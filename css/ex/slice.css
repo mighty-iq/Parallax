@@ -1,0 +1,50 @@
+/* EX-06 Slice (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-slice; tokens from css/base.css with
+   fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-tag, .ex-opt, .ex-focus) come from
+   css/ex.css. The stem is one stage3d canvas; the options are SVG outlines: the cut face in the
+   side-face grey with a dark outline, an inner solid's region in the darker grey inside it. */
+.ex-slice .ex-slice-stem { width: 100%; }
+.ex-slice .ex-slice-stage { width: 100%; height: clamp(10rem, min(40vh, 58vw), 22rem); }
+.ex-slice .ex-slice-label--plane {
+  left: auto; right: 0.625rem;
+  display: inline-flex; align-items: center; gap: 0.45em;
+}
+/* The plane's legend: a tinted square with the plane's border (a shape and a word, not colour alone). */
+.ex-slice .ex-slice-swatch {
+  display: inline-block; width: 0.9em; height: 0.9em; box-sizing: border-box;
+  border: 2px solid var(--stim-target, #0B6A86);
+  background: rgba(11, 106, 134, 0.26);
+  background: color-mix(in srgb, var(--stim-target, #0B6A86) 26%, transparent);
+}
+.ex-slice .ex-slice-under {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+  gap: var(--s2, 0.5rem) var(--s4, 1rem);
+}
+.ex-slice .ex-slice-under .ex-caption { flex: 1 1 16rem; }
+
+/* Options: four outlines in a row on wide screens, a 2 × 2 grid on narrow ones (the grid sets its
+   column count inline, so the narrow layout needs !important). */
+.ex-slice .px-choice { padding: var(--s2, 0.5rem); }
+.ex-slice .ex-slice-svg {
+  display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; max-width: 10.5rem; margin: 0 auto;
+  overflow: visible;
+}
+.ex-slice .ex-slice-region { fill: var(--stim-face-2, #C9CED3); }
+.ex-slice .ex-slice-region--inner { fill: var(--stim-face-3, #A4ABB2); }
+.ex-slice .ex-slice-outline {
+  fill: none; stroke: var(--stim-edge, #22262A); stroke-width: 1.75px;
+  stroke-linejoin: round; vector-effect: non-scaling-stroke;
+}
+/* Show me: the cut face laid over the right option (dashed: a shape, not only a colour). */
+.ex-slice .ex-slice-ghost {
+  fill: var(--stim-target, #0B6A86); fill-opacity: 0.18;
+  stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-dasharray: 7 4;
+  stroke-linejoin: round; vector-effect: non-scaling-stroke;
+}
+.ex-slice .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-slice .ex-tag[data-kind="foil"] { color: var(--ink-2, #454B52); border-style: dashed; }
+
+@media (max-width: 40rem) {
+  .ex-slice .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; }
+  .ex-slice .ex-slice-stage { height: clamp(10rem, min(34vh, 62vw), 16rem); }
+  .ex-slice .ex-slice-svg { max-width: 8.5rem; }
+}

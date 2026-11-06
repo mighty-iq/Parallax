@@ -1,0 +1,194 @@
+{
+ "app-check": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-goal": {
+  "h": 726,
+  "w": 1704
+ },
+ "app-lab": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-library": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-library-phone": {
+  "h": 1760,
+  "w": 824
+ },
+ "app-player-feedback": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-player-phone": {
+  "h": 1760,
+  "w": 824
+ },
+ "app-player-showme": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-progress": {
+  "h": 1080,
+  "w": 1704
+ },
+ "app-settings": {
+  "h": 1091,
+  "w": 1104
+ },
+ "app-share": {
+  "h": null,
+  "w": null
+ },
+ "app-summary": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-today": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-today-phone": {
+  "h": 1760,
+  "w": 824
+ },
+ "app-watch": {
+  "h": 1152,
+  "w": 2049
+ },
+ "app-welcome": {
+  "h": 1150,
+  "w": 1064
+ },
+ "cover-nets": {
+  "h": 600,
+  "w": 1376
+ },
+ "cover-rotate": {
+  "h": 632,
+  "w": 1376
+ },
+ "cover-slice": {
+  "h": 760,
+  "w": 1376
+ },
+ "cover-views": {
+  "h": 760,
+  "w": 1376
+ },
+ "ex01-track": {
+  "h": 1224,
+  "w": 1440
+ },
+ "ex01-track-feedback": {
+  "h": 1224,
+  "w": 1440
+ },
+ "ex02-rotate": {
+  "h": 1120,
+  "w": 1440
+ },
+ "ex02-rotate-showme": {
+  "h": 1084,
+  "w": 1440
+ },
+ "ex03-spin": {
+  "h": 968,
+  "w": 1440
+ },
+ "ex03-spin-showme": {
+  "h": 986,
+  "w": 1440
+ },
+ "ex04-fold": {
+  "h": 870,
+  "w": 1440
+ },
+ "ex04-fold-showme": {
+  "h": 1252,
+  "w": 1440
+ },
+ "ex05-nets": {
+  "h": 912,
+  "w": 1440
+ },
+ "ex05-nets-showme": {
+  "h": 984,
+  "w": 1440
+ },
+ "ex06-slice": {
+  "h": 1160,
+  "w": 1440
+ },
+ "ex06-slice-showme": {
+  "h": 1212,
+  "w": 1440
+ },
+ "ex07-views": {
+  "h": 1160,
+  "w": 1440
+ },
+ "ex07-views-feedback": {
+  "h": 1212,
+  "w": 1440
+ },
+ "ex08-orient": {
+  "h": 1058,
+  "w": 1440
+ },
+ "ex08-orient-feedback": {
+  "h": 1088,
+  "w": 1440
+ },
+ "ex09-span": {
+  "h": 1132,
+  "w": 1440
+ },
+ "ex09-span-feedback": {
+  "h": 1252,
+  "w": 1440
+ },
+ "ex10-hidden": {
+  "h": 866,
+  "w": 1440
+ },
+ "ex10-hidden-feedback": {
+  "h": 944,
+  "w": 1440
+ },
+ "ex11-homing": {
+  "h": 1174,
+  "w": 1440
+ },
+ "ex11-homing-showme": {
+  "h": 1236,
+  "w": 1440
+ },
+ "pr0-wordlinks": {
+  "h": 802,
+  "w": 1440
+ },
+ "pr1-cubematch": {
+  "h": 1058,
+  "w": 1440
+ },
+ "pr2-viewmatch": {
+  "h": 1248,
+  "w": 1440
+ },
+ "pr3-mechanisms": {
+  "h": 1348,
+  "w": 1440
+ },
+ "pr4-patterns": {
+  "h": 850,
+  "w": 1440
+ },
+ "pr5-level": {
+  "h": 964,
+  "w": 1440
+ }
+}

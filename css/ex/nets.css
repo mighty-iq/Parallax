@@ -1,0 +1,83 @@
+/* EX-05 Nets (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-nets; tokens from css/base.css
+   with fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag,
+   .ex-opt, .ex-answer, .ex-glyph, .ex-focus) come from css/ex.css. Six face colours per theme;
+   every square also carries its name, so colour is never the only cue. SVG sizes are in net
+   squares (1 user unit = one square). */
+.ex-nets {
+  --nets-c0: #F4B6A8; --nets-c1: #F3D98B; --nets-c2: #B5DB9E;
+  --nets-c3: #A6CFE8; --nets-c4: #CDBDEE; --nets-c5: #EFC49A;
+  --nets-ink: #1A1D21;
+  --nets-mark: #0B6A86;
+  --nets-line: rgba(26, 29, 33, 0.55);
+  --nets-hatch: rgba(26, 29, 33, 0.34);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ex-nets {
+    --nets-c0: #9A564B; --nets-c1: #8A7536; --nets-c2: #557A45;
+    --nets-c3: #3F6E8C; --nets-c4: #6A5A94; --nets-c5: #8E6640;
+    --nets-ink: #F1F3F4; --nets-mark: #5CC6E0;
+    --nets-line: rgba(230, 232, 234, 0.6); --nets-hatch: rgba(240, 242, 244, 0.42);
+  }
+}
+:root[data-theme="dark"] .ex-nets {
+  --nets-c0: #9A564B; --nets-c1: #8A7536; --nets-c2: #557A45;
+  --nets-c3: #3F6E8C; --nets-c4: #6A5A94; --nets-c5: #8E6640;
+  --nets-ink: #F1F3F4; --nets-mark: #5CC6E0;
+  --nets-line: rgba(230, 232, 234, 0.6); --nets-hatch: rgba(240, 242, 244, 0.42);
+}
+
+/* ---------- stem ---------- */
+.ex-nets .ex-nets-stem { width: 100%; }
+.ex-nets .ex-nets-stage { width: 100%; height: clamp(10rem, 36vh, 17rem); }
+.ex-nets .ex-nets-svg { display: block; width: 100%; height: 100%; }
+.ex-nets .ex-nets-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
+.ex-nets .ex-nets-under .ex-caption { flex: 1 1 16rem; }
+.ex-nets .ex-nets-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-nets .ex-verdict[data-kind="key"], .ex-nets .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-nets .ex-tag[data-kind="foil"] { color: var(--ink, #1A1D21); border-style: dashed; }
+
+/* ---------- squares ---------- */
+.ex-nets .ex-nets-c0 { fill: var(--nets-c0); }
+.ex-nets .ex-nets-c1 { fill: var(--nets-c1); }
+.ex-nets .ex-nets-c2 { fill: var(--nets-c2); }
+.ex-nets .ex-nets-c3 { fill: var(--nets-c3); }
+.ex-nets .ex-nets-c4 { fill: var(--nets-c4); }
+.ex-nets .ex-nets-c5 { fill: var(--nets-c5); }
+.ex-nets .ex-nets-name {
+  fill: var(--nets-ink); font-family: var(--font-sans, system-ui, sans-serif); font-size: 0.42px; font-weight: 600;
+  pointer-events: none;
+}
+.ex-nets .ex-nets-name3d { fill: var(--nets-ink); font-family: var(--font-sans, system-ui, sans-serif); font-size: 42px; font-weight: 600; }
+.ex-nets .ex-nets-hinge { fill: none; stroke: var(--nets-line); stroke-width: 0.028; stroke-dasharray: 0.09 0.06; }
+.ex-nets .ex-nets-cut { fill: none; stroke: var(--stim-edge, #22262A); stroke-width: 0.05; stroke-linecap: square; }
+.ex-nets .ex-nets-hatch { stroke: var(--nets-hatch); stroke-width: 0.035; }
+.ex-nets .ex-nets-base { pointer-events: none; }
+.ex-nets .ex-nets-marked { fill: none; stroke: var(--nets-mark); stroke-width: 0.09; stroke-linejoin: round; }
+.ex-nets .ex-nets-edge { stroke: var(--nets-mark); stroke-width: 0.12; stroke-linecap: round; }
+.ex-nets .ex-nets-marks.is-pointed .ex-nets-marked { stroke-width: 0.14; }
+.ex-nets .ex-nets-marks.is-pointed .ex-nets-edge { stroke-width: 0.17; }
+/* Squares of a non-net that cannot all get a side of their own: dashed frames. */
+.ex-nets .ex-nets-clash { fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 0.07; stroke-dasharray: 0.12 0.08; }
+
+/* ---------- the folding cube (show me) ---------- */
+.ex-nets .ex-nets-face-poly { stroke: var(--stim-edge, #22262A); stroke-width: 0.03; stroke-linejoin: round; }
+.ex-nets .ex-nets-shade { fill: #000; pointer-events: none; }
+.ex-nets .ex-nets-hl { fill: none; stroke: var(--nets-mark); stroke-width: 0.09; stroke-linejoin: round; }
+.ex-nets .ex-nets-stem[data-variant="cube"] .ex-nets-hl { stroke: var(--wrong, #B33A2F); stroke-dasharray: 0.12 0.08; }
+.ex-nets .ex-nets-xray { fill: none; stroke: var(--nets-mark); stroke-width: 0.05; stroke-dasharray: 0.08 0.07; opacity: 0.9; }
+.ex-nets .ex-nets-edge.ex-nets-xray { stroke-width: 0.06; }
+.ex-nets .ex-nets-open { stroke: var(--wrong, #B33A2F); stroke-width: 0.06; }
+
+/* ---------- options ---------- */
+.ex-nets .px-choice { padding: 1.35rem var(--s2, 0.5rem) var(--s2, 0.5rem); }
+.ex-nets .ex-nets-opt .ex-nets-svg--opt { width: 100%; height: auto; aspect-ratio: 1 / 1; max-width: 5.5rem; margin: 0 auto; }
+.ex-nets .ex-nets-swatch { stroke: var(--stim-edge, #22262A); stroke-width: 0.04; }
+.ex-nets .ex-nets-yesno { min-height: 2.75rem; }
+.ex-nets .ex-nets-glyph .ex-nets-glyph-dot { fill: currentColor; stroke: none; }
+.ex-nets .ex-nets-glyph .ex-nets-glyph-dash { stroke-dasharray: 2 2; }
+@media (max-width: 40rem) {
+  .ex-nets .ex-nets-stage { height: clamp(9rem, 32vh, 14rem); }
+  .ex-nets .ex-nets-opt .ex-nets-svg--opt { max-width: 4.5rem; }
+  .ex-nets .ex-answer-text { font-size: var(--fs-md, 1rem); }
+}
+.ex-nets .ex-nets-u { text-decoration: underline; }

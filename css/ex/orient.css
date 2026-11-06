@@ -1,0 +1,110 @@
+/* EX-08 Orient (js/ex/orient/view.js): the question, a map seen from above and an arrow circle.
+   Wide screens: map left, question and circle right. Narrow: question, map, then the circle with
+   its controls beside it. SVG sizes are in map units (100 × 100) and circle units (132 × 132). */
+
+.ex-orient .ex-orient-stem { width: 100%; }
+.ex-orient .ex-orient-body {
+  display: grid; justify-content: center; align-items: start;
+  grid-template-columns: minmax(0, min(54vh, 32rem)) minmax(14rem, 19rem);
+  grid-template-areas: "map q" "map side";
+  grid-template-rows: auto 1fr;
+  column-gap: var(--s5, 1.5rem); row-gap: var(--s3, 0.75rem);
+}
+.ex-orient .ex-orient-qbox { grid-area: q; }
+.ex-orient .ex-orient-stage { grid-area: map; width: 100%; aspect-ratio: 1 / 1; }
+.ex-orient .ex-orient-side { grid-area: side; display: flex; flex-direction: column; align-items: stretch; gap: var(--s3, 0.75rem); }
+
+.ex-orient .ex-orient-q { margin: 0; font-size: var(--fs-md, 1rem); line-height: 1.6; color: var(--ink, #1A1D21); }
+.ex-orient .ex-orient-chip { display: inline-flex; align-items: center; gap: 0.2em; font-weight: 600; white-space: nowrap; }
+.ex-orient .ex-orient-icon { flex: none; overflow: visible; }
+
+/* map */
+.ex-orient .ex-orient-map { display: block; width: 100%; height: 100%; }
+.ex-orient .ex-orient-grid line { stroke: var(--stim-grid, rgba(26, 29, 33, 0.055)); stroke-width: 0.3; }
+.ex-orient .g-fill { fill: var(--stim-face-2, #C9CED3); stroke: var(--stim-edge, #22262A); stroke-width: 0.55; stroke-linejoin: round; }
+/* line and solid symbols stand on the ground, so they take the ink colour (dark on light, light on dark);
+   lines drawn over a filled symbol (g-inner) keep the figure edge colour */
+.ex-orient .g-line { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 0.6; stroke-linecap: round; }
+.ex-orient .g-solid { fill: var(--ink, #1A1D21); stroke: none; }
+.ex-orient .g-ring { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 1.5; }
+.ex-orient .g-inner { fill: none; stroke: var(--stim-edge, #22262A); stroke-width: 0.6; stroke-linecap: round; }
+.ex-orient .ex-orient-map .g-fill, .ex-orient .ex-orient-map .g-line, .ex-orient .ex-orient-map .g-inner { stroke-width: 0.5; }
+.ex-orient .ex-orient-name, .ex-orient .ex-orient-badge, .ex-orient .ex-orient-angle {
+  font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif);
+  paint-order: stroke; stroke: var(--stim-ground, #F7F8F7); stroke-linejoin: round;
+}
+.ex-orient .ex-orient-name { font-size: 3.6px; fill: var(--ink, #1A1D21); stroke-width: 0.9px; }
+.ex-orient .ex-orient-badge {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: 2.9px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  fill: var(--signal, #0B6A86); stroke-width: 0.9px;
+}
+.ex-orient .ex-orient-ring { fill: none; stroke: none; }
+.ex-orient .is-at .ex-orient-ring { fill: var(--signal-wash, #E0EEF2); stroke: var(--signal, #0B6A86); stroke-width: 0.7; }
+.ex-orient .is-facing .ex-orient-ring { stroke: var(--ink-2, #454B52); stroke-width: 0.6; stroke-dasharray: 1.4 1.1; }
+.ex-orient .is-target .ex-orient-ring { stroke: var(--right, #2A7239); stroke-width: 0.9; }
+.ex-orient .ex-orient-you { fill: var(--signal, #0B6A86); }
+.ex-orient .ex-orient-ab { stroke: var(--ink-2, #454B52); stroke-width: 0.6; stroke-dasharray: 2 1.5; }
+.ex-orient .ex-orient-ac { stroke: var(--right, #2A7239); stroke-width: 0.8; }
+.ex-orient .ex-orient-arc { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 0.6; }
+.ex-orient .ex-orient-angle { font-size: 3.6px; font-weight: 600; fill: var(--signal, #0B6A86); stroke-width: 0.9px; }
+.ex-orient .ex-orient-ray-line { stroke-width: 0.7; stroke-dasharray: 1.2 1; }
+.ex-orient .ex-orient-ray.is-wrong .ex-orient-ray-line { stroke: var(--wrong, #B33A2F); }
+.ex-orient .ex-orient-ray.is-wrong .ex-orient-ray-head { fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 0.6; stroke-linejoin: round; }
+.ex-orient .ex-orient-ray.is-right .ex-orient-ray-line { stroke: var(--right, #2A7239); }
+.ex-orient .ex-orient-ray.is-right .ex-orient-ray-head { fill: none; stroke: var(--right, #2A7239); stroke-width: 0.6; stroke-linejoin: round; }
+
+/* arrow circle */
+.ex-orient .ex-orient-dialbox { width: 100%; max-width: 17rem; aspect-ratio: 1 / 1; margin: 0 auto; }
+.ex-orient .ex-orient-dial {
+  display: block; width: 100%; height: 100%; overflow: visible;
+  touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.ex-orient.is-revealed .ex-orient-dial, .ex-orient .is-revealed .ex-orient-dial { cursor: default; }
+.ex-orient .ex-orient-dial:focus { outline: none; }
+.ex-orient .ex-orient-dial:focus-visible .ex-orient-face { stroke: var(--signal, #0B6A86); stroke-width: 2.2; }
+.ex-orient .ex-orient-face { fill: var(--stim-ground, #F7F8F7); stroke: var(--rule-strong, #7B838A); stroke-width: 1.1; }
+.ex-orient .ex-orient-tick { stroke: var(--rule-strong, #7B838A); stroke-width: 0.9; }
+.ex-orient .ex-orient-ahead-line { stroke: var(--ink-3, #5D646C); stroke-width: 0.9; stroke-dasharray: 2.5 2; }
+.ex-orient .ex-orient-dial-name { font-size: 7px; font-weight: 600; fill: var(--ink, #1A1D21); }
+/* dial units: 6.5 ≈ 13 px on the wide layout's dial (≥ 2 px a unit), 8.6 ≥ 12 px on a 360 px phone */
+.ex-orient .ex-orient-dial-side { font-size: 6.5px; font-weight: 500; fill: var(--ink-2, #454B52); }
+.ex-orient .ex-orient-dial .g-fill, .ex-orient .ex-orient-dial .g-line, .ex-orient .ex-orient-dial .g-inner { stroke-width: 0.6; }
+.ex-orient .ex-orient-hub-disc { fill: var(--stim-ground, #F7F8F7); stroke: var(--signal, #0B6A86); stroke-width: 0.9; }
+.ex-orient .ex-orient-arrow-line { stroke: var(--ink, #1A1D21); stroke-width: 2.4; stroke-linecap: round; }
+.ex-orient .ex-orient-arrow-head { fill: var(--surface, #FFFFFF); stroke: var(--ink, #1A1D21); stroke-width: 1.7; stroke-linejoin: round; }
+.ex-orient .ex-orient-arrow.is-right .ex-orient-arrow-line, .ex-orient .ex-orient-arrow.is-right .ex-orient-arrow-head { stroke: var(--right, #2A7239); }
+.ex-orient .ex-orient-arrow.is-wrong .ex-orient-arrow-line, .ex-orient .ex-orient-arrow.is-wrong .ex-orient-arrow-head { stroke: var(--wrong, #B33A2F); }
+.ex-orient .ex-orient-key-line { stroke: var(--right, #2A7239); stroke-width: 2.4; stroke-linecap: round; }
+.ex-orient .ex-orient-key-head { fill: var(--right, #2A7239); }
+.ex-orient .ex-orient-wedge { fill: var(--right-wash, #E3EFE5); stroke: var(--right, #2A7239); stroke-width: 0.6; stroke-dasharray: 1.6 1.4; }
+
+/* controls and feedback */
+.ex-orient .ex-orient-ctl { display: flex; flex-direction: column; align-items: stretch; gap: var(--s2, 0.5rem); }
+.ex-orient .ex-orient-readout { margin: 0; font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: var(--fs-sm, 0.875rem); color: var(--ink-2, #454B52); text-align: center; }
+.ex-orient .ex-orient-confirm { min-height: 2.75rem; width: 100%; }
+.ex-orient .ex-orient-hint { margin: 0; font-size: var(--fs-xs, 0.75rem); line-height: 1.45; color: var(--ink-3, #5D646C); text-align: center; }
+.ex-orient .no-keyhints .ex-orient-keys { display: none; }
+.ex-orient .is-revealed .ex-orient-hint { display: none; }
+@media (pointer: coarse) { .ex-orient .ex-orient-keys { display: none; } } /* touch: the key line only with a keyboard */
+.ex-orient .ex-orient-verdict { align-self: center; }
+.ex-orient .ex-orient-verdict[data-kind="right"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-orient .ex-orient-verdict[data-kind="wrong"] { color: var(--wrong, #B33A2F); border-color: var(--wrong, #B33A2F); border-style: dashed; }
+.ex-orient .ex-orient-note { margin: 0; font-size: var(--fs-sm, 0.875rem); line-height: 1.45; color: var(--ink-2, #454B52); }
+.ex-orient .ex-orient-void { margin: var(--s2, 0.5rem) 0 0; font-size: var(--fs-sm, 0.875rem); line-height: 1.45; color: var(--ink-2, #454B52); }
+.ex-orient .ex-orient-void::before { content: '⦸ '; }
+
+/* narrow screens: question, map, then the circle with its controls beside it */
+@media (max-width: 42rem) {
+  .ex-orient .ex-orient-body {
+    grid-template-columns: minmax(0, 1fr); grid-template-areas: "q" "map" "side"; grid-template-rows: auto auto auto;
+    justify-items: center;
+  }
+  .ex-orient .ex-orient-stage { max-width: min(100%, 46vh); }
+  .ex-orient .ex-orient-side { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; }
+  .ex-orient .ex-orient-dialbox { flex: none; width: min(54vw, 29vh, 16rem); margin: 0; }
+  .ex-orient .ex-orient-dial-side { font-size: 8.6px; }
+  .ex-orient .ex-orient-ctl { flex: 1 1 0; min-width: 0; }
+  .ex-orient .ex-orient-note { flex: 1 1 100%; }
+  .ex-orient .ex-orient-q { font-size: var(--fs-sm, 0.875rem); }
+}

@@ -1,0 +1,43 @@
+/* EX-10 Hidden Shapes (js/ex/hidden/view.js sets css: true). Every rule under .ex-hidden; tokens
+   from css/base.css with fallbacks. SVGs are in lattice units with explicit px sizes (one scale
+   for the figure and the options); strokes are non-scaling, in CSS px. Colour is never the only
+   cue: the hidden copy is thick, missing lines are dashed and marked ✗. */
+
+.ex-hidden .ex-hidden-stem { width: 100%; }
+.ex-hidden .ex-hidden-stage {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--s2, 0.5rem);
+  padding: 1.9rem 0.75rem 0.75rem; min-height: 8rem;
+}
+.ex-hidden .ex-hidden-fighost { display: flex; justify-content: center; }
+.ex-hidden .ex-hidden-fig, .ex-hidden .ex-hidden-opt { display: block; overflow: visible; flex: none; }
+/* Under the figure, never over its lines. */
+.ex-hidden .ex-hidden-verdict { position: static; box-sizing: border-box; min-height: 1.95rem; }
+.ex-hidden .ex-hidden-verdict[hidden] { display: inline-flex; visibility: hidden; } /* its line is reserved: no shift at reveal */
+.ex-hidden .ex-hidden-verdict[data-kind="right"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+
+/* Lattice dots, the figure's lines, overlays. */
+.ex-hidden .ex-hidden-dots circle { fill: var(--rule-strong, #7B838A); opacity: 0.5; }
+.ex-hidden .ex-hidden-seg line { /* ink, not --stim-edge: that one is dark in both themes (cube edges on light faces) */
+  stroke: var(--ink, #1A1D21); stroke-width: 2.6px; stroke-linecap: round; vector-effect: non-scaling-stroke;
+}
+.ex-hidden .ex-hidden-hit line {
+  stroke: var(--signal, #0B6A86); stroke-width: 7px; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: 0.8;
+}
+.ex-hidden .ex-hidden-near line {
+  stroke: var(--signal, #0B6A86); stroke-width: 6px; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: 0.45;
+}
+.ex-hidden .ex-hidden-miss line {
+  stroke: var(--wrong, #B33A2F); stroke-width: 3.5px; stroke-linecap: round; stroke-dasharray: 4 5;
+  vector-effect: non-scaling-stroke;
+}
+.ex-hidden .ex-hidden-x { font-size: 0.42px; font-weight: 700; fill: var(--wrong, #B33A2F); paint-order: stroke; stroke: var(--stim-ground, #F7F8F7); stroke-width: 0.12px; }
+
+/* Options: five in a row on wide screens, 3 + 2 on phones (the grid sets its column count
+   inline, so the narrow layout needs !important). The option SVG keeps its px size. */
+.ex-hidden .px-choice { padding: var(--s2, 0.5rem); }
+.ex-hidden .ex-hidden-optwrap { justify-content: center; min-height: 3rem; }
+.ex-hidden .ex-hidden-optbox { display: flex; justify-content: center; align-items: center; width: 100%; }
+.ex-hidden .px-choice svg.ex-hidden-opt { max-width: none; }
+@media (max-width: 40rem) {
+  .ex-hidden .px-choices[style*="--px-cols:5"] { --px-cols: 3 !important; }
+}
