@@ -1,0 +1,17 @@
+# Runs the Node suite (generators with at least 10,000 seeds each, shortcut solvers, the engine)
+# on every push and pull request. The browser tests (Python Playwright) run locally with
+# tests/run_all.sh; see README.md.
+name: tests
+on:
+  push:
+  pull_request:
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/node/run.mjs

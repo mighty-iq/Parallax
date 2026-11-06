@@ -1,0 +1,80 @@
+/* EX-04 Fold (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-fold; tokens from css/base.css
+   with fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag,
+   .ex-opt, .ex-focus) come from css/ex.css. The paper stays light in both themes (a sheet on
+   a dark plate), so marks drawn on it use their own dark tokens (--fold-mark). SVG sizes are in
+   sheet cells: one cell is 1 user unit. */
+.ex-fold {
+  --fold-paper: #FFFFFF;
+  --fold-back: #D6DDE4;
+  --fold-grid: rgba(26, 29, 33, 0.13);
+  --fold-edge: #22262A;
+  --fold-hole: #22262A;
+  --fold-mark: #0B6A86;
+  --fold-flap: rgba(11, 106, 134, 0.17);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ex-fold {
+    --fold-paper: #CDD3D8; --fold-back: #9EA8B1; --fold-grid: rgba(16, 19, 21, 0.17);
+    --fold-edge: #101315; --fold-hole: #15181B; --fold-mark: #0A5870; --fold-flap: rgba(10, 88, 112, 0.24);
+  }
+}
+:root[data-theme="dark"] .ex-fold {
+  --fold-paper: #CDD3D8; --fold-back: #9EA8B1; --fold-grid: rgba(16, 19, 21, 0.17);
+  --fold-edge: #101315; --fold-hole: #15181B; --fold-mark: #0A5870; --fold-flap: rgba(10, 88, 112, 0.24);
+}
+
+/* ---------- stem: the strip of fold panels, or the large show-me panel ---------- */
+.ex-fold .ex-fold-stem { width: 100%; }
+.ex-fold .ex-fold-stage { padding: var(--s2, 0.5rem); }
+.ex-fold .ex-fold-strip {
+  --fold-cols: 3;
+  display: grid; grid-template-columns: repeat(var(--fold-cols), minmax(0, 1fr)); gap: var(--s2, 0.5rem) var(--s3, 0.75rem);
+  max-width: calc(var(--fold-cols) * 12rem); margin: 0 auto;
+}
+.ex-fold .ex-fold-strip[data-n="2"] { --fold-cols: 2; }
+.ex-fold .ex-fold-strip[data-n="4"] { --fold-cols: 4; }
+.ex-fold .ex-fold-strip[data-n="5"] { --fold-cols: 5; }
+.ex-fold .ex-fold-strip[data-n="6"] { --fold-cols: 6; }
+.ex-fold .ex-fold-panel { display: flex; flex-direction: column; min-width: 0; border-radius: var(--r-plate, 2px); }
+/* The panel label is printed above its panel, not over the paper. */
+.ex-fold .ex-fold-plabel { position: static; display: block; margin: 0 0 0.125rem 0.125rem; white-space: nowrap; }
+.ex-fold .ex-fold-panel.is-pointed { outline: 2px solid var(--signal, #0B6A86); outline-offset: 2px; }
+.ex-fold .ex-fold-svg { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; overflow: visible; }
+.ex-fold .ex-fold-big { display: flex; justify-content: center; }
+.ex-fold .ex-fold-big .ex-fold-svg { width: min(100%, 20rem, 46vh); }
+.ex-fold .ex-fold-strip[hidden], .ex-fold .ex-fold-big[hidden] { display: none; }
+.ex-fold .ex-fold-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
+.ex-fold .ex-fold-under .ex-caption { flex: 1 1 16rem; }
+.ex-fold .ex-fold-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-fold .ex-verdict[data-kind="key"], .ex-fold .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-fold .ex-tag[data-kind="foil"] { color: var(--ink, #1A1D21); border-style: dashed; }
+
+/* ---------- the paper ---------- */
+.ex-fold .ex-fold-ghost { fill: none; stroke: var(--rule-strong, #7B838A); stroke-width: 0.04; stroke-dasharray: 0.2 0.16; }
+.ex-fold .ex-fold-paper { fill: var(--fold-paper); }
+.ex-fold .ex-fold-face.is-back .ex-fold-paper,
+.ex-fold .ex-fold-moving.is-flipped > .ex-fold-face .ex-fold-paper { fill: var(--fold-back); }
+.ex-fold .ex-fold-moving.is-flipped > .ex-fold-face.is-back .ex-fold-paper { fill: var(--fold-paper); }
+.ex-fold .ex-fold-grid { fill: none; stroke: var(--fold-grid); stroke-width: 0.045; }
+.ex-fold .ex-fold-edge { fill: none; stroke: var(--fold-edge); stroke-width: 0.07; stroke-linejoin: round; }
+.ex-fold .ex-fold-hole { fill: var(--fold-hole); }
+.ex-fold .ex-fold-flap { fill: var(--fold-flap); }
+.ex-fold .ex-fold-crease { stroke: var(--fold-mark); stroke-width: 0.1; stroke-dasharray: 0.34 0.22; stroke-linecap: butt; }
+.ex-fold .ex-fold-arrow-line { fill: none; stroke: var(--fold-mark); stroke-width: 0.11; stroke-linecap: round; }
+.ex-fold .ex-fold-arrow-head { fill: var(--fold-mark); stroke: var(--fold-mark); stroke-width: 0.05; stroke-linejoin: round; }
+.ex-fold .ex-fold-ring, .ex-fold .ex-fold-punch-ring { fill: none; stroke: var(--fold-mark); stroke-width: 0.09; }
+/* Holes the chosen wrong sheet has and the folds do not make: dashed rings (a shape, not only a colour). */
+.ex-fold .ex-fold-other { fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 0.1; stroke-dasharray: 0.2 0.12; }
+.ex-fold .ex-fold-svg--big .ex-fold-edge { stroke-width: 0.05; }
+.ex-fold .ex-fold-svg--big .ex-fold-grid { stroke-width: 0.03; }
+
+/* ---------- options: unfolded sheets ---------- */
+/* Room above the sheet for the key number and the right/wrong mark of the cell. */
+.ex-fold .px-choice { padding: 1.35rem var(--s2, 0.5rem) var(--s2, 0.5rem); }
+.ex-fold .ex-fold-opt .ex-fold-svg { max-width: 9.5rem; margin: 0 auto; }
+@media (max-width: 40rem) {
+  .ex-fold .ex-fold-strip[data-n="4"], .ex-fold .ex-fold-strip[data-n="5"], .ex-fold .ex-fold-strip[data-n="6"] { --fold-cols: 3; }
+  .ex-fold .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; }
+  .ex-fold .px-choices[style*="--px-cols:5"] { --px-cols: 3 !important; }
+  .ex-fold .ex-fold-opt .ex-fold-svg { max-width: 8.5rem; }
+}

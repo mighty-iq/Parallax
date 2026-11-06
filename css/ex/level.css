@@ -1,0 +1,62 @@
+/* PR-5 Level (probe): every rule under .ex-level; tokens from css/base.css, with fallbacks.
+   Drawings are SVG in page units (a glass is 2.4 tall), so stroke widths are in those units.
+   The water is a light tint below the line; the line itself carries the answer. */
+
+.ex-level { --lv-water: #BFDCEA; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ex-level { --lv-water: #2E5567; }
+}
+:root[data-theme="dark"] .ex-level { --lv-water: #2E5567; }
+
+.ex-level .ex-level-stem { width: 100%; }
+.ex-level .ex-level-stage { width: 100%; padding: 0.5rem; }
+.ex-level .lv-stem-svg { display: block; width: 100%; height: auto; max-height: min(30vh, 14rem); margin: 0 auto; }
+/* The verdict (development only: the Check reveals nothing) sits under the bar, not over the
+   drawing: the stem fills the stage, and a tilted frame reaches its lower corner. */
+.ex-level .lv-verdict { display: flex; width: fit-content; max-width: 100%; margin: var(--s2, 0.5rem) 0 0; }
+.ex-level .lv-fig-label {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 0.17px; letter-spacing: 0.02px;
+  fill: var(--ink-3, #5D646C);
+}
+.ex-level .lv-fig-label.is-pointed { fill: var(--signal, #0B6A86); font-weight: 600; }
+
+.ex-level .lv-pic { display: block; width: 100%; }
+.ex-level .lv-svg { display: block; width: 100%; height: auto; max-width: 13rem; margin: 0 auto; background: var(--stim-ground, #F7F8F7); }
+.ex-level .lv-water { fill: var(--lv-water); stroke: none; }
+.ex-level .lv-glass { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 0.05; stroke-linejoin: round; }
+.ex-level .lv-frame { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 0.11; stroke-linejoin: miter; }
+.ex-level .lv-line { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 0.06; stroke-linecap: round; }
+.ex-level .lv-string { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 0.03; }
+.ex-level .lv-bob { fill: var(--stim-face-3, #A4ABB2); stroke: var(--ink, #1A1D21); stroke-width: 0.03; }
+.ex-level .lv-pin { fill: var(--ink, #1A1D21); }
+.ex-level .lv-arrow { fill: none; stroke: var(--ink-3, #5D646C); stroke-width: 0.05; stroke-linecap: round; stroke-linejoin: round; }
+/* Show me: the true level or vertical, dashed (shape as well as colour). */
+.ex-level .lv-guide { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 0.035; stroke-dasharray: 0.12 0.08; }
+
+/* Options: four pictures in a row on wide screens, a 2 × 2 grid on narrow ones (the grid sets its
+   column count inline, so the narrow layout needs !important). */
+.ex-level .px-choice { padding: var(--s2, 0.5rem); }
+/* Phones: each picture as wide as its column (no padding, no cap, a narrower gap): at the hardest
+   gap a foil is 4° off, which moves the weight only a few pixels. The corner number sits over the
+   picture's empty corner. */
+@media (max-width: 40rem) {
+  .ex-level .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; gap: var(--s2, 0.5rem); }
+  .ex-level .px-choice { padding: 2px; }
+  .ex-level .lv-svg { max-width: none; }
+}
+
+/* The item's time limit: one slow linear sweep, neutral grey, no ticks and no colour change. */
+.ex-level .pr-timer {
+  height: 4px; margin-top: var(--s2, 0.5rem); overflow: hidden;
+  background: var(--surface-2, #E9ECEA); border-radius: 2px;
+}
+.ex-level .pr-timer-fill {
+  width: 100%; height: 100%; background: var(--ink-3, #5D646C);
+  transform-origin: left center; transform: scaleX(1);
+}
+.ex-level .pr-timer.is-running .pr-timer-fill { animation-name: lv-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }   /* longhands: the shorthand would reset the pause below */
+.ex-level .pr-timer.is-stopped .pr-timer-fill,
+html[data-hx-state="paused"] .ex-level .pr-timer-fill,
+[data-paused] .ex-level .pr-timer-fill,
+.ex-level[data-paused] .pr-timer-fill { animation-play-state: paused; }
+@keyframes lv-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }

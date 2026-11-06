@@ -1,0 +1,15 @@
+{
+  "name": "parallax",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Parallax: a static, offline web app that trains visuospatial ability. Built by the Chimera community (https://discord.gg/chmr).",
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/node/run.mjs",
+    "vendor": "node tools/vendor-three.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "three": "0.186.1"
+  }
+}

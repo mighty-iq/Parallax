@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F2F4F3">
+<meta name="description" content="Parallax: a free, offline trainer for visuospatial ability, built by the Chimera community on Discord.">
+<title>Parallax</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 8.5 9.5 3.5M14.5 8.5l6-5M14.5 19.5l6-5' fill='none' stroke='%235D646C' stroke-width='1.3'/%3E%3Crect x='9.5' y='3.5' width='11' height='11' fill='none' stroke='%230B6A86' stroke-width='1.8' stroke-dasharray='2.2 1.8'/%3E%3Crect x='3.5' y='8.5' width='11' height='11' fill='%23F2F4F3' stroke='%231A1D21' stroke-width='1.8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/ex.css">
+<link rel="stylesheet" href="css/ex/cubematch.css">
+<link rel="stylesheet" href="css/ex/viewmatch.css">
+<link rel="stylesheet" href="css/ex/level.css">
+<link rel="stylesheet" href="css/ex/span.css">
+<link rel="stylesheet" href="css/ex/hidden.css">
+<link rel="stylesheet" href="css/ex/fold.css">
+<link rel="stylesheet" href="css/ex/nets.css">
+<link rel="stylesheet" href="css/ex/spin.css">
+<link rel="stylesheet" href="css/ex/orient.css">
+<link rel="stylesheet" href="css/ex/homing.css">
+<link rel="stylesheet" href="css/ex/mechanisms.css">
+<link rel="stylesheet" href="css/ex/patterns.css">
+<link rel="stylesheet" href="css/ex/wordlinks.css">
+<link rel="stylesheet" href="css/ex/track.css">
+<link rel="stylesheet" href="css/ex/slice.css">
+<link rel="stylesheet" href="css/ex/views.css">
+<link rel="stylesheet" href="css/screens.css">
+<link rel="stylesheet" href="css/play.css">
+</head>
+<body>
+<noscript>
+  <p style="max-width:32rem;margin:2rem auto;padding:0 1rem;font:16px/1.5 system-ui,sans-serif">Parallax needs JavaScript. It runs offline in your browser and keeps your data on this device. Parallax was built by the Chimera community on Discord: https://discord.gg/chmr</p>
+</noscript>
+
+<!-- ===== SCRIPTS: classic scripts in the order of ARCHITECTURE.md §3 =====================
+     Only files that exist are active, because a missing file logs a load error (and breaks
+     the single-file build). When a file lands, move its line out of the PENDING block of its
+     group into the active lines just above, keeping the order. tests/e2e/shell.py checks
+     that every active file exists and lists pending files that now exist. ============== -->
+
+<script src="vendor/three.min.js"></script>
+
+<!-- core -->
+<script src="js/core/px.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/core/rng.js"></script>
+<script src="js/core/bus.js"></script>
+<script src="js/core/timing.js"></script>
+<script src="js/core/keys.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/core/router.js"></script>
+<script src="js/core/svg.js"></script>
+<script src="js/core/ui.js"></script>
+<script src="js/core/stage3d.js"></script>
+
+<!-- engine (pure) -->
+<script src="js/engine/model.js"></script>
+<script src="js/engine/estimator.js"></script>
+<script src="js/engine/select.js"></script>
+<script src="js/engine/staircase.js"></script>
+<script src="js/engine/bandit.js"></script>
+<script src="js/engine/schedule.js"></script>
+<script src="js/engine/modes.js"></script>
+<script src="js/engine/assess.js"></script>
+<script src="js/engine/achievements.js"></script>
+<script src="js/engine/streak.js"></script>
+<script src="js/engine/daily.js"></script>
+<script src="js/engine/stats.js"></script>
+<script src="js/engine/merge.js"></script>
+
+<!-- exercises: registry, then every gen.js, every learn.js, every view.js -->
+<script src="js/ex/registry.js"></script>
+<script src="js/ex/track/gen.js"></script>
+<script src="js/ex/rotate/gen.js"></script>
+<script src="js/ex/spin/gen.js"></script>
+<script src="js/ex/fold/gen.js"></script>
+<script src="js/ex/nets/gen.js"></script>
+<script src="js/ex/slice/gen.js"></script>
+<script src="js/ex/views/gen.js"></script>
+<script src="js/ex/orient/gen.js"></script>
+<script src="js/ex/span/gen.js"></script>
+<script src="js/ex/hidden/gen.js"></script>
+<script src="js/ex/homing/gen.js"></script>
+<script src="js/ex/cubematch/gen.js"></script>
+<script src="js/ex/viewmatch/gen.js"></script>
+<script src="js/ex/mechanisms/gen.js"></script>
+<script src="js/ex/patterns/gen.js"></script>
+<script src="js/ex/level/gen.js"></script>
+<script src="js/ex/wordlinks/gen.js"></script>
+<!-- PENDING gen (training EX-01…EX-11, then probes PR-1…PR-5, PR-0). Activate a line when
+     the exercise's node tests pass: a half-written file breaks the whole page.
+-->
+<script src="js/ex/rotate/learn.js"></script>
+<script src="js/ex/cubematch/learn.js"></script>
+<script src="js/ex/viewmatch/learn.js"></script>
+<script src="js/ex/level/learn.js"></script>
+<script src="js/ex/span/learn.js"></script>
+<script src="js/ex/hidden/learn.js"></script>
+<script src="js/ex/fold/learn.js"></script>
+<script src="js/ex/nets/learn.js"></script>
+<script src="js/ex/spin/learn.js"></script>
+<script src="js/ex/orient/learn.js"></script>
+<script src="js/ex/homing/learn.js"></script>
+<script src="js/ex/mechanisms/learn.js"></script>
+<script src="js/ex/patterns/learn.js"></script>
+<script src="js/ex/wordlinks/learn.js"></script>
+<script src="js/ex/track/learn.js"></script>
+<script src="js/ex/slice/learn.js"></script>
+<script src="js/ex/views/learn.js"></script>
+<script src="js/ex/rotate/view.js"></script>
+<script src="js/ex/cubematch/view.js"></script>
+<script src="js/ex/viewmatch/view.js"></script>
+<script src="js/ex/level/view.js"></script>
+<script src="js/ex/span/view.js"></script>
+<script src="js/ex/hidden/view.js"></script>
+<script src="js/ex/fold/view.js"></script>
+<script src="js/ex/nets/view.js"></script>
+<script src="js/ex/spin/view.js"></script>
+<script src="js/ex/orient/view.js"></script>
+<script src="js/ex/homing/view.js"></script>
+<script src="js/ex/mechanisms/view.js"></script>
+<script src="js/ex/patterns/view.js"></script>
+<script src="js/ex/wordlinks/view.js"></script>
+<script src="js/ex/track/view.js"></script>
+<script src="js/ex/slice/view.js"></script>
+<script src="js/ex/views/view.js"></script>
+
+<!-- screens (ui/app.js last: it boots the app) -->
+<script src="js/ui/welcome.js"></script>
+<script src="js/ui/home.js"></script>
+<script src="js/ui/settings.js"></script>
+<script src="js/ui/about.js"></script>
+<script src="js/ui/library.js"></script>
+<script src="js/ui/progress.js"></script>
+<script src="js/ui/log.js"></script>
+<script src="js/ui/lab.js"></script>
+<script src="js/ui/share.js"></script>
+<script src="js/ui/tour.js"></script>
+<script src="js/ui/play.js"></script>
+<script src="js/ui/check.js"></script>
+<script src="js/ui/app.js"></script>
+</body>
+</html>

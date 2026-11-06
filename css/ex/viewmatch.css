@@ -1,0 +1,51 @@
+/* PR-2 View Match (probe): every rule under .ex-viewmatch; tokens from css/base.css, with
+   fallbacks. The view reads the object and table colours below (--vm-*) for the 3D materials, so a
+   theme change recolours the scene. Colour is never the only cue: the five shapes all differ. */
+
+.ex-viewmatch {
+  --vm-red: #C8483B; --vm-blue: #3A6FB7; --vm-yellow: #E3B53A; --vm-green: #3F9A5A; --vm-purple: #8457B0;
+  --vm-table: #D8D3C8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ex-viewmatch {
+    --vm-red: #E0675A; --vm-blue: #5C8FD6; --vm-yellow: #E8C25A; --vm-green: #5DB878; --vm-purple: #A27BCC;
+    --vm-table: #5B5F64;
+  }
+}
+:root[data-theme="dark"] .ex-viewmatch {
+  --vm-red: #E0675A; --vm-blue: #5C8FD6; --vm-yellow: #E8C25A; --vm-green: #5DB878; --vm-purple: #A27BCC;
+  --vm-table: #5B5F64;
+}
+
+.ex-viewmatch .ex-viewmatch-stem { width: 100%; }
+/* Never taller than wide: the overview camera frames the table for a square picture or wider. */
+.ex-viewmatch .ex-viewmatch-stage { width: 100%; aspect-ratio: 16 / 10; max-height: min(46vh, 24rem); }
+/* The verdict (development only: the Check reveals nothing) sits under the bar, not over the
+   overview, where the table fills the stage on a phone. */
+.ex-viewmatch .vm-verdict { display: flex; width: fit-content; max-width: 100%; margin: var(--s2, 0.5rem) 0 0; }
+
+/* Options: four pictures in a row on wide screens, a 2 × 2 grid on narrow ones (the grid sets its
+   column count inline, so the narrow layout needs !important). */
+.ex-viewmatch .px-choice { padding: var(--s2, 0.5rem); }
+/* Capped by height too, so the overview and all four pictures fit one screen on short laptop
+   windows and phones held sideways (a timed item should never need a scroll). */
+.ex-viewmatch .px-choice .ex-thumb { max-width: min(15rem, 30vh); }
+@media (max-width: 40rem) {
+  .ex-viewmatch .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; }
+}
+
+/* The item's time limit: one slow linear sweep, neutral grey, no ticks and no colour change. */
+.ex-viewmatch .pr-timer {
+  height: 4px; margin-top: var(--s2, 0.5rem); overflow: hidden;
+  background: var(--surface-2, #E9ECEA); border-radius: 2px;
+}
+.ex-viewmatch .pr-timer-fill {
+  width: 100%; height: 100%; background: var(--ink-3, #5D646C);
+  transform-origin: left center; transform: scaleX(1);
+}
+.ex-viewmatch .pr-timer.is-running .pr-timer-fill { animation-name: vm-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }   /* longhands: the shorthand would reset the pause below */
+.ex-viewmatch .pr-timer.is-stopped .pr-timer-fill,
+html[data-hx-state="paused"] .ex-viewmatch .pr-timer-fill,
+[data-paused] .ex-viewmatch .pr-timer-fill,
+.ex-viewmatch[data-paused] .pr-timer-fill { animation-play-state: paused; }
+@keyframes vm-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }

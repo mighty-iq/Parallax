@@ -1,0 +1,53 @@
+/* PR-1 Cube Match (probe): every rule under .ex-cubematch; tokens from css/base.css, with
+   fallbacks. Shared pieces (.ex-stage, .ex-label, .ex-verdict, .ex-answer, .ex-glyph) come from
+   css/ex.css. Drawings are SVG in cube units (a face is 2 × 2), so stroke widths are in those units. */
+
+.ex-cubematch .ex-cubematch-stem { width: 100%; }
+.ex-cubematch .ex-cubematch-stage { width: 100%; padding: 1.9rem 0.5rem 0.75rem; }
+.ex-cubematch .cm-svg { display: block; width: 100%; height: auto; max-height: min(46vh, 22rem); margin: 0 auto; }
+.ex-cubematch .cm-label--b { left: calc(50% + 0.625rem); }
+.ex-cubematch .cm-divider {
+  position: absolute; top: 0.5rem; bottom: 0.5rem; left: 50%; width: 0;
+  border-left: 1px solid var(--rule, #D3D8D5);
+}
+/* The verdict (development only: the Check reveals nothing) sits under the bar, not over the
+   drawings, which fill the stage on a phone. */
+.ex-cubematch .cm-verdict { display: flex; width: fit-content; max-width: 100%; margin: var(--s2, 0.5rem) 0 0; }
+
+/* Faces: three stimulus tones (top lightest, left darkest), dark outlines, dark glyph strokes.
+   The inline color-mix() fill (used while a cube turns) overrides these where it is supported. */
+.ex-cubematch .cm-face-plate { stroke: var(--stim-edge, #22262A); stroke-width: 0.035; stroke-linejoin: round; }
+.ex-cubematch .cm-face--top { fill: var(--stim-face, #ECEEF0); }
+.ex-cubematch .cm-face--right { fill: var(--stim-face-2, #C9CED3); }
+.ex-cubematch .cm-face--left { fill: var(--stim-face-3, #A4ABB2); }
+.ex-cubematch .cm-glyph {
+  fill: none; stroke: var(--stim-edge, #22262A); stroke-width: 0.12;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+/* A face show me talks about: a thick dashed ring (shape as well as colour). */
+.ex-cubematch .cm-face.is-marked .cm-face-plate {
+  stroke: var(--signal, #0B6A86); stroke-width: 0.1; stroke-dasharray: 0.22 0.12;
+}
+
+/* The item's time limit: one slow linear sweep, neutral grey, no ticks and no colour change. */
+.ex-cubematch .pr-timer {
+  height: 4px; margin-top: var(--s2, 0.5rem); overflow: hidden;
+  background: var(--surface-2, #E9ECEA); border-radius: 2px;
+}
+.ex-cubematch .pr-timer-fill {
+  width: 100%; height: 100%; background: var(--ink-3, #5D646C);
+  transform-origin: left center; transform: scaleX(1);
+}
+.ex-cubematch .pr-timer.is-running .pr-timer-fill { animation-name: cm-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }   /* longhands: the shorthand would reset the pause below */
+.ex-cubematch .pr-timer.is-stopped .pr-timer-fill,
+html[data-hx-state="paused"] .ex-cubematch .pr-timer-fill,
+[data-paused] .ex-cubematch .pr-timer-fill,
+.ex-cubematch[data-paused] .pr-timer-fill { animation-play-state: paused; }
+@keyframes cm-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+.ex-cubematch .px-choice { min-height: 3.5rem; }
+/* Phones: the icon above the words, so "Different cubes" stays on one line. */
+@media (max-width: 40rem) {
+  .ex-cubematch .ex-answer { flex-direction: column; gap: 0.25rem; }
+  .ex-cubematch .ex-answer-text { font-size: var(--fs-md, 1rem); }
+}

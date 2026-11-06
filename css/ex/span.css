@@ -1,0 +1,90 @@
+/* EX-09 Block Span (js/ex/span/view.js sets css: true). Every rule under .ex-span; tokens from
+   css/base.css with fallbacks. Board units: the SVG viewBox is 1000 × 1000; strokes use
+   non-scaling widths in CSS px. Colour is never the only cue: a lit block also shows a centre
+   disc, a right number is a solid disc and a missed one a dashed ring, wrong taps carry ✗. */
+
+.ex-span .ex-span-stem { display: flex; flex-direction: column; align-items: center; gap: var(--s2, 0.5rem); width: 100%; }
+
+/* The phase line above the board (outside it, so it never covers a block). */
+.ex-span .ex-span-phase {
+  width: min(100%, 30rem, 50vh); margin: 0;
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: var(--fs-xs, 0.75rem); line-height: 1.3; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3, #5D646C);
+}
+.ex-span .ex-span-phase.is-pointed { color: var(--signal, #0B6A86); font-weight: 500; }
+.ex-span .ex-span-phase.is-pointed::before { content: "▸ "; }
+
+/* The board: square, at most 30rem, and short enough to leave room for the buttons. */
+.ex-span .ex-span-stage {
+  width: min(100%, 30rem, 50vh); aspect-ratio: 1 / 1; height: auto;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.ex-span .ex-span-board { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.ex-span .ex-span-stem[data-phase="recall"] .ex-span-board { cursor: pointer; }
+
+.ex-span .ex-span-plate { fill: var(--surface-2, #E9ECEA); stroke: var(--rule-strong, #7B838A); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.ex-span .ex-span-notch { fill: var(--rule-strong, #7B838A); }
+
+/* Blocks: light grey squares with dark outlines (the stimulus look of css/base.css). */
+.ex-span .ex-span-block rect {
+  fill: var(--stim-face-2, #C9CED3); stroke: var(--stim-edge, #22262A); stroke-width: 2px; vector-effect: non-scaling-stroke;
+}
+.ex-span .ex-span-block .ex-span-dot { fill: var(--signal-ink, #FFFFFF); opacity: 0; }
+.ex-span .ex-span-block.is-lit rect { fill: var(--stim-target, #0B6A86); stroke-width: 4px; }
+.ex-span .ex-span-block.is-lit .ex-span-dot { opacity: 1; }
+.ex-span .ex-span-block.is-pressed rect { fill: var(--stim-face, #ECEEF0); stroke: var(--signal, #0B6A86); stroke-width: 5px; }
+
+/* Upright layer: keyboard labels (recall only), the tapped dot, numbers after the answer. */
+.ex-span .ex-span-label {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 46px; font-weight: 500;
+  fill: var(--ink, #1A1D21); pointer-events: none;
+}
+.ex-span .ex-span-tapped { fill: var(--ink-2, #454B52); opacity: 0; }
+.ex-span .ex-span-tag.is-tapped .ex-span-tapped { opacity: 1; }
+.ex-span .ex-span-disc { stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.ex-span .ex-span-disc--seq { fill: var(--surface, #FFFFFF); stroke: var(--ink-2, #454B52); }
+.ex-span .ex-span-disc--key { fill: var(--signal, #0B6A86); stroke: var(--signal, #0B6A86); }
+.ex-span .ex-span-disc--right { fill: var(--right, #2A7239); stroke: var(--right, #2A7239); }
+.ex-span .ex-span-disc--missed { fill: var(--surface, #FFFFFF); stroke: var(--right, #2A7239); stroke-width: 3px; stroke-dasharray: 5 4; }
+.ex-span .ex-span-num {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 44px; font-weight: 600;
+  pointer-events: none;
+}
+.ex-span .ex-span-num--seq, .ex-span .ex-span-num--missed { fill: var(--ink, #1A1D21); }
+.ex-span .ex-span-num--key { fill: var(--signal-ink, #FFFFFF); }
+.ex-span .ex-span-num--right { fill: var(--surface, #FFFFFF); }
+.ex-span .ex-span-wrongtag { fill: var(--wrong-wash, #F7E4E1); stroke: var(--wrong, #B33A2F); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.ex-span .ex-span-wrongtxt { font-size: 30px; font-weight: 600; fill: var(--wrong, #B33A2F); pointer-events: none; }
+
+/* Show me: the path in the shown order (faint while the tap order is numbered). */
+.ex-span .ex-span-path {
+  fill: none; stroke: var(--signal, #0B6A86); stroke-width: 4px; vector-effect: non-scaling-stroke;
+  stroke-linejoin: round; stroke-linecap: round; opacity: 0.9;
+}
+.ex-span .ex-span-stem.is-faint-path .ex-span-path { opacity: 0.3; }
+
+/* Under the board: taps so far and the buttons; then the key hint. */
+.ex-span .ex-span-actions {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2, 0.5rem);
+  width: min(100%, 30rem);
+}
+.ex-span .ex-span-actions[hidden] { display: none; }
+.ex-span .ex-span-progress { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; min-height: 1rem; }
+.ex-span .ex-span-slot {
+  width: 0.85rem; height: 0.85rem; box-sizing: border-box;
+  border: 1.5px solid var(--rule-strong, #7B838A); border-radius: 2px;
+}
+.ex-span .ex-span-slot.is-filled { background: var(--ink-2, #454B52); border-color: var(--ink-2, #454B52); }
+.ex-span .ex-span-buttons { display: inline-flex; gap: var(--s2, 0.5rem); }
+.ex-span .ex-span-hint {
+  margin: 0; min-height: 1.4em; text-align: center;
+  font-size: var(--fs-sm, 0.875rem); color: var(--ink-3, #5D646C);
+}
+.ex-span .ex-span-verdict[data-kind="right"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-span .ex-span-verdict[data-kind="wrong"] { color: var(--wrong, #B33A2F); border-color: var(--wrong, #B33A2F); }
+.ex-span .ex-caption { width: min(100%, 30rem); }
+
+@media (max-width: 40rem) {
+  .ex-span .ex-span-stage, .ex-span .ex-span-phase { width: min(100%, 58vh); }
+}

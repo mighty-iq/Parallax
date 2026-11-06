@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Parallax · exercise harness</title>
+<!-- Load errors (scripts, stylesheets, exceptions) are collected from the very start and
+     shown on the page by harness.js. Capture phase: resource errors do not bubble. -->
+<script>
+  window.PX_HARNESS_ERRORS = [];
+  window.addEventListener('error', function (e) {
+    var t = e && e.target, src = t && (t.src || t.href);
+    window.PX_HARNESS_ERRORS.push(src && t !== window ? 'could not load ' + src : (e.message || 'error') + (e.filename ? ' (' + e.filename.split('/').slice(-3).join('/') + ':' + e.lineno + ')' : ''));
+    if (window.PX_HARNESS_SHOW) window.PX_HARNESS_SHOW();
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    window.PX_HARNESS_ERRORS.push('unhandled rejection: ' + (e.reason && e.reason.message || e.reason));
+    if (window.PX_HARNESS_SHOW) window.PX_HARNESS_SHOW();
+  });
+</script>
+<link rel="stylesheet" href="../../css/base.css">
+<link rel="stylesheet" href="../../css/ex.css">
+<link rel="stylesheet" href="harness.css">
+</head>
+<body>
+<noscript>The harness needs JavaScript.</noscript>
+<!-- The app's scripts in ARCHITECTURE.md §3 order: core, stage3d, engine, registry. Keep these
+     lines in step with the active lines of ../../index.html (tests/e2e/harness_rotate.py
+     checks). harness.js then appends js/ex/<id>/gen.js, learn.js and view.js for ?ex=<id>. -->
+<script src="../../vendor/three.min.js"></script>
+<script src="../../js/core/px.js"></script>
+<script src="../../js/core/util.js"></script>
+<script src="../../js/core/rng.js"></script>
+<script src="../../js/core/bus.js"></script>
+<script src="../../js/core/timing.js"></script>
+<script src="../../js/core/keys.js"></script>
+<script src="../../js/core/store.js"></script>
+<script src="../../js/core/router.js"></script>
+<script src="../../js/core/svg.js"></script>
+<script src="../../js/core/ui.js"></script>
+<script src="../../js/core/stage3d.js"></script>
+<script src="../../js/engine/model.js"></script>
+<script src="../../js/engine/estimator.js"></script>
+<script src="../../js/engine/select.js"></script>
+<script src="../../js/engine/staircase.js"></script>
+<script src="../../js/engine/bandit.js"></script>
+<script src="../../js/engine/schedule.js"></script>
+<script src="../../js/engine/modes.js"></script>
+<script src="../../js/engine/assess.js"></script>
+<script src="../../js/engine/achievements.js"></script>
+<script src="../../js/engine/streak.js"></script>
+<script src="../../js/engine/daily.js"></script>
+<script src="../../js/engine/stats.js"></script>
+<script src="../../js/engine/merge.js"></script>
+<script src="../../js/ex/registry.js"></script>
+<script src="harness.js"></script>
+</body>
+</html>
