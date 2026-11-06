@@ -1,0 +1,268 @@
+/* Parallax player, session summary, Watch–Try–Go, tour and Spatial Check (js/ui/play.js,
+   tour.js, check.js). Tokens and components come from css/base.css; screens share css/app.css.
+   The player is an instrument run: a slim status strip (specimen label, count, progress ruler),
+   the stimulus plate, the options, and a reading strip that sticks to the bottom of the screen
+   (icon + word + colour, the response time in mono). Classes start with .pl-. */
+
+/* While items run, the footer and the phone tab bar step aside (html[data-chrome="focus"]). */
+:root[data-chrome="focus"] .px-footer,
+:root[data-chrome="focus"] .px-tabbar { display: none; }
+:root[data-chrome="focus"] .px-app { padding-bottom: 0; }
+:root[data-chrome="focus"] .px-main > .px-wrap { padding-top: var(--s4); padding-bottom: var(--s4); }
+
+.pl-screen { width: 100%; max-width: 60rem; margin: 0 auto; }
+.pl-player { position: relative; display: flex; flex-direction: column; gap: var(--s3); }
+
+/* ---------- status strip ---------- */
+.pl-hud { border-bottom: 1px solid var(--rule); padding-bottom: var(--s2); }
+.pl-hud-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s4); min-height: var(--tap); }
+.pl-hud-id { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); min-width: 0; flex: 1 1 14rem; }
+.pl-hud-id .px-spec { font-size: var(--fs-sm); }
+.pl-hud-text { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink-2); }
+.pl-hud-meta { font-size: var(--fs-sm); color: var(--ink-2); white-space: nowrap; }
+.pl-hud-tools { display: flex; gap: var(--s2); margin-left: auto; }
+.pl-hud-bar { margin-top: var(--s2); }
+.pl-hud-bar .px-bar { height: 0.375rem; }
+.pl-tag { font-size: 0.6875rem; }
+
+.pl-goal { font-size: var(--fs-md); color: var(--ink); max-width: var(--measure); }
+.pl-tip {
+  display: flex; gap: var(--s2); align-items: baseline; max-width: var(--measure);
+  padding: var(--s2) var(--s3); border-left: 3px solid var(--signal); background: var(--signal-wash);
+  font-size: var(--fs-sm); color: var(--ink);
+}
+.pl-tip-k { flex: none; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 500; color: var(--signal-strong); }
+.pl-notice { align-items: center; flex-wrap: wrap; }
+.pl-notice > span { flex: 1 1 16rem; }
+
+/* ---------- the item ---------- */
+.pl-trial { position: relative; display: flex; flex-direction: column; gap: var(--s3); outline: none; }
+.pl-host:empty { display: none; }
+.pl-grid:empty { display: none; }
+.pl-confirm { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s2) var(--s4); }
+.pl-confirm-text { font-size: var(--fs-sm); color: var(--ink-3); }
+
+/* the deadline (Speed, timed Free play): one calm linear sweep, paused with the trial */
+.pl-limit { position: relative; height: 0.3125rem; background: var(--surface-2); border-radius: 1px; overflow: hidden; }
+.pl-limit-fill { position: absolute; inset: 0; background: var(--ink-3); transform-origin: left center; transform: scaleX(1); }
+.pl-limit.is-running .pl-limit-fill { animation-name: pl-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
+.pl-trial[data-paused] .pl-limit-fill { animation-play-state: paused; }
+@keyframes pl-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* paused: the item is covered, so a pause never becomes thinking time */
+.pl-pause {
+  position: absolute; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center; padding: var(--s4);
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-panel);
+}
+.pl-pause-in { max-width: 28rem; text-align: center; }
+.pl-pause-title { font-size: var(--fs-2xl); font-weight: 600; letter-spacing: -0.015em; }
+.pl-pause-text { margin-top: var(--s2); color: var(--ink-2); }
+.pl-pause-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s2); margin-top: var(--s4); }
+.pl-pause-note { margin-top: var(--s3); }
+.pl-trial[data-paused] { min-height: 17rem; }
+
+/* ---------- the reading strip (feedback), kept in view at the bottom ---------- */
+.pl-feedback {
+  position: sticky; bottom: 0; z-index: 25;
+  margin: 0 calc(-1 * var(--s2));
+  padding: var(--s3) var(--s3) calc(var(--s3) + env(safe-area-inset-bottom, 0px));
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel) var(--r-panel) 0 0;
+  box-shadow: 0 -10px 24px -18px rgba(26, 29, 33, 0.35);
+}
+.pl-feedback-main { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); }
+.pl-verdict { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s3); flex: 1 1 18rem; min-width: 0; }
+.pl-verdict:empty { display: none; }
+.pl-verdict-icon {
+  display: inline-flex; align-items: center; justify-content: center; align-self: center;
+  width: 1.75rem; height: 1.75rem; border-radius: 2px; border: 2px solid currentColor;
+  font-family: var(--font-sans), "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif; font-size: 1.05rem; font-weight: 600; line-height: 1;
+}
+.pl-verdict-word { font-size: var(--fs-lg); }
+.pl-verdict-rt { font-size: var(--fs-md); color: var(--ink-2); }
+.pl-verdict-text { font-size: var(--fs-sm); color: var(--ink-2); flex-basis: 100%; }
+.pl-verdict-void { font-size: var(--fs-sm); color: var(--warn); flex-basis: 100%; }
+.pl-verdict[data-kind="right"] .pl-verdict-icon, .pl-verdict[data-kind="right"] .pl-verdict-word { color: var(--right); }
+.pl-verdict[data-kind="wrong"] .pl-verdict-icon, .pl-verdict[data-kind="wrong"] .pl-verdict-word { color: var(--wrong); }
+.pl-verdict[data-kind="timeout"] .pl-verdict-icon, .pl-verdict[data-kind="timeout"] .pl-verdict-word { color: var(--warn); }
+.pl-verdict[data-kind="right"] .pl-verdict-icon { background: var(--right-wash); }
+.pl-verdict[data-kind="wrong"] .pl-verdict-icon { background: var(--wrong-wash); }
+.pl-verdict[data-kind="timeout"] .pl-verdict-icon { background: var(--warn-wash); }
+.pl-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-left: auto; }
+.pl-showme { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); }
+.pl-caption { flex: 1 1 14rem; font-size: var(--fs-sm); color: var(--ink-2); }
+.pl-caption:empty { display: none; }
+.pl-showme-buttons { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.pl-notes:empty { display: none; }
+.pl-notes { display: flex; flex-direction: column; gap: var(--s3); margin-top: var(--s3); }
+.pl-note { padding: var(--s3); border: 1px solid var(--rule); border-left: 3px solid var(--rule-strong); border-radius: var(--r-control); background: var(--paper); font-size: var(--fs-sm); color: var(--ink-2); }
+.pl-note--level { border-left-color: var(--signal); }
+.pl-note--level strong { color: var(--ink); }
+.pl-note-range { color: var(--ink-3); }
+.pl-note-bar { margin: var(--s3) 0 var(--s2); }
+.pl-note--offer, .pl-note--checkin { border-left-color: var(--ink-2); }
+.pl-note-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+
+/* ---------- cards (intros, offers) ---------- */
+.pl-card { max-width: 40rem; }
+.pl-card .px-panel-body > p + p { margin-top: var(--s2); }
+.pl-card .px-panel-body > p { color: var(--ink-2); max-width: var(--measure); }
+.pl-card-spec { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2); margin-bottom: var(--s3); }
+.pl-card-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s5); }
+.pl-card-actions .px-btn--primary { order: -1; }
+
+/* ---------- Watch, Try, Go ---------- */
+.pl-wtg { display: flex; flex-direction: column; gap: var(--s2); padding-bottom: var(--s2); border-bottom: 1px dashed var(--rule-strong); }
+.pl-wtg-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); }
+.pl-wtg-steps { display: flex; gap: 0; margin: 0; padding: 0; list-style: none; border: 1px solid var(--rule-strong); border-radius: var(--r-control); overflow: hidden; }
+/* the steps are a label, not a control: compact, so the item fits under them at 1366 × 768 */
+.pl-wtg-step { display: inline-flex; align-items: center; gap: var(--s2); min-height: 2.25rem; padding: 0 var(--s3); color: var(--ink-3); font-weight: 600; font-size: var(--fs-sm); }
+.pl-wtg-step + .pl-wtg-step { border-left: 1px solid var(--rule); }
+.pl-wtg-n { display: inline-flex; align-items: center; justify-content: center; width: 1.375rem; height: 1.375rem; border: 1px solid currentColor; border-radius: 2px; font-size: var(--fs-xs); }
+.pl-wtg-step.is-current { color: var(--signal-ink); background: var(--signal); }
+.pl-wtg-step.is-done { color: var(--ink-2); }
+.pl-wtg-step.is-done .pl-wtg-n { background: var(--surface-3); }
+.pl-wtg-tools { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.pl-wtg-text { color: var(--ink-2); max-width: var(--measure); }
+.pl-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--s2) var(--s4); margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); color: var(--ink-2); }
+.pl-parts li { display: flex; flex-direction: column; gap: 0.125rem; padding-left: var(--s3); border-left: 1px solid var(--rule-strong); }
+.pl-parts b { color: var(--ink); font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 500; }
+/* On a laptop (1366 × 768) every step fits one screen without scrolling: the header keeps to
+   two rows (the labelled parts run as one legend), the progress ruler steps aside (the header
+   says Try n of N), spacing tightens, the verdict keeps to one line and the stimulus gives up
+   height on short windows. play.js marks the host .is-wtg while Watch, Try, Go runs. */
+@media (min-width: 720px) {
+  .is-wtg .pl-wtg { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s4); padding-bottom: var(--s1); }
+  .is-wtg .pl-wtg-lead { margin: 0; }
+  .is-wtg .pl-wtg-top { flex: 1 1 auto; }
+  .is-wtg .pl-wtg-text, .is-wtg .pl-parts { flex-basis: 100%; max-width: none; }
+  .is-wtg .pl-parts { display: block; }
+  .is-wtg .pl-parts li { display: inline; padding: 0; border: 0; }
+  .is-wtg .pl-parts li + li { margin-left: var(--s4); }
+  .is-wtg .pl-parts b { margin-right: var(--s1); }
+  .is-wtg .pl-hud { padding-bottom: var(--s1); }
+  .is-wtg .pl-hud-bar { display: none; }
+  .is-wtg .pl-player, .is-wtg .pl-trial { gap: var(--s2); }
+  .is-wtg .pl-goal, .is-wtg .pl-tip { max-width: none; }
+  .is-wtg .pl-verdict-text { flex-basis: auto; }
+  .is-wtg .pl-showme { margin-top: var(--s2); padding-top: var(--s2); }
+  /* a demo has no verdict yet: its controls take the strip's first row */
+  .is-wtg .pl-feedback-main:has(> .pl-verdict:empty):has(> .pl-actions[hidden]) + .pl-showme { margin-top: 0; padding-top: 0; border-top: 0; }
+  .is-wtg .ex-rotate .ex-rotate-stage { height: clamp(9rem, calc(100vh - 31.5rem), 24rem); }
+  .is-wtg .ex-rotate .ex-rotate-stem[data-variant="pick"] .ex-rotate-stage { height: clamp(8rem, calc(100vh - 36.5rem), 20rem); }
+  .is-wtg .ex-rotate .px-choice .ex-thumb { width: auto; max-width: 100%; max-height: max(6rem, calc(100vh - 40rem)); margin: 0 auto; }
+  .is-wtg .ex-fold .ex-fold-strip { max-width: calc(var(--fold-cols) * clamp(7rem, 100vh - 38rem, 12rem)); }
+  .is-wtg .ex-fold .ex-fold-big .ex-fold-svg { width: min(100%, 20rem, max(9rem, calc(100vh - 37rem))); }
+  .is-wtg .ex-fold .ex-fold-opt .ex-fold-svg { max-width: min(9.5rem, max(5.5rem, calc(100vh - 41rem))); }
+  .is-wtg .ex-track .ex-track-stage { height: clamp(14rem, calc(100vh - 32rem), 32rem); }
+}
+
+/* ---------- session summary ---------- */
+.pl-summary { display: flex; flex-direction: column; gap: var(--s4); max-width: 52rem; }
+.pl-panel .px-panel-body > p + p { margin-top: var(--s2); }
+.pl-sum-line { color: var(--ink); }
+.pl-sum-noise { margin-top: var(--s2); max-width: var(--measure); }
+.pl-results { display: flex; flex-direction: column; margin: var(--s4) 0 0; padding: 0; list-style: none; }
+.pl-res { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; gap: var(--s1); padding: var(--s3) 0; border-top: 1px solid var(--rule); }
+.pl-res-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2); }
+.pl-res-head .px-spec { font-size: var(--fs-sm); }
+.pl-res-stats { font-size: var(--fs-sm); color: var(--ink-2); }
+.pl-res-level { margin-top: var(--s2); }
+.pl-res-lv { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s3); }
+.pl-res-lvk { font-size: var(--fs-sm); color: var(--ink-3); }
+.pl-res-lv b { font-size: var(--fs-xl); font-weight: 500; color: var(--ink); }
+.pl-res-range { font-size: var(--fs-sm); color: var(--ink-3); }
+.pl-res-bar { margin: var(--s2) 0; max-width: 28rem; }
+@media (min-width: 720px) {
+  .pl-res { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); column-gap: var(--s5); }
+  .pl-res-level { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; }
+}
+.pl-list { margin: 0; padding-left: 1.1rem; }
+.pl-list li + li { margin-top: var(--s2); }
+.pl-ach { display: flex; flex-direction: column; gap: var(--s3); margin: 0; padding: 0; list-style: none; }
+.pl-ach li { display: flex; gap: var(--s3); align-items: flex-start; }
+.pl-ach li > div { display: flex; flex-direction: column; }
+.pl-ach span { font-size: var(--fs-sm); color: var(--ink-2); }
+.pl-ach-mark { color: var(--signal); width: 1.5rem; height: 1.5rem; }
+.pl-week { display: flex; gap: var(--s2); margin: var(--s3) 0 0; padding: 0; list-style: none; }
+.pl-week li { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
+.pl-week-k { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3); }
+.pl-week-box { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border: 1px solid var(--rule-strong); border-radius: 2px; font-size: var(--fs-sm); }
+.pl-week li.is-done .pl-week-box { background: var(--signal-wash); border-color: var(--signal); color: var(--signal-strong); }
+.pl-summary-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s4); }
+.pl-next .pl-summary-actions { margin-top: var(--s3); }
+.pl-sum-foot { margin-top: var(--s2); }
+
+.pl-check-list + p { margin-top: var(--s3); }
+.pl-tour-miss { margin: calc(-1 * var(--s3)) 0 var(--s4); }
+.pl-wtg-lead { margin-bottom: calc(-1 * var(--s1)); }
+/* the 1–5 expectation scale: one row of five equal steps, or one column on narrow screens */
+.pl-expect { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s2); margin: var(--s3) 0; }
+.pl-expect .px-btn { flex-direction: column; gap: 0.125rem; height: auto; min-height: 3.5rem; padding: var(--s2) var(--s1); white-space: normal; text-align: center; line-height: 1.25; }
+.pl-expect-n { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 500; }
+.pl-expect-t { font-size: var(--fs-sm); font-weight: 500; }
+@media (max-width: 479px) {
+  .pl-expect { grid-template-columns: minmax(0, 1fr); }
+  .pl-expect .px-btn { flex-direction: row; justify-content: flex-start; gap: var(--s3); min-height: 2.75rem; padding: var(--s1) var(--s3); text-align: left; }
+}
+
+/* ---------- Daily Challenge ---------- */
+.pl-daily-score { display: flex; align-items: baseline; gap: var(--s2); }
+.pl-daily-score b { font-size: var(--fs-4xl); font-weight: 500; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
+.pl-marks { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr)); gap: var(--s2); margin: var(--s4) 0 0; padding: 0; list-style: none; }
+.pl-marks li { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0 var(--s2); padding: var(--s2); border: 1px solid var(--rule-strong); border-radius: var(--r-plate); background: var(--stim-ground); }
+.pl-mark-g { grid-row: span 2; display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border: 2px solid currentColor; border-radius: 2px; font-weight: 600; line-height: 1; }
+.pl-marks li.is-right .pl-mark-g { color: var(--right); background: var(--right-wash); }
+.pl-marks li.is-wrong .pl-mark-g { color: var(--wrong); background: var(--wrong-wash); }
+.pl-mark-n { font-size: var(--fs-xs); color: var(--ink-3); }
+.pl-mark-x { font-size: var(--fs-xs); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-daily .px-copybox-text { min-height: 0; resize: none; }
+.pl-daily .px-linkcopy { margin-top: var(--s4); max-width: 26rem; }
+
+/* ---------- Free play setup ---------- */
+.pl-free { display: flex; flex-direction: column; gap: var(--s4); max-width: 44rem; }
+.pl-free .px-select { width: 100%; max-width: 26rem; }
+.pl-free-dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--s3) var(--s4); margin: var(--s3) 0 var(--s4); }
+.pl-free-dims .px-field + .px-field { margin-top: 0; }
+
+/* ---------- dialogs: keys, How to play, strategy cards ---------- */
+.pl-keylist { display: flex; flex-direction: column; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
+.pl-keylist li { display: grid; grid-template-columns: 4.5rem 1fr; align-items: center; gap: var(--s3); }
+.pl-keylist .px-kbd { justify-self: start; opacity: 1; }
+.pl-howto-goal { color: var(--ink); font-size: var(--fs-lg); }
+.pl-howto-h { margin-top: var(--s4); font-size: var(--fs-md); }
+.pl-strategy + .pl-strategy { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--rule); }
+.pl-strategy h3 { font-size: var(--fs-md); color: var(--ink); }
+.pl-strategy ol { margin: var(--s2) 0 0; padding-left: 1.25rem; }
+.pl-strategy li + li { margin-top: var(--s1); }
+
+@media (max-width: 599px) {
+  /* phones: the label and Pause share the first row, the count sits under them; key hints and
+     the Keys button give way (the keys still work), and while a solution plays the reading
+     strip flows under the item instead of covering the options */
+  .pl-hud-row { gap: var(--s1) var(--s2); }
+  .pl-hud-id { flex: 1 1 0; }
+  .pl-hud-meta { order: 3; flex-basis: 100%; white-space: normal; }
+  .pl-hud-tools [data-help] { display: none; }
+  .pl-player .px-kbd { display: none; }
+  .pl-player[data-state="showme"] .pl-feedback { position: static; box-shadow: none; }
+  /* ...but its controls (Pause, Step, Replay, Close) stay at the bottom of the window */
+  .pl-player[data-state="showme"] { padding-bottom: 4.5rem; }
+  .pl-player[data-state="showme"] .pl-showme-buttons {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    padding: var(--s2) var(--gutter) calc(var(--s2) + env(safe-area-inset-bottom, 0px));
+    background: var(--surface); border-top: 1px solid var(--rule); box-shadow: 0 -10px 24px -18px rgba(26, 29, 33, 0.35);
+  }
+  .pl-showme-buttons { width: 100%; }
+  .pl-showme-buttons .px-btn { flex: 1 1 auto; padding-left: var(--s2); padding-right: var(--s2); }
+  .pl-feedback { margin: 0 calc(-1 * var(--gutter)); border-left: 0; border-right: 0; border-radius: 0; }
+  .pl-actions { width: 100%; }
+  .pl-actions .px-btn--primary { flex: 1 1 auto; }
+  .pl-wtg-step { padding: 0 var(--s2); }
+  .pl-card-actions .px-btn { flex: 1 1 auto; }
+}
+
+/* touch screens: key hints on the play screens give way (a keyboard, when there is one, still works) */
+@media (hover: none) and (pointer: coarse) {
+  .pl-screen .px-kbd { display: none; }
+}

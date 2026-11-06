@@ -1,0 +1,33 @@
+/* EX-03 Spin (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-spin; tokens from css/base.css with
+   fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag, .ex-answer)
+   come from css/ex.css. Figures are SVG polygons: flat grey with a dark outline, like the 3D cubes. */
+.ex-spin .ex-spin-stem { width: 100%; }
+.ex-spin .ex-spin-stage { width: 100%; height: clamp(9rem, min(40vh, 46vw), 22rem); }
+/* pick: the reference about as large as one option (four in a row on wide screens, 2 × 2 on phones). */
+.ex-spin .ex-spin-stem[data-variant="pick"] .ex-spin-stage { height: clamp(8rem, min(30vh, 50vw), 15rem); }
+/* One row exactly as tall as the plate, so each square figure box fits its half (meet). */
+.ex-spin .ex-spin-pair { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); }
+.ex-spin .ex-spin-stem[data-variant="pick"] .ex-spin-pair { grid-template-columns: 1fr; }
+.ex-spin .ex-spin-svg { display: block; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; }
+/* Stem panels leave room for the specimen label above the figure. */
+.ex-spin .ex-spin-svg--ref, .ex-spin .ex-spin-svg--cmp { padding: 1.6rem 0.5rem 0.5rem; }
+.ex-spin .ex-spin-svg--cmp { border-left: 1px solid var(--rule, #D3D8D5); }
+.ex-spin .ex-spin-label--cmp { left: calc(50% + 0.625rem); }
+.ex-spin .ex-spin-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
+.ex-spin .ex-spin-under .ex-caption { flex: 1 1 16rem; }
+.ex-spin .ex-spin-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+
+.ex-spin .ex-spin-fig {
+  fill: var(--stim-face-2, #C9CED3); stroke: var(--stim-edge, #22262A); stroke-width: 1.5px;
+  stroke-linejoin: round; vector-effect: non-scaling-stroke;
+}
+/* Show me: the turned reference laid over a figure (dashed: a shape, not a colour, carries it) and
+   the mirror line it flips across. */
+.ex-spin .ex-spin-ghost {
+  fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 6 4;
+  stroke-linejoin: round; vector-effect: non-scaling-stroke;
+}
+.ex-spin .ex-spin-line { stroke: var(--stim-target, #0B6A86); stroke-width: 1.5px; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+
+.ex-spin .px-choice { padding: var(--s2, 0.5rem); }
+.ex-spin .ex-spin-opt .ex-spin-svg--opt { width: 100%; height: auto; aspect-ratio: 1 / 1; max-width: 10rem; margin: 0 auto; padding: 0.15rem; }

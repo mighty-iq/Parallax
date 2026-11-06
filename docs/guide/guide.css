@@ -1,0 +1,261 @@
+/* Parallax user guide: print-first A4 stylesheet (tools/build-pdf.py renders it to
+   docs/Parallax-Guide.pdf). The app's "lab instrument" look: cool drafting-paper ground,
+   hairline rules, IBM Plex Sans for text, IBM Plex Mono for labels and numbers, one petrol
+   accent, specimen labels. Every page is a fixed A4 <section class="page">; build-pdf.py
+   fails when a page's content overflows it. Guide text: CC BY-SA 4.0. Fonts: SIL OFL 1.1. */
+
+@font-face { font-family: "IBM Plex Sans"; src: url("../../fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "IBM Plex Sans"; src: url("../../fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "IBM Plex Mono"; src: url("../../fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "IBM Plex Mono"; src: url("../../fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+
+:root {
+  --paper: #F2F4F3; --surface: #FFFFFF; --surface-2: #E9ECEA; --surface-3: #DDE1DE;
+  --ink: #1A1D21; --ink-2: #454B52; --ink-3: #5D646C;
+  --rule: #D3D8D5; --rule-strong: #7B838A;
+  --signal: #0B6A86; --signal-strong: #08536A; --signal-wash: #E0EEF2;
+  --right: #2A7239; --wrong: #B33A2F; --warn: #875F00; --warn-wash: #F5EDD6;
+  --grid-minor: rgba(11, 106, 134, 0.05); --grid-major: rgba(11, 106, 134, 0.11);
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --hair: 0.5pt;
+}
+
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); }
+body {
+  font-family: var(--sans); font-size: 9.2pt; line-height: 1.45; color: var(--ink);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  font-variant-numeric: tabular-nums; hyphens: manual; text-rendering: geometricPrecision;
+}
+@media screen { body { background: #C9CED3; } .page { margin: 8mm auto; box-shadow: 0 1mm 4mm rgba(0, 0, 0, 0.18); } }
+
+/* ---------- the page ---------- */
+.page {
+  position: relative; width: 210mm; height: 297mm; padding: 20mm 18mm 19mm; overflow: hidden;
+  background: var(--paper); break-after: page; page-break-after: always; counter-increment: folio;
+}
+.page:last-child { break-after: auto; page-break-after: auto; }
+.run-head, .folio {
+  position: absolute; left: 18mm; right: 18mm; display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--mono); font-size: 6.6pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+}
+.run-head { top: 9.5mm; padding-bottom: 1.6mm; border-bottom: var(--hair) solid var(--rule); }
+.run-head b { font-weight: 500; color: var(--ink-2); }
+.folio { bottom: 8.5mm; padding-top: 1.6mm; border-top: var(--hair) solid var(--rule); }
+.folio a { color: var(--signal); text-decoration: none; }
+.folio .n::after { content: counter(folio, decimal-leading-zero); font-weight: 500; color: var(--ink); }
+.page.bare .run-head, .page.bare .folio { display: none; }
+.content { position: relative; height: 100%; display: flex; flex-direction: column; }
+.content > .push { margin-top: auto; }
+
+/* ---------- type ---------- */
+p { margin: 0 0 2.2mm; }
+.lead { font-size: 11pt; line-height: 1.42; color: var(--ink); margin-bottom: 4mm; max-width: 150mm; }
+h1, h2, h3, h4 { font-weight: 600; line-height: 1.18; margin: 0; break-after: avoid; }
+.chapter { margin: 0 0 5mm; padding-bottom: 3.2mm; border-bottom: var(--hair) solid var(--rule-strong); }
+.chapter .no { display: block; font-family: var(--mono); font-size: 7.4pt; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--signal); margin-bottom: 1.6mm; }
+.chapter h1 { font-size: 23pt; letter-spacing: -0.01em; }
+h2 { font-size: 12.4pt; margin: 4.6mm 0 2mm; }
+h2:first-child { margin-top: 0; }
+h3 { font-size: 9.8pt; margin: 3.6mm 0 1.4mm; }
+h4 { font-size: 8.8pt; margin: 2.4mm 0 0.8mm; }
+.label {
+  font-family: var(--mono); font-size: 6.8pt; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3);
+}
+.mono, .num, code { font-family: var(--mono); font-size: 0.92em; }
+code { color: var(--ink-2); word-break: break-word; }
+a { color: var(--signal); text-decoration: underline; text-decoration-thickness: 0.4pt; text-underline-offset: 1.4pt; }
+a.quiet { text-decoration: none; }
+.cite { color: var(--ink-3); white-space: nowrap; }
+.note { font-size: 8pt; color: var(--ink-2); }
+.meta { font-size: 7.6pt; color: var(--ink-3); }
+small { font-size: 7.8pt; }
+ul, ol { margin: 0 0 2.4mm; padding-left: 4.6mm; }
+li { margin: 0 0 1.1mm; }
+li::marker { color: var(--ink-3); }
+ul.dash { list-style: none; padding-left: 0; }
+ul.dash > li { position: relative; padding-left: 4mm; }
+ul.dash > li::before { content: "–"; position: absolute; left: 0; color: var(--signal); }
+strong, b { font-weight: 600; }
+em { font-style: italic; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 7mm; }
+.cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 5mm; }
+.cols-60 { display: grid; grid-template-columns: 1.45fr 1fr; column-gap: 7mm; }
+.keep { break-inside: avoid; }
+
+/* ---------- specimen labels, badges, panels ---------- */
+.spec {
+  display: inline-block; padding: 0.5mm 1.6mm; border: var(--hair) solid var(--rule-strong); border-radius: 0.6mm;
+  font-family: var(--mono); font-size: 7pt; font-weight: 500; letter-spacing: 0.04em; color: var(--ink-2); background: var(--surface); white-space: nowrap;
+}
+.badge {
+  display: inline-block; padding: 0.35mm 1.8mm; border: var(--hair) solid var(--ink-2); border-radius: 2.5mm;
+  font-family: var(--mono); font-size: 6.6pt; font-weight: 500; letter-spacing: 0.04em; color: var(--ink); white-space: nowrap; vertical-align: 0.3mm;
+}
+.badge.warn { border-color: var(--warn); color: var(--warn); background: var(--warn-wash); }
+.panel { background: var(--surface); border: var(--hair) solid var(--rule); border-radius: 1.2mm; padding: 3.6mm 4.2mm 2.4mm; margin: 0 0 4mm; break-inside: avoid; }
+.panel > .label { display: block; margin-bottom: 1.6mm; }
+.panel.signal { border-left: 1.4mm solid var(--signal); }
+.panel.wash { background: var(--signal-wash); border-color: transparent; }
+.panel.dashed { background: transparent; border: var(--hair) dashed var(--rule-strong); }
+.claims { border: 0.8pt solid var(--signal); background: var(--surface); }
+.claims > .label { color: var(--signal); }
+.claims ul { margin-bottom: 1mm; }
+.claims li { margin-bottom: 1.6mm; }
+
+/* ---------- figures: specimen plates with corner ticks ---------- */
+figure { margin: 0; break-inside: avoid; }
+.shot { position: relative; display: inline-block; line-height: 0; border: var(--hair) solid var(--rule-strong); background: var(--paper); }
+.shot img { display: block; width: auto; height: auto; max-width: 100%; }
+.shot .tk { position: absolute; width: 2.4mm; height: 2.4mm; border: 0 solid var(--ink-2); }
+.shot .tl { left: -1.2mm; top: -1.2mm; border-left-width: var(--hair); border-top-width: var(--hair); }
+.shot .tr { right: -1.2mm; top: -1.2mm; border-right-width: var(--hair); border-top-width: var(--hair); }
+.shot .bl { left: -1.2mm; bottom: -1.2mm; border-left-width: var(--hair); border-bottom-width: var(--hair); }
+.shot .br { right: -1.2mm; bottom: -1.2mm; border-right-width: var(--hair); border-bottom-width: var(--hair); }
+figcaption { margin-top: 1.4mm; font-size: 7.2pt; line-height: 1.35; color: var(--ink-3); }
+figcaption .label { margin-right: 1.4mm; color: var(--ink-2); }
+.pending .shot { border-style: dashed; }
+
+/* ---------- tables ---------- */
+table { width: 100%; border-collapse: collapse; margin: 0 0 3.6mm; font-size: 8pt; line-height: 1.36; break-inside: avoid; }
+th { text-align: left; vertical-align: bottom; font-family: var(--mono); font-size: 6.6pt; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); padding: 0 2mm 1.2mm 0; border-bottom: var(--hair) solid var(--rule-strong); }
+td { vertical-align: top; padding: 1.3mm 2mm 1.3mm 0; border-bottom: var(--hair) solid var(--rule); }
+tr:last-child td { border-bottom: var(--hair) solid var(--rule-strong); }
+td.mono, td .mono { font-size: 7.4pt; }
+table.small { font-size: 7.4pt; }
+table.small td { padding-top: 1.05mm; padding-bottom: 1.05mm; }
+td .spec { font-size: 6.4pt; }
+tr { break-inside: avoid; }
+
+/* ---------- the cover ---------- */
+.cover { padding: 0; background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-major) 0.25mm, transparent 0.25mm), linear-gradient(90deg, var(--grid-major) 0.25mm, transparent 0.25mm),
+    linear-gradient(var(--grid-minor) 0.2mm, transparent 0.2mm), linear-gradient(90deg, var(--grid-minor) 0.2mm, transparent 0.2mm);
+  background-size: 20mm 20mm, 20mm 20mm, 4mm 4mm, 4mm 4mm; background-position: -0.1mm -0.1mm; }
+.cover .frame { position: absolute; inset: 14mm; border: var(--hair) solid var(--rule-strong); padding: 14mm 14mm 12mm; display: flex; flex-direction: column; background: rgba(242, 244, 243, 0.6); }
+.cover .top { display: flex; justify-content: space-between; }
+.cover h1 { font-size: 64pt; letter-spacing: -0.025em; line-height: 1; margin: 22mm 0 3mm; }
+.cover .sub { font-size: 20pt; color: var(--ink-2); margin: 0 0 11mm; }
+.cover .specimens { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.cover .specimens figure .shot { display: block; }
+.cover .specimens img { width: 100%; height: 44mm; object-fit: cover; }
+.cover .specimens figcaption { margin-top: 1.2mm; }
+.cover .chimera { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm; border-top: var(--hair) solid var(--rule-strong); padding-top: 5mm; }
+.cover .chimera .built { font-size: 13pt; font-weight: 600; line-height: 1.25; }
+.cover .chimera .addr { display: inline-block; margin-top: 2mm; font-family: var(--mono); font-size: 12pt; font-weight: 500; }
+.cover .chimera .ver { text-align: right; font-family: var(--mono); font-size: 7.4pt; line-height: 1.6; color: var(--ink-2); letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* ---------- contents ---------- */
+.toc { list-style: none; padding: 0; margin: 0 0 6mm; }
+.toc li { display: flex; align-items: baseline; gap: 3mm; padding: 1.55mm 0; margin: 0; border-bottom: var(--hair) solid var(--rule); }
+.toc .no { width: 8mm; font-family: var(--mono); font-size: 7.6pt; color: var(--signal); font-weight: 500; }
+.toc a { color: var(--ink); text-decoration: none; font-weight: 600; font-size: 10pt; }
+.toc .what { flex: 1; font-size: 8pt; color: var(--ink-3); }
+.toc .pg { font-family: var(--mono); font-size: 8pt; color: var(--ink-2); }
+
+/* ---------- exercise cards: two per page ---------- */
+.ex-page .content { gap: 0; }
+.ex-card { height: 124mm; display: flex; flex-direction: column; overflow: hidden; }
+.ex-card + .ex-card { margin-top: 4mm; padding-top: 4mm; border-top: var(--hair) solid var(--rule-strong); height: 128mm; }
+.ex-head { display: flex; align-items: baseline; gap: 3mm; margin-bottom: 2.6mm; flex-wrap: wrap; }
+.ex-head h2 { margin: 0; font-size: 14pt; }
+.ex-head .kind { font-size: 9.6pt; color: var(--ink-2); }
+.ex-head .badge { margin-left: auto; }
+.ex-body { display: grid; grid-template-columns: 58mm 1fr; column-gap: 5mm; flex: 1; min-height: 0; }
+.ex-figs { display: flex; flex-direction: column; gap: 2.4mm; align-items: flex-start; }
+.ex-figs figcaption { max-width: 58mm; }
+.ex-figs .shot img { max-width: 58mm; max-height: 46mm; }
+.ex-figs figure:only-child .shot img { max-height: 100mm; }
+.ex-text { font-size: 8.25pt; line-height: 1.34; }
+.ex-text p { margin-bottom: 1.5mm; }
+.ex-text .rk { font-family: var(--mono); font-size: 6.6pt; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal); margin-right: 1mm; }
+.ex-text .dims { margin: 0 0 1.6mm; padding: 0; list-style: none; border-top: var(--hair) solid var(--rule); }
+.ex-text .dims li { display: grid; grid-template-columns: 19mm 1fr; column-gap: 2mm; margin: 0; padding: 0.55mm 0; border-bottom: var(--hair) solid var(--rule); }
+.ex-text .dims .k { font-family: var(--mono); font-size: 6.9pt; color: var(--ink-3); padding-top: 0.25mm; }
+.ex-text .strat { margin: 0 0 1.5mm; }
+.ex-text .strat b { font-weight: 600; }
+.ex-text .ev { color: var(--ink-2); }
+
+/* ---------- probes gallery, app figures ---------- */
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm 5mm; margin-bottom: 3mm; }
+.gallery figure .shot { display: block; }
+.gallery img { width: 100%; height: 38mm; object-fit: contain; background: var(--paper); }
+.app-fig .shot img { max-height: 76mm; }
+
+/* ---------- worked example and formulas ---------- */
+.calc { font-family: var(--mono); font-size: 7.6pt; line-height: 1.55; }
+.calc td { padding-top: 0.9mm; padding-bottom: 0.9mm; }
+.calc td:last-child { text-align: right; }
+.verdict { display: inline-block; padding: 0.2mm 1.6mm; border-radius: 0.6mm; font-family: var(--mono); font-size: 7.2pt; font-weight: 500; border: var(--hair) solid currentColor; }
+.verdict.beyond { color: var(--right); }
+.verdict.unclear { color: var(--warn); }
+.verdict.none { color: var(--ink-2); }
+.formula { font-family: var(--mono); font-size: 8pt; background: var(--surface); border: var(--hair) solid var(--rule); border-radius: 0.8mm; padding: 1.4mm 2.4mm; display: inline-block; margin: 0.4mm 0 1.8mm; }
+
+/* ---------- references ---------- */
+.refs { list-style: none; padding: 0; margin: 0; font-size: 7.25pt; line-height: 1.36; columns: 2; column-gap: 7mm; }
+.refs li { break-inside: avoid; margin: 0 0 1.55mm; padding-left: 3.2mm; text-indent: -3.2mm; }
+.refs a { word-break: break-all; text-decoration: none; }
+.refs .unv { color: var(--warn); }
+
+/* ---------- the Chimera page ---------- */
+.chimera-page { background-color: var(--paper);
+  background-image: linear-gradient(var(--grid-major) 0.25mm, transparent 0.25mm), linear-gradient(90deg, var(--grid-major) 0.25mm, transparent 0.25mm);
+  background-size: 20mm 20mm, 20mm 20mm; }
+.chimera-page .big { font-size: 30pt; font-weight: 600; line-height: 1.12; letter-spacing: -0.015em; margin: 6mm 0 6mm; max-width: 150mm; }
+.chimera-page .join { display: inline-block; margin: 2mm 0 3mm; padding: 4mm 7mm; background: var(--signal); color: #fff; border-radius: 1.2mm; font-size: 14pt; font-weight: 600; text-decoration: none; }
+.chimera-page .addr { font-family: var(--mono); font-size: 18pt; font-weight: 500; }
+
+/* ---------- numbered steps (Quick start) ---------- */
+.steps { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+.steps[start="4"] { counter-reset: step 3; }
+.steps > li { position: relative; counter-increment: step; padding: 0 0 2.6mm 12mm; margin: 0 0 3mm; border-bottom: var(--hair) solid var(--rule); }
+.steps > li:last-child { border-bottom: 0; }
+.steps > li::before { content: counter(step, decimal-leading-zero); position: absolute; left: 0; top: -0.6mm; font-family: var(--mono); font-size: 15pt; font-weight: 500; color: var(--signal); }
+.steps h3 { margin: 0 0 1.4mm; font-size: 10.6pt; }
+.ex-extra { border-top: var(--hair) solid var(--rule-strong); }
+.ex-extra .app-fig .shot img { max-height: 92mm; }
+.week { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 0 0 4mm; }
+.week > div { background: var(--surface); border: var(--hair) solid var(--rule); border-top: 1.2mm solid var(--signal); border-radius: 0.8mm; padding: 2mm 2.4mm; font-size: 8pt; line-height: 1.35; }
+.week .label { display: block; margin-bottom: 0.8mm; color: var(--signal); }
+.ladder { margin: 0 0 4mm; border-top: var(--hair) solid var(--rule-strong); }
+.ladder .rung { display: grid; grid-template-columns: 16mm 1fr 52mm; column-gap: 4mm; align-items: baseline; padding: 1.8mm 0; border-bottom: var(--hair) solid var(--rule); }
+.ladder .rung p { margin: 0; }
+.ladder .rung .label { color: var(--signal); font-size: 7.6pt; }
+.ladder .rung .how { font-family: var(--mono); font-size: 7.2pt; color: var(--ink-2); text-align: right; }
+.calc-steps { margin: 2mm 0 0; padding-left: 5mm; font-size: 8pt; line-height: 1.4; }
+.calc-steps li { margin-bottom: 1.3mm; }
+.calc th { font-size: 6.2pt; }
+pre.code { margin: 0 0 3mm; padding: 2mm 3mm; background: var(--surface); border: var(--hair) solid var(--rule); border-radius: 0.8mm; font-family: var(--mono); font-size: 7.3pt; line-height: 1.5; white-space: pre-wrap; color: var(--ink); }
+td.group { font-family: var(--mono); font-size: 6.6pt; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal); padding-top: 2.4mm; border-bottom: var(--hair) solid var(--rule-strong); }
+table.research td:last-child { color: var(--ink-3); }
+/* ---------- app figures ---------- */
+.steps-2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 7mm; }
+.steps-2 > li { border-bottom: 0; }
+.app-fig.wide { margin: 1mm 0 4mm; }
+.app-fig.wide .shot img { max-width: 174mm; max-height: 100mm; }
+.session-row { display: grid; grid-template-columns: 112mm 1fr; column-gap: 6mm; margin: 0 0 4mm; align-items: start; }
+.session-row .app-fig .shot img { max-width: 112mm; max-height: 64mm; }
+.session-row h3 { margin-top: 0; }
+.session-row ul.dash li { font-size: 8.4pt; margin-bottom: 0.8mm; }
+.phone-row { display: grid; grid-template-columns: 52mm 52mm 1fr; column-gap: 6mm; margin: 0 0 5mm; align-items: start; }
+.app-fig.phone .shot img { max-width: 52mm; max-height: 112mm; }
+.phone-row .app-fig:not(.phone) .shot img { max-width: 100%; }
+.phone-row > * { min-width: 0; }
+.ex-extra .cols { grid-template-columns: 1fr 56mm; }
+.app-fig.lib .shot img { max-width: 56mm; max-height: 112mm; }
+.app-fig.goal { margin: 1mm 0 2.4mm; }
+.app-fig.goal .shot img { max-width: 84mm; }
+.app-fig.lab .shot img { max-height: 66mm; }
+.app-fig.wide .shot img { max-height: 97mm; }
+.app-fig.phone .shot img { max-height: 106mm; }
+.back .big { font-size: 30pt; font-weight: 600; line-height: 1.12; letter-spacing: -0.015em; margin: 40mm 0 6mm; max-width: 140mm; }
+.back .join { display: inline-block; margin: 4mm 0 4mm; padding: 4mm 7mm; background: var(--signal); color: #fff; border-radius: 1.2mm; font-size: 14pt; font-weight: 600; text-decoration: none; }
+.back .addr { font-family: var(--mono); font-size: 18pt; font-weight: 500; }
+.app-fig.wide.report .shot img { max-height: 71mm; }
+.panel > table.calc { width: 100%; margin-bottom: 1mm; }
+.panel > table.calc td:first-child, .panel > table.calc th:first-child { width: 52mm; }
+.panel > table.calc td:not(:first-child), .panel > table.calc th:not(:first-child) { text-align: right; }

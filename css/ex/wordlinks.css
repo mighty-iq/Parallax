@@ -1,0 +1,40 @@
+/* PR-0 Word Links (js/ex/wordlinks/view.js). Every rule under .ex-wordlinks; tokens from
+   css/base.css with fallbacks. */
+.ex-wordlinks .wl-stage {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem;
+  min-height: 8.5rem; padding: 2rem 1rem 1.1rem; text-align: center;
+}
+.ex-wordlinks .wl-analogy {
+  margin: 0; max-width: 40rem;
+  font-size: clamp(1.15rem, 1.6vw + 0.75rem, 1.7rem); line-height: 1.55; color: var(--ink-2, #454B52);
+}
+.ex-wordlinks .wl-word {
+  display: inline-block; padding: 0 0.12em;
+  font-weight: 600; color: var(--ink, #1A1D21);
+  border-bottom: 2px solid transparent;
+}
+.ex-wordlinks .wl-q { min-width: 2.4em; border-bottom-color: var(--rule-strong, #7B838A); }
+.ex-wordlinks .wl-word.is-pointed { color: var(--signal, #0B6A86); border-bottom-color: var(--signal, #0B6A86); }
+.ex-wordlinks .wl-notation {
+  margin: 0; font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: var(--fs-sm, 0.875rem); letter-spacing: 0.02em; color: var(--ink-3, #5D646C);
+}
+.ex-wordlinks .wl-verdict { margin-top: 0.5rem; max-width: 40rem; text-align: left; }
+.ex-wordlinks .wl-answer { flex-direction: column; gap: 0.2rem; min-height: 2.75rem; }
+.ex-wordlinks .px-choice .wl-opt { font-size: var(--fs-lg, 1.125rem); }
+.ex-wordlinks .wl-tag { font-weight: 400; color: var(--ink-3, #5D646C); }
+
+/* The item's time limit: one slow linear sweep (no ticks, no colour change). */
+.ex-wordlinks .pr-timer {
+  height: 4px; margin-top: 0.5rem; overflow: hidden;
+  background: var(--surface-3, #DDE1DE); border-radius: 2px;
+}
+.ex-wordlinks .pr-timer-fill {
+  width: 100%; height: 100%; transform-origin: left center; transform: scaleX(1);
+  background: var(--ink-3, #5D646C);
+}
+.ex-wordlinks .pr-timer.is-running .pr-timer-fill { animation-name: wl-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
+.ex-wordlinks .pr-timer.is-stopped .pr-timer-fill,
+html[data-hx-state="paused"] .ex-wordlinks .pr-timer-fill,
+[data-paused] .ex-wordlinks .pr-timer-fill { animation-play-state: paused; }
+@keyframes wl-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }

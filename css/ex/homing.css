@@ -1,0 +1,97 @@
+/* EX-11 Homing (js/ex/homing/view.js): a first-person 3D view (the one stage3d canvas), the arrow
+   circle and its controls; show me draws the route from above in an SVG over the view.
+   Wide screens: view left, circle right. Narrow: view, then the circle with its controls beside it. */
+
+.ex-homing .ex-homing-stem { width: 100%; }
+.ex-homing .ex-homing-notice {
+  margin: 0 0 var(--s3, 0.75rem); padding: var(--s2, 0.5rem) var(--s3, 0.75rem);
+  font-size: var(--fs-xs, 0.75rem); line-height: 1.45; color: var(--ink-2, #454B52);
+  background: var(--surface, #FFFFFF); border-left: 3px solid var(--rule-strong, #7B838A);
+}
+.ex-homing .ex-homing-body {
+  display: grid; align-items: start; gap: var(--s3, 0.75rem) var(--s5, 1.5rem);
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 17rem);
+}
+.ex-homing .ex-homing-view { min-width: 0; }
+.ex-homing .ex-homing-stage { width: 100%; height: clamp(15rem, 54vh, 30rem); }
+.ex-homing .ex-homing-phase { margin: var(--s2, 0.5rem) 0 0; font-size: var(--fs-sm, 0.875rem); font-weight: 600; color: var(--ink, #1A1D21); }
+.ex-homing .ex-homing-void { margin: var(--s1, 0.25rem) 0 0; font-size: var(--fs-sm, 0.875rem); color: var(--ink-2, #454B52); }
+.ex-homing .ex-homing-void::before { content: '⦸ '; }
+.ex-homing .ex-homing-pause {
+  position: absolute; left: 50%; top: 50%; z-index: 4; transform: translate(-50%, -50%); margin: 0;
+  padding: var(--s3, 0.75rem) var(--s4, 1rem); max-width: 80%; text-align: center;
+  font-size: var(--fs-sm, 0.875rem); font-weight: 600; color: var(--ink, #1A1D21);
+  background: var(--surface, #FFFFFF); border: 1px solid var(--rule-strong, #7B838A); border-radius: var(--r-control, 4px);
+}
+
+/* show me: the route from above, over the view */
+.ex-homing .ex-homing-overlay { position: absolute; inset: 0; z-index: 3; display: grid; place-items: stretch; }
+.ex-homing .ex-homing-overlay[hidden] { display: none; }
+.ex-homing .ex-homing-overlay::before { content: ''; position: absolute; inset: 0; background: var(--stim-ground, #F7F8F7); }
+.ex-homing .ex-homing-map { position: relative; display: block; width: 100%; height: 100%; }
+.ex-homing .ex-homing-maptools { display: flex; justify-content: flex-end; margin-top: var(--s2, 0.5rem); }
+.ex-homing .ex-homing-maptools[hidden] { display: none; }
+.ex-homing .ex-homing-map text {
+  font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif);
+  paint-order: stroke; stroke: var(--stim-ground, #F7F8F7); stroke-linejoin: round; fill: var(--ink-2, #454B52);
+}
+.ex-homing .ex-homing-leg { stroke: var(--ink, #1A1D21); stroke-width: 3px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.ex-homing .ex-homing-back { stroke: var(--right, #2A7239); stroke-width: 2.5px; stroke-dasharray: 7 5; vector-effect: non-scaling-stroke; }
+.ex-homing .ex-homing-startdot { fill: var(--signal, #0B6A86); }
+.ex-homing .ex-homing-maplabel--start { font-weight: 600; fill: var(--signal, #0B6A86); }
+.ex-homing .ex-homing-you { fill: var(--signal, #0B6A86); stroke: var(--stim-ground, #F7F8F7); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.ex-homing .ex-homing-turnarc { fill: none; stroke: var(--ink-3, #5D646C); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.ex-homing .ex-homing-anglearc { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.ex-homing .ex-homing-map .ex-homing-anglearc-label { fill: var(--signal, #0B6A86); font-weight: 600; }
+.ex-homing .ex-homing-maplandmark { fill: var(--ink-3, #5D646C); }
+
+/* the arrow circle */
+.ex-homing .ex-homing-side { display: flex; flex-direction: column; align-items: stretch; gap: var(--s3, 0.75rem); }
+.ex-homing .ex-homing-dialbox { width: 100%; max-width: 16rem; aspect-ratio: 1 / 1; margin: 0 auto; transition: opacity 0.2s; }
+.ex-homing .is-watching .ex-homing-dialbox { opacity: 0.45; }
+.ex-homing .ex-homing-dial {
+  display: block; width: 100%; height: 100%; overflow: visible;
+  touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.ex-homing .is-watching .ex-homing-dial, .ex-homing .is-revealed .ex-homing-dial { cursor: default; }
+.ex-homing .ex-homing-dial:focus { outline: none; }
+.ex-homing .ex-homing-dial:focus-visible .ex-homing-face { stroke: var(--signal, #0B6A86); stroke-width: 2.2; }
+.ex-homing .ex-homing-face { fill: var(--stim-ground, #F7F8F7); stroke: var(--rule-strong, #7B838A); stroke-width: 1.1; }
+.ex-homing .ex-homing-tick { stroke: var(--rule-strong, #7B838A); stroke-width: 0.9; }
+.ex-homing .ex-homing-ahead-line { stroke: var(--ink-3, #5D646C); stroke-width: 0.9; stroke-dasharray: 2.5 2; }
+.ex-homing .ex-homing-dial text { font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); }
+.ex-homing .ex-homing-dial-name { font-size: 7px; font-weight: 600; fill: var(--ink, #1A1D21); }
+/* dial units: 6.5 ≈ 12.5 px on the wide layout's dial, 9.2 ≥ 12 px on a 360 px phone */
+.ex-homing .ex-homing-dial-side { font-size: 6.5px; font-weight: 500; fill: var(--ink-2, #454B52); }
+.ex-homing .ex-homing-hub { fill: var(--stim-ground, #F7F8F7); stroke: var(--signal, #0B6A86); stroke-width: 0.9; }
+.ex-homing .ex-homing-hub-you { fill: var(--signal, #0B6A86); }
+.ex-homing .ex-homing-arrow-line { stroke: var(--ink, #1A1D21); stroke-width: 2.4; stroke-linecap: round; }
+.ex-homing .ex-homing-arrow-head { fill: var(--surface, #FFFFFF); stroke: var(--ink, #1A1D21); stroke-width: 1.7; stroke-linejoin: round; }
+.ex-homing .ex-homing-arrow.is-right .ex-homing-arrow-line, .ex-homing .ex-homing-arrow.is-right .ex-homing-arrow-head { stroke: var(--right, #2A7239); }
+.ex-homing .ex-homing-arrow.is-wrong .ex-homing-arrow-line, .ex-homing .ex-homing-arrow.is-wrong .ex-homing-arrow-head { stroke: var(--wrong, #B33A2F); }
+.ex-homing .ex-homing-key-line { stroke: var(--right, #2A7239); stroke-width: 2.4; stroke-linecap: round; }
+.ex-homing .ex-homing-key-head { fill: var(--right, #2A7239); }
+.ex-homing .ex-homing-wedge { fill: var(--right-wash, #E3EFE5); stroke: var(--right, #2A7239); stroke-width: 0.6; stroke-dasharray: 1.6 1.4; }
+
+/* controls and feedback */
+.ex-homing .ex-homing-ctl { display: flex; flex-direction: column; align-items: stretch; gap: var(--s2, 0.5rem); }
+.ex-homing .ex-homing-readout { margin: 0; font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: var(--fs-sm, 0.875rem); color: var(--ink-2, #454B52); text-align: center; }
+.ex-homing .ex-homing-confirm { min-height: 2.75rem; width: 100%; }
+.ex-homing .ex-homing-hint { margin: 0; font-size: var(--fs-xs, 0.75rem); line-height: 1.45; color: var(--ink-3, #5D646C); text-align: center; }
+.ex-homing .no-keyhints .ex-homing-keys, .ex-homing .is-revealed .ex-homing-hint { display: none; }
+@media (pointer: coarse) { .ex-homing .ex-homing-keys { display: none; } } /* touch: the key line only with a keyboard */
+.ex-homing .ex-homing-verdict { align-self: center; }
+.ex-homing .ex-homing-verdict[data-kind="right"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-homing .ex-homing-verdict[data-kind="wrong"] { color: var(--wrong, #B33A2F); border-color: var(--wrong, #B33A2F); border-style: dashed; }
+.ex-homing .ex-homing-note { margin: 0; font-size: var(--fs-sm, 0.875rem); line-height: 1.45; color: var(--ink-2, #454B52); }
+
+/* narrow screens: the view, then the circle with its controls beside it */
+@media (max-width: 42rem) {
+  .ex-homing .ex-homing-body { grid-template-columns: minmax(0, 1fr); }
+  .ex-homing .ex-homing-stage { height: min(70vw, 40vh); }
+  .ex-homing .ex-homing-side { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .ex-homing .ex-homing-dialbox { flex: none; width: min(50vw, 27vh, 15rem); margin: 0; }
+  .ex-homing .ex-homing-dial-side { font-size: 9.2px; }
+  .ex-homing .ex-homing-ctl { flex: 1 1 0; min-width: 0; }
+  .ex-homing .ex-homing-note { flex: 1 1 100%; }
+}

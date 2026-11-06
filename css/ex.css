@@ -1,0 +1,101 @@
+/* Exercise styles (ARCHITECTURE.md §2, docs/dev/EXERCISE-GUIDE.md).
+   1. Shared pieces every exercise may use (.ex-stage, .ex-label, .ex-caption, .ex-verdict,
+      .ex-tag, .ex-opt, .ex-thumb, .ex-answer, .ex-glyph, .ex-focus, .ex-unavailable).
+   2. Rotate (EX-02), scoped under .ex-rotate.
+   Other exercises keep their own rules in css/ex/<id>.css, scoped under .ex-<id>, and set
+   css: true in their view so the dev harness loads that file. The player wraps the whole
+   trial (the view's host and the choice grid) in an element with class ex-<id>.
+   Tokens come from css/base.css; every var() has a fallback, so this sheet also works
+   while base.css changes or is missing. */
+
+/* ---------- 1. shared ---------- */
+
+/* The stimulus stage: a framed plate; a 3D canvas from stage3d fills it absolutely. */
+.ex-stage {
+  position: relative;
+  overflow: hidden;
+  background: var(--stim-ground, #F7F8F7);
+  border: 1px solid var(--rule, #D3D8D5);
+  border-radius: var(--r-plate, 2px);
+}
+
+/* Specimen-style label printed on the stage (above the canvas). */
+.ex-label {
+  position: absolute; top: 0.5rem; left: 0.625rem; z-index: 2;
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: var(--fs-xs, 0.75rem); line-height: 1.3; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3, #5D646C);
+  pointer-events: none;
+}
+.ex-label.is-pointed { color: var(--signal, #0B6A86); font-weight: 500; }
+.ex-label.is-pointed::before { content: '▸ '; }
+
+/* A line under the stage for show-me and demo captions (one line reserved; long captions
+   wrap after the trial, when a small layout shift is harmless). */
+.ex-caption {
+  min-height: 1.45em; margin: var(--s2, 0.5rem) 0 0;
+  font-size: var(--fs-sm, 0.875rem); line-height: 1.45; color: var(--ink-2, #454B52);
+}
+
+/* The truth after an answer: an icon, a word and a colour (never colour alone). */
+.ex-verdict {
+  display: inline-flex; align-items: center; gap: 0.4em; z-index: 2;
+  padding: 0.3rem 0.6rem;
+  font-size: var(--fs-sm, 0.875rem); font-weight: 600; line-height: 1.3;
+  background: var(--surface, #FFFFFF); color: var(--ink, #1A1D21);
+  border: 1px solid var(--rule-strong, #7B838A); border-radius: var(--r-control, 4px);
+}
+.ex-verdict[data-kind="same"], .ex-tag[data-kind="same"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-verdict[data-kind="mirror"], .ex-tag[data-kind="mirror"] { color: var(--ink, #1A1D21); border-style: dashed; }
+
+/* An option drawn as a picture: a square thumbnail with a tag below it after reveal. */
+.ex-opt { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; width: 100%; }
+.ex-thumb { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: var(--r-plate, 2px); }
+.ex-tag {
+  display: inline-block; padding: 0.1rem 0.45rem;
+  font-size: var(--fs-xs, 0.75rem); font-weight: 600; line-height: 1.4;
+  background: var(--surface, #FFFFFF); border: 1px solid var(--rule-strong, #7B838A); border-radius: var(--r-control, 4px);
+}
+
+/* A text answer (Same / Mirror, True / False): a small glyph and a word. */
+.ex-answer { display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; width: 100%; }
+.ex-answer-text { font-size: var(--fs-lg, 1.125rem); font-weight: 600; }
+.ex-glyph, .px-choice .ex-glyph { flex: none; width: 2.5rem; height: 1.25rem; }
+.ex-glyph path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.ex-glyph .ex-glyph-b { fill: var(--surface-3, #DDE1DE); }
+
+/* The option a show-me animation is talking about: a thick ring plus the caption naming it. */
+.px-choice.ex-focus { outline: 3px solid var(--signal, #0B6A86); outline-offset: 2px; }
+
+.ex-unavailable {
+  position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: var(--s4, 1rem);
+  text-align: center; color: var(--ink-2, #454B52); font-size: var(--fs-sm, 0.875rem);
+}
+
+/* ---------- 2. Rotate (EX-02) ---------- */
+
+.ex-rotate .ex-rotate-stem { width: 100%; }
+/* Two figures side by side: tiles close to square on desktop and on phones. */
+.ex-rotate .ex-rotate-stage { width: 100%; height: clamp(10rem, min(42vh, 52vw), 24rem); }
+.ex-rotate .ex-rotate-stem[data-variant="pick"] .ex-rotate-stage { height: clamp(9.5rem, min(32vh, 58vw), 20rem); }
+.ex-rotate .ex-rotate-label--cmp { left: calc(50% + 0.625rem); }
+.ex-rotate .ex-rotate-divider {
+  position: absolute; top: 0.75rem; bottom: 0.75rem; left: 50%; z-index: 1; width: 0;
+  border-left: 1px dashed var(--rule-strong, #7B838A);
+  pointer-events: none;
+}
+.ex-rotate .ex-rotate-stem[data-variant="pick"] .ex-rotate-divider,
+.ex-rotate .ex-rotate-stem[data-variant="pick"] .ex-rotate-label--cmp { display: none; }
+.ex-rotate .ex-rotate-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
+.ex-rotate .ex-rotate-under .ex-caption { flex: 1 1 16rem; }
+.ex-rotate .ex-rotate-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+
+/* Options: four in a row on wide screens, a 2 × 2 grid on narrow ones (the grid sets its
+   column count inline, so the narrow layout needs !important). */
+.ex-rotate .px-choice { padding: var(--s2, 0.5rem); }
+.ex-rotate .px-choice .ex-thumb { max-width: none; } /* the picture fills its cell; item.zoom fills the picture */
+@media (max-width: 40rem) {
+  .ex-rotate .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; }
+  .ex-rotate .ex-rotate-stem[data-variant="pick"] .ex-rotate-stage { height: clamp(9rem, min(30vh, 50vw), 16rem); }
+  .ex-rotate .ex-answer-text { font-size: var(--fs-md, 1rem); }
+}

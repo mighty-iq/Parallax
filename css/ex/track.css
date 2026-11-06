@@ -1,0 +1,110 @@
+/* EX-01 Track (js/ex/track/view.js). Every rule under .ex-track; tokens from css/base.css with
+   fallbacks. Marks are DOM rings over the 3D canvas, never colour alone: the cue ring, a filled
+   number badge for a pick, ✓ / ✗ / ○ glyphs and solid / dashed borders after the answer. */
+
+.ex-track .ex-track-root { width: 100%; }
+
+/* A near-square plate: the cube's image is about as wide as it is tall. */
+.ex-track .ex-track-stage {
+  width: 100%;
+  height: clamp(17rem, min(56vh, 94vw), 32rem);
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+}
+.ex-track .ex-track-root[data-phase="respond"] .ex-track-stage { cursor: pointer; }
+
+/* Rings and numbers over the spheres. */
+.ex-track .ex-track-overlay { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.ex-track .ex-track-mark {
+  position: absolute; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 3px solid transparent;
+}
+.ex-track .ex-track-num {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: 0.8125rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+  color: var(--ink, #1A1D21);
+  text-shadow: 0 0 2px var(--stim-ground, #F7F8F7), 0 0 2px var(--stim-ground, #F7F8F7), 0 0 3px var(--stim-ground, #F7F8F7);
+}
+.ex-track .ex-track-mark[data-kind="cue"] {
+  border-color: var(--stim-target, #0B6A86);
+  box-shadow: 0 0 0 2px var(--stim-ground, #F7F8F7), inset 0 0 0 1px var(--stim-ground, #F7F8F7);
+}
+.ex-track .ex-track-mark[data-kind="pick"] {
+  border-color: var(--signal, #0B6A86);
+  box-shadow: 0 0 0 2px var(--stim-ground, #F7F8F7);
+}
+.ex-track .ex-track-mark[data-kind="pick"] .ex-track-num {
+  min-width: 1.35em; padding: 0.2em 0.25em; border-radius: 0.7em; text-align: center;
+  color: var(--surface, #FFFFFF); background: var(--signal, #0B6A86); text-shadow: none;
+}
+.ex-track .ex-track-mark[data-kind="found"] { border-color: var(--right, #2A7239); box-shadow: 0 0 0 2px var(--stim-ground, #F7F8F7); }
+.ex-track .ex-track-mark[data-kind="wrong"] { border-color: var(--wrong, #B33A2F); box-shadow: 0 0 0 2px var(--stim-ground, #F7F8F7); }
+.ex-track .ex-track-mark[data-kind="missed"] { border-color: var(--stim-target, #0B6A86); border-style: dashed; }
+.ex-track .ex-track-mark[data-kind="focus"] { border-color: var(--ink, #1A1D21); border-style: dashed; }
+/* Targets are drawn in the target colour after the answer: their numbers sit on a light pill. */
+.ex-track .ex-track-mark[data-kind="found"] .ex-track-num,
+.ex-track .ex-track-mark[data-kind="missed"] .ex-track-num,
+.ex-track .ex-track-mark[data-kind="cue"] .ex-track-num {
+  padding: 0.15em 0.3em; border-radius: 0.6em; background: var(--surface, #FFFFFF); text-shadow: none;
+}
+/* ✓ ✗ ○ on the ring's edge, on a light disc, so they read on any sphere colour. */
+.ex-track .ex-track-badge {
+  position: absolute; top: -0.5rem; right: -0.5rem;
+  display: flex; align-items: center; justify-content: center;
+  width: 1.3rem; height: 1.3rem; border-radius: 50%;
+  font-size: 0.8125rem; font-weight: 700; line-height: 1;
+  background: var(--surface, #FFFFFF); border: 1.5px solid currentColor;
+}
+.ex-track .ex-track-mark[data-kind="found"] .ex-track-badge { color: var(--right, #2A7239); }
+.ex-track .ex-track-mark[data-kind="wrong"] .ex-track-badge { color: var(--wrong, #B33A2F); }
+.ex-track .ex-track-mark[data-kind="missed"] .ex-track-badge { color: var(--stim-target, #0B6A86); }
+
+/* Pause during the stimulus, the pause screen and the motion notice. */
+.ex-track .ex-track-pause { position: absolute; top: var(--s2, 0.5rem); right: var(--s2, 0.5rem); z-index: 3; min-height: var(--tap, 44px); }
+.ex-track .ex-track-paused, .ex-track .ex-track-notice {
+  position: absolute; inset: 0; z-index: 4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s3, 0.75rem);
+  padding: var(--s4, 1rem); text-align: center;
+  background: var(--stim-ground, #F7F8F7);
+}
+.ex-track .ex-track-paused p, .ex-track .ex-track-notice-text {
+  max-width: 30rem; margin: 0; font-size: var(--fs-md, 1rem); line-height: 1.5; color: var(--ink, #1A1D21);
+}
+.ex-track .ex-track-notice-icon { font-size: 2rem; line-height: 1; color: var(--signal, #0B6A86); }
+.ex-track .ex-track-paused .px-btn, .ex-track .ex-track-notice .px-btn { min-height: var(--tap, 44px); min-width: 9rem; }
+
+/* The verdict after the answer, top right on the plate. */
+.ex-track .ex-track-verdict { position: absolute; top: var(--s2, 0.5rem); right: var(--s2, 0.5rem); }
+.ex-track .ex-track-verdict[data-kind="right"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-track .ex-track-verdict[data-kind="wrong"] { color: var(--wrong, #B33A2F); border-color: var(--wrong, #B33A2F); }
+
+/* A void trial: said in words, with an icon, under the plate. */
+.ex-track .ex-track-void {
+  margin: var(--s2, 0.5rem) 0 0; padding: 0.4rem 0.75rem;
+  font-size: var(--fs-sm, 0.875rem); color: var(--ink, #1A1D21);
+  background: var(--warn-wash, #F5EDD6); border-left: 3px solid var(--warn, #875F00);
+}
+
+/* Phase line, key hints and Confirm under the plate. */
+.ex-track .ex-track-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: var(--s2, 0.5rem) var(--s4, 1rem); margin-top: var(--s2, 0.5rem);
+}
+.ex-track .ex-track-status { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1 1 16rem; }
+.ex-track .ex-track-phase { margin: 0; min-height: 1.5em; font-weight: 600; color: var(--ink, #1A1D21); }
+.ex-track .ex-track-keys {
+  min-height: 1.4em;
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: var(--fs-xs, 0.75rem); color: var(--ink-3, #5D646C);
+}
+.ex-track .ex-track-confirm { min-height: var(--tap, 44px); min-width: 9rem; }
+
+@media (max-width: 40rem) {
+  .ex-track .ex-track-stage { height: clamp(16rem, min(56vh, 94vw), 26rem); }
+  .ex-track .ex-track-confirm { width: 100%; }
+  .ex-track .ex-track-keys[data-kind="keys"] { display: none; } /* phones tap; the legend stays */
+}
+@media (prefers-reduced-motion: reduce) {
+  .ex-track .ex-track-mark { transition: none; }
+}

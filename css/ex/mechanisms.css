@@ -1,0 +1,66 @@
+/* PR-3 Mechanisms (js/ex/mechanisms/view.js). Every rule under .ex-mechanisms; tokens from
+   css/base.css with fallbacks. SVG sizes are in drawing units (the item is 200 × 140). */
+.ex-mechanisms .mx-question {
+  margin: 0 0 var(--s2, 0.5rem); font-size: var(--fs-lg, 1.125rem); font-weight: 600; color: var(--ink, #1A1D21);
+}
+.ex-mechanisms .mx-stage { padding: 1.6rem 0.5rem 0.5rem; }
+.ex-mechanisms .mx-svg { display: block; width: 100%; height: auto; max-height: 58vh; margin: 0 auto; }
+.ex-mechanisms .mx-verdict { position: absolute; right: 0.6rem; top: 0.45rem; max-width: 70%; }
+
+/* Gears: the back layer darker and behind; the front layer lighter, on top. */
+.ex-mechanisms .mx-teeth { stroke: var(--stim-edge, #2B3036); stroke-width: 0.45; stroke-linejoin: round; }
+.ex-mechanisms .mx-layer0 .mx-teeth { fill: var(--stim-face-3, #A4ABB2); }
+.ex-mechanisms .mx-layer1 .mx-teeth { fill: var(--stim-face, #ECEEF0); }
+.ex-mechanisms .mx-web { fill: none; stroke: var(--stim-edge, #2B3036); stroke-width: 0.25; opacity: 0.55; }
+.ex-mechanisms .mx-spoke { stroke: var(--stim-edge, #2B3036); stroke-width: 0.5; stroke-linecap: round; opacity: 0.7; }
+.ex-mechanisms .mx-pin { fill: var(--stim-edge, #2B3036); }
+
+/* Pulleys, belts, the winch. */
+.ex-mechanisms .mx-rim { fill: var(--stim-face-2, #C9CED3); stroke: var(--stim-edge, #2B3036); stroke-width: 0.45; }
+.ex-mechanisms .mx-groove { fill: none; stroke: var(--stim-edge, #2B3036); stroke-width: 0.25; }
+.ex-mechanisms .mx-drum .mx-rim { fill: var(--surface-3, #DDE1DE); }
+.ex-mechanisms .mx-wind { stroke: var(--ink-2, #454B52); stroke-width: 0.35; }
+.ex-mechanisms .mx-run { stroke: var(--ink-2, #454B52); stroke-width: 1.15; stroke-linecap: round; stroke-dasharray: 3.2 1.3; }
+.ex-mechanisms .mx-wrap { fill: none; stroke: var(--ink-2, #454B52); stroke-width: 1.1; }
+.ex-mechanisms .mx-rope { stroke: var(--ink, #1A1D21); stroke-width: 0.6; }
+.ex-mechanisms .mx-weight rect { fill: var(--stim-face-3, #A4ABB2); stroke: var(--stim-edge, #2B3036); stroke-width: 0.45; }
+.ex-mechanisms .mx-weight-mark { stroke: var(--stim-edge, #2B3036); stroke-width: 0.5; }
+
+/* Marks: the driver's arrow, the marked part's dashed ring, labels with a plate behind. */
+.ex-mechanisms .mx-arrow path { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 0.95; stroke-linecap: round; }
+.ex-mechanisms .mx-arrow .mx-arrow-head { fill: var(--signal, #0B6A86); stroke: none; }
+.ex-mechanisms .mx-ring { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 0.55; stroke-dasharray: 1.6 1.1; }
+.ex-mechanisms .mx-label rect { fill: var(--surface, #FFFFFF); stroke: var(--rule-strong, #7B838A); stroke-width: 0.25; }
+.ex-mechanisms .mx-label text {
+  fill: var(--ink-2, #454B52); font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-weight: 500; letter-spacing: 0.04em;
+}
+.ex-mechanisms .mx-label.is-pointed rect { stroke: var(--signal, #0B6A86); stroke-width: 0.5; }
+.ex-mechanisms .mx-label.is-pointed text { fill: var(--signal, #0B6A86); }
+.ex-mechanisms .mx-hl { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 0.8; }
+.ex-mechanisms .mx-hl.is-jam { stroke: var(--wrong, #B3261E); stroke-dasharray: 2 1.2; stroke-width: 0.9; }
+
+.ex-mechanisms .mx-answer { min-height: 2.75rem; }
+.ex-mechanisms .mx-glyph { width: 2.5rem; height: 1.25rem; }
+
+/* The item's time limit: one slow linear sweep (no ticks, no colour change). */
+.ex-mechanisms .pr-timer {
+  height: 4px; margin-top: 0.5rem; overflow: hidden;
+  background: var(--surface-3, #DDE1DE); border-radius: 2px;
+}
+.ex-mechanisms .pr-timer-fill {
+  width: 100%; height: 100%; transform-origin: left center; transform: scaleX(1);
+  background: var(--ink-3, #5D646C);
+}
+.ex-mechanisms .pr-timer.is-running .pr-timer-fill { animation-name: mx-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
+.ex-mechanisms .pr-timer.is-stopped .pr-timer-fill,
+html[data-hx-state="paused"] .ex-mechanisms .pr-timer-fill,
+[data-paused] .ex-mechanisms .pr-timer-fill { animation-play-state: paused; }
+@keyframes mx-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+@media (max-width: 600px) {
+  .ex-mechanisms .mx-stage { padding: 1.5rem 0.15rem 0.25rem; }
+  .ex-mechanisms .mx-verdict { position: static; margin: 0.4rem; }
+  .ex-mechanisms .mx-answer { flex-direction: column; gap: 0.25rem; }
+  .ex-mechanisms .px-choice .ex-answer-text { font-size: var(--fs-sm, 0.875rem); text-align: center; }
+}

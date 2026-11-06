@@ -1,0 +1,83 @@
+/* EX-07 Views (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-views; tokens from css/base.css with
+   fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag, .ex-opt, .ex-thumb,
+   .ex-answer, .ex-focus) come from css/ex.css. The stage holds the stage3d canvas (.ex-views-3d), the
+   three drawings of toobject (.ex-views-draw), the show-me tracing layer (.ex-views-ink) and HTML tags
+   placed at projected points (Front, Right, the asked view, column heights). */
+.ex-views .ex-views-stem { width: 100%; }
+.ex-views .ex-views-stage { width: 100%; height: clamp(10.5rem, min(42vh, 60vw), 22rem); }
+.ex-views .ex-views-3d { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 0; }
+.ex-views .ex-views-draw { position: absolute; left: 0; top: 0; z-index: 1; overflow: visible; }
+.ex-views .ex-views-ink { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
+
+/* Tags on the 3D picture: centred on their point, never catching the pointer. */
+.ex-views .ex-views-tag {
+  position: absolute; z-index: 3; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+  padding: 0.05rem 0.35rem;
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-size: var(--fs-xs, 0.75rem); line-height: 1.3; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-2, #454B52);
+  background: var(--stim-ground, #F7F8F7); border-radius: var(--r-control, 4px);
+}
+.ex-views .ex-views-tag--ask { color: var(--signal, #0B6A86); font-weight: 600; border: 1px solid var(--signal, #0B6A86); }
+.ex-views .ex-views-tag--ask.is-pointed::before { content: '▸ '; }
+.ex-views .ex-views-tag--n {
+  min-width: 1.5em; text-align: center; font-size: var(--fs-sm, 0.875rem); font-weight: 700; letter-spacing: 0;
+  color: var(--ink, #1A1D21); background: var(--surface, #FFFFFF); border: 1.5px solid var(--signal, #0B6A86); border-radius: 999px;
+}
+
+/* Line drawings (options and the three views): cells in the side-face grey, edges dark. */
+.ex-views .ex-views-fill { fill: var(--stim-face-2, #C9CED3); fill-opacity: 0.55; }
+.ex-views .ex-views-line {
+  fill: none; stroke: var(--ink, #1A1D21); stroke-width: 2px; stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+.ex-views .ex-views-dlabel {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 12px; letter-spacing: 0.06em;
+  text-transform: uppercase; fill: var(--ink-3, #5D646C); text-anchor: middle; dominant-baseline: central;
+}
+.ex-views .ex-views-ok { fill: var(--right, #2A7239); font-size: 15px; font-weight: 700; }
+.ex-views .ex-views-bad { fill: var(--wrong, #B33A2F); font-size: 15px; font-weight: 700; }
+
+/* Show me: the traced drawing, the cover that fades the cubes, the drawing laid over an option or a
+   stem view (dashed: a shape, not only a colour), the edges that differ (thick dots). */
+.ex-views .ex-views-trace {
+  fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+.ex-views .ex-views-cover { fill: var(--stim-ground, #F7F8F7); }
+.ex-views .ex-views-ghost {
+  fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-dasharray: 7 4; stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+.ex-views .ex-views-diff {
+  fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 5px; stroke-dasharray: 1 6; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.ex-views .ex-views-under {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+  gap: var(--s2, 0.5rem) var(--s4, 1rem);
+}
+.ex-views .ex-views-lines { flex: 1 1 16rem; min-width: 0; }
+.ex-views .ex-views-hint { margin: var(--s2, 0.5rem) 0 0; font-size: var(--fs-sm, 0.875rem); color: var(--ink-3, #5D646C); }
+.ex-views .ex-views-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-views .ex-views-verdict[data-kind="key"],
+.ex-views .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-views .ex-tag[data-kind="foil"] { color: var(--ink-2, #454B52); border-style: dashed; }
+
+/* Options: drawings and structures four in a row on wide screens, 2 × 2 on narrow ones; numbers
+   stay in one row. */
+.ex-views .px-choice { padding: var(--s2, 0.5rem); }
+.ex-views .ex-views-svg { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; max-width: 10rem; margin: 0 auto; overflow: visible; }
+.ex-views .px-choice .ex-thumb { max-width: 13rem; } /* structures as large as the cell allows */
+.ex-views .ex-views-count { flex-direction: column; gap: 0; min-height: 4.5rem; }
+.ex-views .ex-views-count .ex-answer-text { font-size: var(--fs-2xl, 2rem); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ex-views .ex-views-unit { font-size: var(--fs-xs, 0.75rem); color: var(--ink-3, #5D646C); text-transform: uppercase; letter-spacing: 0.06em; }
+
+@media (max-width: 40rem) {
+  .ex-views .px-choices[style*="--px-cols:4"]:has(.ex-views-opt) { --px-cols: 2 !important; }
+  .ex-views .ex-views-stage { height: clamp(10rem, min(36vh, 66vw), 17rem); }
+  .ex-views .ex-views-svg { max-width: 8.5rem; }
+  .ex-views .px-choice .ex-thumb { max-width: none; }
+  .ex-views .ex-views-count .ex-answer-text { font-size: var(--fs-xl, 1.5rem); }
+}
