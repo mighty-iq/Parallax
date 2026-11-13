@@ -1468,6 +1468,7 @@
      ===================================================================================== */
 
   var LIFT = 12;                                  // px: a moved arc runs this far from the strand it passed
+  var PARALLEL = 1e-9;                            // |sin| below this: two segments are parallel
 
   function polyOf(cv, over, X, comp) {
     var s = sampleCurve(cv), P = { x: Array.prototype.slice.call(s.x), y: Array.prototype.slice.call(s.y), z: [], closed: s.closed };
@@ -1529,12 +1530,14 @@
     comps.forEach(function (cp) { cp.sort(function (p, q2) { return p.t - q2.t; }); });
     return { list: out, comps: comps, D: fromPassages(comps, out.length, polys.map(function (P) { return !P.closed; })) };
   }
+  // Segments that are parallel to rounding error (two pieces of one straight run, say) do not
+  // cross: dividing by their near-zero cross product would invent a crossing at an end point.
   function polyHit(S, p1, p2) {
     var A = S[p1[0]], B = S[p2[0]];
     var ax = A.x[p1[1]], ay = A.y[p1[1]], rx = A.x[p1[2]] - ax, ry = A.y[p1[2]] - ay;
     var bx = B.x[p2[1]], by = B.y[p2[1]], sx = B.x[p2[2]] - bx, sy = B.y[p2[2]] - by;
     var den = rx * sy - ry * sx;
-    if (den === 0) return null;
+    if (Math.abs(den) <= PARALLEL * Math.sqrt((rx * rx + ry * ry) * (sx * sx + sy * sy))) return null;
     var qx = bx - ax, qy = by - ay, s = (qx * sy - qy * sx) / den, w = (qx * ry - qy * rx) / den;
     if (s < 0 || s >= 1 || w < 0 || w >= 1) return null;
     var lr = Math.sqrt(rx * rx + ry * ry), ls = Math.sqrt(sx * sx + sy * sy);
@@ -1965,7 +1968,7 @@
   }
   function segCross(ax, ay, bx, by, cx, cy, dx, dy) {
     var rx = bx - ax, ry = by - ay, sx = dx - cx, sy = dy - cy, den = rx * sy - ry * sx;
-    if (den === 0) return null;
+    if (Math.abs(den) <= PARALLEL * Math.sqrt((rx * rx + ry * ry) * (sx * sx + sy * sy))) return null;
     var qx = cx - ax, qy = cy - ay, u = (qx * sy - qy * sx) / den, w = (qx * ry - qy * rx) / den;
     return u >= 0 && u <= 1 && w >= 0 && w <= 1 ? [u, w] : null;
   }
