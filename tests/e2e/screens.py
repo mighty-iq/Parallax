@@ -445,7 +445,7 @@ def lab_checks(page, tag, w):
     page.click('[data-action="lab-research"]')
     page.wait_for_selector('.px-modal.px-export')
     head = re.split(r'\r?\n', page.locator('.px-modal.px-export .px-copybox-text').input_value())[0]
-    C.ok(re.search(r'p_pred,stage,(display,input,)?b,g,answer$', head) is not None and ',version,' in head, f'{tag}: research export columns {head[-40:]}')
+    C.ok(re.search(r'p_pred,stage,(display,input,)?(value2,)?b,g,answer$', head) is not None and ',version,' in head, f'{tag}: research export columns {head[-40:]}')
     page.keyboard.press('Escape')
     page.click('[data-part="check"] > summary')
     C.ok(page.locator('[data-part="check"] .px-lab-part-body').is_visible(), f'{tag}: engine explainer opens')

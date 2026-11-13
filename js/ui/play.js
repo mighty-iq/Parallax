@@ -868,14 +868,14 @@
     P.demo = demo;
 
     // After a Watch demo the next step is said where the demo's controls were (the reading strip),
-    // so the screen is never a dead end: answer the marked item, or go on (RV-play-dat).
+    // so the screen is never a dead end: answer it as the demo did, or go on (RV-play-dat).
     function yourTurn(o) {
       if (P.state !== 'respond') return;
       ui.clear(el.verdict);
       el.verdict.setAttribute('data-kind', 'turn');
       el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, '→'));
       el.verdict.appendChild(h('strong.pl-verdict-word', 'Your turn'));
-      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'Pick the marked answer to try it yourself.' : 'Answer it yourself, the way the demo did.'));
+      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'Pick the answer the demo found.' : 'Answer it yourself, the way the demo did.'));
       if (o.skip) {
         var b = ui.button(o.skip, { kind: 'ghost', small: true, onClick: function () { skipItem(false); } });
         b.setAttribute('data-turn-skip', '');
@@ -1394,6 +1394,8 @@
     // fitted again when it starts, under its pinned caption and bar (makeRunner).
     function stageSoon(item, demo) {
       P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
+      // and once its answer controls are up (Span's Undo and Done, Reckon's Walk and Here come then)
+      if (!demo) P.when('respond').then(function () { if (P.item === item) stageIntoView(P, false); });
     }
     // Phones size the item from --pl-avail (css/play.css), the screen less the status strip. Here a
     // Try item's goal and tip shown above it take their share first (--pl-extra on the host, read by

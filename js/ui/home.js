@@ -121,6 +121,9 @@
       aside: h('span.px-num', PX.core.clock.fmtMinutes(plan.minutes * 60000) + ' · ' + plan.mode + ' · ' + plan.style),
     });
     p.head.querySelector('.px-panel-title').classList.add('px-session-title');
+    // the DAT-style focus first, so the first screen shows it (on phones Start sticks above the tab bar)
+    var focus = patFocusLine(plan);
+    if (focus) p.body.appendChild(focus);
     // Today's mix: the exercises take turns in runs, so the list has no order (I1 B5); a key mark
     // (data-seg) ties each one to its segment of the ruler.
     var list = h('ul.px-protocol', { 'aria-label': 'Exercises in today’s session (they take turns)' });
@@ -140,8 +143,6 @@
     });
     p.body.appendChild(list);
     p.body.appendChild(ruler(plan));
-    var focus = patFocusLine(plan);
-    if (focus) p.body.appendChild(focus);
     var start = ui.button('Start today’s session', { kind: 'primary', go: 'play?mode=train' });
     start.setAttribute('data-primary', '');
     p.body.appendChild(h('div.px-session-actions', start,
