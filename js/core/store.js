@@ -49,14 +49,22 @@
   var hasOwn = Object.prototype.hasOwnProperty;
 
   var KEY = 'parallax.v1';
-  var VERSION = 1;
+  // Record format. 2 (Parallax 1.1): trial columns 11-12 (display class, input), session
+  // display/viewport/input/ended, json settings. A v1 record loads unchanged and is written back
+  // as v2; a Parallax 1.0 tab that meets a v2 record runs from memory instead of overwriting it.
+  var VERSION = 2;
   var TRIAL_CAP = 20000;
   var DEBOUNCE_MS = 1000;
   var MAX_WAIT_MS = 5000;
   var MESSAGE = "Progress can't be saved in this view; download the file or open it from disk.";
   var OUTCOMES = ['wrong', 'right', 'stutter', 'skipped']; // trial outcome codes 0..3
-  var CSV_HEADER = ['time_iso', 't_sec', 'exercise', 'mode', 'params_code', 'params', 'seed',
-    'outcome', 'outcome_label', 'rt_ms', 'value'];
+  // Trial columns 11 and 12 (indexes 10, 11): the display class and the input of the answer.
+  var DISPLAYS = ['', 'small', 'large'];                  // 0 unknown (matches est.displayClass)
+  var INPUTS = ['', 'mouse', 'touch', 'pen', 'key'];      // 0 unknown
+  // The one trial CSV (Settings, the Log and the Lab's research export all write it); js/ui/log.js
+  // registers store.csv to fill the session column.
+  var CSV_HEADER = ['time_iso', 't_sec', 'exercise', 'version', 'mode', 'session', 'params_code', 'params', 'seed',
+    'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage', 'display', 'input'];
 
   var DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
   var ID_RE = /^[a-z][a-z0-9-]{0,39}$/;          // exercise ids (same rule as the registry)
@@ -184,7 +192,8 @@
 
   /* ---------- settings ---------- */
 
-  // type: bool | int | num | enum | token (lower-case word) | str. Extend with setting().
+  // type: bool | int | num | enum | token (lower-case word) | str | json. Extend with setting().
+  // json: any JSON value (null allowed); spec.check(v) (or spec.fix(v)) → the repaired value or undefined.
   var SETTINGS = {
     sessionMin: { def: 20, type: 'int', min: 1, max: 120 },
     weeklyGoal: { def: 3, type: 'int', min: 2, max: 6 },
@@ -204,6 +213,15 @@
       case 'enum': return spec.values.indexOf(v) >= 0 ? v : undefined;
       case 'token': return typeof v === 'string' && /^[a-z0-9-]{1,24}$/.test(v) ? v : undefined;
       case 'str': return typeof v === 'string' && v.length <= (spec.max || 200) ? v : undefined;
+      case 'json':
+        if (v === undefined) return undefined;
+        var fixFn = typeof spec.check === 'function' ? spec.check : typeof spec.fix === 'function' ? spec.fix : null;
+        if (fixFn) {
+          var r;
+          try { r = fixFn(v); } catch (e) { r = undefined; }
+          return r === undefined ? undefined : jsonSafe(r);
+        }
+        return v === null || plain(v) || Array.isArray(v) ? jsonSafe(v) : undefined;
     }
     return undefined;
   }
@@ -271,11 +289,18 @@
       summary: take(x, 'summary', cJson, null, log, path),
     };
     if (out.right > out.trials) { out.right = out.trials; note(log, path + '.right'); }
+    // Optional (v1.1): the screen class, viewport and main input of the session, and how it ended.
+    if (x.display === 'small' || x.display === 'large') out.display = x.display;
+    if (typeof x.viewport === 'string' && /^\d{2,5}x\d{2,5}$/.test(x.viewport)) out.viewport = x.viewport;
+    if (typeof x.input === 'string' && /^[a-z]{1,12}$/.test(x.input)) out.input = x.input;
+    if (x.ended === 'complete' || x.ended === 'early' || x.ended === 'closed') out.ended = x.ended;
+    if (isNum(x.budgetMs) && x.budgetMs > 0 && x.budgetMs < 1e9) out.budgetMs = Math.round(x.budgetMs);
     return out;
   }
 
-  // Trial row: [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli?, stage?]
-  // (the engine adds the predicted success × 1000 and the interleaving stage; both optional).
+  // Trial row: [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli?, stage?,
+  // display?, input?] (the engine adds the predicted success × 1000 and the interleaving stage; the
+  // player the display class 0-2 and the input 0-4 of DISPLAYS / INPUTS; all optional).
   function fixTrial(r) {
     if (!Array.isArray(r) || r.length < 7) return undefined;
     if (!isNum(r[0]) || r[0] < 0 || r[0] > 8.64e12) return undefined; // seconds within the Date range
@@ -287,6 +312,8 @@
     if (r.length > 8) {
       row.push(isIntIn(r[8], 0, 1000) ? r[8] : null);
       if (r.length > 9) row.push(isIntIn(r[9], 0, 99) ? r[9] : null);
+      if (r.length > 10) row.push(isIntIn(r[10], 0, DISPLAYS.length - 1) ? r[10] : null);
+      if (r.length > 11) row.push(isIntIn(r[11], 0, INPUTS.length - 1) ? r[11] : null);
     }
     return row;
   }
@@ -435,7 +462,8 @@
     }
   }
 
-  field('v', function () { return VERSION; }, function (x) { return x === VERSION ? x : undefined; });
+  // Older formats (1) are upgraded silently: every v2 field is optional or has a default.
+  field('v', function () { return VERSION; }, function (x) { return isIntIn(x, 1, VERSION) ? VERSION : undefined; });
   // Bounded so that rev + 1 stays exact and the JSON keeps plain digits (no exponent).
   field('rev', zero, function (x) { return isNum(x) && x >= 0 && x <= 1e15 ? Math.floor(x) : undefined; });
   field('created', now, cTime);
@@ -809,17 +837,24 @@
     }
   }
 
-  // Trials as CSV (RFC 4180, CRLF): a header row and one row per kept trial.
+  // Trials as CSV (RFC 4180, CRLF): a header row and one row per kept trial, in the one format of
+  // CSV_HEADER. js/ui/log.js registers store.csv(state) → text, which also fills the session
+  // column; without it (tests, a build without the Log) the session column stays empty.
   function exportCSV() {
     var s = ensure();
+    if (typeof api.csv === 'function') {
+      try { var text = api.csv(s); if (typeof text === 'string') return text; } catch (e) { /* the plain export below */ }
+    }
     var lines = [CSV_HEADER.join(',')];
     for (var i = 0; i < s.trials.length; i++) {
       var r = s.trials[i];
-      var exId = s.idx.ex[r[1]] || '', mode = s.idx.mode[r[2]] || '';
+      var name = s.idx.ex[r[1]] || '', mode = s.idx.mode[r[2]] || '';
+      var at = name.indexOf('@'), exId = at < 0 ? name : name.slice(0, at), ver = at < 0 ? 1 : +name.slice(at + 1);
       var d = new Date(r[0] * 1000);
       lines.push([
-        isFinite(d.getTime()) ? d.toISOString() : '', r[0], exId, mode, r[3], paramsText(exId, r[3]),
-        r[4], r[5], OUTCOMES[r[5]], r[6], r[7],
+        isFinite(d.getTime()) ? d.toISOString() : '', r[0], exId, name ? ver : '', mode, '', r[3], paramsText(name, r[3]),
+        r[4], r[5], OUTCOMES[r[5]], r[6], r[7], isNum(r[8]) ? Math.round(r[8]) / 1000 : null, r[9],
+        DISPLAYS[r[10]] || '', INPUTS[r[11]] || '',
       ].map(csvCell).join(','));
     }
     return lines.join('\r\n') + '\r\n';
@@ -845,9 +880,19 @@
     return s.ex[id] || (s.ex[id] = api.exDefaults());
   }
 
+  // The codes of trial columns 11-12 from a name or a code (unknown: 0).
+  function displayCode(v) { var i = typeof v === 'number' ? v : DISPLAYS.indexOf(v); return isIntIn(i, 1, DISPLAYS.length - 1) ? i : 0; }
+  function inputCode(v) {
+    if (typeof v === 'number') return isIntIn(v, 1, INPUTS.length - 1) ? v : 0;
+    if (v === 'pointer') return 1; // a click without a known pointer type
+    var i = INPUTS.indexOf(v);
+    return i > 0 ? i : 0;
+  }
+
   // Appends a trial. Accepts a row [tSec, exIndex, modeIndex, paramsCode, seed, outcome,
-  // rtMs, value] or { t (ms, default now), ex (id), mode (name), code, seed, outcome, rt, value }.
-  // Returns false (and stores nothing) for an invalid row; an invalid ex id or mode name
+  // rtMs, value, …] or { t (ms, default now), ex (id), mode (name), code, seed, outcome, rt, value,
+  // p (predicted success 0-1), stage, display ('small' | 'large'), input ('mouse' | 'touch' | 'pen' |
+  // 'key') }. Returns false (and stores nothing) for an invalid row; an invalid ex id or mode name
   // throws. Does not save: call save() when the trial is logged.
   function addTrial(t) {
     var s = ensure(), row = t;
@@ -856,6 +901,10 @@
         Math.floor((isNum(t.t) ? t.t : Date.now()) / 1000), exIndex(t.ex), modeIndex(t.mode || 'free'),
         t.code, t.seed, t.outcome, isNum(t.rt) ? Math.round(t.rt) : null, isNum(t.value) ? t.value : null,
       ];
+      if (t.p !== undefined || t.stage !== undefined || t.display !== undefined || t.input !== undefined) {
+        row.push(isNum(t.p) ? Math.round(clampN(t.p, 0, 1) * 1000) : null, isIntIn(t.stage, 0, 99) ? t.stage : null,
+          displayCode(t.display), inputCode(t.input));
+      }
     }
     var r = fixTrial(row);
     if (!r) return false;
@@ -879,6 +928,7 @@
 
   var api = {
     KEY: KEY, VERSION: VERSION, TRIAL_CAP: TRIAL_CAP, OUTCOMES: OUTCOMES, MESSAGE: MESSAGE,
+    DISPLAYS: DISPLAYS, INPUTS: INPUTS, CSV_HEADER: CSV_HEADER, csvCell: csvCell,
     get state() { return ensure(); },
     get volatile() { ensure(); return memoryOnly || failing; },
     get volatileReason() { ensure(); return volatileReason; },
@@ -893,9 +943,10 @@
     exportJSON: exportJSON, importJSON: importJSON, canUndo: canUndo, undo: undo,
     exportCSV: exportCSV, reset: reset,
     exIndex: exIndex, modeIndex: modeIndex, exId: exId, modeName: modeName,
-    exState: exState, addTrial: addTrial, capTrials: capTrials,
+    exState: exState, addTrial: addTrial, capTrials: capTrials, displayCode: displayCode, inputCode: inputCode,
     field: field, setting: setting, settingsSpec: SETTINGS,
     merge: null, // optional fn(theirs, mine) → record, used when a save meets a newer rev
+    csv: null,   // optional fn(state) → the trial CSV (js/ui/log.js), used by exportCSV()
   };
 
   ls = probe();

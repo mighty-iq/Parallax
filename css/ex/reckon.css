@@ -1,0 +1,32 @@
+/* EX-12 Reckon (js/ex/reckon/view.js). The view, the circle, the turn row, subtitles and the map are the
+   first-person kit's (css/ex/homing.css, scoped by .ex-fp); here only what Reckon adds: the walk-back
+   buttons (Walk is the big one, in the thumb zone), the locked turn controls while away from the route's
+   end, and the chart of the last angle errors. */
+
+.ex-reckon .ex-reckon-hold {
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.ex-reckon .ex-fp-actions > .ex-reckon-walk { flex: 2 1 0; min-height: 3.5rem; font-size: var(--fs-md, 1rem); font-weight: 600; }
+.ex-reckon .ex-fp-actions > .ex-reckon-back { flex: 1 1 0; }
+.ex-reckon .ex-fp-actions > .ex-reckon-here { flex: 1.2 1 0; min-height: 3.5rem; }
+.ex-reckon .ex-reckon-hold:active:not(:disabled) { background: var(--surface-2, #E9ECEE); }
+/* away from the route's end the direction is set: the circle and the fine turns rest */
+.ex-reckon .ex-fp.is-answering.is-walked .ex-fp-dialbox, .ex-reckon .ex-fp.is-answering.is-distance .ex-fp-dialbox { opacity: 0.45; }
+.ex-reckon .ex-fp.is-walked.is-answering .ex-fp-stage, .ex-reckon .ex-fp.is-distance.is-answering .ex-fp-stage { cursor: default; }
+.ex-reckon .ex-fp.is-distance .ex-fp-fine { visibility: hidden; }
+.ex-reckon .ex-reckon-keyswalk[hidden] { display: none; }
+
+/* the last angle errors: dots (filled when right, open when wrong) against the tolerance band */
+.ex-reckon .ex-reckon-chart { margin: 0; }
+.ex-reckon .ex-reckon-chart[hidden] { display: none; }
+.ex-reckon .ex-reckon-chartsvg { display: block; max-width: 18rem; height: auto; margin: 0 auto; }
+.ex-reckon .ex-reckon-band { fill: var(--right-wash, #E3EFE5); }
+.ex-reckon .ex-reckon-zero { stroke: var(--right, #2A7239); stroke-width: 1; }
+.ex-reckon .ex-reckon-dot { stroke-width: 1.4; }
+.ex-reckon .ex-reckon-dot.is-right { fill: var(--ink-2, #454B52); stroke: var(--ink-2, #454B52); }
+.ex-reckon .ex-reckon-dot.is-wrong { fill: var(--surface, #FFFFFF); stroke: var(--ink-2, #454B52); }
+.ex-reckon .ex-reckon-bias { font-weight: 500; color: var(--ink, #1A1D21); }
+
+@media (max-width: 42rem) {
+  .ex-reckon .ex-fp-actions > .ex-reckon-walk, .ex-reckon .ex-fp-actions > .ex-reckon-here { min-height: 3.25rem; }
+}

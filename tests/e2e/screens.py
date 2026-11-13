@@ -9,6 +9,8 @@ share cards (both sizes, non-blank) and the share sheet, the Spatial Check repor
 calendar, achievements, the Log (sessions, trials, filters, CSV, import with undo), the Lab
 (protocols, the crossover, research export), file:// and a sandboxed srcdoc frame, phone widths
 without horizontal scroll, 44 px targets, keyboard, light and dark, no console errors.
+v1.1 phones (run_phone_text): with the six-week record on a 360 x 640 touch screen, no text under
+13 px (SVG text by its on-screen size) and no horizontal scroll at 100 % and 150 % text.
 Screenshots: tests/e2e/out/screens/ at 1366 × 768 and 412 × 880, light and dark.
 
 Run: tests/e2e/pwslot.sh python3 tests/e2e/screens.py   (exit code 1 when a check fails)
@@ -472,6 +474,54 @@ def run_file(b):
         go(page, r)
         basics(page, f'file 360 {r}', 360)
     C.ok(not problems(logs), f'file 360: no console errors {problems(logs)[:3]}')
+    ctx.close()
+    run_phone_text(b)
+
+
+# Visible text under 13 px (SVG text by its size on the screen); hidden and screen-reader text skipped.
+SMALL_TEXT_JS = r'''() => {
+  const out = {};
+  function shown(el) {
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+      const s = getComputedStyle(e);
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+    }
+    const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0;
+  }
+  const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; (n = tw.nextNode());) {
+    const t = n.nodeValue.trim(), p = n.parentElement;
+    if (!t || !p || p.closest('.px-sr, script, style, [hidden]') || !shown(p)) continue;
+    let fs = parseFloat(getComputedStyle(p).fontSize);
+    if (!fs) continue;
+    if (p.closest('svg') && p.getScreenCTM) { const m = p.getScreenCTM(); if (m) fs *= Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)); }
+    if (fs < 12.95) { const k = p.tagName.toLowerCase() + '.' + String(p.getAttribute('class') || '').split(' ')[0] + ' @' + fs.toFixed(1); if (!out[k]) out[k] = t.slice(0, 20); }
+  }
+  return out;
+}'''
+
+
+def run_phone_text(b):
+    """v1.1 phones (PLAN M2, B2): with six weeks of data on a 360 x 640 touch screen, no text under
+    13 px on any screen, and no horizontal scroll at 100 % and 150 % text."""
+    tag = 'phone 360 data'
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    logs = attach_console(page)
+    page.goto(INDEX.as_uri()); ready(page); dismiss(page)
+    simulate(page, tag, lab=True)
+    for scale in (1, 1.5):
+        page.evaluate(f'PX.core.store.state.settings.textScale = {scale}; PX.ui.app.applySettings()')
+        for r in ROUTES + ['home', 'settings', 'about', 'exercise/fold']:
+            go(page, r)
+            page.wait_for_timeout(150)
+            sw = page.evaluate('document.documentElement.scrollWidth')
+            C.ok(sw <= 360, f'{tag} {int(scale * 100)} %: {r} has no horizontal scroll ({sw})')
+            if scale == 1:
+                small = page.evaluate(SMALL_TEXT_JS)
+                C.ok(not small, f'{tag}: {r} has no text under 13 px {json.dumps(small)[:240]}')
+    page.evaluate('PX.core.store.state.settings.textScale = 1; PX.ui.app.applySettings()')
+    C.ok(not problems(logs), f'{tag}: no console errors {problems(logs)[:3]}')
     ctx.close()
 
 

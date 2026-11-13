@@ -11,7 +11,8 @@
      overview(rec, now, opts)  every training exercise: level, range, settings, stage, due…
      profile(rec, now, opts)   mean level by ability code and by Uttal cell (practised exercises)
      calendar(rec)             { dayKey: { sessions, trials, minutes } }
-     totals(rec)               { sessions, trials, practiceMs, days } */
+     totals(rec)               { sessions, trials (every row), answers (answered training items: no
+                               skipped, voided or Spatial Check rows), practiceMs, days, practiceDays } */
 (function (PX) {
   'use strict';
 
@@ -55,7 +56,7 @@
     var past = (isArray(rec.sessions) ? rec.sessions : []).filter(function (s) { return isObj(s) && s.mode === plan.mode && s.trials > 0; }).slice(-10);
     var out = {
       mode: plan.mode, trials: n, right: right, acc: n ? right / n : null, rtMed: rts.length ? Math.round(U.median(rts)) : null,
-      minutes: U.round(plan.activeMs / 60000, 1), per: per,
+      minutes: U.round(plan.activeMs / 60000, 1), ms: Math.round(plan.activeMs), per: per,
       past: { sessions: past.length, accMedian: past.length ? U.median(past.map(function (s) { return s.right / s.trials; })) : null },
       lines: [],
     };
@@ -171,13 +172,26 @@
   }
 
   function totals(rec) {
-    var folded = 0;
-    if (isObj(rec.trialDays)) Object.keys(rec.trialDays).forEach(function (d) { folded += rec.trialDays[d].n || 0; });
+    var folded = 0, foldedAns = 0, answers = 0, probe = {};
+    PX.ex.list('probe').forEach(function (d) { probe[d.id] = true; });
+    if (isObj(rec.trialDays)) Object.keys(rec.trialDays).forEach(function (d) {
+      var x = rec.trialDays[d], pr = 0;
+      if (!isObj(x)) return;
+      folded += x.n || 0;
+      // folded days keep no mode: Spatial Check rows are known by their probe exercises
+      if (isObj(x.ex)) Object.keys(x.ex).forEach(function (k) { if (probe[k.split('@')[0]] && isObj(x.ex[k])) pr += x.ex[k].n || 0; });
+      foldedAns += Math.max(0, (x.right || 0) + (x.wrong || 0) - pr);
+    });
+    E.log.scan(rec, function (r, id, mode) { if ((r[5] === 0 || r[5] === 1) && mode !== 'check' && !probe[id]) answers++; });
+    var pdays = {};
+    (isArray(rec.sessions) ? rec.sessions : []).forEach(function (x) { if (isObj(x) && isNum(x.start) && x.mode !== 'check') pdays[E.day(x.start)] = 1; });
     return {
       sessions: isArray(rec.sessions) ? rec.sessions.length : 0,
       trials: (isArray(rec.trials) ? rec.trials.length : 0) + folded,
+      answers: answers + foldedAns,
       practiceMs: isNum(rec.practiceMs) ? rec.practiceMs : 0,
       days: Object.keys(calendar(rec)).length,
+      practiceDays: Object.keys(pdays).length,
     };
   }
 

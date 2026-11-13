@@ -1,0 +1,19 @@
+{
+  "name": "Parallax: a visuospatial trainer",
+  "short_name": "Parallax",
+  "description": "A free, offline trainer for visuospatial ability, built by the Chimera community on Discord (discord.gg/chmr). Your progress stays on your device.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F2F4F3",
+  "theme_color": "#F2F4F3",
+  "lang": "en",
+  "categories": ["education", "games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

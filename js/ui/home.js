@@ -23,7 +23,7 @@
   var U = PX.util;
   var hasOwn = Object.prototype.hasOwnProperty;
 
-  // The eleven training exercises (PLAN.md §3), used until each registers its definition.
+  // The training exercises (PLAN.md §3; v1.1 adds Reckon), used until each registers its definition.
   var CATALOG = [
     { id: 'track', code: 'EX-01', name: 'Track', kind: '3D multiple-object tracking', abilities: ['AT'], note: 'attention practice', blurb: 'Follow several moving spheres in 3D and pick out the ones you were shown.' },
     { id: 'rotate', code: 'EX-02', name: 'Rotate', kind: 'Mental rotation', abilities: ['Vz', 'SR'], blurb: 'Decide whether two block figures are one object turned, or mirror images.' },
@@ -36,6 +36,7 @@
     { id: 'span', code: 'EX-09', name: 'Span', kind: 'Spatial span', abilities: ['MV', 'WM'], blurb: 'Repeat a sequence of blocks forwards, backwards or on a turned board.' },
     { id: 'hidden', code: 'EX-10', name: 'Hidden', kind: 'Embedded figures', abilities: ['CF'], blurb: 'Find which simple shape is hidden inside a pattern.' },
     { id: 'homing', code: 'EX-11', name: 'Homing', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a route, turn to face the place where you started.' },
+    { id: 'reckon', code: 'EX-12', name: 'Reckon', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a walk with nothing to steer by, point or walk back to where you started.' },
   ];
 
   /* ---- SAMPLE DATA (Phase 1b placeholder) -------------------------------------------
@@ -143,23 +144,25 @@
     if (!plan) plan = samplePlan(minutes);
     var p = K.panel({
       title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session', sample: !!plan.sample,
-      aside: h('span.px-num', plan.minutes + ' min · ' + plan.mode + ' · ' + plan.style),
+      aside: h('span.px-num', PX.core.clock.fmtMinutes(plan.minutes * 60000) + ' · ' + plan.mode + ' · ' + plan.style),
     });
     p.head.querySelector('.px-panel-title').classList.add('px-session-title');
-    var list = h('ol.px-protocol', { 'aria-label': 'Exercises in today’s session, in order' });
+    // Today's mix: the exercises take turns in runs, so the list has no order (I1 B5); a key mark
+    // (data-seg) ties each one to its segment of the ruler.
+    var list = h('ul.px-protocol', { 'aria-label': 'Exercises in today’s session (they take turns)' });
     plan.blocks.forEach(function (b, i) {
       var e = entry(b.ex);
       // An exercise not tried yet is "New", whatever slot the plan gave it (engine plan.roleOf).
       var isNew = b.isNew === true || (plan.roleOf && plan.roleOf[b.ex] === 'new') || /^New\b/.test(b.why || '');
       list.appendChild(h('li.px-protocol-step', { 'data-role': isNew ? 'new' : String(b.role || '').toLowerCase() },
         h('div.px-protocol-lead',
-          h('span.px-protocol-n', { 'aria-hidden': 'true' }, String(i + 1)),
+          h('span.px-protocol-n.is-key', { 'aria-hidden': 'true', 'data-seg': String(i + 1) }, '●'),
           h('span.px-protocol-role', isNew ? 'New' : b.role)),
         h('div.px-protocol-main',
           h('div.px-protocol-name', e.name),
           specOf(e),
           !isNew && b.why ? h('div.px-protocol-why', b.why) : null),
-        h('span.px-protocol-time', { 'aria-label': 'about ' + b.min + ' minutes' }, '~' + b.min + ' min')));
+        h('span.px-protocol-time', { 'aria-label': 'about ' + b.min + ' minutes' }, '~' + PX.core.clock.fmtMinutes(b.min * 60000))));
     });
     p.body.appendChild(list);
     p.body.appendChild(ruler(plan));
@@ -170,12 +173,13 @@
     return p.el;
   }
 
-  // The session as a ruler: one segment per block (numbered as in the list), minute ticks.
+  // The session as a ruler: one segment per block (its share of the time, keyed like the list's
+  // marks; no numbers, since the runs take turns), minute ticks.
   function ruler(plan) {
     var total = plan.minutes;
     var track = h('div.px-ruler-track');
     plan.blocks.forEach(function (b, i) {
-      track.appendChild(h('div', { class: ['px-ruler-seg', 'px-ruler-seg--' + (i + 1)], style: { flex: b.min + ' 1 0' } }, h('span', String(i + 1))));
+      track.appendChild(h('div', { class: ['px-ruler-seg', 'px-ruler-seg--' + (i + 1)], style: { flex: b.min + ' 1 0' }, 'data-seg': String(i + 1) }, h('span')));
     });
     var ticks = h('div.px-ruler-ticks');
     for (var m = 0; m <= total; m++) {
@@ -222,21 +226,27 @@
         h('span.px-sr', WEEK_NAMES[i] + (isToday ? ', today' : '') + (did ? ': practised' : ': not practised'))));
     });
     p.body.appendChild(week);
-    p.body.appendChild(h('p.px-meta', { style: 'margin-top:var(--s3)' }, 'A session counts with 10 answers or 5 minutes. One missed week in every four is forgiven automatically.'));
+    var wk = null;
+    try { wk = PX.engine.streak.status(rec, now).week; } catch (e) { wk = null; }
+    if (wk && wk.ms > 0) p.body.appendChild(h('p.px-meta', { 'data-practice': '' }, 'Practice this week: ', h('span.px-num', PX.core.clock.fmtMinutes(wk.ms)), '.'));
+    p.body.appendChild(h('p.px-meta', { style: 'margin-top:var(--s3)' }, 'A session counts with 10 answers or 5 minutes of practice; a Spatial Check does not count. One missed week in every four is forgiven automatically.'));
     return p.el;
   }
 
+  // The engine's own status (one local day boundary, the challenge number): I1 T6.
   function dailySlot(rec, now) {
-    var K = PX.ui.kit;
-    var utc = new Date(now).toISOString().slice(0, 10), local = U.dayKey(now);
-    var res = rec.daily ? (rec.daily[utc] || rec.daily[local]) : null;
-    var num = null;
-    try { if (PX.engine.daily && typeof PX.engine.daily.number === 'function') num = PX.engine.daily.number(now); } catch (e) { num = null; }
-    var p = K.panel({ title: 'Daily Challenge', className: 'px-slot px-slot--daily', aside: num ? h('span.px-num', '#' + num) : null });
+    var K = PX.ui.kit, st = null;
+    try { st = PX.engine.daily.status(rec, now); } catch (e) { st = null; }
+    if (!st) st = { day: U.dayKey(now), number: null, done: false, partial: null, result: null };
+    var res = st.result, part = st.partial, n = PX.engine.config.daily.items;
+    var p = K.panel({ title: 'Daily Challenge', className: 'px-slot px-slot--daily', aside: st.number ? h('span.px-num', '#' + st.number) : null });
     var score = res && typeof res.right === 'number' && typeof res.n === 'number' ? res.right + ' of ' + res.n : null;
-    p.body.appendChild(h('p.px-status', res ? 'Played today' + (score ? ': ' : '') : 'Not played yet', score ? h('span.px-num', score) : null));
-    p.body.appendChild(h('p.px-slot-text', 'The same 8 items for everyone today, with one scored attempt. Compare notes in the Chimera Discord.'));
-    p.body.appendChild(h('div.px-slot-foot', ui.button(res ? 'See today’s result' : 'Play today’s challenge', { kind: 'secondary', go: 'play?mode=daily' })));
+    p.body.appendChild(h('p.px-status', { 'data-daily': res ? 'done' : part ? 'partial' : 'open' },
+      res ? 'Played today' + (score ? ': ' : '') : part ? 'Started: ' : 'Not played yet',
+      score ? h('span.px-num', score) : part ? h('span.px-num', part.answered + ' of ' + part.n + ' answered') : null));
+    p.body.appendChild(h('p.px-slot-text', 'The same ' + n + ' items for everyone on this date, with one scored attempt' +
+      (part ? ' that goes on where you stopped.' : '. A new challenge comes at midnight.') + ' Compare notes in the Chimera Discord.'));
+    p.body.appendChild(h('div.px-slot-foot', ui.button(res ? 'See today’s result' : part ? 'Go on with today’s challenge' : 'Play today’s challenge', { kind: 'secondary', go: 'play?mode=daily' })));
     return p.el;
   }
 
@@ -253,7 +263,7 @@
     var out = { kind: nc.kind, ready: !!nc.ready, dueAt: nc.dueAt, status: '', text: '', label: null };
     if (nc.kind === 'B1') {
       out.status = 'Starting point not measured yet';
-      out.text = 'Two baseline checks on tasks you never practise show where you started. Each takes about 15 minutes and gives no feedback; the second comes 12 hours or more after the first.';
+      out.text = 'Two baseline checks on tasks you never practise show where you started. Each takes 15 to 25 minutes and gives no feedback; the second comes 12 hours or more after the first.';
       out.label = 'Take baseline 1';
     } else if (nc.kind === 'B2' || nc.kind === 'B3') {
       var name = nc.kind === 'B2' ? 'Baseline 2' : 'Baseline 3';

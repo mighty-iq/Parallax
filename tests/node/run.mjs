@@ -51,6 +51,7 @@ export const MANIFEST = [
   'js/engine/daily.js',
   'js/engine/stats.js',
   'js/engine/merge.js',
+  'js/engine/section.js',
   // ENGINE end
   'js/ex/registry.js',
 ];

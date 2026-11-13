@@ -128,7 +128,7 @@
     g.appendChild(S.path(head, true, { class: 'mx-arrow-head' }));
     return g;
   }
-  // Labels keep about 11 px on screen whatever the drawing's scale (st.fs drawing units).
+  // Labels keep about 13 px on screen whatever the drawing's scale (st.fs drawing units; phones: no text under 13 px).
   function label(x, y, text, cls) {
     var fs = st.fs, g = S.el('g', { class: 'mx-label ' + (cls || '') });
     var w = text.length * fs * 0.64 + fs * 0.9, hh = fs * 1.55;
@@ -214,11 +214,11 @@
     var m = st.model, svg = st.svg;
     PX.ui.clear(svg);
     // Show the part of the canvas the mechanism uses (geometry unchanged), then size labels to
-    // about 11 CSS px from the laid-out stage (ready phase).
+    // about 13 CSS px from the laid-out stage (ready phase).
     st.vb = viewBoxOf(item, m);
     svg.setAttribute('viewBox', st.vb.map(function (v) { return U.round(v, 2); }).join(' '));
     var box = svg.getBoundingClientRect(), px = box.width && box.height ? Math.min(box.width / st.vb[2], box.height / st.vb[3]) : 3;
-    st.fs = U.clamp(11 / px, 2, 7);
+    st.fs = U.clamp(13 / px, 2, 9);
     var back = S.el('g', { class: 'mx-back' }), frontL = S.el('g', { class: 'mx-front' }), top = S.el('g', { class: 'mx-top' }), marks = S.el('g', { class: 'mx-marks' });
     st.parts = { gears: {}, pulleys: {}, belts: [], rope: null, weight: null, rings: {} };
     item.wheels.forEach(function (w) {

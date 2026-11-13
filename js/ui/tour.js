@@ -2,7 +2,7 @@
    ("New here? Watch, Try, Go (3 min)") calls PX.ui.tour.start(), which opens the play screen in
    mode 'tour': Watch, Try, Go for Rotate, Fold and Track (each one a slow demo with captions and
    a few practice items that never count; exercises this device cannot show are left out), then
-   "Measure your starting point (about 15 min, no feedback)" or Later. Every step can be skipped;
+   "Measure your starting point (15 to 25 min, no feedback)" or Later. Every step can be skipped;
    skipping the baseline only means transfer reports start later.
    Flags: store.state.tour.done (true once the tour ended, finished or left) and
    store.state.ui.tour = { started, finished, done: [ids], skipped: [ids], baseline: 'now' | 'later' }.
@@ -74,9 +74,9 @@
       wrap.appendChild(box);
       Play.showCard(box, null, {
         id: 'baseline', title: 'Measure your starting point',
-        lines: ['About 15 minutes, no feedback: short tasks that Parallax never trains, plus a word task as a control.',
+        lines: ['15 to 25 minutes, no feedback: short tasks that Parallax never trains, plus a word task as a control.',
           'Later checks are compared with this starting point, so you can see what practice changes beyond familiarity with the tasks. Skipping only means those reports start later.'],
-        actions: [{ label: 'Later', value: 'later' }, { label: 'Measure now (about 15 min)', value: 'now', primary: true }],
+        actions: [{ label: 'Later', value: 'later' }, { label: 'Measure now (15 to 25 min)', value: 'now', primary: true }],
       }).then(function (v) {
         t.baseline = v === 'now' ? 'now' : 'later';
         save();

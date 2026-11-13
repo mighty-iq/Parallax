@@ -48,3 +48,19 @@
   .ex-slice .ex-slice-stage { height: clamp(10rem, min(34vh, 62vw), 16rem); }
   .ex-slice .ex-slice-svg { max-width: 8.5rem; }
 }
+
+/* Phones in the player: the item fits one screen (css/play.css sets --pl-avail and --pl-w).
+   Four outlines in a 2 × 2 grid of square cells; the solid takes what is left. Sideways: the
+   solid on the left at full height, the outlines right. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-slice { --slice-cell: min(calc((var(--pl-w) - var(--s2)) / 2), calc((var(--pl-avail) - 10rem - 2 * var(--s2)) / 2)); }
+  .pl-trial.ex-slice .ex-slice-stage { height: min(18rem, calc(var(--pl-w) * 0.75), calc(var(--pl-avail) - 2 * var(--slice-cell) - 2 * var(--s2))); }
+  .pl-trial.ex-slice .px-choices[style*="--px-cols:4"] .px-choice { height: var(--slice-cell); padding: var(--s1); }
+  .pl-trial.ex-slice .px-choice .ex-opt { position: relative; }
+  .pl-trial.ex-slice .ex-slice-svg { width: calc(var(--slice-cell) - 1.25rem); max-width: 100%; }
+  .pl-trial.ex-slice .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-slice { --slice-cell: min(calc((var(--pl-col) - var(--s2)) / 2), calc((var(--pl-avail) - var(--s2)) / 2)); }
+  .pl-trial.ex-slice .ex-slice-stage { height: var(--pl-avail); }
+}

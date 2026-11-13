@@ -118,15 +118,37 @@
     return true;
   }
 
+  // Every exercise that shares a similarity group with exId (groups may overlap), exId first;
+  // null when it is in none.
   function group(exId) {
-    var G = C.stages.groups;
-    for (var i = 0; i < G.length; i++) if (G[i].indexOf(exId) >= 0) return G[i];
-    return null;
+    var G = C.stages.groups, out = null;
+    for (var i = 0; i < G.length; i++) {
+      if (G[i].indexOf(exId) < 0) continue;
+      if (!out) out = [exId];
+      G[i].forEach(function (id) { if (out.indexOf(id) < 0) out.push(id); });
+    }
+    return out;
   }
   function similar(a, b) {
     if (!a || !b || a === b) return false;
     var g = group(a);
     return !!g && g.indexOf(b) >= 0;
+  }
+
+  /* ---------- automatic choices (CONTRACT-v1.1 H5) ---------- */
+
+  // PAT-format exercises join automatic choices (Train, Today's plan, the beginner order, Path
+  // without a chosen exercise) only with the PAT focus on; exercises paused before a test
+  // (settings.testPause: { ids, until: 'YYYY-MM-DD' }) stay out of them through that local day.
+  // Explicit picks (Library, Free play, a chosen Path, Section, pins) are never filtered.
+  function patFocus(rec) { return !!(rec && isObj(rec.settings) && rec.settings.patFocus === true); }
+  function testPaused(rec, exId, now) {
+    var tp = rec && isObj(rec.settings) ? rec.settings.testPause : null;
+    if (!isObj(tp) || !isArray(tp.ids) || typeof tp.until !== 'string' || !isNum(now)) return false;
+    return E.day(now) <= tp.until && tp.ids.indexOf(exId) >= 0;
+  }
+  function auto(rec, def, now) {
+    return !!def && (def.pat !== true || patFocus(rec)) && !testPaused(rec, def.id, now);
   }
 
   /* ---------- trial times ---------- */
@@ -189,7 +211,10 @@
   /* ---------- choosing the exercises ---------- */
 
   function trainable(rec, opts, now) {
-    var defs = PX.ex.list('train').filter(function (d) { return !opts.can || opts.can(d); });
+    var pins = (opts.pin ? [String(opts.pin)] : []).concat(isObj(rec.train) && isArray(rec.train.pins) ? rec.train.pins : []);
+    var defs = PX.ex.list('train').filter(function (d) {
+      return (!opts.can || opts.can(d)) && (pins.indexOf(d.id) >= 0 || auto(rec, d, now));
+    });
     if (E.lab && E.lab.allowed) {
       var ok = E.lab.allowed(rec, now);
       if (ok) {
@@ -347,6 +372,7 @@
   E.schedule = {
     train: train, totals: totals, due: due, practised: practised, stage: stage, stageUp: stageUp,
     switchNote: switchNote, group: group, similar: similar, trialTimes: trialTimes, trialMs: trialMs, typical: typical, estOf: estOf,
+    auto: auto, patFocus: patFocus, testPaused: testPaused,
     trainable: trainable, choose: choose, build: build, nextRun: nextRun, runLength: runLength, quotas: quotas,
   };
 

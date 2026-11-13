@@ -1,7 +1,11 @@
 /* EX-11 Homing (experimental): tutorial data (pure, data only; ARCHITECTURE.md §2, PLAN.md §8; shapes
    as in js/ex/rotate/learn.js). Watch–Try–Go: goal and labelled parts → demo (view.demo replays the
    route with `captions`) → practice items (not logged) with just-in-time tips → an easy scored start.
-   Wording rules (CLAUDE.md 2, 12): about the task, never the person; no IQ or "mastered". */
+   v1.1: Homing is the landmark-aided stage before Reckon (EX-12): its texts say that landmarks act as
+   fixes that correct dead-reckoning errors (R1 §8.1(d)); the phone controls (drag the view, ◀ ▶) are
+   named; the "larger screen" notice is gone (ratings stay per screen class). Captions are read by
+   js/ex/homing/view.js and its kit (the tests check both). Wording rules (CLAUDE.md 2, 12): about the
+   task, never the person; no IQ or "mastered". */
 (function (PX) {
   'use strict';
 
@@ -10,10 +14,10 @@
     parts: [
       { id: 'view', label: 'View', text: 'You see the walk through your own eyes: straight legs with turns on the spot between them.' },
       { id: 'start', label: 'Start', text: 'You begin inside a ring on the ground. It disappears once you walk away.' },
-      { id: 'landmarks', label: 'Landmarks', text: 'Far-off shapes on the horizon (on some levels). They are so far away that they barely move as you walk.' },
-      { id: 'circle', label: 'Arrow circle', text: 'At the end, its top is the way you face. Drag or tap it, or use ← and → (Shift: 1°); the view turns with the arrow.' },
+      { id: 'landmarks', label: 'Landmarks', text: 'Far-off shapes on the horizon (on some levels). They barely move as you walk, so like a navigator\'s fix they correct the errors of each turn. Reckon, the next stage, has none.' },
+      { id: 'circle', label: 'Turn', text: 'At the end, drag the view sideways, drag or tap the arrow circle, or use the ◀ ▶ buttons (keys: ← and →, Shift for 1°). The top of the circle is the way you face; the view turns with the arrow.' },
     ],
-    // 2 legs, medium turn, three landmarks, 40°: seed 1 walks 7 m, turns 101° right, walks 9 m; the start is 137° to the right.
+    // 2 legs, medium turn, three landmarks, 40° (version 2): seed 1 walks 6.5 m, turns 106° right, walks 8.3 m; the start is 136° to the right.
     demo: [
       { params: { route: 0, landmarks: 0, tolerance: 0 }, seed: 1, kind: 'right' },
     ],
@@ -25,10 +29,10 @@
     ],
     tips: [
       { id: 'track', when: { dim: 'route', levels: [0, 1] }, text: 'Keep track as you go: after each turn, update where the start is (behind you, to the left, …).' },
-      { id: 'landmarks', when: { dim: 'landmarks', levels: [0, 1] }, text: 'The far landmarks stay put while you walk: use them like a compass to see how far you have turned.' },
-      { id: 'nolandmarks', when: { dim: 'landmarks', levels: [2] }, text: 'No landmarks now: only the turns tell you which way you face. Notice each one as it happens.' },
+      { id: 'landmarks', when: { dim: 'landmarks', levels: [0, 1] }, text: 'The far landmarks stay put while you walk: use them as a fix, like a compass, to see how far you have turned.' },
+      { id: 'nolandmarks', when: { dim: 'landmarks', levels: [2] }, text: 'No landmarks now: only the turns tell you which way you face. Notice each one as it happens (Reckon trains exactly this).' },
       { id: 'legs', when: { dim: 'route', levels: [4, 5, 6, 7] }, text: 'More legs: picture the route from above as it grows, one leg at a time.' },
-      { id: 'tight', when: { dim: 'tolerance', levels: [2] }, text: 'Only 20° either side counts now. With Shift, ← and → turn the arrow 1°.' },
+      { id: 'tight', when: { dim: 'tolerance', levels: [2] }, text: 'Only 20° either side counts now. ◀ 1° and 1° ▶ (or Shift with ← →) make fine turns.' },
     ],
     // Visual triangle completion (Loomis et al. 1993 [unverified]) without body-based cues measures visual
     // path integration (research/B §10); in a browser body-based cues are missing, which is why Homing is
@@ -75,22 +79,23 @@
       right: 'right',
       notSet: 'not set',
       dialLabel: 'Arrow circle: you stand in the middle; the top is the way you face at the end of the route',
-      readout: 'Arrow: {dir}',
-      readoutNone: 'Arrow: not set yet',
+      fineLabel: 'Turn {deg}° to the {side}',
+      readout: 'Facing {dir}',
+      readoutNone: 'Facing straight ahead (not turned yet)',
       readoutWatch: 'Watch the route first',
-      readoutYours: 'Your arrow: {dir}',
-      setFirst: 'Set the arrow first: drag or tap the circle, or use ← →.',
+      readoutYours: 'You faced {dir}',
+      setFirst: 'Turn first: drag the view or the circle, or use ◀ ▶.',
       confirm: 'Confirm',
-      hintPointer: 'Drag or tap the circle.',
-      hintKeys: '← → turn 5°, with Shift 1°.',
+      hintTouch: 'Drag the view or the circle to turn; ◀ ▶ for fine steps.',
+      hintKeys: '← → turn 5°, with Shift 1°; Enter confirms.',
       describe: 'A first-person view of a walk across a plain: {legs} straight legs with turns between them{landmarks}. Then turn to face where you started: set the arrow with the left and right arrow keys (5°, with Shift 1°) and confirm with Enter. The top of the circle is the way you face.',
       withLandmarks: ', with far-off landmarks on the horizon',
-      smallScreen: 'Homing is easier to judge on a larger screen (a tablet or a computer). Take a break if the motion feels uncomfortable.',
       experimental: 'Experimental',
       hideMap: 'Hide the map',
       paused: 'Paused. This route will not count. Press Esc or Space to go on.',
       voidPaused: 'The route was paused, so this answer will not count.',
-      voidStutter: 'The view stuttered during the route, so this answer will not count.',
+      voidStutter: 'The view froze during the route, so this answer will not count.',
+      voidTurned: 'The screen changed shape during the route, so this answer will not count.',
       phaseWatch: 'You start in the ring. Watch the route and keep track of the start.',
       phaseTurn: 'Turn to face the start, then confirm.',
       phaseReveal: 'The flag marks the start.',
@@ -113,12 +118,15 @@
       mapBack: 'The start is {dist} m away, along the dashed line.',
       mapRotate: 'Turn the map so that you face up again.',
       mapAngle: 'The start is {deg}° to your {side}: that is the arrow on the circle.',
+      mapYou: 'you',
+      mapYours: 'Your answer: {deg}° to the {side}.',
+      mapYoursWalk: 'You walked {r} m that way: {ep} m from the start.',
       // the demo
       demoStart: 'You start here, inside the ring. Remember where it is.',
       demoWalk: 'Watch the route: straight legs, with turns on the spot between them.',
       demoEnd: 'The route ends here. The start is somewhere off the screen.',
       demoTurn: 'Turn {deg}° to the {side}: now you face the start.',
-      demoAnswer: 'To answer, set the arrow: drag or tap the circle, or use ← → (Shift: 1°). Then Confirm or press Enter.',
+      demoAnswer: 'To answer, drag the view or the circle, or use ◀ ▶ (keys ← →, Shift for 1°). Then Confirm (Enter).',
     },
     bridge: 'Finding the way back to a car or a trailhead without a map uses the same kind of tracking. Practising here improves this task; whether it helps real wayfinding has not been studied.',
   });

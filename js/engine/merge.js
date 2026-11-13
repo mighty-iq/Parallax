@@ -147,7 +147,11 @@
     if (isObj(theirs.spatial) || isObj(mine.spatial)) out.spatial = { expect: cp(se) };
     var tl = obj(theirs.lab), ml = obj(mine.lab);
     if (tl.order || ml.order) out.lab = cp(tl.order && (!ml.order || (tl.start || 0) <= (ml.start || 0)) ? tl : ml);
-    out.practiceMs = Math.max(isNum(theirs.practiceMs) ? theirs.practiceMs : 0, isNum(mine.practiceMs) ? mine.practiceMs : 0);
+    // the total is the sum over the merged sessions (each tab's own total misses the other's);
+    // never below either side's total (sessions dropped by a cap keep their minutes)
+    var sumMs = 0;
+    (isArray(out.sessions) ? out.sessions : []).forEach(function (x) { if (isObj(x) && isNum(x.practiceMs) && x.practiceMs > 0) sumMs += x.practiceMs; });
+    out.practiceMs = Math.max(sumMs, isNum(theirs.practiceMs) ? theirs.practiceMs : 0, isNum(mine.practiceMs) ? mine.practiceMs : 0);
     if (isObj(theirs.streak) || isObj(mine.streak)) {
       out.streak = cp(obj(newer.streak));
       out.streak.goals = union(obj(theirs.streak).goals, obj(mine.streak).goals, function (g) { return isArray(g) ? String(g[0]) : null; })

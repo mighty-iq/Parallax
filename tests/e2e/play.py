@@ -51,7 +51,8 @@ def boot(page, url=None, knobs=True):
         page.keyboard.press('Escape')
         page.wait_for_timeout(120)
     if knobs:
-        page.evaluate('PX.debug.fast(true); PX.core.store.state.settings.sessionMin = 1;')
+        # v1.1: sessions are time-boxed on active time; the test knob gives them 8 s
+        page.evaluate('PX.debug.fast(true); PX.core.store.state.settings.sessionMin = 1; PX.ui.play.config.budgetMs = 8000;')
 
 
 def go(page, params):
@@ -174,7 +175,7 @@ def run_train(b, C):
     con = Console(page)
     boot(page)
     # a long first run of Rotate (S1 runs are 20 items), and no tutorial offers for the others
-    page.evaluate('''PX.core.store.state.settings.sessionMin = 10;
+    page.evaluate('''PX.core.store.state.settings.sessionMin = 10; PX.ui.play.config.budgetMs = null;
       PX.ex.list('train').forEach(d => { if (d.id !== 'rotate') PX.core.store.state.tour.seen[d.id] = true; });''')
     go(page, {'mode': 'train', 'exId': 'rotate', 'count': 1})
     C.ok(card(page) == 'wtg-offer' and 'New: Rotate' in page.locator('[data-card-box]').inner_text(), f'{tag}: Watch, Try, Go offered for a new exercise')
@@ -358,7 +359,7 @@ def run_phone(b, C):
         layout_checks(page, C, f'{tag} item', w)
         C.ok(page.evaluate('getComputedStyle(document.querySelector(".px-tabbar")).display') == 'none', f'{tag}: the tab bar steps aside during items')
         tapped = False
-        for _ in range(80):
+        for _ in range(400):
             if page.locator('.pl-summary').count():
                 break
             st = state(page)
@@ -402,7 +403,7 @@ def run_sandbox(b, C):
         if fr.locator(sel).count():
             fr.locator(sel).first.click(); fr.wait_for_timeout(120)
     C.ok(fr.evaluate('PX.core.store.volatile') is True, f'{tag}: storage blocked, the record lives in memory')
-    fr.evaluate('PX.debug.fast(true); PX.core.store.state.settings.sessionMin = 1;')
+    fr.evaluate('PX.debug.fast(true); PX.core.store.state.settings.sessionMin = 1; PX.ui.play.config.budgetMs = 8000;')
     seen_all(fr)
     go(fr, {'mode': 'train'})
     ok = drive(fr, '!!document.querySelector(".pl-summary")')
@@ -516,10 +517,20 @@ def run_review(b, C):
       return resolved;
     }''')
     C.ok(res is True and len(con.errors()) == n0, f'{tag} 5: Pattern Memory unmounted mid-exposure resolves without errors ({res}, {con.errors()[n0:][:2]})')
-    # 3: a reload on a #/play route: the first item waits for the Chimera pop-up
+    # 3 (v1.1, I1 T4): a reload on a #/play route never starts a session by itself: Today opens
     page.goto('about:blank')
     page.goto(INDEX.as_uri() + '#/play?mode=free&exId=spin&run=1&trials=5')
     page.wait_for_function(READY, timeout=20000)
+    page.wait_for_timeout(1200)
+    st = page.evaluate('__play.state')
+    C.ok(page.evaluate('PX.ui.modalOpen()') >= 1 and st not in ('present', 'respond'), f'{tag} 3: under the pop-up no item runs ({st})')
+    page.keyboard.press('Escape')
+    page.wait_for_timeout(300)
+    # the session the reload cut shows its kept summary; nothing starts by itself
+    C.ok(page.locator('[data-restored] .pl-summary').count() == 1 and page.evaluate('__play.state') == 'idle', f'{tag} 3: a #/play hash at boot shows the cut session\'s summary, no new session')
+    # a session started while a modal is open: the first item waits for it to close
+    page.evaluate('''PX.core.router.go("play", { mode: "free", exId: "spin", run: "1", trials: 5 }, { force: true });
+      void PX.ui.modal({ title: "Test", body: [], actions: [{ label: "Close", kind: "secondary" }] });''')
     page.wait_for_timeout(1200)
     st = page.evaluate('__play.state')
     C.ok(page.evaluate('PX.ui.modalOpen()') >= 1 and st not in ('present', 'respond'), f'{tag} 3: under the pop-up no item runs ({st})')
@@ -650,6 +661,19 @@ def run_reload(b, C):
     C.ok(len(s) == n0 + 1 and s[-1]['mode'] == 'train' and scored >= 1 and s[-1]['trials'] == scored, f'{tag}: the session cut by a reload is saved ({len(s) - n0} new, {s[-1]["trials"] if s else None} answered, {scored} scored rows)')
     C.ok(row_count(page, 'train') == 3, f'{tag}: its trials are logged once ({row_count(page, "train")} rows)')
     C.ok(page.evaluate('PX.core.router.current().name') == 'play', f'{tag}: the app opens on the play screen again')
+    # v1.1 (I1 T4): the reopened page shows that session's summary; it never starts a new session
+    for _ in range(4):
+        if not page.evaluate('PX.ui.modalOpen()'):
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(150)
+    C.ok(s[-1].get('ended') == 'closed', f'{tag}: the cut session is marked as closed ({s[-1].get("ended")})')
+    C.ok(page.locator('[data-restored] .pl-summary').count() == 1 and page.evaluate('__play.state') == 'idle', f'{tag}: the reopened page shows its summary, no new session')
+    C.ok('page closed' in page.locator('.px-screen-head').first.inner_text(), f'{tag}: the summary says the page closed during it')
+    page.reload()
+    page.wait_for_function(READY, timeout=20000)
+    page.wait_for_timeout(300)
+    C.ok(page.evaluate('PX.core.store.state.sessions.length') == n0 + 1 and page.locator('[data-restored] .pl-summary').count() == 1, f'{tag}: a second reload shows the summary again and adds nothing')
     C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
 

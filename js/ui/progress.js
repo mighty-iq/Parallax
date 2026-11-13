@@ -268,7 +268,7 @@
     var b = p.body;
     b.setAttribute('data-status', rep.status);
     if (rep.status === 'none') {
-      b.appendChild(h('p.px-prog-empty', 'The Spatial Check measures change on tasks you never practise, so it can show whether your training carries over. It takes about 15 minutes, gives no feedback, and starts with two baseline checks.'));
+      b.appendChild(h('p.px-prog-empty', 'The Spatial Check measures change on tasks you never practise, so it can show whether your training carries over. It takes 15 to 25 minutes, gives no feedback, and starts with two baseline checks.'));
       b.appendChild(nextLine(rec, now));
       b.appendChild(wordsList());
       return p.el;
@@ -298,7 +298,8 @@
     b.appendChild(h('div.px-check-lead',
       c ? h('p.px-check-verdict', 'Spatial probes combined: ', verdict(c.outcome)) : null,
       c ? h('p', wordText(c.outcome) || c.text) : null,
-      h('p.px-meta', 'Latest check ' + U.fmtDate(rep.latest.date, 'long') + ', form ' + rep.latest.form + '; compared with the average of your ' + rep.baselines + ' starting checks.')));
+      h('p.px-meta', 'Latest check ' + U.fmtDate(rep.latest.date, 'long') + ', form ' + rep.latest.form + '; compared with the average of your ' + rep.baselines + ' starting checks.'),
+      likeNote(rec)));
     b.appendChild(plot);
     b.appendChild(legend());
     b.appendChild(h('p.px-meta.px-units', 'Changes are in points on each task’s difficulty scale: +1 point is about the step from 50 % to 73 % right on the same item. Probes are short, so one check has a wide range; that is why the words are cautious.'));
@@ -313,6 +314,24 @@
     b.appendChild(nextLine(rec, now));
     b.appendChild(checkHistory(rec));
     return p.el;
+  }
+
+  // Results compare like with like (PLAN M2): when the latest check was taken on another screen
+  // class than the starting checks, say so beside the comparison. Checks without the field
+  // (before v1.1) are unknown and never trigger it.
+  function likeNote(rec) {
+    var list = E().assess.checks(rec);
+    if (list.length < 2) return null;
+    var last = list[list.length - 1], base = list.filter(function (c) { return c.kind === 'baseline' && c !== last; });
+    if (!base.length) base = list.slice(0, Math.min(2, list.length - 1));
+    var known = base.map(function (c) { return c.display; }).filter(function (d) { return d === 'small' || d === 'large'; });
+    if ((last.display !== 'small' && last.display !== 'large') || !known.length) return null;
+    var other = known.filter(function (d) { return d !== last.display; }).length;
+    if (!other) return null;
+    function word(d) { return d === 'small' ? 'a phone-sized screen' : 'a larger screen'; }
+    return h('p.px-notice.px-like', { 'data-like': 'differs' }, PX.ui.kit.icon('about'),
+      h('span', 'This check was taken on ' + word(last.display) + ', ' + (other === known.length ? 'your starting checks' : 'some of your starting checks') +
+        ' on ' + word(last.display === 'small' ? 'large' : 'small') + '. Compare with care: the screen can change how hard a task is.'));
   }
 
   /* ---------- levels: by exercise, by ability, coverage ---------- */
@@ -491,14 +510,17 @@
 
   var LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'], DAYNAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  function goalSection(rec, now) {
+  function goalSection(rec, now, tot) {
     // Days are marked by the goal's own rule (sessions with 10 answers or 5 minutes), as on Today.
-    var st = E().streak.status(rec, now), perDay = E().streak.days(rec);
+    var st = E().streak.status(rec, now), perDay = E().streak.days(rec), fmtM = PX.core.clock.fmtMinutes;
     var p = section('goal', 'Weekly goal', h('span.px-num', st.goal + ' a week'));
     var b = p.body;
     b.appendChild(h('div.px-goal-head',
       st.week.met ? h('p.px-goal-now', h('b.px-num', String(st.week.sessions)), st.week.sessions === 1 ? ' session' : ' sessions', ' this week: goal of ' + st.goal + ' met.')
         : h('p.px-goal-now', h('b.px-num', st.week.sessions + ' of ' + st.goal), ' sessions this week.'),
+      // practice time from the same clock as the session summaries and the Log
+      h('p.px-goal-time', { 'data-practice': '' }, 'Practice this week: ', h('b.px-num', fmtM(st.week.ms)),
+        tot ? h('span.px-meta', ' · so far: ' + fmtM(tot.practiceMs) + ' on ' + tot.practiceDays + (tot.practiceDays === 1 ? ' day' : ' days')) : null),
       st.weeks.length ? h('p.px-goal-run', 'Weeks in a row with the goal met: ', h('b.px-num', String(st.current)), st.best > st.current ? h('span.px-meta', ' (best ' + st.best + ')') : null) : null));
     if (st.repair) b.appendChild(h('p.px-notice', PX.ui.kit.icon('about'), h('span', 'Last week fell short. ' + st.repair.left + (st.repair.left === 1 ? ' more session' : ' more sessions') + ' this week carry your run of ' + st.repair.run + (st.repair.run === 1 ? ' week' : ' weeks') + ' on.')));
     var weeks = st.weeks.length ? st.weeks.slice(-12) : [{ key: st.week.key, sessions: st.week.sessions, goal: st.goal, met: st.week.met, open: true }];
@@ -516,7 +538,7 @@
         h('span.px-cal-status', h('span.px-num', w.sessions + '/' + w.goal), ' ' + status));
     });
     b.appendChild(h('div.px-cal', head, h('ol.px-cal-rows', { 'aria-label': 'Days practised, by week' }, rows)));
-    b.appendChild(h('p.px-meta', 'A session counts with 10 answers or 5 minutes. One short week in every four is forgiven, and a short week can be made up with one extra session the week after.'));
+    b.appendChild(h('p.px-meta', 'A session counts with 10 answers or 5 minutes of practice; a Spatial Check is a measurement and does not count. Practice time stops while you pause, while the tab is hidden and after a minute without input. One short week in every four is forgiven, and a short week can be made up with one extra session the week after.'));
     b.appendChild(h('div.px-data-row', ui.button('Change the goal', { kind: 'ghost', small: true, go: 'settings' })));
     return p.el;
   }
@@ -576,8 +598,11 @@
       var def = PX.ex.get(x.exId);
       try { x.has = !!def && E().est.get(rec, def, { display: disp }).n > 0; } catch (e) { x.has = false; }
     });
-    var tot = E().stats.totals(rec), checks = E().assess.checks(rec).length;
-    var meta = tot.trials ? tot.trials + (tot.trials === 1 ? ' answer' : ' answers') + ' on ' + tot.days + (tot.days === 1 ? ' day' : ' days') + ' · ' + checks + (checks === 1 ? ' check' : ' checks') : 'no practice yet';
+    // Answered training items only (no skipped, voided or Spatial Check rows: I1 B1), and the
+    // practice time of the one clock (PX.core.clock.fmtMinutes, as on every screen).
+    var tot = E().stats.totals(rec), checks = E().assess.checks(rec).length, fmtM = PX.core.clock.fmtMinutes;
+    var meta = tot.answers ? tot.answers + (tot.answers === 1 ? ' answer' : ' answers') + ' on ' + tot.practiceDays + (tot.practiceDays === 1 ? ' day' : ' days') +
+      ' · ' + fmtM(tot.practiceMs) + ' of practice · ' + checks + (checks === 1 ? ' check' : ' checks') : checks ? 'no practice yet · ' + checks + (checks === 1 ? ' check' : ' checks') : 'no practice yet';
     host.appendChild(h('div.px-screen-head', h('p.px-screen-meta', meta), h('h1', 'Progress'),
       h('p.px-lead', 'Your levels against your own past, each with its likely range, and the Spatial Check, which tests whether practice carries over to tasks you never train.')));
     var nav = h('nav.px-prog-nav', { 'aria-label': 'Sections of Progress' });
@@ -587,14 +612,14 @@
       nav.appendChild(b);
     });
     host.appendChild(nav);
-    if (!tot.trials && !checks) {
+    if (!tot.answers && !checks) {
       host.appendChild(h('div.px-panel.px-prog-start',
         h('p', h('b', 'Progress fills in as you practise. '), 'Levels show after a few items, learning curves after two practice days, and the Spatial Check report after your two starting checks.'),
         h('div.px-data-row', ui.button('Start today’s session', { kind: 'primary', go: 'play?mode=train' }), startCheckButton('Take baseline 1', 'secondary'))));
     }
     host.appendChild(h('div.px-prog',
-      levelsSection(rec, now, ov, !tot.trials && !checks), checkSection(rec, now), curvesSection(rec, now, focus, ov), bestsSection(rec),
-      goalSection(rec, now), achievementsSection(rec, now), dataSection()));
+      levelsSection(rec, now, ov, !tot.answers && !checks), checkSection(rec, now), curvesSection(rec, now, focus, ov), bestsSection(rec),
+      goalSection(rec, now, tot), achievementsSection(rec, now), dataSection()));
     if (focus) window.setTimeout(function () { jumpTo('curves'); }, 0);
   }
 

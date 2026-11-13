@@ -158,6 +158,9 @@ class Bot:
         return self.f.evaluate(js, arg) if arg is not None else self.f.evaluate(js)
 
     def install(self):
+        # v1.1: Train, Path and Speed are time-boxed on active time; 45 s sessions keep the bot's
+        # pace (v1.0 sessions ended on an item count) while still exercising the time box
+        self.ev('PX.ui.play && PX.ui.play.config && (PX.ui.play.config.budgetMs = 45000)')
         return self.ev(BOT_JS)
 
     def snap(self):

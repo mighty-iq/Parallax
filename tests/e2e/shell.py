@@ -7,6 +7,10 @@ import → undo round trip, the download on file://, file:// and a sandboxed src
 (storage blocked: the banner shows), no console errors, no horizontal scroll at 360 × 640,
 44 px targets, visible focus, reduced motion, and takes screenshots of Today, the pop-up,
 Settings and About at 1366 × 768 and 412 × 880 in light and dark into tests/e2e/out/shell/.
+v1.1 phones (run_phones_b2): no horizontal scroll at 150 % text on 360 and 390 px, touch-action,
+a notch held sideways (CDP safe-area insets: nothing in the left and right insets, the welcome
+opens at its first line), the storage hint on an iPhone and not on a desktop, and the web
+manifest and icons linked and loading on https (served from the repository) but not on file://.
 
 Run: python3 tests/e2e/shell.py   (exit code 1 when a check fails; results.json in OUT)
 """
@@ -215,7 +219,7 @@ def roundtrip_checks(page, t, tag, sandboxed):
     box = t.locator('.px-export textarea')
     text = box.input_value()
     rec = json.loads(text)
-    R.check(f'{tag}: backup holds the record', rec.get('v') == 1 and rec['settings']['weeklyGoal'] == 5)
+    R.check(f'{tag}: backup holds the record', rec.get('v') == t.evaluate('PX.core.store.state.v') and rec['settings']['weeklyGoal'] == 5, str(rec.get('v')))
     R.check(f'{tag}: download offered only where allowed',
             (t.locator('.px-export [data-download]').count() == 0) == sandboxed and
             (t.locator('.px-export .px-notice--warn').count() == 1) == sandboxed)
@@ -324,6 +328,147 @@ def run_phone(b):
     ctx.close()
 
 
+IPHONE_UA = ('Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) '
+             'Version/18.1 Mobile/15E148 Safari/604.1')
+EDGE_JS = '''(ins) => {
+  // elements of the header, the page and the tab bar that reach into the left or right inset
+  const W = innerWidth, out = [];
+  // (the brand's hover plate reaches 6 px left of its mark by design: its mark is what must clear the inset)
+  for (const el of document.querySelectorAll('.px-brand .px-mark, .px-discord, .px-tab, .px-main h1, .px-panel, .px-main .px-btn')) {
+    const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+    if (!r.width || r.bottom < 0 || r.top > innerHeight || s.display === 'none' || s.visibility === 'hidden' || el.closest('[hidden]')) continue;
+    if (r.left < ins - 0.5 || r.right > W - ins + 0.5) out.push(String(el.className.baseVal !== undefined ? el.className.baseVal : el.className).split(' ')[0] + ' "' + (el.textContent || '').trim().slice(0, 20) + '" ' + Math.round(r.left) + '..' + Math.round(r.right));
+  }
+  return out.slice(0, 8);
+}'''
+
+
+def run_phones_b2(b):
+    """v1.1 phones (PLAN M2, B2): 150 % text, safe areas, touch CSS, the storage hint, the
+    welcome held sideways, and the web manifest on https only."""
+    for w, hgt in ((360, 640), (390, 844)):
+        tag = f'phone {w} at 150 %'
+        ctx = b.new_context(viewport={'width': w, 'height': hgt}, device_scale_factor=2, is_mobile=True, has_touch=True)
+        page = ctx.new_page()
+        logs = attach_console(page)
+        page.goto(INDEX.as_uri()); ready(page)
+        page.keyboard.press('Escape'); page.keyboard.press('Escape')
+        page.evaluate('PX.core.store.state.settings.textScale = 1.5; PX.ui.app.applySettings()')
+        for r in ROUTES:
+            go(page, r)
+            page.wait_for_timeout(80)
+            sw = page.evaluate('document.documentElement.scrollWidth')
+            R.check(f'{tag}: {r} has no horizontal scroll', sw <= w, str(sw))
+        page.evaluate('PX.ui.app.showWelcome()'); page.wait_for_timeout(200)
+        R.check(f'{tag}: the welcome pop-up has no horizontal scroll', page.evaluate('document.documentElement.scrollWidth') <= w)
+        if w == 360:
+            R.check(f'{tag}: html touch-action is manipulation', page.evaluate("getComputedStyle(document.documentElement).touchAction") == 'manipulation')
+        R.check(f'{tag}: no console errors', not problems(logs), str(problems(logs)))
+        ctx.close()
+
+    # Held sideways with a notch (47 px insets): nothing of the header, page or tab bar under it.
+    tag = 'phone 844 x 390, notch'
+    ctx = b.new_context(viewport={'width': 844, 'height': 390}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    cdp = ctx.new_cdp_session(page)
+    try:
+        cdp.send('Emulation.setSafeAreaInsetsOverride', {'insets': {'top': 0, 'left': 47, 'right': 47, 'bottom': 21}})
+        overridden = True
+    except Exception:
+        overridden = False
+    logs = attach_console(page)
+    page.goto(INDEX.as_uri()); ready(page)
+    top = page.evaluate('''() => { const t = document.querySelector('.px-welcome-title'); const r = t.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }''')
+    R.check(f'{tag}: the welcome opens at its first line (built by the Chimera community)', top[0] >= 0 and top[1] <= 390, str(top))
+    page.keyboard.press('Escape'); page.keyboard.press('Escape')
+    if overridden:
+        for r in ('home', 'library', 'settings'):
+            go(page, r)
+            page.wait_for_timeout(80)
+            edge = page.evaluate(EDGE_JS, 47)
+            R.check(f'{tag}: {r} keeps clear of the left and right insets', not edge, str(edge))
+    R.check(f'{tag}: no console errors', not problems(logs), str(problems(logs)))
+    ctx.close()
+
+    # The storage hint: on an iPhone (Safari, not from the home screen), not on a desktop browser.
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=IPHONE_UA)
+    page = ctx.new_page()
+    page.goto(INDEX.as_uri()); ready(page)
+    hint = page.locator('[data-welcome="storage"]')
+    R.check('iPhone: the welcome shows the storage hint', hint.count() == 1 and hint.first.is_visible())
+    R.check('iPhone: the hint names the seven-day rule and the home screen', 'seven days' in (hint.first.inner_text() if hint.count() else '') and 'home screen' in (hint.first.inner_text() if hint.count() else ''))
+    ctx.close()
+    # Web Share where it exists (stubbed here: headless Chromium on Linux has none): Share… sends
+    # the PNG and the text with the Chimera line; Download PNG and Copy stay.
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    ctx.add_init_script('navigator.canShare = () => true; navigator.share = (d) => { window.__shared = { n: (d.files || []).length, type: d.files && d.files[0] && d.files[0].type, name: d.files && d.files[0] && d.files[0].name, text: d.text || "" }; return Promise.resolve(); };')
+    page = ctx.new_page()
+    logs = attach_console(page)
+    page.goto(INDEX.as_uri()); ready(page)
+    page.keyboard.press('Escape'); page.keyboard.press('Escape')
+    page.evaluate("void PX.ui.share.open({ title: 'Test card', lines: ['one line'], kind: 'session' })")
+    page.wait_for_function('document.querySelector(".px-share-fig[data-ready]")', timeout=10000)
+    page.wait_for_timeout(300)
+    sheet = page.locator('[data-share-sheet]')
+    R.check('Web Share: the sheet offers Share… first, and still Download PNG and Copy',
+            sheet.locator('[data-share="native"]').count() == 1 and sheet.locator('[data-share="download"]').count() == 1 and sheet.locator('[data-share="copy"]').count() == 1)
+    sheet.locator('[data-share="native"]').click()
+    page.wait_for_timeout(300)
+    shared = page.evaluate('window.__shared || null')
+    R.check('Web Share: Share… sends the PNG and the text with the Chimera link', bool(shared) and shared['n'] == 1 and shared['type'] == 'image/png'
+            and 'discord.gg/chmr' in shared['text'], str(shared))
+    page.keyboard.press('Escape')
+    # How to play carries B7's "Also in tests" note when the exercise has one, and no key line on touch.
+    has_overlap = page.evaluate('!!(PX.ui.overlap && PX.ui.overlap.noteFor && PX.ui.overlap.noteFor("fold"))')
+    page.evaluate('void PX.ui.play.howTo("fold")'); page.wait_for_timeout(200)
+    howto = page.locator('.pl-howto')
+    if has_overlap:
+        R.check('How to play: shows the "Also in tests" note', 'Also in tests' in howto.inner_text())
+    R.check('How to play: the key line is hidden on a touch screen', not page.locator('.pl-howto-keys').is_visible())
+    R.check('Web Share and How to play: no console errors', not problems(logs), str(problems(logs)))
+    ctx.close()
+
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    page.goto(INDEX.as_uri()); ready(page)
+    R.check('desktop: no storage hint in the welcome', page.locator('[data-welcome="storage"]').count() == 0)
+    R.check('file://: no web manifest linked (Chrome would log a CORS error)', page.evaluate('!document.querySelector("link[rel=manifest]")'))
+    ctx.close()
+
+    # https (GitHub Pages), served from the repository: the manifest and the icons are linked and load.
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    loaded = {}
+
+    def serve(route):
+        rel = route.request.url.split('https://parallax.test/', 1)[1].split('?')[0].split('#')[0] or 'index.html'
+        f = (ROOT / rel).resolve()
+        if ROOT not in f.parents or not f.is_file():
+            loaded[rel] = 404
+            route.fulfill(status=404, body='not found')
+            return
+        ctype = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.png': 'image/png',
+                 '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json'}.get(f.suffix, 'application/octet-stream')
+        loaded[rel] = 200
+        route.fulfill(status=200, body=f.read_bytes(), headers={'content-type': ctype})
+    ctx.route('https://parallax.test/**', serve)
+    page = ctx.new_page()
+    logs = attach_console(page)
+    page.goto('https://parallax.test/index.html'); ready(page)
+    page.wait_for_timeout(800)
+    href = page.evaluate('(document.querySelector("link[rel=manifest]") || {}).href || null')
+    R.check('https: the web manifest is linked', href == 'https://parallax.test/manifest.webmanifest', str(href))
+    man = page.evaluate('fetch("manifest.webmanifest").then(r => r.json()).catch(() => null)')
+    R.check('https: the manifest names Parallax, standalone, start_url and icons 192 + 512 + maskable',
+            bool(man) and man.get('short_name') == 'Parallax' and man.get('display') == 'standalone' and man.get('start_url') == './'
+            and {'192x192', '512x512'} <= {i['sizes'] for i in man.get('icons', [])} and any(i.get('purpose') == 'maskable' for i in man.get('icons', [])), str(man)[:200])
+    for icon in [i['src'] for i in (man or {}).get('icons', [])] + ['icons/apple-touch-icon.png']:
+        ok = page.evaluate(f'fetch({json.dumps(icon)}).then(r => r.ok).catch(() => false)')
+        R.check(f'https: {icon} loads', ok)
+    R.check('https: the touch icon is linked', page.evaluate('!!document.querySelector("link[rel=apple-touch-icon]")'))
+    R.check('https: no console errors', not problems(logs), str(problems(logs)))
+    ctx.close()
+
+
 def run_sandbox(b):
     host = write_host(inline_single(), OUT / 'host.html')
     probe = OUT / 'probe.html'
@@ -407,6 +552,7 @@ def main():
         b = p.chromium.launch(headless=True)
         run_file(b)
         run_phone(b)
+        run_phones_b2(b)
         run_sandbox(b)
         shots = run_shots(b)
         b.close()
