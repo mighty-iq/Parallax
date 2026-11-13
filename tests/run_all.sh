@@ -45,13 +45,13 @@ fi
 FILES=()
 for f in tests/e2e/*.py; do
   b=$(basename "$f" .py)
-  case "$b" in common|shell_common) continue ;; esac
+  case "$b" in common|shell_common|pat_harness|patb_common) continue ;; esac
   if [ -n "${RUN_ALL_ONLY:-}" ] && ! [[ "$b" =~ ${RUN_ALL_ONLY} ]]; then continue; fi
   if [ -n "${RUN_ALL_SKIP:-}" ] && [[ "$b" =~ ${RUN_ALL_SKIP} ]]; then continue; fi
   FILES+=("$b")
 done
 ORDERED=()
-for first in longrun perf_track screens harness_track flows play; do
+for first in longrun clock perf_track screens fit harness_knots harness_track flows play; do
   for b in "${FILES[@]}"; do [ "$b" = "$first" ] && ORDERED+=("$b"); done
 done
 for b in "${FILES[@]}"; do
@@ -64,7 +64,7 @@ for b in "${ORDERED[@]}"; do
     wait -n
     running=$((running - 1))
   fi
-  run_one "$b" tests/e2e/pwslot.sh python3 "tests/e2e/$b.py" &
+  run_one "$b" tests/e2e/pwslot.sh python3 "tests/e2e/$b.py" &  # clock.py runs its full 5-minute mode here
   running=$((running + 1))
   sleep 1
 done
