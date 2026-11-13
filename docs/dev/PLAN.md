@@ -1,6 +1,6 @@
 # PLAN: Parallax v1.1 (draft for the owner's go)
 
-Status: DRAFT, 13 Nov 2026. Not approved yet. The brief is BRIEF.md (word for word); the research is in docs/research/v1.1/ (R1 path integration, R2 knots, R3 DAT PAT, R4 test overlap, I1 timing and bugs, I2 phones).
+Status: DRAFT sent to the owner on 13 Nov 2026; waiting for the go. The brief is BRIEF.md (word for word); the research is in docs/research/v1.1/ (R1 path integration, R2 knots, R3 DAT PAT, R4 test overlap, I1 timing and bugs, I2 phones).
 
 Parallax keeps its own rules from CLAUDE.md (quiet game layer, pop-up on every open, cautious wording) unless the owner says to switch to the standing rules of 11 Nov (decision D1 below).
 
@@ -8,7 +8,7 @@ Parallax keeps its own rules from CLAUDE.md (quiet game layer, pop-up on every o
 1. **One honest clock** and a round of bug fixes (I1).
 2. **Phones first-class:** items that never scroll, Homing rebuilt for touch, landscape handled (I2).
 3. **Reckon** (EX-12): path integration by dead reckoning with no landmarks (R1, plus a community member's critique of Homing's landmarks).
-4. **Knots** (EX-13): knotting and deknotting items verified by knot invariants (R2; details below once R2 lands).
+4. **Knots** (EX-13): "does a knot remain?", "which crossing unties it?" and linked loops, every item proved by knot invariants (R2).
 5. **PAT-format practice:** four new exercises in the formats of the DAT Perceptual Ability Test (Angles, Painted Cubes, Openings, Form), two variants (Fold 4×4, Views "complete the views"), and a timed Section mode (R3).
 6. **Test-overlap notes:** say which exercises share formats with published tests, a one-tap check-in, and an optional "Taking a test soon?" helper (R4).
 
@@ -42,7 +42,26 @@ Parallax keeps its own rules from CLAUDE.md (quiet game layer, pop-up on every o
 - Accept: generator and scorer tests over 10 000 seeds; shortcut checks ("heading not updated", mirror answer) miss; the tutorial teaches a fresh agent to play in two minutes; touch-only play at 360×740; frame budget held at 4× CPU throttle.
 
 ### M4. Knots (EX-13) (R2)
-- To be completed from R2: item types, generator, invariant-based validator, rendering, difficulty ladder, tutorial.
+- One exercise whose variants share one rating:
+  - **pull**: "Pull both ends: does a knot remain?" (yes/no);
+  - **untie / tie**: "Which of 4 marked crossings, switched, unties it (or ties a knot)?";
+  - **link**: "Are these loops linked?" (higher levels);
+  - **mirror**: "Same knot or its mirror?" with 3D tubes (experimental, last).
+- Not built: "which moves tie it" (too close to the Knot Reasoning Task), naming knots.
+- An item's truth is its geometry: a spline through integer control points with an over/under flag per crossing. Generate a legible outline, then choose over/under by rejection sampling. Knot and unknot items come in pairs from the same outline, matched on alternation, writhe and visible removable moves, so the cheap tells (alternation 75–92 %, |writhe| 72 %, visible slides 90 % before pairing) fall to near chance.
+- The validator re-derives the crossings independently:
+  - simplification to zero crossings proves an unknot, and its move list becomes the "show me";
+  - otherwise a determinant ≠ 1 proves a knot;
+  - otherwise the Jones polynomial decides (V = 1 means an unknot for any diagram of ≤ 24 crossings).
+  - untie: exactly one tagged switch changes the class.
+  - link: "linked" is proved by a non-zero linking number or the Jones polynomial; "unlinked" only by an explicit separation; at most 20 % of linked items have an odd A-over-B count.
+  - mirror: chiral targets only.
+  - Ropes are capped at 12 crossings (Jones ≤ 12 ms in Node).
+- Difficulty: a 10-rung rope ladder (0.40 logit each: 3–6 crossings with simple moves, up to 11–12 crossings needing a detour) × spacing (open / close / tight, 0.25 logit); base −1.75; hand-set, refit from pooled exports.
+- Rendering: 2D SVG ropes with a background-coloured casing at each crossing, crossing angles ≥ 35°, crossings ≥ 36 px apart on a 320 px plate, ends running off the plate. 3D tubes only for mirror and a tutorial demo (add TubeGeometry and CatmullRomCurve3 to the three.js subset or build tubes by hand). "Show me" morphs the validator's moves in 2D.
+- Tutorial: the gap shows which strand is under; two ropes of one shape with one crossing switched (one falls open, one ties tight); the three moves in plain words; Try on pull, then untie on a 5_2. Strategy cards: picture the pull, or trace and remove ("over-under all the way round means a knot").
+- Licences: reimplement everything (SnapPy, Regina and KnotFolio are GPL; Topoly is non-commercial; KnotPlot and Knot Atlas images are not free). Never copy or probe with the Knot Reasoning Task.
+- Accept: 10 000 seeds per variant with exactly one proven answer; shortcut solvers within chance + 10 points; generation inside the frame budget (pre-generated in idle time when needed); legible at 360 px.
 
 ### M5. PAT-format practice (R3)
 - New exercises: **Angles** (rank four angles; perceptual-judgement practice), **Painted Cubes** (how many cubes have N painted sides), **Openings** (which opening fits the solid), **Form** (which solid folds from the pattern). New variants: **Fold 4×4** (the PAT look) and **Views "complete the views"** (two views given, pick the third, hidden lines dotted).
