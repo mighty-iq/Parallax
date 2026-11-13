@@ -142,7 +142,7 @@
       if (warm && plan.activeMs + m >= plan.budgetMs) {
         // A closing item that keeps being voided (a device that stutters, a phone turned during the
         // stimulus) is replaced at most C.session.lastRetries times; then the session ends.
-        return (plan.lastVoids || 0) >= C.session.lastRetries ? 'over' : 'last';
+        return (plan.lastVoids || 0) > C.session.lastRetries ? 'over' : 'last';
       }
       if (plan.pos >= effTotal(plan) - 1) extend(plan, m || 9000);
       return plan.pos >= effTotal(plan) ? 'over' : null;

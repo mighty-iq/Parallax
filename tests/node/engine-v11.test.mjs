@@ -51,6 +51,26 @@ function drive(PX, rec, mode, opts, pace, fin = {}) {
   return { plan, steps, res, active, now, rec };
 }
 
+// drive() with voided items: pace(i, step) may return { void: true }.
+function driveV(PX, rec, mode, opts, pace) {
+  const E = PX.engine;
+  let now = opts.now, active = 0;
+  const plan = E.modes.start(rec, mode, opts);
+  const steps = [];
+  for (let g = 0; g < 400; g++) {
+    const s = E.modes.next(plan, rec, now, { activeMs: active });
+    if (s.done) break;
+    const x = pace(steps.length, s);
+    now += x.wall;
+    active += x.active;
+    const res = x.void ? { correct: false, outcome: 'stutter', voided: true, rt: x.active } : { correct: true, rt: x.active };
+    const out = E.modes.answer(plan, rec, s, res, now, { activeMs: active });
+    steps.push({ s, out, active });
+  }
+  const res = E.modes.finish(plan, rec, now, { activeMs: active });
+  return { plan, steps, res, active, now, rec };
+}
+
 function timeBox(t) {
   t.section('v1.1 time box');
   const PX = t.mk(), E = PX.engine;
@@ -80,6 +100,16 @@ function timeBox(t) {
   const r4 = drive(PX, newRecord(PX, T0), 'train', { now: T0, minutes: 1 }, (i) => ({ wall: 5000, active: i === 6 ? 90000 : 5000 }));
   t.eq(r4.steps.length, 8, 'an item that ran past the budget is followed by the closing item, then the end');
   t.eq(r4.steps[7].s.kind, 'last', 'the closing item');
+
+  // A closing item that keeps being voided (a stuttering device, a phone turned mid-stimulus) is
+  // replaced at most twice (config.session.lastRetries); then the session ends (review S1).
+  const voidLate = (from) => (i, s) => ({ wall: 5000, active: 5000, void: s.kind === 'last' || from(i) });
+  for (const [name, from] of [['every item from 110 s on', (i) => i >= 22], ['only the closing items', () => false]]) {
+    const rv = driveV(PX, newRecord(PX, T0), 'train', { now: T0, minutes: 2 }, voidLate(from));
+    const lastKinds = rv.steps.filter((x) => x.s.kind === 'last').length;
+    t.ok(rv.plan.done && rv.steps.length < 40 && lastKinds === 1 + E.config.session.lastRetries, 'a 2-minute session with ' + name + ' voided ends after ' + lastKinds + ' closing items (' + rv.steps.length + ' items, ' + (rv.active / 1000) + ' s)');
+    t.eq(rv.res.session.ended, 'complete', 'it ends on its own (' + name + ')');
+  }
 
   // Warm-ups first: even a budget spent at once (a long tutorial) shows warm-ups and one more item.
   const r5 = drive(PX, newRecord(PX, T0), 'train', { now: T0, minutes: 1 }, (i) => ({ wall: 1000, active: i === 0 ? 200000 : 1000 }));
@@ -159,6 +189,18 @@ function weeklyGoal(t) {
   rec.sessions.push({ id: 't2', start: T0 + 3000, end: T0 + 500000, mode: 'free', trials: 4, right: 3, practiceMs: 60000, exs: [], summary: null });
   const st = S.status(rec, T0 + DAY);
   t.eq([st.week.sessions, st.week.ms], [1, 380000], 'a session counts with 5 minutes of practice; the week\'s minutes add every practice session');
+  rec.practiceMs = 250000 + 320000 + 60000; // a v1.0 record: its total held the check too
+  const tot = E.stats.totals(rec);
+  t.eq([tot.practiceMs, tot.practiceDays], [380000, 1], 'the practice total leaves the Spatial Check out, as the week and the days do (review S2)');
+  rec.practiceMs = 380000 + 900000; // sessions pruned from an old record: their time stays
+  t.eq(E.stats.totals(rec).practiceMs, 380000 + 900000 - 250000, 'a stored total above the kept sessions adds the difference');
+  const rc = newRecord(PX, T0), pc = E.modes.start(rc, 'check', { now: T0 });
+  if (!pc.unavailable) {
+    let now = T0, act = 0;
+    for (let i = 0; i < 6; i++) { const s = E.modes.next(pc, rc, now, { activeMs: act }); if (s.done) break; now += 9000; act += 9000; E.modes.answer(pc, rc, s, { correct: true, rt: 8000 }, now, { activeMs: act }); }
+    const fc = E.modes.finish(pc, rc, now, { activeMs: act, ended: 'early' });
+    t.ok(fc.session && fc.session.practiceMs === act && rc.practiceMs === 0, 'a check keeps its own time but never adds to the stored practice total');
+  }
   const days = E.achievements.list(rec, T0 + DAY).filter((a) => a.id === 'twelve-days')[0];
   t.eq(days.progress[0], 1, '"Twelve days" counts practice days, not check days');
   // B7's Section mode: a full run that ended by itself is good practice; one the player ended is not
@@ -233,4 +275,32 @@ function mergeTotal(t) {
   t.eq(m.practiceMs, 350000, 'the merged total sums the merged sessions (v1.0 kept the larger side: 300 000)');
   b.practiceMs = 900000;
   t.eq(E.merge(a, b).practiceMs, 900000, 'never below either side\'s total');
+  b.practiceMs = 0;
+  b.sessions.push(Object.assign(s('chk', 400000), { mode: 'check' }));
+  t.eq(E.merge(a, b).practiceMs, 350000, 'a check\'s time stays out of the merged total');
+
+  // v1.1 fields both tabs add to (review S3): Section runs, Reckon's history, the test-hygiene log
+  const run = (id, start) => ({ id, size: 'mini', start, end: start + 1000, ended: 'done', right: 1, n: 30 });
+  const live = (id, answered) => ({ id, size: 'full', parts: [{ exId: 'fold', items: Array.from({ length: 4 }, (_, i) => ({ status: i < answered ? 'answered' : 'new' })) }] });
+  a.section = { runs: [run('r1', 10), run('rA', 30)], next: { full: 2, mini: 3 }, live: live('L1', 1) };
+  b.section = { runs: [run('r1', 10), run('rB', 20)], next: { full: 4, mini: 1 }, live: live('L1', 3) };
+  a.reckon = { v: 1, hist: [[100, 0, 1, 2, 3, 4, 5, 6], [300, 0, 1, 2, 3, 4, 5, 6]] };
+  b.reckon = { v: 1, hist: [[100, 0, 1, 2, 3, 4, 5, 6], [200, 1, 1, 2, 3, 4, 5, 6]] };
+  a.hygiene = { tests: [{ at: 5, date: null, kinds: ['dat'], paused: [] }], focus: [[10, 1]] };
+  b.hygiene = { tests: [{ at: 7, date: '2026-12-01', kinds: ['pat'], paused: ['fold'] }], focus: [[10, 1], [20, 0]] };
+  for (const [x, y, name] of [[a, b, 'A newer'], [b, a, 'B newer']]) {
+    x.updated = T0 + 9; y.updated = T0 + 1;
+    const mv = E.merge(x, y);
+    t.eq(mv.section.runs.map((r) => r.id), ['r1', 'rB', 'rA'], 'Section runs: both tabs\' runs, once each, in time order (' + name + ')');
+    t.eq(mv.section.next, { full: 4, mini: 3 }, 'Section: the next form of each size is the larger (' + name + ')');
+    t.eq(mv.section.live.parts[0].items.filter((i) => i.status === 'answered').length, 3, 'Section: the live run with more answers is kept (' + name + ')');
+    t.eq(mv.reckon.hist.map((e) => e[0]), [100, 200, 300], 'Reckon: both tabs\' routes, once each, in time order (' + name + ')');
+    t.eq([mv.hygiene.tests.map((x2) => x2.at), mv.hygiene.focus], [[5, 7], [[10, 1], [20, 0]]], 'test hygiene: both tabs\' tests and focus switches (' + name + ')');
+  }
+  b.section.runs.push(run('L1', 40));
+  t.eq(E.merge(a, b).section.live, null, 'a live run that either tab finished is not brought back');
+  a.reckon.hist = Array.from({ length: 30 }, (_, i) => [1000 + 2 * i, 0, 1, 2, 3, 4, 5, 6]);
+  b.reckon.hist = Array.from({ length: 30 }, (_, i) => [1001 + 2 * i, 0, 1, 2, 3, 4, 5, 6]);
+  const mh = E.merge(a, b).reckon.hist;
+  t.ok(mh.length === 40 && mh[39][0] === 1059 && mh[0][0] === 1020, 'Reckon keeps its last 40 routes');
 }

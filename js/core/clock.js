@@ -24,8 +24,8 @@
      C.destroy()                     stops it and removes its listeners and timer
    PX.core.clock.fmtMinutes(ms)    the one formatter for practice time: '0 min', 'under 1 min',
                                    '7 min', '1 h 05 min' (whole minutes, rounded)
-   PX.core.clock.fmtLeft(ms)       the HUD countdown in the same minutes: 'about 7 min left',
-                                   'less than 1 min left'
+   PX.core.clock.fmtLeft(ms)       the HUD countdown, whole minutes rounded down (it never claims time
+                                   that is gone): 'about 7 min left', 'less than 1 min left'
    Listeners only store a time stamp, so the clock does no work during stimulus phases (rule 7). */
 (function (PX) {
   'use strict';
@@ -54,8 +54,11 @@
     if (m < 60) return m + ' min';
     return Math.floor(m / 60) + ' h ' + pad2(m % 60) + ' min';
   }
+  // The countdown rounds down, so it never claims time that is gone: 2:30 left is "about 2 min".
   function fmtLeft(ms) {
-    return isNum(ms) && ms >= 60000 ? 'about ' + fmtMinutes(ms) + ' left' : 'less than 1 min left';
+    if (!isNum(ms) || ms < 60000) return 'less than 1 min left';
+    var m = Math.floor(ms / 60000);
+    return 'about ' + (m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + pad2(m % 60) + ' min') + ' left';
   }
 
   function create(opts) {
@@ -107,20 +110,28 @@
       }
     }
 
+    // The idle cap on the reading itself: running time never counts more than idleMs past the last
+    // input, even when the clock's own timer comes late (a laptop waking from sleep, a throttled
+    // tab), so the cap holds whichever of activeMs, touch, pause, stop or poll comes first.
+    function capIdle(t) {
+      if (dead || !isRunning || reasons.idle === true || t - lastInput < idleMs) return false;
+      reasons.idle = true;
+      sync(t, 'idle', lastInput + idleMs);
+      emit('idle', { activeMs: acc, since: lastInput });
+      return true;
+    }
+
     function activeMs(t) {
       t = t0(t);
-      return isRunning ? acc + Math.max(0, t - runStart) : acc;
+      if (!isRunning) return acc;
+      var end = Math.min(t, Math.max(runStart, lastInput + idleMs)); // a pure read: capped, never mutated
+      return acc + Math.max(0, end - runStart);
     }
 
     function poll(t) {
       t = t0(t);
       if (dead) return;
-      if (isRunning && t - lastInput >= idleMs && reasons.idle !== true) {
-        reasons.idle = true;
-        sync(t, 'idle', lastInput + idleMs);
-        emit('idle', { activeMs: acc, since: lastInput });
-        return;
-      }
+      if (capIdle(t)) return;
       if (isRunning && t >= nextTick) {
         nextTick = t + tickMs;
         emit('tick', { activeMs: activeMs(t) });
@@ -131,8 +142,10 @@
     function pause(reason, t) {
       reason = String(reason || 'user');
       if (reasons[reason] === true) return false;
+      t = t0(t);
+      capIdle(t);
       reasons[reason] = true;
-      sync(t0(t), reason);
+      sync(t, reason);
       return true;
     }
     function resume(reason, t) {
@@ -147,6 +160,7 @@
 
     function touch(t) {
       t = t0(t);
+      capIdle(t); // a quiet stretch past the cap ends at the cap, even if no timer said so
       lastInput = Math.max(lastInput, t);
       if (reasons.idle === true) resume('idle', t);
     }
@@ -169,8 +183,16 @@
 
     var C = {
       idleMs: idleMs,
-      start: function (t) { if (dead) return C; t = t0(t); on = true; lastInput = Math.max(lastInput, t); sync(t, 'start'); return C; },
-      stop: function (t) { on = false; sync(t0(t), 'stop'); return C; },
+      start: function (t) {
+        if (dead) return C;
+        t = t0(t);
+        on = true;
+        delete reasons.idle; // starting is someone there
+        lastInput = Math.max(lastInput, t);
+        sync(t, 'start');
+        return C;
+      },
+      stop: function (t) { t = t0(t); capIdle(t); on = false; sync(t, 'stop'); return C; },
       pause: pause,
       resume: resume,
       activeMs: activeMs,

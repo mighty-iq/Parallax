@@ -741,6 +741,54 @@ function testStore(t) {
     t.eq([back.v, back.trials[0], back.sessions[0]], [2, row12, ses], 'export and import round-trip the new fields');
   }
 
+  t.section('store: two tabs with v1.1 data (the engine merge)');
+  {
+    // Review S3: the tab whose save meets the other tab's newer record kept only the other's
+    // Section runs, Reckon history and test-hygiene log, and lost a setting it had just changed.
+    const shared = new SharedStorage();
+    const reg = (X) => {
+      const S = X.PX.core.store;
+      X.PX.engine.fields().forEach((f) => S.field(f.key, f.def, f.fix));
+      S.field('reckon', () => ({ v: 1, hist: [] }));
+      S.field('hygiene', () => ({ tests: [], focus: [] }));
+      S.setting('patFocus', { def: false, type: 'bool' });
+      S.merge = X.PX.engine.merge;
+    };
+    const A = t.env({ storage: shared }), B = t.env({ storage: shared });
+    reg(A); reg(B);
+    const SA = A.PX.core.store, SB = B.PX.core.store;
+    SA.state; SB.state;
+    const run = (id) => ({ id, size: 'mini', start: T0, end: T0 + 1000, ended: 'done', right: 20, n: 30 });
+    const route = (sec) => [sec, 0, 10, 2, 1, 0.5, 0.1, 3];
+    SA.state.section.runs.push(run('run-A'));
+    SA.state.reckon.hist.push(route(100));
+    SA.save();
+    A.clock.tick(1100);
+    B.clock.tick(0);
+    t.eq([SB.state.section.runs.length, SB.state.reckon.hist.length], [1, 1], 'tab B receives tab A\'s Section run and route');
+    // B changes things and has not saved yet when A writes a newer record
+    SB.state.section.runs.push(run('run-B'));
+    SB.state.reckon.hist.push(route(200));
+    SB.state.hygiene.tests.push({ at: T0 + 5, date: '2026-12-01', kinds: ['pat'], paused: ['fold'] });
+    SB.state.hygiene.focus.push([Math.floor(T0 / 1000) + 6, 1]);
+    SB.state.settings.patFocus = true;
+    SB.save();
+    shared.muted = true;
+    SA.state.section.runs.push(run('run-A2'));
+    SA.state.reckon.hist.push(route(300));
+    SA.save();
+    A.clock.tick(1100);
+    shared.muted = false;
+    B.clock.tick(1100); // B's save meets A's newer rev: the engine merge runs
+    const st = JSON.parse(shared.get(KEY));
+    t.eq(st.section.runs.map((r) => r.id).sort(), ['run-A', 'run-A2', 'run-B'], 'every Section run of both tabs is kept');
+    t.eq(st.reckon.hist.map((e) => e[0]), [100, 200, 300], 'both tabs\' Reckon routes are kept, in time order');
+    t.ok(st.hygiene.tests.length === 1 && st.hygiene.focus.length === 1, 'the test noted and the focus switch in tab B are kept');
+    t.eq(st.settings.patFocus, true, 'the setting tab B had just changed is kept (its unsaved side counts as newer)');
+    A.clock.tick(0);
+    t.eq([SA.state.section.runs.length, SA.state.reckon.hist.length, SA.state.settings.patFocus], [3, 3, true], 'tab A receives the merged record');
+  }
+
   t.section('store: trial cap');
   {
     const env = t.env();

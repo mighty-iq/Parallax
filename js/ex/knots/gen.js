@@ -1636,6 +1636,8 @@
     return [sx / Math.max(1, idx.length), sy / Math.max(1, idx.length)];
   }
 
+  // R1: the curl (the points between the two passages of its crossing) goes, and the rope runs
+  // straight through the crossing point.
   function editR1(polys, pc, c) {
     var X = pc.list[c];
     if (X.a[0] !== X.b[0]) return null;
@@ -1786,15 +1788,24 @@
     var head = e.from > 0 ? [[Q.x[e.from - 1], Q.y[e.from - 1], Q.z[e.from - 1]]] : [], tail = e.to + 1 < Q.x.length ? [[Q.x[e.to + 1], Q.y[e.to + 1], Q.z[e.to + 1]]] : [];
     var newPts = head.concat(e.path, tail), n = Math.max(oldPts.length, newPts.length, 2);
     var A = resample(oldPts, n), B = resample(newPts, n), mid = [];
-    var zMove = e.path.length ? e.path[e.path.length >> 1][2] : 0;
-    // a curl (R1, heights kept) climbs steadily from one passage of its crossing to the other, so
-    // that crossing never turns level while the curl shrinks
-    var zh = A[0][2], zt = A[n - 1][2];
-    for (var j = 1; j < n - 1; j++) {
-      var z = k > 0 ? (Math.abs(zMove) > 1 ? zMove : zh + (zt - zh) * j / (n - 1)) : A[j][2];
-      mid.push([A[j][0] + (B[j][0] - A[j][0]) * k, A[j][1] + (B[j][1] - A[j][1]) * k, z]);
+    var zMove = e.path.length ? e.path[e.path.length >> 1][2] : 0, curl = Math.abs(zMove) <= 1, j;
+    // A moving run climbs by a hair along its length, so it never meets itself level.
+    var dz = zMove >= 0 ? 1e-3 : -1e-3;
+    if (!curl) {
+      for (j = 1; j < n - 1; j++) mid.push([A[j][0] + (B[j][0] - A[j][0]) * k, A[j][1] + (B[j][1] - A[j][1]) * k, k > 0 ? zMove + dz * j : A[j][2]]);
+      return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from, hi: e.from + mid.length - 1, zMove: zMove, curl: false };
     }
-    return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from, hi: e.from + mid.length - 1, zMove: zMove };
+    // A curl (R1): its crossing stays put (two points at each end of the run keep their places and
+    // heights), and the rest of the loop is lifted over everything and drawn in to the short chord
+    // between those points; at the end the loop goes and the rope runs straight (the step's after).
+    var zTop = step.zTop !== undefined ? step.zTop : (step.zTop = zRange(step.before)[1] + 1);
+    var R = Math.min(2, (n - 3) >> 1), T = resample([A[R], A[n - 1 - R]], Math.max(2, n - 2 * R));
+    for (j = 1; j < n - 1; j++) {
+      if (j <= R || j >= n - 1 - R) { mid.push([A[j][0], A[j][1], A[j][2]]); continue; }
+      var g = T[j - R];
+      mid.push([A[j][0] + (g[0] - A[j][0]) * k, A[j][1] + (g[1] - A[j][1]) * k, k > 0 ? zTop + 1 + 1e-3 * j : A[j][2]]);
+    }
+    return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from + R, hi: e.from + mid.length - 1 - R, zMove: zTop + 1, curl: true };
   }
 
   /* ---------- checks: each replayed step is the validator's own move, by a legal motion ---------- */
@@ -1804,25 +1815,22 @@
     for (var i = 0; i < pc.list.length; i++) if (Math.abs(pc.list[i].za - pc.list[i].zb) < 1e-6) return false;
     return true;
   }
-  // Every frame of a step's morph (16 frames, k = 1/16 … 1) is a legal motion: a lifted (or
-  // dropped) run passes over (under) everything it crosses, ramps included; a shrinking curl
-  // crosses nothing but itself (its own crossing may slide a few points along the rope); no
-  // crossing is ever level.
+  // Every frame of a step's morph (16 frames, k = 1/16 … 1) is a legal motion: the moving run,
+  // lifted (or dropped) at the start, passes over (under) everything else it crosses, ramps
+  // included, and no crossing is ever level. (A run that only moves sideways at heights above or
+  // below everything else meets no strand in space, so the knot or link stays what it was.)
   function legalMotion(step) {
     var e = step.edit;
     for (var q = 1; q <= 16; q++) {
       var M = morphParts(step, q / 16), pc;
       try { pc = polyCrossings(M.polys); } catch (err) { return false; }
-      var P = M.polys[e.poly], m = P.x.length, lift = M.zMove > 1, drop = M.zMove < -1;
-      var near = function (seg, lo, hi) { return seg >= lo && seg <= hi || (P.closed && (seg + m >= lo && seg + m <= hi || seg - m >= lo && seg - m <= hi)); };
-      var inRun = function (k, seg) { return k === e.poly && near(seg, M.lo - 1, M.hi); };
-      var byCurl = function (k, seg) { return k === e.poly && near(seg, M.lo - 4, M.hi + 3); };
+      var P = M.polys[e.poly], m = P.x.length, lift = M.zMove > 0;
+      var inRun = function (k, seg) { return k === e.poly && ((seg >= M.lo - 1 && seg <= M.hi) || (P.closed && M.lo === 0 && seg === m - 1)); };
       for (var i = 0; i < pc.list.length; i++) {
         var x = pc.list[i];
         if (Math.abs(x.za - x.zb) < 1e-6) return false;
         var ra = inRun(x.a[0], x.sa), rb = inRun(x.b[0], x.sb);
         if (ra === rb) continue;
-        if (!lift && !drop) { if (byCurl(x.a[0], x.sa) && byCurl(x.b[0], x.sb)) continue; return false; }
         var zr = ra ? x.za : x.zb, zo = ra ? x.zb : x.za;
         if (lift ? zr <= zo : zr >= zo) return false;
       }

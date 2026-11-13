@@ -75,52 +75,73 @@
 <section class="page" id="new" data-chapter="What's new in 1.1">
   <div class="content">
     <div class="chapter"><span class="no">Version 1.1.0 · 13 November 2026</span><h1>What's new in 1.1</h1></div>
-    <p class="lead">Version 1.1 brings one honest clock, phones as first-class devices, path integration without landmarks, knots, practice in the question formats of an admissions test, and a careful look at which exercises overlap with published tests. A record from 1.0 carries over unchanged.</p>
+    <p class="lead">One honest clock, phones as first-class devices, path integration without landmarks, knots, practice in the question formats of an admissions test, and a careful look at which exercises overlap with published tests. A record from 1.0 carries over unchanged.</p>
     <div class="new-grid">
       <div class="panel">
         <h3>One clock that counts honestly</h3>
-        <p>Version 1.0 measured a session with four clocks that disagreed: a countdown that stood still while you answered quickly, a pause that did not stop the session, and practice minutes that dropped any gap of more than 90 seconds whole. Now one active-time clock runs during items, feedback, show-me and tutorials, and stops for the pause sheet, any open sheet or dialog, a hidden tab, and after 60 seconds without input. Its minutes end Train, Path and Speed sessions, and the HUD, the summary, the Log, the share card and the weekly goal all show the same number.</p>
-        <p>Fixed along the way: a reload no longer starts a session by itself or spends the Daily Challenge, unanswered Daily items no longer count as wrong, a Spatial Check no longer counts as a practice session, Progress counts only answered items, and the Sounds setting now plays short tones. <span class="see">Chapter 4, page <span class="pgref" data-for="clock"></span></span></p>
+        <p>Version 1.0 timed a session with four clocks that disagreed. Now one active-time clock runs during items, feedback, show-me and tutorials, and stops for the pause sheet, any open sheet or dialog, a hidden tab, and after 60 seconds without input. Its minutes end Train, Path and Speed sessions, and the HUD, the summary, the Log, the share card and the weekly goal show the same number. A dozen smaller bugs went with it (next page). <span class="see">Page <span class="pgref" data-for="clock"></span></span></p>
       </div>
       <div class="panel">
         <h3>Phones, first-class</h3>
-        <p>Every scored item of all nineteen exercises and six probes now fits a 360 × 640 screen without scrolling, stimulus and answers together; held sideways, items switch to two columns. During an item the header steps aside and the goal and tips wait behind Help. Turning the phone while an item plays voids that trial, because the item no longer looks as it did.</p>
-        <p>Homing was rebuilt for touch: drag the view to turn, buttons for 1° and 5° steps, and slower, smoother motion (1.8 m/s, 45°/s). On iPhones and in apps' built-in browsers, Parallax says where your progress is stored and offers a backup. <span class="see">Chapter 2, page <span class="pgref" data-for="phone"></span></span></p>
+        <p>Every scored item of all nineteen exercises and six probes fits a 360 × 640 screen without scrolling; held sideways, items switch to two columns. During an item the header steps aside and the goal and tips wait behind Help. Turning the phone while an item plays voids that trial. Homing was rebuilt for touch, with slower, smoother motion. <span class="see">Page <span class="pgref" data-for="phone"></span></span></p>
       </div>
       <div class="panel">
         <h3>Reckon <span class="spec">EX-12</span></h3>
-        <p>Dead reckoning with nothing to steer by: a walk across an empty plain, then point home or walk home. Feedback gives the angle error, the distance error and the drift per metre walked, and names your own habit over the last 20 routes.</p>
-        <p>Reckon exists because a community member pointed out that Homing's landmarks correct the very errors that path-integration training should work on. Homing stays as the landmark-aided stage before it. Experimental. <span class="see">Page <span class="pgref" data-for="ex-reckon"></span></span></p>
+        <p>Dead reckoning with nothing to steer by: watch a walk across an empty plain, then point home or walk home. Feedback gives the angle error, the distance error, the drift per metre walked and your own habit over the last 20 routes. A community member pointed out that Homing's landmarks correct the very errors this training should work on; Homing stays as the landmark-aided stage before Reckon. Experimental. <span class="see">Page <span class="pgref" data-for="ex-reckon"></span></span></p>
       </div>
       <div class="panel">
         <h3>Knots <span class="spec">EX-13</span></h3>
-        <p>Pull both ends: does a knot remain? Which marked crossing, switched, would untie the rope, or tie it? Are two loops linked? Every item is proved before you see it, by the moves that take a rope apart, by a determinant or by the Jones polynomial, and Show me replays the proof on the rope you saw. <span class="see">Page <span class="pgref" data-for="ex-knots"></span></span></p>
+        <p>Pull both ends: does a knot remain? Which marked crossing, switched, unties the rope, or ties it? Are two loops linked? Every answer is proved before you see the item, by the moves that take a rope apart, a determinant or the Jones polynomial, and Show me replays the proof. <span class="see">Page <span class="pgref" data-for="ex-knots"></span></span></p>
       </div>
       <div class="panel">
         <h3>Six DAT-style formats <span class="spec">EX-14 to EX-19</span></h3>
-        <p>Openings, Missing View, Angles, Hole Punch, Painted Cubes and Form practise the six question formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). They join Train only when you switch on the DAT-style focus. Section practice rehearses them in the test's order against one clock, with a review at the end and no score prediction. <span class="see">Page <span class="pgref" data-for="dat"></span></span></p>
+        <p>Openings, Missing View, Angles, Hole Punch, Painted Cubes and Form practise the six question formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). They join Train only under the DAT-style focus, and Section practice rehearses them in the test's order against one clock, with a review and no score prediction. <span class="see">Page <span class="pgref" data-for="dat"></span></span></p>
       </div>
       <div class="panel">
         <h3>Test hygiene</h3>
-        <p>Practising a kind of puzzle raises scores on tests that use it. Exercises whose formats published tests share now carry an "Also in tests" note; About has a Test hygiene section; later Spatial Checks ask one question about outside practice; and an optional "Taking a test soon?" helper leaves the matching exercises out of Train until the day of your test. <span class="see">Chapter 8, page <span class="pgref" data-for="hygiene"></span></span></p>
-      </div>
-    </div>
-    <div class="cols">
-      <div class="panel">
-        <span class="label">Your record</span>
-        <p>Version 1.1 stores the record in format 2. A 1.0 record upgrades when 1.1 first opens it, with nothing lost; a 1.0 tab still open elsewhere then runs from memory instead of overwriting the newer record. Every trial gains two columns, the screen class (small or large) and the input (mouse, touch, pen or keys), so that results can be compared like with like. Homing's items changed, so its new trials are logged as version 2, apart from the old ones.</p>
-      </div>
-      <div class="panel">
-        <span class="label">Smaller changes</span>
-        <ul class="dash">
-          <li>The Daily Challenge follows your local date. It leaves out Track, Homing, Reckon and the DAT-style formats, so it is the same on every device, and an attempt left part-way goes on where it stopped.</li>
-          <li>21 achievements: one more, for a full Section practice.</li>
-          <li>The Spatial Check states its real length: 15 to 25 minutes.</li>
-          <li>One CSV format for both trial exports; Path asks once before its first item; Pause reads Resume while paused; Threshold results carry units.</li>
-        </ul>
+        <p>Practising a kind of puzzle raises scores on tests that use it. Exercises whose formats published tests share carry an "Also in tests" note; About has a Test hygiene section; later Spatial Checks ask one question about outside practice; and a "Taking a test soon?" helper can leave the matching exercises out of Train until your test. <span class="see">Page <span class="pgref" data-for="hygiene"></span></span></p>
       </div>
     </div>
     <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 2c · what's new: fixed, and your record -->
+<section class="page" data-chapter="What's new in 1.1">
+  <div class="content">
+    <h2>Fixed in 1.1</h2>
+    <p>An audit of version 1.0 played real sessions in a browser, with pauses, hidden tabs and idle stretches, and found these problems. Each is fixed, and a test now plays five-minute sessions with such stretches and checks that every screen shows the same minutes.</p>
+    <table class="small">
+      <thead><tr><th style="width:84mm">In 1.0</th><th>In 1.1</th></tr></thead>
+      <tbody>
+        <tr><td>The countdown ("about 5 min left") stood still while you answered quickly, and sessions could end with minutes "left".</td><td>The HUD counts down active time, refreshed every few seconds, and a session ends within about one item of its length.</td></tr>
+        <tr><td>Pauses, hidden tabs and idle time ran the session down, while the pause sheet said the clock had stopped.</td><td>The clock stops for the pause sheet, any sheet or dialog, a hidden tab and after 60 seconds without input, so the pause sheet tells the truth.</td></tr>
+        <tr><td>Practice minutes dropped any gap of more than 90 seconds whole, and counted idle gaps just under it.</td><td>Practice minutes are the clock's reading.</td></tr>
+        <tr><td>One session showed four different minute counts ("0.7 min", "1 min").</td><td>One format everywhere: "under 1 min", "7 min", "1 h 05 min". Progress shows your practice totals.</td></tr>
+        <tr><td>A reload split one sitting into two sessions; reopening the app could start a session by itself.</td><td>A reload never starts a session; it shows the last summary, or Today.</td></tr>
+        <tr><td>The Daily Challenge: a reload or "End now" spent the day's one scored attempt; unanswered items showed as wrong; Today mixed the UTC and the local day.</td><td>The attempt is spent only when all 8 items are answered; a partial attempt resumes; unanswered items show as "–"; one local day everywhere, and Today shows the challenge's number.</td></tr>
+        <tr><td>Speed sessions were sized by item count, not by their deadlines.</td><td>Speed plans from its deadlines and ends on time.</td></tr>
+        <tr><td>Progress counted skipped and voided items as answers; a Spatial Check counted as a practice session for the weekly goal.</td><td>Only answered items count; a check never counts as practice.</td></tr>
+        <tr><td>"Measured" was awarded for a Threshold run stopped after 3 items.</td><td>Threshold and Speed achievements need a complete run.</td></tr>
+        <tr><td>Two "Export trials" buttons wrote two different files under one name.</td><td>One CSV format, with the screen class and the input added.</td></tr>
+        <tr><td>The Sounds setting did nothing.</td><td>Short synthesized tones after an answer, off by default, never while an item plays.</td></tr>
+        <tr><td>Smaller slips: Today too wide at 150 % text on a phone; the item counter one ahead during feedback; Pause not saying Resume; Threshold results without units; Path asking twice before its first item; the Spatial Check's time estimate.</td><td>All fixed. A check now says honestly that it takes 15 to 25 minutes.</td></tr>
+      </tbody>
+    </table>
+    <div class="cols push">
+      <div class="panel">
+        <span class="label">Your record</span>
+        <p>Version 1.1 stores the record in format 2. A 1.0 record upgrades when 1.1 first opens it, with nothing lost; a 1.0 tab still open elsewhere then runs from memory instead of overwriting the newer record. Every trial gains two columns, the screen class (small or large) and the input (mouse, touch, pen or keys), so that results can be compared like with like. Homing's items changed, so its new trials are logged as version 2.</p>
+      </div>
+      <div class="panel">
+        <span class="label">Also new</span>
+        <ul class="dash">
+          <li>The Daily Challenge follows your local date and leaves out Track, Homing, Reckon and the six test formats, so it is the same on every device.</li>
+          <li>21 achievements: one more, for a full Section practice.</li>
+          <li>Checks and sessions record the screen they were taken on, and Progress says when a check was taken on another kind of screen than your starting checks.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -143,7 +164,7 @@
       <div>
         <h2>What you get</h2>
         <ul class="dash">
-          <li><b>Nineteen exercises:</b> mental rotation in 3D and 2D, paper folding, cube nets, cross-sections, orthographic views, perspective taking, spatial span, hidden figures, knots, experimental navigation with and without landmarks, and 3D object tracking as attention practice; plus six in the question formats of the Dental Admission Test's Perceptual Ability Test, which join Train only when you ask for them.</li>
+          <li><b>Nineteen exercises:</b> mental rotation in 3D and 2D, paper folding, cube nets, cross-sections, orthographic views, perspective taking, spatial span, hidden figures, knots, experimental navigation with and without landmarks, 3D object tracking as attention practice, and six in the question formats of an admissions test, which join Train only when you ask.</li>
           <li><b>A new seed every time,</b> so each item is generated fresh and checked by a solver: exactly one right answer, wrong options that differ visibly, nothing decisive hidden.</li>
           <li><b>Five ways to practise and one to measure, on one record:</b> Train, Path, Threshold, Speed and Free play, and the Spatial Check; plus a Daily Challenge shared by the community, and Section practice, a timed rehearsal of the six test formats.</li>
           <li><b>Feedback that explains.</b> After a miss, a slow "show me" replays the solution, drawn from the same model that graded your answer.</li>
@@ -157,17 +178,15 @@
         <h2>What it is not</h2>
         <ul class="dash">
           <li><b>Not a test of intelligence, and not a medical or diagnostic tool.</b> It shows no IQ, no index, no percentile and no "brain age".</li>
-          <li><b>Not a copy of a published test.</b> No exercise clones Wechsler Block Design or Visual Puzzles, and no item comes from a published test.</li>
+          <li><b>Not a copy of a published test, nor a promise about one.</b> No exercise clones Wechsler Block Design or Visual Puzzles, no item comes from a published test, and Parallax predicts no test score.</li>
           <li><b>Not a ranking.</b> Levels compare you with your own past on one exercise. There are no leaderboards and no points for time spent.</li>
           <li><b>Not all one thing.</b> Track (EX-01) is labelled attention practice: following moving objects is linked to attention and working memory rather than to visuospatial ability. Angles (EX-16) is labelled perceptual-judgement practice. Homing (EX-11) and Reckon (EX-12) are experimental.</li>
-          <li><b>Not a test-preparation promise.</b> Practising a test's formats raises scores on those formats; Parallax has not measured any effect on the tests themselves and predicts no score.</li>
           <li><b>Not online:</b> no account, ads or analytics.</li>
         </ul>
         <h2>Why the careful wording</h2>
         <p>Reviews of cognitive training find extensive evidence that trained tasks improve, less for closely related tasks, and little for distant tasks or everyday life <span class="cite">(Simons et al., 2016)</span>. US consumer-protection guidance judges claims by their overall impression, implied claims included; "may" or "helps" does not rescue an unsupported claim <span class="cite">(FTC, 2022)</span>. Parallax tries to meet that standard.</p>
       </div>
     </div>
-    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
   </div>
 </section>
 
@@ -243,7 +262,6 @@
         <ul class="dash">
           <li><b>Answer</b> by tap, click or the keys 1–9; Enter confirms a choice of two; Space goes on; <b>?</b> lists the keys.</li>
           <li><b>Esc pauses:</b> the clock stops and the item hides. Pausing while a moving display plays voids that item; it is replaced and never counts.</li>
-          <li><b>The HUD</b> shows the time left, "about 12 min left", counted only while you are active, and the session ends near its length (chapter 4).</li>
           <li><b>After an answer:</b> a tick or a cross with a word and a colour (never colour alone), and the right answer. After a miss, <b>Show me</b> (S) plays a slow solution you can pause, step and replay; after three automatic replays it waits for you to ask (<b>Why?</b>). A right but slow answer offers <b>See solution</b>.</li>
           <li><b>Skip this item</b> counts nowhere. Trials where the screen stuttered are void and never count against you.</li>
         </ul>
@@ -268,36 +286,53 @@
   </div>
 </section>
 
-<!-- ======================================================= 5c · on a phone, and sharing -->
+<!-- ======================================================= 5c · on a phone -->
 <section class="page" id="phone" data-chapter="02 · Quick start">
   <div class="content">
-    <h2>On a phone, and sharing</h2>
+    <h2>On a phone</h2>
     <div class="phone-row">
       <figure class="app-fig phone"><div class="shot"><img src="../shots/app-phone-item.png" alt="An item of Rotate on a 360-pixel phone: the status strip with Help and Pause, the reference figure, four options and Confirm"></div>
-        <figcaption><span class="label">Fig. 2.7</span>A Rotate item on a phone 360 pixels wide: the stimulus, the options and Confirm on one screen.</figcaption></figure>
+        <figcaption><span class="label">Fig. 2.7</span>A Rotate item on a phone 360 pixels wide: stimulus, options and Confirm on one screen.</figcaption></figure>
       <figure class="app-fig phone"><div class="shot"><img src="../shots/app-phone-help.png" alt="The same item with Help open: the goal and a tip over the item"></div>
         <figcaption><span class="label">Fig. 2.8</span>Help shows the goal and the current tip over the item.</figcaption></figure>
       <div>
         <p>Every screen works from 360 pixels wide up, with no sideways scrolling and touch targets of at least 44 pixels; on phones the main screens move to a tab bar at the bottom.</p>
         <h3>During an item</h3>
         <ul class="dash">
-          <li>The header steps aside. One strip remains: the exercise, the count or the time left, Help and Pause.</li>
-          <li>Every scored item fits a 360 × 640 screen without scrolling, the stimulus and every answer control together. Held sideways, items switch to two columns, the item on the left and the answers on the right.</li>
-          <li>Help shows the goal and the tip; the next item closes it. On a larger screen both sit above the item.</li>
-          <li>Turning the phone, or a window changing shape, while an item plays voids that trial: it is replaced and never counts.</li>
-          <li>Track, Homing, Reckon and Angles keep separate ratings for small screens (a short side under 600 pixels) and larger ones.</li>
+          <li>The header steps aside; one strip shows the exercise, the count or time left, Help and Pause.</li>
+          <li>Every scored item fits a 360 × 640 screen without scrolling: the stimulus and every answer control together.</li>
+          <li>Help shows the goal and the tip; the next item closes it.</li>
+          <li>Turning the phone while an item plays voids that trial: it is replaced and never counts.</li>
         </ul>
       </div>
     </div>
     <div class="cols">
       <div>
-        <h3>Where your progress lives on a phone</h3>
-        <p>On iPhone and iPad, Safari can clear a site's storage after seven days of use without a visit, and an app's built-in browser, Discord's included, keeps a copy of its own. On these devices the welcome says so before you start, and later offers a backup whenever none was made for 14 days. Adding Parallax to the home screen (Share, then Add to Home Screen) gives it a lasting home; served from GitHub Pages, it then has its own icon. Parallax also asks the browser to keep its storage, which the browser may decline. A backup is the safe choice on every device (chapter 9).</p>
-        <h3>Sharing</h3>
-        <p>A share card carries your results and the Chimera link, and no ranking. Where the device allows it, Share… hands the card to another app; Copy text is always there.</p>
+        <h3>Held sideways</h3>
+        <p>Items switch to two columns, the item on the left and the answers on the right; Track, Span, Orient, Pattern Memory, Homing and Reckon have layouts of their own. Every item fits a phone held sideways, 844 × 390 pixels.</p>
+        <h3>Screens and ratings</h3>
+        <p>Track, Homing, Reckon and Angles keep separate ratings for small screens (a short side under 600 pixels) and larger ones, because viewing size changes how hard they are. Every trial, session and check records its screen class and input, so results can be compared like with like.</p>
       </div>
-      <figure class="app-fig"><div class="shot"><img src="../shots/app-share.png" alt="A share card for a session, carrying the Discord link"></div>
-        <figcaption><span class="label">Fig. 2.9</span>A share card: results and the Chimera link, no ranking.</figcaption></figure>
+      <div>
+        <h3>Where your progress lives</h3>
+        <p>On iPhone and iPad, Safari can clear a site's storage after seven days of use without a visit, and an app's built-in browser, Discord's included, keeps a copy of its own. On these devices the welcome says so before you start, and later offers a backup whenever none was made for 14 days. Adding Parallax to the home screen (Share, then Add to Home Screen) gives it a lasting home; served from GitHub Pages, it then has its own icon. Parallax also asks the browser to keep its storage, which the browser may decline. A backup is the safe choice on every device (chapter 9).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= 5d · sharing, settings, where things are -->
+<section class="page" data-chapter="02 · Quick start">
+  <div class="content">
+    <h2>Sharing, settings, and where things are</h2>
+    <div class="cols-60">
+      <div>
+        <p>A share card carries your results and the Chimera link, and no ranking. Where the device allows it, Share… hands the card to another app; Copy text is always there. The Daily Challenge has a one-line share of its own, and friends can swap challenge codes to play exactly the same items (chapter 4).</p>
+        <figure class="app-fig"><div class="shot"><img src="../shots/app-share.png" alt="A share card for a session, carrying the Discord link"></div>
+          <figcaption><span class="label">Fig. 2.9</span>A share card: results and the Chimera link, no ranking.</figcaption></figure>
+      </div>
+      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-today-phone.png" alt="Today on a phone: today's session, the weekly goal and the tab bar"></div>
+        <figcaption><span class="label">Fig. 2.10</span>Today on a phone, 412 pixels wide, after six weeks of simulated practice.</figcaption></figure>
     </div>
     <div class="cols push">
       <div class="panel">
@@ -704,38 +739,34 @@
 <section class="page" id="nav-phone" data-chapter="03 · The exercises">
   <div class="content">
     <h2>Navigation without fixes</h2>
-    <div class="phone-row">
+    <div class="phone-row narrow">
       <figure class="app-fig phone"><div class="shot"><img src="../shots/app-homing-phone.png" alt="Homing on a phone: a mountain on the horizon, the arrow circle turned 60 degrees right, fine-turn buttons and Confirm"></div>
-        <figcaption><span class="label">Fig. 3.2</span>Homing on a phone, turned 60° right; a mountain on the horizon is the landmark.</figcaption></figure>
+        <figcaption><span class="label">Fig. 3.2</span>Homing on a phone, turned 60° right; the mountain is a landmark.</figcaption></figure>
       <figure class="app-fig phone"><div class="shot"><img src="../shots/app-reckon-phone.png" alt="Reckon on a phone during the walk back: the circle set at 145 degrees right, and Back, Walk and Here"></div>
-        <figcaption><span class="label">Fig. 3.3</span>Reckon on a phone, part of the way back: Back, Walk and Here.</figcaption></figure>
+        <figcaption><span class="label">Fig. 3.3</span>Reckon on a phone, part of the way back.</figcaption></figure>
       <div>
         <h3>Why Reckon has no landmarks</h3>
-        <p>Dead reckoning works out where you are from where you started and every turn and distance since. Its errors add up, which is why navigators correct them with fixes: a landmark, a star, a satellite. A community member pointed out that Homing's far landmarks are exactly such fixes, so they correct the very errors that path-integration training should work on. Reckon was built to remove every fix:</p>
+        <p>Dead reckoning works out where you are from where you started and every turn and distance since. Its errors add up, so navigators correct them with fixes: a landmark, a star, a satellite. A community member pointed out that Homing's far landmarks are exactly such fixes, so they correct the very errors that path-integration training should work on. Reckon removes every fix:</p>
         <ul class="dash">
           <li>no objects, a flat sky without a sun, unlit ground;</li>
-          <li>ground marks laid out anew for every item, so they show turning and walking but mark no place;</li>
-          <li>a start ring that disappears for good once you leave it;</li>
+          <li>ground marks laid out anew for every item: they show turning and walking, but mark no place;</li>
+          <li>a start ring that is gone once you leave it;</li>
           <li>no map, compass or counter during the walk;</li>
-          <li>speeds that vary from item to item, and from the second level within a route.</li>
+          <li>speeds that change, so seconds do not measure distance.</li>
         </ul>
-        <p>Homing keeps its landmarks as the easier stage before Reckon, and its texts say why they help.</p>
+        <p>Homing keeps its landmarks as the easier stage before Reckon.</p>
       </div>
     </div>
     <div class="cols">
       <div>
-        <h3>Feedback that trains error, not luck</h3>
-        <p>A Reckon answer is right within the tolerance, and that alone moves your rating. The feedback gives more: the angle error; on return items, the distance error and the drift, how far off you ended for each metre walked; a hint when an answer matches a typical slip (the turns left out, left and right swapped, turning straight round, a heading never updated); and, after five routes, your habit over the last 20: turning too far or too little, walking short or long, with a chart of how far round you turned. The tolerance tightens as your rating rises.</p>
-        <p>Every item is built so that answers which skip the integration (the turns reversed, the heading not updated, the mirror image) miss by more than the tolerance, and the start is never almost straight ahead or behind. Routes run 12 to 28 m, the start lies 5 to 20 m away, and no walk moves for more than 30 seconds.</p>
+        <h3>Feedback that trains the error</h3>
+        <p>A Reckon answer is right within the tolerance, and only that moves your rating. The feedback says more: the angle error; on return items the distance error and the drift, how far off you ended per metre walked; a hint when an answer matches a typical slip (turns left out, left and right swapped, turning straight round, a heading never updated); and, after five routes, your habit over the last 20, turning too far or too little and walking short or long, with a chart. Harder items bring tighter tolerances.</p>
+        <p>Answers that skip the work (turns reversed, heading not updated, the mirror image) always miss by more than the tolerance. Routes run 12 to 28 m, the start lies 5 to 20 m away, and no walk moves for more than 30 seconds.</p>
       </div>
       <div>
-        <h3>On a phone, and for comfort</h3>
-        <p>Both exercises play by touch: drag the view to turn, then fine-tune with the 1° and 5° buttons; captions sit over the view as subtitles. Held sideways, the view and the controls sit side by side. Pause freezes the walk at once. The walks move gently: Homing at 1.8 m/s, Reckon between 1.2 and 2.0 m/s, turns at 45°/s at most, with soft starts and stops. If the motion makes you feel unwell, pause or stop.</p>
-        <p>A trial is voided only when the walk itself was harmed: a freeze of more than a second while moving, slow frames for more than half of it, a lost 3D view, the view changing shape, or a pause. Since Homing's items changed in 1.1, its new trials are logged as version 2.</p>
-        <div class="panel signal">
-          <span class="label">What is known</span>
-          <p>On a screen, path integration lacks the body's own sense of turning and walking. Navigation training has transferred little beyond itself: 42 sessions of virtual navigation over four months improved navigation by more than a standard deviation, while no other test moved beyond a non-significant trend <span class="cite">(Lövdén et al., 2012)</span>. The project's search found no randomised study of path-integration training with a transfer test. Reckon is an experiment; pooled data can say more.</p>
-        </div>
+        <h3>Touch, and comfort</h3>
+        <p>Both exercises play by touch: drag the view to turn, then fine-tune with the 1° and 5° buttons; captions sit over the view as subtitles, and held sideways the view and the controls sit side by side. Pause freezes the walk at once. The motion is gentle: Homing walks at 1.8 m/s, Reckon between 1.2 and 2.0 m/s, and turns run at 45°/s at most, with soft starts and stops. If the motion makes you feel unwell, pause or stop.</p>
+        <p>A trial is voided only when the walk itself was harmed: a freeze of more than a second while moving, slow frames for more than half of it, a lost 3D view, the view changing shape, or a pause. Homing's items changed in 1.1, so its new trials are logged as version 2.</p>
       </div>
     </div>
   </div>
@@ -767,7 +798,7 @@
     </article>
     <div class="ex-card ex-extra">
       <h2>How every item is proved</h2>
-      <p>A rope is a smooth curve through points on a grid, with one flag per crossing saying which strand is on top. Before you see an item, a validator finds the crossings again from the drawn curve and settles the answer in up to three steps, each a proof:</p>
+      <p>A rope is a curve through points on a grid, with a flag per crossing for the strand on top. Before you see an item, a validator finds the crossings again from the drawn curve and settles the answer in up to three steps, each a proof. The three moves below never change whether a knot is there.</p>
       <div class="moves">
         <figure>
           <svg viewBox="0 0 124 54" role="img" aria-label="A strand with a curl that crosses itself, then the same strand straight">
@@ -805,13 +836,13 @@
       </div>
       <div class="cols">
         <div>
-          <p><b>1 · Take it apart.</b> The validator applies these three moves, which never change whether a knot is there, wherever they remove crossings. If every crossing comes off, the rope holds no knot, and that list of moves is the Show me you watch.</p>
-          <p><b>2 · A determinant.</b> If crossings remain, it computes a number from the diagram (its determinant, by Fox colouring). A rope with no knot always gives 1, so any other number proves a knot.</p>
-          <p><b>3 · The Jones polynomial.</b> Otherwise it tries slide-overs and the moves again, and then computes the Jones polynomial. For any diagram of up to 24 crossings, that polynomial equals 1 only for a rope with no knot <span class="cite">(Tuzun &amp; Sikora)</span>; ropes here have at most 12.</p>
+          <p><b>1 · Take it apart.</b> Apply the moves wherever they remove crossings. If every crossing comes off, there is no knot, and that list of moves is the Show me you watch.</p>
+          <p><b>2 · A determinant.</b> If crossings remain, compute the diagram's determinant (by Fox colouring). A rope without a knot always gives 1, so any other number proves a knot.</p>
+          <p><b>3 · The Jones polynomial.</b> Otherwise try slide-overs and the moves again, then the Jones polynomial: for diagrams of up to 24 crossings it equals 1 only when there is no knot <span class="cite">(Tuzun &amp; Sikora)</span>. Ropes here have at most 12.</p>
         </div>
         <div>
-          <p><b>Untie and tie</b> items are proved crossing by crossing: switched, exactly one of the four marked crossings changes the answer. <b>Linked</b> loops are proved by a linking number other than zero or by the Jones polynomial; <b>apart</b> only by moves that leave no crossing between the loops.</p>
-          <p><b>No cheap tells.</b> Every knot comes paired with a plain rope drawn from the same outline and matched on how often the rope alternates over and under, on its twist and on the moves in plain sight; before this pairing, alternation alone told knots apart 75 to 92 % of the time; after it, no cheap rule tested beat 52.3 % on Pull items, where guessing scores 50 %. A fifth format, a knot against its mirror image, was left out of 1.1: in flat drawings the crossings give it away.</p>
+          <p><b>Untie and tie</b>: switched, exactly one of the four marked crossings changes the answer. <b>Linked</b> loops are proved by a linking number other than zero or by the Jones polynomial; <b>apart</b> only by moves that leave no crossing between them.</p>
+          <p><b>No cheap tells.</b> Each knot is paired with a plain rope from the same outline, matched on over-under alternation, twist and the moves in plain sight. Unpaired, alternation alone told knots apart 75 to 92 % of the time; paired, no cheap rule tested beat 52.3 % on Pull, where guessing scores 50 %. A knot against its mirror image was left out of 1.1: in flat drawings the crossings give it away.</p>
         </div>
       </div>
     </div>
@@ -1009,7 +1040,8 @@
         <tr><td><b>Speed</b></td><td>fluency</td><td>Deadlines on settings you already answer well without a clock.</td><td>its own timed rating</td></tr>
         <tr><td><b>Free play</b></td><td>choice</td><td>Pick the exercise, variant, settings and timer. Logged.</td><td>untouched</td></tr>
         <tr><td><b>Spatial Check</b></td><td>measurement</td><td>Short adaptive tests on tasks you never train, without feedback (chapter 5).</td><td>untouched</td></tr>
-        <tr><td><b>Daily Challenge</b></td><td>the community</td><td>The same 8 items for everyone on each UTC day, at medium difficulty, one scored attempt (replays are practice). Track and Homing are left out because their difficulty depends on the screen. The share line reads <span class="mono">Parallax Daily #N · x/8 · discord.gg/chmr</span>; #1 was 1 November 2026.</td><td>untouched</td></tr>
+        <tr><td><b>Daily Challenge</b></td><td>the community</td><td>The same 8 items for everyone on each date (your local one), at medium difficulty, one scored attempt (replays are practice); an attempt left part-way goes on where it stopped. Track, Homing and Reckon are left out because their difficulty depends on the screen, and the six test formats because they are opt-in. The share line reads <span class="mono">Parallax Daily #N · x/8 · discord.gg/chmr</span>; #1 was 1 November 2026.</td><td>untouched</td></tr>
+        <tr><td><b>Section practice</b> <span class="meta">1.1</span></td><td>rehearsing six test formats</td><td>The six formats of page <span class="pgref" data-for="dat"></span> in the test's order, against one clock: 30 items in 20 minutes or 90 in 60, no feedback until a review at the end (page <span class="pgref" data-for="section"></span>).</td><td>untouched</td></tr>
       </tbody>
     </table>
     <p class="note push">Friends can also share a challenge code to play exactly the same items and compare notes. There is no ranking anywhere.</p>
@@ -1040,7 +1072,7 @@
         </table>
         <p class="note">For two-choice tasks and simple learners, about 85 % right maximises learning in theory <span class="cite">(Wilson et al., 2019)</span>; Balanced gives that on yes/no items. In a large adaptive-practice study, learners rated 60–70 % success as about right <span class="cite">(Pelánek et al., 2017)</span>. In children's maths, higher success meant more practice, and that volume carried the gain <span class="cite">(Jansen et al., 2013)</span>: hence Comfortable.</p>
         <h3>How a Train session is built</h3>
-        <p>Three exercises: a focus, a review and a variety pick. They share the trials according to how fast each is improving (measured on the rating, because success itself is held at the target), with a bonus when a review is due and for rest. Each gets 20 to 50 % of the trials, and 15 % of picks are random. In children's maths practice, a pure learning-progress bandit reached higher levels than an expert sequence on three of four exercise types but starved the fourth <span class="cite">(Clement et al., 2015)</span>, hence the floors. All eleven exercises are tried within the first five sessions. Sessions open with two easy warm-up items and close on an easier one.</p>
+        <p>Three exercises: a focus, a review and a variety pick. They share the trials according to how fast each is improving (measured on the rating, because success itself is held at the target), with a bonus when a review is due and for rest. Each gets 20 to 50 % of the trials, and 15 % of picks are random. In children's maths practice, a pure learning-progress bandit reached higher levels than an expert sequence on three of four exercise types but starved the fourth <span class="cite">(Clement et al., 2015)</span>, hence the floors. Untried exercises come first, visuospatial ones before Track, Homing and Reckon, so every exercise is tried within the first few sessions; the six test formats join only under their focus. Sessions open with two easy warm-up items and close on an easier one, and end on active time (page <span class="pgref" data-for="clock"></span>).</p>
       </div>
       <div>
         <h3>Levels 1 to 100</h3>
@@ -1058,7 +1090,7 @@
             <tr><td class="mono">S5</td><td>random</td><td>about 70 % of trials switch exercise</td></tr>
           </tbody>
         </table>
-        <p class="note">An exercise moves up a stage once it has 40 answers and a settled rating, and back when trials right after a switch fall more than 10 points below prediction. Stretch starts at S3. Raising interference step by step beat both purely blocked and purely random practice <span class="cite">(Porter &amp; Magill, 2010)</span>, and interleaving helps most when categories look alike <span class="cite">(Brunmair &amp; Richter, 2019)</span>. A name banner would remove the choice that makes mixing work, so S4 hides it. Similar-looking groups: Fold, Nets, Slice, Views and Hidden; Rotate, Spin and Orient.</p>
+        <p class="note">An exercise moves up a stage once it has 40 answers and a settled rating, and back when trials right after a switch fall more than 10 points below prediction. Stretch starts at S3. Raising interference step by step beat both purely blocked and purely random practice <span class="cite">(Porter &amp; Magill, 2010)</span>, and interleaving helps most when categories look alike <span class="cite">(Brunmair &amp; Richter, 2019)</span>. A name banner would remove the choice that makes mixing work, so S4 hides it. Similar-looking groups: Fold, Nets, Slice, Views and Hidden; Rotate, Spin and Orient; Knots with Nets and Fold; Homing and Reckon; and each test format with the exercise it resembles (Hole Punch with Fold, Painted Cubes and Missing View with Views, Openings with Views and Slice, Form with Nets and Fold). Angles is in none.</p>
         <h3>Free play</h3>
         <p>Choose the exercise, the variant, fixed settings or adaptive items, and a timer on or off. Everything is logged; no rating changes.</p>
       </div>
@@ -1097,13 +1129,92 @@
         <tr><td>a number to compare over months, from a research-style staircase</td><td><b>Threshold</b>: Track Standard, Span length</td></tr>
         <tr><td>to get faster at what you already do well</td><td><b>Speed</b></td></tr>
         <tr><td>to explore one setting, or play what a friend played</td><td><b>Free play</b>, or a challenge code</td></tr>
+        <tr><td>to rehearse the six test formats against one clock</td><td><b>Section practice</b> (page <span class="pgref" data-for="section"></span>)</td></tr>
         <tr><td>to know whether your practice carries over</td><td>the <b>Spatial Check</b>, every two weeks</td></tr>
       </tbody>
     </table>
     <div class="panel signal push">
       <span class="label">What the simulations show</span>
-      <p>200 simulated learners with their own abilities, learning curves, lapses and breaks practised for 60 days in each mode. Success on target items stayed within 2.3 points of the target in every style. The 95 % ranges held the true ability 95.4 to 96.3 % of the time in Train, 98.2 % in Path, and 91.5 % with deliberately wrong item difficulties. In Path, 95.7 % of learner and exercise pairs passed stage 1 and 4.8 % reached stage 10. Track Standard thresholds had a typical error of 0.12 log₁₀, Span lengths were within one block 76 % of the time, and one Spin deadline run is a rough guide. These are simulations of the engine, not studies of people: they show that it does what it says, not that it helps.</p>
+      <p>200 simulated learners with their own abilities, learning curves, lapses and breaks practised for 60 days in each mode (run again for 1.1 on 13 November 2026). Success on target items stayed within 2.2 points of the target in every style. The 95 % ranges held the true ability 95.8 to 96.3 % of the time in Train, 98.6 % in Path, and 92.2 % with deliberately wrong item difficulties. In Path, 95.7 % of learner and exercise pairs passed stage 1 and 4.7 % reached stage 10. Track Standard thresholds had a typical error of 0.12 log₁₀, Span lengths were within one block 73 % of the time, and one Spin deadline run is a rough guide. These are simulations of the engine, not studies of people: they show that it does what it says, not that it helps.</p>
     </div>
+  </div>
+</section>
+
+<!-- ======================================================= 15b · chapter 4: the active-time clock -->
+<section class="page" id="clock" data-chapter="04 · Progression modes">
+  <div class="content">
+    <h2>The active-time clock</h2>
+    <p class="lead">Since 1.1 one clock measures every session, and the same minutes appear everywhere: in the HUD, the summary, the Log, the share card, Progress and the weekly goal.</p>
+    <div class="cols">
+      <div>
+        <h3>What it counts, and what stops it</h3>
+        <p>It starts with a session's first item and runs during items, feedback, show-me and tutorials. It stops:</p>
+        <ul class="dash">
+          <li>while the pause sheet is open;</li>
+          <li>while any other sheet or dialog is open, such as How to play or a strategy card;</li>
+          <li>while the tab is hidden, or the phone's screen is off;</li>
+          <li>after 60 seconds without input. Those 60 seconds count, nothing after them does, and the next touch, click, key or mouse movement starts it again.</li>
+        </ul>
+        <h3>How a session ends</h3>
+        <p>Train, Path and Speed sessions, and Free play without a set length, last their length in active minutes. When about one item is left at your own pace, an easier closing item comes; an item that runs past the end closes the session right after it. A quick player gets more items, not a shorter session: the plan grows when its items run out with time left. The HUD reads "about 12 min left", "less than 1 min left" or "last item", refreshed every 5 seconds outside the stimulus. Speed plans its items from their deadlines.</p>
+        <h3>One way of writing minutes</h3>
+        <p>Whole minutes, rounded: "under 1 min", "7 min", "1 h 05 min", the same on every screen. Progress shows practice this week and in all.</p>
+      </div>
+      <div>
+        <h3>Reloads</h3>
+        <p>A reload or a closed tab ends the session with what was played. Reopening the app shows that session's summary, for up to 12 hours, instead of starting a new session by itself.</p>
+        <h3>The Daily Challenge</h3>
+        <p>The day's scored attempt counts only when all 8 items are answered. One left part-way, by "End now", a reload or a closed tab, goes on where it stopped when you open it again that day, and unanswered items are never counted wrong. The day is your local date, the same boundary everywhere in the app.</p>
+        <h3>The weekly goal</h3>
+        <p>A session counts towards it with 10 answers or 5 minutes of active practice. A Spatial Check is a measurement and never counts.</p>
+        <div class="panel signal">
+          <span class="label">How it was checked</span>
+          <p>A browser test plays five-minute Train, Path and Speed sessions with quick and slow stretches, a 100-second pause, a 100-second hidden tab and a 70-second idle stretch. Each session ended within one item of five active minutes, and the summary, the share card, the Log, Progress and Today all showed "5 min".</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= 15c · chapter 4: Section practice -->
+<section class="page" id="section" data-chapter="04 · Progression modes">
+  <div class="content">
+    <h2>Section practice</h2>
+    <p class="lead">A rehearsal of the test conditions for the six DAT-style formats (page <span class="pgref" data-for="dat"></span>): the parts in the order of the Perceptual Ability Test in the Dental Admission Test (DAT®), one clock, no feedback until the end. It practises pacing and switching between formats; the exercises themselves teach each format.</p>
+    <div class="cols">
+      <div>
+        <table class="small">
+          <thead><tr><th style="width:16mm">Size</th><th>Items</th><th style="width:24mm">Time</th></tr></thead>
+          <tbody>
+            <tr><td><b>Mini</b></td><td>5 a part, 30 in all</td><td>20 minutes</td></tr>
+            <tr><td><b>Full</b></td><td>15 a part, 90 in all</td><td>60 minutes</td></tr>
+          </tbody>
+        </table>
+        <p>Both keep about 40 seconds an item, the real test's average pace. A part that cannot run on this device is left out, and the section keeps the same pace for the rest.</p>
+        <h3>Forms</h3>
+        <p>Each size has numbered forms. A form holds the same items for everyone with the same version of the exercises, so friends can compare one. Its items sit in the middle of each exercise's difficulty range, 35 to 65 % of the way up. The setup offers the next form as new to you, and marks the formats you have never practised, with a way to their Watch, Try, Go.</p>
+        <h3>During a section</h3>
+        <ul class="dash">
+          <li>Each part opens with its rules; the clock waits while you read them.</li>
+          <li>Choosing an answer moves on. Back, Flag and Skip sit under the item, and Items shows the part's items, the answered ones marked.</li>
+          <li>You can go back within the part you are in. Moving on to the next part closes this one for good; first a card lists what is unanswered or flagged.</li>
+          <li>The clock stops for Pause, any open sheet, a hidden tab and five idle minutes, and warns at 5 and at 1 minute left.</li>
+          <li>A voided item (a stutter, the phone turned) does not count, and a replacement joins the end of its part.</li>
+          <li>A reload offers to resume the run where it stopped.</li>
+        </ul>
+      </div>
+      <div>
+        <figure class="app-fig review"><div class="shot"><img src="../shots/app-section-review.png" alt="The review after a mini section: right, answered, time used and pauses, then a table of right answers, answered items, time and time per item for each of the six parts"></div>
+          <figcaption><span class="label">Fig. 4.1</span>The review after a mini section, played by a simulated player: results and pacing per part.</figcaption></figure>
+        <h3>The review</h3>
+        <p>After the last part, when the time runs out, or when you end the section from the pause sheet: right and answered out of all items, the time used and any pauses, and for each part the right answers, the time and the time per item. Then the items to look at again, each replayed with your answer and the right one marked, and its show-me.</p>
+        <div class="panel signal">
+          <span class="label">No score, no rating</span>
+          <p>Section practice never changes a level. Its counts are for comparing your own sections; Parallax turns them into no score, scale value or prediction for the test. Its trials are logged as Section practice, and a full section with every part reached and at least half of its items answered earns the achievement "Full section".</p>
+        </div>
+      </div>
+    </div>
+    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
   </div>
 </section>
 
@@ -1156,6 +1267,7 @@
         <tr><td><b>Two strategies, and when to switch</b></td><td>Every exercise has an imagery card and an analytic card; occasional one-tap check-ins log which you used.</td><td>Teaching both kinds closed a sex gap in organic chemistry, while either alone did not <span class="cite">(Stieff et al., 2014)</span>; strategy switching relates to rotation scores <span class="cite">(Nazareth et al.)</span>; elsewhere this is untested, so the cards say to try both.</td></tr>
         <tr><td><b>Feedback that explains</b></td><td>After a miss, show me replays the solution from the grading model, slowly, with pause and step; tags say why each wrong option is wrong.</td><td>Feedback with task and process information had d = 0.99, against 0.46 for right/wrong plus the answer <span class="cite">(Wisniewski et al., 2020)</span>; animation beat static pictures (d = 0.37; <span class="cite">Höffler &amp; Leutner, 2007</span>); seeing the informative views mattered more than interacting <span class="cite">(Keehner et al., 2008)</span>.</td></tr>
         <tr><td><b>Bridges</b></td><td>Each exercise names where its skill is used, with the limitation beside it. These notes are context, not a tested route to transfer.</td><td>Making connections explicit ("bridging") was proposed as a way to help transfer <span class="cite">(Perkins &amp; Salomon, 1988)</span>; it is untested for spatial training.</td></tr>
+        <tr><td><b>Error feedback without fixes</b> <span class="meta">Reckon</span></td><td>No landmark corrects the walk; after each answer the angle and distance errors, the drift per metre and your habit over the last 20 routes.</td><td>In a lab version of the task, feedback after every trial removed the overshoot of distance within one session <span class="cite">(Noel et al., 2020)</span>; whether that lasts or transfers is untested.</td></tr>
         <tr><td><b>Hands on</b></td><td>Off-screen challenges for Fold, Nets and Views, for variety.</td><td>In studies of children, hands-on training went with larger maths gains <span class="cite">(Hawes et al., 2022; Gilligan-Lee et al., 2023)</span>; these challenges are untested, and Parallax makes no maths claim.</td></tr>
         <tr><td><b>Dose</b></td><td>20-minute sessions, three a week, by default.</td><td>Several effective programmes ran about 10 to 20 hours, and more hours have not been shown to help more <span class="cite">(Hawes et al., 2022)</span>; more than three sessions a week added nothing in older adults <span class="cite">(Lampit et al., 2014)</span>.</td></tr>
       </tbody>
@@ -1174,7 +1286,7 @@
         <h3>Probes you never train</h3>
         <p>The Spatial Check is a battery of short tests, the probes, whose formats no exercise uses. They never give feedback, and they are never used as warm-ups. Three spatial probes are one step away from training (mid transfer), two test kinds of spatial thinking that no exercise trains, and a word task serves as the control.</p>
         <h3>A short adaptive test</h3>
-        <p>Each probe has 16 items and takes about 3 minutes. The first two items are easy; each later one aims at about 60 % above chance under the current estimate: neither trivial nor hopeless. Your score θ and its standard error come from the exact posterior with the same starting assumption every time, and forms A, B and C (the same blueprint, different seeds) rotate, so checks stay comparable. Accuracy and the median time of right answers are reported separately. Each item has a calm time bar; a time-out counts as wrong.</p>
+        <p>Each probe has 16 items and takes 3 to 5 minutes. The first two items are easy; each later one aims at about 60 % above chance under the current estimate: neither trivial nor hopeless. Your score θ and its standard error come from the exact posterior with the same starting assumption every time, and forms A, B and C (the same blueprint, different seeds) rotate, so checks stay comparable. Accuracy and the median time of right answers are reported separately. Each item has a calm time bar; a time-out counts as wrong.</p>
       </div>
       <div>
         <h3>When to take it</h3>
@@ -1210,7 +1322,9 @@
       <div>
         <h3>Taking a check well</h3>
         <ul class="dash">
-          <li>Find 15 quiet minutes. A pause stops the clock; an item paused while it plays is replaced. One skip per task is free; after that a skip counts as wrong.</li>
+          <li>Find 15 to 25 quiet minutes. A pause stops the clock; an item paused while it plays is replaced. One skip per task is free; after that a skip counts as wrong.</li>
+          <li>Take your checks on the same kind of screen. Each check records its screen class, and Progress says when a check was taken on another kind of screen than your starting checks.</li>
+          <li>Later checks ask one question first: have you practised or taken another test with puzzles like these, or with word analogies, since the last check? No, a little or a lot; the answer is kept beside your data and never scored.</li>
           <li>Answer as well as you can, and guess when you are unsure. The items adapt, so expect roughly 6 to 8 in 10 right: the difficulty you reach carries the information, not the count.</li>
           <li>Do not look up or practise the probes. Their value is that they are new.</li>
           <li>Expect "unclear yet" for a while. That is the honest answer for one person and a few checks.</li>
@@ -1230,12 +1344,12 @@
         <p><span class="verdict beyond">beyond familiarity</span> when both hold: the lower end of the 95 % range of your change minus the familiarity estimate is above zero, counting the uncertainty of both; and the lower end of your change minus the control's change is above zero. Practice is then one likely reason; one person's checks cannot rule out expectations or chance.</p>
         <p><span class="verdict none">no change</span> when even the upper end of your change beyond familiarity is below 0.25 points on the probe's scale.</p>
         <p><span class="verdict unclear">unclear yet</span> otherwise: at least one comparison (with familiarity or with the word task) still includes zero. This is the usual result and not the same as no progress; a change shows once it is larger than this range.</p>
-        <p class="note">In simulations, learners whose probe ability did not change got "beyond familiarity" about 0.06 % of the time (1 in 1,600 across all runs; at most 0.5 % in any single run). Of learners whose probe ability did rise (by half their training gain), 97 % were still "unclear yet" after 60 days. Each check is compared with the baselines on its own, so taking more checks does not narrow the range; the composite is more precise than any one probe.</p>
+        <p class="note">In the simulations run for 1.1, none of the 1,600 learners whose probe ability did not change got "beyond familiarity" (in 1.0, 1 in 1,600). Of learners whose probe ability did rise (by half their training gain), 96.5 % were still "unclear yet" after 60 days. Each check is compared with the baselines on its own, so taking more checks does not narrow the range; the composite is more precise than any one probe.</p>
       </div>
     </div>
     <div class="panel signal">
       <span class="label">One person, or many</span>
-      <p>Each check is short, so most people will see "unclear yet" for weeks, often for months, even when practice is helping. That is the honest precision of a 15-minute test, not a fault. The place where transfer can really be measured is pooled data: many people's checks together, each with its familiarity estimate and its control task, can show what one record cannot. If you would like to help, export your trials from the Lab (Research export) and share the file in the Chimera Discord, <a href="https://discord.gg/chmr">discord.gg/chmr</a>. Nothing is ever sent automatically: you choose what to share.</p>
+      <p>Each check is short, so most people will see "unclear yet" for weeks, often for months, even when practice is helping. That is the honest precision of a check of 15 to 25 minutes, not a fault. The place where transfer can really be measured is pooled data: many people's checks together, each with its familiarity estimate and its control task, can show what one record cannot. If you would like to help, export your trials from the Lab (Research export) and share the file in the Chimera Discord, <a href="https://discord.gg/chmr">discord.gg/chmr</a>. Nothing is ever sent automatically: you choose what to share.</p>
     </div>
   </div>
 </section>
@@ -1284,6 +1398,7 @@
           <li>The hatched band is what familiarity alone should add, from your own first-to-second gain.</li>
           <li>The dashed line is the change on the word task, which training does not touch.</li>
           <li>Changes are in points on each task's difficulty scale: +1 point is about the step from 50 % to 73 % right on the same item.</li>
+          <li>A note appears when the latest check was taken on another kind of screen than your starting checks, and another, about Level, once you have practised Angles since them.</li>
         </ul>
       </div>
       <div>
@@ -1324,7 +1439,7 @@
         <tr><td>Learning curves with a noise band; personal bests: the highest level after a strong whole block of 10</td><td>In one experiment, badges, leaderboards and performance graphs together raised felt competence <span class="cite">(Sailer et al., 2017)</span>; Parallax keeps the graphs and drops the leaderboard. Whole blocks keep a best from being luck.</td></tr>
         <tr><td>A weekly goal you set (3 by default, 2 to 6), on any days, with a calendar of days practised</td><td>Your own goal; more than three sessions a week added nothing in older adults <span class="cite">(Lampit et al., 2014)</span>.</td></tr>
         <tr><td>A weekly streak with automatic grace (one missed week in four) and free repair (goal + 1 sessions the next week); no daily streak</td><td>Breaks hurt less when they can be repaired <span class="cite">(Silverman &amp; Barasch, 2023)</span>.</td></tr>
-        <tr><td>20 achievements for skills and good practice (examples on the next page)</td><td>Finite and visible criteria, tied to skill or to practice that helps measurement. None says "mastered".</td></tr>
+        <tr><td>21 achievements for skills and good practice (all on the next page)</td><td>Finite and visible criteria, tied to skill or to practice that helps measurement. None says "mastered".</td></tr>
         <tr><td>Session summaries against your own past, with an honest line about noise and one suggested next step</td><td>Self-referenced, task-focused feedback <span class="cite">(Kluger &amp; DeNisi, 1996)</span>.</td></tr>
         <tr><td>Every exercise open from day one; five ways to practise; three styles</td><td>Choice: autonomy <span class="cite">(Ryan et al., 2006)</span>.</td></tr>
         <tr><td>The Daily Challenge, challenge codes for friends, share cards carrying the Discord link</td><td>Relatedness without ranking; competition combined with collaboration beat competition alone <span class="cite">(Sailer &amp; Homner, 2020)</span>.</td></tr>
@@ -1354,9 +1469,9 @@
         <h2>The weekly goal, exactly</h2>
         <figure class="app-fig goal"><div class="shot"><img src="../shots/app-goal.png" alt="The weekly goal calendar in Progress: sessions per day and weeks met"></div>
           <figcaption><span class="label">Fig. 6.1</span>The weekly goal in Progress: days practised and weeks met.</figcaption></figure>
-        <p>Weeks run Monday to Sunday. A session counts when it has 10 answers or lasts 5 minutes. One missed week in any four is forgiven automatically, and a missed week that grace cannot cover is repaired for free by doing one session more than your goal the following week. The streak is recomputed from your sessions every time, so it cannot drift, and its wording is always informational: never a warning about loss.</p>
+        <p>Weeks run Monday to Sunday. A session counts when it has 10 answers or 5 minutes of active practice; a Spatial Check never counts. One missed week in any four is forgiven automatically, and a missed week that grace cannot cover is repaired for free by doing one session more than your goal the following week. The streak is recomputed from your sessions every time, so it cannot drift, and its wording is always informational: never a warning about loss.</p>
         <h2>Achievements, exactly</h2>
-        <p>Achievements reward skill and good practice, never time: only right answers count for skill milestones, and stuttered or skipped trials never count. <b>Good practice:</b> every exercise tried; the weekly goal met, once and in four weeks; 12 practice days within 90; two baselines; three checks at least 12 days apart; a check three weeks after training slowed; both strategies reported on one exercise; a backup downloaded; a Threshold run. <b>Skill:</b> Path stages 3 and 10; a stage still holding at its 30-day recheck; level 50 once settled; level 20 on every exercise; a right answer from the hardest tenth of a range; five targets among ten spheres tracked fully right; a span of seven; a Speed session; a new best block.</p>
+        <p>Achievements reward skill and good practice, never time: only right answers count for skill milestones, and stuttered or skipped trials never count. <b>Good practice:</b> every exercise tried (the six test formats, which are opt-in, never count); the weekly goal met, once and in four weeks; 12 practice days within 90; two baselines; three checks at least 12 days apart; a check three weeks after training slowed; both strategies reported on one exercise; a backup downloaded; a complete Threshold run; a full Section practice, every part reached and at least half its items answered. <b>Skill:</b> Path stages 3 and 10; a stage still holding at its 30-day recheck; level 50 once settled; level 20 on every exercise (again without the test formats); a right answer from the hardest tenth of a range; five targets among ten spheres tracked fully right; a span of seven; a Speed session that ran its full time; a new best block.</p>
       </div>
       <div>
         <h2>Feedback after an answer</h2>
@@ -1440,6 +1555,37 @@
   </div>
 </section>
 
+<!-- ======================================================= 23b · chapter 7, page 3: version 1.1 -->
+<section class="page" data-chapter="07 · The research in one table">
+  <div class="content">
+    <table class="small research">
+      <thead><tr><th style="width:38mm">Finding</th><th style="width:47mm">Numbers</th><th>Design response</th><th style="width:27mm">Source</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" class="group">Navigation without landmarks (1.1)</td></tr>
+        <tr><td>Feedback can remove dead-reckoning bias, at least within a session</td><td>with end-point feedback, distance gain 1.10 → 0.97, angular gain 1.49 → 1.09; practice and feedback not separated</td><td>Reckon: angle, distance, drift and habit feedback after every answer; tolerances tighten with skill</td><td>Noel et al. 2020</td></tr>
+        <tr><td>Navigation training transfers little</td><td>42 sessions: navigation +1.42 SD (young adults); other tests at most a non-significant trend (+0.29 SD, p = .072)</td><td>Homing and Reckon experimental; no wayfinding claim</td><td>Lövdén et al. 2012</td></tr>
+        <tr><td>The body's own senses help</td><td>in free-walking VR, adding walking to vision halved the position error (22.5 → 10.6 m)</td><td>"walking adds body senses that a screen cannot give"</td><td>Embodied Navigation (preprint) 2025</td></tr>
+        <tr><td>Without body cues, sides get swapped</td><td>37.5 % of naive people consistently swapped left and right</td><td>a named hint for swapped sides; tutorial items for one turn and one distance</td><td>Riecke &amp; Wiener 2007</td></tr>
+        <tr><td>A few trials give an unreliable score</td><td>6 trials: test–retest r &lt; .5 for end-point and angle error</td><td>levels shown with ranges, which narrow only over many trials</td><td>McLaren et al. 2022</td></tr>
+        <tr><td colspan="4" class="group">Knots (1.1)</td></tr>
+        <tr><td>Knot reasoning is spatial, and partly its own skill</td><td>Knot Reasoning Task: r = .54 with mental rotation, .59 with paper folding; together about 40 % of its variance</td><td>Knots as a visualisation exercise beside Rotate and Fold</td><td>Bennett-Pierre et al. 2025</td></tr>
+        <tr><td>People see a knot's shape, not its strength</td><td>strength judgements at or below chance (36.9–49.6 %); naming the knot 92.5 % (chance 25 %)</td><td>only questions of shape: does a knot remain, are loops linked</td><td>Croom &amp; Firestone 2024</td></tr>
+        <tr><td>Spatial ability relates to learning to tie knots</td><td>mental rotation and surgical knots tied: r = .42–.45</td><td>the "where it is used" line; no claim about tying</td><td>Brandt &amp; Davies 2006</td></tr>
+        <tr><td>The unknot can be certified</td><td>no knot with a diagram of up to 24 crossings has a Jones polynomial of 1</td><td>the validator's last step; ropes of at most 12 crossings</td><td>Tuzun &amp; Sikora (arXiv)</td></tr>
+        <tr><td colspan="4" class="group">Test formats and test hygiene (1.1)</td></tr>
+        <tr><td>The PAT predicts dental grades modestly</td><td>corrected correlations .16–.36 with grades in 38 schools; highest for second-year technique</td><td>a limitation line beside every DAT-style text; no score prediction</td><td>ADA 2026</td></tr>
+        <tr><td>Coaching adds to retesting</td><td>coached .70 vs .24 SD without coaching; identical forms .46 vs alternate .24</td><td>"Also in tests" notes; take a test that matters first</td><td>Hausknecht et al. 2007</td></tr>
+        <tr><td>Being taught a puzzle type's rules raises scores</td><td>figural matrices: d ≥ 1.19 after a short video; d = .92 with rule information</td><td>About's Test hygiene: about one standard deviation</td><td>Schneider et al. 2020; Levacher et al. 2022</td></tr>
+        <tr><td>Practice gains are not gains in g</td><td>g loading against retest gain: ρ ≈ −.95 (64 studies)</td><td>gains described as staying with the kind of puzzle</td><td>te Nijenhuis et al. 2007</td></tr>
+        <tr><td>Spatial practice left verbal analogies unchanged</td><td>about 7 hours of rotation or folding practice: analogy errors 19.4 → 19.2 %</td><td>analogies untrained; Word Links stays the Check's control</td><td>Wright et al. 2008</td></tr>
+        <tr><td>Angles are judged best near 90°</td><td>thresholds 5.4° at 90°, 8.9° at 80° and 100°, 11.2° at 55° and 125°</td><td>Angles: near-right sets easiest, then sharp, then wide</td><td>Dillon et al. 2019</td></tr>
+        <tr><td>Classic cube-counting errors</td><td>counting only visible cubes or faces; accuracy falls with more cubes and hidden faces</td><td>Painted Cubes: the visible-face count held near chance; the tally strategy card</td><td>Kurtuluş &amp; Yolcu 2013</td></tr>
+      </tbody>
+    </table>
+    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
+  </div>
+</section>
+
 <!-- ======================================================= 24 · chapter 8, page 1 -->
 <section class="page" id="ch-limits" data-chapter="08 · Honest limits">
   <div class="content">
@@ -1450,10 +1596,10 @@
         <h2>No clones of clinical tests</h2>
         <p>Parallax has no version of Wechsler Block Design or Visual Puzzles, the two subtests of the Wechsler Visual Spatial Index, and no packing or piece-assembly tasks that resemble them. On retest, the perceptual-reasoning subtests that include them show the largest practice effects <span class="cite">(Canivez, 2010)</span>. Practising their formats would inflate exactly the scores that psychologists use, probably without changing the ability <span class="cite">(Scharfen et al., 2018; te Nijenhuis et al., 2007)</span>, and would invite claims such as "my VSI went up". No Parallax score is called VSI, and no item, figure or layout is copied from a published test: every item is generated.</p>
         <h2>Formats you may meet elsewhere</h2>
-        <p>Some exercises share a format with published tests: paper folding, cross-sections, perspective taking, block tapping. A gain on such a test after practice here is near transfer, not mid transfer.</p>
+        <p>Several exercises share a format with parts of published tests: paper folding, hidden shapes, counting cubes, cube nets, block tapping, and the six test formats of page <span class="pgref" data-for="dat"></span>, on purpose. A gain on such a test after practice here is near transfer, not mid transfer. The next page gives the formats, the size of practice effects, and what Parallax does about them.</p>
         <div class="panel signal">
           <span class="label">If you take a test</span>
-          <p>Practising block-tapping spans (Span, EX-09) can raise scores on clinical block-tapping tests. If you take a clinical, school or job assessment with spatial tasks, mention that you have practised similar tasks, so the result can be read fairly.</p>
+          <p>Take a test that matters before you practise its kind of puzzle here, or mention your practice: for a clinical, school or job assessment with spatial tasks, say that you have practised similar tasks, so the result can be read fairly. Settings has a "Taking a test soon?" helper (page <span class="pgref" data-for="hygiene"></span>).</p>
         </div>
         <h2>Not medical, not diagnostic</h2>
         <p>Parallax is a practice tool. It does not diagnose, treat or monitor any condition, and its numbers should not be used as evidence about one. It makes no claims about ageing, memory decline, concussion, attention disorders or any other condition. If you are worried about your memory or attention, talk to a health professional.</p>
@@ -1464,9 +1610,59 @@
         <p>Three things limit the damage. Simulated learners whose items were deliberately mis-set (random errors of 0.5 logits plus an interaction between two settings) still got items about half a percentage point from the target, and their 95 % ranges held the true ability 91.5 % of the time. Weak-spot detection adds items where you do worse than predicted. And every trial logs its settings, the predicted chance of a right answer, the interleaving stage and the item-model version.</p>
         <p>That last part is where the community comes in. Pooled exports (chapter 10) would let anyone refit the steps by logistic regression with a term per person, and better steps could ship in a later release, while your rating stays on your device. If you want to help, export from the Lab and share it on the Discord.</p>
         <h2>Shortcuts</h2>
-        <p>Every item pool is attacked by cheap shortcut solvers: counting cubes or holes, the odd one out, the option most like the others, the shape as seen from here, gear parity. Each must score within 10 points of chance, or the exercise would train the shortcut instead of the skill. Some shortcuts are partly valid geometry; where one comes close to the bound, such items are rationed rather than banned.</p>
+        <p>Every item pool is attacked by cheap shortcut solvers: counting cubes or holes, the odd one out, the option most like the others, the shape as seen from here, gear parity, the over-under pattern of a rope. Each must score within 10 points of chance, or the exercise would train the shortcut instead of the skill. Some shortcuts are partly valid geometry; where one comes close to the bound, such items are rationed rather than banned.</p>
+        <p>A few partial strategies do better, and are kept because they are part of the skill: unfolding Fold and Hole Punch sheets by their symmetry about the creases, the format's own method, which fails where layers must be tracked; in Knots' Link items, counting the crossings between the two loops with their signs; in Painted Cubes, counting only the cubes in view, which misses the hidden ones. The tests report them; the strategy cards and show-me teach the full method.</p>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ======================================================= 24b · chapter 8: test hygiene -->
+<section class="page" id="hygiene" data-chapter="08 · Honest limits">
+  <div class="content">
+    <h2>Test hygiene: formats that tests share</h2>
+    <p class="lead">Practising a kind of puzzle raises scores on tests that use it. That gain is real, but it is near transfer: it says little about the ability a test is meant to measure. So Parallax says where its formats overlap with published tests, and lets you plan around a test.</p>
+    <div class="cols-60">
+      <div>
+        <h3>How big practice effects are</h3>
+        <ul class="dash">
+          <li>Taking the same kind of test again: +0.33 standard deviations at the second sitting and +0.50 by the third, then little more; 0.23 with alternate forms against 0.37 with identical ones <span class="cite">(Scharfen et al., 2018)</span>.</li>
+          <li>Coaching nearly triples it: .70 against .24 for retesting alone <span class="cite">(Hausknecht et al., 2007)</span>.</li>
+          <li>Being taught a puzzle type's rules: about one standard deviation on figural matrices, d = .92 to 1.19 or more <span class="cite">(Levacher et al., 2022; Schneider et al., 2020)</span>.</li>
+          <li>The gains stay mostly with that kind of puzzle: the more a subtest measures general ability, the smaller its retest gain <span class="cite">(te Nijenhuis et al., 2007)</span>. They can last for years <span class="cite">(Sommer &amp; Arendasy, 2025)</span>.</li>
+        </ul>
+        <h3>Shared formats</h3>
+        <table class="small">
+          <thead><tr><th style="width:40mm">Exercise</th><th>Shared with parts of published tests</th><th style="width:20mm">In the app</th></tr></thead>
+          <tbody>
+            <tr><td>Fold, Hole Punch</td><td>folding and punching paper</td><td>a note</td></tr>
+            <tr><td>Hidden</td><td>finding a hidden shape</td><td>a note</td></tr>
+            <tr><td>Views (count), Painted Cubes</td><td>counting cubes in a stack</td><td>a note</td></tr>
+            <tr><td>Nets, Form</td><td>folding a net into a cube or solid</td><td>a note</td></tr>
+            <tr><td>Span</td><td>tapping blocks in order, as in clinical memory tests</td><td>a note</td></tr>
+            <tr><td>Openings, Missing View, Angles</td><td>openings, views and angle ranking: with Hole Punch, Painted Cubes and Form, the six DAT-style formats follow the Perceptual Ability Test on purpose</td><td>a note</td></tr>
+            <tr><td>Knots (Pull)</td><td>"knot or not" items in a design entrance exam, a maths competition and a research test of knot reasoning</td><td>none yet</td></tr>
+            <tr><td>Slice, Orient, Homing, Reckon, Rotate, Spin</td><td>cross-sections, directions and maps, turned or mirrored figures</td><td>related only</td></tr>
+          </tbody>
+        </table>
+        <p><b>Analogies.</b> No exercise trains analogy items ("A is to B as C is to …"). The Spatial Check's word task uses that format for a few minutes per check, without feedback. In one study, about seven hours of rotation or folding practice left verbal-analogy accuracy unchanged <span class="cite">(Wright et al., 2008)</span>.</p>
+      </div>
+      <div>
+        <figure class="app-fig hyg"><div class="shot"><img src="../shots/app-about-hygiene.png" alt="About, Test hygiene: the shared formats, the size of practice effects, the advice, and the Taking a test soon? button"></div>
+          <figcaption><span class="label">Fig. 8.1</span>About's Test hygiene section.</figcaption></figure>
+        <h3>What Parallax does</h3>
+        <ul class="dash">
+          <li><b>"Also in tests"</b> notes on those exercises' Library pages and in How to play.</li>
+          <li><b>Later Spatial Checks</b> ask one question about outside tests and practice since the last check, kept beside your data and never scored: outside practice moves the Check too.</li>
+          <li><b>"Taking a test soon?"</b> in Settings: tick what your test contains, from paper folding to word analogies, or "not sure". Parallax lists the exercises with the same kind of puzzle, the related ones, and what it does not train. It can leave the same-kind exercises out of Train and Today's plan until the day of your test, and note the test in your record; Free play, Path, Section practice, the Library and the Daily Challenge keep them.</li>
+        </ul>
+        <div class="panel signal">
+          <span class="label">If a test result matters to you</span>
+          <p>Take the test before you practise its kind of puzzle here, or say how much you have practised. Compare only results taken under the same conditions. For a clinical, school or job assessment with spatial tasks, mention that you have practised similar tasks, so the result can be read fairly.</p>
+        </div>
+      </div>
+    </div>
+    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
   </div>
 </section>
 
@@ -1479,7 +1675,7 @@
         <ul class="dash">
           <li><b>One person is noisy.</b> Sixteen items per probe give wide ranges, and each check is compared with the baselines on its own, so taking more checks does not narrow them. "Unclear yet" is the honest and common answer; the composite of four probes is more precise than any one.</li>
           <li><b>Levels are estimates.</b> Each comes with a likely range, and session-to-session noise of a few levels is normal.</li>
-          <li><b>Screens differ.</b> Viewing distance changes Track's difficulty, so Track and Homing keep separate ratings for small and large screens. Turning a phone during an Orient item voids it.</li>
+          <li><b>Screens differ.</b> Viewing size changes how hard some tasks are, so Track, Homing, Reckon and Angles keep separate ratings for small and large screens, and every trial records its screen class. Turning a phone while an item plays voids that trial.</li>
           <li><b>Software rendering.</b> On slow devices, frames can stutter. Stuttered trials are voided and never count, and after two of them quality steps down automatically.</li>
         </ul>
         <h2>What research has not settled</h2>
@@ -1487,8 +1683,10 @@
           <li><b>Dose and spacing</b> for spatial training: no head-to-head comparison was found, and no reliable dose-response either.</li>
           <li><b>Session length:</b> weak evidence that sessions under 30 minutes did not work in older adults <span class="cite">(Lampit et al., 2014)</span>, against efficient 8-minute sessions in perceptual learning <span class="cite">(Molloy et al., 2012)</span>.</li>
           <li><b>Animated against static</b> corrective feedback for rotation: untested.</li>
-          <li><b>Navigation training</b> on a screen, and <b>perspective-taking training</b> as such: no trials found.</li>
+          <li><b>Navigation training</b> on a screen, and <b>perspective-taking training</b> as such: no trials found. For <b>path integration</b>, no randomised training study with a transfer test was found, and phone-sized screens are untested.</li>
           <li><b>Adults' disembedding</b> (Hidden): no training studies found.</li>
+          <li><b>Knot diagrams</b> as training: no study found.</li>
+          <li><b>Practice on the six test formats</b> against a control group, with the test itself as the outcome: no study found.</li>
         </ul>
         <p>Parallax makes a default choice for each. Its trial log lets pooled data say more later about dose, spacing and the untested exercises; it does not yet log each use of show-me, so that question stays open.</p>
       </div>
@@ -1506,7 +1704,7 @@
         <p>In the reference list, details that could not be confirmed, such as page numbers, are left out. Where a year is uncertain it is marked n.d.</p>
         <div class="panel">
           <span class="label">Accessibility</span>
-          <p>Everything is playable by keyboard; touch targets are at least 44 pixels; colour is never the only cue; nothing flashes faster than three times a second; reduced motion is respected outside the stimulus. Track and Homing are moving displays by nature: Parallax warns before them, and they pause at once.</p>
+          <p>Everything is playable by keyboard; touch targets are at least 44 pixels; colour is never the only cue; nothing flashes faster than three times a second; reduced motion is respected outside the stimulus. Track, Homing and Reckon are moving displays by nature: Parallax warns before them, and they pause at once. Every scored item fits a 360 × 640 screen, and text inside the figures stays at 13 pixels or more on phones.</p>
         </div>
       </div>
     </div>
@@ -1521,7 +1719,8 @@
     <div class="cols-60">
       <div>
         <h2>Where it lives</h2>
-        <p>Parallax keeps your record in the browser's local storage. Where storage is blocked (some private windows, some embedded previews), it runs from memory and says so on screen: progress is then lost when you close it, so back up before you leave. Two open tabs stay in step with each other. After 60 simulated days, a record took at most about 1 MB (typically a third of that).</p>
+        <p>Parallax keeps your record in the browser's local storage. Where storage is blocked (some private windows, some embedded previews), it runs from memory and says so on screen: progress is then lost when you close it, so back up before you leave. Two open tabs stay in step with each other. After 60 simulated days, a record took at most about 1.1 MB (typically about a third of that).</p>
+        <p>Since 1.1 the record is in format 2. A 1.0 record upgrades when 1.1 first opens it, with nothing lost; a 1.0 tab still open elsewhere then runs from memory rather than overwrite the newer record.</p>
         <h2>Back up and restore</h2>
         <ul class="dash">
           <li><b>Back up now</b> (in Settings, on Today and in Progress) saves the whole record as a file, <span class="mono">parallax-backup-&lt;date&gt;.json</span>. Where downloads are blocked, the same text is shown to copy.</li>
@@ -1530,15 +1729,15 @@
           <li><b>Reset progress</b> clears levels, sessions, trials, checks and achievements but keeps your settings, and can also be undone once.</li>
         </ul>
         <div class="panel signal">
-          <span class="label">iPhone and iPad</span>
-          <p>Safari may clear a site's data after 7 days without a visit. Adding Parallax to your home screen (Share, then Add to Home Screen), or backing up regularly, avoids losing progress. A backup is the safe choice on every device.</p>
+          <span class="label">iPhone, iPad and in-app browsers</span>
+          <p>Safari may clear a site's data after seven days of use without a visit, and an app's built-in browser, Discord's included, keeps a copy of its own. Adding Parallax to your home screen (Share, then Add to Home Screen), or backing up regularly, avoids losing progress; to move it, back up in one place and import in the other. A backup is the safe choice on every device.</p>
         </div>
         <h2>Export formats</h2>
         <table class="small">
           <thead><tr><th style="width:36mm">Export</th><th>What it holds</th></tr></thead>
           <tbody>
-            <tr><td><b>Backup</b> (JSON)</td><td>The whole record: ratings, sessions, trials, Spatial Checks, Threshold runs, strategy check-ins, achievements, settings. The only format that can be imported again.</td></tr>
-            <tr><td><b>Trials</b> (CSV)</td><td>One row per trial: time, exercise and its version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer and the interleaving stage. For a spreadsheet; cannot be imported.</td></tr>
+            <tr><td><b>Backup</b> (JSON)</td><td>The whole record: ratings, sessions, trials, Spatial Checks with their one-tap answers, Threshold runs, Section runs, strategy check-ins, the tests you noted, the focus switches, achievements, settings. The only format that can be imported again.</td></tr>
+            <tr><td><b>Trials</b> (CSV)</td><td>One row per trial: time, exercise and its version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class and the input. For a spreadsheet; cannot be imported.</td></tr>
             <tr><td><b>Research</b> (CSV, in the Lab)</td><td>The trial rows plus each item's difficulty and guessing rate under the current item model (chapter 10).</td></tr>
           </tbody>
         </table>
@@ -1548,7 +1747,7 @@
           <figcaption><span class="label">Fig. 9.1</span>Settings, Your data: back up, export, import, undo and reset.</figcaption></figure>
         <div class="panel" style="margin-top:4mm">
           <span class="label">What a trial row does not hold</span>
-          <p>No name, no account, no device identifier, no location. A seed and the settings regenerate the exact item, so a row records what you saw without storing the picture. Timestamps and results are still personal: share exports only where you choose to.</p>
+          <p>No name, no account, no device identifier, no location; only the screen class (small or large) and the kind of input. A seed and the settings regenerate the exact item, so a row records what you saw without storing the picture. Timestamps and results are still personal: share exports only where you choose to.</p>
         </div>
       </div>
     </div>
@@ -1565,7 +1764,7 @@
         <h2>Threshold protocols</h2>
         <p>Each protocol keeps one setting on a staircase (chapter 4) and lists its rules and your past runs: Track Standard (the speed you track fully right about half the time: a staircase after Legault, Allard and Faubert, 2013, with the spheres, targets and tracking time of Faubert, 2013), Span length (near 71 % right) and Spin deadline. Stereo displays raised thresholds in adults and children <span class="cite">(Plourde et al., 2017)</span>, so thresholds from different display modes, Parallax's flat screens included, are not comparable.</p>
         <h2>Research export</h2>
-        <p>One row per trial with the exercise and its item-model version, the settings, the seed (which regenerates the exact item), the outcome and response time, the chance of a right answer the engine predicted, the interleaving stage, and the item's difficulty and guessing rate under the current model. Pooled from many people, these rows can refit the hand-set difficulty steps (chapter 8) and test the defaults this guide calls design bets. Nothing is sent anywhere: you choose what to share and where.</p>
+        <p>One row per trial with the exercise and its item-model version, the settings, the seed (which regenerates the exact item), the outcome and response time, the chance of a right answer the engine predicted, the interleaving stage, the screen class and the input, and the item's difficulty and guessing rate under the current model. Checks with their one-tap answers, Section runs and the tests you noted travel in the JSON backup. Pooled from many people, these rows can refit the hand-set difficulty steps (chapter 8) and test the defaults this guide calls design bets. Nothing is sent anywhere: you choose what to share and where.</p>
       </div>
       <div>
         <h2>The self-experiment</h2>
@@ -1573,7 +1772,7 @@
         <table class="small">
           <tbody>
             <tr><td style="width:18mm"><b>Group A</b></td><td>Rotate, Spin, Fold, Nets, Slice</td></tr>
-            <tr><td><b>Group B</b></td><td>Views, Orient, Span, Hidden, Track, Homing</td></tr>
+            <tr><td><b>Group B</b></td><td>Views, Orient, Span, Hidden, Track, Homing, Reckon</td></tr>
             <tr><td><b>Phases</b></td><td>three weeks each, in the drawn order</td></tr>
             <tr><td><b>Checks</b></td><td>two at the start, one at week 3, one at week 6</td></tr>
             <tr><td><b>Analysis</b></td><td>fixed in advance: for each probe, the change while training A minus the change while training B, with its standard error</td></tr>
@@ -1585,7 +1784,7 @@
       </div>
     </div>
     <figure class="app-fig lab push"><div class="shot"><img src="../shots/app-lab.png" alt="The Lab: the Threshold protocols, with Track Standard's rules, last threshold and runs"></div>
-      <figcaption><span class="label">Fig. 10.1</span>The Lab, opening on the Threshold protocols and your past runs.</figcaption></figure>
+      <figcaption><span class="label">Fig. 10.1</span>The Lab, opening on the Threshold protocols: their rules, and your runs once there are some.</figcaption></figure>
   </div>
 </section>
 
@@ -1600,10 +1799,10 @@
         <table class="small">
           <tbody>
             <tr><td class="mono" style="width:30mm">index.html</td><td>the app; scripts load in a fixed order</td></tr>
-            <tr><td class="mono">js/core/</td><td>random numbers, timing, keys, storage, routing, the shared 3D stage</td></tr>
-            <tr><td class="mono">js/engine/</td><td>ratings, item choice, modes, the Spatial Check, achievements, streaks; pure code that runs in Node</td></tr>
+            <tr><td class="mono">js/core/</td><td>random numbers, timing, the active-time clock, keys, storage, routing, the shared 3D stage</td></tr>
+            <tr><td class="mono">js/engine/</td><td>ratings, item choice, modes, the Spatial Check, Section practice, achievements, streaks; pure code that runs in Node</td></tr>
             <tr><td class="mono">js/ex/&lt;id&gt;/</td><td>one folder per exercise or probe: gen.js, learn.js, view.js</td></tr>
-            <tr><td class="mono">js/ui/</td><td>the screens: Today, player, Library, Progress, Log, Lab, Settings, About, share cards</td></tr>
+            <tr><td class="mono">js/ui/</td><td>the screens: Today, player, Library, Progress, Log, Lab, Settings, About, share cards, Section practice; overlap.js holds the test-hygiene notes and helper</td></tr>
             <tr><td class="mono">css/</td><td>design tokens, app, screens, player and one file per exercise</td></tr>
             <tr><td class="mono">tests/node/</td><td>generator, engine and simulation tests</td></tr>
             <tr><td class="mono">tests/e2e/</td><td>browser tests (Python Playwright)</td></tr>
@@ -1619,7 +1818,8 @@
           <li>No clones of clinical subtests and no copied test items.</li>
           <li>Every item verified by a solver; shortcuts near chance.</li>
           <li>Motion in units per second from frame timestamps; the answer clock starts at the painted frame; stuttered trials never count.</li>
-          <li>Keyboard everywhere, 44-pixel targets, colour never alone, no flashing faster than 3 Hz.</li>
+          <li>Keyboard everywhere, 44-pixel targets, colour never alone, no flashing faster than 3 Hz; every scored item fits a 360 × 640 screen.</li>
+          <li>Test formats named only to describe them, with the non-affiliation line; rules in Parallax's own words.</li>
         </ul>
       </div>
       <div>
@@ -1656,6 +1856,9 @@ node tests/node/sim.mjs --learners 200                     # simulated learners 
 tests/e2e/pwslot.sh python3 tests/e2e/play.py              # the player, feedback, show me, sessions
 tests/e2e/pwslot.sh python3 tests/e2e/flows.py             # tour, Spatial Check, Daily Challenge
 tests/e2e/pwslot.sh python3 tests/e2e/screens.py           # Library, Progress, Log, Lab, share cards
+tests/e2e/pwslot.sh python3 tests/e2e/clock.py             # the clock, in real time (about 30 min)
+tests/e2e/pwslot.sh python3 tests/e2e/fit.py               # every scored item fits 360 × 640
+tests/e2e/pwslot.sh python3 tests/e2e/section.py           # Section practice end to end
 tests/e2e/pwslot.sh python3 tests/e2e/harness_rotate.py    # one exercise in the dev harness (any id)
 tests/e2e/pwslot.sh python3 tests/e2e/single.py            # the single-file build
 tests/e2e/pwslot.sh python3 tests/e2e/longrun.py           # a bot plays 300 trials in each mode</pre>
@@ -1702,7 +1905,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
       </div>
       <div class="panel">
         <span class="label">This guide</span>
-        <p>Version 1.0.0, 6 November 2026. Text licensed CC BY-SA 4.0: you may share and adapt it, with credit, under the same licence. Corrections are welcome, especially about the research: if a number here is wrong, tell us on the Discord.</p>
+        <p>Version 1.1.0, 13 November 2026 (first published for 1.0.0, 6 November 2026). Text licensed CC BY-SA 4.0: you may share and adapt it, with credit, under the same licence. Corrections are welcome, especially about the research: if a number here is wrong, tell us on the Discord.</p>
       </div>
     </div>
   </div>
@@ -1714,27 +1917,43 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
     <div class="chapter"><span class="no">Chapter 13</span><h1>References</h1></div>
     <p class="note">Every source cited in this guide. Details that could not be confirmed against a primary source, such as some page numbers, are left out; n.d. marks a year that could not be confirmed.</p>
     <ol class="refs">
+      <li>American Dental Association (2026). <i>DAT Validity Study</i>, March 2026 (read through its PDF on ada.org). The ADA's page for the test: <a href="https://www.ada.org/en/education-careers/dental-admission-test">ada.org/en/education-careers/dental-admission-test</a></li>
       <li>Andersen, E., O'Rourke, E., Liu, Y.-E., Snider, R., Lowdermilk, J., Truong, D., Cooper, S., &amp; Popović, Z. (2012). The impact of tutorials on games of varying complexity. <i>Proceedings of CHI '12</i>, 59–68. <a href="https://doi.org/10.1145/2207676.2207687">doi.org/10.1145/2207676.2207687</a></li>
       <li>Bai, S., Hew, K. F., &amp; Huang, B. (2020). Does gamification improve student learning outcome? Evidence from a meta-analysis and synthesis of qualitative data in educational contexts. <i>Educational Research Review, 30</i>, 100322. <a href="https://doi.org/10.1016/j.edurev.2020.100322">doi.org/10.1016/j.edurev.2020.100322</a></li>
       <li>Barnett, S. M., &amp; Ceci, S. J. (2002). When and where do we apply what we learn? A taxonomy for far transfer. <i>Psychological Bulletin, 128</i>(4), 612–637. <a href="https://doi.org/10.1037/0033-2909.128.4.612">doi.org/10.1037/0033-2909.128.4.612</a></li>
       <li>Bediou, B., Adams, D. M., Mayer, R. E., Tipton, E., Green, C. S., &amp; Bavelier, D. (2018). Meta-analysis of action video game impact on perceptual, attentional, and cognitive skills. <i>Psychological Bulletin, 144</i>(1), 77–110. <a href="https://doi.org/10.1037/bul0000130">doi.org/10.1037/bul0000130</a></li>
       <li>Bediou, B., Rodgers, M. A., Tipton, E., Mayer, R. E., Green, C. S., &amp; Bavelier, D. (2023). Effects of action video game play on cognitive skills: A meta-analysis. <i>Technology, Mind, and Behavior, 4</i>(1). <a href="https://doi.org/10.1037/tmb0000102">doi.org/10.1037/tmb0000102</a></li>
+      <li>Bennett-Pierre, G., Shipley, T. F., Newcombe, N. S., &amp; Gunderson, E. A. (2025). Developing a novel measure of non-rigid, ductile spatial skill. <i>Cognitive Research: Principles and Implications, 10</i>, 13. <a href="https://doi.org/10.1186/s41235-025-00621-w">doi.org/10.1186/s41235-025-00621-w</a></li>
+      <li>Brandt, M. G., &amp; Davies, E. T. (2006). Visual-spatial ability, learning modality and surgical knot tying. <i>Canadian Journal of Surgery, 49</i>(6), 412–416.</li>
       <li>Brunmair, M., &amp; Richter, T. (2019). Similarity matters: A meta-analysis of interleaved learning and its moderators. <i>Psychological Bulletin, 145</i>(11), 1029–1052. <a href="https://doi.org/10.1037/bul0000209">doi.org/10.1037/bul0000209</a></li>
       <li>Burte, H., Gardony, A. L., Hutton, A., &amp; Taylor, H. A. (2018). Knowing when to fold 'em: Problem attributes and strategy differences in the Paper Folding test. <i>Personality and Individual Differences.</i> <a href="https://doi.org/10.1016/j.paid.2018.08.009">doi.org/10.1016/j.paid.2018.08.009</a></li>
       <li>Canivez, G. L. (2010). Review of the WAIS-IV [test review; author's copy]. <a href="https://www.ux1.eiu.edu/~glcanivez/Adobe%20pdf/Publications-Papers/Canivez%20(2010)%20Buros%20MMY%20WAIS-IV%20Review.pdf">ux1.eiu.edu/~glcanivez (PDF)</a></li>
       <li>Clement, B., Roy, D., Oudeyer, P.-Y., &amp; Lopes, M. (2015). Multi-armed bandits for intelligent tutoring systems. <i>Journal of Educational Data Mining.</i> <a href="https://arxiv.org/abs/1310.3174">arxiv.org/abs/1310.3174</a></li>
       <li>Cohen, C. A., &amp; Hegarty, M. (2007). Sources of difficulty in imagining cross sections of 3D objects. <i>Proceedings of the 29th Annual Conference of the Cognitive Science Society.</i> <a href="https://escholarship.org/uc/item/98p7t49b">escholarship.org/uc/item/98p7t49b</a></li>
       <li>Cohen, C. A., &amp; Hegarty, M. (2014). Visualizing cross sections: Training spatial thinking using interactive animations and virtual objects. <i>Learning and Individual Differences, 33</i>, 63–71. <a href="https://doi.org/10.1016/j.lindif.2014.04.002">doi.org/10.1016/j.lindif.2014.04.002</a></li>
+      <li>Croom, S., &amp; Firestone, C. (2024). Tangled physics: Knots strain intuitive physical reasoning. <i>Open Mind.</i> <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11495958/">pmc.ncbi.nlm.nih.gov/articles/PMC11495958</a></li>
       <li>De Lillo, C., Kirby, M., &amp; Poole, D. (2016). Spatio-temporal structure, path characteristics, and perceptual grouping in immediate serial spatial recall. <i>Frontiers in Psychology, 7</i>, 1686. <a href="https://doi.org/10.3389/fpsyg.2016.01686">doi.org/10.3389/fpsyg.2016.01686</a></li>
       <li>Deci, E. L., Koestner, R., &amp; Ryan, R. M. (1999). A meta-analytic review of experiments examining the effects of extrinsic rewards on intrinsic motivation. <i>Psychological Bulletin, 125</i>(6), 627–668. <a href="https://doi.org/10.1037/0033-2909.125.6.627">doi.org/10.1037/0033-2909.125.6.627</a></li>
+      <li>Dillon, M. R., Duyck, M., Dehaene, S., Amalric, M., &amp; Izard, V. (2019). Geometric categories in cognition. <i>Journal of Experimental Psychology: Human Perception and Performance.</i> <a href="https://doi.org/10.1037/xhp0000663">doi.org/10.1037/xhp0000663</a></li>
       <li>Doll, R. J., Veltink, P. H., &amp; Buitenweg, J. R. (2015). Observation of time-dependent psychophysical functions and accounting for threshold drifts. <i>Attention, Perception, &amp; Psychophysics, 77</i>(4), 1440–1447. <a href="https://doi.org/10.3758/s13414-015-0865-x">doi.org/10.3758/s13414-015-0865-x</a></li>
+      <li>Embodied Navigation (2025). <i>Embodied Navigation: Whole-body movement drives path integration in large-scale free-walking virtual reality</i> [preprint; authors not recorded]. bioRxiv. <a href="https://www.biorxiv.org/content/10.1101/2025.11.05.686699">biorxiv.org/content/10.1101/2025.11.05.686699</a></li>
       <li>Faubert, J. (2013). Professional athletes have extraordinary skills for rapidly learning complex and neutral dynamic visual scenes. <i>Scientific Reports, 3</i>, 1154. <a href="https://doi.org/10.1038/srep01154">doi.org/10.1038/srep01154</a></li>
       <li>Federal Trade Commission (2022). <i>Health Products Compliance Guidance.</i> <a href="https://www.ftc.gov/business-guidance/resources/health-products-compliance-guidance">ftc.gov/business-guidance/resources/health-products-compliance-guidance</a></li>
+    </ol>
+    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 31b · chapter 13, page 2 -->
+<section class="page" data-chapter="13 · References">
+  <div class="content">
+    <ol class="refs">
       <li>Fischer, G. H. (1973). The linear logistic test model as an instrument in educational research. <i>Acta Psychologica, 37.</i></li>
       <li>Foroughi, C. K., Monfort, S. S., Paczynski, M., McKnight, P. E., &amp; Greenwood, P. M. (2016). Placebo effects in cognitive training. <i>PNAS, 113</i>(27), 7470–7474. <a href="https://doi.org/10.1073/pnas.1601243113">doi.org/10.1073/pnas.1601243113</a></li>
       <li>Ganis, G., &amp; Kievit, R. (2015). A new set of three-dimensional shapes for investigating mental rotation processes: Validation data and stimulus set. <i>Journal of Open Psychology Data, 3</i>, e3. <a href="https://doi.org/10.5334/jopd.ai">doi.org/10.5334/jopd.ai</a></li>
       <li>Gilligan-Lee, K. A., Hawes, Z. C. K., Williams, A. Y., Farran, E. K., &amp; Mix, K. S. (2023). Hands-on: Investigating the role of physical manipulatives in spatial training. <i>Child Development.</i> <a href="https://doi.org/10.1111/cdev.13963">doi.org/10.1111/cdev.13963</a></li>
       <li>Harris, D. J., Wilson, M. R., Smith, S. J. R., Meder, N., &amp; Vine, S. J. (2020). Testing the effects of 3D multiple object tracking training on near, mid and far transfer. <i>Frontiers in Psychology, 11</i>, 196. <a href="https://doi.org/10.3389/fpsyg.2020.00196">doi.org/10.3389/fpsyg.2020.00196</a></li>
+      <li>Hausknecht, J. P., Halpert, J. A., Di Paolo, N. T., &amp; Moriarty Gerrard, M. O. (2007). Retesting in selection: A meta-analysis of coaching and practice effects for tests of cognitive ability. <i>Journal of Applied Psychology, 92</i>(2), 373–385. <a href="https://doi.org/10.1037/0021-9010.92.2.373">doi.org/10.1037/0021-9010.92.2.373</a></li>
       <li>Hawes, Z. C. K., Gilligan-Lee, K. A., &amp; Mix, K. S. (2022). Effects of spatial training on mathematics performance: A meta-analysis. <i>Developmental Psychology, 58</i>(1), 112–137. <a href="https://doi.org/10.1037/dev0001281">doi.org/10.1037/dev0001281</a></li>
       <li>He, C., Chrastil, E. R., &amp; Hegarty, M. (2022). A new psychometric task measuring spatial perspective taking in ambulatory virtual reality. <i>Frontiers in Virtual Reality, 3</i>, 971502. <a href="https://doi.org/10.3389/frvir.2022.971502">doi.org/10.3389/frvir.2022.971502</a></li>
       <li>Hegarty, M. (2004). Mechanical reasoning by mental simulation. <i>Trends in Cognitive Sciences, 8</i>(6), 280–285. <a href="https://doi.org/10.1016/j.tics.2004.04.001">doi.org/10.1016/j.tics.2004.04.001</a></li>
@@ -1744,50 +1963,15 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
       <li>Information Commissioner's Office (n.d.). <i>Age appropriate design: a code of practice for online services</i>, standard 5: Detrimental use of data. <a href="https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/5-detrimental-use-of-data/">ico.org.uk (children's code, standard 5)</a></li>
       <li>Jansen, B. R. J., Louwerse, J., Straatemeier, M., Van der Ven, S. H. G., Klinkenberg, S., &amp; Van der Maas, H. L. J. (2013). The influence of experiencing success in math on math anxiety, perceived math competence, and math performance. <i>Learning and Individual Differences, 24</i>, 190–197. <a href="https://doi.org/10.1016/j.lindif.2012.12.014">doi.org/10.1016/j.lindif.2012.12.014</a></li>
       <li>Kaernbach, C. (1991). Simple adaptive testing with the weighted up-down method. <i>Perception &amp; Psychophysics, 49</i>(3), 227–229. <a href="https://doi.org/10.3758/BF03214307">doi.org/10.3758/BF03214307</a></li>
-    </ol>
-  </div>
-</section>
-
-<!-- ======================================================= 31b · chapter 13, page 2 -->
-<section class="page" data-chapter="13 · References">
-  <div class="content">
-    <ol class="refs">
       <li>Kalyuga, S., Ayres, P., Chandler, P., &amp; Sweller, J. (2003). The expertise reversal effect. <i>Educational Psychologist, 38</i>(1), 23–31. <a href="https://doi.org/10.1207/S15326985EP3801_4">doi.org/10.1207/S15326985EP3801_4</a></li>
       <li>Keehner, M., Hegarty, M., Cohen, C., Khooshabeh, P., &amp; Montello, D. R. (2008). Spatial reasoning with external visualizations: What matters is what you see, not whether you interact. <i>Cognitive Science, 32</i>(7), 1099–1132. <a href="https://doi.org/10.1080/03640210801898177">doi.org/10.1080/03640210801898177</a></li>
       <li>Kivetz, R., Urminsky, O., &amp; Zheng, Y. (2006). The goal-gradient hypothesis resurrected: Purchase acceleration, illusionary goal progress, and customer retention. <i>Journal of Marketing Research, 43</i>(1), 39–58. <a href="https://doi.org/10.1509/jmkr.43.1.39">doi.org/10.1509/jmkr.43.1.39</a></li>
       <li>Kluger, A. N., &amp; DeNisi, A. (1996). The effects of feedback interventions on performance: A historical review, a meta-analysis, and a preliminary feedback intervention theory. <i>Psychological Bulletin, 119</i>(2), 254–284. <a href="https://doi.org/10.1037/0033-2909.119.2.254">doi.org/10.1037/0033-2909.119.2.254</a></li>
       <li>Kozhevnikov, M., &amp; Hegarty, M. (2001). A dissociation between object manipulation spatial ability and spatial orientation ability. <i>Memory &amp; Cognition, 29</i>(5), 745–756.</li>
+      <li>Kurtuluş, A., &amp; Yolcu, B. (2013). A study on sixth-grade Turkish students' spatial visualization ability. <i>The Mathematics Educator, 22</i>(2), 82–117.</li>
       <li>Lampit, A., Hallock, H., &amp; Valenzuela, M. (2014). Computerized cognitive training in cognitively healthy older adults: A systematic review and meta-analysis of effect modifiers. <i>PLOS Medicine, 11</i>(11), e1001756. <a href="https://doi.org/10.1371/journal.pmed.1001756">doi.org/10.1371/journal.pmed.1001756</a></li>
       <li>Legault, I., Allard, R., &amp; Faubert, J. (2013). Healthy older observers show equivalent perceptual-cognitive training benefits to young adults for multiple object tracking. <i>Frontiers in Psychology, 4</i>, 323. <a href="https://doi.org/10.3389/fpsyg.2013.00323">doi.org/10.3389/fpsyg.2013.00323</a></li>
-      <li>Levitt, H. (1971). Transformed up-down methods in psychoacoustics. <i>Journal of the Acoustical Society of America, 49</i>(2B), 467–477. <a href="https://doi.org/10.1121/1.1912375">doi.org/10.1121/1.1912375</a></li>
-      <li>Liesefeld, H. R., &amp; Janczyk, M. (2019). Combining speed and accuracy to control for speed-accuracy trade-offs(?). <i>Behavior Research Methods, 51</i>, 40–60. <a href="https://doi.org/10.3758/s13428-018-1076-x">doi.org/10.3758/s13428-018-1076-x</a></li>
-      <li>McGrew, K. S. (2017). <i>CHC broad and narrow ability definitions</i>, abstracted from Schneider &amp; McGrew (2018). Institute for Applied Psychometrics. <a href="http://www.iapsych.com/chcdefs.pdf">iapsych.com/chcdefs.pdf</a></li>
-      <li>Melby-Lervåg, M., Redick, T. S., &amp; Hulme, C. (2016). Working memory training does not improve performance on measures of intelligence or other measures of "far transfer". <i>Perspectives on Psychological Science, 11</i>(4), 512–534. <a href="https://ora.ox.ac.uk/objects/uuid:daa9a729-f17b-4e45-97c0-cff5075ea404">ora.ox.ac.uk (open copy)</a></li>
-      <li>Meneghetti, C., Borella, E., &amp; Pazzaglia, F. (2016). Mental rotation training: Transfer and maintenance effects on spatial abilities. <i>Psychological Research, 80</i>(1). <a href="https://doi.org/10.1007/s00426-014-0644-7">doi.org/10.1007/s00426-014-0644-7</a></li>
-      <li>Meyerhoff, H. S., Papenmeier, F., &amp; Huff, M. (2017). Studying visual attention using the multiple object tracking paradigm: A tutorial review. <i>Attention, Perception, &amp; Psychophysics, 79</i>(5), 1255–1274. <a href="https://doi.org/10.3758/s13414-017-1338-1">doi.org/10.3758/s13414-017-1338-1</a></li>
-      <li>Miller, D. I., &amp; Halpern, D. F. (2013). Can spatial training improve long-term outcomes for gifted STEM undergraduates? <i>Learning and Individual Differences, 26</i>, 141–152. <a href="https://doi.org/10.1016/j.lindif.2012.03.012">doi.org/10.1016/j.lindif.2012.03.012</a></li>
-      <li>Mix, K. S., Hambrick, D. Z., Satyam, V. R., Burgoyne, A. P., &amp; Levine, S. C. (2018). The latent structure of spatial skill: A test of the 2 × 2 typology. <i>Cognition, 180</i>, 268–278. <a href="https://doi.org/10.1016/j.cognition.2018.07.012">doi.org/10.1016/j.cognition.2018.07.012</a></li>
-      <li>Molloy, K., Moore, D. R., Sohoglu, E., &amp; Amitay, S. (2012). Less is more: Latent learning is maximized by shorter training sessions in auditory perceptual learning. <i>PLOS ONE, 7</i>(5), e36929. <a href="https://doi.org/10.1371/journal.pone.0036929">doi.org/10.1371/journal.pone.0036929</a></li>
-      <li>Nazareth, A., Killick, R., Dick, A. S., &amp; Pruden, S. M. (n.d.). Strategy selection versus flexibility: Eye-trackers and mental rotation. <i>Journal of Experimental Psychology: Learning, Memory, and Cognition.</i> Author manuscript: <a href="https://eprints.lancs.ac.uk/89803/1/Nazareth_et_al_JEPLMC_strategyflexibility.pdf">eprints.lancs.ac.uk/89803</a></li>
-      <li>Newcombe, N. S., &amp; Shipley, T. F. (2015). Thinking about spatial thinking: New typology, new assessments. In J. S. Gero (Ed.), <i>Studying Visual and Spatial Reasoning for Design Creativity</i> (pp. 179–192). Springer. <a href="https://doi.org/10.1007/978-94-017-9297-4_10">doi.org/10.1007/978-94-017-9297-4_10</a></li>
-      <li>Pelánek, R. (2016). Applications of the Elo rating system in adaptive educational systems. <i>Computers &amp; Education, 98.</i> <a href="https://doi.org/10.1016/j.compedu.2016.03.017">doi.org/10.1016/j.compedu.2016.03.017</a></li>
-      <li>Pelánek, R., Papoušek, J., Řihák, J., Stanislav, V., &amp; Nižnan, J. (2017). Elo-based learner modeling for the adaptive practice of facts. <i>User Modeling and User-Adapted Interaction.</i> <a href="https://www.fi.muni.cz/~xpelanek/publications/umuai-adaptive-practice.pdf">fi.muni.cz/~xpelanek (PDF)</a></li>
-      <li>Pelánek, R., &amp; Řihák, J. (2018). Analysis and design of mastery learning criteria. <i>New Review of Hypermedia and Multimedia.</i> <a href="http://www.fi.muni.cz/~xpelanek/publications/nrhm-mastery.pdf">fi.muni.cz/~xpelanek (PDF)</a></li>
-      <li>Perkins, D. N., &amp; Salomon, G. (1988). Teaching for transfer. <i>Educational Leadership, 46</i>(1), 22–32. <a href="https://files.ascd.org/staticfiles/ascd/pdf/journals/ed_lead/el_198809_perkins.pdf">files.ascd.org (PDF)</a></li>
-      <li>Plourde, M., Corbeil, M.-E., &amp; Faubert, J. (2017). Effect of age and stereopsis on a multiple-object tracking task. <i>PLOS ONE, 12</i>(12), e0188373. <a href="https://doi.org/10.1371/journal.pone.0188373">doi.org/10.1371/journal.pone.0188373</a></li>
-      <li>Porter, J. M., &amp; Magill, R. A. (2010). Systematically increasing contextual interference is beneficial for learning sport skills. <i>Journal of Sports Sciences.</i> <a href="https://doi.org/10.1080/02640414.2010.502946">doi.org/10.1080/02640414.2010.502946</a></li>
-      <li>Rajeb, M., Krist, A. T., Shi, Q., Oyeniran, D. O., Wind, S. A., &amp; Lakin, J. M. (2025). Mental rotation performance: Contribution of item features to difficulties and functional adaptation. <i>Journal of Intelligence, 13</i>(1), 2. <a href="https://doi.org/10.3390/jintelligence13010002">doi.org/10.3390/jintelligence13010002</a></li>
-      <li>Raviv, L., Lupyan, G., &amp; Green, S. C. (2022). How variability shapes learning and generalization. <i>Trends in Cognitive Sciences, 26</i>(6), 462–483. <a href="https://doi.org/10.1016/j.tics.2022.03.007">doi.org/10.1016/j.tics.2022.03.007</a></li>
-      <li>Rohrer, D., &amp; Taylor, K. (2007). The shuffling of mathematics problems improves learning. <i>Instructional Science, 35</i>, 481–498. <a href="https://doi.org/10.1007/s11251-007-9015-8">doi.org/10.1007/s11251-007-9015-8</a></li>
-      <li>Romeas, T., Goujat, M., Faubert, J., &amp; Labbé, D. (2025). No transfer of 3D-Multiple Object Tracking training on game performance in soccer: A follow-up study. <i>Psychology of Sport and Exercise, 76</i>, 102770. <a href="https://doi.org/10.1016/j.psychsport.2024.102770">doi.org/10.1016/j.psychsport.2024.102770</a></li>
-      <li>Ryan, R. M., Rigby, C. S., &amp; Przybylski, A. (2006). The motivational pull of video games: A self-determination theory approach. <i>Motivation and Emotion, 30</i>(4), 344–360. <a href="https://doi.org/10.1007/s11031-006-9051-8">doi.org/10.1007/s11031-006-9051-8</a></li>
-      <li>Sailer, M., Hense, J. U., Mayr, S. K., &amp; Mandl, H. (2017). How gamification motivates: An experimental study of the effects of specific game design elements on psychological need satisfaction. <i>Computers in Human Behavior, 69</i>, 371–380. <a href="https://doi.org/10.1016/j.chb.2016.12.033">doi.org/10.1016/j.chb.2016.12.033</a></li>
-      <li>Sailer, M., &amp; Homner, L. (2020). The gamification of learning: A meta-analysis. <i>Educational Psychology Review, 32</i>(1), 77–112. <a href="https://doi.org/10.1007/s10648-019-09498-w">doi.org/10.1007/s10648-019-09498-w</a></li>
-      <li>Sala, G., &amp; Gobet, F. (2019). Cognitive training does not enhance general cognition. <i>Trends in Cognitive Sciences, 23</i>(1), 9–20. <a href="https://livrepository.liverpool.ac.uk/id/eprint/3030313">livrepository.liverpool.ac.uk/3030313</a></li>
-      <li>Sala, G., Tatlidil, K. S., &amp; Gobet, F. (2018). Video game training does not enhance cognitive ability: A comprehensive meta-analytic investigation. <i>Psychological Bulletin, 144</i>(2), 111–139. <a href="https://doi.org/10.1037/bul0000139">doi.org/10.1037/bul0000139</a></li>
-      <li>Scharfen, J., Peters, J. M., &amp; Holling, H. (2018). Retest effects in cognitive ability tests: A meta-analysis. <i>Intelligence, 67</i>, 44–66. <a href="https://doi.org/10.1016/j.intell.2018.01.003">doi.org/10.1016/j.intell.2018.01.003</a></li>
-      <li>Schneider, W. J., &amp; McGrew, K. S. (2018). The Cattell-Horn-Carroll theory of cognitive abilities. In D. P. Flanagan &amp; E. M. McDonough (Eds.), <i>Contemporary Intellectual Assessment</i> (4th ed.). Guilford.</li>
-      <li>Shepard, R. N., &amp; Feng, C. (1972). A chronometric study of mental paper folding. <i>Cognitive Psychology, 3</i>, 228–243.</li>
+      <li>Levacher, J., Koch, M., Hissbach, J., Spinath, F. M., &amp; Becker, N. (2022). You can play the game without knowing the rules, but you're better off knowing them. <i>European Journal of Psychological Assessment.</i> <a href="https://doi.org/10.1027/1015-5759/a000637">doi.org/10.1027/1015-5759/a000637</a></li>
     </ol>
   </div>
 </section>
@@ -1796,14 +1980,58 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
 <section class="page" data-chapter="13 · References">
   <div class="content">
     <ol class="refs">
+      <li>Levitt, H. (1971). Transformed up-down methods in psychoacoustics. <i>Journal of the Acoustical Society of America, 49</i>(2B), 467–477. <a href="https://doi.org/10.1121/1.1912375">doi.org/10.1121/1.1912375</a></li>
+      <li>Liesefeld, H. R., &amp; Janczyk, M. (2019). Combining speed and accuracy to control for speed-accuracy trade-offs(?). <i>Behavior Research Methods, 51</i>, 40–60. <a href="https://doi.org/10.3758/s13428-018-1076-x">doi.org/10.3758/s13428-018-1076-x</a></li>
+      <li>Lövdén, M., Schaefer, S., Noack, H., Bodammer, N. C., Kühn, S., Heinze, H.-J., Düzel, E., Bäckman, L., &amp; Lindenberger, U. (2012). Spatial navigation training protects the hippocampus against age-related changes during early and late adulthood. <i>Neurobiology of Aging, 33</i>(3), 620.e9–620.e22. <a href="https://pub.dzne.de/record/136421/files/DZNE-2020-02743.pdf">pub.dzne.de (PDF)</a></li>
+      <li>McGrew, K. S. (2017). <i>CHC broad and narrow ability definitions</i>, abstracted from Schneider &amp; McGrew (2018). Institute for Applied Psychometrics. <a href="http://www.iapsych.com/chcdefs.pdf">iapsych.com/chcdefs.pdf</a></li>
+      <li>McLaren, R., Chaudhary, S., Rashid, U., Ravindran, S., &amp; Taylor, D. (2022). Reliability of the triangle completion test in the real-world and in virtual reality. <i>Frontiers in Human Neuroscience, 16</i>, 945953. <a href="https://doi.org/10.3389/fnhum.2022.945953">doi.org/10.3389/fnhum.2022.945953</a></li>
+      <li>Melby-Lervåg, M., Redick, T. S., &amp; Hulme, C. (2016). Working memory training does not improve performance on measures of intelligence or other measures of "far transfer". <i>Perspectives on Psychological Science, 11</i>(4), 512–534. <a href="https://ora.ox.ac.uk/objects/uuid:daa9a729-f17b-4e45-97c0-cff5075ea404">ora.ox.ac.uk (open copy)</a></li>
+      <li>Meneghetti, C., Borella, E., &amp; Pazzaglia, F. (2016). Mental rotation training: Transfer and maintenance effects on spatial abilities. <i>Psychological Research, 80</i>(1). <a href="https://doi.org/10.1007/s00426-014-0644-7">doi.org/10.1007/s00426-014-0644-7</a></li>
+      <li>Meyerhoff, H. S., Papenmeier, F., &amp; Huff, M. (2017). Studying visual attention using the multiple object tracking paradigm: A tutorial review. <i>Attention, Perception, &amp; Psychophysics, 79</i>(5), 1255–1274. <a href="https://doi.org/10.3758/s13414-017-1338-1">doi.org/10.3758/s13414-017-1338-1</a></li>
+      <li>Miller, D. I., &amp; Halpern, D. F. (2013). Can spatial training improve long-term outcomes for gifted STEM undergraduates? <i>Learning and Individual Differences, 26</i>, 141–152. <a href="https://doi.org/10.1016/j.lindif.2012.03.012">doi.org/10.1016/j.lindif.2012.03.012</a></li>
+      <li>Mix, K. S., Hambrick, D. Z., Satyam, V. R., Burgoyne, A. P., &amp; Levine, S. C. (2018). The latent structure of spatial skill: A test of the 2 × 2 typology. <i>Cognition, 180</i>, 268–278. <a href="https://doi.org/10.1016/j.cognition.2018.07.012">doi.org/10.1016/j.cognition.2018.07.012</a></li>
+      <li>Molloy, K., Moore, D. R., Sohoglu, E., &amp; Amitay, S. (2012). Less is more: Latent learning is maximized by shorter training sessions in auditory perceptual learning. <i>PLOS ONE, 7</i>(5), e36929. <a href="https://doi.org/10.1371/journal.pone.0036929">doi.org/10.1371/journal.pone.0036929</a></li>
+      <li>Nazareth, A., Killick, R., Dick, A. S., &amp; Pruden, S. M. (n.d.). Strategy selection versus flexibility: Eye-trackers and mental rotation. <i>Journal of Experimental Psychology: Learning, Memory, and Cognition.</i> Author manuscript: <a href="https://eprints.lancs.ac.uk/89803/1/Nazareth_et_al_JEPLMC_strategyflexibility.pdf">eprints.lancs.ac.uk/89803</a></li>
+      <li>Newcombe, N. S., &amp; Shipley, T. F. (2015). Thinking about spatial thinking: New typology, new assessments. In J. S. Gero (Ed.), <i>Studying Visual and Spatial Reasoning for Design Creativity</i> (pp. 179–192). Springer. <a href="https://doi.org/10.1007/978-94-017-9297-4_10">doi.org/10.1007/978-94-017-9297-4_10</a></li>
+      <li>Noel, J.-P., Lakshminarasimhan, K. J., Park, H., &amp; Angelaki, D. E. (2020). Increased variability but intact integration during visual navigation in Autism Spectrum Disorder. <i>PNAS, 117</i>(20), 11158–11166. <a href="https://doi.org/10.1073/pnas.2000216117">doi.org/10.1073/pnas.2000216117</a></li>
+      <li>Pelánek, R. (2016). Applications of the Elo rating system in adaptive educational systems. <i>Computers &amp; Education, 98.</i> <a href="https://doi.org/10.1016/j.compedu.2016.03.017">doi.org/10.1016/j.compedu.2016.03.017</a></li>
+      <li>Pelánek, R., &amp; Řihák, J. (2018). Analysis and design of mastery learning criteria. <i>New Review of Hypermedia and Multimedia.</i> <a href="http://www.fi.muni.cz/~xpelanek/publications/nrhm-mastery.pdf">fi.muni.cz/~xpelanek (PDF)</a></li>
+      <li>Pelánek, R., Papoušek, J., Řihák, J., Stanislav, V., &amp; Nižnan, J. (2017). Elo-based learner modeling for the adaptive practice of facts. <i>User Modeling and User-Adapted Interaction.</i> <a href="https://www.fi.muni.cz/~xpelanek/publications/umuai-adaptive-practice.pdf">fi.muni.cz/~xpelanek (PDF)</a></li>
+      <li>Perkins, D. N., &amp; Salomon, G. (1988). Teaching for transfer. <i>Educational Leadership, 46</i>(1), 22–32. <a href="https://files.ascd.org/staticfiles/ascd/pdf/journals/ed_lead/el_198809_perkins.pdf">files.ascd.org (PDF)</a></li>
+      <li>Plourde, M., Corbeil, M.-E., &amp; Faubert, J. (2017). Effect of age and stereopsis on a multiple-object tracking task. <i>PLOS ONE, 12</i>(12), e0188373. <a href="https://doi.org/10.1371/journal.pone.0188373">doi.org/10.1371/journal.pone.0188373</a></li>
+      <li>Porter, J. M., &amp; Magill, R. A. (2010). Systematically increasing contextual interference is beneficial for learning sport skills. <i>Journal of Sports Sciences.</i> <a href="https://doi.org/10.1080/02640414.2010.502946">doi.org/10.1080/02640414.2010.502946</a></li>
+      <li>Rajeb, M., Krist, A. T., Shi, Q., Oyeniran, D. O., Wind, S. A., &amp; Lakin, J. M. (2025). Mental rotation performance: Contribution of item features to difficulties and functional adaptation. <i>Journal of Intelligence, 13</i>(1), 2. <a href="https://doi.org/10.3390/jintelligence13010002">doi.org/10.3390/jintelligence13010002</a></li>
+      <li>Raviv, L., Lupyan, G., &amp; Green, S. C. (2022). How variability shapes learning and generalization. <i>Trends in Cognitive Sciences, 26</i>(6), 462–483. <a href="https://doi.org/10.1016/j.tics.2022.03.007">doi.org/10.1016/j.tics.2022.03.007</a></li>
+      <li>Riecke, B. E., &amp; Wiener, J. M. (2007). Point-to-origin experiments in VR revealed novel qualitative errors in visual path integration. Max Planck Institute for Biological Cybernetics (short conference paper). <a href="https://core.ac.uk/download/210714985.pdf">core.ac.uk (PDF)</a></li>
+      <li>Rohrer, D., &amp; Taylor, K. (2007). The shuffling of mathematics problems improves learning. <i>Instructional Science, 35</i>, 481–498. <a href="https://doi.org/10.1007/s11251-007-9015-8">doi.org/10.1007/s11251-007-9015-8</a></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ======================================================= 32c · chapter 13, page 4 -->
+<section class="page" data-chapter="13 · References">
+  <div class="content">
+    <ol class="refs">
+      <li>Romeas, T., Goujat, M., Faubert, J., &amp; Labbé, D. (2025). No transfer of 3D-Multiple Object Tracking training on game performance in soccer: A follow-up study. <i>Psychology of Sport and Exercise, 76</i>, 102770. <a href="https://doi.org/10.1016/j.psychsport.2024.102770">doi.org/10.1016/j.psychsport.2024.102770</a></li>
+      <li>Ryan, R. M., Rigby, C. S., &amp; Przybylski, A. (2006). The motivational pull of video games: A self-determination theory approach. <i>Motivation and Emotion, 30</i>(4), 344–360. <a href="https://doi.org/10.1007/s11031-006-9051-8">doi.org/10.1007/s11031-006-9051-8</a></li>
+      <li>Sailer, M., &amp; Homner, L. (2020). The gamification of learning: A meta-analysis. <i>Educational Psychology Review, 32</i>(1), 77–112. <a href="https://doi.org/10.1007/s10648-019-09498-w">doi.org/10.1007/s10648-019-09498-w</a></li>
+      <li>Sailer, M., Hense, J. U., Mayr, S. K., &amp; Mandl, H. (2017). How gamification motivates: An experimental study of the effects of specific game design elements on psychological need satisfaction. <i>Computers in Human Behavior, 69</i>, 371–380. <a href="https://doi.org/10.1016/j.chb.2016.12.033">doi.org/10.1016/j.chb.2016.12.033</a></li>
+      <li>Sala, G., &amp; Gobet, F. (2019). Cognitive training does not enhance general cognition. <i>Trends in Cognitive Sciences, 23</i>(1), 9–20. <a href="https://livrepository.liverpool.ac.uk/id/eprint/3030313">livrepository.liverpool.ac.uk/3030313</a></li>
+      <li>Sala, G., Tatlidil, K. S., &amp; Gobet, F. (2018). Video game training does not enhance cognitive ability: A comprehensive meta-analytic investigation. <i>Psychological Bulletin, 144</i>(2), 111–139. <a href="https://doi.org/10.1037/bul0000139">doi.org/10.1037/bul0000139</a></li>
+      <li>Scharfen, J., Peters, J. M., &amp; Holling, H. (2018). Retest effects in cognitive ability tests: A meta-analysis. <i>Intelligence, 67</i>, 44–66. <a href="https://doi.org/10.1016/j.intell.2018.01.003">doi.org/10.1016/j.intell.2018.01.003</a></li>
+      <li>Schneider, B., Becker, N., Krieger, F., Spinath, F. M., &amp; Sparfeldt, J. R. (2020). Teaching the underlying rules of figural matrices in a short video increases test scores. <i>Intelligence, 82</i>, 101473. <a href="https://doi.org/10.1016/j.intell.2020.101473">doi.org/10.1016/j.intell.2020.101473</a></li>
+      <li>Schneider, W. J., &amp; McGrew, K. S. (2018). The Cattell-Horn-Carroll theory of cognitive abilities. In D. P. Flanagan &amp; E. M. McDonough (Eds.), <i>Contemporary Intellectual Assessment</i> (4th ed.). Guilford.</li>
+      <li>Shepard, R. N., &amp; Feng, C. (1972). A chronometric study of mental paper folding. <i>Cognitive Psychology, 3</i>, 228–243.</li>
       <li>Silverman, J., &amp; Barasch, A. (2023). On or off track: How (broken) streaks affect consumer decisions. <i>Journal of Consumer Research, 49</i>(6), 1095–1117. <a href="https://doi.org/10.1093/jcr/ucac029">doi.org/10.1093/jcr/ucac029</a></li>
       <li>Simons, D. J., Boot, W. R., Charness, N., Gathercole, S. E., Chabris, C. F., Hambrick, D. Z., &amp; Stine-Morrow, E. A. L. (2016). Do "brain-training" programs work? <i>Psychological Science in the Public Interest, 17</i>(3), 103–186. <a href="https://doi.org/10.1177/1529100616661983">doi.org/10.1177/1529100616661983</a></li>
+      <li>Sommer, M., &amp; Arendasy, M. (2025). Automatic- and transformer-based automatic item generation: A critical review. <i>Journal of Intelligence, 13</i>(8), 102. <a href="https://www.mdpi.com/2079-3200/13/8/102">mdpi.com/2079-3200/13/8/102</a></li>
       <li>Sorby, S. A. (2009). Educational research in developing 3-D spatial skills for engineering students. <i>International Journal of Science Education, 31</i>(3), 459–480. <a href="https://doi.org/10.1080/09500690802595839">doi.org/10.1080/09500690802595839</a></li>
       <li>Sorby, S. A., &amp; Veurink, N. (n.d.). Long-term results from spatial skills intervention. ASEE Engineering Design Graphics Division paper. <a href="https://edgd.asee.org/wp-content/uploads/sites/22/2019/09/Sorby_Veurink_Long_term_Results_Spatial_Skills_intervention.pdf">edgd.asee.org (PDF)</a></li>
-      <li>Stieff, M., Dixon, B. L., Ryu, M., Kumi, B. C., &amp; Hegarty, M. (2014). Strategy training eliminates sex differences in spatial problem solving in a STEM domain. <i>Journal of Educational Psychology, 106</i>(2), 390–402. <a href="https://doi.org/10.1037/a0034823">doi.org/10.1037/a0034823</a></li>
       <li>Stieff, M., &amp; Uttal, D. (2015). How much can spatial training improve STEM achievement? <i>Educational Psychology Review, 27</i>, 607–615. <a href="https://doi.org/10.1007/s10648-015-9304-8">doi.org/10.1007/s10648-015-9304-8</a></li>
+      <li>Stieff, M., Dixon, B. L., Ryu, M., Kumi, B. C., &amp; Hegarty, M. (2014). Strategy training eliminates sex differences in spatial problem solving in a STEM domain. <i>Journal of Educational Psychology, 106</i>(2), 390–402. <a href="https://doi.org/10.1037/a0034823">doi.org/10.1037/a0034823</a></li>
       <li>te Nijenhuis, J., van Vianen, A. E. M., &amp; van der Flier, H. (2007). Score gains on g-loaded tests: No g. <i>Intelligence, 35.</i> <a href="https://doi.org/10.1016/j.intell.2006.07.006">doi.org/10.1016/j.intell.2006.07.006</a></li>
       <li>Treviño, M., Zhu, X., Lu, Y. Y., Scheuer, L. S., Passell, E., Huang, G. C., Germine, L. T., &amp; Horowitz, T. S. (2021). How do we measure attention? Using factor analysis to establish construct validity of neuropsychological tests. <i>Cognitive Research: Principles and Implications, 6</i>, 51. <a href="https://doi.org/10.1186/s41235-021-00313-1">doi.org/10.1186/s41235-021-00313-1</a></li>
+      <li>Tuzun, R. E., &amp; Sikora, A. S. (n.d.). Verification of the Jones unknot conjecture up to 24 crossings. arXiv:2003.06724. <a href="https://arxiv.org/abs/2003.06724">arxiv.org/abs/2003.06724</a></li>
       <li>Uttal, D. H., Meadow, N. G., Tipton, E., Hand, L. L., Alden, A. R., Warren, C., &amp; Newcombe, N. S. (2013). The malleability of spatial skills: A meta-analysis of training studies. <i>Psychological Bulletin, 139</i>(2), 352–402. <a href="https://doi.org/10.1037/a0028446">doi.org/10.1037/a0028446</a></li>
       <li>Vater, C., Gray, R., &amp; Holcombe, A. O. (2021). A critical systematic review of the Neurotracker perceptual-cognitive training tool. <i>Psychonomic Bulletin &amp; Review, 28</i>(5), 1458–1483. <a href="https://doi.org/10.3758/s13423-021-01892-2">doi.org/10.3758/s13423-021-01892-2</a></li>
       <li>Voyer, D. (2011). Time limits and gender differences on paper-and-pencil tests of mental rotation: A meta-analysis. <i>Psychonomic Bulletin &amp; Review, 18</i>(2), 267–277. <a href="https://doi.org/10.3758/s13423-010-0042-0">doi.org/10.3758/s13423-010-0042-0</a></li>
@@ -1818,7 +2046,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
 <!-- ======================================================= back cover -->
 <section class="page cover bare back" id="back">
   <div class="frame">
-    <div class="top"><span class="label">Parallax · user guide 1.0.0</span><span class="label">6 November 2026</span></div>
+    <div class="top"><span class="label">Parallax · user guide 1.1.0</span><span class="label">13 November 2026</span></div>
     <p class="big">Built by the Chimera community on Discord.</p>
     <p class="lead">Questions, results, strategies, ideas for new exercises, corrections to this guide: bring them to the community that made Parallax.</p>
     <p><a class="join" href="https://discord.gg/chmr">Join the Chimera Discord</a></p>

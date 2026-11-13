@@ -13,6 +13,9 @@
    on(fn(cur, prev)) → off     also emitted on PX.bus as 'route' { cur, prev }
    fromHash() → the route the URL hash names (deep link at boot), or null
    parse(text) → { route, name, arg, params } or null
+   guard: null or fn(route) → route | null, set by the app: applied to hashes the person goes to
+       (back, forward, a typed hash), never to the app's own routes; null opens Today. js/ui/app.js
+       uses it so a #/play hash never starts a session by itself (I1 T4), as at boot.
 
    One delegated click listener handles every [data-go] element: data-go="exercise/rotate"
    (query allowed: data-go="play?mode=daily"). Use it on <button> or <a> elements so the
@@ -146,6 +149,12 @@
     if (h === lastHash) return; // our own mirror write
     lastHash = null;
     var r = h && h !== '#' ? parse(h) : null;
+    if (r && typeof api.guard === 'function') {
+      var g;
+      try { g = api.guard(r); } catch (e) { g = r; }
+      if (!g) { go('home', null, { force: true }); return; } // mirrored, so the hash says #/home
+      r = g;
+    }
     if (r) go(r.route, r.params, { mirror: false }); // back/forward or a typed hash
   }
 
@@ -171,8 +180,9 @@
   if (win.document && win.document.addEventListener) win.document.addEventListener('click', onClick);
   try { if (win.addEventListener) win.addEventListener('hashchange', onHashChange); } catch (e) { /* mirror only */ }
 
-  PX.core.router = {
+  var api = PX.core.router = {
     go: go, current: current, on: on, fromHash: fromHash, parse: parse, NAMES: NAMES,
     mirror: function (on) { if (on !== undefined) mirrorOn = !!on; return mirrorOn; },
+    guard: null,
   };
 })(window.PX);
