@@ -314,6 +314,29 @@ function plateStats(H, item) {
   return { len, aspect: (x1 - x0) / Math.max(1, y1 - y0) };
 }
 
+// The strand on top at each crossing of a rope: its length from the passage underneath before
+// that crossing to the passage underneath after it (the rope's ends where there is none), on the
+// sampled curve.
+function overStrands(dg) {
+  const S = dg.S[0], a = [0];
+  for (let j = 1; j < S.m; j++) a.push(a[j - 1] + Math.hypot(S.x[j] - S.x[j - 1], S.y[j] - S.y[j - 1]));
+  const at = (t) => { const T = H_sampleIndex(S, t); return a[T]; }, total = a[S.m - 1], cp = dg.comps[0], out = {};
+  cp.forEach((p, i) => {
+    if (!p.over) return;
+    let lo = 0, hi = total;
+    for (let j = i - 1; j >= 0; j--) if (!cp[j].over) { lo = at(cp[j].t); break; }
+    for (let j = i + 1; j < cp.length; j++) if (!cp[j].over) { hi = at(cp[j].t); break; }
+    out[p.c] = hi - lo;
+  });
+  return out;
+}
+// The sample index nearest a passage's curve parameter t (samples sit at i + (k + 0.5) / SUB).
+function H_sampleIndex(S, t) {
+  let lo = 0, hi = S.m - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (S.t[mid] < t) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+
 function shortcuts(t, H, pools) {
   t.section('knots: shortcut solvers');
   const lines = [];
@@ -358,6 +381,27 @@ function shortcuts(t, H, pools) {
     const worst = Object.entries(acc).map(([k, v]) => [k, v / its.length]).sort((a, b) => b[1] - a[1]);
     for (const [k, v] of worst) t.ok(v <= 0.35, `${variant}: "${k}" ≤ 35 % (${pct(v)})`);
     lines.push(`${variant}: worst ` + worst.slice(0, 4).map(([k, v]) => `${k} ${pct(v)}`).join(', '));
+    // per rope rung: the tag nearest the plate's centre (or farthest), and the tag on the shortest
+    // (or longest) strand on top (from the passage underneath before it to the one after it; the
+    // rope's ends where there is none), each ≤ 35 % on every rung (RV-knots F5)
+    const rung = {};
+    for (const x of pools[variant].items) {
+      const it = x.item, dg = H.diagramOf(H.curvesOf(it), it.over), ol = overStrands(dg);
+      const dc = it.tags.map((c) => Math.hypot(dg.X[c].x - 160, dg.X[c].y - 160)), oa = it.tags.map((c) => ol[c]);
+      const r = rung[x.params.rope] = rung[x.params.rope] || { n: 0, near: 0, far: 0, short: 0, long: 0 };
+      r.n++;
+      r.near += pickBest(dc.map((v) => -v), it.key); r.far += pickBest(dc, it.key);
+      r.short += pickBest(oa.map((v) => -v), it.key); r.long += pickBest(oa, it.key);
+    }
+    let worstRung = [0, ''];
+    for (const [k, r] of Object.entries(rung)) {
+      for (const cue of ['near', 'far', 'short', 'long']) {
+        const v = r[cue] / r.n;
+        if (v > worstRung[0]) worstRung = [v, `rung ${k} ${cue}`];
+        t.ok(v <= 0.35, `${variant}, rope rung ${k}: "${{ near: 'nearest the centre', far: 'farthest from the centre', short: 'shortest strand on top', long: 'longest strand on top' }[cue]}" ≤ 35 % (${pct(v)} of ${r.n})`);
+      }
+    }
+    lines.push(`${variant} per rung: worst ${worstRung[1]} ${pct(worstRung[0])}`);
   }
   // link: parity of A-over-B crossings (sound when odd), loops wholly on top, cheap counts
   {
@@ -467,7 +511,7 @@ function testLearn(t, PX, def, H) {
   }
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['gap', 'pair', 'curl', 'slide', 'slideUnder', 'over', 'none', 'knot', 'knotCore', 'broken', 'switchKey', 'unties', 'ties', 'stays', 'apart', 'linked', 'linkedZero', 'moves'];
+  const caps = ['gap', 'pair', 'curl', 'slide', 'slideUnder', 'over', 'under', 'none', 'knot', 'knotCore', 'brokenRope', 'brokenLoops', 'switchKey', 'unties', 'ties', 'stays', 'apart', 'linked', 'linkedZero', 'moves'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   t.ok(typeof L.bridge === 'string' && /not been shown/.test(L.bridge), 'a "where it is used" text with its limitation line');
   const allText = JSON.stringify(L).toLowerCase();

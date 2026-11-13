@@ -174,7 +174,7 @@
     st.S.stopLook();
     st.item = item; st.value = null; st.raw = 0; st.dist = 0; st.v = 0; st.dir = 0; st.done = false; st.playing = false; st.respond = null;
     st.voided = null; st.voidStats = null; st.paused = false; st.hostPause = false; st.frames = null; st.input = null; st.mode = null;
-    st.demoed = false; st.lostDuring = false;
+    st.demoed = !!ctx.demo; st.lostDuring = false; st.practice = !!ctx.practice;
     var S = st.S, el = st.el, S0 = item.path[0];
     S.attach();
     S.setPose(S0[0], S0[1], item.startHeading);
@@ -202,19 +202,21 @@
     var ringOn = true;
     return timing.nextPaint().then(function () {
       if (!st || st.item !== item) return timing.now();
-      st.W = st.kit.walker(S, planOf(item), {
+      // a Watch item (ctx.demo, when the player sets it): the demo replays the walk with captions, so the
+      // first, silent walk is skipped and the item starts at the end of the route
+      st.W = ctx.demo ? null : st.kit.walker(S, planOf(item), {
         ctx: ctx, fast: ctx.fast,
         paused: function () { return !!(st && (st.paused || st.hostPause || st.kit.hostPaused(ctx))); },
         // the ring hides once you have stepped out of it, for good (no fix after the start)
         onFrame: function (pose) { if (ringOn && Math.hypot(pose.x - S0[0], pose.y - S0[1]) > START_R + 0.3) { ringOn = false; S.showRing(false); } },
         onVoid: function (reason, stats) { voidTrial(reason, stats); },
       });
-      return st.W.done.then(function (stats) {
+      return (st.W ? st.W.done : Promise.resolve(null)).then(function (stats) {
         if (!st || st.item !== item) return timing.now();
         st.frames = stats;
         st.walking = false; st.paused = false;
         S.pauseNote.hidden = true;
-        try { ctx.stage3d.noteTrial(!!stats.stutter); } catch (e) { /* quality bookkeeping is optional */ }
+        if (stats) { try { ctx.stage3d.noteTrial(!!stats.stutter); } catch (e) { /* quality bookkeeping is optional */ } }
         var E = endOf(item);
         S.setPose(E.x, E.y, E.h);
         S.showRing(item.task === 'heading'); // a turn on the spot never leaves the ring
@@ -428,8 +430,8 @@
     var res = result || { correct: false }, ok = !!res.correct, el = st.el, d = res.detail || {}, lines = [], kit = st.kit;
     var ret = isReturn(item), dir = ret ? (isNum(d.dir) ? d.dir : null) : isNum(response) ? kit.norm360(response) : null;
     // the bias line learns only from clean answers: not a voided trial (by the view, or a lost 3D view the
-    // player voids), not an item whose solution the Watch demo just showed
-    if (!st.voided && !st.demoed && !st.lostDuring) remember(lib().entry(item, response, res, Date.now() / 1000, displayCode()));
+    // player voids), not an item whose solution the Watch demo just showed, not a practice item
+    if (!st.voided && !st.demoed && !st.lostDuring && !st.practice) remember(lib().entry(item, response, res, Date.now() / 1000, displayCode()));
     el.root.classList.add('is-revealed');
     st.D.mark(ok ? 'is-right' : 'is-wrong');
     st.D.set(dir, dir === null ? '' : kit.sideText(cap, dir));

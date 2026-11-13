@@ -377,12 +377,10 @@ export function shortcutReport(def, items, label) {
     rows.push({ cell: k, n: list.length, chance: ch, S, worst: worst[0], worstRate: worst[1], over: worst[1] > ch + 0.10 });
   }
   rows.sort((a, b) => a.cell.localeCompare(b.cell, 'en', { numeric: true }));
-  const names = Object.keys(rows[0].S);
   const lines = [`       ${label}: turn-only shortcuts per route/tolerance cell (bound chance + 10 points; n per cell ${Math.min(...rows.map((r) => r.n))}–${Math.max(...rows.map((r) => r.n))})`];
   for (const v of [...new Set(rows.map((r) => r.cell.split('/')[0]))]) {
     const rv = rows.filter((r) => r.cell.startsWith(v + '/'));
-    for (const nm of names) {
-      if (!(nm in rv[0].S)) continue;
+    for (const nm of Object.keys(rv[0].S)) {
       const over = rv.filter((r) => r.S[nm] > r.chance + 0.10), w = rv.reduce((m, r) => (r.S[nm] - r.chance > m.d ? { d: r.S[nm] - r.chance, r } : m), { d: -1, r: null });
       lines.push(`         ${v} · ${nm}: over in ${over.length} of ${rv.length} cells; worst ${w.r.cell} ${pct(w.r.S[nm])} vs chance ${pct(w.r.chance)}`);
     }

@@ -1017,18 +1017,20 @@
     var ringOn = true, S0 = item.path[0];
     return timing.nextPaint().then(function () {
       if (!st || st.item !== item) return timing.now();
-      st.W = walker(S, planOf(item), {
+      // a Watch item (ctx.demo, when the player sets it): the demo replays the walk with captions, so the
+      // first, silent walk is skipped and the item starts at the end of the route
+      st.W = ctx.demo ? null : walker(S, planOf(item), {
         ctx: ctx, fast: ctx.fast,
         paused: function () { return !!(st && (st.paused || st.hostPause || hostPaused(ctx))); },
         onFrame: function (pose) { if (ringOn && Math.hypot(pose.x - S0[0], pose.y - S0[1]) > START_R + 0.3) { ringOn = false; S.showRing(false); } },
         onVoid: function (reason, stats) { voidTrial(reason, stats); },
       });
-      return st.W.done.then(function (stats) {
+      return (st.W ? st.W.done : Promise.resolve(null)).then(function (stats) {
         if (!st || st.item !== item) return timing.now();
         st.frames = stats;
         st.walking = false; st.paused = false;
         S.pauseNote.hidden = true;
-        try { ctx.stage3d.noteTrial(!!stats.stutter); } catch (e) { /* quality bookkeeping is optional */ }
+        if (stats) { try { ctx.stage3d.noteTrial(!!stats.stutter); } catch (e) { /* quality bookkeeping is optional */ } }
         var E = endPose(item);
         S.setPose(E.x, E.y, E.h);
         S.showRing(false);
