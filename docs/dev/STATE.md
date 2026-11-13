@@ -1,6 +1,6 @@
 # STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-13 17:10 UTC.
+Updated 2026-11-13 17:45 UTC. All 19 exercises are active in index.html (Knots and B6's three included).
 
 ## Phase
 2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in focus on the DAT-style formats. D3: analogical test named in v1.2.
@@ -32,7 +32,8 @@ Updated 2026-11-13 17:10 UTC.
 
 ## Integration to-do (lead, after the builders)
 - Check report: a "compare with care" line on the Level probe when Angles was practised since the baselines (R3 §5.3; DECISIONS 13 Nov).
-- B5/B6 → B1 requests: similarity groups ['patfold','fold'], ['cubes','views'], ['openings','views','slice'], ['form','nets','fold'], ['patviews','views']; beginner order appends patviews, openings, angles, patfold, cubes, form (if B1 has not done them).
+- (done by B1 at 17:00) similarity groups and beginner order for the DAT-style exercises.
+- Library cards: Knots and the six DAT-style exercises have no blurb (home.js CATALOG, B1's file): add one line each, from their learn.goal.
 - Review question: Painted Cubes' visible-only count is right on 61 % of items (partial strategy).
 - B2's screens.py had 6 failures in B7's run (new exercises without data in its record; CSV columns from B1): recheck after B1/B2 finish.
 - Openings validate failed on 18 Section-form items (B7 → B6 FYI): recheck when B6 finishes.
