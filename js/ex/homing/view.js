@@ -511,9 +511,11 @@
     function onVis() { if (doc.hidden) { st.hidden = true; judge(); } last = -1; }
     doc.addEventListener('visibilitychange', onVis);
     // final: the share of slow frames is judged over the whole walk only.
+    // fast (tests, the debug switch) plays the walk 50× faster: its frame timing says nothing about what a
+    // player would see, so it never voids for timing ('stutter'); the other reasons still apply
     function judge(final) {
       var r = st.lost ? 'lost' : st.turned ? 'turned' : st.paused || st.hidden ? 'paused'
-        : st.maxFreezeMs > FREEZE_MS || (final && st.motionMs > 0 && st.slowMs > SLOW_SHARE * st.motionMs) ? 'stutter' : null;
+        : !opts.fast && (st.maxFreezeMs > FREEZE_MS || (final && st.motionMs > 0 && st.slowMs > SLOW_SHARE * st.motionMs)) ? 'stutter' : null;
       if (r && !reason) { reason = r; if (opts.onVoid) opts.onVoid(r, summary()); }
       return reason;
     }

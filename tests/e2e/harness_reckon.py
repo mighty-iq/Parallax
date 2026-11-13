@@ -18,13 +18,15 @@ inlined harness page with Homing's gen/learn/view.js and both stylesheets (writt
 7. show me draws your believed home vector and stop; the demo plays to the end and leaves the answer
    state; after 5+ answers the bias line and the error chart show; the record field 'reckon' fills
 8. a sandboxed srcdoc page plays by keyboard; no console errors
+9. the real player by touch: the reveal comes and stays, no click reaches Next
 Screenshots: tests/e2e/out/reckon/reckon_<case>.png """
+import json
 import math
 import sys
 
 from playwright.sync_api import sync_playwright
 
-from common import OUT, Checks, Console, child_frame, inline_page, launch, non_blank, srcdoc_host
+from common import OUT, ROOT, Checks, Console, child_frame, inline_page, launch, non_blank, srcdoc_host
 
 C = Checks('harness_reckon')
 DIR = OUT / 'reckon'
@@ -258,6 +260,55 @@ def phone_play(b, cons):
         ctx.close()
 
 
+def app_touch(b, cons):
+    """The real player at 360 × 740 by touch: drag, then Confirm 40 ms later (point); drag, hold Walk, Here
+    (return). The reveal must come and stay, and no click may reach the player's Next (kit.tapAct cancels
+    the tap's touchend, so the answer changing the screen never clicks what is under the finger)."""
+    ctx = b.new_context(viewport={'width': 360, 'height': 740}, **PHONE)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto((ROOT / 'index.html').resolve().as_uri())
+    page.wait_for_function('document.documentElement.getAttribute("data-px-ready") === "1"', timeout=30000)
+    for _ in range(4):
+        if not page.evaluate('PX.ui.modalOpen()'):
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(150)
+    page.evaluate("""() => { const r = PX.core.store.state; r.tour = r.tour || { seen: {} }; r.tour.seen = r.tour.seen || {};
+        PX.ex.list().forEach(d => { r.tour.seen[d.id] = true; });
+        window.__nextClicks = 0; document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-next]')) __nextClicks++; }, true); }""")
+    tt = Touch(ctx, page)
+    play = lambda: page.evaluate('window.__play ? __play.state : null')
+    out = []
+    for v in ('point', 'point', 'return'):
+        page.evaluate('PX.debug.fast(true)')
+        cfg = {'mode': 'free', 'exId': 'reckon', 'run': '1', 'trials': 2, 'params': {'variant': v, 'route': 0, 'flow': 0, 'speed': 0, 'tolerance': 0}}
+        page.evaluate(f'void PX.core.router.go("play", {json.dumps(cfg)}, {{ force: true }})')
+        for _ in range(600):  # an intro or offer card may come first (as in fit.py)
+            if play() == 'respond':
+                break
+            for sel in ('[data-card-box] [data-card="skip"]', '[data-card-box] .px-btn--primary'):
+                loc = page.locator(sel)
+                if loc.count() and loc.first.is_visible():
+                    loc.first.click()
+                    page.wait_for_timeout(200)
+            page.wait_for_timeout(100)
+        it = page.evaluate('() => ({ key: __play.item.keyDeg, d: __play.item.distance, v: __play.item.walkSpeed })')
+        turn_to(page, it['key'], tt)
+        if v == 'return':
+            walk_back(page, it['d'], it['v'], tt)
+        page.wait_for_timeout(40)
+        tt.tap('.pl-trial ' + ('.ex-reckon-here' if v == 'return' else '.ex-fp-confirm'))
+        page.wait_for_timeout(1500)
+        out.append([v, play(), page.evaluate("() => __play.last && __play.last.input")])
+        page.evaluate('void __play.end()')
+    REPORT['touch']['app'] = {'items': out, 'nextClicks': page.evaluate('window.__nextClicks')}
+    C.ok(all(o[1] == 'reveal' for o in out) and page.evaluate('window.__nextClicks') == 0,
+         f'the real player by touch: the answer shows its reveal and keeps it, no click reaches Next ({REPORT["touch"]["app"]})')
+    shot(page, 'app_touch_end')
+    ctx.close()
+
+
 def desktop_keys(b, cons):
     for theme in ('light', 'dark'):
         ctx = b.new_context(viewport={'width': 1366, 'height': 768})
@@ -379,14 +430,17 @@ def pauses_and_voids(b, cons):
         s = st(page)
         REPORT['voids'][name] = {'voided': s['voided'], 'frames': s['frames']}
         C.ok(s['voided'] == want, f'{name}: voided = {want} ({s["voided"]}; max gap {s["frames"]["maxGapMs"]} ms, slow share {s["frames"]["slowShare"]})')
-    # the view changes shape mid-walk (the phone turned, a window resized): void
+    # the view changes shape mid-walk (the phone turned, a window resized): void. 600 px switches to the
+    # phone layout, so the view itself changes size (a resize that leaves the view alone harms nothing).
     page.goto(url('turned', seed=64, p=P, v='point'))
     wait_moving(page, 300)
-    page.set_viewport_size({'width': 1100, 'height': 768})
+    w0 = page.evaluate("() => document.querySelector('.ex-fp-stage').getBoundingClientRect().width")
+    page.set_viewport_size({'width': 600, 'height': 768})
     page.wait_for_function(READY, timeout=90000)
     s = st(page)
     REPORT['voids']['turned'] = s['voided']
-    C.ok(s['voided'] == 'turned', f'a change of the view\'s shape mid-walk voids the item ({s["voided"]})')
+    w1 = page.evaluate("() => document.querySelector('.ex-fp-stage').getBoundingClientRect().width")
+    C.ok(s['voided'] == 'turned', f'a change of the view\'s shape mid-walk voids the item ({s["voided"]}; view {w0:.0f} → {w1:.0f} px wide)')
     page.set_viewport_size({'width': 1366, 'height': 768})
     errs = page.evaluate('() => __harness.errors')
     C.ok(not errs, f'pause and void: no harness errors ({errs})')
@@ -500,6 +554,7 @@ def main():
     with sync_playwright() as p:
         b = launch(p)
         phone_play(b, cons)
+        app_touch(b, cons)
         desktop_keys(b, cons)
         pauses_and_voids(b, cons)
         throttled(b, cons)

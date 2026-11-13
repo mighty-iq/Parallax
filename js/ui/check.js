@@ -48,7 +48,28 @@
     var kind = S.plan.check.kind, baseline = /^B/.test(kind || '');
     S.device = { display: displayOf(), viewport: Math.round(win.innerWidth || 0) + 'x' + Math.round(win.innerHeight || 0), inputs: {} };
     Play.setChrome(true);
-    var P = S.P = Play.player({ endLabel: 'Stop the check' });
+    // The check's practice time comes from the one active-time clock (PX.core.clock), as in every
+    // session: it starts with the first item and stops for the pause sheet, modals, a hidden tab
+    // and 60 s without input (B1's gap: checks used the old gap rule).
+    var CK = PX.core.clock;
+    S.clock = CK && typeof CK.create === 'function' ? CK.create({ idleMs: 60000 }) : null;
+    S.offs = [];
+    var P = S.P = Play.player({ endLabel: 'Stop the check', onState: function (st) {
+      if (!S.clock) return;
+      if (st === 'paused') S.clock.pause('sheet'); else S.clock.resume('sheet');
+    } });
+    if (S.clock) {
+      if (ui.modalOpen()) S.clock.pause('modal');
+      S.offs.push(PX.bus.on('modal:open', function () { if (S.clock) S.clock.pause('modal'); }));
+      S.offs.push(PX.bus.on('modal:close', function () { if (S.clock && !ui.modalOpen()) S.clock.resume('modal'); }));
+    }
+    function clockNow() { return S.clock ? { activeMs: S.clock.activeMs() } : undefined; }
+    function dropClock() {
+      (S.offs || []).forEach(function (off) { try { off(); } catch (e) { /* gone */ } });
+      S.offs = [];
+      if (S.clock) { try { S.clock.destroy(); } catch (e) { /* gone */ } S.clock = null; }
+    }
+    S.dropClock = dropClock;
     wrap.appendChild(h('h1.px-sr', 'Spatial Check'));
     wrap.appendChild(P.el.root);
     P.el.helpBtn.hidden = true;
@@ -170,8 +191,9 @@
 
     function loop() {
       if (S.done) return;
+      if (S.clock) { if (!S.clock.started()) S.clock.start(); S.clock.touch(); } // going on to an item is activity
       var step;
-      try { step = E().modes.next(S.plan, rec(), now()); } catch (e) { log('next failed', e); finish(); return; }
+      try { step = E().modes.next(S.plan, rec(), now(), clockNow()); } catch (e) { log('next failed', e); finish(); return; }
       if (!step || step.done) { finish(); return; }
       S.step = step;
       var def = PX.ex.get(step.exId);
@@ -209,8 +231,9 @@
             if (!S.freeSkip[def.id]) { S.freeSkip[def.id] = true; result.outcome = 'skipped'; skipLabel(true); }
           }
           if (item.fallback === true) result.fallback = true;
+          if (S.clock && tr.outcome !== 'skipped' && !tr.timeout) S.clock.touch(); // an answer is activity; a time-out is not
           var out;
-          try { out = E().modes.answer(S.plan, rec(), step, result, now()); } catch (e) { log('answer failed', e); out = {}; }
+          try { out = E().modes.answer(S.plan, rec(), step, result, now(), clockNow()); } catch (e) { log('answer failed', e); out = {}; }
           save();
           if (out.outcome === 0 || out.outcome === 1) {
             S.answered++;
@@ -225,6 +248,7 @@
     function stop() {
       if (S.done) return;
       S.done = S.stopped = true;
+      dropClock();
       P.destroy();
       Play.setChrome(false);
       PX.ui.clear(wrap);
@@ -237,7 +261,10 @@
       S.done = true;
       var res = null;
       deviceExtra(S);
-      try { res = E().modes.finish(S.plan, rec(), now()); } catch (e) { log('finish failed', e); }
+      if (S.clock) S.clock.stop(); // first: the reading stored is the reading kept
+      var t = clockNow();
+      dropClock();
+      try { res = E().modes.finish(S.plan, rec(), now(), t); } catch (e) { log('finish failed', e); }
       save();
       try { store.flush(); } catch (e) { /* the debounced save runs later */ }
       P.destroy();
@@ -266,6 +293,7 @@
     return function cleanup() {
       Play.setChrome(false);
       if (!S.done) { S.done = S.stopped = true; } // a check left part-way does not count (its answers stay in the Log)
+      if (S.dropClock) S.dropClock();
       if (Play.closeCards) Play.closeCards(); // open cards and their key layers go with the screen
       if (S.P) S.P.destroy();
       if (PX.ui.check.session === S) PX.ui.check.session = null;
