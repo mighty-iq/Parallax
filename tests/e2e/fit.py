@@ -285,8 +285,9 @@ WTG_JS = r"""() => {
 
 def run_wtg(page, size, ex, rows):
     """Watch, Try, Go on a phone (PLAN M2): while the demo plays its caption is on the screen and
-    above the pinned controls, and the stage is in view; the first Try item's stage is fully in
-    view when it plays."""
+    above the pinned controls, and the stage is in view above the caption (wholly, or from its top
+    when it is taller than the room left); the first Try item's stage is fully in view when it
+    plays."""
     page.evaluate('void __play.end()')
     page.evaluate('PX.debug.fast(true)')
     page.evaluate(f"PX.core.store.state.tour.seen['{ex}'] = false")
@@ -314,7 +315,8 @@ def run_wtg(page, size, ex, rows):
                 break
             page.wait_for_timeout(20)
     ok_demo = bool(demo) and 0 <= demo['caption']['top'] and demo['caption']['bottom'] <= (demo['bar']['top'] + 1 if demo['bar'] else demo['H']) \
-        and bool(demo['stage']) and 0 <= demo['stage']['top'] < demo['H'] - 40
+        and bool(demo['stage']) and 0 <= demo['stage']['top'] < demo['H'] - 40 \
+        and (demo['stage']['bottom'] <= demo['caption']['top'] + 2 or demo['stage']['top'] <= 10)
     ok_try = bool(tried) and bool(tried['stage']) and tried['stage']['top'] >= 0 and tried['stage']['bottom'] <= tried['H'] + 0.5
     rows.append({'ex': ex, 'item': 'watch', 'ok': ok_demo, 'why': '' if ok_demo else f'demo: {demo}'})
     rows.append({'ex': ex, 'item': 'try', 'ok': ok_try, 'why': '' if ok_try else f'try: {tried}'})

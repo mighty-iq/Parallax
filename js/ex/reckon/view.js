@@ -281,6 +281,9 @@
     placeWalker();
     st.walkStop = timing.loop(function (dt) {
       if (!st || !st.item) return false;
+      // the player's pause sheet (the item inert and hidden): a finger still on Walk gets no pointerup
+      // there, so the walk stops at once and stays where it was
+      if (st.kit.hostPaused(st.ctx)) { st.dir = 0; st.v = 0; st.walkStop = null; readout(); controls(); return false; }
       var s = dt / 1000, want = st.dir * st.item.walkSpeed * (st.dir < 0 ? BACK_SHARE : 1);
       st.v += (want - st.v) * Math.min(1, s / WALK_TAU);
       if (st.dir === 0 && Math.abs(st.v) < 0.02) st.v = 0;
