@@ -39,6 +39,10 @@
   "h": 1480,
   "w": 720
  },
+ "app-phone-landscape": {
+  "h": 780,
+  "w": 1688
+ },
  "app-player-feedback": {
   "h": 1152,
   "w": 2049

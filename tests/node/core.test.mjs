@@ -679,27 +679,31 @@ function testStore(t) {
     const env = t.env();
     env.PX.ex.define(sampleDef({ id: 'rotate', code: 'EX-02' })); // lets the CSV spell out params
     const S = env.PX.core.store;
-    const HEAD = 'time_iso,t_sec,exercise,version,mode,session,params_code,params,seed,outcome,outcome_label,rt_ms,value,p_pred,stage,display,input';
+    const HEAD = 'time_iso,t_sec,exercise,version,mode,session,params_code,params,seed,outcome,outcome_label,rt_ms,value,p_pred,stage,display,input,value2';
     t.eq(S.exportCSV(), HEAD + '\r\n', 'an empty log exports only the header (the one trial format)');
     const outcomes = [1, 0, 2, 3, 1];
     outcomes.forEach((o, i) => S.addTrial({ t: T0 + i * 1000, ex: i % 2 ? 'rotate' : 'paper-fold', mode: 'free', code: i, seed: 1000 + i, outcome: o, rt: 900 + i, value: i === 4 ? 12.5 : undefined }));
     t.ok(!S.addTrial([1, 0, 0, 0, 0, 7, 1, null]) && !S.addTrial({ ex: 'rotate', code: -1, seed: 1, outcome: 1 }), 'invalid trials are refused');
     t.throws(() => S.addTrial({ ex: 'Bad Id', code: 0, seed: 1, outcome: 1 }), /invalid exercise id/, 'an invalid exercise id throws');
     S.addTrial({ t: T0 + 9000, ex: 'rotate', mode: 'train', code: 1, seed: 77, outcome: 1, rt: 800, p: 0.7125, stage: 2, display: 'small', input: 'touch' });
+    S.addTrial({ t: T0 + 10000, ex: 'rotate', mode: 'train', code: 1, seed: 78, outcome: 0, rt: 900, value: -12.5, value2: 0.83 });
+    S.addTrial({ t: T0 + 11000, ex: 'rotate', mode: 'train', code: 1, seed: 79, outcome: 1, rt: 950, value2: NaN });
     const csv = S.exportCSV();
     const lines = csv.split('\r\n').filter(Boolean);
     t.eq(lines[0], HEAD, 'CSV header row');
-    t.eq(lines.length, 2 + outcomes.length, 'one CSV row per trial');
-    t.ok(lines.slice(1).every((l) => l.split(',').length === 17), 'every row has 17 cells');
+    t.eq(lines.length, 4 + outcomes.length, 'one CSV row per trial');
+    t.ok(lines.slice(1).every((l) => l.split(',').length === 18), 'every row has 18 cells');
     t.eq(lines[1].split(',').slice(1, 15), [String(T0 / 1000), 'paper-fold', '1', 'free', '', '0', '', '1000', '1', 'right', '900', '', '', ''], 'row cells (unknown exercise: no params text; no session without the Log)');
     t.eq(lines[2].split(',')[7], 'size=3;axis=x;noise=0;variant=pick1', 'params spelled out through the registry (level values)');
     t.eq(lines.slice(1, 6).map((l) => l.split(',')[10]), ['right', 'wrong', 'stutter', 'skipped', 'right'], 'outcome labels');
     t.eq(lines[5].split(',')[12], '12.5', 'value column');
     t.eq(lines[1].split(',')[0], new Date(T0).toISOString(), 'ISO time column');
-    t.eq(lines[6].split(',').slice(13), ['0.713', '2', 'small', 'touch'], 'predicted success, stage, display class and input (v1.1 columns 11-12 as words)');
+    t.eq(lines[6].split(',').slice(13), ['0.713', '2', 'small', 'touch', ''], 'predicted success, stage, display class and input (v1.1 columns 11-12 as words); value2 empty when absent');
     t.eq(S.state.trials[5].slice(8), [713, 2, 1, 2], 'addTrial stores columns 9-12 as codes');
+    t.eq([S.state.trials[6].slice(7), lines[7].split(',').slice(12)], [[-12.5, null, null, 0, 0, 0.83], ['-12.5', '', '', '', '', '0.83']], 'value2 (column 13): stored after the other optional columns and written in the CSV');
+    t.eq(S.state.trials[7].length, 8, 'a value2 that is not a finite number is dropped (the row keeps its 8 columns)');
     S.csv = (st) => 'hooked ' + st.trials.length;
-    t.eq(S.exportCSV(), 'hooked 6', 'the Log\'s exporter (store.csv) writes the CSV when it is registered');
+    t.eq(S.exportCSV(), 'hooked 8', 'the Log\'s exporter (store.csv) writes the CSV when it is registered');
     S.csv = null;
   }
 
@@ -721,9 +725,13 @@ function testStore(t) {
     t.ok(!log.includes('v'), 'the upgrade is silent (not a repair)');
     t.eq([g.trials[0], g.trials[1], g.sessions[0], g.practiceMs, g.settings.theme], [v1.trials[0], v1.trials[1], v1.sessions[0], 600000, 'dark'], 'its rows, sessions and settings load unchanged');
     const row12 = [Math.floor(T0 / 1000), 0, 0, 3, 13, 1, 900, null, 650, 3, 2, 4];
-    const g2 = S.guard(Object.assign({}, v1, { trials: [row12, [Math.floor(T0 / 1000) + 1, 0, 0, 3, 14, 1, 900, null, null, null, 7, -1]] }));
+    const row13 = [Math.floor(T0 / 1000) + 2, 0, 0, 3, 15, 0, 1200, -31.5, null, null, 1, 2, 1.27];
+    const g2 = S.guard(Object.assign({}, v1, { trials: [row12, [Math.floor(T0 / 1000) + 1, 0, 0, 3, 14, 1, 900, null, null, null, 7, -1], row13,
+      [Math.floor(T0 / 1000) + 3, 0, 0, 3, 16, 1, 900, null, null, null, 2, 1, 'far']] }));
     t.eq(g2.trials[0], row12, 'columns 11-12 (display class, input) survive the guard');
     t.eq(g2.trials[1].slice(10), [null, null], 'out-of-range codes become null');
+    t.eq(g2.trials[2], row13, 'column 13 (value2) survives the guard');
+    t.eq(g2.trials[3].length, 12, 'a value2 that is not a finite number is dropped');
     const ses = Object.assign({}, v1.sessions[0], { display: 'small', viewport: '390x844', input: 'touch', ended: 'complete', budgetMs: 300000 });
     const g3 = S.guard(Object.assign({}, v1, { sessions: [ses, Object.assign({}, ses, { id: 's2', display: 'huge', viewport: '1e9', input: 'Touch!', ended: 'maybe' })] }));
     t.eq(g3.sessions[0], ses, 'sessions keep display, viewport, input, ended and budgetMs');
@@ -736,9 +744,9 @@ function testStore(t) {
     t.eq([g4.settings.trialPause, g4.settings.anyJson], [{ ids: ['fold'], until: '2026-12-01' }, [1, 2]], 'json settings keep JSON data only');
     t.eq(S.guard({ v: 2, settings: { trialPause: { ids: 'fold' }, anyJson: 'text' } }).settings.trialPause, null, 'a json setting its check refuses falls back to the default');
     // export → import round trip with the new fields
-    S.importJSON(JSON.stringify(Object.assign({}, v1, { trials: [row12], sessions: [ses] })));
+    S.importJSON(JSON.stringify(Object.assign({}, v1, { trials: [row12, row13], sessions: [ses] })));
     const back = JSON.parse(S.exportJSON());
-    t.eq([back.v, back.trials[0], back.sessions[0]], [2, row12, ses], 'export and import round-trip the new fields');
+    t.eq([back.v, back.trials[0], back.trials[1], back.sessions[0]], [2, row12, row13, ses], 'export and import round-trip the new fields (columns 11-13, session fields)');
   }
 
   t.section('store: two tabs with v1.1 data (the engine merge)');

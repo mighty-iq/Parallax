@@ -1,8 +1,9 @@
 /* EX-14 Openings (DAT-style format): view (DOM, SVG and 3D through PX.core.stage3d; ARCHITECTURE.md §6).
    layout 'stem+options'. The stem is the solid (its exact surface from lib.surface, flat shaded,
    with edge bars along lib.edges) in an orthographic view from the front-right-top, posed as the
-   item says. Options are SVG openings: a plate with the outline cut out (dark, outlined), all at
-   the stem's scale where the cell allows it.
+   item says. Options are SVG openings: a plate with the outline cut out (dark, outlined). Solid and
+   openings share one scale (px per step): the openings' drawn size sets it, and the solid is drawn
+   no larger (fitScale); where the stage is too small for that, the openings shrink to the solid's.
    Show me (ctx.play steps, from the item's own model): the camera swings round to look straight
    along the fitting axis; the solid's outline is traced over it; the outline turns and flips onto
    the right opening; after a wrong pick, the nearest true outline is laid over the chosen opening
@@ -14,7 +15,7 @@
   var h = PX.ui.h, SV = PX.core.svg;
   var def = PX.ex.get('openings'), lib = def.lib;
   var st = null;
-  var DEG = Math.PI / 180, CAM_D = 60, MARGIN = 1.12, BAR = 0.085, PAD = 0.6;
+  var DEG = Math.PI / 180, CAM_D = 60, MARGIN = 1.12, BAR = 0.085, PAD = 0.3;
   var VIEW0 = { az: 35, el: 28 };
   var FACE = { x: 'side', y: 'top', z: 'front' };
 
@@ -114,19 +115,44 @@
     st.solid.children.forEach(function (c) { if (c.geometry && c.geometry !== st.unit) c.geometry.dispose(); });
     st.solid = null;
   }
+  // The camera frame for a view: the solid fitted to the stage, but never drawn larger than the
+  // openings' scale (st.kCap px per step), so solid and openings share one scale.
+  function frameFor(b, W, H) {
+    var fr = frame(boxPts(st.item), b, W, H);
+    if (st.kCap > 0) fr.half = Math.max(fr.half, H / (2 * st.kCap));
+    return fr;
+  }
   // Draws the 3D picture for camera state cur = { az, el, fr }.
   function render() {
     if (!st || !st.v3 || !st.cur) return;
     var v = st.v3;
     if (!v.width || !v.height) v.resize();
     var W = v.width || 1, H = v.height || 1, b = basis(st.cur.az, st.cur.el);
-    st.cur.fr = frame(boxPts(st.item), b, W, H); // from the current size: a turn or resize never crops the solid
+    st.cur.fr = frameFor(b, W, H); // from the current size: a turn or resize never crops the solid
     placeCam(st.cam, b, st.cur.fr, W, H);
     v.render(st.scene, st.cam);
+    if (st.cur.az === VIEW0.az && st.cur.el === VIEW0.el) st.root.setAttribute('data-k-solid', (H / (2 * st.cur.fr.half)).toFixed(2)); // px per step (tests)
   }
   function camAt(az, el) {
     var W = st.v3.width || 1, H = st.v3.height || 1, b = basis(az, el);
-    return { az: az, el: el, fr: frame(boxPts(st.item), b, W, H) };
+    return { az: az, el: el, fr: frameFor(b, W, H) };
+  }
+  // One scale for solid and openings: the openings' px per step as drawn (CSS sizes their cells),
+  // capped by the largest scale at which the solid still fits its stage.
+  function fitScale() {
+    if (!st || !st.item) return;
+    var size = st.M + 2 * PAD, kOpt = 0;
+    st.opts.forEach(function (o) { if (o) o.svg.style.maxWidth = ''; });
+    st.opts.forEach(function (o) { if (o && !kOpt) { var r = o.svg.getBoundingClientRect(), w = Math.min(r.width, r.height); if (w > 0) kOpt = w / size; } }); // the square viewBox fits the smaller side
+    var kFit = 0;
+    if (st.v3) {
+      var W = st.v3.width || 1, H = st.v3.height || 1, fr = frame(boxPts(st.item), basis(VIEW0.az, VIEW0.el), W, H);
+      kFit = H / (2 * fr.half);
+    }
+    var k = kOpt && kFit ? Math.min(kOpt, kFit) : kOpt || kFit;
+    st.k = k; st.kCap = k;
+    if (kOpt && k < kOpt - 0.01) st.opts.forEach(function (o) { if (o) o.svg.style.maxWidth = (size * k).toFixed(1) + 'px'; });
+    st.root.setAttribute('data-k-open', k.toFixed(2)); // px per step (tests)
   }
 
   /* ---------- openings (SVG) ---------- */
@@ -148,7 +174,6 @@
     svg.appendChild(SV.el('path', { d: polyD(o.poly, o.h, ox, oy, 1), class: 'op-hole' }));
     var over = SV.el('g', { class: 'op-over' });
     svg.appendChild(over);
-    if (st.k) svg.style.maxWidth = Math.round(size * st.k) + 'px';
     var tag = h('span.ex-tag', { hidden: true });
     el.appendChild(h('span.ex-opt.op-opt-cell', svg, tag));
     st.opts[i] = { el: el, svg: svg, over: over, tag: tag, ox: ox, oy: oy, size: size };
@@ -170,10 +195,10 @@
     root.appendChild(h('div.op-under', caption, verdict));
     root.appendChild(desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, stage: stage, d3: d3, ink: ink, label: label, caption: caption, verdict: verdict, desc: desc, v3: null, item: null, optItem: null, opts: [], offs: [], cur: null, solid: null, k: 0, M: 1 };
+    st = { ctx: ctx, root: root, stage: stage, d3: d3, ink: ink, label: label, caption: caption, verdict: verdict, desc: desc, v3: null, item: null, optItem: null, opts: [], offs: [], cur: null, solid: null, k: 0, kCap: 0, M: 1 };
     if (!S3.available()) { stage.appendChild(h('p.ex-unavailable', { role: 'alert' }, 'This exercise needs 3D graphics, which are not available here: ' + S3.reason() + '.')); return; }
     st.v3 = S3.attach(d3);
-    st.v3.redraw = render;
+    st.v3.redraw = function () { fitScale(); render(); };
     st.scene = new T.Scene();
     S3.lights(st.scene);
     st.cam = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 2 * CAM_D);
@@ -187,15 +212,14 @@
     st.optItem = item;
     st.opts = [];
     st.M = optScale(item);
-    st.k = 0;
+    st.k = 0; st.kCap = 0;
+    st.item = item;
     if (st.v3) {
-      st.item = item;
       dropSolid();
       st.solid = buildSolid(item);
       st.scene.add(st.solid);
       st.v3.resize();
       st.cur = camAt(VIEW0.az, VIEW0.el);
-      st.k = (st.v3.height || 1) / (2 * st.cur.fr.half); // px per step in the picture: the openings use it too
     }
   }
   function present(item, ctx) {
@@ -207,6 +231,7 @@
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
     PX.ui.clear(st.ink);
+    fitScale();
     if (st.v3) { st.cur = camAt(VIEW0.az, VIEW0.el); render(); }
     return timing.nextPaint();
   }

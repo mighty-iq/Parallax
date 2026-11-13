@@ -10,7 +10,7 @@
 2. Prints it with page.pdf: A4 from the CSS, backgrounds on, a document outline from the headings,
    tagged PDF.
 3. Checks the PDF with pypdf: every external link of the page is a clickable link annotation with
-   its URL, the page count is sensible (28 to 40), placeholder figures are listed; then adds the
+   its URL, the page count is sensible (44 to 56), placeholder figures are listed; then adds the
    document metadata.
 4. --png DIR: rasterises every page at 60 dpi with pdftoppm (for looking at the layout).
 Figures come from tools/shots.py (docs/shots/). Runs through tests/e2e/pwslot.sh (two browser slots). """
@@ -28,11 +28,11 @@ from common import Console, launch  # noqa: E402
 
 HTML = ROOT / 'docs' / 'guide' / 'guide.html'
 PDF = ROOT / 'docs' / 'Parallax-Guide.pdf'
-PAGES_OK = (28, 40)
+PAGES_OK = (44, 56)
 META = {
     '/Title': 'Parallax: user guide',
     '/Author': 'Parallax contributors and the Chimera community (discord.gg/chmr)',
-    '/Subject': 'What Parallax does, how to use it, and the research behind it. Version 1.0.0.',
+    '/Subject': 'What Parallax does, how to use it, and the research behind it. Version 1.1.0.',
     '/Keywords': 'Parallax, visuospatial, spatial ability, mental rotation, training, transfer, Chimera',
     '/Creator': 'tools/build-pdf.py (Chromium via Playwright)',
 }
