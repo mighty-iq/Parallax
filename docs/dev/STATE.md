@@ -56,7 +56,7 @@ Updated 2026-11-13 19:10 UTC. All 19 exercises are active in index.html (Knots a
 - RV-H done (docs/dev/reviews/RV-code-core.md): no blockers; 4 should-fix (closing-item cap, check time as practice, two-tab merge of new fields, idle cap on late timers); B1 fix round done (value2 = trial column 13; CSV 18 columns).
 - Guide writer G1 handed back (7f255a6): guide 1.1.0, 50 pages, clean build; README, CHANGELOG. Remaining after B3/B4: Reckon/Homing/Knots facts and figures, the Knots hygiene row (now near), rebuild (G1.md "Remaining after B3 and B4"); resume G1 (ac14d632f5849a4a9) then.
 - Play-through RV-F (fresh player, no source: six DAT-style tutorials, Section mini, focus; phone 390×844 and 360×640, desktop): a76c1d49da2d6b2fa → docs/dev/reviews/RV-play-dat.md. A second play-through for Reckon, Homing and Knots after B3/B4.
-- RV-C done (docs/dev/reviews/RV-knots.md): all answers right; Show me replay can show a type-changing move; 3 false texts; 2 untie cues at the limit; B4 fix round resumed (a0dafe0ed9a9dc012).
+- RV-C done (docs/dev/reviews/RV-knots.md): all answers right; Show me replay can show a type-changing move; 3 false texts; 2 untie cues at the limit; B4 fix round done (Show me checked move by move; captions; untie cues ≤ 27.7 %).
 - Finished: B3 (a4766dc5c229a6ee1), B2 (aed53d9e449759e47), B6 (a0dc048b845b7fc8e), B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
 
 ## Dead ends
