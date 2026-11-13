@@ -29,21 +29,29 @@ The first update, built by the Chimera community on Discord (https://discord.gg/
   iPad and in-app browsers the welcome explains where progress is kept and offers backups; served
   over https, Parallax has a web manifest and icons for the home screen. Track, Homing, Reckon and
   Angles keep separate ratings for small and large screens.
-- **Homing, rebuilt for touch (version 2):** slower, smoother motion (1.8 m/s, turns at 45°/s, 0.4
-  s ramps), routes of 12 to 28 m, and touch controls (drag the view, a dial, 1° and 5° buttons). A
-  trial is voided only when the walk itself was harmed. Its trials are logged as version 2.
+- **Homing, rebuilt for touch (version 2):** slower, smoother motion (1.8 m/s, turns at 45°/s,
+  0.4-second ramps), routes of 12 to 28 m, and touch controls (drag the view, a dial, 1° and 5°
+  buttons). Routes are chosen so that answers that need no tracking (the turns reversed, a heading
+  never updated) miss, and turning straight round or a fixed answer stays near chance wherever the
+  routes allow. A trial is voided only when the walk itself was harmed, or when the screen changes
+  shape while you answer. The strategy card's side error, there since 1.0, is fixed. Its trials are
+  logged as version 2.
 - **Reckon (EX-12, experimental):** path integration without landmarks. Watch a walk across an
   empty plain, with no objects, no sun and no compass, then point home or walk home. The ground's
-  marks show motion but mark no place; harder levels thin them out or make them short-lived, and
-  speeds and turn rates vary so that seconds do not measure distance. After every answer: the angle
-  error, the distance error, the drift per metre walked, and your habit over the last 20 routes. A
-  community member pointed out that Homing's landmarks correct the very dead-reckoning errors that
-  this training should work on; Homing stays as the landmark-aided stage before Reckon.
+  marks show motion but mark no place; harder levels thin them out or make them short-lived. Above
+  the steady level, speeds vary from 0.5 to 2.0 m/s, so a leg's walking time says little about its
+  length. After every answer: the angle error, the distance error, the drift per metre walked, and
+  your habit over the last 20 routes; the trial log keeps the angle error and, on walks back, the
+  distance ratio (walked ÷ true) in separate columns. On the easier routes the turns alone tell you
+  much of the way home; distances matter more with bigger turns, at tighter tolerances and when you
+  walk back. A community member pointed out that Homing's landmarks correct the very dead-reckoning
+  errors that this training should work on; Homing stays as the landmark-aided stage before Reckon.
 - **Knots (EX-13):** pull both ends, does a knot remain? Which marked crossing, switched, unties
   the rope, or ties it? Are two loops linked? Ropes of 5 to 12 crossings in three spacings. Every
   answer is proved before the item is shown: by the simplification moves that take a rope apart, by
-  a determinant that shows a knot remains, or by the Jones polynomial, and Show me replays the
-  proof. The mirror variant was not built.
+  a determinant that shows a knot remains, or by the Jones polynomial. Show me replays the moves
+  and checks every one before it is drawn; where a move cannot be drawn safely, it stops with a
+  caption that says how it ends. The mirror variant was not built.
 - **Six DAT-style formats (EX-14 to EX-19):** Openings, Missing View, Angles (labelled
   perceptual-judgement practice), Hole Punch, Painted Cubes and Form practise the question formats
   of the Perceptual Ability Test in the Dental Admission Test (DAT®). They join Train and Today's
@@ -57,11 +65,11 @@ The first update, built by the Chimera community on Discord (https://discord.gg/
   within the current part; warnings come at 5 and 1 minutes left. No feedback until the review:
   results and pacing per part, then the items to look at again, each with its show-me. It changes
   no level and gives no score. A full section earns the new achievement "Full section" (21 in all).
-- **Test hygiene:** "Also in tests" notes on Fold, Hidden, Views, Nets, Span and the six DAT-style
-  formats; a Test hygiene section in About with the size of practice effects; on later Spatial
-  Checks, one question about outside tests and practice since the last check, kept with your data
-  and never scored; and a "Taking a test soon?" helper in Settings that lists the matching
-  exercises and can leave them out of Train and Today's plan until the day of your test.
+- **Test hygiene:** "Also in tests" notes on Fold, Hidden, Views, Nets, Span, Knots and the six
+  DAT-style formats; a Test hygiene section in About with the size of practice effects; on later
+  Spatial Checks, one question about outside tests and practice since the last check, kept with
+  your data and never scored; and a "Taking a test soon?" helper in Settings that lists the
+  matching exercises and can leave them out of Train and Today's plan until the day of your test.
 - **Your record:** format 2. A 1.0 record upgrades the first time 1.1 opens it, with nothing lost;
   a 1.0 tab still open elsewhere then runs from memory instead of overwriting the newer record.
   Every trial gains its screen class (small or large) and its input (mouse, touch, pen or keys),
