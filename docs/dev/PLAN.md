@@ -31,7 +31,7 @@ Parallax keeps its own rules from CLAUDE.md (quiet game layer, pop-up on every o
 - Touch CSS: overscroll-behavior none during items, touch-action manipulation, no long-press callouts on options; left and right safe-area padding; text no smaller than 13 px (SVG labels scaled).
 - Storage: navigator.storage.persist() requested; an iOS and in-app-browser hint with a backup prompt; a web manifest and icons linked only on https (GitHub Pages), so file:// stays clean; Web Share for results where available.
 - Homing on phones: view fixed on top, answer by dragging to turn plus a larger dial with ±1° and ±5° buttons; captions as subtitles; landscape split; Pause really freezes the walk; walking speed 2 m/s or less and turns 45°/s or less; ground texture without shimmer; the void rule based on what harms the task (measured), not any 400 ms freeze; the "larger screens" notices removed.
-- Accept: a test opens every scored item of all exercises and probes at 360×640 and checks that the stimulus and every answer control are fully visible with no scrolling; Homing and Reckon play touch-only at 360×740; landscape cards appear; no horizontal overflow at 150 % text.
+- Accept: a test opens every scored item of all exercises and probes at 360×640 and checks that the stimulus and every answer control are fully visible with no scrolling; Homing and Reckon play touch-only at 360×740; held sideways, every item has a two-column layout (or its own) that fits 844×390 (changed 13 Nov from "landscape cards appear": layouts serve better than cards, DECISIONS); no horizontal overflow at 150 % text.
 
 ### M3. Reckon (EX-12): dead reckoning without landmarks (R1)
 - A new exercise, experimental, NAV. Homing stays as the easier, landmark-aided stage before it.

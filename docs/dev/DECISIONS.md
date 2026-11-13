@@ -28,3 +28,5 @@
 - 2026-11-13: Painted Cubes never asks N = 5, in training or in Section practice (item.asks holds N 1–4 within KRANGE, keys balanced).
 - 2026-11-13: The Daily Challenge keeps paused exercises (same items for everyone); the "Taking a test soon?" text says so (RV-B).
 - 2026-11-13: "Full section" needs every part reached and at least half the items answered (RV-B: it could be earned with zero answers).
+- 2026-11-13: Phones held sideways get two-column layouts (stem left, answers right; Track, Span, Orient and Patterns their own) instead of "turn upright" cards; every item fits 844×390 (B2's fit.py). A turn during a stimulus still voids the trial (H3). PLAN M2's acceptance line reworded.
+- 2026-11-13: A show-me after an answer scrolls the stage above the pinned caption on phones, as Watch's demo does (B2's gap: Orient's dial at 360×640).
