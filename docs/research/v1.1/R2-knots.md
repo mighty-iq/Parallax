@@ -411,3 +411,261 @@ outline with its over/under information removed.
   scrambled geometrically.
 - **D:** catalogue knots lifted to 3D from their minimal diagrams (z = ±h at crossings, smoothed),
   then turned and deformed.
+
+### 4.3 Invariants: cost at about 12 crossings, and what each can prove
+
+| Invariant | Cost | Proves | Cannot prove |
+|---|---|---|---|
+| Crossing count; equality of Gauss or PD codes | O(n) | The diagrams are identical | Knot equivalence |
+| Linking number, lk = ½ Σ signs of the crossings between two components | O(n) | Linked, if lk ≠ 0 | Links with lk = 0 (Whitehead link, Borromean rings) |
+| Fox colourings; tricolourability (3 divides det) | O(n³), rank mod p | Knotted, if tricolourable | Many knots are not tricolourable (4_1 det 5, 5_1 det 5) |
+| Determinant det = abs(Δ(−1)) = abs(V(−1)), from the colouring matrix (fraction-free elimination) | O(n³), about 0.05 ms; matched abs(V(−1)) on all 600 checked [proto] | Knotted, if det ≠ 1 | Knots with det 1: 10_124 = T(3,5) (Δ_T(3,5)(−1) = 1 by the torus-knot formula); knots with Δ = 1 |
+| Alexander polynomial Δ(t) | O(n³) polynomial arithmetic, under 1 ms (DJ estimate) | Knotted, if Δ ≠ 1; separates many knots | Knots with Δ = 1 (Conway 11n34, Kinoshita–Terasaka 11n42 [unverified]); mirror images (Δ is symmetric); 5_1 vs 10_132 [record: Knot Atlas] |
+| Kauffman bracket, hence the Jones polynomial V(t), by a 2ⁿ-state sum | 0.5 ms (8 crossings), 1.6–3 ms (10), 6–12 ms (12), 52 ms (14), 246 ms (16) in Node [proto]; #P-hard in general (Jaeger, Vertigan & Welsh 1990 [unverified]) | Knotted, if V ≠ 1. **Unknotted, if V = 1 and the diagram has ≤ 24 crossings** (Tuzun & Sikora). Chiral, if V(t) ≠ V(1/t) | Unknots beyond 24 crossings (the Jones unknot conjecture is open); unlinks (non-trivial links with the unlink's Jones polynomial exist: Thistlethwaite 2001; Eliahou, Kauffman & Thistlethwaite 2003 [unverified]); chirality of 9_42 and 10_71 |
+| Signature σ (Goeritz matrix with the Gordon–Litherland correction [unverified details]) | O(n³) | Chiral and knotted, if σ ≠ 0 | Knots with σ = 0 (4_1, 6_1, …) |
+| HOMFLY-PT polynomial | Exponential, heavier than Jones | More identity and chirality power | Not needed; also blind to 9_42 and 10_71 |
+| Khovanov homology | Heavy (Bar-Natan 2007 [secondary]) | Detects the unknot (Kronheimer & Mrowka 2011 [abstract]) and unlinks (Hedden & Ni 2013 [unverified]) | Too heavy for a 20 ms budget in a browser (DJ) |
+| Simplification certificate: a sequence of R1/R2/R3 moves to 0 crossings, or to a split diagram | Greedy R1/R2: 0.05–0.2 ms [proto] | Unknot or unlink, constructively; doubles as the show-me script | Hard unknots that need crossings added first (Culprit, 10 crossings; Goeritz, 11) |
+
+**Identifying knots with the Jones polynomial:**
+
+- Within each crossing number up to 9, no two prime knots share a Jones polynomial. At 10
+  crossings, 13 polynomials are shared by two knots each, out of 249 knots (Maguire 2024 [full:
+  slides], prime knots, apparently counted up to mirror image).
+- Across crossing numbers there are collisions: 4_1 with K11n19 (Maguire), and 5_1 with 10_132,
+  which also share the Alexander polynomial [record: Knot Atlas].
+
+### 4.4 Unknot detection: where it stands in 2026
+
+- **Jones unknot conjecture: open, verified to 24 crossings.**
+  - Tuzun & Sikora (arXiv 2003.06724, Theorem 1 [full]) state: "The Jones polynomial distinguishes
+    all non-trivial knots with diagrams up to 24 crossings from the unknot." The 22-crossing version
+    appeared in J. Knot Theory Ramifications 27 (2018) [secondary].
+  - Their pipeline computes cheap determinants first, brackets only for diagrams with det 1, then
+    settles candidates with SnapPy group presentations and Dynnikov's algorithm. Parallax's cheap
+    route has the same shape.
+  - **For Parallax:** any diagram with at most 24 crossings and V = 1 is the unknot.
+- **Links:** two-component links with the unlink's Jones polynomial exist (Thistlethwaite 2001;
+  Eliahou, Kauffman & Thistlethwaite 2003 [unverified]). There is no Jones-based unlink certificate,
+  so separation must be constructive.
+- **Khovanov homology detects the unknot:** "a knot is the unknot if and only if its reduced
+  Khovanov cohomology has rank 1" (Kronheimer & Mrowka 2011 [abstract]).
+- **Complexity.**
+  - Unknot recognition is in NP (Hass, Lagarias & Pippenger 1999) and in co-NP (Kuperberg 2014,
+    assuming GRH; Lackenby 2021, unconditionally) [secondary: Wikipedia].
+  - Lackenby's 2021 quasi-polynomial algorithm had not appeared in peer-reviewed form by October
+    2025 [secondary]. Lackenby (2026, arXiv 2607.23350 [full, first part]) gives a new
+    hierarchy-based unknot algorithm; the part read states no running time.
+  - Every unknot diagram simplifies in a polynomial number of Reidemeister moves (Lackenby 2015,
+    *Annals* [secondary]). Arc presentations of the unknot simplify monotonically (Dynnikov 2006
+    [abstract]).
+- **Hard unknot diagrams** need crossings added before they will simplify (Burton et al., "Hard
+  diagrams of the unknot", arXiv 2104.14076 [full]):
+  - the Culprit (10 crossings) and Goeritz's diagram (11 crossings) need one extra crossing on the
+    sphere;
+  - a 28-crossing diagram needs three.
+  - Reinforcement learning has been applied to hard unknots and unknotting numbers (Applebaum et al.
+    2024 [record]).
+- **Consequences (DJ):** a greedy simplifier cannot certify every unknot, even at 10 crossings, so
+  the Jones fallback matters. "Needs a detour" is a legitimate top difficulty level, very hard for
+  people too.
+
+### 4.5 Chirality
+
+- The mirror image has V(1/t). If V(t) ≠ V(1/t), the knot is chiral and a mirror distractor is
+  certified different. The Alexander polynomial and the determinant cannot see mirrors. The
+  signature changes sign under mirroring, so σ ≠ 0 also proves chirality.
+- Amphichiral knots up to 8 crossings: 4_1, 6_3, 8_3, 8_9, 8_12, 8_17, 8_18 [unverified; a node
+  test can compare with KnotInfo's symmetry types].
+- Chiral knots whose chirality the Jones, HOMFLY-PT and Kauffman polynomials miss: 9_42 and 10_71
+  (Ramadevi 2011 [full]). Other lists add 10_48, 10_91, 10_104 and 10_125 for HOMFLY-PT
+  [unverified].
+- **Parallax rule (DJ):** a mirror distractor is allowed only when V(t) ≠ V(1/t) is checked for that
+  item, so no hand-made lists are needed. Items stay unoriented (no arrows); then invertibility
+  (8_17 is the first non-invertible knot [unverified]) does not matter.
+
+### 4.6 Proving that two diagrams show the same knot (D, G)
+
+- Invariants can only prove a **difference**. Sameness needs a construction:
+  - **In 2D:** an explicit Reidemeister-move path, checked by replaying it.
+  - **In 3D (DJ):** a discrete isotopy check. Interpolate the control points from the target to the
+    option in K steps. At every step, non-adjacent segments must stay at least d_min apart, and no
+    point may move more than d_min/2 per step. Then no strand can pass through another.
+- **Alternative:** an invariant-complete catalogue. Once a certificate shows a diagram simplifies to
+  ≤ 9 crossings, the Jones polynomial identifies its type within that crossing number (§4.3).
+  Collisions across crossing numbers below 10 were not seen in the sources read but are not ruled
+  out [gap]. Cross-check with signature, determinant and Alexander polynomial, or prefer the
+  construction.
+- Minimal diagrams of an alternating knot are related by flypes (Menasco & Thistlethwaite 1993
+  [unverified]), so comparing minimal diagrams directly would need the flype closure. The
+  construction avoids this.
+
+### 4.7 A verification pipeline that guarantees one right answer
+
+**Common steps** (validator, independent of the generator's bookkeeping):
+
+1. Re-derive the crossings from the stored geometry and reject degenerate geometry. Only the over
+   flags are read from the item.
+2. Run the legibility checks of §5.3.
+3. Build the PD code and classify by the cheap route:
+   - greedy R1/R2 (+ a bounded R3 search) down to 0 crossings ⇒ unknot, with the certificate kept
+     for show me;
+   - else det ≠ 1 ⇒ knot;
+   - else compute Jones on the simplified diagram (≤ 24 crossings): V = 1 ⇒ unknot, otherwise knot.
+
+   In the prototype the cheap route took 0.05–0.2 ms, left 0–15 % of diagrams for the Jones step,
+   and never contradicted the Jones polynomial in 600 checks [proto].
+
+**Per item type:**
+
+- **A Pull:** the key is knot or unknot. The validator checks that both ends lie on the outer face
+  and leave the plate, and records the balance features for the tests.
+- **B Untie / Tie:** classify the base diagram (a knot for untie, an unknot for tie). Switch each of
+  the four marked crossings and classify the result: exactly one option must change the class.
+  - Tags must be at least 44 px apart and all four crossings visible.
+  - Exclude **nugatory** crossings (removing them splits the diagram in two). Switching one never
+    changes the knot, and that is obvious, so they are the "structural distractors" Rotate also
+    excludes (DJ).
+- **C Link:**
+  - each component must be unknotted (Jones = 1 per component);
+  - **linked** ⇐ lk ≠ 0, or V(L) ≠ −(t^½ + t^−½), the Jones polynomial of the two-component unlink;
+  - **unlinked** ⇐ a split certificate: moves until no crossing joins the two components;
+  - reject the item if neither proof is found.
+- **D Mirror:**
+  - the target is chiral (V(t) ≠ V(1/t));
+  - the key passes the discrete isotopy check from the target, with V(key) = V(target) as a
+    cross-check;
+  - mirror options have V(t) replaced by V(1/t);
+  - other-knot options have a V unlike both;
+  - the projected 3D view passes the checks of §5.3.
+- **All:** node tests run ≥ 10 000 seeds per variant (standing rule 4), plus the shortcut solvers
+  of §7.4.
+
+### 4.8 The prototype
+
+- **Scope:** throwaway code in the session scratchpad (`r2/`), not app code, written to check
+  feasibility and measure shortcut risks.
+  - `knotlib.mjs`: crossings from a polyline, the PD code, the bracket and Jones polynomial, the
+    colouring determinant, cheap features.
+  - `simplify.mjs`: faces of the diagram and greedy R1/R2 simplification.
+  - `experiment*.mjs`: the measurements below.
+- **Checks against known values:** the left-handed trefoil (det 3), the figure-eight (det 5, with a
+  palindromic V), and a Lissajous (3,2,7) curve that came out as 7_4 (det 15). Switching one trefoil
+  crossing gives V = 1. The greedy simplifier leaves the trefoil at 3 crossings and undoes the
+  one-switch trefoil with one R2 and one R1.
+- **Unknot fraction under random crossing choices.**
+  - Smooth Fourier shadows: 3 crossings .946, 4 .866, 5 .809, 6 .719, 7 .649, 8 .576 (24 shadows),
+    9 .55 (5 shadows).
+  - Braid closures: 6 .52, 7 .60, 8 .46, 9 .42, 10 .39, 11 .31, 12 .30.
+- **Greedy R1/R2 simplification:** it fully undid 99.5 % of the same-shadow unknots and 93.0 % of
+  the matched-pair unknots (4–9 crossings), and never emptied a knot, as it must not. Most small
+  random unknots are visibly simplifiable; R3 slides and detours are needed for a minority, which is
+  a natural top difficulty level.
+- **Caveats:** the pools are small and mostly 4–6 crossings; braid closures and higher crossing
+  counts need a proper run with ≥ 2 000 items per level once the real generator exists.
+  Sampling 64 assignments per shadow, as the matched pools did, costs about 64 × 0.1 ms with the
+  cheap route. That fits the 20 ms budget, but the Fourier shadow search (2.7 % acceptance at
+  O(M²) intersection tests) does not without spatial hashing or a constructive shadow source.
+
+## 5. Rendering
+
+### 5.1 2D diagrams or 3D tubes?
+
+| | 2D rope diagram (SVG, `PX.core.svg`) | 3D tube (three.js, `stage3d`) |
+|---|---|---|
+| Over/under | Explicit: casing/gap at every crossing, the knot-diagram convention | Occlusion and shading; ambiguous where tubes nearly touch or at shallow depth gaps |
+| Legibility at 320 px | High with the rules below | Medium: tube radius and lighting decide; thumbnails need snapshots |
+| Cost | Trivial; no WebGL | One shared context; snapshots 7–21 ms in software rendering (EXERCISE-GUIDE §6) |
+| Validator | Same geometry as the display | Must project the curve with the display camera and re-check every crossing |
+| Animation | Easy morphs of control points; exact moves | Physics relaxation is approximate (§5.4) |
+| Fit | A, B, C | D, the tutorial's "pull tight" demo, an optional tube look for A |
+
+**Choice (DJ):** 2D for A–C, 3D only for D and demos. Croom & Firestone's medium manipulation did
+not rescue strength judgements, and KRT items are photos, so no study says 3D helps topological
+judgements [gap]. 2D is cheaper, exact and phone-safe. A "tube look" for A can be a later variant
+once data exist.
+
+### 5.2 Legibility on phones: a validator spec (DJ, for a 320 CSS px plate)
+
+- **Size:** the plate is at least 320 × 320 CSS px (a 360 px phone minus 16 px gutters). The same
+  item serves phones and desktops; desktops only scale up.
+- **Rope:** stroke 7–9 px with round caps. A background-coloured casing of 3–4 px on each side of
+  the over-strand, near crossings, makes the under-strand gap. This is Browne's (2025) "bordered"
+  style; he notes bordered and hatched styles strengthen the "2.5D over/under effect".
+- **Gap geometry:** Finke & Weitz (2024) [full] give the length of the doubly drawn piece as
+  l = (w_s + w_g)·tan α + w_s·sec α, where w_s is the stroke width, w_g the gap width and α the
+  deviation from a right angle. l grows without bound as α → 90°, which is another reason to cap
+  crossing angles.
+- **Crossing angle:** ≥ 35° (≥ 30° accepted in the prototype). Shallow crossings read as touching
+  strands.
+- **Spacing:**
+  - crossing to crossing: ≥ 36 px (11 % of the plate), and ≥ 44 px between crossings that carry
+    answer tags;
+  - non-adjacent strands, away from crossings: ≥ 18 px;
+  - radius of curvature: ≥ 10 px.
+  Strand spacing is also a difficulty dimension, since tracing slows near distractor curves (§1.1),
+  so the "tight" level sits at the lower bounds.
+- **Crossing count:** at most 12 at 320 px, decided by validator checks rather than by fiat. More
+  than 12 seldom fits the spacing rules at this size (DJ estimate; to be checked in phone
+  screenshots).
+- **Ends:** both run off the plate edge with a small "pull" arrow. Neither end may be crossed near
+  the edge.
+- **Tags (B, D):** letters A–D in ≥ 28 px circles beside the crossing, with a short leader line; the
+  answer goes through the option grid (≥ 44 px buttons). Tapping a tag also answers.
+- **3D tubes:**
+  - tube radius 1.6–2 % of the figure's diameter and ≥ 5 px on screen;
+  - in projection, crossing angle ≥ 35° and depth gap ≥ 3 tube radii at every crossing;
+  - an inverted-hull outline in the background colour gives every occlusion a visible rim, the 3D
+    equivalent of the 2D casing;
+  - key and fill lights, and mild depth fog (`Fog` is in the vendored subset).
+
+### 5.3 Showing over and under unambiguously (DJ)
+
+- The cue is **geometric**: the casing/gap at every crossing, never colour alone (standing rule 8).
+  An optional colour gradient along the rope, using theme tokens and a colour-vision-safe sequential
+  ramp, only helps tracing; items must be solvable without it.
+- Browne (2025) notes rainbow scales are "problematic for scientific visualisation" but help players
+  tell parts of the path apart.
+- The validator re-checks the drawn geometry: every crossing has its gap, no gap hides another
+  crossing, and no third strand passes within 2 stroke widths of a crossing (no near-triple points).
+- **Light and dark themes:** the casing uses the plate's background token, so it adapts to both.
+  Screenshot checks belong in the e2e test.
+- **Reveal:** "✓ Knot: over, under, over all the way round" / "✓ No knot: these loops slide off",
+  with the deciding crossings ringed (shape and colour).
+
+### 5.4 Animation: pulling and untangling ("show me")
+
+- **Primary (DJ): replay the certificate in 2D.** The validator's simplification certificate
+  (R1/R2/R3 moves) is the model that graded the answer (EXERCISE-GUIDE §3, `lib`). Each move morphs
+  the control points:
+  - **R1 untwist:** shrink the curl into its crossing.
+  - **R2 slide off:** push the over-arc across the under-arc until both crossings vanish.
+  - **R3 slide over:** move a strand across a crossing.
+
+  Each move runs 1.2–2 s (the guide asks 2–4 s per solution movement), with captions such as "This
+  loop lies on top: lift it off." For a knot, the replay stops at the reduced core and a final step
+  pulls it tight. Tests re-derive the crossings every few frames to confirm that only the planned
+  crossings appear and disappear. Reduced motion uses keyframes about 400 ms apart (≤ 2.5 Hz).
+- **Secondary: 3D "pull the ends" relaxation, for the tutorial demo.** A bead–spring rope (about
+  150 beads) with repulsion between non-adjacent beads; the ends are pulled apart and the rope
+  straightens (unknot) or tightens into a small knot. The risk is a numerical strand passage, which
+  would teach something false. Mitigations (DJ):
+  - cap each bead's step below a quarter of the bead spacing and keep a minimum distance;
+  - precompute from fixed seeds and test the knot type at checkpoints (Jones of the projection);
+  - never run it during a stimulus phase (standing rule 7).
+  KnotPlot does such relaxations, but it is proprietary. A known tightening algorithm (SONO,
+  Pieranski 1998) was not checked [unverified].
+
+### 5.5 three.js notes
+
+- **`TubeGeometry` is not in Parallax's vendored subset** (`tools/vendor-three.mjs`, CORE list).
+  `CatmullRomCurve3` is bundled (as a dependency). Adding `'TubeGeometry'` to CORE is a one-word
+  change plus `npm run vendor`; three.js is MIT. Alternatively, build the tube by hand into a
+  `BufferGeometry` with parallel-transport frames.
+- `TubeGeometry(path, tubularSegments, radius, radialSegments, closed)` [record: three.js docs].
+  `closed = true` with a closed `CatmullRomCurve3` (centripetal by default) makes the loop.
+  three.js spreads the frame twist over the loop so no seam shows [unverified detail; from general
+  knowledge, not the docs page].
+- **Budget (DJ):** about 300 tubular × 12 radial segments is ≈ 7 k triangles per knot, so four
+  option thumbnails are easily affordable. Use the one shared renderer, take thumbnails with
+  `stage3d.snapshot` in `drawOption` (ready phase), and do nothing heavy after `present`.
