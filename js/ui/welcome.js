@@ -242,13 +242,14 @@
     if (framed || d.standalone || !(d.ios || d.inApp) || !rec) return null;
     // A home-screen app and an app's built-in browser each keep a record of their own, so the
     // advice says how to move progress (Back up, then Import), not only where to open Parallax.
-    var text = d.ios
-      ? 'Your progress is saved in this browser only. Safari can clear it after seven days of use without a visit, and an app’s built-in browser (Discord’s too) keeps a copy of its own. For a lasting home, add Parallax to your home screen (Share, then Add to Home Screen) and move your progress there: Back up here, then Import in Settings there.'
-      : 'Your progress is saved in this browser only, and an app’s built-in browser keeps a copy of its own. For a lasting home, open Parallax in your browser or add it to your home screen, and move your progress there: Back up here, then Import in Settings there.';
     // Once before any practice, then only while a backup is due (none in the last 14 days).
     var last = rec.settings && rec.settings.lastBackup || 0, has = (rec.sessions && rec.sessions.length) || (rec.trials && rec.trials.length);
     var due = has && Date.now() - last > 14 * 864e5;
     if (has && !due) return null;
+    var move = has ? ' and move your progress there: Back up here, then Import in Settings there.' : ' and practise there.';
+    var text = d.ios
+      ? 'Your progress is saved in this browser only. Safari can clear it after seven days of use without a visit, and an app’s built-in browser (Discord’s too) keeps a copy of its own. For a lasting home, add Parallax to your home screen (Share, then Add to Home Screen)' + move
+      : 'Your progress is saved in this browser only, and an app’s built-in browser keeps a copy of its own. For a lasting home, open Parallax in your browser or add it to your home screen,' + move;
     var box = h('div.px-welcome-store', { 'data-welcome': 'storage' }, h('p', text));
     if (due && PX.ui.app && typeof PX.ui.app.backup === 'function') {
       var b = ui.button(last ? 'Back up now' : 'Back up now (never backed up)', { kind: 'secondary', small: true, onClick: function () { PX.ui.app.backup(); } });

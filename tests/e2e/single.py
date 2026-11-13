@@ -13,6 +13,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import ROOT, launch, Console, Checks, srcdoc_host, child_frame  # noqa: E402
 
 SINGLE = ROOT / 'dist' / 'Parallax.html'
+
+
+def expected_exercises():
+    """How many exercises index.html loads (active js/ex/<id>/gen.js lines, outside comments)."""
+    import re
+    text = re.sub(r'<!--.*?-->', '', (ROOT / 'index.html').read_text(), flags=re.S)
+    return len(set(re.findall(r'<script src="js/ex/([a-z0-9]+)/gen\.js"></script>', text)))
 PROBE = """() => {
   const PX = window.PX, ex = PX.ex.list();
   const noView = ex.filter(d => !PX.ex.view(d.id)).map(d => d.id);
@@ -32,7 +39,9 @@ def check_frame(c, frame, label):
     frame.wait_for_function("() => document.documentElement.getAttribute('data-px-ready') === '1'", timeout=30000)
     r = frame.evaluate(PROBE)
     c.ok(r['ready'], f'{label}: app booted')
-    c.ok(r['nTrain'] == 11 and r['nProbe'] == 6, f"{label}: 11 exercises + 6 probes registered (got {r['nTrain']} + {r['nProbe']})")
+    # every exercise whose files index.html loads is in the build (v1.1 adds exercises as they land)
+    want = expected_exercises()
+    c.ok(r['nTrain'] + r['nProbe'] == want and r['nProbe'] == 6, f"{label}: {want - 6} exercises + 6 probes registered (got {r['nTrain']} + {r['nProbe']})")
     c.ok(not r['noView'], f"{label}: every exercise has a view (missing: {r['noView']})")
     c.ok(r['webgl'], f'{label}: WebGL available')
     c.ok(r['discord'] and r['discordTarget'] == '_blank', f'{label}: Chimera pop-up links to discord.gg/chmr in a new tab')
