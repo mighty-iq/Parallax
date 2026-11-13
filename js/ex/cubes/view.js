@@ -206,13 +206,13 @@
     list.forEach(function (c, k) {
       out.push({
         ms: c.hidden ? 2200 : 1600,
-        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: k + 1, sides: c.q.painted + ' (' + sidesText(c.q) + ')' }),
+        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: k + 1, sides: plural(c.q.painted, 'painted side', 'painted sides') + ' (' + sidesText(c.q) + ')' }),
         enter: function () { markAll(item, k + 1); focusOption(-1); },
       });
     });
     out.push({ ms: 1300, caption: cap('skip'), enter: function () { markAll(item); } });
     out.push({
-      ms: 1800, caption: cap('done', { k: item.count, cubes: item.count === 1 ? 'cube has' : 'cubes have', N: item.ask }),
+      ms: 1800, caption: cap('done', { k: item.count, cubes: item.count === 1 ? 'cube has' : 'cubes have', sides: plural(item.ask, 'painted side', 'painted sides') }),
       enter: function () { markAll(item); focusOption(item.key); },
     });
     var r = response;
