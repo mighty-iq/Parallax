@@ -1,6 +1,6 @@
 # PLAN: Parallax v1.1 (draft for the owner's go)
 
-Status: DRAFT sent to the owner on 13 Nov 2026; waiting for the go. The brief is BRIEF.md (word for word); the research is in docs/research/v1.1/ (R1 path integration, R2 knots, R3 DAT PAT, R4 test overlap, I1 timing and bugs, I2 phones).
+Status: APPROVED by the owner on 13 Nov 2026 (go; D1 = v1.2, D2 = opt-in PAT focus, D3 = test named in v1.2). The brief is BRIEF.md (word for word); the research is in docs/research/v1.1/ (R1 path integration, R2 knots, R3 DAT PAT, R4 test overlap, I1 timing and bugs, I2 phones).
 
 Parallax keeps its own rules from CLAUDE.md (quiet game layer, pop-up on every open, cautious wording) unless the owner says to switch to the standing rules of 11 Nov (decision D1 below).
 
