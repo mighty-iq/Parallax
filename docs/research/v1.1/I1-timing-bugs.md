@@ -193,7 +193,7 @@ Notes:
 | Phone run: Span | 3 100 ms | 3 149 ms | 16.7 ms, 17 ms | counted |
 | Phone run: Homing, first route after load | 12 315 ms | 12 446 ms | 16.7 ms, 100 ms | counted |
 
-Pattern Memory's 3 s exposure is timed from rAF time stamps (`patterns/view.js:148-172`): in a full Spatial Check (`crawl.py desktop check`) the swap came at 3 000 ms every time and the empty grid was painted at 3 033–3 067 ms; 2 of 18 exposures were voided by the view's own 100 ms gap rule (gaps of 150 and 417 ms while the machine was loaded) and replaced, as designed. Motion is integrated from frame time clamped to 100 ms (`timing.js:15, 51-53`), so a long frame lengthens the stimulus instead of making it jump (Homing above: +1.6 s around one 1.3 s stall), and gaps over 150 ms void the trial. That is the intended trade-off.
+Pattern Memory's 3 s exposure is timed from rAF time stamps (`patterns/view.js:148-172`): in a full Spatial Check (`crawl.py desktop check`) the swap came at 3 000 ms every time and the empty grid was painted at 3 033–3 067 ms; 2 of 18 exposures were voided by the view's own 100 ms gap rule (gaps of 150 and 417 ms while the machine was loaded) and replaced, as designed. On the phone run (`crawl.py phone check`) all 16 exposures painted the empty grid at 3 033 ms and none was voided. Motion is integrated from frame time clamped to 100 ms (`timing.js:15, 51-53`), so a long frame lengthens the stimulus instead of making it jump (Homing above: +1.6 s around one 1.3 s stall), and gaps over 150 ms void the trial. That is the intended trade-off.
 
 Note (S4, watch on real phones): the one freeze seen (1.3 s, first Homing route of the desktop run) did not recur on the phone run's first route, and the 2-CPU machine was running another audit's browsers at the time, so it is most likely load. Homing already renders the scene once before the walk starts (`homing/view.js:658-659`); if real phones show first-route voids, render every landmark once in the ready phase.
 
@@ -202,7 +202,7 @@ Note (S4, watch on real phones): the one freeze seen (1.3 s, first Homing route 
 
 ## 4. General bug hunt
 
-Covered: every training exercise once in Free play on desktop with real stimulus speed (Track, Rotate, Spin, Fold, Nets, Slice, Views, Orient, Span, Hidden, Homing; Watch, Try, Go played on Rotate, Span and Homing, skipped on the rest), every mode (Train, Path, Speed, Threshold with the Spin deadline and Track Standard protocols, Free play with a timer, Daily Challenge, Spatial Check), Today, Library, Progress, Log, Lab, Settings, About, Back up (download) and Import (paste, a broken file, Undo), on desktop and on a 390 × 844 touch phone. No page errors or console errors in any run (only SwiftShader's "GPU stall due to ReadPixels" driver warnings). Phone layout, Homing on phones and touch targets belong to the I2 mobile audit and are not repeated here.
+Covered: every training exercise in Free play on desktop and on the phone with real stimulus speed (Track, Rotate, Spin, Fold, Nets, Slice, Views, Orient, Span, Hidden, Homing; Watch, Try, Go played on Rotate, Span and Homing, skipped on the rest), every mode (Train, Path, Speed, Threshold with the Spin deadline and Track Standard protocols, Free play with a timer, Daily Challenge, Spatial Check), Today, Library, Progress, Log, Lab, Settings, About, Back up (download) and Import (paste, a broken file, Undo), on desktop and on a 390 × 844 touch phone. No page errors or console errors in any run (only SwiftShader's "GPU stall due to ReadPixels" driver warnings). Phone layout, Homing on phones and touch targets belong to the I2 mobile audit and are not repeated here.
 
 ### B1 (S2). Progress counts skipped and voided items as "answers"
 
@@ -280,8 +280,8 @@ Covered: every training exercise once in Free play on desktop with real stimulus
 
 - Answer times: a 100 s pause, a 100 s hidden tab and the keys sheet are all left out of `rtMs` (3 159, 3 138 ms); a hidden tab during the answer phase pauses and hides the item, and it stays paused until Resume.
 - Trial rows: one per item, never twice; End session logs one skipped row; a reload logs the cut session once.
-- Speed deadlines, Spatial Check limits and their bars (T7, T8); "Stop the check" asks first, saves nothing, and the Log lists the answers as "not finished" (`exp_check.py desktop 2`).
-- The Daily Challenge in full (8 items, "5/8", share line, Today "Played today: 5 of 8"), Free play with a 5 s timer, Threshold (Spin deadline, Track Standard), Train and Speed on desktop and phone; every training exercise in Free play on desktop, with Watch, Try, Go on Rotate, Span and Homing.
+- Speed deadlines, Spatial Check limits and their bars (T7, T8); "Stop the check" asks first, saves nothing, and the Log lists the answers as "not finished" (`exp_check.py desktop 2`); a complete Baseline 1 on desktop (152 s at 0.6 s per answer) and on the phone (135 s), each ending on "Check saved" with five probe lines and "Baseline 2 … from 14 Nov 2026, 02:28" (12 h later), mirrored on Today and Progress.
+- The Daily Challenge in full (8 items, "5/8", share line, Today "Played today: 5 of 8"), Free play with a 5 s timer, Path, Threshold (Spin deadline, Track Standard), Train and Speed on desktop and phone; every training exercise in Free play on desktop and phone (`crawl_*_exercises.json`), with Watch, Try, Go on Rotate, Span and Homing.
 - Settings: session length (Today follows: "10 min", blocks ~4/~3/~3), theme, text size, Back up (a real download, `parallax-backup-2026-11-13.json`, 20 top-level keys, "Last backup" updated), Export CSV dialog, Import of pasted text with Undo, a broken import refused with "Nothing was changed".
 - No page errors and no console errors in any run (desktop and phone), only SwiftShader's "GPU stall due to ReadPixels" driver warnings.
 
@@ -339,5 +339,3 @@ All scripts take the frozen copy's `index.html` over `file://` and write to `scr
 | `exp_check.py desktop N` | the first Spatial Check task: pause, time-out, hidden tab, then "Stop the check" | probe bar samples, `rtMs`, the Log row (T8) |
 | `exp_stim.py desktop \| phone` | Track, Span and Homing at real speed in Free play | `presentMs` vs nominal, frame statistics (T9) |
 | `crawl.py desktop \| phone  exercises \| modes \| screens \| check` | every exercise in Free play; Train, Path, Threshold, Daily, timed Free play; every screen, Settings, Back up, Import; a full Spatial Check | `crawl_*.json`, screenshots (§4) |
-
-<!-- END -->
