@@ -354,6 +354,12 @@ function testLearn(t, PX, def) {
   const ds = L.practice.map((p) => PX.ex.difficulty(def, p));
   t.ok(ds.every((x, i) => i === 0 || x >= ds[i - 1]), `practice goes from easy to harder (${ds.map((x) => x.toFixed(2)).join(', ')})`);
   t.ok(new Set(L.practice.map((p) => p.missing)).size === 3, 'practice asks for each of the three views once');
+  // The Watch's dotted-line step plays (the demo item shows dotted lines), and the practice item that
+  // only dotted lines decide (foil level 2) comes last.
+  const di = def.generate(PX.rng(L.demo[0].seed), L.demo[0].params);
+  const dotted = [di.options[di.key].drawing, ...Object.values(di.given)].reduce((a, d) => a + d.segs.filter((q) => q[4] === 2).length, 0);
+  t.ok(dotted >= 1, `the demo item shows dotted lines (${dotted})`);
+  t.ok(L.practice[L.practice.length - 1].foil === 2 && L.practice.slice(0, -1).every((p) => p.foil < 2), 'the practice item decided by dotted lines comes last');
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');
   for (const tip of L.tips) {
     const tr = tip.when || {};
@@ -362,7 +368,7 @@ function testLearn(t, PX, def) {
   }
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['views', 'slot', 'options', 'project', 'build', 'dotted', 'land', 'whyHull', 'whyAlign', 'whySearch', 'object'];
+  const caps = ['views', 'slot', 'options', 'project', 'build', 'dotted', 'land', 'whyHull', 'whyAlign', 'whySearch', 'object', 'diffDotted', 'diffSolid', 'diffExtra', 'diffMissing', 'diffMixed'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');

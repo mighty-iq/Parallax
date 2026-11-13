@@ -20,8 +20,10 @@
       'A cube you cannot see is there only to hold up cubes above it. Every column\'s top cube is in view.',
       'A cube that sits under another one has no painted top.',
     ],
+    // The easiest level, with a cube out of sight among the ones the tally counts: every tip is
+    // about hidden cubes, so the Watch shows one (fresh-player test, RV-play-dat).
     demo: [
-      { params: { cubes: 0, height: 0, asked: 0 }, seed: 2, kind: 'easy' },
+      { params: { cubes: 0, height: 0, asked: 0 }, seed: 6, kind: 'hidden' },
     ],
     practice: [
       { cubes: 0, height: 0, asked: 0 },
@@ -75,6 +77,7 @@
     ],
     captions: {
       figure: 'Equal cubes, painted on every outside face except the bottom.',
+      hidden: '{what} out of sight, {where}. Hidden cubes count too.',
       question: 'The question names a number of painted sides to look for.',
       options: 'Answers are 1 to 5 cubes. One is right.',
       tally: 'Cube {n}: {sides}.',

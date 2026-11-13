@@ -3,8 +3,11 @@
    Speed achievements, checks outside the weekly goal, automatic-choice filters (PAT focus, a
    test pause), similarity groups, the merged practice total, the new session fields.
    Fixture exercises (tests/node/fixtures/exercises.mjs) plus one PAT-format fixture. */
+import fs from 'node:fs';
+import path from 'node:path';
 import { defineFixtures } from './fixtures/exercises.mjs';
 import { newRecord } from './fixtures/learner.mjs';
+import { ROOT, wrapSource } from './run.mjs';
 
 const DAY = 86400000;
 const T0 = Date.UTC(2026, 10, 2, 18, 0, 0); // Monday 2 Nov 2026
@@ -27,6 +30,8 @@ export async function run(t0) {
   weeklyGoal(t);
   filters(t);
   groups(t);
+  patFocusOrder(t0);
+  todayCatalog(t0);
   mergeTotal(t);
 }
 
@@ -265,6 +270,129 @@ function groups(t) {
   t.ok(pat.every((id) => b.indexOf(id) > b.indexOf('reckon')), 'the PAT formats come after every other exercise (they join only under the PAT focus)');
   t.ok(SCH.similar('patfold', 'fold') && SCH.similar('cubes', 'views') && SCH.similar('openings', 'slice') && SCH.similar('form', 'nets') && SCH.similar('patviews', 'views') && SCH.group('angles') === null,
     'PAT formats grouped with the exercises whose models they share; Angles in no group (R3 §9)');
+}
+
+// The PAT focus has a visible effect (RV-play-dat): on, the six DAT-style formats lead the
+// beginner order in the test's order and every Train session holds at least one of them (when
+// one can run); off, the usual order is back. Fixtures for the v1.0 exercises plus six PAT
+// fixtures under the real ids.
+const PAT_IDS = ['openings', 'patviews', 'angles', 'patfold', 'cubes', 'form'];
+function definePatSix(PX) {
+  PAT_IDS.forEach((id, i) => PX.ex.define({
+    id, code: 'EX-' + (14 + i), name: id, abilities: ['Vz'], cell: null, role: 'train', answer: 'choice', nOptions: 4, pat: true, version: 1,
+    dims: [{ key: 'size', levels: [3, 4, 5], step: 0.6 }], base: -1.5,
+    generate(rng, params) { return { ex: id, seed: rng.seed, params, key: 0 }; },
+    validate() { return true; },
+    score(item, r) { return { correct: r === item.key }; },
+  }));
+}
+function patFocusOrder(t0) {
+  t0.section('v1.1 PAT focus: beginner order and one DAT-style format a session');
+  const c = t0.context({ exercises: false });
+  defineFixtures(c.PX);
+  definePatSix(c.PX);
+  const PX = c.PX, E = PX.engine, SCH = E.schedule, C = E.config, t = t0;
+  const isPat = (id) => PAT_IDS.includes(id);
+  const practise = (r, ids, at) => ids.forEach((id) => { E.est.exEntry(r, id); Object.assign(r.ex[id], { n: (r.ex[id].n || 0) + 30, mu: 0, sd: 0.6, last: at }); });
+  t.eq(C.session.patOrder, PAT_IDS, 'patOrder: the test\'s six parts in order (EX-14 … EX-19)');
+
+  // off: the usual order
+  const off = newRecord(PX, T0);
+  t.eq(SCH.beginOrder(off), C.session.beginner, 'focus off: the beginner order is the usual one');
+  t.eq(SCH.choose(off, {}, T0).exs, ['rotate', 'fold', 'spin'], 'focus off: a new player starts with Rotate, Fold, Spin');
+
+  // on: the formats first, in the test's order
+  const on = newRecord(PX, T0);
+  on.settings.patFocus = true;
+  const order = SCH.beginOrder(on);
+  t.eq(order.slice(0, 6), PAT_IDS, 'focus on: the six formats lead the beginner order, in the test\'s order');
+  t.eq(order.slice(6), C.session.beginner.filter((id) => !isPat(id)), '… then the rest in the usual order, none twice');
+  const ch1 = SCH.choose(on, {}, T0);
+  t.eq(ch1.exs, ['openings', 'patviews', 'angles'], 'focus on: a new player starts with Openings, Missing View, Angles');
+  t.ok(ch1.exs.every((id) => ch1.roleOf[id] === 'new') && ch1.patPick === null, '… all new, none put in by the rule');
+  practise(on, ch1.exs, T0);
+  t.eq(SCH.choose(on, {}, T0 + DAY).exs, ['patfold', 'cubes', 'form'], 'the next session: Hole Punch, Painted Cubes, Form');
+
+  // after every format was tried: at least one a session, over many sessions
+  const r = newRecord(PX, T0);
+  r.settings.patFocus = true;
+  let every = true, forced = 0, picks = new Set(), last = null;
+  for (let k = 0; k < 30; k++) {
+    const ch = SCH.choose(r, {}, T0 + k * DAY);
+    if (!ch.exs.some(isPat)) every = false;
+    if (ch.patPick) {
+      forced++; picks.add(ch.patPick); last = ch;
+      t.ok(isPat(ch.patPick) && ch.exs.indexOf(ch.patPick) === ch.exs.length - 1, `day ${k}: the rule fills the last slot (${ch.exs})`);
+    }
+    practise(r, ch.exs, T0 + k * DAY);
+  }
+  t.ok(every, 'focus on: every one of 30 sessions holds a DAT-style format');
+  t.ok(forced > 0, `the rule fired when no format was chosen otherwise (${forced} of 30 sessions)`);
+  if (last) {
+    const role = Object.keys(last.roles).filter((k) => last.roles[k] === last.patPick)[0];
+    t.ok(role && last.roleOf[last.patPick] === role && Object.values(last.roles).every((id) => last.exs.includes(id)), `the format takes over the slot's role (${role}); roles stay consistent`);
+  }
+  // formats much practised and never due, the others due: only the rule brings one in, and it
+  // takes the least practised format each time, so it goes round all six
+  const rw = newRecord(PX, T0);
+  rw.settings.patFocus = true;
+  practise(rw, PX.ex.list('train').filter((d) => !d.pat).map((d) => d.id), T0 - 10 * DAY);
+  PAT_IDS.forEach((id) => { E.est.exEntry(rw, id); Object.assign(rw.ex[id], { n: 500, mu: 0, sd: 0.6 }); });
+  const round = [];
+  for (let k = 0; k < 6; k++) {
+    const at = T0 + k * DAY;
+    PAT_IDS.forEach((id) => { rw.ex[id].last = at - 3600000; });
+    const ch = SCH.choose(rw, {}, at);
+    round.push(ch.patPick);
+    if (ch.exs.filter(isPat).length !== 1 || ch.exs[ch.exs.length - 1] !== ch.patPick) t.ok(false, `day ${k}: one format, in the last slot (${ch.exs})`);
+    practise(rw, ch.exs, at);
+  }
+  t.eq(round.slice().sort(), PAT_IDS.slice().sort(), `six sessions take each format once, least practised first (${round})`);
+  const plan = E.modes.start(U(r), 'train', { now: T0 + 30 * DAY, minutes: 10 });
+  t.ok(plan.exs.some(isPat) && (plan.patPick === null || plan.exs.includes(plan.patPick)), `a Train plan under the focus holds a format (${plan.exs}; patPick ${plan.patPick})`);
+
+  // pins stay; a session of one exercise without a pin takes a format
+  const rp = U(r);
+  rp.train.pins = ['rotate'];
+  const chp = SCH.choose(rp, {}, T0 + 31 * DAY);
+  t.ok(chp.roles.focus === 'rotate' && chp.exs.some(isPat), `a pinned focus stays and a format joins (${chp.exs})`);
+  t.eq(SCH.choose(rp, { count: 1, pin: 'rotate' }, T0 + 31 * DAY).exs, ['rotate'], '"Train this exercise" on a v1.0 exercise stays that exercise');
+  const one = SCH.choose(U(r), { count: 1 }, T0 + 31 * DAY);
+  t.ok(one.exs.length === 1 && isPat(one.exs[0]), `a one-exercise session without a pin takes a format (${one.exs})`);
+
+  // none can run, or all are paused: no format, no error
+  const none = SCH.choose(U(r), { can: (d) => !d.pat }, T0 + 31 * DAY);
+  t.ok(none.exs.length === 3 && !none.exs.some(isPat) && none.patPick === null, 'no format can run: a normal session');
+  const rz = U(r);
+  rz.settings.testPause = { ids: PAT_IDS.slice(), until: E.day(T0 + 40 * DAY) };
+  t.ok(!SCH.choose(rz, {}, T0 + 31 * DAY).exs.some(isPat), 'all formats paused before a test: none is put in');
+
+  // off again: the usual order and no format
+  const back = U(on);
+  back.settings.patFocus = false;
+  t.eq(SCH.beginOrder(back), C.session.beginner, 'focus off again: the usual beginner order');
+  t.eq(SCH.choose(newRecord(PX, T0), {}, T0).exs, ['rotate', 'fold', 'spin'], '… and a new player starts with Rotate, Fold, Spin again');
+  const rr = U(r);
+  rr.settings.patFocus = false;
+  let anyPat = false;
+  for (let k = 0; k < 10; k++) { const ch = SCH.choose(rr, {}, T0 + (31 + k) * DAY); if (ch.exs.some(isPat) || ch.patPick) anyPat = true; practise(rr, ch.exs, T0 + (31 + k) * DAY); }
+  t.ok(!anyPat, 'focus off: no format joins Train, even after it was on');
+}
+function U(x) { return JSON.parse(JSON.stringify(x)); }
+
+// Today's "N exercises in the Library" and the Library's "N training exercises" count the same
+// (RV-play-dat: Knots was listed twice in Today's catalog). home.js does no DOM work at load.
+function todayCatalog(t0) {
+  t0.section('Today\'s catalog and the Library count');
+  const c = t0.context();
+  const PX = c.PX;
+  PX.ui = PX.ui || {};
+  try { c.run(wrapSource(fs.readFileSync(path.join(ROOT, 'js/ui/home.js'), 'utf8'))); } catch (e) { t0.ok(false, 'home.js loads: ' + e.message); return; }
+  const H = PX.ui.home, cat = H.catalog(), ids = cat.map((e) => e.id), lib = PX.ex.list('train').map((d) => d.id);
+  t0.eq(ids.length, new Set(ids).size, `one catalog entry per exercise (${ids.length})`);
+  t0.eq(H.count(), lib.length, `Today counts what the Library lists (${lib.length} training exercises)`);
+  t0.ok(lib.every((id) => ids.filter((x) => x === id).length === 1), 'every registered training exercise is in the catalog exactly once');
+  t0.ok(lib.length >= 19, `the v1.1 set is registered (${lib.length})`);
 }
 
 function mergeTotal(t) {

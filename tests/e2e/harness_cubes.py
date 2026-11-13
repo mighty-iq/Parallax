@@ -39,4 +39,4 @@ def showme(C, frame, tag):
 if __name__ == '__main__':
     P = Pat('cubes', [('easy', 'cubes:0', 2), ('mid', 'cubes:1,height:1,asked:1', 7), ('big', 'cubes:3,height:2,asked:1', 4)],
             stem_check=stem, option_check=options, showme_check=showme)
-    sys.exit(P.run(demo=('cubes:0', 2), sandbox=('cubes:2,height:2', 21)))
+    sys.exit(P.run(demo=('cubes:0', 6), sandbox=('cubes:2,height:2', 21)))

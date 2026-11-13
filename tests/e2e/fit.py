@@ -104,6 +104,7 @@ FIT_JS = r'''() => {
     .concat(ctl.filter(out).map(b => 'control ' + b.el + ' y ' + b.top + '..' + b.bottom + ' x ' + b.left + '..' + b.right));
   const scrollH = Math.max(de.scrollHeight, document.body.scrollHeight);
   const lowest = Math.max(0, ...stim.concat(ctl).map(b => b.bottom));
+  const highest = Math.min(H, ...stim.concat(ctl).map(b => b.top));
   // Text under 13 px in the item and its status strip (SVG text by its size on the screen).
   const small = {};
   const scope = document.querySelector('.pl-player') || trial;
@@ -118,7 +119,7 @@ FIT_JS = r'''() => {
     if (fs < 12.95) { const k = name(p).split(' "')[0] + ' @' + fs.toFixed(1); if (!small[k]) small[k] = t.slice(0, 16); }
   }
   const scrollW = Math.max(de.scrollWidth, document.body.scrollWidth);
-  return { H, W, scrollY: Math.round(scrollY), scrollH, scrolls: scrollH > H + 1, scrollW, stim: stim.length, ctl: ctl.length, bad, lowest, small,
+  return { H, W, scrollY: Math.round(scrollY), scrollH, scrolls: scrollH > H + 1, scrollW, stim: stim.length, ctl: ctl.length, bad, lowest, highest, small,
     header: !!(document.querySelector('.px-header') && shown(document.querySelector('.px-header'))),
     overscroll: getComputedStyle(de).overscrollBehaviorY, pxItem: document.body.classList.contains('px-item'),
     touchAction: getComputedStyle(de).touchAction,
@@ -278,51 +279,80 @@ WTG_JS = r"""() => {
   const H = innerHeight;
   const box = e => { if (!e) return null; const r = e.getBoundingClientRect(); return r.height ? { top: Math.round(r.top), bottom: Math.round(r.bottom) } : null; };
   const cap = [...document.querySelectorAll('.pl-trial .ex-caption, .pl-showme .pl-caption, .pl-trial .ex-fp-sub')].find(e => e.textContent.trim() && getComputedStyle(e).display !== 'none');
+  const turn = document.querySelector('.pl-verdict[data-kind="turn"]'), strip = turn && turn.closest('.pl-feedback');
   return { H, state: window.__play && __play.state, stage: box(document.querySelector('.pl-host .ex-stage')),
     caption: box(cap), bar: box(document.querySelector('.pl-showme-buttons')),
-    overlay: !!(cap && cap.classList.contains('ex-fp-sub')) };
+    overlay: !!(cap && cap.classList.contains('ex-fp-sub')),
+    turn: turn && getComputedStyle(turn).display !== 'none' ? { text: turn.textContent.trim().slice(0, 60), strip: box(strip) } : null,
+    wtgText: (document.querySelector('.pl-wtg-text') || {}).textContent || '' };
 }"""
 
 
 def run_wtg(page, size, ex, rows):
-    """Watch, Try, Go on a phone (PLAN M2): while the demo plays its caption is on the screen and
-    above the pinned controls, and the stage is in view above the caption (wholly, or from its top
-    when it is taller than the room left; Homing and Reckon show subtitles over the view, .ex-fp-sub);
-    the first Try item's stage is fully in view when it plays."""
+    """Watch, Try, Go on a phone (PLAN M2; RV-play-dat):
+    - watch: while the demo plays, its caption is on the screen above the pinned controls, and the
+      stimulus and every answer control are on the screen above the caption (Homing and Reckon show
+      subtitles over the view, .ex-fp-sub: there only the bar must clear them);
+    - turn: when the demo ends, "Your turn" says what to do next in the reading strip, and the
+      item and its options stay above that strip;
+    - try1..: every Try item, tip shown, fits like a scored item: its stimulus and every answer
+      control within the screen (the Watch, Try, Go header may scroll away above)."""
     page.evaluate('void __play.end()')
     page.evaluate('PX.debug.fast(true)')
     page.evaluate(f"PX.core.store.state.tour.seen['{ex}'] = false")
     page.evaluate(f'void PX.core.router.go("play", {{ mode: "watch", exId: "{ex}" }}, {{ force: true }})')
-    demo, t0 = None, time.time()
+    demo, dfit, t0 = None, None, time.time()
     while time.time() - t0 < 20:
         if state(page) == 'showme':
             m = page.evaluate(WTG_JS)
             if m['caption']:
-                demo = m
+                demo, dfit = m, page.evaluate(FIT_JS)
                 break
         page.wait_for_timeout(30)
-    tried = None
+    turn, tfit, tries = None, None, []
     if demo is not None:
         t0 = time.time()
         while time.time() - t0 < 30 and state(page) != 'reveal':
-            if state(page) == 'respond' and page.evaluate('(document.querySelector(".pl-wtg-text") || {}).textContent || ""').startswith('Now answer'):
+            if state(page) == 'respond' and page.evaluate('(document.querySelector(".pl-wtg-text") || {}).textContent || ""').startswith('Your turn'):
+                if turn is None:
+                    page.wait_for_timeout(150)
+                    turn, tfit = page.evaluate(WTG_JS), page.evaluate(FIT_JS)
                 page.evaluate('__play.answer(true).catch(() => 0)')
             page.wait_for_timeout(60)
         page.evaluate('__play.next()')
-        t0 = time.time()
-        while time.time() - t0 < 30:
-            if state(page) in ('present', 'respond'):
-                tried = page.evaluate(WTG_JS)
+        for k in range(6):
+            t0 = time.time()
+            while time.time() - t0 < 30 and state(page) not in ('respond', 'done', 'idle', None):
+                page.wait_for_timeout(30)
+            if state(page) != 'respond' or not page.evaluate('(document.querySelector(".pl-wtg-text") || {}).textContent || ""').startswith(('Try', 'Go')):
                 break
-            page.wait_for_timeout(20)
+            page.wait_for_timeout(200)
+            tries.append(page.evaluate(FIT_JS))
+            if k == 0:
+                page.screenshot(path=str(SHOTS / f'{size}_{ex}_try1.png'))
+            page.evaluate('__play.answer(true).catch(() => 0)')
+            page.wait_for_timeout(120)
+            page.evaluate('__play.next()')
+            page.wait_for_timeout(120)
+    cap_top = demo['caption']['top'] if demo else 0
+    clear_line = demo['bar']['top'] if demo and demo.get('overlay') and demo['bar'] else cap_top
     ok_demo = bool(demo) and 0 <= demo['caption']['top'] and demo['caption']['bottom'] <= (demo['bar']['top'] + 1 if demo['bar'] else demo['H']) \
-        and bool(demo['stage']) and 0 <= demo['stage']['top'] < demo['H'] - 40 \
-        and (demo.get('overlay') or demo['stage']['bottom'] <= demo['caption']['top'] + 2 or demo['stage']['top'] <= 10)
-    ok_try = bool(tried) and bool(tried['stage']) and tried['stage']['top'] >= 0 and tried['stage']['bottom'] <= tried['H'] + 0.5
-    rows.append({'ex': ex, 'item': 'watch', 'ok': ok_demo, 'why': '' if ok_demo else f'demo: {demo}'})
-    rows.append({'ex': ex, 'item': 'try', 'ok': ok_try, 'why': '' if ok_try else f'try: {tried}'})
-    for label, ok, m in (('watch', ok_demo, demo), ('try', ok_try, tried)):
-        print(f'  {"ok  " if ok else "FAIL"} {size} {ex} {label} {m}', flush=True)
+        and bool(dfit) and not dfit.get('error') and dfit['ctl'] > 0 and dfit['highest'] >= -0.5 and dfit['lowest'] <= clear_line + 2
+    strip_top = turn['turn']['strip']['top'] if turn and turn.get('turn') and turn['turn'].get('strip') else 0
+    ok_turn = bool(turn) and bool(turn.get('turn')) and 'Your turn' in turn['turn']['text'] and bool(tfit) and not tfit.get('error') \
+        and tfit['highest'] >= -0.5 and tfit['lowest'] <= strip_top + 2
+    rows.append({'ex': ex, 'item': 'watch', 'ok': ok_demo, 'why': '' if ok_demo else f'demo: {demo}; lowest {dfit and dfit.get("lowest")}, highest {dfit and dfit.get("highest")}'})
+    rows.append({'ex': ex, 'item': 'turn', 'ok': ok_turn, 'why': '' if ok_turn else f'turn: {turn and turn.get("turn")}; lowest {tfit and tfit.get("lowest")}, highest {tfit and tfit.get("highest")}'})
+    print(f'  {"ok  " if ok_demo else "FAIL"} {size} {ex} watch caption {demo and demo["caption"]} bar {demo and demo["bar"]} item {dfit and dfit.get("highest")}..{dfit and dfit.get("lowest")}', flush=True)
+    print(f'  {"ok  " if ok_turn else "FAIL"} {size} {ex} turn {turn and turn.get("turn")} item {tfit and tfit.get("highest")}..{tfit and tfit.get("lowest")}', flush=True)
+    if not tries:
+        rows.append({'ex': ex, 'item': 'try', 'ok': False, 'why': 'no Try item reached'})
+        print(f'  FAIL {size} {ex} try: no Try item reached', flush=True)
+    for k, m in enumerate(tries):
+        ok = not m.get('error') and not m['bad'] and m['stim'] > 0 and m['ctl'] > 0
+        why = '' if ok else (m.get('error') or '; '.join(m['bad'][:3]) or 'no stimulus or control found')
+        rows.append({'ex': ex, 'item': f'try{k + 1}', 'ok': ok, 'why': why, 'lowest': m.get('lowest'), 'H': m.get('H')})
+        print(f'  {"ok  " if ok else "FAIL"} {size} {ex} try{k + 1} item {m.get("highest")}..{m.get("lowest")}/{m.get("H")} {why}', flush=True)
     page.evaluate('void __play.end()')
     page.evaluate(f"PX.core.store.state.tour.seen['{ex}'] = true")
 

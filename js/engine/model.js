@@ -71,6 +71,10 @@
       // PAT formats after them, which join automatic choices only under the PAT focus)
       beginner: ['rotate', 'fold', 'spin', 'nets', 'knots', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing', 'reckon',
         'patfold', 'cubes', 'angles', 'patviews', 'openings', 'form'],
+      // under the PAT focus the DAT-style formats lead the beginner order, in the order of the test's
+      // six parts (apertures, view recognition, angles, hole punching, cube counting, pattern
+      // folding), and every Train session holds at least one of them (schedule.choose)
+      patOrder: ['openings', 'patviews', 'angles', 'patfold', 'cubes', 'form'],
       review: [3, 7, 14, 30], maxGapMs: 90000, maxFactor: 1.6, blockEvery: 10,
       minItemMs: 500, // a time-boxed session's item cap: one item per 0.5 s of its budget (a safety net)
       lastRetries: 2, // a voided closing item is replaced at most twice; then a time-boxed session ends

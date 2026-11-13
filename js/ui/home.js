@@ -3,17 +3,17 @@
    (a dial with one segment per planned session, and the days practised), Daily Challenge,
    Spatial Check, your data (last backup, Back up now), exercise levels, recent achievements.
 
-   Real data where the record already has it: sessions this week, days practised, whether
-   today's Daily was played, Spatial Checks taken, last backup, achievements. Placeholders
-   where the engine and the Phase 3 UI will supply it (the session plan, levels): those panels
-   carry a visible "Sample data" tag and a dashed edge, so nobody mistakes them for progress.
+   Every panel shows the player's own record, never sample data: a fresh profile sees empty
+   states (no levels yet, no achievements yet), and a plan that cannot be built says so.
 
    PX.ui.home
-     catalog()        the exercises in code order: registry definitions over the list below
-     plan(rec, now)   hook → { minutes, mode, style, blocks: [{ role, ex, min, why }] } or null
-                      (null shows the sample plan). Phase 3 replaces it.
-     levels(rec, now) hook → { <exId>: { level, lo, hi, settings, stage } } or null
-     MOCK             the sample data */
+     catalog()        the exercises in code order, one entry per id: registry definitions over
+                      the list below
+     count()          the training exercises the Library lists (registered definitions)
+     plan(rec, now)   hook → { minutes, mode, style, blocks: [{ role, ex, min, why, pat }], patFocus }
+                      or null (nothing to plan: the panel says so); js/ui/play.js homePlan
+     levels(rec)      hook → [{ ex, n, last, level, lo, hi, settings, stage }] or null (the
+                      record's own levels are used then); js/ui/play.js homeLevels */
 (function (PX) {
   'use strict';
 
@@ -38,7 +38,6 @@
     { id: 'homing', code: 'EX-11', name: 'Homing', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a route, turn to face the place where you started.' },
     { id: 'reckon', code: 'EX-12', name: 'Reckon', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a walk with nothing to steer by, point or walk back to where you started.' },
     { id: 'knots', code: 'EX-13', name: 'Knots', kind: 'Knot diagrams', abilities: ['Vz'], blurb: 'Pull a rope in your mind: does a knot remain? Which crossing unties it? Are two loops linked?' },
-    { id: 'knots', code: 'EX-13', name: 'Knots', kind: 'Knots and links', abilities: ['Vz'], blurb: 'Picture a rope pulled tight: does a knot remain, and which crossing would untie it?' },
     // v1.1 DAT-style formats (opt-in: they join Train only under the DAT-style focus).
     { id: 'openings', code: 'EX-14', name: 'Openings', kind: 'Openings (apertures)', abilities: ['Vz'], note: 'DAT-style', blurb: 'Find the opening a solid would pass through, turned the right way, with nothing to spare.' },
     { id: 'patviews', code: 'EX-15', name: 'Missing View', kind: 'Orthographic views', abilities: ['Vz'], note: 'DAT-style', blurb: 'Two drawings of a block structure are given: pick the missing third view.' },
@@ -48,37 +47,12 @@
     { id: 'form', code: 'EX-19', name: 'Form', kind: 'Pattern folding', abilities: ['Vz'], note: 'DAT-style', blurb: 'Fold a flat pattern in your mind and pick the solid it makes.' },
   ];
 
-  /* ---- SAMPLE DATA (Phase 1b placeholder) -------------------------------------------
-     Shows the layout until js/engine/* and the Phase 3 screens supply real values. Every
-     panel that uses it says "Sample data". Delete with the hooks below once they are real. */
-  var MOCK = {
-    plan: {
-      mode: 'Train', style: 'Balanced',
-      blocks: [
-        { role: 'Focus', ex: 'rotate', share: 0.4, why: 'Improving fastest this week' },
-        { role: 'Review', ex: 'fold', share: 0.3, why: 'Last practised 7 days ago' },
-        { role: 'Variety', ex: 'span', share: 0.3, why: 'Practised least so far' },
-      ],
-    },
-    levels: [
-      { ex: 'rotate', level: 34, lo: 28, hi: 41, settings: '120° turns about a vertical axis, 10 cubes', stage: 3 },
-      { ex: 'fold', level: 41, lo: 33, hi: 49, settings: 'three folds including a diagonal, 2 punches', stage: 4 },
-      { ex: 'span', level: 47, lo: 40, hi: 55, settings: 'sequences of 5 blocks, backwards', stage: 4 },
-      { ex: 'track', level: 22, lo: 15, hi: 30, settings: '3 of 8 spheres for 8 seconds at a slow speed', stage: 2 },
-      { ex: 'views', level: 18, lo: 9, hi: 28, settings: 'front and side views of 6 cubes', stage: 1 },
-    ],
-    achievements: [
-      { name: 'Two baselines', desc: 'Took two Spatial Checks before judging change', date: '2026-10-28' },
-      { name: 'Both strategies', desc: 'Reported picturing the object and reasoning step by step', date: '2026-10-26' },
-      { name: 'Span 7', desc: 'Repeated a sequence of 7 blocks', date: '2026-10-24' },
-    ],
-  };
-
+  // One entry per id (a repeated catalog line never counts twice: RV-play-dat).
   function catalog() {
     var reg = PX.ex && typeof PX.ex.list === 'function' ? PX.ex.list('train') : [];
-    var byId = {};
+    var byId = {}, seen = {};
     reg.forEach(function (d) { byId[d.id] = d; });
-    var out = CATALOG.map(function (c) {
+    var out = CATALOG.filter(function (c) { return hasOwn.call(seen, c.id) ? false : (seen[c.id] = true); }).map(function (c) {
       var d = byId[c.id];
       if (!d) return c;
       delete byId[c.id];
@@ -90,6 +64,8 @@
     });
     return out;
   }
+  // The training exercises the Library lists (its "N training exercises"): the registered ones.
+  function count() { return catalog().filter(function (e) { return !!e.def; }).length; }
   function entry(id) {
     var list = catalog();
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
@@ -132,27 +108,15 @@
     return { sessions: n, goal: goal, left: Math.max(0, goal - n), days: Array.isArray(w.days) ? w.days : [] };
   }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
-  function hasAnyTrials(rec) {
-    return (rec.trials && rec.trials.length) || (rec.sessions && rec.sessions.length) || Object.keys(rec.trialDays || {}).length > 0;
-  }
-
-  function samplePlan(minutes) {
-    var blocks = MOCK.plan.blocks.map(function (b) { return { role: b.role, ex: b.ex, why: b.why, min: Math.max(1, Math.round(minutes * b.share)) }; });
-    var used = blocks.reduce(function (a, b) { return a + b.min; }, 0);
-    blocks[0].min += minutes - used; // the parts add up to the session length
-    return { minutes: minutes, mode: MOCK.plan.mode, style: MOCK.plan.style, blocks: blocks, sample: true };
-  }
-
   /* ---------- slots ---------- */
 
   function sessionSlot(rec, now) {
     var K = PX.ui.kit;
-    var minutes = rec.settings.sessionMin || 20;
     var plan = null;
     try { plan = PX.ui.home.plan(rec, now); } catch (e) { plan = null; }
-    if (!plan) plan = samplePlan(minutes);
+    if (!plan || !plan.blocks || !plan.blocks.length) return noSession();
     var p = K.panel({
-      title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session', sample: !!plan.sample,
+      title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session',
       aside: h('span.px-num', PX.core.clock.fmtMinutes(plan.minutes * 60000) + ' · ' + plan.mode + ' · ' + plan.style),
     });
     p.head.querySelector('.px-panel-title').classList.add('px-session-title');
@@ -175,11 +139,32 @@
     });
     p.body.appendChild(list);
     p.body.appendChild(ruler(plan));
+    var focus = patFocusLine(plan);
+    if (focus) p.body.appendChild(focus);
     var start = ui.button('Start today’s session', { kind: 'primary', go: 'play?mode=train' });
     start.setAttribute('data-primary', '');
     p.body.appendChild(h('div.px-session-actions', start,
       ui.button('Choose exercises', { kind: 'ghost', go: 'library' })));
     return p.el;
+  }
+
+  // Nothing to plan: every exercise is paused before a test or cannot run in this browser (or the
+  // plan failed). Never a sample plan.
+  function noSession() {
+    var p = PX.ui.kit.panel({ title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session' });
+    p.head.querySelector('.px-panel-title').classList.add('px-session-title');
+    p.body.appendChild(h('p.px-slot-text', { 'data-plan': 'none' }, 'No session can be planned right now. Exercises paused before a test, and exercises this browser cannot show, stay out of the plan; the Library shows the state of each one.'));
+    p.body.appendChild(h('div.px-session-actions', ui.button('Open the Library', { kind: 'primary', go: 'library' })));
+    return p.el;
+  }
+
+  // The DAT-style focus says what it does to the plan (RV-play-dat: the switch seemed to do nothing).
+  function patFocusLine(plan) {
+    if (!plan.patFocus) return null;
+    var has = plan.blocks.some(function (b) { var d = entry(b.ex).def; return b.pat === true || (!!d && d.pat === true); });
+    return h('p.px-meta.px-plan-focus', { 'data-patfocus': has ? 'on' : 'none' }, has
+      ? 'DAT-style focus is on: every session includes at least one DAT-style format, and the ones you have not tried come first. Switch it off in the Library or in Settings.'
+      : 'DAT-style focus is on, but none of the DAT-style formats can run here right now.');
   }
 
   // The session as a ruler: one segment per block (its share of the time, keyed like the list's
@@ -351,25 +336,25 @@
       set.length ? h('div.px-level-set', set.join('')) : null);
   }
 
-  function levelsSlot(rec, sample) {
+  function levelsSlot(rec) {
     var K = PX.ui.kit;
     var hook = null;
     try { hook = PX.ui.home.levels(rec); } catch (e) { hook = null; }
-    var useSample = !hook && sample;
-    var rows = hook || (sample ? MOCK.levels : realLevels(rec));
-    var p = K.panel({ title: 'Exercise levels', className: 'px-slot px-slot--levels', sample: useSample, aside: 'level 1–100, likely range' });
+    var rows = hook || realLevels(rec);
+    var p = K.panel({ title: 'Exercise levels', className: 'px-slot px-slot--levels', aside: 'level 1–100, likely range' });
     if (rows.length) {
       var list = h('ul.px-levels');
       rows.slice(0, 5).forEach(function (r) { list.appendChild(levelRow(r)); });
       p.body.appendChild(list);
     } else {
-      p.body.appendChild(h('p.px-slot-text', 'Levels appear after your first few items in an exercise, each with a range that narrows as you practise.'));
+      p.body.appendChild(h('p.px-slot-text', { 'data-empty': '' }, 'No levels yet: they appear after your first few items in an exercise, each with a range that narrows as you practise.'));
     }
-    p.body.appendChild(h('div.px-slot-foot', h('span.px-meta', catalog().length + ' exercises in the Library'), ui.button('Open the Library', { kind: 'ghost', small: true, go: 'library' })));
+    var n = count();
+    p.body.appendChild(h('div.px-slot-foot', h('span.px-meta', { 'data-count': String(n) }, n + ' exercises in the Library'), ui.button('Open the Library', { kind: 'ghost', small: true, go: 'library' })));
     return p.el;
   }
 
-  function achievementsSlot(rec, sample) {
+  function achievementsSlot(rec) {
     var K = PX.ui.kit;
     var A = PX.engine && PX.engine.achievements;
     var items = Object.keys(rec.achievements || {}).map(function (id) {
@@ -378,9 +363,7 @@
       if (!meta && A && typeof A.get === 'function') return null; // an id from an older version: not shown
       return { name: (meta && meta.name) || id.replace(/[-_.]/g, ' '), desc: (meta && meta.desc) || '', date: rec.achievements[id] };
     }).filter(Boolean).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
-    var useSample = !items.length && sample;
-    if (useSample) items = MOCK.achievements;
-    var p = K.panel({ title: 'Recent achievements', className: 'px-slot px-slot--achievements', sample: useSample });
+    var p = K.panel({ title: 'Recent achievements', className: 'px-slot px-slot--achievements' });
     if (items.length) {
       var list = h('ul.px-ach');
       items.slice(0, 3).forEach(function (a) {
@@ -389,7 +372,7 @@
       });
       p.body.appendChild(list);
     } else {
-      p.body.appendChild(h('p.px-slot-text', 'Achievements mark skills and good practice, such as trying every exercise or taking two baselines. None yet.'));
+      p.body.appendChild(h('p.px-slot-text', { 'data-empty': '' }, 'No achievements yet: the first ones come with your first sessions. They mark skills and good practice, such as trying every exercise or taking two baselines.'));
     }
     return p.el;
   }
@@ -398,7 +381,6 @@
 
   function render(host) {
     var rec = PX.core.store.state, now = Date.now(), d = new Date(now);
-    var sample = !hasAnyTrials(rec);
     host.appendChild(h('div.px-screen-head',
       h('p.px-screen-meta', DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · week ' + isoWeek(d)),
       h('h1', 'Today')));
@@ -406,20 +388,20 @@
       sessionSlot(rec, now),
       goalSlot(rec, now),
       dailySlot(rec, now),
-      levelsSlot(rec, sample),
+      levelsSlot(rec),
       checkSlot(rec, now),
-      achievementsSlot(rec, sample),
+      achievementsSlot(rec),
       dataSlot()));
   }
 
   PX.ui.home = {
     catalog: catalog,
+    count: count,             // the training exercises the Library lists
     checkStatus: checkStatus, // the next Spatial Check in words (Today and Progress)
     weekStatus: weekStatus,   // the weekly goal as the engine counts it
     // Phase 3 hooks (Builder A): the real plan and levels from js/ui/play.js (engine data).
     plan: function (rec, now) { var P = PX.ui.play; return P && typeof P.homePlan === 'function' ? P.homePlan(rec, now) : null; },
     levels: function (rec) { var P = PX.ui.play; return P && typeof P.homeLevels === 'function' ? P.homeLevels(rec) : null; },
-    MOCK: MOCK,
   };
   PX.ui.screens = PX.ui.screens || {};
   PX.ui.screens.home = { title: 'Today', render: render };
