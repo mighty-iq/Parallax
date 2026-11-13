@@ -202,7 +202,7 @@ Note (S4, watch on real phones): the one freeze seen (1.3 s, first Homing route 
 
 ## 4. General bug hunt
 
-Covered: every training exercise in Free play on desktop and on the phone with real stimulus speed (Track, Rotate, Spin, Fold, Nets, Slice, Views, Orient, Span, Hidden, Homing; Watch, Try, Go played on Rotate, Span and Homing, skipped on the rest), every mode (Train, Path, Speed, Threshold with the Spin deadline and Track Standard protocols, Free play with a timer, Daily Challenge, Spatial Check), Today, Library, Progress, Log, Lab, Settings, About, Back up (download) and Import (paste, a broken file, Undo), on desktop and on a 390 × 844 touch phone. No page errors or console errors in any run (only SwiftShader's "GPU stall due to ReadPixels" driver warnings). Phone layout, Homing on phones and touch targets belong to the I2 mobile audit and are not repeated here.
+Covered: every training exercise in Free play on desktop and on the phone with real stimulus speed (Track, Rotate, Spin, Fold, Nets, Slice, Views, Orient, Span, Hidden, Homing; Watch, Try, Go played on Rotate, Span and Homing, skipped on the rest), every mode (Train, Path, Speed, Threshold with the Spin deadline and Track Standard protocols, Free play with a timer, Daily Challenge, Spatial Check), Today, Library, Progress, Log, Lab, Settings, About, Back up (download) and Import (pasted backup, a broken file), on desktop and on a 390 × 844 touch phone. No page errors or console errors in any run (only SwiftShader's "GPU stall due to ReadPixels" driver warnings). Phone layout, Homing on phones and touch targets belong to the I2 mobile audit and are not repeated here.
 
 ### B1 (S2). Progress counts skipped and voided items as "answers"
 
@@ -215,7 +215,7 @@ Covered: every training exercise in Free play on desktop and on the phone with r
 
 **Steps:** Free play, Length 10, answer the first item and look at the HUD while its result is shown. Same in the Daily Challenge and Threshold.
 **Expected:** "item 1 of 10" until Next.
-**Actual:** "Free play · item 2 of 2" above the first item's result (`shots/crawl_desktop_exercises_homing_reveal.png`); "Daily #13 · 2 of 8" on item 1's feedback.
+**Actual:** "Free play · item 2 of 2" above the first item's result (`shots/crawl_desktop_exercises_homing_reveal.png`); by the same code, "Daily #13 · 2 of 8" on item 1's feedback.
 **Where:** `afterTrial()` calls `progress()` right after the answer (`play.js:1329`) and the text shows `done + 1` (`play.js:1251, 1254, 1259`). Show `done` items finished, or update the text at the next item.
 
 ### B3 (S3). The Sounds setting does nothing
@@ -278,11 +278,11 @@ Covered: every training exercise in Free play on desktop and on the phone with r
 
 ### Checked and working
 
-- Answer times: a 100 s pause, a 100 s hidden tab and the keys sheet are all left out of `rtMs` (3 159, 3 138 ms); a hidden tab during the answer phase pauses and hides the item, and it stays paused until Resume.
+- Answer times: a 100 s pause and a 100 s hidden tab are left out of `rtMs` (3 159, 3 138 ms; the keys sheet is covered by the existing `tests/e2e/play.py`); a hidden tab during the answer phase pauses and hides the item, and it stays paused until Resume.
 - Trial rows: one per item, never twice; End session logs one skipped row; a reload logs the cut session once.
 - Speed deadlines, Spatial Check limits and their bars (T7, T8); "Stop the check" asks first, saves nothing, and the Log lists the answers as "not finished" (`exp_check.py desktop 2`); a complete Baseline 1 on desktop (152 s at 0.6 s per answer) and on the phone (135 s), each ending on "Check saved" with five probe lines and "Baseline 2 … from 14 Nov 2026, 02:28" (12 h later), mirrored on Today and Progress.
 - The Daily Challenge in full (8 items, "5/8", share line, Today "Played today: 5 of 8"), Free play with a 5 s timer, Path, Threshold (Spin deadline, Track Standard), Train and Speed on desktop and phone; every training exercise in Free play on desktop and phone (`crawl_*_exercises.json`), with Watch, Try, Go on Rotate, Span and Homing.
-- Settings: session length (Today follows: "10 min", blocks ~4/~3/~3), theme, text size, Back up (a real download, `parallax-backup-2026-11-13.json`, 20 top-level keys, "Last backup" updated), Export CSV dialog, Import of pasted text with Undo, a broken import refused with "Nothing was changed".
+- Settings: session length (Today follows: "10 min", blocks ~4/~3/~3), theme, text size, Back up (a real download, `parallax-backup-2026-11-13.json`, 20 top-level keys, "Last backup" updated), Export CSV dialog, Import of pasted text ("Progress imported." with an Undo action), a broken import refused with "Nothing was changed".
 - No page errors and no console errors in any run (desktop and phone), only SwiftShader's "GPU stall due to ReadPixels" driver warnings.
 
 ---
