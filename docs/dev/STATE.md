@@ -1,6 +1,6 @@
 # STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-13 16:31 UTC. All 19 exercises are active in index.html (Knots and B6's three included).
+Updated 2026-11-13 16:36 UTC. All 19 exercises are active in index.html (Knots and B6's three included).
 
 ## Phase
 2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in focus on the DAT-style formats. D3: analogical test named in v1.2.
@@ -53,7 +53,7 @@ Updated 2026-11-13 16:31 UTC. All 19 exercises are active in index.html (Knots a
 - B7 fix round done (2c68b6a). B5 fix round done (625eb27); B5 follow-up running (Angles LONG_MIN 0.7 if bounds hold; Fold validator re-simulates drawn steps).
 - RV-D done (docs/dev/reviews/RV-dat-style-B.md): no wrong items; Form face-shape cue 71 %, Openings cues; B6 fix round resumed (a0dc048b845b7fc8e).
 - Reviewer RV-E (Reckon and Homing: geometry, scoring, no-fix cues, shortcuts, feedback, voids, touch): a25ca175d24e7caab → docs/dev/reviews/RV-reckon-homing.md
-- Reviewer RV-H (code review of the v1.1 core/engine/ui diff: bugs, migration, clock, rules 6–7): a02feb65826393f2a → docs/dev/reviews/RV-code-core.md
+- RV-H done (docs/dev/reviews/RV-code-core.md): no blockers; 4 should-fix (closing-item cap, check time as practice, two-tab merge of new fields, idle cap on late timers); B1 fix round resumed (a34b20ea2c882325b).
 - Guide writer G1 (guide 1.1 pages, shots, PDF, README, CHANGELOG): ac14d632f5849a4a9 → docs/dev/progress/G1.md
 - RV-C done (docs/dev/reviews/RV-knots.md): all answers right; Show me replay can show a type-changing move; 3 false texts; 2 untie cues at the limit; B4 fix round resumed (a0dafe0ed9a9dc012).
 - Finished: B3 (a4766dc5c229a6ee1), B2 (aed53d9e449759e47), B6 (a0dc048b845b7fc8e), B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
