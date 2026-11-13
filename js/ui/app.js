@@ -853,6 +853,40 @@
   bus.on('route', chartUnitsSoon);
   window.addEventListener('resize', function () { window.clearTimeout(chartTimer); chartTimer = window.setTimeout(chartUnits, 200); });
 
+  // A tap on the tab bar or the header's nav while a pop-up is open lands on the pop-up's backdrop,
+  // which closes the pop-up; the tap then went nowhere and seemed ignored (RV-play-nav-knots: on a
+  // first run the tour offer opens as the welcome closes, and the first tap on Library only closed
+  // it). Now, once that pop-up has closed and no other opened, the tap goes where it was aimed.
+  var navTap = null;
+  function navAt(x, y) {
+    var els = shell.root ? shell.root.querySelectorAll('.px-tabbar [data-go], .px-tabbar [data-more], .px-header [data-go], .px-header [data-more]') : [];
+    for (var i = 0; i < els.length; i++) {
+      var r = els[i].getBoundingClientRect();
+      if (r.width && r.height && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return els[i];
+    }
+    return null;
+  }
+  doc.addEventListener('mousedown', function (e) {
+    var bd = e.target;
+    if (!bd || !bd.classList || !bd.classList.contains('px-modal-backdrop') || !ui.modalOpen()) return;
+    var nav = navAt(e.clientX, e.clientY);
+    if (!nav) return;
+    var tap = navTap = { el: nav, t: Date.now(), done: false };
+    window.setTimeout(function () { // after the backdrop's own handler has closed it (or kept it)
+      if (navTap !== tap || bd.parentNode || ui.modalOpen()) return;
+      tap.done = true;
+      nav.click();
+    }, 0);
+  }, true);
+  // The browser may deliver the tap's own click to the button after all: then it is not sent twice.
+  doc.addEventListener('click', function (e) {
+    var tap = navTap;
+    if (!tap || !e.isTrusted || !tap.el.contains(e.target)) return;
+    navTap = null;
+    if (Date.now() - tap.t > 1500) return;
+    if (tap.done) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
   var api = {
     ready: false,
     env: env,

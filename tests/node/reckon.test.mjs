@@ -195,6 +195,11 @@ export async function run(t) {
     extra.push({ p, it: def.generate(PX.rng(PX.rng.hash('reckon-shortcuts', route, tol, k)), p) });
   }
   boundShortcuts(t, shortcutReport(def, items.concat(extra), 'Reckon'));
+  // RV-play-nav-knots 3: the generator never leaves the level's description (the stage text is the player's)
+  {
+    const all = items.concat(extra), off = all.filter((x) => { const rt = L.ROUTES[x.p.route], band = L.TURNS[rt.turns]; return x.it.legs.length !== rt.legs || x.it.turns.length !== rt.legs - 1 || !x.it.turns.every((v) => Math.abs(v) >= band.lo - 1e-9 && Math.abs(v) <= band.hi + 1e-9); });
+    t.ok(off.length === 0, `every route matches its level: its number of legs and every turn within its band (${all.length} items, fallbacks included${off.length ? `; ${off.length} off, first at route ${off[0].p.route}` : ''})`);
+  }
   // time as a cue to leg length (RV S1): above 'steady' a leg's walking time says little about its length
   {
     const byLevel = [0, 1, 2].map((lv) => {

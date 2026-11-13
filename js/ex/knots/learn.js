@@ -1,8 +1,10 @@
 /* EX-13 Knots: tutorial data (pure, data only; ARCHITECTURE.md §2, docs/dev/EXERCISE-GUIDE.md §7).
-   Watch–Try–Go (R2 §7.5): the gap shows which strand is under → the minimal pair (one outline, one
-   crossing switched: one rope falls open, the other ties tight) → the three moves in plain words →
-   Try on easy ropes, then one untie item → Go. Wording rules (CLAUDE.md 2, 12): about the task,
-   never the person; no IQ or "mastered"; the bridge carries its limitation line. */
+   Watch–Try–Go (R2 §7.5): the gap shows which strand is under → the minimal pair, shown as a
+   labelled copy on a dashed plate ("Copy · crossing A switched": it falls open) → back to "Your
+   rope" → the marked-crossing question in words (switching A is what "which crossing unties it"
+   items ask) → the three moves → the rope's own solution (a knot remains) → Try on easy ropes, then
+   one untie item, whose tip explains the marks → Go (RV-play-nav-knots). Wording rules (CLAUDE.md
+   2, 12): about the task, never the person; no IQ or "mastered"; the bridge carries its limitation. */
 (function (PX) {
   'use strict';
 
@@ -38,14 +40,16 @@
       { rope: 1, spacing: 0, variant: 'pull' },
       { rope: 0, spacing: 0, variant: 'untie' },
     ],
+    // The player shows the first tip whose trigger fits (Try shows one every time): the format tips
+    // come first, so a marked-crossing item gets the line that explains the marks.
     tips: [
-      { id: 'descend', when: { variant: 'pull' }, text: 'If, from one end, the rope is on top at every crossing it meets first, it falls apart.' },
-      { id: 'slippery', when: { dim: 'rope', levels: [0, 1] }, text: 'The rope is perfectly slippery and cannot pass through itself: real ropes can jam, these cannot.' },
+      { id: 'untie', when: { variant: 'untie' }, text: 'Four crossings carry a letter. Switch one in your mind (the strand underneath goes on top) and pull: exactly one lets the rope fall open.' },
+      { id: 'tie', when: { variant: 'tie' }, text: 'This rope falls open as it is. Switch each marked crossing in your mind and pull: exactly one leaves a knot that holds.' },
+      { id: 'link', when: { variant: 'link' }, text: 'Slide off what you can. If one loop still goes over and under the other in a way nothing undoes, they are linked.' },
+      { id: 'slide-off', when: { variant: 'pull' }, text: 'A loop that lies on top at both of its crossings slides off, and a curl untwists. Take off what you can: if nothing is left, there is no knot.' },
+      { id: 'slippery', when: { variant: 'pull', dim: 'rope', levels: [0, 1] }, text: 'The rope is perfectly slippery and cannot pass through itself: real ropes can jam, these cannot.' },
       { id: 'slide-over', when: { dim: 'rope', levels: [4, 6, 7, 8, 9] }, text: 'Nothing comes off at first? Slide a strand over a crossing (a slide-over); then a loop may come off.' },
       { id: 'tight', when: { dim: 'spacing', levels: [2] }, text: 'The strands run close here. Follow one strand with your eyes, crossing by crossing.' },
-      { id: 'untie', when: { variant: 'untie' }, text: 'Switch each marked crossing in your mind and pull: exactly one lets the rope fall open. After a switch, look for a loop that now lies on top.' },
-      { id: 'tie', when: { variant: 'tie' }, text: 'Switch each marked crossing in your mind and pull. Only one of them leaves a knot that holds.' },
-      { id: 'link', when: { variant: 'link' }, text: 'Slide off what you can. If one loop still goes over and under the other in a way nothing undoes, they are linked.' },
     ],
     // Strategy cards (R2 §7.5). Picturing: animation and imagined epistemic actions are how knot
     // diagrams are reasoned with (De Toffoli & Giardino 2014; de Koning et al. 2019). Step by step:
@@ -87,7 +91,12 @@
     ],
     captions: {
       gap: 'The gap shows which strand is underneath.',
-      pair: 'Same shape, one crossing different: only the crossings decide.',
+      pair: 'A copy of your rope with crossing A switched. Same shape: only the crossings decide.',
+      copyNone: 'Nothing is left: the copy falls open. Switching A unties your rope.',
+      backToRope: 'Back to your rope, every crossing as it was drawn.',
+      marks: 'Items with letters A–D ask exactly this: which crossing, switched, lets the rope fall open? Here it would be A.',
+      labelYours: 'Your rope',
+      labelCopy: 'Copy · crossing A switched',
       curl: 'A curl: untwist it.',
       slide: 'This loop lies on top: lift it off.',
       slideUnder: 'This loop lies underneath: drop it out.',

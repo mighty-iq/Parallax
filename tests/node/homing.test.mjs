@@ -159,6 +159,27 @@ export async function run(t) {
   t.ok(tm.cpu < 20, `generation p95 < 20 ms at the hardest level (CPU ${tm.cpu.toFixed(2)} ms, wall ${tm.wall.toFixed(2)} ms)`);
   const hardTiming = tm;
 
+  // Landmarks are on screen during the walk (RV-play-nav-knots 2: random bearings left them behind the walker):
+  // with landmarks, at least min(landmarks, 2) lie within 31° of a leg's heading (inside the 74° view, with a
+  // margin), so they stay in view for that whole leg; how many show every landmark at some moment is reported.
+  {
+    const HALF = 37 - 6;
+    let withLm = 0, short = 0, allSeen = 0, firstShort = '';
+    for (const x of items) {
+      const lm = x.it.landmarks || [];
+      if (!lm.length) continue;
+      withLm++;
+      const heads = [];
+      let hh = x.it.startHeading;
+      x.it.legs.forEach((_, i) => { if (i) hh += x.it.turns[i - 1]; heads.push(hh); });
+      const inLeg = (b) => heads.some((hd) => adiff(b, hd) <= HALF);
+      const inTurn = (b) => x.it.turns.some((tn, i) => { for (let f = 0; f <= 1.0001; f += 0.05) if (adiff(b, heads[i] + tn * f) <= HALF) return true; return false; });
+      if (lm.filter((l) => inLeg(l.bearing)).length < Math.min(lm.length, 2)) { short++; firstShort = firstShort || `route ${x.p.route} seed ${x.seed}`; }
+      if (lm.every((l) => inLeg(l.bearing) || inTurn(l.bearing))) allSeen++;
+    }
+    t.ok(withLm > 0 && short === 0, `landmarks on screen during the walk: in all ${withLm} items with landmarks, min(landmarks, 2) stay in view along a whole leg${short ? ` (${short} short; first ${firstShort})` : ''}; every landmark seen at some moment in ${pct(allSeen / withLm)}`);
+  }
+
   t.section('homing: validate rejects broken items');
   const clone = (x) => JSON.parse(JSON.stringify(x)), base = items.find((x) => L.ROUTES[x.p.route].legs === 3 && x.p.landmarks === 0).it;
   const rejects = (what, it, pattern) => {
@@ -309,6 +330,11 @@ export async function run(t) {
     extra.push({ p, it: def.generate(PX.rng(PX.rng.hash('homing-shortcuts', route, tol, k)), p) });
   }
   const scRows = shortcutReport(def, items.concat(extra), 'Homing');
+  // RV-play-nav-knots 3: the generator never leaves the level's description (the stage text is the player's)
+  {
+    const all = items.concat(extra), off = all.filter((x) => { const rt = L.ROUTES[x.p.route], band = L.TURNS[rt.turns]; return x.it.legs.length !== rt.legs || x.it.turns.length !== rt.legs - 1 || !x.it.turns.every((v) => Math.abs(v) >= band.lo - 1e-9 && Math.abs(v) <= band.hi + 1e-9); });
+    t.ok(off.length === 0, `every route matches its level: its number of legs and every turn within its band (${all.length} items, fallbacks included${off.length ? `; ${off.length} off, first at route ${off[0].p.route}` : ''})`);
+  }
   boundShortcuts(t, scRows);
   // estMs: within 10 % of the mean trial time of the generated routes (lead-in + route + response).
   const estOk = L.ROUTES.map((_, ri) => {
