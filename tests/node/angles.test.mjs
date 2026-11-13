@@ -160,7 +160,7 @@ export async function run(t) {
   if (process.env.PX_REPORT) {
     const worst = Object.entries(cues).sort((a, b) => b[1].hit / b[1].n - a[1].hit / a[1].n).slice(0, 12);
     console.log('       angles, worst rules: ' + worst.map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
-    console.log(`       keys ${keyPos.join(',')}; mean scale ${(sumScale / n).toFixed(2)}; shortest arm ${minArmPx.toFixed(3)} cell; CPU p95 ${p95.toFixed(1)} ms`);
+    console.log(`       keys ${keyPos.join(',')}; mean scale ${(sumScale / n).toFixed(2)}; shortest arm ${minArmPx.toFixed(3)} cell; longer arms under 90 px in a 155 px cell ${(100 * phoneShort / nAngles).toFixed(1)} %; CPU p95 ${p95.toFixed(1)} ms`);
   }
   testLearn(t, PX, def);
 }
