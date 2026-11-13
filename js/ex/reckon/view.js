@@ -47,10 +47,12 @@
   var memHist = [];
   function fixRec(x) {
     if (!x || typeof x !== 'object' || !Array.isArray(x.hist)) return undefined;
-    var ok = x.hist.filter(function (e) { return Array.isArray(e) && e.length === 8 && e.every(function (v) { return v === null || isNum(v); }); });
+    var ok = x.hist.filter(function (e) { return Array.isArray(e) && (e.length === 8 || e.length === 9) && e.every(function (v) { return v === null || isNum(v); }); });
     return { v: 1, hist: ok.slice(-(lib().HIST_N || 40)) };
   }
   try { if (PX.core.store && typeof PX.core.store.field === 'function') PX.core.store.field('reckon', function () { return { v: 1, hist: [] }; }, fixRec); } catch (e) { /* already registered */ }
+  // The display class of an answer (0 phone layout, 1 wide), as the bias line groups them.
+  function displayCode() { return st && st.kit.narrow() ? 0 : 1; }
   function hist() {
     var s = PX.core.store && PX.core.store.state;
     if (!s || typeof s !== 'object') return memHist;
@@ -99,6 +101,7 @@
     el.notes.parentNode.appendChild(el.chart);
     // a held key that loses its keyup (focus moved) stops by itself; keyup stops it at once
     st.onKeyUp = function (e) { if ((e.key === 'ArrowUp' && st.dir > 0) || (e.key === 'ArrowDown' && st.dir < 0)) setDir(0); };
+    st.offLost = PX.bus && PX.bus.on ? PX.bus.on('stage3d:lost', function () { if (st) st.lostDuring = true; }) : null;
     window.addEventListener('keyup', st.onKeyUp);
     st.onBlur = function () { setDir(0); };
     window.addEventListener('blur', st.onBlur);
@@ -132,7 +135,7 @@
     if (item.task === 'distance') return cap('describeDistance');
     return cap('describe', { legs: item.legs.length, walk: isReturn(item) ? cap('describeWalk') : '' });
   }
-  function voidTrial(reason, stats) {
+  function voidTrial(reason, stats, phase) {
     if (!st || st.voided) return;
     st.voided = reason;
     st.voidStats = stats || null;
@@ -140,15 +143,8 @@
     if (st.ctx && typeof st.ctx.voidTrial === 'function') {
       try { st.ctx.voidTrial(reason, stats || null); } catch (e) { if (window.console) console.error('reckon: ctx.voidTrial failed', e); }
     }
-    st.el.voidNote.textContent = cap(reason === 'paused' ? 'voidPaused' : reason === 'turned' ? 'voidTurned' : 'voidStutter');
+    st.el.voidNote.textContent = cap(reason === 'turned' && phase === 'answer' ? 'voidTurnedAnswer' : reason === 'paused' ? 'voidPaused' : reason === 'turned' ? 'voidTurned' : reason === 'lost' ? 'voidLost' : 'voidStutter');
     st.el.voidNote.hidden = false;
-  }
-  function togglePause() {
-    if (!st || !st.walking) return false;
-    st.paused = !st.paused;
-    st.S.pauseNote.textContent = cap('paused');
-    st.S.pauseNote.hidden = !st.paused;
-    return undefined;
   }
   function setActions(item) {
     var ret = isReturn(item);
@@ -167,6 +163,7 @@
     st.S.stopLook();
     st.item = item; st.value = null; st.raw = 0; st.dist = 0; st.v = 0; st.dir = 0; st.done = false; st.playing = false; st.respond = null;
     st.voided = null; st.voidStats = null; st.paused = false; st.hostPause = false; st.frames = null; st.input = null; st.mode = null;
+    st.demoed = false; st.lostDuring = false;
     var S = st.S, el = st.el, S0 = item.path[0];
     S.attach();
     S.setPose(S0[0], S0[1], item.startHeading);
@@ -188,14 +185,12 @@
     S.showFlag(false);
     S.hideStop();
     S.render();
-    var popWalkKeys = ctx.keys.push({
-      Escape: function () { return togglePause(); },
-      Space: function () { return st && st.paused ? togglePause() : false; },
-    }, { through: true });
+    // Esc during the walk is the player's: its pause sheet covers the item, voids it (it was paused while it
+    // played) and freezes the walk through pause()/resume() below, so every way back resumes the walk.
     st.walking = true;
     var ringOn = true;
     return timing.nextPaint().then(function () {
-      if (!st || st.item !== item) { popWalkKeys(); return timing.now(); }
+      if (!st || st.item !== item) return timing.now();
       st.W = st.kit.walker(S, planOf(item), {
         ctx: ctx, fast: ctx.fast,
         paused: function () { return !!(st && (st.paused || st.hostPause || st.kit.hostPaused(ctx))); },
@@ -204,7 +199,6 @@
         onVoid: function (reason, stats) { voidTrial(reason, stats); },
       });
       return st.W.done.then(function (stats) {
-        popWalkKeys();
         if (!st || st.item !== item) return timing.now();
         st.frames = stats;
         st.walking = false; st.paused = false;
@@ -285,6 +279,7 @@
       // the player's pause sheet (the item inert and hidden): a finger still on Walk gets no pointerup
       // there, so the walk stops at once and stays where it was
       if (st.kit.hostPaused(st.ctx)) { st.dir = 0; st.v = 0; st.walkStop = null; readout(); controls(); return false; }
+      if (st.shape) st.shape.check(); // a turned phone mid-walk voids at once (resize events can come late)
       var s = dt / 1000, want = st.dir * st.item.walkSpeed * (st.dir < 0 ? BACK_SHARE : 1);
       st.v += (want - st.v) * Math.min(1, s / WALK_TAU);
       if (st.dir === 0 && Math.abs(st.v) < 0.02) st.v = 0;
@@ -335,6 +330,7 @@
     st.F.disable(true);
     st.el.root.classList.remove('is-answering');
     if (st.popKeys) { st.popKeys(); st.popKeys = null; }
+    if (st.shape) { st.shape.stop(); st.shape = null; }
     setDir(0);
     controls();
   }
@@ -343,6 +339,9 @@
     if (!st || st.item !== item) return;
     st.respond = respond;
     st.live = true;
+    // the phone turned or the screen class changed while answering (walking back included): void (R1 §7.4)
+    if (st.shape) st.shape.stop();
+    st.shape = st.kit.watchShape(st.S, function () { voidTrial('turned', { phase: 'answer' }, 'answer'); });
     st.el.root.classList.add('is-answering');
     controls();
     readout();
@@ -355,7 +354,7 @@
       ArrowDown: function (e) { return keyWalk(-1, e); },
       Enter: function () {
         if (!live()) return false;
-        if (isReturn(item) ? st.dist < HERE_MIN : st.value === null) { st.el.readout.textContent = cap('setFirst'); return undefined; }
+        if (isReturn(item) ? st.dist < HERE_MIN : st.value === null) { st.el.readout.textContent = cap(isReturn(item) ? 'walkFirst' : 'setFirst'); return undefined; }
         st.input = 'key';
         confirm();
         return undefined;
@@ -367,8 +366,8 @@
   /* ---------- feedback ---------- */
   function sideOf(a) { return st.kit.side(a); }
   // Named error types (R1 §3.5, §6.4): which shortcut the answer's direction matches, when the key does not.
-  function errorHint(item, dir) {
-    if (!isNum(dir) || item.task) return '';
+  function errorHint(item, dir, ok) {
+    if (ok || !isNum(dir) || item.task) return '';
     var tol = item.tolDeg, key = item.keyDeg, S = item.turns.reduce(function (a, b) { return a + b; }, 0), ad = st.kit.adiff;
     if (ad(dir, key) <= tol) return '';
     if (ad(dir, key + S) <= tol) return cap('hintNotUpdated');
@@ -378,7 +377,7 @@
     return '';
   }
   function biasLine() {
-    var b = lib().bias(hist(), CHART_N), parts = [];
+    var b = lib().bias(hist(), CHART_N, displayCode()), parts = [];
     if (b.n < 5) return '';
     if (b.turn !== null) parts.push(Math.abs(b.turn) < 5 ? cap('biasTurnEven') : cap(b.turn > 0 ? 'biasTurnFar' : 'biasTurnShort', { deg: Math.round(Math.abs(b.turn)) }));
     if (b.ratio !== null) parts.push(Math.abs(b.ratio - 1) < 0.08 ? cap('biasWalkEven') : cap(b.ratio < 1 ? 'biasWalkShort' : 'biasWalkLong', { pct: Math.round(Math.abs(b.ratio - 1) * 100) }));
@@ -388,7 +387,7 @@
   // The last CHART_N angle errors (answer − key, °) as dots (filled: right), with the current
   // tolerance as a band: the error budget that tightens as the level rises.
   function chart(item) {
-    var list = hist().slice(-CHART_N).filter(function (e) { return e[3] !== null; });
+    var dc = displayCode(), list = hist().filter(function (e) { return e[3] !== null && (e.length < 9 || e[8] === dc); }).slice(-CHART_N);
     if (list.length < 3) return null;
     var W = 240, H = 64, mid = H / 2, sc = (H / 2 - 6) / 90, tol = Math.min(90, item.tolDeg || 30), dx = W / (CHART_N + 1);
     var svg = S2.svg(W, H, { viewBox: '0 0 ' + W + ' ' + H, width: '100%', class: 'ex-reckon-chartsvg', role: 'img', 'aria-label': cap('chartLabel') });
@@ -411,7 +410,9 @@
     st.done = true;
     var res = result || { correct: false }, ok = !!res.correct, el = st.el, d = res.detail || {}, lines = [], kit = st.kit;
     var ret = isReturn(item), dir = ret ? (isNum(d.dir) ? d.dir : null) : isNum(response) ? kit.norm360(response) : null;
-    if (!st.voided) remember(lib().entry(item, response, res, Date.now() / 1000));
+    // the bias line learns only from clean answers: not a voided trial (by the view, or a lost 3D view the
+    // player voids), not an item whose solution the Watch demo just showed
+    if (!st.voided && !st.demoed && !st.lostDuring) remember(lib().entry(item, response, res, Date.now() / 1000, displayCode()));
     el.root.classList.add('is-revealed');
     st.D.mark(ok ? 'is-right' : 'is-wrong');
     st.D.set(dir, dir === null ? '' : kit.sideText(cap, dir));
@@ -426,7 +427,7 @@
     el.verdict.setAttribute('data-kind', ok ? 'right' : 'wrong');
     var verdict;
     if (!ret) {
-      var err = isNum(res.value) ? Math.round(res.value) : null;
+      var err = kit.errShown(isNum(res.value) ? Math.abs(res.value) : null, item.tolerance, ok);
       verdict = err === null ? cap('noAnswer') : cap(ok ? 'verdictRight' : 'verdictWrong', { err: err, tol: item.tolerance });
     } else {
       var lim = item.tolerance * item.distance, pct = Math.round(item.tolerance * 100), key = item.task === 'distance' ? (ok ? 'posRightDistance' : 'posWrongDistance') : (ok ? 'posRight' : 'posWrong');
@@ -451,7 +452,7 @@
         lines.push(cap('drift', { ep: r1(d.posErr), path: Math.round(walked), cm: Math.round(100 * d.posErr / Math.max(1, walked)) }));
       }
       lines.push(cap(ret ? 'legendReturn' : 'legend', { tol: item.tolerance }));
-      var hint = errorHint(item, dir);
+      var hint = errorHint(item, dir, ok);
       if (hint) lines.push(hint);
     }
     PX.ui.clear(el.notes);
@@ -493,7 +494,7 @@
       steps = [
         { ms: 1800, caption: cap('headingWas', { deg: ts.deg, side: kit.sideText(cap, T).replace(/^\d+° /, '') }), enter: function () { st.D.key(null); st.D.wedge(null); },
           update: function (k) { st.D.set(kit.sweep(kit.norm360(T), kit.ease(k))); } },
-        { ms: 1800, caption: cap('demoTurn', { deg: sideOf(back).deg, side: sideOf(back).side }), enter: function () { st.D.set(null); },
+        { ms: 1800, caption: cap('demoTurnHeading', { deg: sideOf(back).deg, side: sideOf(back).side }), enter: function () { st.D.set(null); },
           update: function (k) { st.D.key(kit.sweep(back, kit.ease(k))); }, exit: function () { st.D.wedge(back, item.tolerance); } },
       ];
     } else if (item.task === 'distance') {
@@ -509,6 +510,7 @@
   // Tutorial: the walk again with captions, the map from above, then the turn to the start.
   function demo(item, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
+    st.demoed = true;
     var kit = st.kit, S = st.S, L = lib().homing, pl = planOf(item), E = endOf(item), s = sideOf(item.keyDeg), S0 = item.path[0], last = 0;
     st.playing = true;
     function at(p, flag) {
@@ -549,6 +551,7 @@
     stopInput();
     stopWalkBack();
     if (st.W) st.W.stop();
+    if (st.offLost) st.offLost();
     window.removeEventListener('keyup', st.onKeyUp);
     window.removeEventListener('blur', st.onBlur);
     document.removeEventListener('visibilitychange', st.onBlur);
@@ -570,7 +573,7 @@
     demo: demo,
     unmount: unmount,
     pause: function () { if (st && st.walking) st.hostPause = true; },
-    resume: function () { if (st) st.hostPause = false; },
+    resume: function () { if (st) { st.hostPause = false; st.paused = false; st.S.pauseNote.hidden = true; } },
     // for tests
     timeline: function (item) { return planOf(item); },
     pose: function () { return st && st.S ? { x: st.S.pose.x, y: st.S.pose.y, h: st.S.pose.h } : null; },

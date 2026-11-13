@@ -130,13 +130,13 @@
         <tr><td>"Measured" was awarded for a Threshold run stopped after 3 items.</td><td>Threshold and Speed achievements need a complete run.</td></tr>
         <tr><td>Two "Export trials" buttons wrote two different files under one name.</td><td>One CSV format, with the screen class and the input added.</td></tr>
         <tr><td>The Sounds setting did nothing.</td><td>Short synthesized tones after an answer, off by default, never while an item plays.</td></tr>
-        <tr><td>Smaller slips: Today too wide at 150 % text on a phone; the item counter one ahead during feedback; Pause not saying Resume; Threshold results without units; Path asking twice before its first item; the Spatial Check's time estimate.</td><td>All fixed. A check now says honestly that it takes 15 to 25 minutes.</td></tr>
+        <tr><td>Smaller slips: Today too wide at 150 % text on a phone; Today numbering a session's exercises in an order the session did not follow; the item counter one ahead during feedback; the deadline bar jumping back to full after an answer, and a deadline timed from a few milliseconds after the item appeared; Pause not saying Resume; Threshold results without units; Path asking twice before its first item; the Spatial Check's time estimate.</td><td>All fixed. A check now says honestly that it takes 15 to 25 minutes.</td></tr>
       </tbody>
     </table>
     <div class="cols push">
       <div class="panel">
         <span class="label">Your record</span>
-        <p>Version 1.1 stores the record in format 2. A 1.0 record upgrades when 1.1 first opens it, with nothing lost; a 1.0 tab still open elsewhere then runs from memory instead of overwriting the newer record. Every trial gains two columns, the screen class (small or large) and the input (mouse, touch, pen or keys), so that results can be compared like with like. Homing's items changed, so its new trials are logged as version 2.</p>
+        <p>Version 1.1 stores the record in format 2. A 1.0 record upgrades when 1.1 first opens it, with nothing lost; a 1.0 tab still open elsewhere then runs from memory instead of overwriting the newer record. Every trial gains the screen class (small or large) and the input (mouse, touch, pen or keys), so that results can be compared like with like, and room for a second number where an exercise reports one. Homing's items changed, so its new trials are logged as version 2.</p>
       </div>
       <div class="panel">
         <span class="label">Also new</span>
@@ -904,13 +904,13 @@
           <figure><div class="shot"><img src="../shots/ex14-openings.png" alt="Openings: a solid with a slot and slanted cuts, and five black openings, each turned or flipped"></div><figcaption><span class="label">Question</span>Two features, slanted cuts; the fitting face is the side. Each opening is turned or flipped at random.</figcaption></figure>
         </div>
         <div class="ex-text">
-          <p><span class="rk">How to play</span>The solid may be turned any way before it goes in; then it slides straight through without turning, so the opening it needs is its outline seen along that direction. It must fit exactly: the right features in the wrong proportions are wrong. Every cut runs straight through the solid, so what shows on one face continues to the opposite one.</p>
+          <p><span class="rk">How to play</span>The solid may be turned any way before it goes in; then it slides straight through without turning, so the opening it needs is its outline seen along that direction. It must fit exactly: the openings are drawn at the solid's scale, and the right features in the wrong proportions are wrong. Every cut runs straight through the solid, so what shows on one face continues to the opposite one.</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
-            <li><span class="k">Features</span><span>1 to 4 notches, steps or cuts</span></li>
+            <li><span class="k">Features</span><span>notches, steps or cuts: one on each face → 2 + 1 + 1 → 2 + 2 + 1 → 2 + 2 + 2</span></li>
             <li><span class="k">Edges</span><span>straight → slanted (45°) cuts</span></li>
-            <li><span class="k">Fitting face</span><span>front → side → top; the solid upright → lying</span></li>
-            <li><span class="k">Wrong ones</span><span>other features → the right features stretched</span></li>
+            <li><span class="k">Fitting face</span><span>mostly the front → any face → mostly the top; the solid upright → lying</span></li>
+            <li><span class="k">Wrong ones</span><span>other features → also one outline stretched or squeezed</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Push it through:</b> pick a face and picture the hole it would cut. <b>Three outlines, then sizes:</b> the solid has only three; match width and height, then the features, then the lengths.</p>
           <p class="ev"><span class="rk">Checked</span>Rays cast through the solid on a grid of twelfths of a unit rebuild its three outlines; every opening is compared under all eight turns and flips, and exactly one matches.</p>
@@ -932,7 +932,7 @@
             <li><span class="k">Wrong ones</span><span>another outline → the same outline, other lines → one edge solid instead of dotted, or the reverse</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Build it, then look</b> from the missing side, or <b>line up and eliminate:</b> every line of the missing view lines up with lines in the given ones.</p>
-          <p class="ev"><span class="rk">Checked</span>Two views do not fix a structure, so every item searches all stacks of cubes that fit the two given views, and a wrong drawing is admitted only when none of them has it: exactly one drawing is possible.</p>
+          <p class="ev"><span class="rk">Checked</span>Two views do not fix a structure, so every item searches all stacks of cubes that fit the two given views, and a wrong drawing is admitted only when none of them has it: exactly one drawing is possible. A second search, built on the line drawing alone, must find the same stacks.</p>
         </div>
       </div>
     </article>
@@ -952,7 +952,7 @@
             <li><span class="k">Pose</span><span>one arm level → turned freely</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Settle the extremes first</b> and cross out every list that disagrees; often the close pair never needs judging. <b>Lay one on another:</b> corners and one arm lined up, the wider angle sticks out.</p>
-          <p class="ev"><span class="rk">Checked</span>Judging angles by eye is most precise near 90° <span class="cite">(Dillon et al., 2019)</span>. Arm lengths are drawn so that the tip distance, the area between the arms and arm length point to a random list; each angle is measured again from the drawn ends. Rated per screen size.</p>
+          <p class="ev"><span class="rk">Checked</span>Judging angles by eye is most precise near 90° <span class="cite">(Dillon et al., 2019)</span>. Arm lengths are drawn so that quick cues, such as the distance between the tips, the area between the arms or arm length, point to random lists, and rules that read only the lists stay near chance; each angle is measured again from the drawn ends. Rated per screen size.</p>
         </div>
       </div>
     </article>
@@ -1011,11 +1011,12 @@
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Solid</span><span>boxes and prisms → wedges and pyramids → frusta and five-sided prisms</span></li>
-            <li><span class="k">Marks</span><span>one face → two → a half-shaded face</span></li>
-            <li><span class="k">Pictures</span><span>upright → on a side → upside down; wrong solids: shape or marks → marks only</span></li>
+            <li><span class="k">Marks</span><span>a shaded and a half-shaded face → two shaded and a half → one shaded and two halves</span></li>
+            <li><span class="k">Pictures</span><span>upright → on a side → upside down</span></li>
+            <li><span class="k">Wrong ones</span><span>a size off, or marks moved → marks moved only, always to faces of the same shape and size</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Fold it up</b> around one face kept flat, or work by <b>landmarks:</b> rule out by shape, then check one marked face and its neighbours.</p>
-          <p class="ev"><span class="rk">Checked</span>The pattern is folded in 3D by the solid's own angles and must close; each pictured solid is matched by every rotation, and exactly one fits. Never a cube: oriented marks on cubes belong to the Cube Match probe.</p>
+          <p class="ev"><span class="rk">Checked</span>The pattern is folded in 3D by the solid's own angles and must close, and each pictured solid is matched by every rotation; a second check, which never sees the solid, lays the pattern's pieces onto each picture face by face. Both agree that exactly one fits. Never a cube: oriented marks on cubes belong to the Cube Match probe.</p>
         </div>
       </div>
     </article>
@@ -1616,7 +1617,7 @@
         <p>That last part is where the community comes in. Pooled exports (chapter 10) would let anyone refit the steps by logistic regression with a term per person, and better steps could ship in a later release, while your rating stays on your device. If you want to help, export from the Lab and share it on the Discord.</p>
         <h2>Shortcuts</h2>
         <p>Every item pool is attacked by cheap shortcut solvers: counting cubes or holes, the odd one out, the option most like the others, the shape as seen from here, gear parity, the over-under pattern of a rope. Each must score within 10 points of chance, or the exercise would train the shortcut instead of the skill. Some shortcuts are partly valid geometry; where one comes close to the bound, such items are rationed rather than banned.</p>
-        <p>A few partial strategies do better, and are kept because they are part of the skill: unfolding Fold and Hole Punch sheets by their symmetry about the creases, the format's own method, which fails where layers must be tracked; in Knots' Link items, counting the crossings between the two loops with their signs; in Painted Cubes, counting only the cubes in view, which misses the hidden ones. The tests report them; the strategy cards and show-me teach the full method.</p>
+        <p>A few partial strategies do better, and are kept because they are part of the skill: unfolding Fold and Hole Punch sheets by their symmetry about the creases, the format's own method, which fails where layers must be tracked; in Knots' Link items, counting the crossings between the two loops with their signs; in Painted Cubes, counting only the cubes in view, which misses the hidden ones; in Openings, checking only the face with the most features. The tests report them; the strategy cards and show-me teach the full method.</p>
       </div>
     </div>
   </div>
@@ -1738,7 +1739,7 @@
           <thead><tr><th style="width:36mm">Export</th><th>What it holds</th></tr></thead>
           <tbody>
             <tr><td><b>Backup</b> (JSON)</td><td>The whole record: ratings, sessions, trials, Spatial Checks with their one-tap answers, Threshold runs, Section runs, strategy check-ins, the tests you noted, the focus switches, achievements, settings. The only format that can be imported again.</td></tr>
-            <tr><td><b>Trials</b> (CSV)</td><td>One row per trial: time, exercise and its version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class and the input. For a spreadsheet; cannot be imported.</td></tr>
+            <tr><td><b>Trials</b> (CSV)</td><td>One row per trial: time, exercise and its version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class, the input, and a second number where an exercise reports one. For a spreadsheet; cannot be imported.</td></tr>
             <tr><td><b>Research</b> (CSV, in the Lab)</td><td>The trial rows plus each item's difficulty and guessing rate under the current item model (chapter 10).</td></tr>
           </tbody>
         </table>
@@ -1769,7 +1770,7 @@
         <h2>Threshold protocols</h2>
         <p>Each protocol keeps one setting on a staircase (chapter 4) and lists its rules and your past runs: Track Standard (the speed you track fully right about half the time: a staircase after Legault, Allard and Faubert, 2013, with the spheres, targets and tracking time of Faubert, 2013), Span length (near 71 % right) and Spin deadline. Stereo displays raised thresholds in adults and children <span class="cite">(Plourde et al., 2017)</span>, so thresholds from different display modes, Parallax's flat screens included, are not comparable.</p>
         <h2>Research export</h2>
-        <p>One row per trial with the exercise and its item-model version, the settings, the seed (which regenerates the exact item), the outcome and response time, the chance of a right answer the engine predicted, the interleaving stage, the screen class and the input, and the item's difficulty and guessing rate under the current model. Checks with their one-tap answers, Section runs and the tests you noted travel in the JSON backup. Pooled from many people, these rows can refit the hand-set difficulty steps (chapter 8) and test the defaults this guide calls design bets. Nothing is sent anywhere: you choose what to share and where.</p>
+        <p>One row per trial with the exercise and its item-model version, the settings, the seed (which regenerates the exact item), the outcome and response time, the chance of a right answer the engine predicted, the interleaving stage, the screen class and the input, a second number where an exercise reports one, and the item's difficulty and guessing rate under the current model. Checks with their one-tap answers, Section runs and the tests you noted travel in the JSON backup. Pooled from many people, these rows can refit the hand-set difficulty steps (chapter 8) and test the defaults this guide calls design bets. Nothing is sent anywhere: you choose what to share and where.</p>
       </div>
       <div>
         <h2>The self-experiment</h2>

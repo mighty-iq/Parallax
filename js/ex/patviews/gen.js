@@ -23,19 +23,23 @@
    of the shown structure; a foil is admitted only when no structure in the class has it, so exactly
    one option is possible. Every foil is also tested by class-free reasons, recorded in option.why
    for show me: 'hull' (the silhouette hull of the three outlines does not reproduce them), 'align'
-   (a line has no partner coordinate in the neighbouring view), else 'search' (only the exhaustive
-   search rules it out, typically a solid/dotted difference).
+   (its line positions differ from those the given views require: an extra line or a missing one),
+   else 'search' (only the exhaustive search rules it out, typically a solid/dotted difference).
 
    Foils come from the structure's neighbours inside the same box (one or two columns changed) and,
    for front and end views, from flipping one line between solid and dotted; all share the key's
    size. Kinds: 'outline' (another silhouette), 'lines' (same silhouette, other lines), 'dashes'
    (same lines, other styles). Dim foil: 0 outline foils, 1 same-silhouette foils, 2 the subtlest
-   (a solid/dotted foil for front and end; the closest one-line foils for top). Foil sets are
-   chosen so the cheap solvers (line counts, area, like the others, odd one out) hit about 1 in 4.
+   (a solid/dotted foil for front and end, with the key's line layout never the most common one:
+   other dashes foils, or a lines foil with its own flip; the closest one-line foils for top). Foil
+   sets are chosen so the cheap solvers (line counts, area, like the others, odd one out, by lines
+   only, the drawing most like a given view) hit about 1 in 4.
 
    validate (independent): rebuilds the voxels, enumerates the solid's edges in 3D and decides each
    one's visibility by marching voxels toward the viewer (drawRay), re-derives every drawing, re-runs
-   the exhaustive search and re-proves every foil.
+   the exhaustive search, runs a second search built on drawRay alone (searchRay: lone slices, rows
+   and slice pairs drawn by drawRay prune; every leaf drawn in full), which must find the same
+   structures, and re-proves every foil.
 
    Item: { ex: 'patviews', seed, params, W, H, D, heights: [[...]] (D rows of W), missing,
            given: { <view>: drawing, <view>: drawing }, key, options: [{ kind, why?, drawing }] }
@@ -559,7 +563,7 @@
   }
   // "Lines only": the same, solid and dotted taken alike (where lines are, not how they are drawn).
   var SOLVERS = ['most solid', 'fewest solid', 'most dotted', 'fewest dotted', 'largest area', 'smallest area', 'like the others', 'odd one out',
-    'like the others (lines only)', 'odd one out (lines only)'];
+    'like the others (lines only)', 'odd one out (lines only)', 'most like a given view'];
   function layoutOf(g) { var out = '', k; for (k = 0; k < g.hs.length; k++) out += g.hs[k] ? 1 : 0; for (k = 0; k < g.vs.length; k++) out += g.vs[k] ? 1 : 0; return out; }
   function gdistLines(a, b) {
     var n = 0, k;
@@ -567,27 +571,31 @@
     for (k = 0; k < a.vs.length; k++) if (!a.vs[k] !== !b.vs[k]) n++;
     return n;
   }
-  function shares(gs) { // gs[0] is the key
+  // gs[0] is the key; giv: the given views (the stem-based solver: the option most like a given view
+  // of the same size).
+  function shares(gs, giv) {
     function sums(f) { return gs.map(function (a, i) { var s = 0; gs.forEach(function (b2, j) { if (i !== j) s += f(a, b2); }); return s; }); }
     var c = gs.map(counts), sum = sums(gdist), sumL = sums(gdistLines);
     var sol = c.map(function (x) { return x.solid; }), dot = c.map(function (x) { return x.dotted; }), ar = c.map(function (x) { return x.area; });
+    var like = gs.map(function (o) { var m = 99; (giv || []).forEach(function (v) { if (v.w === o.w && v.h === o.h) m = Mth.min(m, gdist(o, v)); }); return m; });
     return [pickShare(sol, true), pickShare(sol, false), pickShare(dot, true), pickShare(dot, false), pickShare(ar, true), pickShare(ar, false), pickShare(sum, false), pickShare(sum, true),
-      pickShare(sumL, false), pickShare(sumL, true)];
+      pickShare(sumL, false), pickShare(sumL, true), pickShare(like, false)];
   }
-  var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5, 2, 1];
-  function chooseFoils(rng, keyG, pool, need) {
+  var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5, 2, 1, 2];
+  function chooseFoils(rng, keyG, pool, need, giv) {
     var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 13), best = null, bestScore = INF, bestSh = null;
     var want = SOLVERS.map(function () { return rng.chance(0.25) ? 1 : 0; });
     for (var a = 0; a < idx.length; a++) for (var b = a + 1; b < idx.length; b++) for (var c = b + 1; c < idx.length; c++) {
       var set = [pool[idx[a]], pool[idx[b]], pool[idx[c]]];
       if (need && !need(set)) continue;
-      var sh = shares([keyG].concat(set.map(function (o) { return o.g; }))), score = 0;
+      var sh = shares([keyG].concat(set.map(function (o) { return o.g; })), giv), score = 0;
       for (var k = 0; k < sh.length; k++) score += WEIGHTS[k] * Mth.abs(sh[k] - want[k]);
       if (score < bestScore - 1e-9) { bestScore = score; best = set; bestSh = sh; }
     }
     // The pool can leave no choice (outline foils mostly add cubes, so the key's outline tends to be
-    // the smallest): such a set is dropped half the time, and the item is drawn again.
-    if (best && ((bestSh[5] >= 0.5 && !want[5]) || (bestSh[6] >= 0.5 && !want[6])) && rng.chance(0.6)) return null;
+    // the smallest, and the key tends to be the drawing most like a given view of its size): such a
+    // set is dropped more than half the time, and the item is drawn again.
+    if (best && ((bestSh[5] >= 0.5 && !want[5]) || (bestSh[6] >= 0.5 && !want[6]) || (bestSh[10] >= 0.5 && !want[10])) && rng.chance(0.6)) return null;
     return best;
   }
 
@@ -640,7 +648,7 @@
       else cands = cands.filter(function (o) { return o.d <= 3; });
     }
     if (cands.length < 3) return null;
-    var set = chooseFoils(rng, keyG, cands, need);
+    var set = chooseFoils(rng, keyG, cands, need, Object.keys(given).map(function (v) { return given[v]; }));
     if (!set) return null;
     var perm = rshuffle(rng, [0, 1, 2, 3]), givenPub = {};
     Object.keys(given).forEach(function (v) { givenPub[v] = pub(given[v]); });

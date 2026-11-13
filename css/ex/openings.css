@@ -65,6 +65,9 @@
   .pl-trial.ex-openings .op-stage { height: calc(var(--pl-avail) - 2.5rem); }
 }
 
-/* The key digit (1–5) stays above the drawing in its cell, on a chip of the plate's tone so it reads
-   over a dark opening too. */
-.ex-openings .px-choice-key { z-index: 1; background: var(--stim-face, #ECEEF0); border-radius: 3px; padding: 0 3px; }
+/* The key digit (1–5) stays above the drawing in its cell, with a thin halo of the plate's tone so it
+   reads over a dark opening too (a solid chip would cut a block out of the opening's corner). */
+.ex-openings .px-choice-key {
+  z-index: 1;
+  text-shadow: 0 0 1px var(--stim-face, #ECEEF0), 0 0 2px var(--stim-face, #ECEEF0), 0 0 2px var(--stim-face, #ECEEF0);
+}

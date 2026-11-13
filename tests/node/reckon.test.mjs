@@ -116,11 +116,14 @@ export async function run(t) {
         const k = it.key, sc = def.score(it, k);
         if (!sc.correct || sc.value !== 0 || !def.score(it, k + 360).correct) keyWrong++;
         if (!def.score(it, k + tol).correct || !def.score(it, k - tol).correct) edgeWrong++;
-        for (const off of [tol + 5, -(tol + 5), tol + 0.5, 180]) { const r = def.score(it, k + off); if (r.correct || Math.abs(r.value - adiff(k + off, k)) > 0.011) overRight++; }
+        // value: the signed angle error (+ clockwise of the start), the same number as detail.signed
+        for (const off of [tol + 5, -(tol + 5), tol + 0.5, 180]) { const r = def.score(it, k + off); if (r.correct || Math.abs(Math.abs(r.value) - adiff(k + off, k)) > 0.011 || r.value !== r.detail.signed || (off !== 180 && Math.sign(r.value) !== Math.sign(off))) overRight++; }
         if ([NaN, null, undefined, '120', {}, { x: 1, z: 1 }].some((x) => def.score(it, x).correct)) junkRight++;
       } else {
         const K = at(w.key, d), sc = def.score(it, K);
-        if (!sc.correct || sc.value > 0.001) keyWrong++;
+        // value: the signed angle error of the way walked; value2: walked ÷ true distance
+        if (!sc.correct || Math.abs(sc.value) > 0.11 || Math.abs(sc.value2 - 1) > 0.001) keyWrong++;
+        { const r = def.score(it, at(w.key + 30, 0.6 * d)); if (Math.abs(r.value - 30) > 0.11 || Math.abs(r.value2 - 0.6) > 0.0011) keyWrong++; }
         // just inside and just outside the disk, in four directions round the start
         for (const ang of [0, 90, 180, 270]) {
           const inn = { x: K.x + 0.99 * tol * d * Math.sin(rad(ang)), z: K.z + 0.99 * tol * d * Math.cos(rad(ang)) };
