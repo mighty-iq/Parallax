@@ -339,6 +339,14 @@
   .px-cal-row { grid-template-columns: 3rem repeat(7, minmax(0, 1.5rem)) minmax(0, 1fr); gap: 0.1875rem; }
   .px-cal-status { padding-left: var(--s1); }
 }
+/* A narrow calendar (phones, large text): too little room is left beside the days for "2/3 forgiven",
+   so each week's status goes on its own line under its days instead of being cut short. */
+.px-cal { container: pxcal / inline-size; }
+@container pxcal (max-width: 20.5rem) {
+  .px-cal-row { grid-template-columns: 3rem repeat(7, minmax(0, 1.5rem)) minmax(0, 1fr); gap: 0 0.1875rem; }
+  .px-cal-row > .px-cal-status { grid-column: 2 / -1; padding: 0 0 0.25rem; }
+  .px-cal-head > .px-cal-status { display: none; }
+}
 
 /* ---------- Log ---------- */
 .px-log { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr); align-items: start; }

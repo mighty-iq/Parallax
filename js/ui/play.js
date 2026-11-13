@@ -1263,13 +1263,16 @@
   }
   // Scrolls the item's stage fully into the window when it is not (phones: the Watch, Try, Go
   // header sits above the player); never past its top edge.
-  function stageIntoView(P) {
+  // demo: a Watch demo will pin its caption and the show-me bar to the bottom (css/play.css), so
+  // keep the stage above them (about 7.5rem).
+  function stageIntoView(P, demo) {
     if (!isPhone()) return;
     try {
       var st = P.el.host.querySelector('.ex-stage') || P.el.host, r = st.getBoundingClientRect(), vh = win.innerHeight || 640;
       if (!r.height) return;
-      var by = 0;
-      if (r.bottom > vh - 8) by = Math.min(r.bottom - vh + 8, r.top - 8);
+      var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
+      var by = 0, bottom = vh - (demo ? 7.5 * rem : 8);
+      if (r.bottom > bottom) by = Math.min(r.bottom - bottom, r.top - 8);
       else if (r.top < 0) by = r.top - 8;
       if (by) win.scrollBy(0, by);
     } catch (e) { /* cosmetic */ }
@@ -1324,8 +1327,8 @@
     }
     // On a phone the header above the item can push the stimulus down: just before an item
     // plays (its first frame comes after this), its stage is brought fully onto the screen.
-    function stageSoon(item) {
-      P.when('present').then(function () { if (P.item === item) stageIntoView(P); });
+    function stageSoon(item, demo) {
+      P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
     }
     function watchStep() {
       if (!demoSpec || skipped) return Promise.resolve();
@@ -1335,7 +1338,7 @@
       showParts(item);
       P.setMeta('Watch');
       P.setProgress(0, practice.length + 1);
-      stageSoon(item);
+      stageSoon(item, true);
       return P.demo(item, {
         goal: goalOf(learn, item),
         onDemoEnd: function () { text.textContent = 'Now answer it yourself. It is practice and never counts.'; partsOn(false); }, // the item and its options fit again

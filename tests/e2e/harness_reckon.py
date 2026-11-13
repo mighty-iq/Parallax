@@ -349,6 +349,24 @@ def pauses_and_voids(b, cons):
     s2 = st(page)
     C.ok(p1 == p2 and s2['voided'] == 'paused', f'the player\'s pause (an inert host) freezes the walk ({p1 == p2}) and voids it ({s2["voided"]})')
     REPORT['voids']['pause'] = {'esc': s1['voided'], 'host': s2['voided']}
+    # a pause during the walk back with the button still held: the walk stops at once and stays put
+    page.evaluate("() => { __harness.config.fast = true; PX.debug.fast(true); }")
+    page.evaluate("() => __harness.next({ variant: 'return', route: 0, flow: 0, speed: 0, tolerance: 0 }, 64)")
+    page.wait_for_function(READY, timeout=90000)
+    wb = page.locator('.ex-reckon-walk').bounding_box()
+    page.mouse.move(wb['x'] + wb['width'] / 2, wb['y'] + wb['height'] / 2)
+    page.mouse.down()
+    page.wait_for_timeout(600)
+    page.evaluate("() => document.querySelector('.hx-host').setAttribute('inert', '')")
+    page.wait_for_timeout(100)
+    d1 = st(page)['dist']
+    page.wait_for_timeout(700)
+    d2 = st(page)['dist']
+    page.evaluate("() => document.querySelector('.hx-host').removeAttribute('inert')")
+    page.mouse.up()
+    page.wait_for_timeout(300)
+    d3 = st(page)['dist']
+    C.ok(d1 > 0.3 and d1 == d2 == d3, f'a pause during the walk back (button still held) stops it at once; it stays put ({d1:.2f}, {d2:.2f}, {d3:.2f} m)')
     # a 1.2 s freeze while moving voids; three 300 ms freezes do not
     for name, freezes, want in (('freeze1200', [1200], 'stutter'), ('freeze3x300', [300, 300, 300], None)):
         page.goto(url(name, seed=63, p=P, v='point'))

@@ -218,7 +218,7 @@
     st.vb = viewBoxOf(item, m);
     svg.setAttribute('viewBox', st.vb.map(function (v) { return U.round(v, 2); }).join(' '));
     var box = svg.getBoundingClientRect(), px = box.width && box.height ? Math.min(box.width / st.vb[2], box.height / st.vb[3]) : 3;
-    st.fs = U.clamp(13 / px, 2, 9);
+    st.fs = U.clamp(13 / px, 2, 11); // up to 11 units: a small drawing (phone held sideways, about 1.2 px per unit) keeps 13 px labels
     var back = S.el('g', { class: 'mx-back' }), frontL = S.el('g', { class: 'mx-front' }), top = S.el('g', { class: 'mx-top' }), marks = S.el('g', { class: 'mx-marks' });
     st.parts = { gears: {}, pulleys: {}, belts: [], rope: null, weight: null, rings: {} };
     item.wheels.forEach(function (w) {
