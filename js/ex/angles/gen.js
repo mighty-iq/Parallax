@@ -278,20 +278,7 @@
     return [cand[pick[1]], cand[pick[2]], cand[pick[3]]];
   }
 
-  // Arm lengths (relative to L). Cues a quick look could rank by instead of the angle: the tip
-  // distance, the enclosed area, the arm-length sum, the longer and the shorter arm, each read
-  // either way round. A cue "answers" with the option nearest (Kendall) to the order it gives. Every
-  // cue gets a random target option, and of 400 random arm sets the one whose cues land nearest
-  // their targets is kept, so each cue picks each option about equally often (one time in four).
-  function cueHit(vals, sign, opts, target) {
-    var pred = orderOf(sign > 0 ? vals : vals.map(function (x) { return -x; })), best = 7, ties = 0, hit = false;
-    for (var o = 0; o < 4; o++) {
-      var d = kendall(opts[o], pred);
-      if (d < best) { best = d; ties = 1; hit = o === target; } else if (d === best) { ties++; if (o === target) hit = true; }
-    }
-    return hit ? 1 - 1 / ties : 1;
-  }
-  // One angle's arm pair, its longer arm at least LONG_MIN.
+  // Arm lengths (relative to L). One angle's arm pair, its longer arm at least LONG_MIN.
   function armPair(r, lo) {
     var a1, a2;
     do { a1 = rnd(lo + r.next() * (ARM[1] - lo), 1000); a2 = rnd(lo + r.next() * (ARM[1] - lo), 1000); } while ((a1 > a2 ? a1 : a2) < LONG_MIN);
@@ -315,7 +302,7 @@
   // (weighted Kendall distance). Each cue then points at a random list, read either way round. The
   // angle itself pulls the tip distance up and the vertex-to-midpoint length down as it grows;
   // unequal arms weaken both pulls, and the search uses that.
-  function chooseArms(r, deg, opts, lo) {
+  function chooseArms(r, deg, lo) {
     var tau = shuffle(r, [0, 1, 2, 3]), NC = CUE_W.length;
     var cs = deg.map(function (d) { return sincos(d); });
     var arms = [0, 1, 2, 3].map(function () { return armPair(r, lo); });
@@ -380,8 +367,7 @@
     var deg = rankOfCell.map(function (k) { return byRank[k]; });
     var foils = chooseFoils(r, res, close);
     if (!foils) return null;
-    var toCells0 = function (o) { return o.map(function (k) { return cellOfRank[k]; }); };
-    var arms = chooseArms(r, deg, [[0, 1, 2, 3]].concat(foils).map(toCells0), armMin(delta));
+    var arms = chooseArms(r, deg, armMin(delta));
     var poses = deg.map(function (d, i) { return choosePose(r, arms[i][0], arms[i][1], d, aligned); });
     var L = Mth.min(LMAX, Mth.min.apply(null, poses.map(function (q) { return q.f.fit; })));
     var angles = poses.map(function (q) {
