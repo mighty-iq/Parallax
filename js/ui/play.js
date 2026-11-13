@@ -254,6 +254,9 @@
         if (prev !== 'showme') P.setState('showme');
         P.el.player.hidden = false;
         enter(0);
+        // Phones pin the caption and the show-me bar to the bottom (css/play.css): keep the stage
+        // above them for a show-me after an answer too, as Watch does for its demo (B2's gap).
+        stageIntoView(P, true);
         stop = timing.loop(function (dt) { return frame(dt); });
       });
     }
