@@ -1728,7 +1728,7 @@
       var set = step.preset ? settingsText(def, step.preset) : '';
       return showCard(wrap, P.el.root, {
         id: 'stage', title: 'Path stage ' + step.pathStage + ' of 10', def: def, hide: P.el.root,
-        lines: [set ? 'Settings at this stage: ' + set + '.' : '', 'A short demo shows how this stage’s items look. It never counts.'],
+        lines: [set ? 'This stage goes up to: ' + set + '. Its items mix easier settings too.' : '', 'A short demo shows how this stage’s items look. It never counts.'],
         actions: [{ label: 'Start the stage', value: 'start' }, { label: 'Watch the demo', value: 'watch', primary: true }],
       }).then(function (v) {
         if (S.done || v !== 'watch') return null;
@@ -1900,7 +1900,7 @@
       h('p', h('strong', o.first ? name + ': first level ' + a.level : moved ? name + ' level ' + b.level + ' → ' + a.level : name + ' level ' + a.level + ', unchanged'),
         h('span.px-num.pl-note-range', ' likely ' + a.lo + '–' + a.hi), ' after the last 10 items'),
       h('div.pl-note-bar', bar),
-      set ? h('p.px-meta', 'At this level: ' + set + '.') : null);
+      set ? h('p.px-meta', 'Typical at this level: ' + set + '.') : null);
   }
 
   function pathNote(def, x) {
@@ -1966,7 +1966,7 @@
       var watchIt = !(plan.rechecks && plan.rechecks.length) && !(isObj(ps) && isObj(ps.watched) && ps.watched[st]) && !!(viewOf(def.id) && viewOf(def.id).demo) && wtgSeen(def.id);
       var acts = watchIt ? [back, { label: 'Start the stage', value: 'start' }, { label: 'Watch the demo', value: 'watch', primary: true }] : [back, go];
       return { title: 'Path · stage ' + st + ' of 10', def: def, actions: acts, offersDemo: watchIt, lines: [
-        pre ? 'Settings at this stage: ' + settingsText(def, pre) + '.' : '',
+        pre ? 'This stage goes up to: ' + settingsText(def, pre) + '. Its items mix easier settings too.' : '',
         'Ten stages from easy to hard, practised one at a time. A stage is passed when your recent answers and your level both show it holds; passed stages come back now and then for a short recheck.',
         plan.rechecks && plan.rechecks.length ? 'First, a short recheck of stage ' + plan.rechecks[0].s + '.' : '',
         watchIt ? 'A short demo shows how this stage’s items look. It never counts.' : '',
@@ -2061,7 +2061,7 @@
         h('div.pl-res-bar', bar),
         h('p.px-meta', lv.before === null || lv.before === undefined ? 'A first level: it narrows as you practise.' :
           r.clear ? 'A clear change: larger than the usual ±' + r.noise + ' between sessions.' : 'Within the usual session-to-session noise (±' + r.noise + ').'),
-        lv.settings ? h('p.px-meta', 'At this level: ' + settingsText(def, lv.settings) + '.') : null));
+        lv.settings ? h('p.px-meta', 'Typical at this level: ' + settingsText(def, lv.settings) + '.') : null));
     }
     return h('li.pl-res', { 'data-ex': r.exId }, kids);
   }
@@ -2147,7 +2147,7 @@
       var def = PX.ex.get(res.path.exId);
       p = K.panel({ title: 'Path', className: 'pl-panel', aside: 'stage ' + res.path.stage + ' of 10' });
       if (res.path.passed && res.path.passed.length) rows.push('Passed this session: stage ' + res.path.passed.join(', ') + '.');
-      if (res.path.preset && def) rows.push('Stage ' + res.path.stage + ' settings: ' + settingsText(def, res.path.preset) + '.');
+      if (res.path.preset && def) rows.push('Stage ' + res.path.stage + ' goes up to: ' + settingsText(def, res.path.preset) + '.');
       (res.path.rechecks || []).forEach(function (r) { rows.push('Recheck of stage ' + r.s + ': ' + (r.held === false ? 'it opens again for practice.' : 'it still holds.')); });
       rows.push('A stage counts as passed only while it holds: passed stages come back for short rechecks after 3, 7, 14, 30 and 60 days.');
     } else if (mode === 'speed' && res.speed) {
