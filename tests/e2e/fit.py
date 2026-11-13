@@ -48,6 +48,7 @@ ap.add_argument('--shim', action='store_true', help='add body.px-item from the t
 ap.add_argument('--no-check', action='store_true', help='skip the Spatial Check probes')
 ap.add_argument('--shots', action='store_true', help='a screenshot of every item, not only the first of each exercise')
 ap.add_argument('--no-wtg', action='store_true', help='skip the Watch, Try, Go checks (360 x 640 only)')
+ap.add_argument('--wtg-all', action='store_true', help='run the Watch, Try, Go checks at every size listed, not only 360 x 640')
 ap.add_argument('--scale', type=float, default=1.0, help='text size (Settings): at 1.5 only horizontal overflow is checked')
 ap.add_argument('--tag', default='fit')
 args = ap.parse_args()
@@ -387,7 +388,7 @@ with sync_playwright() as p:
             exs = [e for e in exs if e in args.ex.split(',')]
         for ex in exs:
             try:
-                if size == STRICT and not args.no_wtg and args.scale == 1:
+                if (size == STRICT or args.wtg_all) and not args.no_wtg and args.scale == 1:
                     run_wtg(page, size, ex, rows)
                 run_train(page, size, ex, rows)
             except Exception as e:  # one exercise's failure must not hide the others
