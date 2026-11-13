@@ -1,4 +1,4 @@
-/* PAT-4 Hole Punch: tutorial data (pure, data only; ARCHITECTURE.md §2, EXERCISE-GUIDE.md §7).
+/* EX-17 Hole Punch: tutorial data (pure, data only; ARCHITECTURE.md §2, EXERCISE-GUIDE.md §7).
    Watch–Try–Go: goal and labelled parts → demo (view.demo plays it with `captions`) → practice
    items (not logged) with just-in-time tips → an easy scored start. The rules are the format's,
    in Parallax's own words (R3 §6: no sentences copied from the official instructions).

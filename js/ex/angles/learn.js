@@ -1,4 +1,4 @@
-/* PAT-3 Angles: tutorial data (pure, data only; ARCHITECTURE.md §2, EXERCISE-GUIDE.md §7).
+/* EX-16 Angles: tutorial data (pure, data only; ARCHITECTURE.md §2, EXERCISE-GUIDE.md §7).
    Perceptual-judgement practice, labelled as such (R3 §8.0): angle ranking is a perceptual drill,
    and practice tends to stay specific to the trained figures, so no transfer beyond the format is
    claimed. The rules are the format's, in Parallax's own words.

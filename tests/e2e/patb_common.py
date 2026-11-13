@@ -1,4 +1,4 @@
-"""Shared helpers for the PAT-B harness tests (Openings PAT-1, Missing View PAT-2, Form PAT-6; owner B6).
+"""Shared helpers for the DAT-style harness tests of B6 (Openings EX-14, Missing View EX-15, Form EX-19).
 
 The dev harness loads only js/ex/<id>/{gen,learn,view}.js from disk, so an exercise that reads
 another one's model (Missing View reads Views' block model) is opened as one inlined harness page

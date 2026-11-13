@@ -179,8 +179,10 @@ def simulate(page, tag, lab=True):
 def library_checks(page, tag, w, phone):
     go(page, 'library')
     n_train = page.evaluate("PX.ex.list('train').length")
+    # every exercise the simulated learner practised shows its level (v1.1 adds exercises it does not train)
+    n_practised = page.evaluate("PX.engine.stats.overview(PX.core.store.state, Date.now(), {}).filter(x => x.n > 0).length")
     with_level = page.locator('.px-excard .px-lvl-row').count()
-    C.ok(with_level >= n_train - (2 if phone else 0), f'{tag}: levels with ranges on the cards ({with_level})')
+    C.ok(with_level >= min(n_train, n_practised) - (2 if phone else 0), f'{tag}: levels with ranges on the cards ({with_level} of {n_practised} practised)')
     rot = page.locator('.px-excard[data-ex="rotate"]').inner_text()
     C.ok(re.search(r'\d+\s*\n?\s*\d+–\d+', rot) is not None and 'Handles' in rot, f'{tag}: Rotate card shows level, range and settings')
     if phone:
@@ -398,7 +400,10 @@ def log_checks(page, tag, w):
     csv = page.locator('.px-modal.px-export .px-copybox-text').input_value()
     lines = re.split(r'\r?\n', csv.strip('\r\n'))  # a textarea's value turns CRLF into LF
     n_trials = page.evaluate('PX.core.store.state.trials.length')
-    C.ok(lines[0] == 'time_iso,t_sec,exercise,version,mode,session,params_code,params,seed,outcome,outcome_label,rt_ms,value,p_pred,stage' and len(lines) == n_trials + 1, f'{tag}: CSV export ({len(lines)} lines, {n_trials} trials)')
+    # v1.1: one CSV format for both exports (PX.core.store.CSV_HEADER: … p_pred, stage, display, input)
+    header = page.evaluate('(PX.core.store.CSV_HEADER || []).join(",")')
+    C.ok(lines[0] == header and header.startswith('time_iso,t_sec,exercise,version,mode,session,params_code,params,seed,outcome,outcome_label,rt_ms,value,p_pred,stage')
+         and len(lines) == n_trials + 1, f'{tag}: CSV export ({len(lines)} lines, {n_trials} trials; {lines[0][-40:]})')
     rot = [l for l in lines[1:] if ',rotate,' in l][:1]
     C.ok(rot and re.search(r',rotate,1,train,', rot[0]) is not None and 'angle=' in rot[0], f'{tag}: CSV rows carry exercise, version, mode and settings {rot[:1]}')
     page.keyboard.press('Escape')
@@ -437,7 +442,7 @@ def lab_checks(page, tag, w):
     page.click('[data-action="lab-research"]')
     page.wait_for_selector('.px-modal.px-export')
     head = re.split(r'\r?\n', page.locator('.px-modal.px-export .px-copybox-text').input_value())[0]
-    C.ok(head.endswith('p_pred,stage,b,g,answer') and ',version,' in head, f'{tag}: research export columns {head[-40:]}')
+    C.ok(re.search(r'p_pred,stage,(display,input,)?b,g,answer$', head) is not None and ',version,' in head, f'{tag}: research export columns {head[-40:]}')
     page.keyboard.press('Escape')
     page.click('[data-part="check"] > summary')
     C.ok(page.locator('[data-part="check"] .px-lab-part-body').is_visible(), f'{tag}: engine explainer opens')

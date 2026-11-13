@@ -1,4 +1,4 @@
-"""E2E: the dev harness with Missing View (PAT-2). Owner B6.
+"""E2E: the dev harness with Missing View (EX-15, a DAT-style format). Owner B6.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_patviews.py
 
 1. desktop 1366 x 768 and phone 390 x 844 (DPR 2, touch), light and dark, each missing view (end,

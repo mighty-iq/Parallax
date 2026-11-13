@@ -211,7 +211,11 @@ function groups(t) {
   t.ok(['nets', 'slice', 'views', 'hidden', 'knots'].every((id) => SCH.group('fold').indexOf(id) >= 0) && SCH.group('fold')[0] === 'fold', 'Fold\'s group is the union of its groups, Fold first');
   t.eq(SCH.group('span'), null, 'an exercise in no group');
   const b = C.session.beginner;
-  t.ok(b.indexOf('knots') === b.indexOf('nets') + 1 && b.indexOf('reckon') === b.indexOf('homing') + 1 && b[b.length - 1] === 'reckon', 'beginner order: Knots after Nets, Reckon after Homing (last)');
+  t.ok(b.indexOf('knots') === b.indexOf('nets') + 1 && b.indexOf('reckon') === b.indexOf('homing') + 1, 'beginner order: Knots after Nets, Reckon after Homing');
+  const pat = ['patfold', 'cubes', 'angles', 'patviews', 'openings', 'form'];
+  t.ok(pat.every((id) => b.indexOf(id) > b.indexOf('reckon')), 'the PAT formats come after every other exercise (they join only under the PAT focus)');
+  t.ok(SCH.similar('patfold', 'fold') && SCH.similar('cubes', 'views') && SCH.similar('openings', 'slice') && SCH.similar('form', 'nets') && SCH.similar('patviews', 'views') && SCH.group('angles') === null,
+    'PAT formats grouped with the exercises whose models they share; Angles in no group (R3 §9)');
 }
 
 function mergeTotal(t) {

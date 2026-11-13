@@ -1,4 +1,4 @@
-/* PAT-2 Missing View: tutorial data (pure, data only; EXERCISE-GUIDE §7).
+/* EX-15 Missing View (DAT-style format): tutorial data (pure, data only; EXERCISE-GUIDE §7).
    Watch–Try–Go: goal and labelled parts → demo (view.demo plays it with `captions`) → practice
    items (not logged) with just-in-time tips → an easy scored start. Rules in Parallax's own words
    (R3 §6: the ADA's instruction texts are not copied). Wording: about the task, never the person;

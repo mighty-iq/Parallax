@@ -1,4 +1,4 @@
-/* PAT-5 Painted Cubes: how many cubes have exactly N painted sides? (pure; ARCHITECTURE.md §5,
+/* EX-18 Painted Cubes: how many cubes have exactly N painted sides? (pure; ARCHITECTURE.md §5,
    docs/research/v1.1/R3-dat-pat.md §3.5, §8.4).
 
    The figure. Equal cubes stacked on a G × G grid as a height map heights[z][x] (x = 0 left …
@@ -345,7 +345,7 @@
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
 
   PX.ex.define({
-    id: 'cubes', version: 1, code: 'PAT-5', name: 'Painted cubes', short: 'Painted Cubes',
+    id: 'cubes', version: 1, code: 'EX-18', name: 'Painted cubes', short: 'Painted Cubes',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', pat: true,
     answer: 'choice', nOptions: 5,
     extraParams: ['ask'],

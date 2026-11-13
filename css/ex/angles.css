@@ -1,4 +1,4 @@
-/* PAT-3 Angles (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-angles; tokens from css/base.css
+/* EX-16 Angles (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-angles; tokens from css/base.css
    with fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag, .ex-answer,
    .ex-focus) come from css/ex.css. Cells are 1 × 1 user units; strokes keep their CSS width at any
    size (vector-effect: non-scaling-stroke). */

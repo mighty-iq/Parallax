@@ -247,7 +247,7 @@
     var p = K.panel({ title: 'DAT-style formats', className: 'px-settings-section' });
     p.el.setAttribute('data-section', 'patfocus');
     p.body.appendChild(K.toggle({
-      key: 'patFocus', label: 'PAT focus', checked: s.patFocus === true,
+      key: 'patFocus', label: 'DAT-style focus', checked: s.patFocus === true,
       hint: (ids.length ? 'Adds the DAT-style formats (' + andList(names(ids)) + ') to Train and Today’s plan.' : 'Adds the DAT-style formats to Train and Today’s plan once they are in this version.') +
         ' Off, they stay in the Library, Free play and Section practice. Use it when you are preparing for the Perceptual Ability Test of the Dental Admission Test.',
       onChange: function (on) {

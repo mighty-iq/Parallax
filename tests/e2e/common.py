@@ -169,10 +169,39 @@ def srcdoc_host(name, single_doc):
     return path
 
 
+REQUIRES_RE = re.compile(r"\brequires:\s*\[([^\]]*)\]")
+
+
+def requires_of(ex):
+    """def.requires of exercise `ex`, read from its gen.js source (v1.1: reckon → homing,
+    patviews → views, patfold → fold)."""
+    gen = ROOT / f'js/ex/{ex}/gen.js'
+    if not gen.exists():
+        return []
+    m = REQUIRES_RE.search(gen.read_text(encoding='utf-8'))
+    return re.findall(r"'([a-z0-9]+)'", m.group(1)) if m else []
+
+
+def exercise_files(ex, seen=None):
+    """(scripts, stylesheets) of `ex` with every exercise it requires first, each one once."""
+    seen = set() if seen is None else seen
+    if ex in seen:
+        return [], []
+    seen.add(ex)
+    files, css = [], []
+    for r in requires_of(ex):
+        f, c = exercise_files(r, seen)
+        files += f
+        css += c
+    files += [f'js/ex/{ex}/{f}' for f in ('gen.js', 'learn.js', 'view.js') if (ROOT / f'js/ex/{ex}/{f}').exists()]
+    css += [f'css/ex/{ex}.css'] if (ROOT / f'css/ex/{ex}.css').exists() else []
+    return files, css
+
+
 def harness_single(ex, cfg):
-    """The harness with exercise `ex` inlined; css/ex/<ex>.css is inlined when it exists."""
-    files = [f'js/ex/{ex}/{f}' for f in ('gen.js', 'learn.js', 'view.js') if (ROOT / f'js/ex/{ex}/{f}').exists()]
-    css = [f'css/ex/{ex}.css'] if (ROOT / f'css/ex/{ex}.css').exists() else []
+    """The harness with exercise `ex` inlined, after every exercise in its def.requires; their
+    css/ex/<id>.css files are inlined when they exist."""
+    files, css = exercise_files(ex)
     cfg = dict(cfg, ex=ex, inlinedCss=True)
     return inline_page('tests/dev/harness.html', extra_scripts=files, cfg=cfg, extra_css=css)
 

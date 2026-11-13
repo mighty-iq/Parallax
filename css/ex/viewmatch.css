@@ -52,7 +52,13 @@ html[data-hx-state="paused"] .ex-viewmatch .pr-timer-fill,
 
 /* Phones in the player (css/play.css: --pl-avail, --pl-w, --pl-col): the overview and the four
    pictures share one screen; held sideways, the overview on the left at full height. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-viewmatch { --vm-cell: min(calc((var(--pl-w) - var(--s2)) / 2), calc((var(--pl-avail) - 9rem - 1.75rem) / 2)); }
+  .pl-trial.ex-viewmatch .ex-viewmatch-stage { aspect-ratio: auto; height: min(calc(var(--pl-w) * 0.625), calc(var(--pl-avail) - 2 * var(--vm-cell) - 1.75rem)); max-height: none; }
+  .pl-trial.ex-viewmatch .px-choices[style*="--px-cols:4"] .px-choice { height: var(--vm-cell); padding: var(--s1); }
+  .pl-trial.ex-viewmatch .px-choice .ex-thumb { width: calc(var(--vm-cell) - 0.5rem - 2px); max-width: 100%; }
+}
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-viewmatch .ex-viewmatch-stage { aspect-ratio: auto; height: calc(var(--pl-avail) - 0.75rem); max-height: none; }
-  .pl-trial.ex-viewmatch .px-choice .ex-thumb { max-width: min(15rem, calc((var(--pl-avail) - 2.5rem) / 2)); }
+  .pl-trial.ex-viewmatch { --vm-cell: min(calc((var(--pl-col) - var(--s2)) / 2), calc((var(--pl-avail) - var(--s2)) / 2)); }
+  .pl-trial.ex-viewmatch .ex-viewmatch-stage { aspect-ratio: auto; height: calc(var(--pl-avail) - 1.25rem); max-height: none; }
 }

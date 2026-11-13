@@ -53,7 +53,7 @@ Your level on an exercise is the difficulty you would answer right with probabil
 
 ## 5. Train sessions
 
-**Three exercises** (C §9d): a focus exercise (the one you pinned; else, while some exercise is untried, the next untried one in the beginner order Rotate, Fold, Spin, Nets, Knots, Views, Slice, Orient, Hidden, Span, Track, Homing, Reckon; else the one with the highest learning progress), a review exercise (the most overdue on a 3, 7, 14, 30-day schedule; the interval grows when you practise it while due) and a variety exercise (the least practised). Untried exercises fill the review and variety slots in the same order when nothing is due, so every exercise is tried within the first few sessions, visuospatial ones first. `plan.roleOf` maps each exercise to its role, `'new'` for an untried one that is not pinned.
+**Three exercises** (C §9d): a focus exercise (the one you pinned; else, while some exercise is untried, the next untried one in the beginner order Rotate, Fold, Spin, Nets, Knots, Views, Slice, Orient, Hidden, Span, Track, Homing, Reckon, then the PAT formats Hole Punch, Painted Cubes, Angles, Missing View, Openings, Form (only under the PAT focus); else the one with the highest learning progress), a review exercise (the most overdue on a 3, 7, 14, 30-day schedule; the interval grows when you practise it while due) and a variety exercise (the least practised). Untried exercises fill the review and variety slots in the same order when nothing is due, so every exercise is tried within the first few sessions, visuospatial ones first. `plan.roleOf` maps each exercise to its role, `'new'` for an untried one that is not pinned.
 
 **Automatic choices (v1.1).** Train, Today's plan, the beginner order and a Path started without a chosen exercise skip PAT-format exercises (`def.pat`) unless the PAT focus is on (`settings.patFocus`), and skip the exercises paused before a test (`settings.testPause = { ids, until }`) through that local day. Explicit picks are never filtered: a pin ("Train this exercise", Library pins), a chosen Path, Free play and Section mode (`PX.engine.schedule.auto(rec, def, now)`).
 
@@ -75,7 +75,7 @@ The planned number of trials comes from an expected time per trial for each exer
 | S4 | 2 | alternating with a similar-looking exercise, without a name banner |
 | S5 | random | about 70 % of trials switch exercise |
 
-Similar-looking groups: {Fold, Nets, Slice, Views, Hidden}, {Rotate, Spin, Orient}, {Knots, Nets, Fold} and {Homing, Reckon}; groups may overlap, and an exercise's partners are the union of its groups. An exercise moves up one stage at the end of a session once it has 40 answers and σ ≤ 0.45, and moves back one when the last 20 trials right after a switch fall more than 0.10 below their predicted success. Stretch starts at S3. Every trial row records the stage.
+Similar-looking groups: {Fold, Nets, Slice, Views, Hidden}, {Rotate, Spin, Orient}, {Knots, Nets, Fold}, {Homing, Reckon}, and for the PAT formats {Hole Punch, Fold}, {Painted Cubes, Views}, {Openings, Views, Slice}, {Form, Nets, Fold}, {Missing View, Views} (Angles is in none); groups may overlap, and an exercise's partners are the union of its groups. An exercise moves up one stage at the end of a session once it has 40 answers and σ ≤ 0.45, and moves back one when the last 20 trials right after a switch fall more than 0.10 below their predicted success. Stretch starts at S3. Every trial row records the stage.
 
 ## 6. Path
 

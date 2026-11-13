@@ -31,7 +31,9 @@
   'use strict';
 
   var win = window;
-  // Input that shows someone is there. Scrolling counts: on a phone, reading the feedback is scrolling.
+  // Input that shows someone is there. A person's scroll always comes with one of these (a touch,
+  // the wheel, a key, a drag); 'scroll' itself is not listened to, because the app's own scrolling
+  // (bringing the item or its marks into view) fires it too and would look like someone there.
   var DOC_INPUTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
   var REASONS = ['sheet', 'modal', 'hidden', 'idle', 'user'];
 
@@ -161,7 +163,6 @@
         d[m]('visibilitychange', onVisibility);
         DOC_INPUTS.forEach(function (type) { d[m](type, onInput, { capture: true, passive: true }); });
       }
-      if (w && typeof w[m] === 'function') w[m]('scroll', onInput, { capture: true, passive: true });
     }
     listen(true);
     if (d && d.hidden) reasons.hidden = true;

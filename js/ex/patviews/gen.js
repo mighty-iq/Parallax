@@ -1,4 +1,4 @@
-/* PAT-2 Missing View: two of a block structure's top, front and end views are given in their
+/* EX-15 Missing View (DAT-style format): two of a block structure's top, front and end views are given in their
    fixed places; which of four drawings is the missing view? Hidden edges are dotted.
    (pure; ARCHITECTURE.md §5; design: docs/research/v1.1/R3-dat-pat.md §8.2, Phase A on cube stacks.)
 
@@ -629,7 +629,7 @@
   // top +0.8 (two side views carry no direct footprint), foils +0.6 per level (same outline, then a
   // solid/dotted difference: the DAT's subtlest option type, R3 §3.2). Range 4.0 logits.
   PX.ex.define({
-    id: 'patviews', version: 1, code: 'PAT-2', name: 'Missing View', short: 'Missing View',
+    id: 'patviews', version: 1, code: 'EX-15', name: 'Missing View', short: 'Missing View',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4, pat: true,
     requires: ['views'],
     dims: [

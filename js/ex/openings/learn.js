@@ -1,4 +1,4 @@
-/* PAT-1 Openings: tutorial data (pure, data only; EXERCISE-GUIDE §7).
+/* EX-14 Openings (DAT-style format): tutorial data (pure, data only; EXERCISE-GUIDE §7).
    Rules in Parallax's own words (R3 §6: the ADA's instruction texts are not copied). Wording: about
    the task, never the person; no claim about DAT scores (CLAUDE.md rule 2). */
 (function (PX) {

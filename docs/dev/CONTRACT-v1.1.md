@@ -12,16 +12,17 @@ Read with docs/dev/PLAN.md (what to build, acceptance checks), CLAUDE.md (standi
 - Every number in a user-facing text matches the code. CLAUDE.md rules bind: honesty (rule 2), test hygiene (3), solver-verified items with ≥ 10 000 seeds (4), shortcut solvers ≤ chance + 10 points (5), runs everywhere (6), timing validity (7), accessibility (8), measurement (10), gamification (11).
 
 ## Ids and codes (registry entries)
+Codes changed on 13 Nov (lead): no code may use the mark (R3 §6), so the DAT-style exercises are EX-14…EX-19 in PAT order (they were PAT-1…PAT-6).
 | id | code | name / short | answer | flags |
 |---|---|---|---|---|
 | reckon | EX-12 | Reckon (experimental) / Reckon | angle (point) or position (return), per variant | experimental, perDisplay, abilities ['NAV'] |
 | knots | EX-13 | Knots | yesno or choice, per variant (item.answer) | abilities ['Vz'] |
-| openings | PAT-1 | Openings | choice (5) | pat |
-| patviews | PAT-2 | Missing View | choice (4) | pat |
-| angles | PAT-3 | Angles | choice (4 orderings) | pat, perDisplay, abilities ['LE'] |
-| patfold | PAT-4 | Hole Punch | choice | pat |
-| cubes | PAT-5 | Painted Cubes | choice (counts 1–5) | pat |
-| form | PAT-6 | Form | choice (4) | pat |
+| openings | EX-14 | Openings | choice (5) | pat |
+| patviews | EX-15 | Missing View | choice (4) | pat |
+| angles | EX-16 | Angles | choice (4 orderings) | pat, perDisplay, abilities ['LE'] |
+| patfold | EX-17 | Hole Punch | choice | pat |
+| cubes | EX-18 | Painted Cubes | choice (counts 1–5) | pat |
+| form | EX-19 | Form | choice (4) | pat |
 
 Registry (done by the lead): answer type `position` = `{ x, z }` in metres in the item's frame (chance(params) required); flags `pat` (bool) and `experimental` (bool), default false. Per-variant answer types use the existing `answers: { variant: type }` map or `item.answer`; per-item option counts use `item.options` / `item.nOptions` (see play.js answerType/nOptions). three.js subset now also exports TubeGeometry, CatmullRomCurve3, CurvePath, Curve.
 
