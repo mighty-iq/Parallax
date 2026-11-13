@@ -1,6 +1,6 @@
 # STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-13 18:45 UTC. Every builder and fix round is done; verification phase. All 19 exercises are active in index.html (Knots and B6's three included).
+Updated 2026-11-13 20:01 UTC. Every builder and fix round is done; verification phase. All 19 exercises are active in index.html (Knots and B6's three included).
 
 ## Phase
 2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in focus on the DAT-style formats. D3: analogical test named in v1.2.
@@ -56,7 +56,7 @@ Updated 2026-11-13 18:45 UTC. Every builder and fix round is done; verification 
 - RV-H done (docs/dev/reviews/RV-code-core.md): no blockers; 4 should-fix (closing-item cap, check time as practice, two-tab merge of new fields, idle cap on late timers); B1 fix round done (value2 = trial column 13; CSV 18 columns).
 - RV-F done (docs/dev/reviews/RV-play-dat.md): all six learnable; Form > 2 min; tutorial flow, Section phone review, focus effect, sample data. Fix rounds resumed: B2 (aed53d9e449759e47), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B6 (a0dc048b845b7fc8e). 
 - Play-through RV-F2 (fresh player: Homing, Reckon, Knots): a8c9191d53e6416d6 → docs/dev/reviews/RV-play-nav-knots.md
-- Full suite run 1 (tests/run_all.sh incl. longrun and clock full) from 0c8daf6+: background b4w592kpu, log scratchpad/run_all_1.log, results tests/e2e/out/run_all.json
+- Full suite run 1 (0c8daf6+) stopped at the 2-hour limit: node pass (1,011 s); flows, play, perf_track, harness_angles, harness_knots, harness_track pass; clock 47/2, screens 356/2 (export columns now include value2), fit failures from the Watch/Try changes in flight. Final run after the fix rounds in chunks under 2 h each with RUN_ALL_TAG (A: node+longrun+clock; B: fit, screens, flows, play, twotabs, shell, single; C: harness_*, section, overlap, perf_track).
 - G1 finished (80fe43f): guide 1.1.0, 50 pages, clean build; README; CHANGELOG.
 - RV-G done (docs/dev/reviews/RV-guide.md): 2 must, 6 should; G1 resumed to fix text (figures after the tutorial fix round); B4 resumed for a show-me failure at pull seed 530622980.
 - RV-C done (docs/dev/reviews/RV-knots.md): all answers right; Show me replay can show a type-changing move; 3 false texts; 2 untie cues at the limit; B4 fix round done (Show me checked move by move; captions; untie cues ≤ 27.7 %).
