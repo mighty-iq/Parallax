@@ -31,3 +31,13 @@
 .ex-reckon .ex-reckon-bias { font-weight: 500; color: var(--ink, #1A1D21); }
 .ex-reckon .ex-reckon-chartnote { margin: var(--s1, 0.25rem) 0 0; font-size: var(--fs-xs, 0.8125rem); line-height: 1.4; color: var(--ink-3, #5D646C); text-align: center; }
 
+
+/* walking back, the controls under the view are taller than the kit's (the 64 px Back / Walk / Here row and
+   two lines of readout): their room is kept so that a Try or scored item fits 360 × 640 (B2: it ended 10 px
+   below with the kit's 17rem) */
+@media (max-width: 42rem) {
+  .ex-reckon .ex-fp.is-return .ex-fp-stage { max-height: min(42svh, calc(var(--pl-avail, 100vh) - 18.25rem)); }
+}
+@media (max-width: 42rem) and (min-height: 43.75rem) {
+  .ex-reckon .ex-fp.is-return .ex-fp-dialbox { width: clamp(8.5rem, calc(var(--pl-avail, 100vh) - 75vw - 14.25rem), 13rem); }
+}
