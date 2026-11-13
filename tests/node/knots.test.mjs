@@ -34,6 +34,7 @@ export async function run(t) {
   t.eq(hardest, { rope: 9, spacing: 2, variant: 'link' }, 'the hardest item: link, top rung, tight spacing');
 
   knownValues(t, PX, H);
+  seamPin(t, PX, def, H);
   moveChecks(t, PX, H);
   const pools = itemChecks(t, PX, def, H, all);
   fallbackAndTiming(t, PX, def, H, all, hardest);
@@ -133,6 +134,20 @@ function knownValues(t, PX, H) {
 }
 
 /* ---------- moves keep the knot ---------- */
+
+// Crossing numbers on a loop start at its first sample (1/16 of interval 0), so a crossing at the
+// loop's start point is numbered last on that loop (gen.js header). Three link items (RV-knots
+// N4) pin it: a change of the sampler (SUB) cannot silently re-map stored items' flags.
+function seamPin(t, PX, def, H) {
+  t.section('knots: crossing numbers');
+  for (const seed of [3539363287, 3134040709, 2719457981]) {
+    const it = def.generate(PX.rng(seed), { rope: 0, spacing: 0, variant: 'link' });
+    const X = H.crossingsOf(H.curvesOf(it)).list, m = it.loops[0].length;
+    const onA = X.map((x, c) => ({ c, t: x.a[0] === 0 ? x.a[1] : x.b[0] === 0 ? x.b[1] : null })).filter((q) => q.t !== null);
+    const last = onA.reduce((a, q) => (q.c > a.c ? q : a));
+    t.ok(X.length === 8 && def.validate(it) === true && last.t > m - 1 / 16, `link seed ${seed}: the crossing at loop A's start is numbered last on A (crossing ${last.c} of ${X.length}, at t ${last.t.toFixed(3)} of ${m})`);
+  }
+}
 
 function moveChecks(t, PX, H) {
   t.section('knots: moves');
@@ -436,29 +451,54 @@ function shortcuts(t, H, pools) {
 function replays(t, H, pools) {
   t.section('knots: show me');
   const lines = [];
+  // About 1 000 items per variant, every step: the frame each step ends on has the item's Jones
+  // polynomial (and, for links, its linking number), so no step changes the knot or link; three
+  // frames inside each move have no strand level with another and keep the determinant (knots) or
+  // the linking number (links); the first frame is the item; a knot (a linked pair, the tied rope)
+  // is still one at the end, and "apart" ends really come apart. The frames sit at k = 0.2731,
+  // 0.5137 and 0.7713: a strand that slides across a parallel one lies exactly along it for one
+  // instant (k = ½ when it starts and ends as far on either side), where the drawing has no
+  // well-defined crossings; that instant is a projection, not a pass-through, so it is not sampled.
   for (const variant of ['pull', 'untie', 'tie', 'link']) {
-    const sample = pools[variant].items.filter((_, i) => i % Math.max(1, Math.floor(pools[variant].items.length / 300)) === 0);
-    let n = 0, reached = 0, finished = 0, wrong = 0, steps = 0;
-    for (const x of sample) {
-      const it = x.item, cv = H.curvesOf(it);
+    const items = pools[variant].items, every = Math.max(1, Math.floor(items.length / 1000));
+    const link = variant === 'link';
+    const sig = (D) => H.tText(H.jones(D)) + (link ? ' lk ' + H.linking(D) : '');
+    let n = 0, reached = 0, finished = 0, steps = 0, badStep = 0, badFrame = 0, firstFrame = 0, wrongEnd = 0, r3 = 0, under = 0, first = null;
+    for (let i = 0; i < items.length; i += every) {
+      const x = items[i], it = x.item, cv = H.curvesOf(it);
       let over = it.over, apart;
-      if (variant === 'pull') apart = !it.key;
-      else if (variant === 'link') apart = !it.key;
+      if (variant === 'pull' || link) apart = !it.key;
       else { over = it.over.slice(); over[it.tags[it.key]] = !over[it.tags[it.key]]; apart = variant === 'untie'; }
-      const R = H.replay(cv, over, { split: variant === 'link' && apart });
+      const R = H.replay(cv, over, { split: link && apart });
       n++;
-      if (R.broken) continue;
-      finished++; steps += R.steps.length;
-      if (apart && R.reached) reached++;
-      // never wrong: a knot (a link) is still one at the end; every step was checked as it went
-      if (!apart) {
+      const want = sig(H.diagramOf(cv, over).D);
+      if (sig(H.polyCrossings(R.steps.length ? R.steps[0].before : R.polys).D) !== want) { firstFrame++; first = first || `${variant} seed ${x.seed}: first frame`; }
+      R.steps.forEach((st, k) => {
+        steps++;
+        if (st.t === 'R3') { r3++; if (st.under) under++; }
+        if (sig(H.polyCrossings(st.after).D) !== want) { badStep++; first = first || `${variant} seed ${x.seed}: step ${k} (${st.t})`; }
+        const D0 = H.polyCrossings(st.before).D, det0 = link ? 0 : H.determinant(D0), lk0 = link ? H.linking(D0) : 0;
+        for (const q of [0.2731, 0.5137, 0.7713]) {
+          let D = null;
+          try { D = H.polyCrossings(H.morph(st, q)).D; } catch (e) { D = null; }
+          if (!D || (link ? H.linking(D) !== lk0 : H.determinant(D) !== det0)) { badFrame++; first = first || `${variant} seed ${x.seed}: step ${k} (${st.t}) at k = ${q}`; }
+        }
+      });
+      if (!R.broken) finished++;
+      if (apart) { if (R.reached) reached++; }
+      else {
         reached++;
-        if (variant === 'link' ? H.interCount(R.end.D) === 0 : R.end.D.live === 0) wrong++;
+        const still = link ? (H.linkKind(R.end.D) || {}).kind === 'L' || H.linking(R.end.D) !== 0 : R.end.D.live > 0 && H.classify(R.end.D).knot === true;
+        if (!still) { wrongEnd++; first = first || `${variant} seed ${x.seed}: end`; }
       }
     }
+    t.ok(n >= Math.min(900, Math.floor(PER_VARIANT / every)), `${variant}: ${n} show-me replays checked step by step`);
+    t.eq(firstFrame, 0, `${variant}: show me starts on the item itself` + (first && firstFrame ? ` (${first})` : ''));
+    t.eq(badStep, 0, `${variant}: no step of show me changes the knot or link (${steps} steps, Jones${link ? ' and linking number' : ''})` + (first && badStep ? ` (${first})` : ''));
+    t.eq(badFrame, 0, `${variant}: no frame inside a move passes a strand through another (${3 * steps} frames)` + (first && badFrame ? ` (${first})` : ''));
+    t.eq(wrongEnd, 0, `${variant}: show me never ends a knot (or linked loops) as something else` + (first && wrongEnd ? ` (${first})` : ''));
     t.ok(reached / n >= 0.85, `${variant}: show me plays to the end for most items (${reached} of ${n})`);
-    t.eq(wrong, 0, `${variant}: show me never turns a knot (or linked loops) into something else`);
-    lines.push(`${variant} ${reached}/${n} reach the end (${finished} without a broken step), ${(steps / Math.max(1, finished)).toFixed(1)} moves each`);
+    lines.push(`${variant} ${reached}/${n} reach the end (${finished} without a stop), ${(steps / Math.max(1, n)).toFixed(1)} moves each, slide-overs ${r3} (${under} under)`);
   }
   if (REPORT) console.log('       knots show me: ' + lines.join('; '));
 }
