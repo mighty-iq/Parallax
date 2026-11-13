@@ -130,6 +130,9 @@ def main_run(b, C, tag, phone):
     s = sec(page)
     C.ok(s['running'] is False, f'{tag}: the clock is stopped while the part instructions are open')
     page.screenshot(path=str(OUT / f'{tag}_intro.png'))
+    if phone:  # RV-play-dat: "Start part 1" showed a keyboard hint on a phone
+        C.ok(page.evaluate('[...document.querySelectorAll("[data-card-box] .px-kbd")].every((k) => getComputedStyle(k).display === "none")'),
+             f'{tag}: no key hints on the part card on a touch screen')
     page.wait_for_timeout(800)
     C.ok(sec(page)['usedMs'] < 300, f'{tag}: reading the instructions uses no section time ({sec(page)["usedMs"]:.0f} ms)')
     press(page, '[data-card="start"]', phone)
@@ -139,6 +142,7 @@ def main_run(b, C, tag, phone):
     t = page.locator('[data-sec-timer]').inner_text()
     C.ok(':' in t, f'{tag}: the HUD shows the time left ({t})')
     C.ok(page.locator('.pl-verdict:not(:empty)').count() == 0, f'{tag}: no feedback')
+    C.ok('px-btn--primary' not in (page.locator('[data-sec-next]').get_attribute('class') or ''), f'{tag}: Skip is not styled as the main button')
     if phone:
         f = fits(page)
         C.ok(f['ok'], f'{tag}: the item, its options and the controls fit the screen {f}')
@@ -290,6 +294,30 @@ def main_run(b, C, tag, phone):
     st = page.evaluate('__play.state')
     C.ok(st in ('showme', 'reveal'), f'{tag}: its show-me plays ({st})')
     page.screenshot(path=str(OUT / f'{tag}_review_item.png'))
+    if phone:
+        # RV-play-dat, Section 1-2: the review's Next and its show-me controls are on top (above the
+        # tab bar, never under it); the results table labels each number
+        ONTOP = '''(sel) => [...document.querySelectorAll(sel)].filter((b) => b.getBoundingClientRect().height).map((b) => { const r = b.getBoundingClientRect();
+            const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(el && b.contains(el)); })'''
+        page.wait_for_function('__play.state === "reveal"', timeout=8000)
+        nxt = page.evaluate(ONTOP, '.sec-stage [data-next]')
+        C.ok(nxt == [True], f'{tag}: the review item’s Next is not under the tab bar {nxt}')
+        page.evaluate('PX.debug.fast(false)')
+        page.locator('.sec-stage [data-showme]').tap()
+        page.wait_for_function('__play.state === "showme"', timeout=8000)
+        page.wait_for_timeout(300)
+        bar = page.evaluate(ONTOP, '.sec-stage .pl-showme-buttons .px-btn')
+        C.ok(len(bar) == 4 and all(bar), f'{tag}: the review’s show-me controls are on top, not under the tab bar {bar}')
+        page.screenshot(path=str(OUT / f'{tag}_review_showme.png'))
+        page.locator('.sec-stage .pl-showme-buttons .px-btn').nth(3).tap()  # Close
+        page.evaluate('PX.debug.fast(true)')
+        cells = page.evaluate('''[...document.querySelectorAll('.sec-table tbody tr')].map((tr) => [...tr.querySelectorAll('td[data-label]')].map((td) => {
+            const r = td.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.right), Math.round(r.top)]; }))''')
+        apart = all(a[1] <= b[0] + 1 or a[2] != b[2] for row in cells for a, b in zip(row, row[1:]))
+        C.ok(any(cells) and apart and page.locator('.sec-table td[data-label="Time"]').count() >= 1, f'{tag}: the results table keeps its numbers apart and labelled {cells[:1]}')
+    if page.locator('[data-sec-chip].is-open').count():
+        lab = page.locator('[data-sec-chip].is-open').first.get_attribute('aria-label') or ''
+        C.ok('not answered' in lab and 'skipped' not in lab, f'{tag}: an item without an answer reads "not answered" ({lab})')
     # the Log lists the run as a session; the setup screen names the last section
     page.evaluate('void PX.core.router.go("log")')
     page.wait_for_timeout(400)

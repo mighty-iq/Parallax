@@ -156,7 +156,7 @@ PX.ex.view('rotate', {
 
 ## 9. Screens (ui/*)
 - **Screen contract (from the shell, 30 Oct):** each screen file does `PX.ui.screens = PX.ui.screens || {}; PX.ui.screens.<name> = { title, render(host, route, ctx) → cleanup }`. app.js loads last and shows a placeholder for screens nobody has registered. Shared pieces live in `PX.ui.kit` (icons, spec labels, panels, segmented controls, switches, copy field, "Last backup" line); kit is defined in app.js, so use it inside render only.
-- Hooks the shell already calls: `PX.ui.tour.start()` (first-run offer; flag `store.state.ui.tourOffered`); `PX.ui.home.plan(rec, now)` and `PX.ui.home.levels(rec)` (Today shows sample data while they return null); `PX.engine.achievements.get(id) → {name, desc}`; `PX.engine.daily.number(now)`.
+- Hooks the shell already calls: `PX.ui.tour.start()` (first-run offer; flag `store.state.ui.tourOffered`); `PX.ui.home.plan(rec, now)` and `PX.ui.home.levels(rec)` (v1.1: never sample data; a null plan shows "No session can be planned right now" with the Library, null levels fall back to the record's own); `PX.engine.achievements.get(id) → {name, desc}`; `PX.engine.daily.number(now)`.
 - Theme: app.js emits `'theme' { dark }` on PX.bus when it changes; stimulus colours are the `--stim-*` CSS tokens (stage3d reads them).
 - index.html: exercise gen/learn/view files sit in commented PENDING blocks; enable each when its node tests pass (tests/e2e/shell.py lists pending files that exist).
 - Playwright tip: `page.evaluate` on an expression that returns a function calls it; prefix with `void`.
