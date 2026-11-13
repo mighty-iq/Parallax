@@ -19,7 +19,8 @@ Updated 2026-11-13 12:10 UTC.
 - The v1.0 research notes (A–D) copied to docs/research/v1.0/.
 
 ## In progress
-- Phase 1 research and audits by subagents (see below).
+- Phase 2 build: contract docs/dev/CONTRACT-v1.1.md (owners B1–B7), requests in docs/dev/REQUESTS-v1.1.md, builder logs in docs/dev/progress/.
+- Lead scaffolding done: registry answer type `position` + flags `pat`/`experimental`; play.js responseFor('position'); index.html PENDING slots for every new file; three.js subset + TubeGeometry/CatmullRomCurve3/CurvePath/Curve (577.7 KiB).
 
 ## Next three steps
 1. Wait for the go and the answers to D1–D3 (PLAN.md, end).

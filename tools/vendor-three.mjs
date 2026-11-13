@@ -32,6 +32,7 @@ const CORE = [
   'BufferGeometry', 'BufferAttribute', 'Float32BufferAttribute', 'EdgesGeometry',
   'BoxGeometry', 'SphereGeometry', 'CylinderGeometry', 'ConeGeometry', 'PlaneGeometry', 'CircleGeometry',
   'RingGeometry', 'TorusGeometry', 'LatheGeometry', 'ExtrudeGeometry', 'ShapeGeometry', 'Shape', 'Path',
+  'TubeGeometry', 'CatmullRomCurve3', 'CurvePath', 'Curve',
   // materials
   'MeshBasicMaterial', 'MeshLambertMaterial', 'MeshStandardMaterial', 'LineBasicMaterial', 'LineDashedMaterial',
   // lights
