@@ -111,6 +111,32 @@ function testSearch(t, PX, L, VL) {
   }
   t.eq(agree, cases, `the search finds exactly the structures brute force finds (${cases} cases)` + (first ? ' ' + first : ''));
   t.eq(holds, cases, 'the search always contains the structure the views came from');
+  // The validator's second search (drawRay only, sharing nothing with search()) against brute force
+  // on drawRay's own views.
+  let cases2 = 0, agree2 = 0, first2 = '';
+  for (const [W, D, H] of [[2, 2, 3], [3, 2, 2], [2, 3, 3], [3, 3, 2]]) {
+    const cells = W * D, total = (H + 1) ** cells, views = [];
+    for (let code = 0; code < total; code++) {
+      const rows = [];
+      let x = code;
+      for (let z = 0; z < D; z++) { const row = []; for (let i = 0; i < W; i++) { row.push(x % (H + 1)); x = Math.floor(x / (H + 1)); } rows.push(row); }
+      views.push({ key: JSON.stringify(rows), v: { top: L.drawRay(rows, W, H, D, 'top'), front: L.drawRay(rows, W, H, D, 'front'), end: L.drawRay(rows, W, H, D, 'end') } });
+    }
+    const r = PX.rng(W * 1000 + D * 10 + H + 7);
+    for (let s = 0; s < 30; s++) {
+      const pick = views[Math.floor(r.next() * views.length)];
+      for (const miss of L.VIEWS) {
+        const given = {};
+        for (const v of L.VIEWS) if (v !== miss) given[v] = pick.v[v];
+        const res = L.searchRay(given, W, H, D);
+        const brute = views.filter((o) => Object.keys(given).every((v) => L.sameGrid(o.v[v], given[v]))).map((o) => o.key).sort();
+        const got = res.sols.map((rows) => JSON.stringify(rows)).sort();
+        cases2++;
+        if (!res.over && JSON.stringify(brute) === JSON.stringify(got)) agree2++; else first2 = first2 || `${W}x${D}x${H} ${miss}: brute ${brute.length}, second search ${got.length}`;
+      }
+    }
+  }
+  t.eq(agree2, cases2, `the validator's second search finds exactly what brute force finds (${cases2} cases)` + (first2 ? ' ' + first2 : ''));
 }
 
 /* ------------------------------------------------------------------ the pool */
@@ -198,13 +224,28 @@ const shareOf = (scores, key, high) => {
   return scores[key] === best ? 1 / scores.filter((x) => x === best).length : 0;
 };
 
+// Lines only: unit segments present in one drawing and not the other, solid and dotted taken alike (own code).
+function linesApart(a, b) {
+  let n = 0;
+  for (let k = 0; k < a.hs.length; k++) if (!a.hs[k] !== !b.hs[k]) n++;
+  for (let k = 0; k < a.vs.length; k++) if (!a.vs[k] !== !b.vs[k]) n++;
+  return n;
+}
 function testShortcuts(t, PX, def, L, pool) {
   t.section('patviews: shortcut solvers');
-  const acc = {}, cnt = {};
-  const add = (name, v) => { acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; };
-  for (const { it } of pool) {
+  const acc = {}, cnt = {}, cell = {};
+  let tag = '';
+  const add = (name, v) => {
+    acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1;
+    const k = name + ' @ ' + tag; cell[k] = cell[k] || [0, 0]; cell[k][0] += v; cell[k][1]++;
+  };
+  for (const { it, p } of pool) {
+    tag = 'foil ' + p.foil + ', ' + it.missing + ' missing';
     const g = it.options.map((o) => L.grid(o.drawing)), c = g.map(L.counts), key = it.key;
     const sum = g.map((a, i) => g.reduce((s, b, j) => s + (i === j ? 0 : L.gdist(a, b)), 0));
+    const sumL = g.map((a, i) => g.reduce((s, b, j) => s + (i === j ? 0 : linesApart(a, b)), 0));
+    add('like the others (lines only)', shareOf(sumL, key, false));
+    add('odd one out (lines only)', shareOf(sumL, key, true));
     add('most solid', shareOf(c.map((x) => x.solid), key, true));
     add('fewest solid', shareOf(c.map((x) => x.solid), key, false));
     add('most dotted', shareOf(c.map((x) => x.dotted), key, true));
@@ -231,6 +272,9 @@ function testShortcuts(t, PX, def, L, pool) {
     t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
   console.log('       patviews shortcuts: ' + line.join(', '));
+  // Per foil level and missing view too (review RV-dat-style-B §9), apart from the constant "size fits".
+  const over = Object.entries(cell).filter(([k, v]) => !k.startsWith('size fits') && v[0] / v[1] > LIMIT).map(([k, v]) => `${k} ${(v[0] / v[1] * 100).toFixed(1)}% (n ${v[1]})`);
+  t.ok(!over.length, 'every solver stays within chance + 10 at each foil level and missing view' + (over.length ? ': ' + over.join('; ') : ''));
 }
 
 /* ------------------------------------------------------------------ tampering, fallback, timing */

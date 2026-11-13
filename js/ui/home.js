@@ -37,6 +37,7 @@
     { id: 'hidden', code: 'EX-10', name: 'Hidden', kind: 'Embedded figures', abilities: ['CF'], blurb: 'Find which simple shape is hidden inside a pattern.' },
     { id: 'homing', code: 'EX-11', name: 'Homing', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a route, turn to face the place where you started.' },
     { id: 'reckon', code: 'EX-12', name: 'Reckon', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a walk with nothing to steer by, point or walk back to where you started.' },
+    { id: 'knots', code: 'EX-13', name: 'Knots', kind: 'Knot diagrams', abilities: ['Vz'], blurb: 'Pull a rope in your mind: does a knot remain? Which crossing unties it? Are two loops linked?' },
     { id: 'knots', code: 'EX-13', name: 'Knots', kind: 'Knots and links', abilities: ['Vz'], blurb: 'Picture a rope pulled tight: does a knot remain, and which crossing would untie it?' },
     // v1.1 DAT-style formats (opt-in: they join Train only under the DAT-style focus).
     { id: 'openings', code: 'EX-14', name: 'Openings', kind: 'Openings (apertures)', abilities: ['Vz'], note: 'DAT-style', blurb: 'Find the opening a solid would pass through, turned the right way, with nothing to spare.' },

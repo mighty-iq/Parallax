@@ -106,8 +106,8 @@ APP_NAMES = ['app-welcome', 'app-watch', 'app-today', 'app-today-phone', 'app-li
 # v1.1 screens (shoot_v11_screens): phones at 360 × 740 with touch (an item, its Help, Homing and Reckon),
 # the Section practice review, About's Test hygiene and the Library's DAT-style group. They need no
 # history: the record only marks every exercise as met, so no Watch, Try, Go comes first.
-V11_NAMES = ['app-phone-item', 'app-phone-help', 'app-homing-phone', 'app-reckon-phone', 'app-section-review',
-             'app-about-hygiene', 'app-library-pat']
+V11_NAMES = ['app-phone-item', 'app-phone-help', 'app-phone-landscape', 'app-homing-phone', 'app-reckon-phone',
+             'app-section-review', 'app-about-hygiene', 'app-library-pat']
 APP_NAMES += V11_NAMES
 APP_READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 APP_SCALE = 1.5          # 1366 × 768 at 1.5: sharp at full text width in print, files of a sensible size
@@ -574,6 +574,18 @@ def shoot_v11_screens(b, want):
                 save(page, 'app-phone-help', viewport(page))
         else:
             print('  phone item: no item came up', flush=True)
+        c.close()
+    if 'app-phone-landscape' in want:               # the same item on a phone held sideways: two columns
+        c = b.new_context(viewport={'width': 844, 'height': 390}, device_scale_factor=2, color_scheme='light',
+                          has_touch=True, is_mobile=True)
+        page = c.new_page()
+        boot_app(page)
+        page.evaluate(MET)
+        if free_play(page, 'rotate', {'variant': 'pick', 'angle': 4, 'axis': 1, 'cubes': 1}):
+            page.wait_for_timeout(900)
+            save(page, 'app-phone-landscape', viewport(page))
+        else:
+            print('  phone landscape: no item came up', flush=True)
         c.close()
     if 'app-homing-phone' in want:                  # Homing's answer by touch controls, turned part way
         c, page = phone()

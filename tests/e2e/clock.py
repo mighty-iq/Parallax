@@ -408,7 +408,7 @@ def repro(b):
     # B4: one CSV
     a = page.evaluate('PX.core.store.exportCSV().split("\\r\\n")[0]')
     b2 = page.evaluate('PX.ui.log.csv(PX.ui.log.rows(PX.core.store.state)).split("\\r\\n")[0]')
-    C.ok(a == b2 and a.endswith('display,input') and 'session' in a, f'B4: Settings and the Log write one CSV format ({a})')
+    C.ok(a == b2 and a.endswith('display,input,value2') and 'session' in a, f'B4: Settings and the Log write one CSV format ({a})')
 
     # B1: Progress counts answered training items only
     n_ans = page.evaluate('''(() => { const r = PX.core.store.state; return r.trials.filter(t => (t[5] === 0 || t[5] === 1) && r.idx.mode[t[2]] !== 'check').length; })()''')
