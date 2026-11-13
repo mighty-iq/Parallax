@@ -64,3 +64,9 @@ html[data-hx-state="paused"] .ex-mechanisms .pr-timer-fill,
   .ex-mechanisms .mx-answer { flex-direction: column; gap: 0.25rem; }
   .ex-mechanisms .px-choice .ex-answer-text { font-size: var(--fs-sm, 0.875rem); text-align: center; }
 }
+
+/* Phones held sideways: the question and the drawing on the left at full height, the answers right. */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-mechanisms .mx-question { font-size: var(--fs-md); }
+  .pl-trial.ex-mechanisms .mx-svg { max-height: calc(var(--pl-avail) - 5.5rem); }
+}

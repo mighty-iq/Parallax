@@ -119,7 +119,14 @@
     var K = PX.ui.kit;
     var p = K.panel({ title: 'Sound and keys', className: 'px-settings-section' });
     p.el.setAttribute('data-section', 'sound');
-    p.body.appendChild(K.toggle({ key: 'sound', label: 'Sounds', checked: !!s.sound, hint: 'Short tones after answers. Off by default.', onChange: set('sound') }));
+    // Turning sounds on is a tap, which also lets the browser play them; a short sample confirms it.
+    p.body.appendChild(K.toggle({ key: 'sound', label: 'Sounds', checked: !!s.sound,
+      hint: 'A short tone after each answer: a high one when right, a low one when not. Never while an item plays. Off by default.',
+      onChange: function (on) {
+        set('sound')(on);
+        var snd = PX.ui.play && PX.ui.play.sound;
+        if (on && snd) { try { snd.unlock(); snd.play('right'); } catch (e) { /* no audio here: the setting stays */ } }
+      } }));
     p.body.appendChild(K.toggle({ key: 'keyHints', label: 'Show key hints', checked: s.keyHints !== false, hint: 'Shows the keyboard shortcut on buttons and answer options.', onChange: set('keyHints') }));
     return p.el;
   }
@@ -148,7 +155,7 @@
       onClick: function () {
         PX.ui.app.exportDialog({
           title: 'Export trials',
-          intro: 'One row per trial: time, exercise, settings, outcome and response time, for a spreadsheet or your own analysis. A CSV file cannot be imported; use Back up now to keep your progress.',
+          intro: 'One row per trial: time, exercise, session, settings, outcome, response time, screen class and input, for a spreadsheet or your own analysis (the same file as the Log’s export). A CSV file cannot be imported; use Back up now to keep your progress.',
           text: store.exportCSV(),
           filename: 'parallax-trials-' + U.fmtDate(Date.now()) + '.csv',
           type: 'text/csv',
@@ -215,10 +222,192 @@
     host.appendChild(h('div.px-screen-head', h('h1', 'Settings'),
       h('p.px-lead', 'Changes apply at once and are saved with your progress.')));
     host.appendChild(h('div.px-settings',
-      appearance(s), training(s), soundKeys(s), dataPanel(),
+      appearance(s), training(s),
+      typeof patFocusSection === 'function' ? patFocusSection(s) : null, // B7's (v1.1)
+      typeof testSoonSection === 'function' ? testSoonSection(s) : null, // B7's (v1.1)
+      soundKeys(s), dataPanel(),
       h('p.px-settings-foot', 'Parallax ', h('span.px-num', 'v' + PX.version), '. Your data stays in this browser; nothing is sent anywhere. ',
         ui.button('About Parallax', { kind: 'ghost', small: true, go: 'about' }))));
   }
+
+  /* ---------- B7: PAT focus and "Taking a test soon?" (v1.1 PLAN M5, M6; R4 §6.4) ----------
+     patFocusSection(s) and testSoonSection(s) return panels (or null when js/ui/overlap.js is not
+     loaded); render() places them after training(s). The settings themselves are registered in
+     js/ui/overlap.js; js/engine/schedule.js applies them to Train and Today's plan. */
+
+  function names(ids) {
+    return ids.map(function (id) { var d = PX.ex.get(id); return d ? d.short || d.name : id; });
+  }
+  function andList(list) { return list.length < 2 ? list.join('') : list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1]; }
+
+  function patFocusSection(s) {
+    var K = PX.ui.kit, O = PX.ui.overlap, store = PX.core.store;
+    if (!O) return null;
+    var ids = O.patIds();
+    var p = K.panel({ title: 'DAT-style formats', className: 'px-settings-section' });
+    p.el.setAttribute('data-section', 'patfocus');
+    p.body.appendChild(K.toggle({
+      key: 'patFocus', label: 'PAT focus', checked: s.patFocus === true,
+      hint: (ids.length ? 'Adds the DAT-style formats (' + andList(names(ids)) + ') to Train and Today’s plan.' : 'Adds the DAT-style formats to Train and Today’s plan once they are in this version.') +
+        ' Off, they stay in the Library, Free play and Section practice. Use it when you are preparing for the Perceptual Ability Test of the Dental Admission Test.',
+      onChange: function (on) {
+        O.setFocus(store.state, on, Date.now());
+        store.save();
+        PX.bus.emit('settings', { key: 'patFocus', value: !!on });
+      },
+    }));
+    p.body.appendChild(h('p.px-meta.px-overlap-legal', O.ADA));
+    return p.el;
+  }
+
+  function testSoonSection(s, open) {
+    var K = PX.ui.kit, O = PX.ui.overlap, store = PX.core.store, now = Date.now();
+    if (!O) return null;
+    var rec = store.state, linked = false;
+    if (open === undefined) {
+      // About's "Taking a test soon?" opens Settings at this section (route settings?section=testsoon).
+      try { linked = PX.core.router.current().params.section === 'testsoon'; } catch (e) { linked = false; }
+      open = linked;
+    }
+    var st = O.pauseState(rec, now);
+    if (st.ended) { O.clearPause(rec); store.save(); st = O.pauseState(rec, now); } // the test day has passed
+    var p = K.panel({ title: 'Taking a test soon?', className: 'px-settings-section px-testsoon' });
+    p.el.setAttribute('data-section', 'testsoon');
+    function redraw(keepOpen) {
+      var fresh = testSoonSection(store.state.settings, keepOpen);
+      if (fresh && p.el.parentNode) p.el.parentNode.replaceChild(fresh, p.el);
+      return fresh;
+    }
+    p.body.appendChild(h('p.px-field-hint.px-testsoon-intro', 'Practising a kind of puzzle raises scores on tests that use it. Tick what your test contains to see which exercises practise the same kind of puzzle, and leave them out of Train until the day of the test. Nothing changes unless you use it.'));
+
+    if (st.on) {
+      var end = ui.button('End the pause now', { kind: 'secondary', small: true, onClick: function () {
+        O.clearPause(store.state);
+        store.save();
+        PX.bus.emit('settings', { key: 'testPause', value: null });
+        ui.toast('The pause has ended: these exercises can come up in Train again.', { kind: 'ok' });
+        var f = redraw(false);
+        var hd = f && f.querySelector('.px-panel-title');
+        if (hd) { hd.setAttribute('tabindex', '-1'); try { hd.focus(); } catch (e) { /* ignore */ } }
+      } });
+      end.setAttribute('data-action', 'testpause-end');
+      p.body.appendChild(h('div.px-setting.px-testsoon-active', { 'data-testpause': 'on' },
+        h('p', h('b', 'Left out of Train until ' + U.fmtDate(st.until, 'long') + ': '), andList(names(st.ids)) + '.'),
+        h('p.px-field-hint', 'Free play, Path, Section practice and the Library still have them. Today’s plan leaves them out too.'),
+        h('div.px-data-row', end)));
+    } else {
+      var body = h('div.px-testsoon-body', { hidden: !open });
+      var start = ui.button(open ? 'Hide the helper' : 'Open the helper', { kind: 'secondary', small: true });
+      start.setAttribute('data-action', 'testsoon-open');
+      start.setAttribute('aria-expanded', open ? 'true' : 'false');
+      start.addEventListener('click', function () {
+        body.hidden = !body.hidden;
+        start.setAttribute('aria-expanded', body.hidden ? 'false' : 'true');
+        start.firstChild.textContent = body.hidden ? 'Open the helper' : 'Hide the helper';
+      });
+      p.body.appendChild(h('div.px-data-row', start));
+      p.body.appendChild(body);
+      fillHelper(body, function () { return redraw(false); });
+    }
+    noted(p.body, rec, function () { redraw(!st.on); });
+    if (linked) {
+      win.setTimeout(function () {
+        var hd = p.el.querySelector('.px-panel-title');
+        if (!hd || !p.el.isConnected) return;
+        hd.setAttribute('tabindex', '-1');
+        try { hd.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+        try { p.el.scrollIntoView({ block: 'start' }); } catch (e) { /* ignore */ }
+      }, 0);
+    }
+    return p.el;
+  }
+  var win = window;
+
+  // The checklist, the three-line answer and the two actions.
+  function fillHelper(body, done) {
+    var O = PX.ui.overlap, store = PX.core.store, picked = [];
+    var boxes = h('div.px-testsoon-kinds', { role: 'group', 'aria-label': 'What your test contains' });
+    O.KINDS.forEach(function (k, i) {
+      var id = 'px-ts-kind-' + i;
+      var cb = h('input', { type: 'checkbox', id: id, value: k.id });
+      cb.setAttribute('data-kind', k.id);
+      cb.addEventListener('change', function () {
+        var at = picked.indexOf(k.id);
+        if (cb.checked && at < 0) picked.push(k.id);
+        if (!cb.checked && at >= 0) picked.splice(at, 1);
+        update();
+      });
+      boxes.appendChild(h('label.px-tick', { for: id }, cb, h('span', k.label)));
+    });
+    var answer = h('div.px-testsoon-answer', { 'aria-live': 'polite' });
+    var dateId = 'px-ts-date-' + Date.now().toString(36);
+    var date = h('input.px-input', { type: 'date', id: dateId, min: O.today(Date.now()) });
+    date.setAttribute('data-action', 'testsoon-date');
+    date.addEventListener('input', update);
+    date.addEventListener('change', update);
+    var msg = h('p.px-field-hint.px-testsoon-msg', { role: 'status' });
+    var pauseBtn = ui.button('Leave them out of Train until the test', { kind: 'primary', small: true, onClick: function () { act(true); } });
+    pauseBtn.setAttribute('data-action', 'testsoon-pause');
+    var noteBtn = ui.button('Only note the test', { kind: 'secondary', small: true, onClick: function () { act(false); } });
+    noteBtn.setAttribute('data-action', 'testsoon-note');
+
+    function line(label, text, kind) { return h('p', { class: 'px-testsoon-line', 'data-line': kind }, h('b', label + ': '), text); }
+    function update() {
+      var m = O.match(picked);
+      ui.clear(answer);
+      if (!picked.length) answer.appendChild(h('p.px-meta', 'Tick at least one kind of puzzle.'));
+      if (m.same.length) answer.appendChild(line('Same kind of puzzle', andList(names(m.same)) + ': practice here will likely raise your score on these parts.', 'same'));
+      if (m.related.length) answer.appendChild(line('Related', andList(names(m.related)) + ': a small or unknown effect.', 'related'));
+      m.untrained.forEach(function (u) { answer.appendChild(line(u.label, u.text, 'untrained')); });
+      if (picked.length && !m.same.length && !m.related.length && !m.untrained.length) answer.appendChild(h('p.px-meta', 'No exercise in this version matches.'));
+      if (picked.indexOf('dat') >= 0) answer.appendChild(h('p.px-overlap-legal', O.ADA)); // the DAT is named: the ADA line goes with it
+      var okDate = /^\d{4}-\d{2}-\d{2}$/.test(date.value) && date.value >= O.today(Date.now());
+      pauseBtn.disabled = !(okDate && m.same.length);
+      noteBtn.disabled = !(okDate && picked.length);
+      msg.textContent = !picked.length ? '' : !okDate ? 'Choose the day of the test (today or later).' : !m.same.length ? 'Nothing to leave out: no exercise practises the same kind of puzzle.' : '';
+    }
+    function act(withPause) {
+      var rec = store.state, now = Date.now(), m = O.match(picked), pz = null;
+      if (withPause) {
+        pz = O.pause(rec, picked, date.value, now);
+        if (!pz) { update(); return; }
+      }
+      O.noteTest(rec, { date: date.value, kinds: picked.slice(), paused: pz ? pz.ids : [] }, now);
+      store.save();
+      if (pz) PX.bus.emit('settings', { key: 'testPause', value: pz });
+      ui.toast(pz ? andList(names(pz.ids)) + (pz.ids.length === 1 ? ' stays' : ' stay') + ' out of Train until ' + U.fmtDate(pz.until, 'long') + '. Free play and the Library still have ' + (pz.ids.length === 1 ? 'it.' : 'them.') : 'Noted: your test on ' + U.fmtDate(date.value, 'long') + '.', { kind: 'ok' });
+      void m;
+      done();
+    }
+    body.appendChild(h('fieldset.px-field', h('legend.px-field-label.px-setting-label', 'What does the test contain?'), boxes));
+    body.appendChild(answer);
+    body.appendChild(h('div.px-setting', h('label.px-setting-label', { for: dateId }, 'Day of the test'), date));
+    body.appendChild(h('div.px-data-row', pauseBtn, noteBtn));
+    body.appendChild(msg);
+    update();
+  }
+
+  // Tests the player noted: kept in the record (and the backup) so pooled data can allow for them.
+  function noted(parent, rec, changed) {
+    var O = PX.ui.overlap, store = PX.core.store;
+    var list = rec.hygiene && Array.isArray(rec.hygiene.tests) ? rec.hygiene.tests.slice(-5).reverse() : [];
+    if (!list.length) return;
+    var ul = h('ul.px-testsoon-noted');
+    list.forEach(function (t) {
+      var kinds = t.kinds.map(function (k) { var K = O.kind(k); return K ? K.label.charAt(0).toLowerCase() + K.label.slice(1) : k; });
+      var rm = ui.button('Remove', { kind: 'ghost', small: true, ariaLabel: 'Remove the test noted for ' + (t.date ? U.fmtDate(t.date, 'long') : 'an unknown day'), onClick: function () {
+        O.removeTest(store.state, t.at);
+        store.save();
+        changed();
+      } });
+      rm.setAttribute('data-action', 'testsoon-remove');
+      ul.appendChild(h('li', h('span', h('b.px-num', t.date ? U.fmtDate(t.date, 'long') : 'Day not given'), ': ' + (kinds.join('; ') || 'kinds not given') + (t.paused.length ? ' (' + t.paused.length + ' left out of Train)' : '') + '.'), rm));
+    });
+    parent.appendChild(h('div.px-setting.px-testsoon-list', h('p.px-setting-label', 'Tests you noted'), ul,
+      h('p.px-field-hint', 'Kept in your record and backups, so data pooled from many people can allow for outside tests.')));
+  }
+
+  PX.ui.settingsSections = { patFocus: patFocusSection, testSoon: testSoonSection };
 
   PX.ui.screens = PX.ui.screens || {};
   PX.ui.screens.settings = { title: 'Settings', render: render };

@@ -49,3 +49,10 @@ html[data-hx-state="paused"] .ex-viewmatch .pr-timer-fill,
 [data-paused] .ex-viewmatch .pr-timer-fill,
 .ex-viewmatch[data-paused] .pr-timer-fill { animation-play-state: paused; }
 @keyframes vm-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Phones in the player (css/play.css: --pl-avail, --pl-w, --pl-col): the overview and the four
+   pictures share one screen; held sideways, the overview on the left at full height. */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-viewmatch .ex-viewmatch-stage { aspect-ratio: auto; height: calc(var(--pl-avail) - 0.75rem); max-height: none; }
+  .pl-trial.ex-viewmatch .px-choice .ex-thumb { max-width: min(15rem, calc((var(--pl-avail) - 2.5rem) / 2)); }
+}

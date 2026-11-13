@@ -1,0 +1,65 @@
+/* PAT-1 Openings (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-openings; tokens from css/base.css
+   with fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag, .ex-opt,
+   .ex-focus) come from css/ex.css. The stage holds the stage3d canvas (.op-3d) and the show-me
+   tracing layer (.op-ink). Openings: a pale plate with the outline cut out, dark inside with a
+   2 px rim, so the shape reads by contrast and by its edge, not by colour. */
+.ex-openings .op-stem { width: 100%; }
+.ex-openings .op-stage { width: 100%; height: clamp(11rem, min(40vh, 64vw), 20rem); }
+.ex-openings .op-3d { position: absolute; inset: 0; z-index: 0; }
+.ex-openings .op-ink { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
+.ex-openings .op-trace {
+  fill: var(--stim-target, #0B6A86); fill-opacity: 0.16; stroke: var(--stim-target, #0B6A86); stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.ex-openings .op-plate { fill: var(--stim-face, #ECEEF0); stroke: var(--stim-face-3, #A4ABB2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.ex-openings .op-hole {
+  fill: var(--stim-edge, #22262A); stroke: var(--ink, #1A1D21); stroke-width: 2px; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.ex-openings .op-ghost {
+  fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-dasharray: 7 4; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.ex-openings .op-true {
+  fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 3px; stroke-dasharray: 2 5; stroke-linecap: round; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.ex-openings .op-under {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem);
+}
+.ex-openings .op-under .ex-caption { flex: 1 1 14rem; min-width: 0; }
+.ex-openings .op-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-openings .op-verdict[data-kind="key"],
+.ex-openings .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-openings .ex-tag[data-kind="foil"] { color: var(--ink-2, #454B52); border-style: dashed; }
+
+/* Options: five in a row on wide screens, 3 + 2 on narrow ones; each plate at the picture's scale
+   (max-width set by the view). */
+.ex-openings .px-choice { padding: var(--s2, 0.5rem); }
+.ex-openings .op-opt-cell { flex-direction: column; gap: var(--s1, 0.25rem); }
+.ex-openings .op-opt-svg { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; max-height: 9rem; margin: 0 auto; overflow: visible; }
+
+@media (max-width: 40rem) {
+  .ex-openings .px-choices[style*="--px-cols:5"] { --px-cols: 3 !important; }
+  .ex-openings .op-stage { height: clamp(10rem, min(34vh, 60vw), 15rem); }
+  .ex-openings .op-opt-svg { max-height: 5.75rem; }
+  .ex-openings .px-choice { padding: var(--s1, 0.25rem); }
+}
+
+/* Phones in the player (B2's contract; css/play.css sets --pl-avail, --pl-w, --pl-col): five
+   openings in 3 + 2 cells under the solid; sideways, the solid left and the openings right. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-openings { --op-cell: min(calc((var(--pl-w) - 2 * var(--s2)) / 3), calc((var(--pl-avail) - 10rem - 2.5rem - 2 * var(--s2)) / 2)); }
+  .pl-trial.ex-openings .px-choices { --px-cols: 3 !important; }
+  .pl-trial.ex-openings .op-stage { height: min(16rem, calc(var(--pl-w) * 0.72), calc(var(--pl-avail) - 2 * var(--op-cell) - 2.5rem - 2 * var(--s2))); }
+  .pl-trial.ex-openings .px-choice { height: var(--op-cell); padding: var(--s1); }
+  .pl-trial.ex-openings .px-choice .ex-opt { position: relative; }
+  .pl-trial.ex-openings .op-opt-svg { width: calc(var(--op-cell) - 1rem); max-height: calc(var(--op-cell) - 1.25rem); max-width: 100%; }
+  .pl-trial.ex-openings .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 0.75rem; }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-openings { --op-cell: min(calc((var(--pl-col) - 2 * var(--s2)) / 3), calc((var(--pl-avail) - var(--s2)) / 2)); }
+  .pl-trial.ex-openings .op-stage { height: calc(var(--pl-avail) - 2.5rem); }
+}

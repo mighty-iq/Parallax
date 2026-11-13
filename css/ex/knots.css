@@ -1,0 +1,93 @@
+/* EX-13 Knots (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-knots; tokens from css/base.css with
+   fallbacks; shared pieces (.ex-stage, .ex-caption, .ex-verdict, .ex-tag, .ex-answer, .ex-glyph) come
+   from css/ex.css. The stage is one square 320 × 320 SVG plate: the rope in the ink colour (it
+   flips with the theme), loop B of a link in the accent tone with a light centre line (a shape cue,
+   never colour alone), and at each crossing the strand on top over a casing in the plate's own
+   colour, which opens the gap in the strand underneath. All strokes are in plate units, so the
+   rope keeps its proportions at every size. */
+.ex-knots {
+  --knots-rope: var(--ink, #1A1D21);
+  --knots-rope-b: var(--stim-target, #0B6A86);
+  --knots-plate-bg: var(--stim-ground, #F7F8F7);
+  --knots-plate: clamp(15rem, min(56vh, 86vw), 30rem);
+}
+.ex-knots .ex-knots-stem { width: 100%; display: flex; flex-direction: column; align-items: center; }
+.ex-knots .ex-knots-stage { width: var(--knots-plate); height: var(--knots-plate); max-width: 100%; }
+.ex-knots .ex-knots-svg { display: block; width: 100%; height: 100%; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+
+/* the rope */
+.ex-knots .ex-knots-rope {
+  fill: none; stroke: var(--knots-rope); stroke-width: 4.5px; stroke-linecap: round; stroke-linejoin: round;
+}
+.ex-knots .ex-knots-rope--b { stroke: var(--knots-rope-b); stroke-width: 5.5px; }
+.ex-knots .ex-knots-stripe {
+  fill: none; stroke: var(--knots-plate-bg); stroke-width: 1.4px; stroke-linecap: round; stroke-linejoin: round;
+}
+.ex-knots .ex-knots-casing {
+  fill: none; stroke: var(--knots-plate-bg); stroke-width: 14px; stroke-linecap: butt; stroke-linejoin: round;
+}
+.ex-knots .ex-knots-arrow {
+  fill: none; stroke: var(--knots-rope); stroke-width: 2.5px; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75;
+}
+
+/* show me: the crossings a move is about (a ring: a shape, so not colour alone) */
+.ex-knots .ex-knots-ring { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 5 3.5; }
+.ex-knots .ex-knots-ring.is-key { stroke: var(--right, #2A7239); stroke-width: 3px; stroke-dasharray: none; }
+
+/* tags A–D beside four crossings (untie, tie): a disc with a letter and a dotted leader to the
+   crossing; a 44 px invisible disc catches the tap */
+.ex-knots .ex-knots-tag { cursor: pointer; }
+.ex-knots .ex-knots-taghit { fill: transparent; stroke: none; pointer-events: all; }
+.ex-knots .ex-knots-leader { stroke: var(--ink-2, #454B52); stroke-width: 1.5px; stroke-dasharray: 1.5 2.5; stroke-linecap: round; }
+.ex-knots .ex-knots-tagdisc { fill: var(--surface, #FFFFFF); stroke: var(--ink-2, #454B52); stroke-width: 1.75px; }
+.ex-knots .ex-knots-tagtext {
+  fill: var(--ink, #1A1D21); font-family: var(--font-sans, system-ui, sans-serif); font-size: 15px; font-weight: 700;
+  pointer-events: none;
+}
+.ex-knots .ex-knots-tag:hover .ex-knots-tagdisc,
+.ex-knots .ex-knots-tag:focus-visible .ex-knots-tagdisc { stroke: var(--signal, #0B6A86); stroke-width: 2.5px; }
+.ex-knots .is-revealed .ex-knots-tag { cursor: default; }
+.ex-knots .ex-knots-tag.is-key .ex-knots-tagdisc { stroke: var(--right, #2A7239); stroke-width: 3px; }
+.ex-knots .ex-knots-tag.is-key .ex-knots-tagtext { fill: var(--right, #2A7239); }
+.ex-knots .ex-knots-tag.is-chosen .ex-knots-tagdisc { stroke: var(--wrong, #B33A2F); stroke-width: 2.5px; stroke-dasharray: 4 3; }
+
+/* under the plate: the caption (demo and show me) and the verdict after an answer */
+.ex-knots .ex-knots-under {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+  gap: var(--s2, 0.5rem) var(--s4, 1rem); width: var(--knots-plate); max-width: 100%;
+}
+.ex-knots .ex-knots-under .ex-caption { flex: 1 1 14rem; }
+.ex-knots .ex-knots-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-knots .ex-knots-verdict[data-kind="key"],
+.ex-knots .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+
+/* the answers: Knot / No knot (Linked / Apart) with a small glyph; letters A–D for the marks */
+.ex-knots .ex-knots-glyph { width: 2.5rem; height: 1.25rem; }
+.ex-knots .ex-knots-glyph path { stroke-width: 2; stroke-linecap: round; }
+.ex-knots .ex-knots-letter { position: relative; flex-direction: column; gap: 0.1rem; }
+.ex-knots .ex-knots-letter-text { font-size: var(--fs-xl, 1.5rem); font-weight: 700; line-height: 1.1; }
+.ex-knots .ex-knots-letter .ex-tag { font-size: var(--fs-xs, 0.75rem); }
+
+@media (max-width: 40rem) {
+  .ex-knots .ex-answer-text { font-size: var(--fs-md, 1rem); }
+  .ex-knots .ex-answer { gap: 0.4rem; }
+}
+
+/* ---------- phones in the player: the item fits one screen (css/play.css sets --pl-avail, the
+   height left for the item, and --pl-w, its width) ----------
+   The plate is square: as wide as the screen, or as tall as what is left above one row of
+   answers (2 or 4 cells of 3.5 rem). The verdict and the reveal's tick sit inside the answer row,
+   so the plate keeps its size after an answer. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-knots { --knots-plate: min(var(--pl-w), calc(var(--pl-avail) - 3.5rem - 2 * var(--s2) - 2px)); }
+  .pl-trial.ex-knots .ex-knots-under { gap: 0 var(--s2); }
+  .pl-trial.ex-knots .ex-knots-verdict { margin-top: var(--s1, 0.25rem); padding: 0.2rem 0.5rem; font-size: 0.8125rem; }
+  .pl-trial.ex-knots .px-choice { min-height: 3.5rem; padding: var(--s1, 0.25rem); }
+  .pl-trial.ex-knots .ex-knots-letter .ex-tag { position: absolute; top: -0.2rem; right: -0.6rem; padding: 0 0.3rem; }
+}
+/* sideways: the plate on the left at full height, the answers right (css/play.css --pl-col) */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-knots { --knots-plate: min(var(--pl-col), var(--pl-avail)); }
+}
+
+/* reduced motion: show me steps in keyframes (the player); nothing here animates by CSS */

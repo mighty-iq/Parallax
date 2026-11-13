@@ -51,3 +51,8 @@ html[data-hx-state="paused"] .ex-cubematch .pr-timer-fill,
   .ex-cubematch .ex-answer { flex-direction: column; gap: 0.25rem; }
   .ex-cubematch .ex-answer-text { font-size: var(--fs-md, 1rem); }
 }
+
+/* Phones held sideways: the two drawings on the left as tall as the screen allows. */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-cubematch .cm-svg { max-height: calc(var(--pl-avail) - 3.5rem); }
+}

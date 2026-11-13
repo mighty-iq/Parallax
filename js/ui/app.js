@@ -335,7 +335,7 @@
     { route: 'about', label: 'About', icon: 'about', desc: 'Credits, licences, and what training can and cannot do' },
   ];
   // Which nav item a route belongs to.
-  var NAV_OF = { home: 'home', play: 'home', library: 'library', exercise: 'library', progress: 'progress', log: 'log', lab: 'lab', settings: 'settings', about: 'about' };
+  var NAV_OF = { home: 'home', play: 'home', library: 'library', exercise: 'library', section: 'library', progress: 'progress', log: 'log', lab: 'lab', settings: 'settings', about: 'about' };
 
   var shell = {};
 
@@ -766,8 +766,16 @@
     bus.on('store:volatile', renderBanner);
     bus.on('store:reload', onReload);
     router.on(onRoute);
+    // A #/play hash (a reload, a restored tab, a home-screen icon) never starts a session by itself
+    // (I1 T4): it shows that session's kept summary when it is recent, else Today.
     var r = router.fromHash();
-    router.go(r ? r.route : 'home', r ? r.params : null, { force: true, mirror: false });
+    if (r && r.name === 'play') {
+      var b = null;
+      try { b = PX.ui.play && typeof PX.ui.play.bootRoute === 'function' ? PX.ui.play.bootRoute(r) : null; } catch (e) { b = null; }
+      r = b;
+      if (!r) { router.go('home', null, { force: true }); r = false; }
+    }
+    if (r !== false) router.go(r ? r.route : 'home', r ? r.params : null, { force: true, mirror: false });
     renderBanner();
     api.ready = true;
     doc.documentElement.setAttribute('data-px-ready', '1');
@@ -775,6 +783,64 @@
     bus.emit('app:ready', { first: firstRun(), sessions: R.sessions.length });
     showWelcome();
   }
+
+  /* =====================================================================================
+     Phones (B2, PLAN M2; I2 §9): the home-screen app and keeping the record
+     ===================================================================================== */
+
+  // The web manifest and the touch icon, only on https (GitHub Pages) and only for the app's own
+  // files: on file:// Chrome logs a CORS error for a manifest, and the single-file build (styles
+  // inlined) has no manifest next to it.
+  function homeScreenLinks() {
+    try {
+      if (window.location.protocol !== 'https:' || env.framed || !doc.querySelector('link[rel="stylesheet"][href$="css/base.css"]')) return false;
+      if (doc.querySelector('link[rel="manifest"]')) return true;
+      var head = doc.head;
+      [['link', { rel: 'manifest', href: 'manifest.webmanifest' }],
+        ['link', { rel: 'apple-touch-icon', href: 'icons/apple-touch-icon.png' }],
+        ['meta', { name: 'apple-mobile-web-app-title', content: 'Parallax' }],
+        ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
+        ['meta', { name: 'mobile-web-app-capable', content: 'yes' }]].forEach(function (x) {
+        var el = doc.createElement(x[0]);
+        Object.keys(x[1]).forEach(function (k) { el.setAttribute(k, x[1][k]); });
+        head.appendChild(el);
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // Ask the browser to keep this site's storage (it may still say no). Only once the record holds
+  // practice, and not on desktop Firefox, which asks the person with a prompt.
+  function askPersist() {
+    try {
+      var st = window.navigator && window.navigator.storage, R = store.state;
+      if (!st || typeof st.persist !== 'function' || store.volatile || env.framed) return;
+      if (!(R.sessions && R.sessions.length)) return;
+      var ua = String(window.navigator.userAgent || ''), touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (/Firefox\//.test(ua) && !touch) return;
+      Promise.resolve(typeof st.persisted === 'function' ? st.persisted() : false).then(function (yes) {
+        if (!yes) return st.persist();
+        return true;
+      }).then(null, function () { /* refused or not allowed here: nothing to do */ });
+    } catch (e) { /* not available */ }
+  }
+
+  // Chart labels (Progress and Lab curves) keep 13 px on a phone: each chart gets its drawing units
+  // per CSS px as --px-u once it is laid out, and css/screens.css sizes the labels from it.
+  function chartUnits() {
+    try {
+      Array.prototype.forEach.call(doc.querySelectorAll('svg.px-curve-svg, svg.px-lab-svg'), function (svg) {
+        var r = svg.getBoundingClientRect(), vb = svg.viewBox && svg.viewBox.baseVal;
+        if (r.width && r.height && vb && vb.width && vb.height) svg.style.setProperty('--px-u', String(Math.max(vb.width / r.width, vb.height / r.height)));
+      });
+    } catch (e) { /* the labels keep their drawing size */ }
+  }
+  function chartUnitsSoon() { try { window.requestAnimationFrame(chartUnits); } catch (e) { chartUnits(); } }
+  var chartTimer = 0;
+
+  bus.on('app:ready', function () { homeScreenLinks(); askPersist(); chartUnitsSoon(); });
+  bus.on('route', chartUnitsSoon);
+  window.addEventListener('resize', function () { window.clearTimeout(chartTimer); chartTimer = window.setTimeout(chartUnits, 200); });
 
   var api = {
     ready: false,

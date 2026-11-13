@@ -21,8 +21,12 @@
    PX.ui.welcome: the pop-up on every app open.
      show({ onClose(reason) }) → close     reason: 'start' (Start training) or 'dismiss'
                                            (✕, Esc, backdrop). Focus is trapped (PX.ui.modal);
-                                           app.js decides where focus goes afterwards.
-     isOpen() */
+                                           app.js decides where focus goes afterwards. On iPhones,
+                                           iPads and recognisable in-app browsers (not from the
+                                           home screen) it ends with the storage hint and, when a
+                                           backup is due, a Back up button. It opens at its top.
+     isOpen()
+     device() → { ios, standalone, inApp, touch }   where the app runs (the hint, app.js) */
 (function (PX) {
   'use strict';
 
@@ -213,6 +217,42 @@
     return wrap;
   }
 
+  /* ---------- where the app runs (phones; I2 §9) ---------- */
+
+  // ios: an iPhone or iPad (iPadOS reports a Mac with touch); standalone: opened from the home
+  // screen; inApp: a browser built into another app that says so in its user agent (Android
+  // WebViews and some apps; Discord's iOS browser cannot be told apart from Safari).
+  function device() {
+    var n = window.navigator || {}, ua = String(n.userAgent || ''), plat = String(n.platform || '');
+    function mq(q) { try { return !!(window.matchMedia && window.matchMedia(q).matches); } catch (e) { return false; } }
+    var ios = /iPad|iPhone|iPod/.test(ua) || (plat === 'MacIntel' && (n.maxTouchPoints || 0) > 1);
+    var standalone = n.standalone === true || mq('(display-mode: standalone)') || mq('(display-mode: fullscreen)');
+    var inApp = /; wv\)|\bFBA[NV]\b|Instagram|\bLine\/|Discord|Twitter|Snapchat|\bGSA\//.test(ua);
+    return { ios: ios, standalone: standalone, inApp: inApp, touch: mq('(pointer: coarse)') };
+  }
+
+  // The storage hint: where a phone can lose a record (iOS clears a site's storage after seven days
+  // of Safari use without a visit; an app's built-in browser keeps its own copy). Shown in the
+  // welcome on iPhones and iPads and in recognisable in-app browsers, not from the home screen; with
+  // a Back up button once there is something to back up and no backup in the last 14 days.
+  function storageHint() {
+    var d = device(), st = PX.core.store, rec = st && st.state;
+    var framed = false;
+    try { framed = !!(PX.ui.app && PX.ui.app.env && (PX.ui.app.env.framed || PX.ui.app.env.sandboxed)); } catch (e) { framed = false; }
+    if (framed || d.standalone || !(d.ios || d.inApp) || !rec) return null;
+    var text = d.ios
+      ? 'Your progress is saved in this browser only, and Safari can clear it after seven days of use without a visit. Opened from Discord or another app? That app keeps its own copy. To keep your progress, add Parallax to your home screen (Share, then Add to Home Screen) and back up from Settings now and then.'
+      : 'Your progress is saved in this browser only. Opened from Discord or another app? That app may keep its own copy. To keep your progress, open Parallax in your browser or add it to your home screen, and back up from Settings now and then.';
+    var box = h('div.px-welcome-store', { 'data-welcome': 'storage' }, h('p', text));
+    var last = rec.settings && rec.settings.lastBackup || 0, has = (rec.sessions && rec.sessions.length) || (rec.trials && rec.trials.length);
+    if (has && Date.now() - last > 14 * 864e5 && PX.ui.app && typeof PX.ui.app.backup === 'function') {
+      var b = ui.button(last ? 'Back up now' : 'Back up now (never backed up)', { kind: 'secondary', small: true, onClick: function () { PX.ui.app.backup(); } });
+      b.setAttribute('data-welcome', 'backup');
+      box.appendChild(b);
+    }
+    return box;
+  }
+
   /* ---------- the welcome pop-up ---------- */
 
   var current = null;
@@ -238,7 +278,8 @@
         h('div.px-welcome-actions',
           join,
           h('div.px-welcome-addr', copy, h('p.px-welcome-hint', 'The button opens a new tab. Some previews block that, so the address is here to copy.')),
-          start)));
+          start),
+        storageHint()));
 
     var close = ui.modal({
       body: body,
@@ -255,6 +296,11 @@
     close.el.setAttribute('data-welcome', '');
     start.addEventListener('click', function () { reason = 'start'; close('start'); });
     current = close;
+    // Open at the top, so its first line ("built by the Chimera community") is on the screen even
+    // when focusing Start scrolled a short (landscape) dialog down.
+    function toTop() { try { close.el.scrollTop = 0; if (close.el.parentNode) close.el.parentNode.scrollTop = 0; } catch (e) { /* cosmetic */ } }
+    toTop();
+    try { window.requestAnimationFrame(function () { toTop(); window.requestAnimationFrame(toTop); }); } catch (e) { /* ignore */ }
     return close;
   }
 
@@ -262,5 +308,5 @@
 
   PX.ui.chimera = { URL: URL, joinLink: joinLink, linkCopy: linkCopy, nudgeIfBlocked: nudgeIfBlocked, icon: function () { return svgIcon(EXTERNAL); } };
   PX.ui.figures = { polycube: polycube, plate: plate, turnZ: turnZ, turnAbout: turnAbout, FIGURE: FIGURE, AXIS: AXIS };
-  PX.ui.welcome = { show: show, isOpen: isOpen };
+  PX.ui.welcome = { show: show, isOpen: isOpen, device: device };
 })(window.PX);

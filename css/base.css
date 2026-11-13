@@ -181,6 +181,11 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background-color: var(--paper);
+  touch-action: manipulation; /* no double-tap zoom on buttons and options; pinch zoom stays */
+}
+/* Phones (narrower than 720 px, or at most 500 px tall when held sideways): no text under 13 px. */
+@media (max-width: 719px), (max-height: 500px) {
+  :root { --fs-xs: 0.8125rem; }
 }
 body {
   margin: 0;
@@ -339,7 +344,7 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 .px-textarea { resize: vertical; font-family: var(--font-mono); font-size: var(--fs-sm); }
 .px-input:focus-visible, .px-textarea:focus-visible, .px-select:focus-visible { outline-offset: 0; border-color: var(--focus); }
 .px-input[readonly], .px-textarea[readonly] { background: var(--surface-2); }
-.px-file { display: block; max-width: 100%; font-size: var(--fs-sm); color: var(--ink-2); }
+.px-file { display: block; width: 100%; max-width: 100%; min-width: 0; font-size: var(--fs-sm); color: var(--ink-2); }
 .px-file::file-selector-button {
   min-height: var(--tap); margin-right: var(--s3); padding: 0 0.875rem;
   border: 1px solid var(--rule-strong); border-radius: var(--r-control);
@@ -472,6 +477,8 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 .px-modal-backdrop {
   background: var(--backdrop);
   padding: var(--gutter);
+  padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
   animation: px-fade var(--t-med) var(--ease) both;
 }
 .px-modal {
@@ -517,7 +524,10 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 @keyframes px-sheet-up { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
 
 /* ---------- toast (ui.toast) ---------- */
-.px-toasts { bottom: calc(var(--s4) + env(safe-area-inset-bottom, 0px)); }
+.px-toasts {
+  bottom: calc(var(--s4) + env(safe-area-inset-bottom, 0px));
+  padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+}
 .px-toast {
   display: flex; align-items: center; gap: var(--s3);
   max-width: min(32rem, 100%); min-height: var(--tap);
@@ -542,6 +552,7 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
   padding: var(--s3);
   background: var(--stim-ground); color: var(--ink);
   border: 1px solid var(--rule-strong); border-radius: var(--r-plate);
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; /* a long press answers nothing and selects nothing */
   transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
 }
 .px-choice:hover { border-color: var(--ink-2); }

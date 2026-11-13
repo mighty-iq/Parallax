@@ -60,3 +60,9 @@ html[data-hx-state="paused"] .ex-level .pr-timer-fill,
 [data-paused] .ex-level .pr-timer-fill,
 .ex-level[data-paused] .pr-timer-fill { animation-play-state: paused; }
 @keyframes lv-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Phones held sideways: the stem on the left as tall as the screen allows, the four pictures right. */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-level .lv-stem-svg { max-height: calc(var(--pl-avail) - 2rem); }
+  .pl-trial.ex-level .lv-svg { max-width: calc((var(--pl-avail) - 1.5rem) / 2); }
+}

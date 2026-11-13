@@ -442,6 +442,16 @@
       result: null, live: false, playing: false, done: false, respond: null, popKeys: null, voided: null, offRotation: null };
   }
 
+  // Phones: the drawing's units per CSS px as --px-u, so css/ex/orient.css keeps the labels at
+  // 13 px or more on the screen (a small map or circle shrinks its labels with it). Read once per
+  // item, before its first frame; never during the stimulus.
+  function textUnit(svg) {
+    try {
+      var r = svg.getBoundingClientRect(), vb = svg.viewBox && svg.viewBox.baseVal;
+      if (r.width && r.height && vb && vb.width && vb.height) svg.style.setProperty('--px-u', String(Math.max(vb.width / r.width, vb.height / r.height)));
+    } catch (e) { /* the labels keep their drawing size */ }
+  }
+
   function present(item, ctx) {
     if (!st) mount(ctx);
     stopInput();
@@ -455,6 +465,7 @@
     PX.ui.clear(st.stage).appendChild(st.map.svg);
     st.dial = drawDial(item);
     PX.ui.clear(st.dialbox).appendChild(st.dial.svg);
+    textUnit(st.map.svg); textUnit(st.dial.svg);
     bindDial();
     st.readout.textContent = cap('readoutNone');
     st.confirm.hidden = false;

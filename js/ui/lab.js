@@ -241,9 +241,11 @@
     var p = PX.ui.kit.panel({ title: 'Research export', className: 'px-lab-section' });
     p.el.setAttribute('data-section', 'export');
     var rows = PX.ui.log ? PX.ui.log.rows(rec) : [];
-    p.body.appendChild(h('p.px-lab-intro', 'For pooling with the community: one row per trial with the exercise and its item-model version, the settings, the seed (which regenerates the exact item), the outcome and response time, the chance of a right answer the engine predicted, the interleaving stage, and the item’s difficulty and guessing rate under the current model. Pooled data can refit the hand-set difficulty steps.'));
+    p.body.appendChild(h('p.px-lab-intro', 'For pooling with the community: one row per trial with the exercise and its item-model version, its session, the settings, the seed (which regenerates the exact item), the outcome and response time, the chance of a right answer the engine predicted, the interleaving stage, the screen class (small or large) and the input (mouse, touch, pen or keys), and the item’s difficulty and guessing rate under the current model. Pooled data can refit the hand-set difficulty steps, and the screen class and input let results be compared like with like.'));
     var csv = ui.button('Export trials for research (CSV)', { kind: 'primary', disabled: !rows.length, onClick: function () {
-      PX.ui.log.exportCSV(PX.ui.log.rows(PX.core.store.state), {
+      var st = PX.core.store.state, rs = PX.ui.log.rows(st);
+      PX.ui.log.sessions(st, rs); // fills each row's session
+      PX.ui.log.exportCSV(rs, {
         research: true, title: 'Research export', filename: 'parallax-research-' + U.fmtDate(Date.now()) + '.csv',
         intro: 'Every trial in your record, with the item model’s difficulty (b, in logits) and guessing rate (g) for rows of the current version. Nothing is sent anywhere: you choose what to share and where.',
       });
@@ -251,7 +253,7 @@
     csv.setAttribute('data-action', 'lab-research');
     var json = ui.button('Back up the whole record (JSON)', { kind: 'secondary', onClick: function () { PX.ui.app.backup(); } });
     p.body.appendChild(h('div.px-data-row', csv, json));
-    p.body.appendChild(h('p.px-meta', rows.length ? rows.length + ' trials. Spatial Check results, Threshold runs, strategy check-ins and the self-experiment are in the JSON backup.' : 'No trials yet: the export fills as you practise.'));
+    p.body.appendChild(h('p.px-meta', rows.length ? rows.length + ' trials. Spatial Check results (with the one-tap answer about other tests), Threshold runs, strategy check-ins, the self-experiment, when the DAT-style focus was switched on or off, the tests you noted and Section runs are in the JSON backup.' : 'No trials yet: the export fills as you practise.'));
     return p.el;
   }
 

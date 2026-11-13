@@ -35,13 +35,27 @@ function segDist(p, a, b) {
   const t = Math.max(0, Math.min(1, L2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2 : 0));
   return Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]);
 }
+// Duration of a route with raised-cosine ramps (independent closed form): every leg takes L / v + ramp,
+// every turn |t| / ω + ramp (a ramp of r seconds covers rate × r / 2).
+function closedDuration(it) {
+  return it.legs.reduce((s, l) => s + l / it.speed + it.ramp, 0) + it.turns.reduce((s, x) => s + Math.abs(x) / it.turnRate + it.ramp, 0);
+}
+// Simpson's rule over a rate function on [0, T] (n even).
+function simpson(f, T, n = 200) {
+  const h = T / n;
+  let s = f(0) + f(T);
+  for (let i = 1; i < n; i++) s += (i % 2 ? 4 : 2) * f(i * h);
+  return s * h / 3;
+}
 
 export async function run(t) {
   const PX = t.PX, X = PX.ex, def = X.get('homing');
   t.section('homing: definition');
   if (!t.ok(def, 'homing is defined')) return;
   const L = def.lib;
-  t.eq([def.code, def.version, def.abilities, def.cell, def.role, def.answer, def.perDisplay], ['EX-11', 1, ['NAV'], 'extrinsic-dynamic', 'train', 'angle', true], 'code, version, abilities, cell, role, answer, perDisplay');
+  t.eq([def.code, def.version, def.abilities, def.cell, def.role, def.answer, def.perDisplay], ['EX-11', 2, ['NAV'], 'extrinsic-dynamic', 'train', 'angle', true], 'code, version (2: v1.1 motion and legs), abilities, cell, role, answer, perDisplay');
+  t.eq([L.SPEED, L.TURN_RATE, L.RAMP, L.LEG, L.PATH], [1.8, 45, 0.4, [4, 12], [12, 28]], 'v1.1 motion: 1.8 m/s, 45°/s, 0.4 s ramps; legs 4–12 m, routes 12–28 m');
+  t.ok(L.SPEED <= 2 && L.TURN_RATE <= 45 && L.V_MAX === 2 && L.W_MAX === 45, 'comfort limits: ≤ 2 m/s and ≤ 45°/s (R1 §7.2)');
   t.ok(def.experimental === true && /experimental/i.test(def.name), 'labelled experimental');
   t.eq(def.dims.map((d) => d.key), ['route', 'landmarks', 'tolerance'], 'dims: route, landmarks, tolerance');
   t.eq([def.dims[1].levels, def.dims[2].levels], [['several', 'one', 'none'], [40, 30, 20]], 'landmarks several/one/none, tolerance 40/30/20°');
@@ -91,11 +105,12 @@ export async function run(t) {
         && w.path.every((q, i) => Math.hypot(q[0] - it.path[i][0], q[1] - it.path[i][1]) < 0.003)
         && adiff(w.key, 0) >= 20 && adiff(w.key, 180) >= 20 && w.distance >= 5
         && w.path.slice(1, -1).every((q, i) => segDist([0, 0], q, w.path[i + 2]) >= 3 - 1e-6)
-        && n === rt.legs && it.legs.every((l) => l >= 6 && l <= 18) && it.turns.length === n - 1
+        && n === rt.legs && it.legs.every((l) => l >= 4 && l <= 12) && it.turns.length === n - 1
+        && it.pathLength >= 12 - 1e-9 && it.pathLength <= 28 + 1e-9 && Math.abs(it.pathLength - it.legs.reduce((s2, l) => s2 + l, 0)) < 0.006
         && it.turns.every((x) => Math.abs(x) >= band.lo && Math.abs(x) <= band.hi)
         && it.landmarks.length === [3, 1, 0][p.landmarks] && new Set(it.landmarks.map((m) => m.id)).size === it.landmarks.length
         && it.landmarks.every((m, i) => m.dist >= 200 && it.landmarks.every((o, j) => i === j || adiff(m.bearing, o.bearing) >= 59.9))
-        && Math.abs(it.duration - (it.legs.reduce((s2, l) => s2 + l, 0) / it.speed + it.turns.reduce((s2, x) => s2 + Math.abs(x), 0) / it.turnRate)) < 0.011
+        && Math.abs(it.duration - closedDuration(it)) < 0.011
         && it.experimental === true;
       if (!ok) { geoBad++; firstGeo = firstGeo || `${X.paramsKey(p)} seed ${seed}`; }
       items.push({ p, seed, it, w });
@@ -149,20 +164,63 @@ export async function run(t) {
   m = clone(base); m.turns[0] = m.turns[0] > 0 ? 170 : -170; rejects('a turn outside its band', m, /band/);
   m = clone(base); m.path[2][0] += 1; rejects('a path that does not follow from the legs and turns', m, /path/);
   m = clone(base); m.landmarks.pop(); rejects('the wrong number of landmarks', m, /landmark/);
-  { // Hand-made routes that break one rule each (2 legs, large turns, tolerance 20°).
+  m = clone(base); m.speed = 2.4; m.duration = Math.round(closedDuration(m) * 100) / 100; rejects('a walk faster than 2 m/s', m, /limits/);
+  m = clone(base); m.turnRate = 60; m.duration = Math.round(closedDuration(m) * 100) / 100; rejects('a turn faster than 45°/s', m, /limits/);
+  m = clone(base); m.duration += 1; rejects('a duration that does not match the motion', m, /duration/);
+  m = clone(base); m.pathLength += 1; rejects('a pathLength that does not match the legs', m, /pathLength/);
+  { // Hand-made routes that break one rule each (large turns, tolerance 20°).
     const mk = (h0, legs, turns) => {
       const w = walk(h0, legs, turns), r2 = (x) => Math.round(x * 100) / 100;
       const route = L.ROUTES.findIndex((r) => r.legs === legs.length && r.turns === 2);
-      return { ex: 'homing', seed: 1, params: { route, landmarks: 2, tolerance: 2 }, key: r2(w.key) % 360, tolerance: 20, experimental: true,
+      const it = { ex: 'homing', seed: 1, params: { route, landmarks: 2, tolerance: 2 }, key: r2(w.key) % 360, tolerance: 20, experimental: true,
         startHeading: h0, legs, turns, path: w.path.map((q) => [Math.round(q[0] * 1000) / 1000, Math.round(q[1] * 1000) / 1000]),
         heading: r2(w.heading) % 360, distance: Math.round(w.distance * 1000) / 1000, returnBearing: r2(compass(-w.path.at(-1)[0], -w.path.at(-1)[1])) % 360,
-        speed: 3, turnRate: 60, duration: 0, landmarks: [] };
+        pathLength: legs.reduce((a, b) => a + b, 0), speed: 1.8, turnRate: 45, ramp: 0.4, duration: 0, landmarks: [] };
+      it.duration = Math.round(closedDuration(it) * 100) / 100;
+      return it;
     };
     t.eq(def.validate(mk(0, [12, 10], [130])), true, 'a hand-made 2-leg route passes');
-    // Leg 2 passes 2 m from the start (6 m out, then a 160° turn); the end is 6 m away, start at 121°.
-    rejects('a route that passes within 3 m of the start before the end', mk(0, [6, 14, 10], [160, 130]), /passes within/);
+    // Leg 2 passes 2.05 m from the start (6 m out, then a 160° turn); the end is 5.9 m away.
+    rejects('a route that passes within 3 m of the start before the end', mk(0, [6, 10, 10], [160, 125]), /passes within/);
     // A short first leg and a long second one: the start ends up 18.7° from straight behind.
-    rejects('a start within 20° of straight behind', mk(0, [6, 18], [125]), /behind/);
+    rejects('a start within 20° of straight behind', mk(0, [4, 12], [125]), /behind/);
+    rejects('a route longer than 28 m', mk(0, [12, 10, 9], [130, 130]), /longer than/);
+  }
+
+  t.section('homing: motion (raised-cosine ramps)');
+  { // Each leg and turn, integrated numerically from the rate (Simpson), covers its length or angle; rates
+    // stay within the comfort limits; poses join up at segment ends and the walk ends on the route's end.
+    let covered = true, limits = true, joins = true, ends = true, ramps = true, firstBad = null;
+    items.filter((_, i) => i % 40 === 0).forEach(({ it }) => {
+      const pl = L.plan(it, 1), n = it.legs.length;
+      let w = 0, k = 0;
+      pl.segs.forEach((s, si) => {
+        if (s.kind === 'stand') return;
+        const want = s.kind === 'walk' ? it.legs[w++] : Math.abs(it.turns[k++]), lim = s.kind === 'walk' ? 2 : 45;
+        let off = 0;
+        const rate = (tt) => { let acc = 0; for (const p of s.pieces) { if (tt <= acc + p.dur) return L.rateAt(p, tt - acc); acc += p.dur; } return 0; };
+        s.pieces.forEach((p) => { off += simpson((tt) => L.rateAt(p, tt), p.dur); });
+        if (Math.abs(off - want) > 1e-6 * Math.max(1, want)) { covered = false; firstBad = firstBad || `seg ${si}: ${off} vs ${want}`; }
+        for (let tt = 0; tt <= s.dur; tt += s.dur / 50) if (rate(tt) > lim + 1e-9) limits = false;
+        if (rate(0) > 1e-9 || rate(s.dur) > 1e-6) ramps = false; // every start and stop is smooth
+      });
+      let tAcc = 0;
+      pl.segs.forEach((s, si) => {
+        tAcc += s.dur;
+        const a = L.poseAt(pl, tAcc - 1e-9), b = L.poseAt(pl, tAcc + 1e-9);
+        if (Math.hypot(a.x - b.x, a.y - b.y) > 1e-4 || adiff(a.h, b.h) > 1e-4) joins = false;
+      });
+      const e = L.poseAt(pl, pl.total + 5), E = it.path[n];
+      if (Math.hypot(e.x - E[0], e.y - E[1]) > 0.003 || adiff(e.h, it.heading) > 0.02) ends = false;
+      if (Math.abs(pl.motion - it.duration) > 0.006 || Math.abs(pl.total - pl.motion - 1) > 1e-9) ends = false;
+    });
+    t.ok(covered, 'every leg and turn covers its length or angle (Simpson over the rate)' + (firstBad ? ` (${firstBad})` : ''));
+    t.ok(limits, 'rates stay ≤ 2 m/s and ≤ 45°/s throughout');
+    t.ok(ramps, 'every leg and turn starts and stops at rate 0 (no instant starts)');
+    t.ok(joins, 'poses join up at every segment boundary (no jumps)');
+    t.ok(ends, 'the walk ends on the route\'s end and final heading; plan duration = item duration (+ the stand)');
+    const longest = Math.max(...items.map((x) => x.it.duration));
+    t.ok(longest <= 30, `the longest route moves for at most 30 s (${longest.toFixed(1)} s)`);
   }
 
   t.section('homing: shortcut solvers');
@@ -243,6 +301,13 @@ export async function run(t) {
   t.ok(estOk.every(([e, m]) => Math.abs(e / m - 1) <= 0.10), `estMs within 10 % of the mean trial time on every route (${estOk.map(([e, m]) => (e / 1000).toFixed(1) + '/' + (m / 1000).toFixed(1) + ' s').join(', ')})`);
   report.push(`estMs by route ${estOk.map(([e]) => (e / 1000).toFixed(1)).join('/')} s`);
   checkLearn(t, PX, def, 'homing', (it) => (it.key < 180 ? 'right' : 'left'));
+  { // The first-person kit in homing/view.js asks for its captions through kc('…') (Homing's and Reckon's).
+    const kitSrc = readFileSync(new URL('../../js/ex/homing/view.js', import.meta.url), 'utf8');
+    const kitKeys = [...new Set([...kitSrc.matchAll(/\bkc\('(\w+)'/g)].map((mm) => mm[1]))];
+    const hl = PX.ex.learn('homing'), miss = kitKeys.filter((k) => !(hl && hl.captions && typeof hl.captions[k] === 'string'));
+    t.ok(kitKeys.length > 10 && miss.length === 0, `every caption the view kit asks for exists (${kitKeys.length} keys${miss.length ? '; missing ' + miss.join(', ') : ''})`);
+    t.ok(!/larger screen/i.test(JSON.stringify(hl)) && !/smallScreen|larger screen/.test(kitSrc), 'no "larger screen" notice left (v1.1 brief)');
+  }
   console.log('       EX-11 homing: ' + items.length + ' items; ' + report.join('; '));
 }
 
@@ -250,7 +315,7 @@ export async function run(t) {
 
 // Caption keys the view asks for: string literals that start the first argument of cap(…) or follow
 // a ? or : inside it (cap(ok ? 'a' : 'b', …)).
-function viewCaptionKeys(id) {
+export function viewCaptionKeys(id) {
   let src = '';
   try { src = readFileSync(new URL('../../js/ex/' + id + '/view.js', import.meta.url), 'utf8'); } catch (e) { return null; }
   const keys = new Set();
@@ -258,7 +323,7 @@ function viewCaptionKeys(id) {
   return [...keys];
 }
 
-function checkLearn(t, PX, def, id, kindOf) {
+export function checkLearn(t, PX, def, id, kindOf) {
   t.section(id + ': learn');
   const L = PX.ex.learn(id);
   if (!t.ok(L && typeof L === 'object', 'learn data is registered')) return;

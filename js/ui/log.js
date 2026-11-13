@@ -37,6 +37,7 @@
         i: i, t: r[0], exId: nm.ex[r[1]] || null, ver: nm.ver[r[1]] || 1, mode: nm.mode[r[2]] || null, code: r[3], seed: r[4],
         outcome: r[5], rt: isNum(r[6]) ? r[6] : null, value: isNum(r[7]) ? r[7] : null,
         p: isNum(r[8]) ? r[8] / 1000 : null, stage: isNum(r[9]) ? r[9] : null, session: null, raw: r,
+        display: isNum(r[10]) ? r[10] : 0, input: isNum(r[11]) ? r[11] : 0, // v1.1 columns 11-12 (codes; 0 unknown)
       });
     }
     return out;
@@ -112,15 +113,20 @@
     return parts.join(';');
   }
 
+  // The one trial CSV (Settings, the Log and the Lab's research export; store.exportCSV() writes
+  // it through store.csv below): the header is PX.core.store.CSV_HEADER, plus b, g and answer for
+  // the research export.
+  var HEAD = ['time_iso', 't_sec', 'exercise', 'version', 'mode', 'session', 'params_code', 'params', 'seed', 'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage', 'display', 'input'];
   function csv(rs, opts) {
-    var research = !!(opts && opts.research);
-    var head = ['time_iso', 't_sec', 'exercise', 'version', 'mode', 'session', 'params_code', 'params', 'seed', 'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage'];
+    var research = !!(opts && opts.research), S = PX.core.store;
+    var head = (S && Array.isArray(S.CSV_HEADER) ? S.CSV_HEADER : HEAD).slice();
+    var DISP = S && S.DISPLAYS ? S.DISPLAYS : ['', 'small', 'large'], INP = S && S.INPUTS ? S.INPUTS : ['', 'mouse', 'touch', 'pen', 'key'];
     if (research) head = head.concat(['b', 'g', 'answer']);
     var lines = [head.join(',')];
     rs.forEach(function (r) {
       var def = r.exId ? PX.ex.get(r.exId) : null, p = paramsOf(r), d = new Date(r.t * 1000);
       var row = [isFinite(d.getTime()) ? d.toISOString() : '', r.t, r.exId || '', r.ver, r.mode || '', r.session || '', r.code, paramsCsv(def, p), r.seed,
-        r.outcome, OUT[r.outcome], r.rt, r.value, r.p === null ? '' : U.round(r.p, 3), r.stage];
+        r.outcome, OUT[r.outcome], r.rt, r.value, r.p === null ? '' : U.round(r.p, 3), r.stage, DISP[r.display] || '', INP[r.input] || ''];
       if (research) {
         var b = '', g = '', ans = '';
         if (def && p) {
@@ -138,7 +144,7 @@
     var o = opts || {};
     return PX.ui.app.exportDialog({
       title: o.title || 'Export trials',
-      intro: o.intro || ('One row per trial (' + rs.length + ' rows): time, exercise and its item-model version, mode, settings, seed, outcome, response time, the predicted chance of a right answer and the interleaving stage. A CSV file cannot be imported; Back up keeps your whole record.'),
+      intro: o.intro || ('One row per trial (' + rs.length + ' rows): time, exercise and its item-model version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class and the input. A CSV file cannot be imported; Back up keeps your whole record.'),
       text: csv(rs, o),
       filename: o.filename || ('parallax-trials-' + U.fmtDate(Date.now()) + '.csv'),
       type: 'text/csv',
@@ -185,7 +191,8 @@
   function sessionItem(s, exFilter) {
     var nRows = exFilter ? s.rows.filter(function (r) { return r.exId === exFilter; }).length : s.rows.length;
     var not = s.rows.filter(function (r) { return r.outcome >= 2; }).length;
-    var mins = isNum(s.practiceMs) && s.practiceMs > 0 ? Math.max(1, Math.round(s.practiceMs / 60000)) + ' min' : null;
+    // practice time in the one format of every screen (PX.core.clock.fmtMinutes)
+    var mins = isNum(s.practiceMs) && s.practiceMs > 0 ? PX.core.clock.fmtMinutes(s.practiceMs) : null;
     var body = h('div.px-sess-body');
     var d = h('details.px-sess', { 'data-session': s.id, 'data-mode': s.mode || '' },
       h('summary.px-sess-sum',
@@ -336,7 +343,12 @@
     host.appendChild(h('div.px-log', listPanel.el, dataPanel.el));
   }
 
-  PX.ui.log = { rows: rows, sessions: sessions, counts: counts, countText: countText, csv: csv, exportCSV: exportCSV };
+  // The whole record's trials with their sessions: what store.exportCSV() (Settings) writes, so
+  // both exports are the same file.
+  function csvText(rec) { var rs = rows(rec); sessions(rec, rs); return csv(rs); }
+  if (PX.core.store) PX.core.store.csv = csvText;
+
+  PX.ui.log = { rows: rows, sessions: sessions, counts: counts, countText: countText, csv: csv, csvText: csvText, exportCSV: exportCSV };
   PX.ui.screens = PX.ui.screens || {};
   PX.ui.screens.log = { title: 'Log', render: render };
 })(window.PX);

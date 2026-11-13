@@ -1,0 +1,92 @@
+/* PAT-4 Hole Punch (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-patfold; tokens from
+   css/base.css with fallbacks; shared pieces from css/ex.css. The format's look: the paper's
+   position before a fold dashed, the folded paper solid; options show all 16 positions, holes
+   filled and empty positions as open rings. The paper stays light in both themes, so marks on it
+   use their own dark tokens. SVG sizes are in sheet cells. */
+.ex-patfold {
+  --pf-paper: #FFFFFF;
+  --pf-back: #D6DDE4;
+  --pf-flap: #E3EEF2;
+  --pf-grid: rgba(26, 29, 33, 0.12);
+  --pf-edge: #22262A;
+  --pf-hole: #22262A;
+  --pf-pos: #8A9299;
+  --pf-mark: #0B6A86;
+  --pf-was: #7B838A;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ex-patfold {
+    --pf-paper: #CDD3D8; --pf-back: #9EA8B1; --pf-flap: #B7C9D1; --pf-grid: rgba(16, 19, 21, 0.16);
+    --pf-edge: #101315; --pf-hole: #15181B; --pf-pos: #5E676E; --pf-mark: #0A5870; --pf-was: #A3ACB3;
+  }
+}
+:root[data-theme="dark"] .ex-patfold {
+  --pf-paper: #CDD3D8; --pf-back: #9EA8B1; --pf-flap: #B7C9D1; --pf-grid: rgba(16, 19, 21, 0.16);
+  --pf-edge: #101315; --pf-hole: #15181B; --pf-pos: #5E676E; --pf-mark: #0A5870; --pf-was: #A3ACB3;
+}
+
+.ex-patfold .ex-patfold-stem { width: 100%; }
+.ex-patfold .ex-patfold-stage { padding: var(--s2, 0.5rem); }
+.ex-patfold .ex-patfold-strip {
+  --pf-cols: 4;
+  display: grid; grid-template-columns: repeat(var(--pf-cols), minmax(0, 1fr)); gap: var(--s2, 0.5rem) var(--s3, 0.75rem);
+  max-width: calc(var(--pf-cols) * 11rem); margin: 0 auto;
+}
+.ex-patfold .ex-patfold-strip[data-n="3"] { --pf-cols: 3; }
+.ex-patfold .ex-patfold-strip[hidden], .ex-patfold .ex-patfold-big[hidden] { display: none; }
+.ex-patfold .ex-patfold-panel { display: flex; flex-direction: column; min-width: 0; border-radius: var(--r-plate, 2px); }
+.ex-patfold .ex-patfold-plabel { position: static; display: block; margin: 0 0 0.125rem 0.125rem; white-space: nowrap; }
+.ex-patfold .ex-patfold-panel.is-pointed { outline: 2px solid var(--signal, #0B6A86); outline-offset: 2px; }
+.ex-patfold .ex-patfold-svg { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; overflow: visible; }
+.ex-patfold .ex-patfold-big { display: flex; justify-content: center; }
+.ex-patfold .ex-patfold-big .ex-patfold-svg { width: min(100%, 18rem, 40vh); }
+.ex-patfold .ex-patfold-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
+.ex-patfold .ex-patfold-under .ex-caption { flex: 1 1 16rem; }
+.ex-patfold .ex-patfold-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-patfold .ex-verdict[data-kind="key"], .ex-patfold .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-patfold .ex-tag[data-kind="foil"] { color: var(--ink, #1A1D21); border-style: dashed; }
+
+/* the paper */
+.ex-patfold .ex-patfold-was { fill: none; stroke: var(--pf-was); stroke-width: 0.05; stroke-dasharray: 0.22 0.16; }
+.ex-patfold .ex-patfold-paper { fill: var(--pf-paper); }
+.ex-patfold .ex-patfold-face.is-flap .ex-patfold-paper { fill: var(--pf-flap); }
+.ex-patfold .ex-patfold-face.is-back .ex-patfold-paper,
+.ex-patfold .ex-patfold-moving.is-flipped > .ex-patfold-face .ex-patfold-paper { fill: var(--pf-back); }
+.ex-patfold .ex-patfold-moving.is-flipped > .ex-patfold-face.is-back .ex-patfold-paper { fill: var(--pf-paper); }
+.ex-patfold .ex-patfold-grid { fill: none; stroke: var(--pf-grid); stroke-width: 0.035; }
+.ex-patfold .ex-patfold-edge { fill: none; stroke: var(--pf-edge); stroke-width: 0.07; stroke-linejoin: round; }
+.ex-patfold .ex-patfold-hole { fill: var(--pf-hole); }
+.ex-patfold .ex-patfold-punch { stroke: var(--pf-paper); stroke-width: 0.06; }
+.ex-patfold .ex-patfold-arrow-line { fill: none; stroke: var(--pf-mark); stroke-width: 0.1; stroke-linecap: round; }
+.ex-patfold .ex-patfold-arrow-head { fill: var(--pf-mark); stroke: var(--pf-mark); stroke-width: 0.04; stroke-linejoin: round; }
+.ex-patfold .ex-patfold-crease { stroke: var(--pf-mark); stroke-width: 0.08; stroke-dasharray: 0.28 0.18; }
+.ex-patfold .ex-patfold-ring { fill: none; stroke: var(--pf-mark); stroke-width: 0.08; }
+.ex-patfold .ex-patfold-other { fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 0.09; stroke-dasharray: 0.18 0.11; }
+
+/* options: the 16 positions */
+.ex-patfold .ex-patfold-sheet { fill: var(--pf-paper); stroke: var(--pf-edge); stroke-width: 0.06; }
+.ex-patfold .ex-patfold-pos { fill: none; stroke: var(--pf-pos); stroke-width: 0.05; }
+.ex-patfold .px-choice { padding: 1.35rem var(--s1, 0.25rem) var(--s1, 0.25rem); }
+.ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: 9rem; margin: 0 auto; }
+
+@media (max-width: 719px) {
+  .ex-patfold .ex-patfold-stage { padding: var(--s1, 0.25rem); }
+  .ex-patfold .ex-patfold-strip { gap: var(--s1, 0.25rem) var(--s2, 0.5rem); }
+  /* four panels (three folds and the punch) in two rows of two, so each is large enough to read */
+  .ex-patfold .ex-patfold-strip[data-n="4"] { --pf-cols: 2; max-width: min(100%, 36vh); }
+  .ex-patfold .px-choices[style*="--px-cols:5"] { --px-cols: 3 !important; gap: var(--s1, 0.25rem); }
+  .ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, 16vh); }
+  .ex-patfold .px-choice { padding-top: 1.2rem; min-height: 0; }
+}
+
+/* In the player on phones (css/play.css: --pl-avail, --pl-w): the panels take what two rows of
+   option sheets leave; three folds and the punch sit in two rows of two. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="4"] { max-width: min(100%, calc(var(--pl-avail) - 21rem)); }
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="3"] { max-width: min(100%, calc(1.5 * (var(--pl-avail) - 19rem))); }
+  .pl-trial.ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, calc((var(--pl-avail) - 17rem) / 2)); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="4"] { --pf-cols: 4; max-width: 100%; }
+  .pl-trial.ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, calc((var(--pl-avail) - 4rem) / 2)); }
+}

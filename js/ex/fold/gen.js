@@ -1183,4 +1183,42 @@
       fallback: fallbackFor, norm: normParams, grad: grad,
     },
   });
+
+  /* ===== v1.1 EXPORT BLOCK (owner: B5; used by PAT-4 Hole Punch, js/ex/patfold/gen.js) =====
+     A non-breaking addition: nothing above changes, and Fold's ids, ratings, items and lib keys
+     stay as they were. Hole Punch runs this exact model on a 4 × 4 sheet. sheet(n, fn) sets the
+     sheet size to n for the duration of one synchronous call of fn and always restores 8 in a
+     finally block, so Fold's own generate and validate never see another size. Every size-
+     dependent function above reads N when it runs (the scratch arrays are allocated for 8 × 8 and
+     are large enough for 4 × 4). Fold's fallback cache is not reachable from here: it is keyed by
+     Fold's params alone, so the caller keeps its own fallbacks.
+     fn receives { n, attempt(rng, params, relaxed) → item | null (ex 'fold', item.n = n),
+     check(item) → true | reason (the triangle re-simulation; item.ex must be 'fold'),
+     norm, maskOf, maskCells, maskKey, hamming, popcount, symScore, symMask, mirrorCell, reflCell,
+     onSheet, unfoldMask(start, ctx.steps, order, count, alt) }.
+     Optional hooks, active for the same call only (a small sheet has few neighbouring problems,
+     so Hole Punch widens the foil pool and balances its own shortcuts):
+       hooks.pool(ctx, pool) → pool    runs after foilPool(ctx); ctx as built in attempt()
+                                       (r, folds, steps, punches, key, keyMask, layersAt, whyOf)
+       hooks.select(r, keyCells, keyMask, pool, nf, line1, relaxed, punchMask, mt) → foils | null
+                                       replaces selectFoils (same arguments and result);
+       hooks.nOptions(params) → count  replaces nOpt (attempt builds, and check expects, that
+                                       many options). */
+  PX.ex.get('fold').lib.sheet = function (n, fn, hooks) {
+    if (n !== 4 && n !== 8) throw new Error('fold lib.sheet: the sheet size must be 4 or 8 (got ' + n + ')');
+    var keepN = N, keepPool = foilPool, keepSelect = selectFoils, keepNOpt = nOpt;
+    N = n;
+    if (hooks && typeof hooks.pool === 'function') foilPool = function (ctx) { return hooks.pool(ctx, keepPool(ctx)); };
+    if (hooks && typeof hooks.select === 'function') selectFoils = hooks.select;
+    if (hooks && typeof hooks.nOptions === 'function') nOpt = hooks.nOptions;
+    try {
+      return fn({
+        n: n, attempt: attempt, check: check, norm: normParams,
+        maskOf: maskOf, maskCells: maskCells, maskKey: maskKey, hamming: hamming, popcount: popcount,
+        symScore: symScore, symMask: symMask, mirrorCell: mirrorCell, reflCell: reflCell, onSheet: onSheet,
+        unfoldMask: unfoldMask,
+      });
+    } finally { N = keepN; foilPool = keepPool; selectFoils = keepSelect; nOpt = keepNOpt; }
+  };
+  /* ===== end of the v1.1 export block ===== */
 })(window.PX);

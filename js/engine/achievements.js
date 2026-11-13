@@ -49,19 +49,24 @@
     { id: 'top-tenth', kind: 'skill', name: 'Top tenth', desc: 'Answer an item right from the hardest tenth of an exercise’s range.', check: function (c) { return prog(c.hardest, 1); } },
     { id: 'track-five', kind: 'skill', name: 'Five at once', desc: 'Track five targets among ten spheres fully right.', check: function (c) { return prog(c.track5 ? 1 : 0, 1); } },
     { id: 'span-seven', kind: 'skill', name: 'Seven steps', desc: 'Recall a span of seven right.', check: function (c) { return prog(dimValueRight(c, 'span', 'len', 7) || dimValueRight(c, 'span', 'length', 7) ? 1 : 0, 1); } },
-    { id: 'speed-session', kind: 'skill', name: 'Against the clock', desc: 'Finish a Speed session.', check: function (c) { return prog(c.speedSessions, 1); } },
+    { id: 'speed-session', kind: 'skill', name: 'Against the clock', desc: 'Finish a Speed session, its full time.', check: function (c) { return prog(c.speedSessions, 1); } },
     { id: 'new-best', kind: 'skill', name: 'New best block', desc: 'Beat your best whole block on an exercise.', check: function (c) { return prog(c.bestBeats, 1); } },
+    // v1.1 (B7, R3 §9): good practice in Section mode, never a score
+    { id: 'full-section', kind: 'practice', name: 'Full section', desc: 'Finish a full Section practice, every part to the end of its clock.', check: function (c) { return prog(c.fullSections, 1); } },
   ];
 
   function context(rec, now, need) {
-    var trainDefs = PX.ex.list('train');
+    // the exercises of everyone's training: PAT-format exercises join only under the PAT focus
+    // (v1.1), so "every exercise" never asks for them
+    var trainDefs = PX.ex.list('train').filter(function (d) { return d.pat !== true; });
     var c = { now: now, trainIds: trainDefs.map(function (d) { return d.id; }) };
     var sessions = (isArray(rec.sessions) ? rec.sessions : []).filter(function (s) { return isObj(s) && (s.trials || 0) > 0; });
     c.sessions = sessions.length;
     var st = E.streak.status(rec, now);
     c.weeksMet = st.weeks.filter(function (w) { return w.met; }).length;
     var dset = {};
-    sessions.forEach(function (s) { if (isNum(s.start) && now - s.start <= 90 * DAY && s.start <= now) dset[E.day(s.start)] = 1; });
+    // practice days: a Spatial Check alone is not practice (v1.1, as for the weekly goal)
+    sessions.forEach(function (s) { if (isNum(s.start) && s.mode !== 'check' && now - s.start <= 90 * DAY && s.start <= now) dset[E.day(s.start)] = 1; });
     c.days90 = Object.keys(dset).length;
     var chs = E.assess.checks(rec);
     c.checks = chs.length;
@@ -82,9 +87,16 @@
     });
     c.bothStrategies = Object.keys(strat).some(function (k) { return strat[k].whole && strat[k].parts; }) ? 1 : 0;
     c.backup = !!(rec.settings && isNum(rec.settings.lastBackup) && rec.settings.lastBackup > 0);
-    c.dailies = isObj(rec.daily) ? Object.keys(rec.daily).length : 0;
+    c.dailies = isObj(rec.daily) ? Object.keys(rec.daily).filter(function (k) { return isObj(rec.daily[k]) && rec.daily[k].partial !== true; }).length : 0;
+    // complete runs only (v1.1 saves no others; a v1.0 record may hold stopped ones: fewer items
+    // than the protocol has)
     c.thresholds = 0;
-    if (isObj(rec.mot)) Object.keys(rec.mot).forEach(function (k) { if (isArray(rec.mot[k])) c.thresholds += rec.mot[k].length; });
+    var PR = E.threshold && E.threshold.PROTOCOLS ? E.threshold.PROTOCOLS : {};
+    if (isObj(rec.mot)) Object.keys(rec.mot).forEach(function (k) {
+      if (!isArray(rec.mot[k])) return;
+      var need = hasOwn.call(PR, k) && isNum(PR[k].trials) ? PR[k].trials : 1;
+      rec.mot[k].forEach(function (e) { if (isObj(e) && (e.complete === true || (e.complete === undefined && isNum(e.n) && e.n >= need))) c.thresholds++; });
+    });
     c.pathTop = 0;
     c.held30 = 0;
     if (isObj(rec.path)) Object.keys(rec.path).forEach(function (id) {
@@ -108,10 +120,17 @@
       var e = rec.ex && rec.ex[def.id];
       if (isObj(e) && isObj(e.best) && isObj(e.best.block) && e.best.block.beats >= 1) c.bestBeats = 1;
     });
+    // a full Section run that ended by itself: every item done, or its clock ran out (not ended by the player)
+    c.fullSections = 0;
+    var secRuns = isObj(rec.section) && isArray(rec.section.runs) ? rec.section.runs : [];
+    secRuns.forEach(function (r) { if (isObj(r) && r.size === 'full' && (r.ended === 'done' || r.ended === 'time')) c.fullSections++; });
     c.speedSessions = 0;
     if (isObj(rec.timed)) Object.keys(rec.timed).forEach(function (id) {
       var t = rec.timed[id];
-      if (isObj(t) && isArray(t.sessions)) c.speedSessions += t.sessions.length;
+      // a Speed session that ran its full time (v1.1: the 5th value); a v1.0 entry with 10 answers
+      if (isObj(t) && isArray(t.sessions)) t.sessions.forEach(function (x) {
+        if (isArray(x) && (x.length > 4 ? x[4] === 1 : isNum(x[3]) && x[3] >= E.config.session.minTrials)) c.speedSessions++;
+      });
       if (isObj(t) && isNum(t.n)) c.rated += t.n;
     });
     // Right answers by setting: the highest value reached per numeric dimension, and whether an

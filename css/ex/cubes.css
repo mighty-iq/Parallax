@@ -1,0 +1,67 @@
+/* PAT-5 Painted Cubes (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-cubes; tokens from
+   css/base.css with fallbacks; shared pieces from css/ex.css. The figure is light grey cubes with
+   dark outlines in both themes (research convention), three face tones so colour is never the
+   only cue. SVG sizes are in cube edges. */
+.ex-cubes {
+  --cube-top: #F4F5F3;
+  --cube-front: #C9CED2;
+  --cube-right: #9DA5AC;
+  --cube-edge: #22262A;
+  --cube-mark: var(--signal, #0B6A86);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ex-cubes { --cube-top: #DDE1E4; --cube-front: #AEB6BC; --cube-right: #848E96; --cube-edge: #0E1113; }
+}
+:root[data-theme="dark"] .ex-cubes { --cube-top: #DDE1E4; --cube-front: #AEB6BC; --cube-right: #848E96; --cube-edge: #0E1113; }
+
+.ex-cubes .ex-cubes-stem { width: 100%; }
+.ex-cubes .ex-cubes-stage { padding: var(--s2, 0.5rem); display: flex; justify-content: center; }
+.ex-cubes .ex-cubes-figure-box { width: min(100%, 26rem, 52vh); border-radius: var(--r-plate, 2px); }
+.ex-cubes .ex-cubes-figure-box.is-pointed, .ex-cubes .ex-cubes-q.is-pointed { outline: 2px solid var(--cube-mark); outline-offset: 3px; }
+.ex-cubes .ex-cubes-svg { display: block; width: 100%; height: auto; max-height: min(26rem, 52vh); overflow: visible; }
+.ex-cubes .ex-cubes-face { stroke: var(--cube-edge); stroke-width: 0.045; stroke-linejoin: round; }
+.ex-cubes .ex-cubes-face--top { fill: var(--cube-top); }
+.ex-cubes .ex-cubes-face--front { fill: var(--cube-front); }
+.ex-cubes .ex-cubes-face--right { fill: var(--cube-right); }
+.ex-cubes .ex-cubes-ghost { fill: none; stroke: var(--cube-mark); stroke-width: 0.06; stroke-dasharray: 0.14 0.1; }
+.ex-cubes .ex-cubes-badge circle { fill: var(--cube-mark); stroke: #FFFFFF; stroke-width: 0.05; }
+.ex-cubes .ex-cubes-badge.is-hidden circle { fill: #FFFFFF; stroke: var(--cube-mark); stroke-width: 0.07; stroke-dasharray: 0.12 0.08; }
+.ex-cubes .ex-cubes-badge-n { font-size: 0.34px; font-weight: 700; text-anchor: middle; fill: #FFFFFF; font-family: var(--font-sans, sans-serif); }
+.ex-cubes .ex-cubes-badge.is-hidden .ex-cubes-badge-n { fill: var(--cube-mark); }
+/* The question: N in large type, the most important number on the screen. */
+.ex-cubes .ex-cubes-q { margin: var(--s2, 0.5rem) 0 0; text-align: center; font-size: var(--fs-md, 1rem); line-height: 1.35; }
+.ex-cubes .ex-cubes-n {
+  display: inline-block; min-width: 1.6em; padding: 0 0.3em; margin: 0 0.1em; border: 2px solid var(--cube-mark); border-radius: 0.35em;
+  font-size: 1.5em; line-height: 1.15; font-family: var(--font-mono, monospace); color: var(--cube-mark);
+}
+.ex-cubes .ex-cubes-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
+.ex-cubes .ex-cubes-under .ex-caption { flex: 1 1 16rem; }
+.ex-cubes .ex-cubes-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-cubes .ex-verdict[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+/* Options: a count and its unit. */
+.ex-cubes .ex-cubes-opt { flex-direction: column; gap: 0; }
+.ex-cubes .ex-cubes-opt .ex-answer-text { font-size: var(--fs-xl, 1.375rem); font-family: var(--font-mono, monospace); line-height: 1.1; }
+.ex-cubes .ex-cubes-unit { font-size: var(--fs-sm, 0.875rem); color: var(--muted, #5C646B); }
+
+@media (max-width: 719px) {
+  .ex-cubes .ex-cubes-stage { padding: var(--s1, 0.25rem); }
+  .ex-cubes .ex-cubes-figure-box { width: min(100%, 46vh); }
+  .ex-cubes .ex-cubes-svg { max-height: 44vh; }
+  .ex-cubes .px-choices[style*="--px-cols:5"] { --px-cols: 5 !important; gap: var(--s1, 0.25rem); }
+  .ex-cubes .px-choice { padding-left: 0.25rem; padding-right: 0.25rem; }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .ex-cubes .ex-cubes-figure-box { width: min(100%, 70vh); }
+  .ex-cubes .ex-cubes-svg { max-height: 80vh; }
+}
+
+/* In the player on phones (css/play.css: --pl-avail, --pl-w, --pl-col): the figure takes what the
+   question line and the row of answers leave; held sideways it fills the left column. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-cubes .ex-cubes-figure-box { width: 100%; }
+  .pl-trial.ex-cubes .ex-cubes-svg { max-height: min(22rem, calc(var(--pl-avail) - 3.5rem - 4.25rem - 3 * var(--s2, 0.5rem))); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-cubes .ex-cubes-svg { max-height: calc(var(--pl-avail) - 3rem - 2 * var(--s1, 0.25rem)); }
+  .pl-trial.ex-cubes .ex-cubes-q { margin-top: var(--s1, 0.25rem); font-size: var(--fs-sm, 0.875rem); }
+}

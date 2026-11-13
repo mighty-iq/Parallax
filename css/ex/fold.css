@@ -78,3 +78,15 @@
   .ex-fold .px-choices[style*="--px-cols:5"] { --px-cols: 3 !important; }
   .ex-fold .ex-fold-opt .ex-fold-svg { max-width: 8.5rem; }
 }
+
+/* Phones in the player (css/play.css sets --pl-avail and --pl-w). Sideways: the fold panels in
+   rows of three on the left, as large as the height allows; the sheets on the right. */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-fold .ex-fold-strip,
+  .pl-trial.ex-fold .ex-fold-strip[data-n="4"], .pl-trial.ex-fold .ex-fold-strip[data-n="5"], .pl-trial.ex-fold .ex-fold-strip[data-n="6"] {
+    --fold-cols: 3; max-width: calc(3 * min(9rem, calc((var(--pl-avail) - 4rem) / 2)) + 2 * var(--s3));
+  }
+  .pl-trial.ex-fold .ex-fold-strip[data-n="2"] { --fold-cols: 2; max-width: calc(2 * min(10rem, calc(var(--pl-avail) - 3rem)) + var(--s3)); }
+  .pl-trial.ex-fold .ex-fold-strip[data-n="3"] { max-width: calc(3 * min(10rem, calc(var(--pl-avail) - 3rem)) + 2 * var(--s3)); }
+  .pl-trial.ex-fold .ex-fold-opt .ex-fold-svg { max-width: min(8rem, calc((var(--pl-avail) - 5rem) / 2)); }
+}
