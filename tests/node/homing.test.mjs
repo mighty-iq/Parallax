@@ -293,6 +293,11 @@ export async function run(t) {
     return pct(l.filter((x) => def.score(x.it, walk(x.it.startHeading, x.it.legs.map(() => 1), x.it.turns).key).correct).length / l.length);
   });
   report.push(`[info] turns only, legs taken as equal: ${eqHit.join(' ')} for small/medium/large turns`);
+  // Turn-only shortcuts per cell (RV B1). Most cells cannot meet chance + 10 under the current route levels
+  // (2 legs or small turns put the start on the side of the net turn every time; at 40° the axis gap alone
+  // lets a fixed angle hit 29 %): reported here, pending the lead's decision (docs/dev/progress/B3.md).
+  const scRows = shortcutReport(def, items, 'Homing');
+  t.ok(scRows.every((r) => r.S.mirror <= r.chance + 0.10), 'the mirror answer stays within chance + 10 in every route/tolerance cell');
   // estMs: within 10 % of the mean trial time of the generated routes (lead-in + route + response).
   const estOk = L.ROUTES.map((_, ri) => {
     const l = items.filter((x) => x.p.route === ri), mean = L.LEAD_MS + L.RESPONSE_MS + 1000 * l.reduce((s2, x) => s2 + x.it.duration, 0) / l.length;

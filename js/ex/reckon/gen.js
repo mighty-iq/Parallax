@@ -248,7 +248,7 @@
     });
     // The second walk at a clearly different speed (≥ 0.4 m/s apart), so counting seconds misleads.
     var v1 = it.speeds[0][0], wr = r.fork('walk2');
-    it.walkSpeed = v1 <= 1.55 ? rnd(wr.float(v1 + 0.4, WALK[1]), 100) : rnd(wr.float(WALK[0], v1 - 0.4), 100);
+    it.walkSpeed = v1 <= 1.55 ? rnd(wr.float(Math.max(WALK[0], v1 + 0.4), WALK[1]), 100) : rnd(wr.float(WALK[0], v1 - 0.4), 100);
     return it;
   }
 
