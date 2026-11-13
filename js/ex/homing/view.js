@@ -188,6 +188,9 @@
       var a = v.width / Math.max(1, v.height), vfov = Math.min(o.vfovMax || 80, 2 * Math.atan(Math.tan(rad(S.hfov / 2)) / a) * 180 / Math.PI);
       if (S.cam.fov !== vfov || S.cam.aspect !== a) { S.cam.fov = vfov; S.cam.aspect = a; S.cam.updateProjectionMatrix(); }
       var far = S.fadeFor(v.width);
+      // dots live within DOT_R of you: the fade ends before that circle could show, even at the view's edge
+      // (depth there is DOT_R × cos(half the field))
+      if (S.dots) far = Math.min(far, DOT_R * Math.cos(rad(S.hfov / 2)) - 1.5);
       S.fadeU.value.set(0.5 * far, far);
       S.plain.position.set(S.pose.x, 0, -S.pose.y);
       placeTiles();

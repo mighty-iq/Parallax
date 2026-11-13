@@ -62,6 +62,12 @@ function simpson(f, T, n = 200) {
 }
 // A position at direction a (° clockwise from ahead) and distance r in the frame 'end' (x right, z ahead).
 const at = (a, r) => ({ x: r * Math.sin(rad(a)), z: r * Math.cos(rad(a)) });
+function pearson(a, b) {
+  const n = a.length, ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+  let ab = 0, aa = 0, bb = 0;
+  for (let i = 0; i < n; i++) { ab += (a[i] - ma) * (b[i] - mb); aa += (a[i] - ma) ** 2; bb += (b[i] - mb) ** 2; }
+  return ab / Math.sqrt(aa * bb);
+}
 
 export async function run(t) {
   const PX = t.context({ files: FILES }).PX, X = PX.ex, def = X.get('reckon');
@@ -147,7 +153,7 @@ export async function run(t) {
         && Math.abs(it.duration - closedDuration(it)) < 0.011 && it.duration <= 30 + 1e-9 && it.experimental === true && it.frame === 'end';
       if (!ok) { geoBad++; firstGeo = firstGeo || `${X.paramsKey(p)} seed ${seed}`; }
       // speeds by level, within the comfort limits
-      const flat = it.speeds.flat(), sOk = flat.every((v2) => v2 >= 1.2 - 1e-9 && v2 <= 2 + 1e-9) && it.turnRates.every((w2) => w2 >= 30 && w2 <= 45)
+      const flat = it.speeds.flat(), sOk = flat.every((v2) => v2 >= 0.5 - 1e-9 && v2 <= 2 + 1e-9) && it.turnRates.every((w2) => w2 >= 30 && w2 <= 45)
         && (p.speed === 0 ? it.speeds.every((v2) => v2.length === 1 && v2[0] === it.speeds[0][0] && v2[0] >= 1.62 - 1e-9 && v2[0] <= 1.98 + 1e-9) && it.turnRates.every((w2) => w2 === 45)
           : p.speed === 1 ? it.speeds.every((v2) => v2.length === 1) : it.speeds.every((v2) => v2.length === 2 && Math.abs(v2[0] - v2[1]) >= 0.4 - 1e-9))
         && it.walkSpeed >= 1.05 && it.walkSpeed <= 1.95;
@@ -168,10 +174,23 @@ export async function run(t) {
   t.eq(junkRight, 0, 'malformed responses score wrong');
   t.eq(notJson, 0, 'items survive a JSON round trip unchanged');
   t.ok(geoBad === 0, 'independent geometry agrees: path, key, distance 5–20 m, heading, gap from ahead/behind, never near the start before the end, legs 4–12 m, routes 12–28 m, turns, answer key, duration (closed form) ≤ 30 s' + (firstGeo ? ` (first bad: ${firstGeo})` : ''));
-  t.ok(speedBad === 0, 'speeds by level: steady 1.8 ± 10 % at 45°/s; varied 1.2–2.0 m/s at 30–45°/s; within legs two speeds ≥ 0.4 m/s apart; walk back 1.05–1.95 m/s' + (firstSpeed ? ` (first bad: ${firstSpeed})` : ''));
+  t.ok(speedBad === 0, 'speeds by level: steady 1.8 ± 10 % at 45°/s; varied 0.5–2.0 m/s at 30–45°/s; within legs two speeds ≥ 0.4 m/s apart; walk back 1.05–1.95 m/s' + (firstSpeed ? ` (first bad: ${firstSpeed})` : ''));
   t.ok(groundBad === 0, 'the ground matches the flow level; no landmarks or objects in any item');
   t.ok(groundSeeds.size >= items.length * 0.999, `the ground is re-seeded every item (${groundSeeds.size} seeds for ${items.length} items)`);
   t.ok(L.stats.fallbacks <= items.length / 1000, `fallback construction rarely needed (${L.stats.fallbacks})`);
+  // time as a cue to leg length (RV S1): above 'steady' a leg's walking time says little about its length
+  {
+    const byLevel = [0, 1, 2].map((lv) => {
+      const T = [], Ls = [], Vm = [];
+      items.filter((x) => x.p.speed === lv).forEach((x) => {
+        let i = 0;
+        H.plan(x.it, 0).segs.forEach((sg) => { if (sg.kind === 'walk') { T.push(sg.dur); Ls.push(x.it.legs[i]); Vm.push(x.it.legs[i] / sg.dur); i++; } });
+      });
+      return { r: pearson(T, Ls), rv: pearson(Vm, Ls), n: T.length };
+    });
+    t.ok(byLevel[0].r > 0.9 && Math.abs(byLevel[1].r) <= 0.5 && Math.abs(byLevel[2].r) <= 0.5,
+      `leg time vs leg length: r ${byLevel.map((b) => b.r.toFixed(2)).join(' / ')} at steady / between legs / within legs (≤ 0.5 above steady; steady keeps one speed); r(mean speed, length) ${byLevel.map((b) => b.rv.toFixed(2)).join(' / ')}; ${byLevel.map((b) => b.n).join(' / ')} legs`);
+  }
   const rightSide = items.filter((x) => x.it.keyDeg < 180).length / items.length;
   t.ok(Math.abs(rightSide - 0.5) < 0.03, `the start lies to the right ≈ 50 % (${pct(rightSide)})`);
 
@@ -310,7 +329,8 @@ export async function run(t) {
     const lastLeg = radial(list, (it) => it.legs.at(-1));
     const [byPath] = bestC(list, (it) => it.pathLength), [byTime] = bestC(list, (it) => outTime(it)), [fixed] = bestC(list, () => 10);
     dRows.push(`speed ${sl}: last leg ${pct(lastLeg)}, ∝ path ${pct(byPath)}, ∝ walking time ${pct(byTime)}, best fixed ${pct(fixed)}`);
-    if (sl > 0) t.ok(byTime <= byPath + 0.02, `speed level ${sl}: walking time is no better an odometer than path length (${pct(byTime)} vs ${pct(byPath)})`);
+    // above 'steady', holding Walk for a multiple of the outbound walking time does no better than one fixed distance
+    if (sl > 0) t.ok(byTime <= fixed + 0.03, `speed level ${sl}: walking time is no better an odometer than a fixed distance (${pct(byTime)} vs ${pct(fixed)})`);
     const corr = (() => { const a = list.map((x) => outTime(x.it)), b = list.map((x) => x.it.distance), ma = sumOf(a) / a.length, mb = sumOf(b) / b.length;
       let sab = 0, saa = 0, sbb = 0; a.forEach((v2, i) => { sab += (v2 - ma) * (b[i] - mb); saa += (v2 - ma) ** 2; sbb += (b[i] - mb) ** 2; }); return sab / Math.sqrt(saa * sbb); })();
     dRows.push(`r(walking time, home distance) ${corr.toFixed(2)}`);

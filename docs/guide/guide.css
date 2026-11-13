@@ -302,5 +302,8 @@ table.small td.num { text-align: right; white-space: nowrap; }
 .phone-row.narrow { grid-template-columns: 44mm 44mm 1fr; }
 .phone-row.narrow .app-fig.phone .shot img { max-width: 44mm; max-height: 92mm; }
 #ex-reckon .ex-figs .shot img { max-height: 44mm; }
+#ex-cubes .ex-figs .shot img { max-height: 55mm; }
 #knots-proof p { font-size: 8.4pt; line-height: 1.38; margin-bottom: 1.6mm; }
 #knots-proof h2 { margin-bottom: 1.4mm; }
+.app-fig.croptop { margin-top: 4mm; }
+.app-fig.croptop .shot img { display: block; width: 46mm; height: 56.5mm; object-fit: cover; object-position: top; }
