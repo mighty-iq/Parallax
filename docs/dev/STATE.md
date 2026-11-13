@@ -1,6 +1,6 @@
 # STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-14 00:20 UTC. Verification phase: every fix round is done; final suite running in chunks from bcf1b83 (A: node+longrun+clock, background bbu654ve8, log scratchpad/run_all_A.log; then B: fit, screens, flows, play, twotabs, shell, single; then C: harness_*, section, overlap, perf_track); G1 finished (guide final, 50 pages). All 19 exercises are active in index.html (Knots and B6's three included).
+Updated 2026-11-13 22:55 UTC (earlier stamps said 00:20 by mistake). Verification phase: every fix round is done. Final suite from bcf1b83+: chunk A done (node pass 1,002 s; clock full pass 1,634 s; longrun desktop 6 modes clean, then stopped at the 2-hour limit). Running: longrun --only phone,srcdoc --per 150 (bc8vnihk1, scratchpad/longrun_phone.log) and chunk B (beuf74xiz: fit, screens, flows, play, twotabs, shell, single). Then chunk C (harness_*, section, overlap, perf_track); G1 finished (guide final, 50 pages). All 19 exercises are active in index.html (Knots and B6's three included).
 
 ## Phase
 2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in focus on the DAT-style formats. D3: analogical test named in v1.2.
