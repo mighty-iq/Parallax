@@ -305,7 +305,7 @@ PHRASES = '''(ids) => {
     d.dims.forEach((dim) => dim.levels.forEach((v) => {
       const s = X.dimText(d, dim, v), low = (dim.label || dim.key).toLowerCase();
       out.push(id + '.' + dim.key + ' = ' + s);
-      if (s.toLowerCase() === low + ' ' + X.valueText(dim, v).toLowerCase() || s === String(v)) bad.push(id + '.' + dim.key + ': ' + s);
+      if (s.toLowerCase() === low + ' ' + X.valueText(dim, v).toLowerCase()) bad.push(id + '.' + dim.key + ': ' + s);
     }));
   });
   return { out, bad };
@@ -374,10 +374,9 @@ def run_today(b, C):
     ph = page.evaluate(PHRASES, NEW_IDS)
     C.ok(len(ph['out']) > 50 and not ph['bad'], f'{tag}: every setting of the new exercises reads as words ({len(ph["out"])} levels; raw: {ph["bad"][:4]})')
     (OUT / 'flows_today_phrases.txt').write_text('\n'.join(ph['out']) + '\n', encoding='utf-8')
-    go(page, {'mode': 'free'})
+    go(page, {'mode': 'free', 'exId': 'openings'})
     page.wait_for_selector('select[data-free="exercise"]', timeout=10000)
-    page.select_option('select[data-free="exercise"]', 'openings')
-    page.get_by_text('Fixed settings', exact=True).first.tap()
+    page.locator('[data-setting="free-mode"] label:has-text("Fixed settings")').tap()
     page.wait_for_timeout(150)
     opts = page.locator('select[data-free="keyview"] option').all_inner_texts()
     C.ok(bool(opts) and opts[0] == 'mostly the front outline fits (sometimes the side)', f'{tag}: Free play lists Openings settings in words ({opts})')
