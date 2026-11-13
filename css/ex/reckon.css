@@ -29,6 +29,7 @@
 .ex-reckon .ex-reckon-dot.is-right { fill: var(--ink-2, #454B52); stroke: var(--ink-2, #454B52); }
 .ex-reckon .ex-reckon-dot.is-wrong { fill: var(--surface, #FFFFFF); stroke: var(--ink-2, #454B52); }
 .ex-reckon .ex-reckon-bias { font-weight: 500; color: var(--ink, #1A1D21); }
+.ex-reckon .ex-reckon-chartnote { margin: var(--s1, 0.25rem) 0 0; font-size: var(--fs-xs, 0.8125rem); line-height: 1.4; color: var(--ink-3, #5D646C); text-align: center; }
 
 @media (max-width: 42rem) {
   .ex-reckon .ex-fp-actions > .ex-reckon-walk, .ex-reckon .ex-fp-actions > .ex-reckon-here { min-height: 3.25rem; }
