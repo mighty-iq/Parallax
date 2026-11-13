@@ -34,11 +34,11 @@
 .ex-knots .ex-knots-ring { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 5 3.5; }
 .ex-knots .ex-knots-ring.is-key { stroke: var(--right, #2A7239); stroke-width: 3px; stroke-dasharray: none; }
 
-/* tags A–D beside four crossings (untie, tie): a disc with a letter and a dotted leader to the
-   crossing; a 44 px invisible disc catches the tap */
+/* tags A–D beside four crossings (untie, tie): a disc with a letter and a solid leader to the
+   crossing; a 44-unit invisible disc (r 22) catches the tap */
 .ex-knots .ex-knots-tag { cursor: pointer; }
 .ex-knots .ex-knots-taghit { fill: transparent; stroke: none; pointer-events: all; }
-.ex-knots .ex-knots-leader { stroke: var(--ink-2, #454B52); stroke-width: 1.5px; stroke-dasharray: 1.5 2.5; stroke-linecap: round; }
+.ex-knots .ex-knots-leader { stroke: var(--ink-2, #454B52); stroke-width: 1.75px; stroke-linecap: round; }
 .ex-knots .ex-knots-tagdisc { fill: var(--surface, #FFFFFF); stroke: var(--ink-2, #454B52); stroke-width: 1.75px; }
 .ex-knots .ex-knots-tagtext {
   fill: var(--ink, #1A1D21); font-family: var(--font-sans, system-ui, sans-serif); font-size: 15px; font-weight: 700;
