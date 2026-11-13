@@ -253,7 +253,8 @@
     csv.setAttribute('data-action', 'lab-research');
     var json = ui.button('Back up the whole record (JSON)', { kind: 'secondary', onClick: function () { PX.ui.app.backup(); } });
     p.body.appendChild(h('div.px-data-row', csv, json));
-    p.body.appendChild(h('p.px-meta', rows.length ? rows.length + ' trials. Spatial Check results (with the one-tap answer about other tests), Threshold runs, strategy check-ins, the self-experiment, when the DAT-style focus was switched on or off, the tests you noted and Section runs are in the JSON backup.' : 'No trials yet: the export fills as you practise.'));
+    p.body.appendChild(h('p.px-meta', rows.length ? rows.length + ' trials. Spatial Check results (with the one-tap answer about other tests), Threshold runs, strategy check-ins, the self-experiment, when the focus on formats like those of the Dental Admission Test (DAT®) was switched on or off, the tests you noted and Section runs are in the JSON backup.' : 'No trials yet: the export fills as you practise.'));
+    if (rows.length && PX.ui.overlap && PX.ui.overlap.ADA) p.body.appendChild(h('p.px-meta.px-overlap-legal', PX.ui.overlap.ADA));
     return p.el;
   }
 

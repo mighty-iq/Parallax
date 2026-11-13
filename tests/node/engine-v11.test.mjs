@@ -164,8 +164,12 @@ function weeklyGoal(t) {
   // B7's Section mode: a full run that ended by itself is good practice; one the player ended is not
   rec.section = { runs: [{ id: 'a', size: 'full', ended: 'user' }, { id: 'b', size: 'mini', ended: 'done' }] };
   t.ok(!E.achievements.check(rec, T0 + DAY).some((a) => a.id === 'full-section'), 'no "Full section" for a stopped or a mini run');
-  rec.section.runs.push({ id: 'c', size: 'full', ended: 'time' });
-  t.ok(E.achievements.check(rec, T0 + DAY).some((a) => a.id === 'full-section'), '"Full section" once a full run reaches its end (or its clock)');
+  // the rule since the review (RV-B N15): every part reached and at least half the items answered
+  const PARTS = ['openings', 'patviews', 'angles', 'patfold', 'cubes', 'form'];
+  rec.section.runs.push({ id: 'd', size: 'full', ended: 'done', n: 90, answered: 0, right: 0, parts: PARTS.map((exId) => ({ exId, n: 15, answered: 0, seen: 15, reached: true })) });
+  t.ok(!E.achievements.check(rec, T0 + DAY).some((a) => a.id === 'full-section'), 'no "Full section" for a full run with no answers');
+  rec.section.runs.push({ id: 'c', size: 'full', ended: 'time', n: 90, answered: 60, right: 40, parts: PARTS.map((exId) => ({ exId, n: 15, answered: 10, seen: 15, reached: true })) });
+  t.ok(E.achievements.check(rec, T0 + DAY).some((a) => a.id === 'full-section'), '"Full section" once a full run reaches its end (or its clock) with every part reached and half the items answered');
   // PAT-format exercises are opt-in: "Every exercise" never waits for them
   const ev = E.achievements.list(newRecord(PX, T0), T0).filter((a) => a.id === 'all-exercises')[0];
   t.eq(ev.progress[1], PX.ex.list('train').filter((d) => !d.pat).length, '"Every exercise" counts the exercises of everyone\'s training, not PAT formats');

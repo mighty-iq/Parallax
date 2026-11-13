@@ -15,6 +15,9 @@
 .ex-reckon .ex-fp.is-walked.is-answering .ex-fp-stage, .ex-reckon .ex-fp.is-distance.is-answering .ex-fp-stage { cursor: default; }
 .ex-reckon .ex-fp.is-distance .ex-fp-fine { visibility: hidden; }
 .ex-reckon .ex-reckon-keyswalk[hidden] { display: none; }
+/* walking back, the readout says the direction is set and how to turn again (two lines on a phone): the
+   room is kept from the start, so Walk, Back and Here never move under the finger */
+.ex-reckon .ex-fp.is-return .ex-fp-readout { line-height: 1.3; min-height: 2.6em; }
 
 /* the last angle errors: dots (filled when right, open when wrong) against the tolerance band */
 .ex-reckon .ex-reckon-chart { margin: 0; }
