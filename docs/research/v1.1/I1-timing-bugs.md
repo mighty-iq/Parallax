@@ -266,6 +266,33 @@ Covered: every training exercise once in Free play on desktop with real stimulus
 
 ---
 
+## 5. Ranked list
+
+| Rank | ID | Sev. | One line | Main place to fix |
+|---|---|---|---|---|
+| 1 | T1 | S1 | Sessions end by a hidden item count while the HUD counts minutes: quick sessions end with "about N min left" (43 s of a "5-minute" session) | `modes.js:92-104`, `play.js:1247-1263`, `schedule.js:276-297` |
+| 2 | T2 | S1 | Pause sheet, hidden tab and idle time run down the session budget; the sheet says "The clock is stopped"; a session can end one item after Resume (4 of 12 items) | `modes.js:102`, `play.js:792-830, 981`, `app.js:769-776` |
+| 3 | T3 | S2 | Practice minutes drop any gap over 90 s whole and count idle gaps under 90 s (30 s of work reported as 1.4 min; real work after a break lost); they feed the weekly goal, the check schedule and Speed's rate | `modes.js:149-151`, `model.js:68`, `stats.js:58` |
+| 4 | T4 | S2 | A reload saves a cut session and silently starts a new one (one sitting = 2 weekly-goal sessions); reopening on a summary starts a session | `play.js:1454-1462`, `router.js:63-85`, `app.js:769-770` |
+| 5 | T6 | S2 | Daily Challenge: a reload or End now spends the scored attempt as "2/8"; unanswered items drawn as wrong; Today mixes UTC and local days ("Played today" for yesterday) and never shows the number (`NaN`) | `daily.js:100-108`, `play.js:1759`, `home.js:231-234` |
+| 6 | B7 | S2 | "Measured: Complete a Threshold run" for a run stopped after 3 of 30 items (also "Finish a Speed session" for any Speed session) | `modes.js:859-875`, `achievements.js:42, 52` |
+| 7 | B1 | S2 | Progress counts skipped, voided and probe rows as "answers" (6 for 5, 82 for 80) | `stats.js:173-182`, `progress.js:579-580` |
+| 8 | T7 | S2 | Speed sessions end by the untimed item estimate (11 items, 42 s, "about 2 min left") | `modes.js:634-635` |
+| 9 | T5 | S3 | One session shows four different minute values ("0.7 min", "1 min", "about 5 min left", "5 min"); no practice total or weekly minutes anywhere | `play.js:1639, 1730`, `log.js:188`, `stats.js:173-182` |
+| 10 | B10 | S3 | A Spatial Check counts as a practice session for the weekly goal and "Twelve days" | `streak.js:33-35`, `achievements.js:59-65` |
+| 11 | B4 | S3 | Settings and Log export two different trial CSVs under the same file name | `store.js:813-824`, `log.js:115-135` |
+| 12 | B3 | S3 | The Sounds setting does nothing | `settings.js:122` |
+| 13 | B9 | S3 | 150 % text on a phone: Today 439 px wide in a 390 px screen | layout (I2) |
+| 14 | B2 | S3 | The HUD counter runs one item ahead during feedback | `play.js:1251-1259, 1329` |
+| 15 | T9 | S3 | The first Homing route after load froze 1.3 s and was voided (re-check on a phone) | `homing/view.js:630-688` |
+| 16 | B5, B6, B8, T7 edge, T8 notes | S4 | Today's numbered order is not the play order; Pause button label; Threshold units ("6810.06 ms", "0.34 speed"); deadline and answer clocks start from different stamps; the Check's "about 15 minutes" and silent bars | see each item |
+
+---
+
+<!-- END-B -->
+
+---
+
 ## 6. Fix direction for the time model (for the v1.1 plan)
 
 One clock, owned by the player, measured the same way everywhere:

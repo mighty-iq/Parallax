@@ -23,7 +23,24 @@
 - Emulation is not a phone: there is no pull-to-refresh, no address bar that collapses, no notch, no in-app browser and no "Add to Home Screen" here. Those parts of the report come from reading the code against documented browser behaviour (sources in §9).
 - A trap worth knowing for future phone tests: **Playwright's full-page screenshot drops touch emulation** in this Chromium (afterwards `(pointer: coarse)` is false and `maxTouchPoints` is 0; checked in `dbg_fullshot.py`). An early run showed key hints on a "touch" screen because of it. `lib.shot()` now restores touch through CDP `Emulation.setTouchEmulationEnabled` after every full-page shot; the repository's own phone tests should do the same if they take full-page shots mid-test.
 
-<!-- SUMMARY -->
+## 2. Summary
+
+Parallax v1.0 is tidy on a phone in the ways the v1.0 tests checked (no horizontal scroll, 44 px targets, a tab bar, bottom sheets, safe-area padding at the bottom, key hints hidden on touch), and every exercise can be finished by touch. What goes wrong is **vertical space and timing**: the item screen is a desktop page that scrolls, so on a phone the stimulus and the answer are rarely on screen together, motion plays off-screen in tutorials and in landscape, and timed items charge the scroll to the learner. Around that sit gaps in readiness for where phones open the app (Discord's in-app browser, Safari's storage rules, no home-screen app, the notch in landscape).
+
+The ten problems that matter most, in order:
+1. **Items do not fit a phone screen.** Header, status strip, goal and tip take ~330 px of 844 before the stimulus; at 360 × 740 every 4-option 3D or folding item and both dials end 88–224 px below the edge, and with a browser's bars almost every item does (§5.2).
+2. **Homing is laid out against the phone**: the tutorial's walk plays below the fold (view at y 739 of 844), the dial and Confirm are below the edge after the walk, the dial is a 136 px ring with no fine control on touch, landscape shows 75 px of the walk, and the app tells phone users to use a larger screen (§3).
+3. **Watch, Try, Go is built for a laptop screen**: the labelled parts push the demo item down (Track's stage at y 725), and for several exercises the demo captions sit under the pinned control bar (§5.3).
+4. **Landscape uses the desktop layout**: every answer area starts below the 390 px edge; Track's spheres and Homing's walk move mostly off-screen (§8).
+5. **The Spatial Check is not phone-safe as a measurement**: timed probes need scrolling (View Match), and neither checks nor sessions record the screen class, so phone and computer results mix silently (§5.4).
+6. **Gestures fight the app**: pull-to-refresh reloads mid-item, Safari's double-tap zoom is live on options, a scroll that reads as a tap answers an item, turning the phone mid-stimulus is not voided (§6).
+7. **Discord's in-app browser and Safari's storage rules can lose a learner's record**: iOS keeps in-app-browser data apart from Safari, and Safari deletes localStorage after seven days of use without a visit (§9.1–9.2).
+8. **No home-screen app**: no manifest, no touch icon, no full-screen mode, no offline start from the icon (§9.3).
+9. **The notch in landscape**: left and right safe-area insets are ignored; brand, More and every page edge sit 22–29 px inside a 47 px inset (§9.4).
+10. **Small text**: 11–12 px labels across the screens (tab labels, specimen labels, Log rows, Progress verdicts), and 6–10 px SVG labels inside stimuli (Orient's map in landscape, Homing's map, Span) (§4, §5.5).
+
+The fixes (§11) start with one change to the player (a non-scrolling item screen sized with `dvh`, the chrome folded away during items), which removes most of problems 1, 3, 4 and part of 6, then the Homing phone layout, then the record-keeping and readiness items.
+
 
 ## 3. Homing on a phone
 
