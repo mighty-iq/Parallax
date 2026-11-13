@@ -23,7 +23,8 @@
    chance(params) (a number in the definition becomes a function; only choice (1/nOptions)
    and yesno (0.5) have defaults, the other answer types must give it), timeLimit(params)
    (default null = untimed), customDifficulty (boolean), version (default 1), nCorrect (1 unless
-   answer 'multi'), perDisplay (default false), cell (null = outside the 2×2).
+   answer 'multi'), perDisplay (default false), cell (null = outside the 2×2), pat (default false: a
+   PAT-format exercise, trained only under the player's PAT focus; v1.1), experimental (default false).
    key(def) → 'id@version' (how trial logs index exercises). Definitions are frozen after define. */
 (function (PX) {
   'use strict';
@@ -37,7 +38,8 @@
   var ABILITIES = ['Vz', 'SR', 'CS', 'CF', 'MV', 'SS', 'PI', 'LE', 'IL', 'PN', 'IM', 'AT', 'WM', 'PT', 'NAV', 'MA', 'VB'];
   var CELLS = ['intrinsic-static', 'intrinsic-dynamic', 'extrinsic-static', 'extrinsic-dynamic', null]; // null: outside the 2×2 (a checklist label only)
   var ROLES = ['train', 'probe'];
-  var ANSWERS = ['choice', 'multi', 'yesno', 'angle', 'targets', 'sequence'];
+  // position (v1.1): a point on the ground plane, { x, z } in metres in the item's own frame (Reckon's walk-back).
+  var ANSWERS = ['choice', 'multi', 'yesno', 'angle', 'targets', 'sequence', 'position'];
   var LAYOUTS = ['stem+options', 'custom'];
   var ENUM_LIMIT = 5000;
   var ENUM_SAMPLE = 400;
@@ -93,6 +95,11 @@
     // version: bump when dims or levels change incompatibly; trial logs index exercises as "id@version".
     if (d.version === undefined) d.version = 1;
     else if (!(Number.isInteger(d.version) && d.version >= 1)) fail(id, 'version must be an integer ≥ 1 (got ' + JSON.stringify(d.version) + ')');
+    // pat (v1.1): a PAT-format exercise (DAT-style formats), in Train only under the PAT focus.
+    if (d.pat === undefined) d.pat = false;
+    else if (typeof d.pat !== 'boolean') fail(id, 'pat must be true or false');
+    if (d.experimental === undefined) d.experimental = false;
+    else if (typeof d.experimental !== 'boolean') fail(id, 'experimental must be true or false');
     // perDisplay: ratings kept per screen class (Track, Homing: viewing distance changes difficulty).
     if (d.perDisplay === undefined) d.perDisplay = false;
     else if (typeof d.perDisplay !== 'boolean') fail(id, 'perDisplay must be true or false');
