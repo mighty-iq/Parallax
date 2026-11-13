@@ -27,9 +27,12 @@ What a person sees, measured (details in §3):
 1. **The countdown never counts down when you answer quickly, and the session ends with minutes "left".** A 5-minute Train session answered at about 1.4 s per item ended after 43 s with the HUD still at "Train · about 5 min left" on the last item; the summary then said "0.7 min" (§3, T1).
 2. **The countdown freezes while you think.** It is recomputed only when an item starts or is answered (`play.js:1247-1263`), never on a timer, so on a slow item it shows the value from the item's start.
 3. **Pausing does not stop the session clock.** The pause sheet says "The clock is stopped and the item is hidden" (`play.js:803-805`), which is true of the answer clock only. The budget keeps running under the pause, a hidden tab and an idle screen, so a session can end one or two items after a break (T2).
-4. **Practice time drops real practice.** Any gap over 90 s between two answers is thrown away whole, including the minute of real thinking before the break, the first item after a tutorial, and every slow item (Homing or Views on a phone can pass 90 s). Gaps just under 90 s of idling or a hidden tab are counted in full (T3).
+4. **Practice time drops real practice.** Any gap over 90 s between two answers is thrown away whole, including the real work on the item before the break, the first item after a tutorial that ran past 90 s, and any item someone thinks about for more than 90 s. Gaps just under 90 s of idling or a hidden tab are counted in full (T3).
 5. **Every screen rounds the same number differently.** Summary "0.7 min" (one decimal, `stats.js:58`), Log "1 min" (rounded, minimum 1, `log.js:188`), share card "1 min" (rounded, minimum 1, `play.js:1730`), Today "5 min" (the setting, not a measurement); total practice time is stored but shown nowhere (T5).
 6. **A reload splits one sitting into two sessions** (the hash keeps `#/play?mode=train`, `app.js:769-770`, and `pagehide` saves the cut session, `play.js:1454-1462`), which inflates the weekly goal and the "8 sessions" rule for the next Spatial Check; reopening the app on a summary starts a fresh session behind the pop-up (T4).
+7. **The Daily Challenge loses its one scored attempt to a reload or an early end**, draws unanswered items as wrong, and Today's panel mixes the UTC and the local day and never shows the challenge number (T6).
+
+What works: answer times (pauses, modals and hidden tabs are excluded correctly), Speed deadlines and their bar, the Spatial Check's time limits and bars, and the stimulus durations of Track, Span and Pattern Memory (T7–T9).
 
 The root cause is architectural rather than a typo: `plan.start` / `Date.now()` is used as if it were "time spent practising", while the engine's own `activeMs` is a different, lossy measure, and the HUD shows a wall-clock countdown for a session whose length is really decided by an item count. The fix (§6) is one **active-time clock** in the player (paused under the pause sheet, modals, hidden tabs and long idle; running during items, feedback and tutorials), used for the budget, the HUD, the summary and the weekly-goal minutes alike, with one formatter.
 
@@ -101,7 +104,7 @@ Today's panel, the intro line ("This session: Rotate, Fold and Spin, about 5 min
 
 ### T3 (S2). Practice minutes drop real practice and count idle time
 
-**Steps:** any session with (a) a pause or tab switch longer than 90 s, (b) one item that takes longer than 90 s (a long Homing route plus thinking, Views or Slice on a phone), (c) a Watch, Try, Go tutorial before the first scored item, or (d) a minute on the feedback strip or another tab after an answer. Compare the summary's minutes, or `rec.sessions[i].practiceMs`, with the time actually spent.
+**Steps:** any session with (a) a pause or tab switch longer than 90 s, (b) one item someone thinks about for more than 90 s, (c) a Watch, Try, Go tutorial before the first scored item, or (d) a minute on the feedback strip or another tab after an answer. Compare the summary's minutes, or `rec.sessions[i].practiceMs`, with the time actually spent.
 
 **Expected:** practice time = time on items, feedback and show-me (and arguably tutorials), without pauses, hidden-tab time or long idle stretches.
 
@@ -110,9 +113,10 @@ Today's panel, the intro line ("This session: Rotate, Fold and Spin, about 5 min
 - Pause run: 100 s pause at item 4. The 104.6 s gap to the next answer was dropped, so the 3–4 s of real work on that item vanished too; `practiceMs` 61 490 against about 66 s of real activity.
 - Hidden-tab run: the 60 s hidden on the feedback strip stayed under 90 s, so it was counted: `practiceMs` 85 524 ("1.4 min") for about 30 s of real activity, nearly three times too much.
 - A single slow item over 90 s, or a first item after a tutorial that took more than 90 s since the plan began (the first gap starts at `plan.start`, `modes.js:73`), counts zero. A session made only of such items has `practiceMs` 0: its summary says "· 0 min" and its Log row shows "N trials" instead of minutes (`log.js:188, 196`).
+- Tutorials fall on either side of the line: in the desktop crawl, Span's Watch, Try, Go took 40 s and was counted as practice (2 scored items, "· 0.7 min"), while Homing's took 100 s and was dropped with the first scored item.
 - The time between the last answer and Finish (reading the last feedback, show-me) is never counted.
 
-**Where it matters:** the weekly goal and the Spatial Check schedule count a session with ≥ 10 answers **or ≥ 5 minutes** (`streak.js:33-35`, `assess.js:106-111`), so a slow, careful session of 8 Homing items over 12 minutes can count for nothing; Speed's "right answers in time: N a minute" divides by this clock (`modes.js:671-674`); and `trialTimes()` uses the same 90 s cut for planning (`schedule.js:148-170`). The running total `rec.practiceMs` is stored but displayed nowhere, and the two-tab merge keeps `max(theirs, mine)` instead of re-summing the merged sessions (`js/engine/merge.js:150`), so one tab's minutes are lost.
+**Where it matters:** the weekly goal and the Spatial Check schedule count a session with ≥ 10 answers **or ≥ 5 minutes** (`streak.js:33-35`, `assess.js:106-111`), so a session of fewer than 10 answers whose gaps mostly exceed 90 s (slow thinking, or a pause on most items) counts for nothing however long it lasted, while one with a few idle minutes under 90 s each can pass the 5-minute line; Speed's "right answers in time: N a minute" divides by this clock (`modes.js:671-674`); and `trialTimes()` uses the same 90 s cut for planning (`schedule.js:148-170`). The running total `rec.practiceMs` is stored but displayed nowhere, and the two-tab merge keeps `max(theirs, mine)` instead of re-summing the merged sessions (`js/engine/merge.js:150`), so one tab's minutes are lost.
 
 
 ### T4 (S2). A reload splits one sitting into two sessions, and reopening the app starts a session by itself
@@ -186,7 +190,7 @@ Notes:
 | Span, length 2 | 3 100 ms | 3 177 ms | 16.7 ms, 100 ms | counted |
 | Homing, first route after load | 9 630 ms | 11 257 ms | 33.3 ms, **1 300 ms** | voided ("The display stuttered") |
 
-Pattern Memory's 3 s exposure is timed from rAF time stamps (`patterns/view.js:148-172`) and reports its own stutter; its measured exposures are in §4 (Spatial Check run). Motion is integrated from frame time clamped to 100 ms (`timing.js:15, 51-53`), so a long frame lengthens the stimulus instead of making it jump (Homing above: +1.6 s around one 1.3 s stall), and gaps over 150 ms void the trial. That is the intended trade-off.
+Pattern Memory's 3 s exposure is timed from rAF time stamps (`patterns/view.js:148-172`): in a full Spatial Check (`crawl.py desktop check`) the swap came at 3 000 ms every time and the empty grid was painted at 3 033–3 067 ms; 2 of 18 exposures were voided by the view's own 100 ms gap rule (gaps of 150 and 417 ms while the machine was loaded) and replaced, as designed. Motion is integrated from frame time clamped to 100 ms (`timing.js:15, 51-53`), so a long frame lengthens the stimulus instead of making it jump (Homing above: +1.6 s around one 1.3 s stall), and gaps over 150 ms void the trial. That is the intended trade-off.
 
 Note (S3, to re-check on a real phone): the only freeze seen was on the first Homing route after the page loaded, while this 2-CPU machine was also running another audit's browsers; Homing renders the scene once before the walk (`homing/view.js:658-659`), but if the stall is a first-use cost (textures, landmarks first entering the view), a phone would void the first Homing item of most sessions. Render every landmark once in the ready phase to rule it out.
 
@@ -202,7 +206,7 @@ Covered: every training exercise once in Free play on desktop with real stimulus
 
 **Steps:** Train, answer 5 items, Pause → End session. Open Progress.
 **Expected:** "5 answers on 1 day" (the summary said "5 answered").
-**Actual:** "6 answers on 1 day" (`exp_reload.py end`); after the reload run, "21 answers" for 20 answered. Every trial row counts, including the skipped row that End session writes, voided (stutter) rows, Spatial Check probe rows and Threshold rows.
+**Actual:** "6 answers on 1 day" (`exp_reload.py end`); after the reload run, "21 answers" for 20 answered; after one complete Spatial Check (80 items), "82 answers on 1 day · 1 check" (2 voided Pattern Memory items). Every trial row counts, including the skipped row that End session writes, voided (stutter) rows, Spatial Check probe rows and Threshold rows.
 **Where:** `stats.totals()` returns `rec.trials.length + folded` (`js/engine/stats.js:173-182`), shown as "answers" by `js/ui/progress.js:579-580`. Count outcomes 0 and 1 only (and say "answers in training" if probes are left out), as the summary and the Log's session rows do (`log.js:73-78`).
 
 ### B2 (S3). The HUD counter runs one item ahead during the feedback
@@ -235,7 +239,30 @@ Covered: every training exercise once in Free play on desktop with real stimulus
 **Steps:** press Pause (or Esc) during an item.
 **Actual:** the pause sheet offers Resume, while the HUD button still reads "Pause Esc" and still works as a toggle (`play.js:291, 831`); on phones the two buttons sit one above the other (`shots/breaks_pause2_before_resume.png`). Label it "Resume" while paused, or disable it.
 
-<!-- B7+ go here -->
+### B7 (S2). "Measured: Complete a Threshold run" is awarded for a run stopped after 3 of 30 items
+
+**Steps:** Library → Spin → Practise → Threshold (Spin deadline, 30 items) → Start; answer 3 items; Pause → End session.
+**Expected:** no achievement (the run is not complete), and the run is either discarded or saved as "stopped".
+**Actual (phone, `crawl.py phone modes`):** the summary shows "Threshold: 6810.06 ms. The staircase did not settle yet…" and, under Achievements, "**Measured** — Complete a Threshold run." (`shots/crawl_phone_modes_threshold_summary.png`). The 3-item run is stored in `rec.mot['spin-deadline']` like a finished one (`n: 3, ok: false`).
+**Where:** `MODES.threshold.finish` saves any run with at least one answer (`modes.js:859-875`); the achievement counts saved runs (`achievements.js:42, 86-87`). Rule 11 ("honest" achievements) is broken. Count only runs with `n >= trials` (or `ok`), and keep stopped runs out of the Lab's threshold history. The same pattern applies to "Against the clock: Finish a Speed session" (`achievements.js:52, 111-116`), which any Speed session with one answer earns.
+
+### B8 (S4). Threshold results print raw numbers and a non-unit
+
+"Threshold: 6810.06 ms." for the Spin deadline (`play.js:1721`, `U.round(t.threshold, 2) + ' ' + t.unit`) should read "6.8 s"; Track Standard prints "Threshold: 0.34 speed." (unit `'speed'`, `modes.js:695`), which is not a unit; rule 9 gives Track its own speed unit, which the Library already prints as "cw/s: widths of the box per second" (`library.js:459`).
+
+### B9 (S3). Text size 150 % on a phone makes Today wider than the screen
+
+**Steps:** 390 × 844 phone, Settings → Text size 150 %, Today.
+**Expected:** no horizontal scroll (ARCHITECTURE §9: "no horizontal scroll").
+**Actual:** the page is 439 px wide in a 390 px viewport; the header's "Chimera Discord" button is cut off at the right edge and exercise names break inside the word ("Rota / te") in the plan list (`shots/crawl_phone_screens_today_dark_150.png`). At 100 % the same screen is 390 px wide. (Phone layout as a whole is the I2 audit's subject; this one is listed because Settings offers 150 %.)
+
+### B10 (S3). A Spatial Check counts as a practice session for the weekly goal
+
+**Steps:** fresh profile, take Baseline 1 to the end (no training at all). Open Progress or Today.
+**Expected:** the weekly goal counts practice; a measurement that "Parallax never trains" is not practice (the Check's own schedule counts only training sessions: "8 practice sessions", `assess.js:106-111`).
+**Actual (`crawl.py desktop check`):** "Weekly goal: 1 of 3 sessions this week", Friday marked "practised", and the "Twelve days" achievement at "1 of 12", all from the Check alone. The check is saved as an ordinary session (80 answers, `practiceMs` 154 134) and `streak.counts()` ignores the mode (`streak.js:33-35`), as does the day count for "Twelve days" (`achievements.js:59-65`). Free play and Threshold runs count too, which may be intended; the Check should not. Filter by mode in `streak.counts()` (training modes, as `assess.js` does), or state the rule ("any session, including checks").
+
+<!-- B11+ go here -->
 
 ---
 
