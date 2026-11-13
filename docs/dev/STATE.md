@@ -57,7 +57,8 @@ Updated 2026-11-13 21:40 UTC. Every builder and fix round is done; verification 
 - Play-through RV-F (fresh player, no source: six DAT-style tutorials, Section mini, focus; phone 390×844 and 360×640, desktop): a76c1d49da2d6b2fa → docs/dev/reviews/RV-play-dat.md. 
 - Play-through RV-F2 (fresh player: Homing, Reckon, Knots): a8c9191d53e6416d6 → docs/dev/reviews/RV-play-nav-knots.md
 - Full suite run 1 (tests/run_all.sh incl. longrun and clock full) from 0c8daf6+: background b4w592kpu, log scratchpad/run_all_1.log, results tests/e2e/out/run_all.json
-- G1 resumed to finish Reckon/Homing/Knots pages, shots, PDF, CHANGELOG (ac14d632f5849a4a9)
+- G1 finished (80fe43f): guide 1.1.0, 50 pages, clean build; README; CHANGELOG.
+- Reviewer RV-G (guide, README, CHANGELOG claims against code and notes): a8033f4a82a020e3c → docs/dev/reviews/RV-guide.md
 - RV-C done (docs/dev/reviews/RV-knots.md): all answers right; Show me replay can show a type-changing move; 3 false texts; 2 untie cues at the limit; B4 fix round done (Show me checked move by move; captions; untie cues ≤ 27.7 %).
 - Finished: B3 (a4766dc5c229a6ee1), B2 (aed53d9e449759e47), B6 (a0dc048b845b7fc8e), B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
 
