@@ -522,6 +522,9 @@
       cfg = cfg || {};
       if (cfg.feedback === undefined) cfg.feedback = true;
       var def = P.def, view = P.view;
+      // Per item, for the view (B3's request): practice items (Watch, Try, and other unrated
+      // items) and the item a Watch demo plays. Views read them if present.
+      if (P.ctx) { P.ctx.practice = !!cfg.practice; P.ctx.demo = !!cfg.demo; }
       return new Promise(function (resolve) {
         var token = ++P.token;
         P.resolve = resolve; P.item = item; P.cfg = cfg; P.last = null;
@@ -822,7 +825,7 @@
     // Watch: the item is presented, view.demo plays its solution with captions, then the
     // player is back in 'respond' and the item can be answered (practice, never logged).
     function demo(item, cfg) {
-      var p = run(item, Object.assign({ practice: true }, cfg || {}));
+      var p = run(item, Object.assign({ practice: true, demo: true }, cfg || {}));
       var tok = P.token;
       when('respond').then(function () {
         if (tok !== P.token || !P.view || !P.view.demo) return;

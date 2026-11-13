@@ -101,28 +101,26 @@
   }
   function ring(g, x, y, cls) { g.appendChild(el('circle', { cx: f1(x), cy: f1(y), r: 17, class: 'ex-knots-ring ' + (cls || '') })); }
 
-  // Tag positions: 24–38 px from the crossing, in the free direction farthest from every strand.
-  // A spot must be nearer its own crossing than any other crossing by 12 px, its disc must clear
-  // the rope, and its 44 px tap disc must not overlap another tag's; spots that break a rule only
-  // win when no spot keeps them all.
+  // Tag positions: 24–44 px from the crossing. The score favours a tag that is clearly nearer its
+  // own crossing than any other (the margin counts most), clear of the rope, with a short leader;
+  // a disc that touches the rope or a 44-unit tap disc that overlaps another tag's loses.
   function tagSpots(dg, tags) {
     var pts = [];
     dg.S.forEach(function (s) { for (var i = 0; i < s.m; i += 2) pts.push([s.x[i], s.y[i]]); });
     var placed = [];
     return tags.map(function (c) {
       var X = dg.X[c], best = null;
-      for (var a = 0; a < 16; a++) {
-        for (var rr = 24; rr <= 38; rr += 2) {
-          var ang = Math.PI * 2 * a / 16, cx = X.x + rr * Math.cos(ang), cy = X.y + rr * Math.sin(ang);
+      for (var a = 0; a < 24; a++) {
+        for (var rr = 24; rr <= 44; rr += 2) {
+          var ang = Math.PI * 2 * a / 24, cx = X.x + rr * Math.cos(ang), cy = X.y + rr * Math.sin(ang);
           if (cx < TAG_R + 2 || cy < TAG_R + 2 || cx > P - TAG_R - 2 || cy > P - TAG_R - 2) continue;
           var clear = Infinity, other = Infinity, near = Infinity, i;
           for (i = 0; i < pts.length; i++) { var dx = pts[i][0] - cx, dy = pts[i][1] - cy; clear = Math.min(clear, dx * dx + dy * dy); }
           for (i = 0; i < dg.X.length; i++) if (i !== c) { var ox = dg.X[i].x - cx, oy = dg.X[i].y - cy; other = Math.min(other, Math.sqrt(ox * ox + oy * oy)); }
           for (i = 0; i < placed.length; i++) { var ex = placed[i][0] - cx, ey = placed[i][1] - cy; near = Math.min(near, Math.sqrt(ex * ex + ey * ey)); }
           clear = Math.sqrt(clear);
-          var score = Math.min(clear, near / 2) - 0.15 * rr;
-          if (other < rr + 12) score -= 100;               // nearer another crossing than its own
-          if (clear < TAG_R + 4) score -= 100;             // the disc touches the rope
+          var score = Math.min(other - rr, 24) + 0.5 * Math.min(clear - TAG_R - 3, 10) - 0.15 * rr;
+          if (clear < TAG_R + 3) score -= 50;              // the disc touches the rope
           if (near < 2 * HIT_R) score -= 100;              // tap discs overlap
           if (!best || score > best.score) best = { score: score, x: cx, y: cy };
         }
