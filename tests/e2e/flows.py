@@ -22,6 +22,14 @@ from play import (OUT, INDEX, READY, boot, go, state, wait_state, card, click_ca
                   row_count, seen_all, last_outcome)
 
 
+def shot(page, name, full=False):
+    """A screenshot that never fails the test: under machine load they can time out."""
+    try:
+        page.screenshot(path=str(OUT / name), full_page=full, timeout=10000)
+    except Exception as e:
+        print('  (screenshot skipped:', name, str(e)[:60], ')', flush=True)
+
+
 def run_tour(b, C):
     tag = 'tour'
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})
@@ -38,7 +46,7 @@ def run_tour(b, C):
     C.ok(page.evaluate('PX.core.router.current().params.mode') == 'tour' and page.locator('[data-wtg="rotate"]').count() == 1, f'{tag}: Watch, Try, Go starts with Rotate')
     page.wait_for_function('__play.played && __play.played.demos >= 1', timeout=10000)
     C.ok(True, f'{tag}: the Watch demo played')
-    page.screenshot(path=str(OUT / 'flows_tour_watch.png'))
+    shot(page, 'flows_tour_watch.png')
     # Rotate: answer the demo item and the practice items; then skip Fold
     ok = drive(page, '!!document.querySelector("[data-wtg=fold]")', limit=200)
     C.ok(ok, f'{tag}: Rotate done, Fold next')
@@ -51,7 +59,7 @@ def run_tour(b, C):
     C.ok(nb.count() == 1 and nb.first.is_visible(), f'{tag}: Track shows the motion notice the first time')
     ok = drive(page, '!!document.querySelector("[data-card-box=baseline]")', limit=300)
     C.ok(ok, f'{tag}: the tour ends with the baseline offer')
-    page.screenshot(path=str(OUT / 'flows_tour_end.png'))
+    shot(page, 'flows_tour_end.png')
     t = page.evaluate('({ tour: PX.core.store.state.tour, ui: PX.core.store.state.ui.tour, notice: !!PX.core.store.state.ui.seen.motionNotice })')
     C.ok(t['tour']['done'] is True and t['ui']['done'] == ['rotate', 'track'] and t['ui']['skipped'] == ['fold'], f'{tag}: tour flags {t["ui"]}')
     C.ok(t['notice'] is True, f'{tag}: the motion notice is remembered')
@@ -86,7 +94,7 @@ def run_check(b, C):
     page.wait_for_timeout(150)
     C.ok(page.evaluate('PX.core.store.state.spatial.expect.value') == 3, f'{tag}: the expectation is recorded')
     C.ok(card(page) == 'probe-intro', f'{tag}: the first probe’s instruction screen')
-    page.screenshot(path=str(OUT / 'flows_check_instruction.png'))
+    shot(page, 'flows_check_instruction.png')
     rows0 = page.evaluate('PX.core.store.state.trials.length')
     click_card(page, 'example')
     page.wait_for_function('__play.played.demos >= 1', timeout=10000)
@@ -122,7 +130,7 @@ def run_check(b, C):
     C.ok(len(a) == 1 and a[0]['kind'] == 'B1' and len(a[0]['results']) >= 5, f'{tag}: saved with every probe ({len(a)} checks, {len(a[0]["results"]) if a else 0} probes)')
     txt = page.locator('.pl-summary').inner_text()
     C.ok('What the numbers mean' in txt and 'Baseline 2 is next' in txt and 'IQ' in txt, f'{tag}: the end note says what the numbers mean and what comes next')
-    page.screenshot(path=str(OUT / 'flows_check_end.png'), full_page=True)
+    shot(page, 'flows_check_end.png', True)
     # a second check stopped part-way is not used for results
     go(page, {'mode': 'check'})
     click_card(page, 'start')
@@ -170,7 +178,7 @@ def run_daily(b, C):
     page.locator('.pl-daily [data-copy]').first.click()
     page.wait_for_timeout(300)
     C.ok('Cop' in page.locator('.pl-daily .px-copybox-status').first.inner_text(), f'{tag}: Copy reports back')
-    page.screenshot(path=str(OUT / 'flows_daily_412_dark.png'), full_page=True)
+    shot(page, 'flows_daily_412_dark.png', True)
     page.locator('.pl-daily [data-share]').click()
     page.wait_for_timeout(400)
     C.ok(page.evaluate('PX.ui.modalOpen()') >= 1, f'{tag}: the share card sheet opens')
@@ -200,7 +208,7 @@ def run_modes(b, C):
     go(page, {'mode': 'path', 'exId': 'hidden'})
     C.ok(card(page) == 'intro' and 'stage 1 of 10' in page.locator('[data-card-box]').inner_text(), f'{tag}: Path intro names the stage')
     C.ok(page.locator('[data-card-box="intro"] [data-card="watch"]').count() == 1 and page.locator('[data-card-box="intro"] [data-card="start"]').count() == 1, f'{tag}: the intro offers the stage demo itself')
-    page.screenshot(path=str(OUT / 'flows_path_stage.png'))
+    shot(page, 'flows_path_stage.png')
     click_card(page, 'watch')
     C.ok(card(page) is None, f'{tag}: no second stage card')
     page.wait_for_function('__play.played.demos >= 1', timeout=10000)
@@ -226,7 +234,7 @@ def run_modes(b, C):
         page.wait_for_timeout(40)
     C.ok(seen['level'], f'{tag}: a block end shows the level change')
     C.ok(seen['checkin'] and page.evaluate('PX.core.store.state.strategies.length') == 1 and page.evaluate('PX.core.store.state.strategies[0].strategy') == 'parts', f'{tag}: the strategy check-in is recorded')
-    page.screenshot(path=str(OUT / 'flows_path_notes.png'))
+    shot(page, 'flows_path_notes.png')
     page.evaluate('__play.end()')
     page.wait_for_selector('.pl-summary', timeout=8000)
     C.ok('Path' in page.locator('.pl-summary').inner_text(), f'{tag}: the Path summary shows the stage')
@@ -253,7 +261,7 @@ def run_modes(b, C):
     page.locator('select[data-free="extra"]').select_option('1')
     page.locator('[data-setting="free-timer"] label:has-text("10 s")').click()
     page.locator('[data-setting="free-items"] label:has-text("10 items")').click()
-    page.screenshot(path=str(OUT / 'flows_free_setup.png'), full_page=True)
+    shot(page, 'flows_free_setup.png', True)
     page.locator('[data-free-start]').click()
     wait_state(page, 'respond')
     C.ok(page.evaluate('__play.item.params.extra') == 1 and page.locator('.pl-limit.is-running').is_visible(), f'{tag}: Free play uses the chosen settings and timer')

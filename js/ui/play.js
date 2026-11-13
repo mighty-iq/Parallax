@@ -1503,7 +1503,12 @@
     function loop() {
       if (S.done) return;
       if (S.ended) { end(); return; }
-      if (!S.clock.started()) S.clock.start();
+      if (!S.clock.started()) {
+        S.clock.start();
+        // a new session: an earlier kept summary is no longer the last screen (a tab killed without
+        // pagehide then reopens on Today, not on that older summary; review N5)
+        if (isObj(uiRec().lastSummary)) uiRec().lastSummary = null;
+      }
       S.clock.touch(); // going on to an item is activity (also when a test drives the player)
       var step;
       try { step = E().modes.next(S.plan, rec(), now(), clockNow()); } catch (e) { log('next failed', e); end(); return; }
@@ -1521,7 +1526,7 @@
       S.skipRun = 0;
       hud(step, def, item);
       var pre = Promise.resolve(null);
-      if (!wtgSeen(def.id) && mode !== 'speed' && mode !== 'threshold') pre = offerWtg(def);
+      if (!wtgSeen(def.id) && mode !== 'speed' && mode !== 'threshold') { pre = offerWtg(def); S.introDemo = undefined; } // the intro's choice never reaches a later stage
       else if (step.watch && S.introDemo !== undefined) { pre = S.introDemo ? stageDemo(step, def) : Promise.resolve(null); S.introDemo = undefined; } // asked on the intro card
       else if (step.watch) pre = stageWatch(step, def);
       pre.then(function (r) {
@@ -1755,7 +1760,9 @@
     var p = (r && r.params) || {}, m = String(p.mode || 'train');
     if (m === 'free' && !p.run && !p.params && !p.challenge) return r;
     var L = uiRec().lastSummary;
-    if (isObj(L) && isNum(L.at) && now() - L.at >= 0 && now() - L.at < RESTORE_MS && L.mode === m && (L.res || L.daily)) {
+    // a Daily attempt belongs to its day: after midnight its summary is not brought back
+    var dayOk = !(isObj(L) && L.mode === 'daily') || (isObj(L.daily) && L.daily.day === E().daily.day(now()));
+    if (isObj(L) && dayOk && isNum(L.at) && now() - L.at >= 0 && now() - L.at < RESTORE_MS && L.mode === m && (L.res || L.daily)) {
       return { route: 'play', params: { mode: m, restore: '1' } };
     }
     return null;
@@ -1851,7 +1858,8 @@
       var st = plan.pathStage0 || 1, pre = null, ps = rec().path && rec().path[def.id];
       try { pre = E().path.preset(def, st); } catch (e) { pre = null; }
       // A stage not yet watched offers its demo here, on the one card (I1 B12).
-      var watchIt = !(plan.rechecks && plan.rechecks.length) && !(isObj(ps) && isObj(ps.watched) && ps.watched[st]) && !!(viewOf(def.id) && viewOf(def.id).demo);
+      // (not while Watch, Try, Go is still to come: its offer, with its own demo, takes stage 1's place)
+      var watchIt = !(plan.rechecks && plan.rechecks.length) && !(isObj(ps) && isObj(ps.watched) && ps.watched[st]) && !!(viewOf(def.id) && viewOf(def.id).demo) && wtgSeen(def.id);
       var acts = watchIt ? [back, { label: 'Start the stage', value: 'start' }, { label: 'Watch the demo', value: 'watch', primary: true }] : [back, go];
       return { title: 'Path · stage ' + st + ' of 10', def: def, actions: acts, offersDemo: watchIt, lines: [
         pre ? 'Settings at this stage: ' + settingsText(def, pre) + '.' : '',
@@ -2102,7 +2110,9 @@
     // 1 right, 0 wrong, null not answered (never drawn as wrong: I1 T6)
     var outs = Array.isArray(d.outcomes) ? d.outcomes : D.items.map(function (it, i) { return D.outcomes[i] === 1 || D.outcomes[i] === 0 ? D.outcomes[i] : null; });
     var marks = outs.map(function (o) { return o === 1 ? 1 : o === 0 ? 0 : null; });
-    var p = K.panel({ title: d.partial && d.scored ? 'Today’s attempt so far' : d.scored ? 'Today’s score' : 'Practice round', className: 'pl-panel', aside: d.day });
+    var today = false;
+    try { today = d.day === E().daily.day(now()); } catch (e) { today = false; }
+    var p = K.panel({ title: d.partial && d.scored ? (today ? 'Today’s attempt so far' : 'An attempt left open') : d.scored ? 'Today’s score' : 'Practice round', className: 'pl-panel', aside: d.day });
     p.body.appendChild(h('p.pl-daily-score', h('b.px-num', d.right + '/' + d.n), h('span', ' right'),
       d.partial ? h('span.px-meta', ' · ' + (isNum(d.answered) ? d.answered : outs.filter(function (o) { return o !== null; }).length) + ' of ' + d.n + ' answered') : null));
     p.body.appendChild(h('ol.pl-marks', { 'aria-label': 'Items: right, wrong or not answered' }, D.items.map(function (it, i) {
@@ -2110,6 +2120,12 @@
       return h('li', { class: cls }, h('span.pl-mark-g', { 'aria-hidden': 'true' }, o === 1 ? '✓' : o === 0 ? '✗' : '–'),
         h('span.pl-mark-n.px-num', String(i + 1)), h('span.pl-mark-x', def ? def.short || def.name : it.exId), h('span.px-sr', o === 1 ? ': right' : o === 0 ? ': wrong' : ': not answered'));
     })));
+    if (d.partial && d.scored && !today) { // its day is over: it can no longer be finished
+      p.body.appendChild(h('p', 'This attempt was left open on ' + d.day + ', so it has no score. A new challenge opens every day.'));
+      p.body.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' })));
+      out.appendChild(p.el);
+      return;
+    }
     if (d.partial && d.scored) {
       var go = ui.button('Go on now', { kind: 'primary', onClick: function () { router.go('play', { mode: 'daily' }, { force: true }); } });
       go.setAttribute('data-daily-resume', '');

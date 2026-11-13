@@ -52,6 +52,48 @@
     return out;
   }
 
+  // v1.1 fields that both tabs may add to (the newer side alone would drop the other's): Section
+  // runs (by id), Reckon's route history (by entry), the test-hygiene log (tests by time, focus
+  // switches by time and value).
+  function lastN(list, n) { return list.length > n ? list.slice(list.length - n) : list; }
+  function mergeV11(out, theirs, mine) {
+    var ts = obj(theirs.section), ms = obj(mine.section);
+    if (isObj(theirs.section) || isObj(mine.section)) {
+      var runs = lastN(union(ts.runs, ms.runs, function (r) { return isObj(r) && typeof r.id === 'string' ? r.id : null; })
+        .sort(function (a, b) { return (a.start || 0) - (b.start || 0); }), 200);
+      var next = {};
+      ['full', 'mini'].forEach(function (k) {
+        var a = obj(ts.next)[k], b = obj(ms.next)[k];
+        next[k] = Math.max(isNum(a) ? a : 1, isNum(b) ? b : 1);
+      });
+      // the live (unfinished) run: the side with more answers, mine on a tie; none once either
+      // side has finished it (its summary is in runs)
+      function answered(l) {
+        var n = 0;
+        if (isObj(l) && isArray(l.parts)) l.parts.forEach(function (p) { arr(p && p.items).forEach(function (it) { if (isObj(it) && it.status === 'answered') n++; }); });
+        return n;
+      }
+      var lt = isObj(ts.live) ? ts.live : null, lm = isObj(ms.live) ? ms.live : null;
+      var live = lt && lm ? (answered(lt) > answered(lm) ? lt : lm) : lm || lt;
+      if (live && runs.some(function (r) { return r.id === live.id; })) live = null;
+      out.section = { runs: runs, next: next, live: live ? cp(live) : null };
+    }
+    if (isObj(theirs.reckon) || isObj(mine.reckon)) {
+      var hist = union(obj(theirs.reckon).hist, obj(mine.reckon).hist, function (e) { return isArray(e) ? JSON.stringify(e) : null; })
+        .sort(function (a, b) { return (isNum(a[0]) ? a[0] : 0) - (isNum(b[0]) ? b[0] : 0); });
+      out.reckon = { v: 1, hist: lastN(hist, 40) };
+    }
+    if (isObj(theirs.hygiene) || isObj(mine.hygiene)) {
+      var th = obj(theirs.hygiene), mh = obj(mine.hygiene);
+      out.hygiene = {
+        tests: lastN(union(th.tests, mh.tests, function (x) { return isObj(x) && isNum(x.at) ? String(x.at) : null; })
+          .sort(function (a, b) { return a.at - b.at; }), 200),
+        focus: lastN(union(th.focus, mh.focus, function (x) { return isArray(x) ? x[0] + ':' + x[1] : null; })
+          .sort(function (a, b) { return a[0] - b[0]; }), 500),
+      };
+    }
+  }
+
   function pathSize(p) {
     if (!isObj(p)) return -1;
     return (isObj(p.passed) ? Object.keys(p.passed).length : 0) * 1e6 + (isNum(p.stage) ? p.stage : 0) * 1e3 + (isNum(p.items) ? p.items : 0);
@@ -149,9 +191,10 @@
     if (tl.order || ml.order) out.lab = cp(tl.order && (!ml.order || (tl.start || 0) <= (ml.start || 0)) ? tl : ml);
     // the total is the sum over the merged sessions (each tab's own total misses the other's);
     // never below either side's total (sessions dropped by a cap keep their minutes)
-    var sumMs = 0;
-    (isArray(out.sessions) ? out.sessions : []).forEach(function (x) { if (isObj(x) && isNum(x.practiceMs) && x.practiceMs > 0) sumMs += x.practiceMs; });
+    var sumMs = 0; // Spatial Checks are not practice (modes.finish and stats.totals leave them out too)
+    (isArray(out.sessions) ? out.sessions : []).forEach(function (x) { if (isObj(x) && x.mode !== 'check' && isNum(x.practiceMs) && x.practiceMs > 0) sumMs += x.practiceMs; });
     out.practiceMs = Math.max(sumMs, isNum(theirs.practiceMs) ? theirs.practiceMs : 0, isNum(mine.practiceMs) ? mine.practiceMs : 0);
+    mergeV11(out, theirs, mine);
     if (isObj(theirs.streak) || isObj(mine.streak)) {
       out.streak = cp(obj(newer.streak));
       out.streak.goals = union(obj(theirs.streak).goals, obj(mine.streak).goals, function (g) { return isArray(g) ? String(g[0]) : null; })

@@ -464,6 +464,21 @@ def repro(b):
     page.reload()
     page.wait_for_function(READY, timeout=20000)
     C.ok(page.evaluate('PX.core.store.state.sessions.length') == n0 + 1, 'T4: reopening on the summary adds no session')
+    # review N4: back (or forward) to a #/play hash never starts a session either
+    for _ in range(4):
+        if not page.evaluate('PX.ui.modalOpen()'):
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(150)
+    page.evaluate('void PX.core.router.go("home")')
+    page.wait_for_timeout(300)
+    try:
+        page.go_back(timeout=5000)
+    except Exception:
+        pass
+    page.wait_for_timeout(800)
+    C.ok(page.evaluate('__play.state') == 'idle' and page.evaluate('PX.core.store.state.sessions.length') == n0 + 1 and page.evaluate('PX.core.router.current().name') in ('play', 'home'),
+         f'N4: back to a #/play hash starts no session ({page.evaluate("PX.core.router.current().route")}, {page.evaluate("__play.state")})')
     page.evaluate('PX.core.store.state.ui.lastSummary.at = Date.now() - 13 * 3600e3; PX.core.store.flush && PX.core.store.save();')
     page.wait_for_timeout(1300)
     page.reload()

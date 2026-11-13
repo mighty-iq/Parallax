@@ -140,22 +140,32 @@ function testPool(t, PX, def, L) {
 function testItems(t, PX, def, L, pool) {
   t.section('openings: items');
   const ranks = [0, 0, 0, 0, 0], tfs = Array(8).fill(0), keyTf = Array(8).fill(0), axes = {}, kinds = {};
-  let lvlOk = 0, propOk = 0, nProp = 0, axisOk = 0, featOk = 0, chamOk = 0, nCham = 0;
+  let lvlOk = 0, propOk = 0, nProp = 0, axisOk = 0, featOk = 0, chamOk = 0, nCham = 0, sizeOk = 0;
+  const face = { 2: 0, 0: 0, 1: 0 }, keyMost = [[0, 0], [0, 0], [0, 0], [0, 0]];
   for (const { p, it } of pool) {
     ranks[it.key]++;
     axes[it.keyAxis] = (axes[it.keyAxis] || 0) + 1;
     it.options.forEach((o, i) => { tfs[o.tf]++; if (i === it.key) keyTf[o.tf]++; else kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
-    const want = L.axisFacing(L.POSES[it.pose], [2, 0, 1][p.keyview]);
-    if (it.keyAxis === want && L.POSE_SETS[p.pose].includes(it.pose)) axisOk++;
-    const nf = it.feats.F.length + it.feats.T.length + it.feats.S.length;
-    if (nf === p.features + 1 && it.feats[L.PROF_OF[it.keyAxis]].length >= 1) featOk++;
+    const wf = [2, 0, 1].find((w) => L.axisFacing(L.POSES[it.pose], w) === it.keyAxis); // the picture's face of the key
+    face[wf]++;
+    if (L.KEYVIEW_SETS[p.keyview].includes(wf) && L.POSE_SETS[p.pose].includes(it.pose)) axisOk++;
+    const nf = ['F', 'T', 'S'].map((n) => it.feats[n].length);
+    if (JSON.stringify(nf.slice().sort()) === JSON.stringify(L.FEATURES[p.features].slice().sort())) featOk++;
+    // the key's face is the most featured one (ties shared) about as often as any face: a third
+    const mx = Math.max(...nf), top = ['F', 'T', 'S'].filter((n, i) => nf[i] === mx);
+    keyMost[p.features][0] += top.includes(L.PROF_OF[it.keyAxis]) ? 1 / top.length : 0; keyMost[p.features][1]++;
+    if (it.options.every((o) => Math.max(o.w, o.h) <= L.MAXEXT)) sizeOk++;
     if (p.edges === 1) { nCham++; if (['F', 'T', 'S'].some((n) => it.feats[n].includes('cham'))) chamOk++; }
     const np = it.options.filter((o) => o.kind === 'proportion').length;
     if (p.foils === 1) { nProp++; if (np === 1) propOk++; } else if (np === 0) lvlOk++;
   }
   const N = pool.length;
-  t.eq(axisOk, N, 'the key is the outline along the axis the level asks for, in a pose of the level');
-  t.eq(featOk, N, 'the solid has the level\'s number of features, at least one on the key\'s profile');
+  t.eq(axisOk, N, 'the key is the outline of a face the level allows, in a pose of the level');
+  t.ok([2, 0, 1].every((w) => face[w] / N > 0.29 && face[w] / N < 0.38), `over all levels each face of the picture holds the key about a third of the time (front ${(face[2] / N * 100).toFixed(0)} %, side ${(face[0] / N * 100).toFixed(0)} %, top ${(face[1] / N * 100).toFixed(0)} %)`);
+  t.eq(featOk, N, 'features on all three profiles, in the level\'s counts (1+1+1, 2+1+1, 2+2+1, 2+2+2)');
+  const km = keyMost.map(([a, b]) => a / b);
+  t.ok(km.every((x) => x < 0.42), `the key's face is the most featured one (ties shared) near a third of the time, as any face (${km.map((x) => (x * 100).toFixed(1) + '%').join(' ')} by features level)`);
+  t.eq(sizeOk, N, `no option is longer than ${L.MAXEXT} steps (11 px a step at the solid's scale on a 360 px phone)`);
   t.eq(chamOk, nCham, 'chamfer levels have a chamfer');
   t.eq(propOk, nProp, 'foil level 1: exactly one proportion foil');
   t.eq(lvlOk, N - nProp, 'foil level 0: no proportion foil');
@@ -176,7 +186,8 @@ function testShortcuts(t, PX, def, L, pool) {
   t.section('openings: shortcut solvers');
   const acc = {}, cnt = {}, req = {};
   const add = (name, v, required) => { acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; req[name] = required; };
-  for (const { it } of pool.filter((_, i) => i % 5 === 0)) { // 2 016 items
+  const mfBy = [[0, 0], [0, 0], [0, 0], [0, 0]];
+  for (const { it, p } of pool.filter((_, i) => i % 5 === 0)) { // 2 016 items
     const R = it.options.map((o) => L.polyRaster(o.poly)), key = it.key;
     const area = R.map((x) => x.r.reduce((s, v) => s + v, 0)), corners = it.options.map((o) => o.poly.length);
     const dims = it.options.map((o) => [o.w, o.h]);
@@ -196,18 +207,53 @@ function testShortcuts(t, PX, def, L, pool) {
     const pairs = [[it.W, it.H], [it.W, it.D], [it.D, it.H]];
     add('box fits the solid', shareOf(dims.map(([w, h]) => (pairs.some(([a, b]) => (a === w && b === h) || (a === h && b === w)) ? 1 : 0)), key, true), true);
     add('squarest box', shareOf(dims.map(([w, h]) => -Math.abs(w - h)), key, true), true);
-    // Partial strategies (reported, not limited): checking only the outline on the picture's front
-    // face, or only the profile with the most features.
-    const front = L.axisFacing(L.POSES[it.pose], 2), pr = L.polyRaster(it.prof[L.PROF_OF[front]]);
-    add('checks the front face only', shareOf(it.options.map((o) => (L.rcompare(o.poly, pr) === 'match' ? 1 : 0)), key, true), false);
-    const most = ['F', 'T', 'S'].sort((a, b) => it.feats[b].length - it.feats[a].length)[0], pm = L.polyRaster(it.prof[most]);
-    add('checks the most featured profile only', shareOf(it.options.map((o) => (L.rcompare(o.poly, pm) === 'match' ? 1 : 0)), key, true), false);
+    // Counting with the solid in view (review RV-dat-style-B §2): corners of each face outline, the most
+    // featured faces (ties: each as likely), and the box as well (reported only: comparing corners and
+    // then proportions is the format's analytic method, which the strategy card teaches).
+    const outs = ['F', 'T', 'S'].map((n) => ({ n, c: it.prof[n].length, d: n === 'F' ? [it.W, it.H] : n === 'T' ? [it.W, it.D] : [it.D, it.H] }));
+    const nfe = outs.map((q) => it.feats[q.n].length), mx = Math.max(...nfe), top = outs.filter((q, i) => nfe[i] === mx);
+    add('corners = a face outline\'s', shareOf(corners.map((c) => (outs.some((q) => q.c === c) ? 1 : 0)), key, true), true);
+    add('corners = the most featured face\'s', top.reduce((s, q) => s + shareOf(corners.map((c) => (c === q.c ? 1 : 0)), key, true), 0) / top.length, true);
+    const boxIs = ([w, h], [a, b]) => (w === a && h === b) || (w === b && h === a);
+    add('box and corners = a face outline\'s (reported)', shareOf(corners.map((c, i) => (outs.some((q) => q.c === c && boxIs(dims[i], q.d)) ? 1 : 0)), key, true), false);
+    // The most alike pair, shape only (each option scaled to a unit box, best of 8 turns): pick one of the two.
+    const N = 24, norm = it.options.map((o) => {
+      const xs = o.poly.map((v) => v[0]), ys = o.poly.map((v) => v[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
+      return [0, 1, 2, 3, 4, 5, 6, 7].map((k) => {
+        const g = new Uint8Array(N * N);
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          let u = (i + 0.5) / N, v = (j + 0.5) / N;
+          [u, v] = [[u, v], [1 - v, u], [1 - u, 1 - v], [v, 1 - u], [1 - u, v], [u, 1 - v], [v, u], [1 - v, 1 - u]][k];
+          g[j * N + i] = L.pip(o.poly, x0 + u * w + 1e-4, y0 + v * h + 1e-4) ? 1 : 0;
+        }
+        return g;
+      });
+    });
+    let bp = null, bd = Infinity;
+    for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) {
+      let d = Infinity; for (let k = 0; k < 8; k++) { let x = 0; const A = norm[i][0], B = norm[j][k]; for (let n = 0; n < A.length; n++) if (A[n] !== B[n]) x++; d = Math.min(d, x); }
+      if (d < bd) { bd = d; bp = [i, j]; }
+    }
+    add('one of the most alike pair (shape, size ignored)', bp.includes(key) ? 0.5 : 0, true);
+    if (p.foils === 1) add('one of the most alike pair, proportion level', bp.includes(key) ? 0.5 : 0, true);
+    // Partial strategies: checking only the outline on one face of the picture (reported: the keyview
+    // dim spreads the key over the faces), or only the most featured profile (bounded at 50 %: it
+    // cannot fall to chance while the key's outline carries features; a third of 1 + two thirds of a
+    // fifth, 46.7 %, is the share when the key's face is as likely as any face to be the most featured).
+    for (const [nm, w] of [['front', 2], ['side', 0], ['top', 1]]) {
+      const ax = L.axisFacing(L.POSES[it.pose], w), pr = L.polyRaster(it.prof[L.PROF_OF[ax]]);
+      add(`checks the ${nm} face only (reported)`, shareOf(it.options.map((o) => (L.rcompare(o.poly, pr) === 'match' ? 1 : 0)), key, true), false);
+    }
+    const mf = top.reduce((s, q) => { const pm = L.polyRaster(it.prof[q.n]); return s + shareOf(it.options.map((o) => (L.rcompare(o.poly, pm) === 'match' ? 1 : 0)), key, true); }, 0) / top.length;
+    add('checks the most featured face only', mf, 'half');
+    mfBy[p.features][0] += mf; mfBy[p.features][1]++;
   }
   const line = [];
   for (const name of Object.keys(acc)) {
     const a = acc[name] / cnt[name];
     line.push(`${name} ${(a * 100).toFixed(1)}%`);
-    if (req[name]) t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
+    if (req[name] === 'half') t.ok(a <= 0.5, `partial strategy "${name}" ${(a * 100).toFixed(1)} % ≤ 50 % (by features level: ${mfBy.map(([x, y]) => (x / y * 100).toFixed(1) + '%').join(' ')})`);
+    else if (req[name]) t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
   console.log('       openings shortcuts: ' + line.join(', '));
 }
