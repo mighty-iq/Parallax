@@ -52,7 +52,7 @@
     { id: 'speed-session', kind: 'skill', name: 'Against the clock', desc: 'Finish a Speed session, its full time.', check: function (c) { return prog(c.speedSessions, 1); } },
     { id: 'new-best', kind: 'skill', name: 'New best block', desc: 'Beat your best whole block on an exercise.', check: function (c) { return prog(c.bestBeats, 1); } },
     // v1.1 (B7, R3 §9): good practice in Section mode, never a score
-    { id: 'full-section', kind: 'practice', name: 'Full section', desc: 'Finish a full Section practice, every part to the end of its clock.', check: function (c) { return prog(c.fullSections, 1); } },
+    { id: 'full-section', kind: 'practice', name: 'Full section', desc: 'Finish a full Section practice: reach every part and answer at least half of its items.', check: function (c) { return prog(c.fullSections, 1); } },
   ];
 
   function context(rec, now, need) {
@@ -120,10 +120,17 @@
       var e = rec.ex && rec.ex[def.id];
       if (isObj(e) && isObj(e.best) && isObj(e.best.block) && e.best.block.beats >= 1) c.bestBeats = 1;
     });
-    // a full Section run that ended by itself: every item done, or its clock ran out (not ended by the player)
+    // a full Section run that ended by itself (every part done, or its clock ran out; not ended by the
+    // player), with real practice in it: every part reached (an item of it shown) and at least half
+    // of the items answered (B7; js/engine/section.js run summaries)
     c.fullSections = 0;
     var secRuns = isObj(rec.section) && isArray(rec.section.runs) ? rec.section.runs : [];
-    secRuns.forEach(function (r) { if (isObj(r) && r.size === 'full' && (r.ended === 'done' || r.ended === 'time')) c.fullSections++; });
+    secRuns.forEach(function (r) {
+      if (!isObj(r) || r.size !== 'full' || (r.ended !== 'done' && r.ended !== 'time')) return;
+      var parts = isArray(r.parts) ? r.parts : [];
+      var reached = parts.length > 0 && parts.every(function (p) { return isObj(p) && (p.reached === true || (isNum(p.seen) && p.seen > 0)); });
+      if (reached && isNum(r.answered) && isNum(r.n) && r.n > 0 && 2 * r.answered >= r.n) c.fullSections++;
+    });
     c.speedSessions = 0;
     if (isObj(rec.timed)) Object.keys(rec.timed).forEach(function (id) {
       var t = rec.timed[id];

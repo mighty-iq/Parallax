@@ -44,7 +44,8 @@
 .ex-nets .ex-nets-c4 { fill: var(--nets-c4); }
 .ex-nets .ex-nets-c5 { fill: var(--nets-c5); }
 .ex-nets .ex-nets-name {
-  fill: var(--nets-ink); font-family: var(--font-sans, system-ui, sans-serif); font-size: 0.42px; font-weight: 600;
+  fill: var(--nets-ink); font-family: var(--font-sans, system-ui, sans-serif); font-weight: 600;
+  font-size: max(0.42px, calc(13px * var(--px-u, 0))); /* at least 13 px on screen: --px-u from the view */
   pointer-events: none;
 }
 .ex-nets .ex-nets-name3d { fill: var(--nets-ink); font-family: var(--font-sans, system-ui, sans-serif); font-size: 42px; font-weight: 600; }
