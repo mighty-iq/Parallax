@@ -95,6 +95,7 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .sec-chip.is-seen { border-style: dashed; }
 .sec-chip.is-current { box-shadow: inset 0 0 0 2px var(--ink); }
 .sec-chip-flag { color: var(--warn); font-size: var(--fs-xs); }
+.sec-chip-dot { font-family: var(--font-sans); font-size: 0.5rem; line-height: 1; color: var(--signal); } /* answered: a mark, not colour alone */
 .sec-chip.is-flagged { border-color: var(--warn); }
 .sec-chip.is-right { border-color: var(--right); background: var(--right-wash); }
 .sec-chip.is-wrong { border-color: var(--wrong); background: var(--wrong-wash); }

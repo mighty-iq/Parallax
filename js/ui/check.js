@@ -370,7 +370,10 @@
         lines: ['Since your last check, have you practised or taken another test with puzzles like these, or with word analogies?', row,
           h('p.px-meta', 'Outside practice changes results too, so the Lab keeps your answer next to your data. It is never scored.')],
         actions: [{ label: 'Skip', value: 'skip' }],
-        onShow: function (pnl, done) { close = done; },
+        onShow: function (pnl, done) {
+          close = done;
+          try { row.firstChild.focus({ preventScroll: true }); } catch (e) { /* ignore */ } // keyboard: start on "No"
+        },
       }).then(function () { resolve(S.overlapAnswer || null); });
     });
   }

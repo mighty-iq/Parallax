@@ -193,14 +193,6 @@
       placeTiles();
       v.render(S.scene, S.cam);
     };
-    // Input handlers (a drag on the view) only move the pose and ask for one paint on the next frame: a
-    // paint inside every pointermove keeps a slow phone's main thread busy, input queues up behind it,
-    // and a tap that follows (Confirm) can be lost.
-    S.renderSoon = function () {
-      if (S.soon) return;
-      S.soon = true;
-      timing.loop(function () { S.soon = false; S.render(); return false; });
-    };
     // The 2 × 2 tiles whose union covers [x − TILE/2, x + TILE/2] round the viewer.
     function placeTiles() {
       if (!S.tiles.length) return;
@@ -477,6 +469,32 @@
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
     el.addEventListener('lostpointercapture', up);
+  }
+
+  // Answer buttons (Confirm, Here): a finger acts on its pointerup over the button. In testing, the click a
+  // browser makes from a tap was sometimes lost right after a drag on the view when the machine was busy
+  // (pointerdown and pointerup still arrived), so these buttons do not wait for it. The same tap's touchend
+  // is cancelled, so no click follows: no second action, and nothing clicked under the finger once the
+  // answer has changed the screen. Mouse, pen and keyboard use the click as usual.
+  function tapAct(b, fn) {
+    var id = null, acted = 0;
+    b.addEventListener('pointerdown', function (e) { acted = 0; id = e.pointerType === 'touch' ? e.pointerId : null; });
+    b.addEventListener('pointercancel', function (e) { if (e.pointerId === id) id = null; });
+    b.addEventListener('pointerup', function (e) {
+      if (e.pointerId !== id) return;
+      id = null;
+      var r = b.getBoundingClientRect();
+      if (b.disabled || e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+      acted = timing.now();
+      fn(e);
+    });
+    b.addEventListener('touchend', function (e) { if (acted && e.cancelable) { e.preventDefault(); acted = 0; } });
+    // a click from that tap all the same (its touchend could not be cancelled): not a second action
+    b.addEventListener('click', function (e) {
+      var was = acted;
+      acted = 0;
+      if (was && timing.now() - was < 1500) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }, true);
   }
 
   /* =====================================================================================
@@ -854,7 +872,7 @@
 
   var kit = {
     hintOn: hintOn, hintOff: hintOff, narrow: narrow,
-    stage: stage, dial: dial, fine: fine, drag: drag, walker: walker, mapper: mapper, layout: layout, turnRow: turnRow,
+    stage: stage, dial: dial, fine: fine, drag: drag, tapAct: tapAct, walker: walker, mapper: mapper, layout: layout, turnRow: turnRow,
     play: play, runSteps: runSteps, inputOf: inputOf, hostPaused: hostPaused, capFor: capFor, sideText: sideText, side: side,
     norm360: norm360, norm180: norm180, adiff: adiff, ease: ease, sweep: sweep, keyOf: keyOf,
     FREEZE_MS: FREEZE_MS, SLOW_SHARE: SLOW_SHARE, SLOW_GAP: SLOW_GAP, DRAG_DEG: DRAG_DEG, TILE: TILE, MIN_PX: MIN_PX, DOT_R: DOT_R,
@@ -886,6 +904,7 @@
     st.M = mapper(st.S, st.D, { cap: cap, landmarks: true, tools: el.tools });
     el.hide.addEventListener('click', function () { st.M.close(); });
     st.confirm = PX.ui.button(cap('confirm') || 'Confirm', { kind: 'primary', key: 'Enter', className: 'ex-fp-confirm', disabled: true, onClick: function (e) { st.input = inputOf(e) || st.input; confirm(); } });
+    tapAct(st.confirm, function (e) { st.input = inputOf(e) || st.input; confirm(); });
     el.actions.appendChild(st.confirm);
     drag(el.stage, { enabled: live, onTurn: function (d, e) { turnBy(d, 'drag', e, true); } });
   }
@@ -1013,7 +1032,7 @@
     st.confirm.disabled = false;
     st.mode = mode;
     st.input = inputOf(e) || (mode === 'keys' ? 'key' : st.input);
-    if (mode === 'drag') { st.S.stopLook(); st.S.setPose(st.S.pose.x, st.S.pose.y, st.item.heading + st.raw); st.S.renderSoon(); }
+    if (mode === 'drag') { st.S.stopLook(); st.S.setPose(st.S.pose.x, st.S.pose.y, st.item.heading + st.raw); st.S.render(); }
     else st.S.lookTo(st.item.heading + st.value, 160);
   }
   function turnBy(d, mode, e, exact) {

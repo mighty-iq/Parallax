@@ -92,6 +92,7 @@
     st.here = PX.ui.button(cap('here') || 'Here', { kind: 'primary', className: 'ex-reckon-here', disabled: true,
       onClick: function (e) { st.input = kit.inputOf(e) || st.input; confirm(); } });
     st.here.setAttribute('aria-keyshortcuts', 'Enter');
+    [st.confirm, st.here].forEach(function (b) { kit.tapAct(b, function (e) { st.input = kit.inputOf(e) || st.input; confirm(); }); });
     [st.confirm, st.back, st.walk, st.here].forEach(function (b) { el.actions.appendChild(b); });
     kit.drag(el.stage, { enabled: canTurn, onTurn: function (d, e) { turnBy(d, 'drag', e, true); } });
     el.chart = h('div.ex-reckon-chart', { hidden: true });
@@ -258,7 +259,7 @@
     st.input = st.kit.inputOf(e) || (mode === 'keys' ? 'key' : st.input);
     readout();
     controls();
-    if (mode === 'drag') { st.S.stopLook(); placeWalker(); st.S.renderSoon(); }
+    if (mode === 'drag') { st.S.stopLook(); placeWalker(); st.S.render(); }
     else { var E = endOf(st.item); st.S.lookTo(E.h + st.value, 160); }
   }
   function turnBy(d, mode, e, exact) {

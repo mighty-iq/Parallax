@@ -143,7 +143,19 @@
     st.net = netSvg(item);
     st.stage.appendChild(st.net.svg);
     showNet();
+    // Face names at least 13 px on screen (small nets on phones): before the first paint, so the
+    // stimulus never changes once shown. The options are laid out already.
+    textUnit(st.net.svg);
+    st.opts.forEach(function (o) { var svg = o && o.el && o.el.querySelector('svg.ex-nets-svg'); if (svg) textUnit(svg); });
     return timing.nextPaint();
+  }
+
+  // --px-u: drawing units per CSS px, read by css/ex/nets.css for a 13 px floor on the labels.
+  function textUnit(svg) {
+    try {
+      var r = svg.getBoundingClientRect(), vb = svg.viewBox && svg.viewBox.baseVal;
+      if (r.width && r.height && vb && vb.width && vb.height) svg.style.setProperty('--px-u', String(Math.max(vb.width / r.width, vb.height / r.height)));
+    } catch (e) { /* the labels keep their drawing size */ }
   }
 
   function newItem(item) {

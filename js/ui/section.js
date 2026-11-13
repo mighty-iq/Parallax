@@ -104,7 +104,7 @@
     setState(X, 'setup');
     clear(X);
     var K = PX.ui.kit, size = params.size === 'full' ? 'full' : 'mini';
-    var head = Play().screenHead('Section practice', 'A timed section', 'The DAT-style formats in the order of the Perceptual Ability Test, against one clock, with no feedback until a review at the end.');
+    var head = Play().screenHead('Section practice', 'A timed section', 'Formats in the style of the Perceptual Ability Test of the Dental Admission Test (DAT®), in the test’s order, against one clock, with no feedback until a review at the end.');
     var body = h('div.sec-setup');
     X.wrap.appendChild(head);
     X.wrap.appendChild(body);
@@ -114,12 +114,13 @@
       if (!sh.parts.length) {
         body.appendChild(h('p.px-notice.px-notice--warn', 'None of the DAT-style exercises can run here yet, so a section cannot start.'));
         body.appendChild(h('div.pl-summary-actions', ui.button('Back to the Library', { kind: 'secondary', go: 'library' })));
+        body.appendChild(ada());
         return;
       }
       var sizes = K.segmented({
         key: 'secSize', legend: 'Length', value: size,
         options: ['mini', 'full'].map(function (s) { var x = SE().shape(s, opts()); return { value: s, label: (s === 'mini' ? 'Mini' : 'Full') + ' · ' + x.items + ' items', aria: (s === 'mini' ? 'Mini' : 'Full') + ', ' + x.items + ' items in ' + SE().fmtMinutes(x.budgetMs) }; }),
-        hint: size === 'mini' ? 'Five items a part: a short section that fits a phone and a break.' : 'Fifteen items a part, the length of the real test’s perceptual section.',
+        hint: size === 'mini' ? 'Five items a part: a short section that fits a phone and a break.' : 'Fifteen items a part' + (sh.parts.length === sh.of ? ', the length of the real test’s perceptual section.' : '.'),
         onChange: function (v) { size = v; draw(); },
       });
       body.appendChild(sizes);
@@ -145,7 +146,7 @@
         h('li', 'One clock for the whole section: ' + sh.items + ' items in ' + SE().fmtMinutes(sh.budgetMs) + ', about 40 seconds an item, the real test’s average pace.'),
         h('li', 'No feedback until the end. Skip, flag and go back to any item of the part you are in; once you move on to the next part, you cannot return.'),
         h('li', 'Pause stops the clock, and so does reading a part’s instructions. The review reports your pauses.'),
-        h('li', 'Your levels do not change. The review shows each part’s results and pacing, with a show-me for every item. Parallax does not predict a DAT score.')));
+        h('li', 'Your levels do not change. The review shows each part’s results and pacing, with a show-me for every item. Parallax does not predict your score on the real test.')));
       var start = ui.button('Start the section', { kind: 'primary', onClick: function () {
         var form = parseInt(formSel.value, 10);
         var run = SE().start(rec(), { size: size, form: isNum(form) ? form : next, now: now(), display: display(), can: can, why: why });
@@ -169,7 +170,17 @@
   // Part names before the exercises exist (R3 §2.2, CONTRACT-v1.1 ids table).
   var PART_NAMES = { openings: 'Openings', patviews: 'Missing View', angles: 'Angles', patfold: 'Hole Punch', cubes: 'Painted Cubes', form: 'Form' };
 
+  function endLive(X, live, ended) {
+    X.done = true;
+    var res = SE().finish(live, rec(), now(), { usedMs: Math.min(live.usedMs, live.budgetMs), pausedMs: live.pausedMs, ended: ended });
+    res.achievements = achieved();
+    save();
+    try { store.flush(); } catch (e) { /* the debounced save runs later */ }
+    review(X, res);
+  }
+
   function resumeCard(X, live) {
+    if (live.usedMs >= live.budgetMs) { endLive(X, live, 'time'); return; } // its clock had run out
     setState(X, 'resume');
     clear(X);
     var P = live.parts[live.part], at = live.part + 1;
@@ -177,13 +188,7 @@
       'Your ' + live.size + ' section (form ' + live.form + ') stopped in part ' + at + ' of ' + live.parts.length + ', ' + shortOf(P.exId) + ', with ' + clockText(live.budgetMs - live.usedMs) + ' left on its clock.'));
     var go = ui.button('Resume the section', { kind: 'primary', onClick: function () { begin(X, live, false); } });
     go.setAttribute('data-sec-resume', '');
-    var end = ui.button('End it and see the review', { kind: 'secondary', onClick: function () {
-      var res = SE().finish(live, rec(), now(), { usedMs: live.usedMs, pausedMs: live.pausedMs, ended: 'user' });
-      res.achievements = achieved();
-      save();
-      try { store.flush(); } catch (e) { /* the debounced save runs later */ }
-      review(X, res);
-    } });
+    var end = ui.button('End it and see the review', { kind: 'secondary', onClick: function () { endLive(X, live, 'user'); } });
     end.setAttribute('data-sec-endlive', '');
     X.wrap.appendChild(h('div.pl-summary-actions', go, end));
     X.wrap.appendChild(h('p.px-meta', 'Its clock stopped when you left, so no time was lost.'));
@@ -210,6 +215,16 @@
     X.introMs = 0;
     X.wallStart = now();
     X.done = false;
+    X.warned = {};      // a new section warns again at 5 and 1 minutes
+    X.result = null;
+    X.deferred = null;
+    if (!fresh) {
+      // a resumed run: a part that cannot run here any more (no view, no 3D) ends with a note
+      run.parts.forEach(function (Pt, p) {
+        var def = PX.ex.get(Pt.exId);
+        if (p >= run.part && !Pt.broken && (!def || !can(def))) SE().breakPart(run, p, (def && why(def)) || 'cannot run on this device');
+      });
+    }
     clear(X);
     Play().setChrome(true);
     var P = X.P = Play().player({ endLabel: 'End the section', onState: function (s) { onPlayerState(X, s); } });
@@ -234,8 +249,9 @@
     }, { through: true });
     X.C.start();
     tick(X);
+    if (X.done) return; // no time was left: the review is up
     setStrip(X, display() === 'large'); // a phone opens the strip with Items
-    if (fresh || X.run.index === 0) partIntro(X, X.run.part);
+    if (fresh || X.run.index === 0 || X.run.parts[X.run.part].broken) partIntro(X, X.run.part);
     else resumeAt(X);
   }
 
@@ -252,12 +268,17 @@
     X.timer.textContent = clockText(left);
     X.timer.setAttribute('aria-label', 'Time left: ' + minutesText(left));
     X.timer.classList.toggle('is-low', left <= 5 * 60000 && X.run.budgetMs > 10 * 60000 || left <= 60000);
-    [5, 1].forEach(function (m) {
-      if (left <= m * 60000 && left > 0 && !X.warned[m] && X.run.budgetMs > m * 60000 * 2) {
-        X.warned[m] = true;
-        ui.toast(m === 1 ? 'One minute left on the section clock.' : 'Five minutes left on the section clock.', { kind: 'info' });
-      }
-    });
+    var stim = false;
+    try { stim = doc.body.classList.contains('px-stim'); } catch (e) { stim = false; }
+    if (!stim) {
+      [5, 1].forEach(function (m) {
+        if (left <= m * 60000 && left > 0 && !X.warned[m] && X.run.budgetMs > m * 60000 * 2) {
+          X.warned[m] = true;
+          if (m === 5) X.warned[1] = X.warned[1] || left <= 60000; // one toast when both are due
+          ui.toast(m === 1 || left <= 60000 ? 'One minute left on the section clock.' : 'Five minutes left on the section clock.', { kind: 'info' });
+        }
+      });
+    }
     if (left <= 0) timeUp(X);
   }
 
@@ -303,7 +324,9 @@
       shown++;
       var st = itemState(it), label = 'Item ' + shown + ', ' + (st === 'answered' ? 'answered' : 'not answered') + (it.flag ? ', flagged' : '') + (i === run.index ? ', current' : '');
       var b = h('button', { type: 'button', class: ['sec-chip', 'is-' + st, it.flag ? 'is-flagged' : null, i === run.index ? 'is-current' : null], 'data-sec-item': String(i), 'aria-label': label, 'aria-current': i === run.index ? 'true' : null },
-        h('span.sec-chip-n', String(shown)), it.flag ? h('span.sec-chip-flag', { 'aria-hidden': 'true' }, '⚑') : null);
+        h('span.sec-chip-n', String(shown)),
+        st === 'answered' ? h('span.sec-chip-dot', { 'aria-hidden': 'true' }, '●') : null, // answered: a dot, not colour alone (rule 8)
+        it.flag ? h('span.sec-chip-flag', { 'aria-hidden': 'true' }, '⚑') : null);
       b.addEventListener('click', function () {
         if (X.mode !== 'item' && X.mode !== 'partend') return;
         leave(X);
@@ -354,6 +377,7 @@
 
   function partIntro(X, p) {
     var run = X.run, exId = run.parts[p].exId, def = PX.ex.get(exId), L = PX.ex.learn(exId) || {};
+    if (run.parts[p].broken) { partBroken(X); return; } // marked when the run was resumed
     setState(X, 'intro');
     X.C.pause('intro');
     X.introAt = now();
@@ -362,6 +386,7 @@
     lines.push(n + (n === 1 ? ' item.' : ' items.') + ' The clock is stopped while you read this; ' + clockText(run.budgetMs - used(X)) + ' left in all.');
     if (p === 0) lines.push('Choosing an answer moves on. Back, Flag and Skip are under the item, and Items shows the part’s items. Pause stops the clock.');
     if (exId === 'angles') lines.push('Judge by eye: in the real test, rulers and other measuring tools are not allowed.');
+    if (def && (def.extraParams || []).indexOf('ask') >= 0) lines.push('Up to three questions in a row ask about the same figure, as in the test, so a figure you have just seen can come back with a new question.');
     Play().showCard(X.wrap, X.P.el.root, {
       id: 'sec-part', title: 'Part ' + (p + 1) + ' of ' + run.parts.length + ': ' + shortOf(exId), def: def, hide: X.P.el.root, lines: lines,
       actions: [{ label: 'Start part ' + (p + 1), value: 'start', primary: true }],
@@ -371,9 +396,38 @@
       X.introAt = 0;
       X.C.resume('intro');
       X.el.foot.hidden = false;
-      show(X, run.parts[p].items[0].status === 'void' ? nextIndex(run, 0) : 0);
+      var first = run.parts[p].items[0].status === 'void' ? nextIndex(run, 0) : 0;
+      if (first === null) partEnd(X); else show(X, first);
     });
     X.el.foot.hidden = true;
+  }
+
+  // A part whose exercise cannot be shown here (it does not mount, or its items keep failing to
+  // draw): a note, then on. Its items that were not shown do not count; the clock stops meanwhile.
+  function partBroken(X) {
+    var run = X.run, P = run.parts[run.part], last = run.part + 1 >= run.parts.length;
+    X.token++;
+    if (X.P) X.P.abort();
+    setState(X, 'broken');
+    setStrip(X, false);
+    X.el.foot.hidden = true;
+    X.C.pause('intro');
+    X.introAt = now();
+    persist(X);
+    Play().showCard(X.wrap, X.P.el.root, {
+      id: 'sec-broken', title: 'Part ' + (run.part + 1) + ' of ' + run.parts.length + ': ' + shortOf(P.exId), hide: X.P.el.root,
+      lines: [(P.broken === 'cannot run on this device' ? 'This part cannot run on this device' : P.broken === 'coming soon' ? 'This part’s screen is not in this version of Parallax' : 'Its items could not be drawn here') +
+        ', so the part ends here. The items it did not show do not count, and the clock is stopped while you read this.'],
+      actions: [{ label: last ? 'Finish the section' : 'Next part', value: 'next', primary: true }],
+    }).then(function (v) {
+      if (X.done || v !== 'next') return;
+      X.introMs += now() - X.introAt;
+      X.introAt = 0;
+      X.C.resume('intro');
+      var nx = SE().endPart(run, rec(), now(), used(X));
+      persist(X);
+      if (nx < 0) finish(X, 'done'); else partIntro(X, nx);
+    });
   }
 
   function resumeAt(X) {
@@ -407,7 +461,7 @@
     X.P.el.root.hidden = false;
     X.el.foot.hidden = false;
     var def = PX.ex.get(part.exId), item = null, tok = ++X.token;
-    if (!def || !X.P.use(part.exId)) { voidItem(X, index, 'error'); return; }
+    if (!def || !X.P.use(part.exId)) { SE().breakPart(run, run.part, (def && why(def)) || 'could not be shown here'); partBroken(X); return; }
     try { item = def.generate(PX.rng(it.seed >>> 0), it.params); } catch (e) { log('generate failed (' + part.exId + ')', e); item = null; }
     if (!item) { voidItem(X, index, 'error'); return; }
     X.P.setLabel(def);
@@ -439,14 +493,14 @@
     var ms = isNum(tr.rtMs) ? tr.rtMs : visitMs(X);
     X.visitAt = 0;
     if (tr.end) {
-      SE().visit(run, index, visitMs(X), now());
+      SE().visit(run, index, ms, now());
       askEnd(X, index);
       return;
     }
     if (tr.outcome === 'skipped') { SE().visit(run, index, ms, now()); persist(X); goOn(X, index); return; }
     if (tr.outcome === 'stutter') { SE().visit(run, index, ms, now()); voidItem(X, index, tr.voidReason || 'stutter'); return; }
     SE().visit(run, index, ms, now());
-    SE().answer(run, index, { response: tr.response, correct: !!(tr.result && tr.result.correct), rtMs: tr.rtMs, input: tr.source }, now());
+    SE().answer(run, index, { response: tr.response, correct: !!(tr.result && tr.result.correct), rtMs: tr.rtMs, input: tr.input || tr.source }, now()); // tr.input: the answering event's device (H4)
     persist(X);
     updateControls(X);
     var tok = ++X.token;
@@ -456,7 +510,8 @@
   function voidItem(X, index, reason) {
     var r = SE().answer(X.run, index, { voided: true, voidReason: reason }, now());
     persist(X);
-    if (r.replaced !== null) ui.toast('That item was interrupted, so it does not count. A new one joins the end of this part.', { kind: 'info' });
+    if (r.broken) { partBroken(X); return; } // its items keep failing to draw: the part ends with a note
+    ui.toast(r.replaced !== null ? 'That item was interrupted, so it does not count. A new one joins the end of this part.' : 'That item was interrupted, so it does not count.', { kind: 'info' });
     goOn(X, index);
   }
 
@@ -501,10 +556,11 @@
     if (open.length) lines.push('Not answered: item' + (open.length === 1 ? ' ' : 's ') + andList(open.map(function (i) { return String(numberOf(run, i)); })) + '.');
     if (flagged.length) lines.push('Flagged: item' + (flagged.length === 1 ? ' ' : 's ') + andList(flagged.map(function (i) { return String(numberOf(run, i)); })) + '.');
     lines.push(last ? 'Finishing ends the section and opens the review.' : 'Once you move on, you cannot come back to this part. The clock is running.');
-    var actions = [];
+    // With items open or flagged, the default (focus, Enter, Space) goes back to the first of them:
+    // closing the part for good takes a deliberate choice (Tab to it, or a click).
     var firstOpen = open.length ? open[0] : flagged.length ? flagged[0] : null;
-    if (firstOpen !== null) actions.push({ label: 'Go to item ' + numberOf(run, firstOpen), value: 'back' });
-    actions.push({ label: last ? 'Finish the section' : 'Next part', value: 'next', primary: true });
+    var actions = [{ label: last ? 'Finish the section' : 'Next part', value: 'next', primary: firstOpen === null }];
+    if (firstOpen !== null) actions.unshift({ label: 'Go to item ' + numberOf(run, firstOpen), value: 'back', primary: true });
     Play().showCard(X.wrap, X.P.el.root, {
       id: 'sec-partend', title: 'End of part ' + (run.part + 1) + ' of ' + run.parts.length + ': ' + shortOf(P.exId), hide: X.P.el.root, lines: lines, actions: actions,
     }).then(function (v) {
@@ -583,7 +639,7 @@
   /* ---------- the review ---------- */
 
   function statusText(e) {
-    var s = e.status === 'answered' ? (e.correct ? 'right' : 'wrong') : e.status === 'seen' ? 'skipped' : 'not reached';
+    var s = e.status === 'answered' ? (e.correct ? 'right' : 'wrong') : 'skipped'; // the list holds shown items only
     return s + (e.flag ? ', flagged' : '');
   }
   function mark(e) { return e.status === 'answered' ? (e.correct ? '✓' : '✗') : '–'; }
@@ -607,14 +663,14 @@
       var per = x.seen ? Math.round(x.timeMs / x.seen / 1000) + ' s' : '–';
       return h('tr', { 'data-part': x.exId },
         h('th', { scope: 'row' }, (i + 1) + '. ' + shortOf(x.exId)),
-        h('td.px-num', x.reached ? x.right + '/' + x.n : '–'), h('td.px-num', x.reached ? String(x.answered) : 'not reached'),
+        h('td.px-num', x.reached ? x.right + '/' + x.n : '–'), h('td.px-num', x.broken && !x.reached ? 'not shown here' : x.reached ? String(x.answered) + (x.broken ? ' (ended early)' : '') : 'not reached'),
         h('td.px-num', x.reached ? clockText(x.timeMs) : '–'), h('td.px-num', x.reached ? per : '–'));
     });
     p.body.appendChild(h('div.sec-tablewrap', h('table.sec-table', h('caption.px-sr', 'Results by part'),
       h('thead', h('tr', h('th', { scope: 'col' }, 'Part'), h('th', { scope: 'col' }, 'Right'), h('th', { scope: 'col' }, 'Answered'), h('th', { scope: 'col' }, 'Time'), h('th', { scope: 'col' }, 'Per item'))),
       h('tbody', rows))));
     p.body.appendChild(h('p.px-meta', 'Per item: the part’s time over the items you looked at. The real test averages about ' + Math.round(SE().PACE_MS / 1000) + ' seconds an item over its six parts.'));
-    p.body.appendChild(h('p.px-meta', 'These counts are for comparing your own sections. Parallax does not turn them into a DAT score or a prediction.'));
+    p.body.appendChild(h('p.px-meta', 'These counts are for comparing your own sections. Parallax does not turn them into a score or a prediction for the Dental Admission Test.'));
     (res.achievements || []).forEach(function (a) { p.body.appendChild(h('p.sec-award', K.icon('award'), h('span', h('b', a.name), ': ' + a.desc))); });
     if (run.missing && run.missing.length) p.body.appendChild(h('p.px-meta', andList(run.missing.map(function (m) { return PART_NAMES[m.id] || shortOf(m.id); })) + ' could not be part of this section.'));
     box.appendChild(p.el);
@@ -644,7 +700,7 @@
     function drawLists() {
       ui.clear(lists);
       var list = filter === 'all' ? all : again;
-      if (!list.length) { lists.appendChild(h('p.px-meta', 'Nothing to look at again: every item you answered was right, and none is flagged.')); return; }
+      if (!list.length) { lists.appendChild(h('p.px-meta', all.length ? 'Nothing to look at again: every item you answered was right, and none is flagged.' : 'No item was shown in this section.')); return; }
       run.parts.forEach(function (P, pi) {
         var mine = list.filter(function (e) { return e.part === pi; });
         if (!mine.length) return;
