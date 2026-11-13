@@ -21,7 +21,7 @@ Updated 2026-11-13 17:45 UTC. All 19 exercises are active in index.html (Knots a
 - Lead: codes EX-14…EX-19 (no "PAT-n", R3 §6); switch label "DAT-style focus"; harness loads def.requires (PRELOAD for Reckon) and answers position items; harness.html has clock.js and section.js; play.js labelLine/tagOf/goalOf; section.js in the node MANIFEST.
 
 ## In progress
-- B3 (Homing + Reckon) still building. B2 finished (13c648c): every scored item of 19 exercises and 6 probes fits 360×640 (v1.0: 44 of 137), 844×390 layouts; shell 228/0, screens 358/0, single 17/0. Fix rounds from reviews: B5 (RV-A: Angles cues and foils, Hole Punch validator panels, Painted Cubes asks 1–4, phone arms, 150 % text) and B7 (RV-B: 12 fixes in Section and overlap notes), both resumed with their context. B6 finished (1a16b9c): Openings, Missing View, Form; node 68/78/69, e2e 82/110/92. B4 finished (a7c24a9): Knots pull/untie/tie/link, 364 node checks at 10 000 seeds per variant, harness 340/340, fit passes; mirror variant not built. B1 finished (b49f12b): clock.py full 73/73, play.py 103/103, flows 61/61, twotabs 10/10, sim hard checks pass.
+- All builders finished. B3 (fbd0f83): Homing v2 on phones and Reckon; node 88/96 checks, harness_homing 161/0, harness_reckon 62/0. B2 finished (13c648c): every scored item of 19 exercises and 6 probes fits 360×640 (v1.0: 44 of 137), 844×390 layouts; shell 228/0, screens 358/0, single 17/0. Fix rounds from reviews: B5 (RV-A: Angles cues and foils, Hole Punch validator panels, Painted Cubes asks 1–4, phone arms, 150 % text) and B7 (RV-B: 12 fixes in Section and overlap notes), both resumed with their context. B6 finished (1a16b9c): Openings, Missing View, Form; node 68/78/69, e2e 82/110/92. B4 finished (a7c24a9): Knots pull/untie/tie/link, 364 node checks at 10 000 seeds per variant, harness 340/340, fit passes; mirror variant not built. B1 finished (b49f12b): clock.py full 73/73, play.py 103/103, flows 61/61, twotabs 10/10, sim hard checks pass.
 - First playable build sent 13 Nov ~18:40 UTC: private artifact "Parallax v1.1 preview" https://claude.ai/artifact/XTDjxtPznRk4TCuTrgonov (built from 9e6517c; smoke 22/22 on phone and desktop in a host-like wrapper: pop-up, 9 new or changed exercises, no console errors). Republish the same file path scratchpad/preview/parallax-v11-preview.html for later previews (make it with the snippet in this session's scratchpad notes or tools-release/make_artifact_page.py with the preview title).
 
 ## Next three steps
@@ -36,7 +36,9 @@ Updated 2026-11-13 17:45 UTC. All 19 exercises are active in index.html (Knots a
 - (done 39d17f8) check.js uses PX.core.clock; (done 2f2c714) show-me after an answer scrolls the stage above the pinned caption. From B1's report, still open: answer times 2 decimals on the verdict vs 1 in the Log (pick one); a partial Daily resumes by position in the device-filtered list (resume by seed instead); run longrun.py.
 - Review question: Painted Cubes' visible-only count is right on 61 % of items (partial strategy).
 - B2's screens.py had 6 failures in B7's run (new exercises without data in its record; CSV columns from B1): recheck after B1/B2 finish.
-- Openings validate failed on 18 Section-form items (B7 → B6 FYI): recheck when B6 finishes.
+- (done) Openings Section forms validate (B6, B7's section tests pass with all six parts).
+- Homing/Reckon tutorial Try items need a scroll to Confirm at 360×640 (B3): judge in the play-through review; option: scroll the answer controls into view when respond begins in Try on phones.
+- flows.py run_modes crashed on a screenshot time-out under load (17:57): rerun in the full suite.
 
 ## Open questions for the owner
 - None blocking. (D1–D3 answered; the analogical test is for v1.2.)
@@ -46,12 +48,11 @@ Updated 2026-11-13 17:45 UTC. All 19 exercises are active in index.html (Knots a
 - v1.0.0 (f10f7db): tests/run_all.sh 25 files, 5,117 checks, 0 failed (6 Nov); GitHub Actions green.
 
 ## Running subagents and the files they write (Phase 2, launched 13 Nov ~15:20 UTC)
-- B3 Homing fixes + Reckon (EX-12): a4766dc5c229a6ee1 (B3.md)
 - Reviews done: RV-A docs/dev/reviews/RV-dat-style-A.md (no wrong items; 2 rule-5 issues in Angles; Hole Punch symmetry = method); RV-B docs/dev/reviews/RV-section-overlap.md (no blockers; 8 should-fix).
 - B5 fix round (resumed abccc8030cd5dc4ce), B7 fix round (resumed a0a560fe48fdb31c0).
 - Reviewer RV-D (Openings, Missing View, Form: items, shortcuts incl. Openings' most-featured-profile 75.7 %, texts): ae56c9d3bf7bb7e4a → docs/dev/reviews/RV-dat-style-B.md
 - Reviewer RV-C (Knots item validity, independent invariants, shortcuts, texts, timing): af47f967c9625baf4 → docs/dev/reviews/RV-knots.md
-- Finished: B2 (aed53d9e449759e47), B6 (a0dc048b845b7fc8e), B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
+- Finished: B3 (a4766dc5c229a6ee1), B2 (aed53d9e449759e47), B6 (a0dc048b845b7fc8e), B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
 
 ## Dead ends
 - Browser slots are the bottleneck (2 for the machine; waits of 10+ minutes while builders run e2e). Queue long browser runs in the background, never in the foreground.
