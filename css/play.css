@@ -311,11 +311,13 @@
   .is-wtg .pl-player:not(.pl-guide-open) > .pl-tip:not([hidden]) { display: flex; flex-direction: column; }
   .is-wtg .pl-player:not(.pl-guide-open) > .pl-tip:not([hidden]) { flex-direction: row; }
   .is-wtg .pl-hud-guide { display: none; }
+  /* the Spatial Check's timed probes: no Help over a running item (each task's card explains it) */
+  [data-mode="check"] .pl-hud-guide { display: none; }
   .pl-guide { display: flex; flex-direction: column; gap: var(--s2); }
   .pl-goal { font-size: var(--fs-sm); }
   /* Help opens the goal and the tip over the top of the item, under the strip: the item never
      moves, so it still fits one screen; Help again closes it. */
-  body.px-item .pl-player.pl-guide-open > .pl-guide:not(:empty) {
+  body.px-item .pl-player.pl-guide-open > .pl-guide:has(> :not([hidden])) {
     position: absolute; z-index: 27; top: calc(var(--tap) + 0.25rem + var(--s1)); left: 0; right: 0;
     max-height: 60vh; overflow: auto; padding: var(--s3);
     background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--r-panel); box-shadow: var(--lift);
@@ -356,8 +358,9 @@
     background: var(--surface); border-top: 1px solid var(--rule);
     font-size: var(--fs-sm); line-height: 1.4; color: var(--ink);
   }
-  .pl-showme-buttons { width: 100%; flex-wrap: nowrap; }
-  .pl-showme-buttons .px-btn { flex: 1 1 auto; min-width: 0; padding-left: var(--s2); padding-right: var(--s2); }
+  /* one row of four controls, also at large text sizes (the caption sits right above the row) */
+  .pl-showme-buttons { width: 100%; flex-wrap: nowrap; gap: var(--s1); }
+  .pl-showme-buttons .px-btn { flex: 1 1 auto; padding-left: var(--s1); padding-right: var(--s1); }
   /* a demo has no verdict yet: with its caption and controls pinned, the strip has nothing left to show */
   .pl-player[data-state="showme"] .pl-feedback:has(> .pl-feedback-main > .pl-verdict:empty) { padding: 0; border: 0; background: none; }
   .pl-player[data-state="showme"] .pl-feedback:has(> .pl-feedback-main > .pl-verdict:empty) .pl-showme { margin: 0; padding: 0; border: 0; }

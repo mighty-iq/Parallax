@@ -62,3 +62,6 @@
   .pl-trial.ex-form { --fm-cell: min(calc((var(--pl-col) - var(--s2)) / 2), calc((var(--pl-avail) - var(--s2)) / 2)); }
   .pl-trial.ex-form .fm-stage { height: calc(var(--pl-avail) - 2.5rem); }
 }
+
+/* The key digit (1–5) stays above the drawing in its cell. */
+.ex-form .px-choice-key { z-index: 1; }
