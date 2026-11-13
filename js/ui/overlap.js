@@ -51,6 +51,8 @@
     { id: 'views', format: 'counting cubes', note: 'counting the cubes in a stack, as in the count format, is part of some ability and military aptitude tests. Practice here helps with that part (here every cube is visible; in tests some are hidden)' + SAY },
     { id: 'nets', format: 'cube nets', note: 'folding a net into a cube is a common item in spatial and admissions tests. Practising it here will likely raise your score on such items' + SAY },
     { id: 'span', format: 'block tapping', note: 'tapping blocks in order is part of some clinical memory tests. Practising it here can raise your score on such a test' + SAY },
+    // R2 §1.7: "knot or not" items appear in a design entrance exam, a maths competition and a research test of knot reasoning
+    { id: 'knots', format: 'knot or not', note: 'deciding whether a rope forms a knot when both ends are pulled appears in some design entrance tests, maths competitions and a research test of knot reasoning. Practising it here will likely raise your score on such items' + SAY },
   ];
   var NEAR_BY = {}, NOTES = {};
   NEAR.forEach(function (x) { NEAR_BY[x.id] = x; NOTES[x.id] = x.note; });
@@ -72,6 +74,7 @@
     { id: 'rotation', label: 'Turned or mirrored block figures', same: [], related: ['rotate', 'spin'] },
     { id: 'directions', label: 'Directions, maps and finding your way', same: [], related: ['orient', 'homing', 'reckon'] },
     { id: 'tapping', label: 'Remembering positions in order (block tapping)', same: ['span'], related: [] },
+    { id: 'knots', label: 'Whether a rope forms a knot when pulled', same: ['knots'], related: [] },
     { id: 'analogies', label: 'Word analogies (“A is to B as C is to …”)', same: [], related: [],
       untrained: 'Not trained here. Only the Spatial Check’s word task uses this format, for a few minutes per check and without feedback.' },
     { id: 'matrices', label: 'Figure analogies or matrices', same: [], related: ['rotate', 'spin', 'hidden'],

@@ -2,7 +2,7 @@
    (ARCHITECTURE.md §5, §12; docs/research/v1.1/R1-path-integration.md §6, §8). Route geometry here is
    written independently of the generators (Math.sin/cos/atan2 on the stored legs and turns). */
 import { deepDiff } from './run.mjs';
-import { checkLearn } from './homing.test.mjs';
+import { checkLearn, shortcutReport } from './homing.test.mjs';
 import { performance } from 'node:perf_hooks';
 import { readFileSync } from 'node:fs';
 
@@ -178,6 +178,12 @@ export async function run(t) {
   t.ok(groundBad === 0, 'the ground matches the flow level; no landmarks or objects in any item');
   t.ok(groundSeeds.size >= items.length * 0.999, `the ground is re-seeded every item (${groundSeeds.size} seeds for ${items.length} items)`);
   t.ok(L.stats.fallbacks <= items.length / 1000, `fallback construction rarely needed (${L.stats.fallbacks})`);
+  // Turn-only shortcuts per cell (RV B1), with the reviewer's definitions: reported, pending the lead's decision
+  // (most cells cannot meet chance + 10 under the current route levels; docs/dev/progress/B3.md has the proof)
+  {
+    const scRows = shortcutReport(def, items, 'Reckon');
+    t.ok(scRows.every((r) => r.S.mirror <= r.chance + 0.10), 'the mirror answer stays within chance + 10 in every variant/route/tolerance cell');
+  }
   // time as a cue to leg length (RV S1): above 'steady' a leg's walking time says little about its length
   {
     const byLevel = [0, 1, 2].map((lv) => {
