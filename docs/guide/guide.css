@@ -259,3 +259,43 @@ table.research td:last-child { color: var(--ink-3); }
 .panel > table.calc { width: 100%; margin-bottom: 1mm; }
 .panel > table.calc td:first-child, .panel > table.calc th:first-child { width: 52mm; }
 .panel > table.calc td:not(:first-child), .panel > table.calc th:not(:first-child) { text-align: right; }
+
+/* ---------- version 1.1 additions ---------- */
+/* The non-affiliation line, carried on every page that names the Dental Admission Test. */
+.ada { font-size: 7pt; line-height: 1.35; color: var(--ink-3); margin: 0; padding-top: 1.6mm; border-top: var(--hair) solid var(--rule); }
+.content > .ada { margin-top: auto; }
+.content > .push + .ada, .content > .ada.tight { margin-top: 2mm; }
+/* What's new: six panels in a 2 × 3 grid. */
+.new-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 6mm; margin: 0 0 4mm; }
+.new-grid .panel { margin: 0; padding: 3.2mm 4mm 2mm; }
+.new-grid h3 { margin: 0 0 1.2mm; font-size: 10pt; }
+.new-grid h3 .spec { margin-left: 1.4mm; vertical-align: 0.3mm; }
+.new-grid p { font-size: 8.3pt; line-height: 1.38; margin-bottom: 1.4mm; }
+.new-grid .see { font-family: var(--mono); font-size: 6.8pt; color: var(--signal); letter-spacing: 0.04em; }
+/* DAT-style format cards: three per page, figure on the left. */
+.fmt-card { display: flex; flex-direction: column; height: 79mm; overflow: hidden; }
+.fmt-card + .fmt-card { margin-top: 3mm; padding-top: 3mm; border-top: var(--hair) solid var(--rule-strong); }
+.fmt-card .ex-head { margin-bottom: 2mm; }
+.fmt-card .ex-head h2 { font-size: 13pt; }
+.fmt-card .ex-body { grid-template-columns: 62mm 1fr; }
+.fmt-card .ex-figs .shot img { max-width: 62mm; max-height: 58mm; }
+.fmt-card .ex-figs figcaption { max-width: 62mm; }
+.fmt-card .ex-text { font-size: 8pt; line-height: 1.32; }
+.fmt-card .ex-text p { margin-bottom: 1.2mm; }
+.fmt-card .ex-text .dims li { padding: 0.4mm 0; }
+/* A plate of small line drawings (the three knot moves). */
+.moves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin: 1mm 0 2.4mm; }
+.moves figure { background: var(--surface); border: var(--hair) solid var(--rule); border-radius: 0.8mm; padding: 2mm 2.4mm 1.6mm; }
+.moves svg { display: block; width: 100%; height: 22mm; }
+.moves figcaption { margin-top: 1mm; }
+.moves .rope { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; }
+.moves .gap { fill: none; stroke: var(--surface); stroke-width: 4.2; }
+.moves .arrow { fill: none; stroke: var(--signal); stroke-width: 0.9; }
+.moves .arrowhead { fill: var(--signal); }
+/* Phone figures in pairs, and wide app cut-outs. */
+.app-fig.cutout .shot img { max-width: 100%; max-height: 92mm; }
+.app-fig.review .shot img { max-width: 100%; max-height: 70mm; }
+.app-fig.hyg .shot img { max-width: 100%; max-height: 104mm; }
+.app-fig.libpat .shot img { max-width: 100%; max-height: 74mm; }
+table.small td.num { text-align: right; white-space: nowrap; }
+.badge.info { border-color: var(--signal); color: var(--signal); background: var(--signal-wash); }

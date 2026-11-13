@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parallax: user guide</title>
 <meta name="author" content="Parallax contributors and the Chimera community">
-<meta name="description" content="What Parallax does, how to use it, and the research behind it. Version 1.0.0.">
+<meta name="description" content="What Parallax does, how to use it, and the research behind it. Version 1.1.0.">
 <!-- Parallax user guide. Text: CC BY-SA 4.0 (LICENSE-GUIDE.md). Rendered to docs/Parallax-Guide.pdf by
      tools/build-pdf.py; figures come from tools/shots.py (docs/shots/). Every factual claim comes from the
      project's research notes; points the notes tag as unverified are left out or marked "reported". -->
@@ -16,7 +16,7 @@
 <!-- ======================================================= 1 · cover -->
 <section class="page cover bare" id="cover">
   <div class="frame">
-    <div class="top"><span class="label">User guide · version 1.0.0</span><span class="label">6 November 2026</span></div>
+    <div class="top"><span class="label">User guide · version 1.1.0</span><span class="label">13 November 2026</span></div>
     <h1>Parallax</h1>
     <p class="sub">A visuospatial trainer</p>
     <div class="specimens">
@@ -30,7 +30,7 @@
         <div class="built">Built by the Chimera community on Discord</div>
         <a class="addr quiet" href="https://discord.gg/chmr">discord.gg/chmr</a>
       </div>
-      <div class="ver">Free · open source · offline<br>Version 1.0.0<br>6 November 2026</div>
+      <div class="ver">Free · open source · offline<br>Version 1.1.0<br>13 November 2026</div>
     </div>
   </div>
 </section>
@@ -38,16 +38,17 @@
 <!-- ======================================================= 2 · contents -->
 <section class="page" id="contents" data-chapter="Contents">
   <div class="content">
-    <div class="chapter"><span class="no">Parallax 1.0.0</span><h1>Contents</h1></div>
+    <div class="chapter"><span class="no">Parallax 1.1.0</span><h1>Contents</h1></div>
     <ol class="toc">
+      <li><span class="no">1.1</span><a href="#new">What's new in 1.1</a><span class="what">one clock, phones, Reckon, Knots, six test formats, test hygiene</span><span class="pg" data-for="new"></span></li>
       <li><span class="no">01</span><a href="#ch-what">What Parallax is, and what it is not</a><span class="what">honest claims in one box</span><span class="pg" data-for="ch-what"></span></li>
-      <li><span class="no">02</span><a href="#ch-start">Quick start</a><span class="what">the five steps of a first week</span><span class="pg" data-for="ch-start"></span></li>
-      <li><span class="no">03</span><a href="#ch-ex">The exercises</a><span class="what">what each of the eleven trains and how to play it</span><span class="pg" data-for="ch-ex"></span></li>
-      <li><span class="no">04</span><a href="#ch-modes">Progression modes</a><span class="what">Train, Path, Threshold, Speed, Free play, and why there are several</span><span class="pg" data-for="ch-modes"></span></li>
+      <li><span class="no">02</span><a href="#ch-start">Quick start</a><span class="what">the five steps of a first week; phones</span><span class="pg" data-for="ch-start"></span></li>
+      <li><span class="no">03</span><a href="#ch-ex">The exercises</a><span class="what">what each of the nineteen trains and how to play it</span><span class="pg" data-for="ch-ex"></span></li>
+      <li><span class="no">04</span><a href="#ch-modes">Progression modes</a><span class="what">Train, Path, Threshold, Speed, Free play, Section practice; the clock</span><span class="pg" data-for="ch-modes"></span></li>
       <li><span class="no">05</span><a href="#ch-transfer">Transfer</a><span class="what">near, mid and far; the Spatial Check and how to read it</span><span class="pg" data-for="ch-transfer"></span></li>
       <li><span class="no">06</span><a href="#ch-motivation">Motivation</a><span class="what">what Parallax includes and avoids, and why</span><span class="pg" data-for="ch-motivation"></span></li>
       <li><span class="no">07</span><a href="#ch-research">The research in one table</a><span class="what">finding, numbers, design response</span><span class="pg" data-for="ch-research"></span></li>
-      <li><span class="no">08</span><a href="#ch-limits">Honest limits and test hygiene</a><span class="what">what Parallax cannot tell you</span><span class="pg" data-for="ch-limits"></span></li>
+      <li><span class="no">08</span><a href="#ch-limits">Honest limits and test hygiene</a><span class="what">what Parallax cannot tell you; formats that tests share</span><span class="pg" data-for="ch-limits"></span></li>
       <li><span class="no">09</span><a href="#ch-data">Your data</a><span class="what">on your device; backups, import and export</span><span class="pg" data-for="ch-data"></span></li>
       <li><span class="no">10</span><a href="#ch-lab">The Lab</a><span class="what">protocols, research export, a self-experiment</span><span class="pg" data-for="ch-lab"></span></li>
       <li><span class="no">11</span><a href="#ch-dev">For contributors</a><span class="what">code layout, building an exercise, tests, licences</span><span class="pg" data-for="ch-dev"></span></li>
@@ -57,8 +58,8 @@
     <div class="cols">
       <div class="panel">
         <span class="label">About this guide</span>
-        <p>This guide explains what Parallax does, how to use it, and what the research behind it shows, including where that research is thin. Its claims come from the project's four research notes on evidence, tasks, progression and motivation. Points those notes could not confirm against a primary source are left out or marked "reported".</p>
-        <p>Pictures of exercises come from the development harness at mid-level settings; in the app the same views appear inside the player. Pictures of the app's screens show a record built by about six weeks of simulated practice, played through the real engine: their numbers belong to no real person.</p>
+        <p>This guide explains what Parallax does, how to use it, and what the research behind it shows, including where that research is thin. Its claims come from the project's research notes: four for version 1.0 (evidence, tasks, progression, motivation) and six for 1.1 (path integration, knots, the formats of an admissions test, test overlap, timing, phones). Points those notes could not confirm against a primary source are left out or marked "reported".</p>
+        <p>Pictures of exercises come from the development harness at mid-level settings; in the app the same views appear inside the player. Most pictures of the app's screens show a record built by about six weeks of simulated practice, played through the real engine: their numbers belong to no real person. The phone pictures and the new screens of 1.1 start from a fresh record.</p>
       </div>
       <div class="panel">
         <span class="label">Reading the numbers</span>
