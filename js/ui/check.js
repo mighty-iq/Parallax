@@ -191,7 +191,9 @@
 
     function loop() {
       if (S.done) return;
-      if (S.clock) { if (!S.clock.started()) S.clock.start(); S.clock.touch(); } // going on to an item is activity
+      // the clock starts with the first item; later items do not touch it: in the Check a time-out
+      // goes on by itself, so only real answers (below) and the clock's own input listener count
+      if (S.clock && !S.clock.started()) S.clock.start();
       var step;
       try { step = E().modes.next(S.plan, rec(), now(), clockNow()); } catch (e) { log('next failed', e); finish(); return; }
       if (!step || step.done) { finish(); return; }

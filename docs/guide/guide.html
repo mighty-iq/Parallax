@@ -651,44 +651,336 @@
   </div>
 </section>
 
-<!-- ======================================================= 12 · EX-11 + Library -->
+<!-- ======================================================= 12 · EX-11, EX-12 -->
 <section class="page ex-page" data-chapter="03 · The exercises">
   <div class="content">
     <article class="ex-card" id="ex-homing">
-      <header class="ex-head"><span class="spec">EX-11 · Homing · NAV</span><h2>Homing</h2><span class="kind">Navigation: back to the start</span><span class="badge warn">experimental</span></header>
+      <header class="ex-head"><span class="spec">EX-11 · Homing · NAV</span><h2>Homing</h2><span class="kind">Navigation with landmarks</span><span class="badge warn">experimental</span></header>
       <div class="ex-body">
         <div class="ex-figs">
-          <figure><div class="shot"><img src="../shots/ex11-homing.png" alt="Homing: a first-person view of a plain with a windmill on the horizon, and an arrow circle"></div><figcaption><span class="label">Question</span>On the walk: a windmill on the horizon serves as a landmark.</figcaption></figure>
-          <figure><div class="shot"><img src="../shots/ex11-homing-showme.png" alt="Homing show me: the route from above with its turn, and your arrow on the circle"></div><figcaption><span class="label">Show me, paused</span>The route from above: two legs and a 137° turn; you end at the arrowhead.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex11-homing.png" alt="Homing: a first-person view of a plain with a windmill on the horizon, an arrow circle and fine-turn buttons"></div><figcaption><span class="label">Question</span>On the walk: a windmill on the horizon is a landmark. The circle and the turn buttons wait.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex11-homing-showme.png" alt="Homing show me: the route from above with its turn and three landmarks, and your arrow on the circle"></div><figcaption><span class="label">Show me, paused</span>The route from above, with its 137° turn and three landmarks.</figcaption></figure>
         </div>
         <div class="ex-text">
-          <p><span class="rk">Trains</span>Navigation (NAV): keeping track of where you started as you move. Extrinsic-dynamic. <b>Experimental</b>, and best on a larger screen.</p>
-          <p><span class="rk">How to play</span>You watch a short walk through your own eyes: straight legs, with turns on the spot between them. You start in a ring that disappears once you walk away. At the end, turn the arrow circle to face where you started, then confirm. On some levels distant landmarks stand on the horizon; they barely move as you walk.</p>
+          <p><span class="rk">Trains</span>Navigation (NAV): keeping track of where you started as you move, with far landmarks as fixes on the easier levels. Extrinsic-dynamic. <b>Experimental.</b> It is the landmark-aided stage before Reckon.</p>
+          <p><span class="rk">How to play</span>You watch a short walk through your own eyes: straight legs, with turns on the spot between them. You start in a ring that disappears once you walk away. Then turn to face the start: drag the view sideways, drag or tap the arrow circle, or use the buttons for 5° and 1° steps (keys ← and →, Shift for 1°), and confirm. Far landmarks barely move as you walk, so, like a navigator's fix, they show how far you have turned.</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Route</span><span>2 to 4 legs with small (30–60°), medium (60–120°) or large (120–160°) turns, in eight steps</span></li>
-            <li><span class="k">Landmarks</span><span>several → one → none</span></li>
+            <li><span class="k">Landmarks</span><span>three → one → none</span></li>
             <li><span class="k">Tolerance</span><span>within 40°, 30° or 20° counts as right</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Draw the map in your head:</b> picture the walk from above as it happens, with yourself as a moving arrow. Natural for short routes. <b>Track the start like a compass needle:</b> keep one direction in mind, where the start lies from you, and update it after every leg and turn. Steady without landmarks. <span class="rk">Switch</span>when the picture blurs after several turns, track the direction; with landmarks, check your picture against them.</p>
-          <p class="ev"><span class="rk">Evidence</span>Homing is experimental: its item model is new and untested. On a screen it measures visual path integration only, without the body's own sense of turning and walking. Our literature search found no studies of training navigation this way, and whether it helps real wayfinding has not been studied. Its ratings are kept apart for small and large screens.</p>
+          <p class="ev"><span class="rk">Evidence</span>On a screen, Homing measures visual path integration only, without the body's own sense of turning and walking; whether it helps real wayfinding has not been studied. Since 1.1 it walks at 1.8 m/s and turns at 45°/s with gentle starts and stops, over routes of 12 to 28 m (page <span class="pgref" data-for="nav-phone"></span>).</p>
+        </div>
+      </div>
+    </article>
+    <article class="ex-card" id="ex-reckon">
+      <header class="ex-head"><span class="spec">EX-12 · Reckon · NAV</span><h2>Reckon</h2><span class="kind">Dead reckoning, nothing to steer by</span><span class="badge warn">experimental</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex12-reckon.png" alt="Reckon after the walk: an empty plain, the arrow circle, fine-turn buttons and Back, Walk and Here"></div><figcaption><span class="label">Question</span>After the walk nothing marks the start. Turn, hold Walk, then tap Here.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex12-reckon-feedback.png" alt="Reckon feedback: the flag at the start, both arrows on the circle, and the errors in direction, distance and drift"></div><figcaption><span class="label">Feedback</span>A walk back that ended near the start: the errors in direction and distance, and the drift per metre walked.</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">Trains</span>Navigation (NAV): path integration by dead reckoning, keeping track of home from your own turns and steps alone. Extrinsic-dynamic. <b>Experimental;</b> rated per screen size.</p>
+          <p><span class="rk">How to play</span>Watch a walk of 2 to 4 legs across an endless plain. <b>Point:</b> turn to face the start and confirm. <b>Return:</b> turn, then hold Walk (↑) to walk back, Back (↓) to step back, and tap Here (Enter) where the start is. Nothing in the world, the sky or the screen marks a place, and speeds vary, so seconds do not measure distance (page <span class="pgref" data-for="nav-phone"></span>).</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Route</span><span>Homing's eight steps</span></li>
+            <li><span class="k">Ground</span><span>textured → sparse → short-lived dots that fade within about a second</span></li>
+            <li><span class="k">Speed</span><span>steady, about 1.8 m/s → varied between legs (1.2 to 2.0 m/s) → varied within legs</span></li>
+            <li><span class="k">Tolerance</span><span>±40°, 30° or 20°; on return items within 50, 35 or 25 % of the way back</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Picture the shape from above,</b> most accurate on longer routes, or <b>keep the start as a direction from you,</b> updated with every turn and leg, quick when the turns come fast. <span class="rk">Switch</span>after two misses in a row.</p>
+          <p class="ev"><span class="rk">Evidence</span>In a lab version of the task with feedback after every trial, the overshoot of distance vanished within one session and the angular bias shrank, though practice and feedback were not separated <span class="cite">(Noel et al., 2020)</span>. Whether gains last, or reach walking in real places, has not been studied.</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ======================================================= 12b · navigation: why Reckon has no fixes; phones -->
+<section class="page" id="nav-phone" data-chapter="03 · The exercises">
+  <div class="content">
+    <h2>Navigation without fixes</h2>
+    <div class="phone-row">
+      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-homing-phone.png" alt="Homing on a phone: a mountain on the horizon, the arrow circle turned 60 degrees right, fine-turn buttons and Confirm"></div>
+        <figcaption><span class="label">Fig. 3.2</span>Homing on a phone, turned 60° right; a mountain on the horizon is the landmark.</figcaption></figure>
+      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-reckon-phone.png" alt="Reckon on a phone during the walk back: the circle set at 145 degrees right, and Back, Walk and Here"></div>
+        <figcaption><span class="label">Fig. 3.3</span>Reckon on a phone, part of the way back: Back, Walk and Here.</figcaption></figure>
+      <div>
+        <h3>Why Reckon has no landmarks</h3>
+        <p>Dead reckoning works out where you are from where you started and every turn and distance since. Its errors add up, which is why navigators correct them with fixes: a landmark, a star, a satellite. A community member pointed out that Homing's far landmarks are exactly such fixes, so they correct the very errors that path-integration training should work on. Reckon was built to remove every fix:</p>
+        <ul class="dash">
+          <li>no objects, a flat sky without a sun, unlit ground;</li>
+          <li>ground marks laid out anew for every item, so they show turning and walking but mark no place;</li>
+          <li>a start ring that disappears for good once you leave it;</li>
+          <li>no map, compass or counter during the walk;</li>
+          <li>speeds that vary from item to item, and from the second level within a route.</li>
+        </ul>
+        <p>Homing keeps its landmarks as the easier stage before Reckon, and its texts say why they help.</p>
+      </div>
+    </div>
+    <div class="cols">
+      <div>
+        <h3>Feedback that trains error, not luck</h3>
+        <p>A Reckon answer is right within the tolerance, and that alone moves your rating. The feedback gives more: the angle error; on return items, the distance error and the drift, how far off you ended for each metre walked; a hint when an answer matches a typical slip (the turns left out, left and right swapped, turning straight round, a heading never updated); and, after five routes, your habit over the last 20: turning too far or too little, walking short or long, with a chart of how far round you turned. The tolerance tightens as your rating rises.</p>
+        <p>Every item is built so that answers which skip the integration (the turns reversed, the heading not updated, the mirror image) miss by more than the tolerance, and the start is never almost straight ahead or behind. Routes run 12 to 28 m, the start lies 5 to 20 m away, and no walk moves for more than 30 seconds.</p>
+      </div>
+      <div>
+        <h3>On a phone, and for comfort</h3>
+        <p>Both exercises play by touch: drag the view to turn, then fine-tune with the 1° and 5° buttons; captions sit over the view as subtitles. Held sideways, the view and the controls sit side by side. Pause freezes the walk at once. The walks move gently: Homing at 1.8 m/s, Reckon between 1.2 and 2.0 m/s, turns at 45°/s at most, with soft starts and stops. If the motion makes you feel unwell, pause or stop.</p>
+        <p>A trial is voided only when the walk itself was harmed: a freeze of more than a second while moving, slow frames for more than half of it, a lost 3D view, the view changing shape, or a pause. Since Homing's items changed in 1.1, its new trials are logged as version 2.</p>
+        <div class="panel signal">
+          <span class="label">What is known</span>
+          <p>On a screen, path integration lacks the body's own sense of turning and walking. Navigation training has transferred little beyond itself: 42 sessions of virtual navigation over four months improved navigation by more than a standard deviation, while no other test moved beyond a non-significant trend <span class="cite">(Lövdén et al., 2012)</span>. The project's search found no randomised study of path-integration training with a transfer test. Reckon is an experiment; pooled data can say more.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= 12c · EX-13 Knots and its proofs -->
+<section class="page ex-page" data-chapter="03 · The exercises">
+  <div class="content">
+    <article class="ex-card" id="ex-knots">
+      <header class="ex-head"><span class="spec">EX-13 · Knots · Vz</span><h2>Knots</h2><span class="kind">Knots and links</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex13-knots.png" alt="Knots, pull: a rope with eight crossings whose ends run off the plate, and the answers Knot and No knot"></div><figcaption><span class="label">Question</span>Pull · 8 crossings, open spacing: does a knot remain?</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex13-knots-untie-showme.png" alt="Knots, untie: four marked crossings A to D; show me marks D, the one that unties the rope"></div><figcaption><span class="label">Show me, paused</span>Untie: switch crossing D, and the moves take the rope apart.</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">Trains</span>Visualisation (Vz): following a rope through its crossings and picturing it pulled tight. Intrinsic-dynamic.</p>
+          <p><span class="rk">How to play</span>One rope, its ends running off the plate. It is perfectly slippery and cannot pass through itself; where two strands cross, the gap shows which one is underneath. Four formats share one rating: <b>Pull</b>, does a knot remain when both ends are pulled (1 Knot, 2 No knot)? <b>Untie</b>, which of four marked crossings, switched, lets the rope fall open (tap a letter or press 1–4)? <b>Tie</b>, which one ties a knot? <b>Link</b>, are two closed loops linked, or could they be pulled apart?</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Rope</span><span>5 to 12 crossings in ten steps; on most higher steps, plain ropes that need a slide-over before anything comes off</span></li>
+            <li><span class="k">Spacing</span><span>open → close → tight strands</span></li>
+            <li><span class="k">Format</span><span>pull → untie and tie (7 crossings or more) → link (8 to 11, the loops crossing six times)</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Picture the pull:</b> hold one end still and pull the other in your mind; watch which loops slide off and which tighten. Quick on short ropes. <b>Trace and remove:</b> take the rope apart move by move, as Show me does; if what is left goes over, under, over all the way round, it is a knot. Steady on long or crowded ropes. <span class="rk">Switch</span>when strands run close, trace; when tracing gets long, picture the whole rope pulled tight. Counting crossings never decides: a knot and a plain rope of the same shape are both here.</p>
+          <p class="ev"><span class="rk">Evidence</span>The one psychometric knot test, the Knot Reasoning Task, correlated r = .54 with mental rotation and r = .59 with paper folding <span class="cite">(Bennett-Pierre et al., 2025)</span>. People recognise a knot's shape far better than they judge its strength <span class="cite">(Croom &amp; Firestone, 2024)</span>, so Knots asks only about shape. No study of training knot diagrams was found, and nothing shows that it helps tie real knots.</p>
         </div>
       </div>
     </article>
     <div class="ex-card ex-extra">
+      <h2>How every item is proved</h2>
+      <p>A rope is a smooth curve through points on a grid, with one flag per crossing saying which strand is on top. Before you see an item, a validator finds the crossings again from the drawn curve and settles the answer in up to three steps, each a proof:</p>
+      <div class="moves">
+        <figure>
+          <svg viewBox="0 0 124 54" role="img" aria-label="A strand with a curl that crosses itself, then the same strand straight">
+            <path class="rope" d="M4,40 L30,40 C40,40 46,32 44,23 C42,14 32,12 27,18 C23,23 25,32 29,37"/>
+            <path class="gap" d="M29,37 C32,41 36,46 46,46 L56,46"/>
+            <path class="rope" d="M29,37 C32,41 36,46 46,46 L56,46"/>
+            <path class="arrow" d="M59,30 L66,30"/><polygon class="arrowhead" points="66,27 70,30 66,33"/>
+            <path class="rope" d="M74,40 C86,40 100,46 120,46"/>
+          </svg>
+          <figcaption><span class="label">Untwist a curl</span>A loop that crosses only itself comes out.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 124 54" role="img" aria-label="A loop lying on top of a straight strand at both of its crossings, then lifted off">
+            <path class="rope" d="M4,30 L56,30"/>
+            <path class="gap" d="M8,8 C22,8 18,48 30,48 C42,48 38,8 52,8"/>
+            <path class="rope" d="M8,8 C22,8 18,48 30,48 C42,48 38,8 52,8"/>
+            <path class="arrow" d="M59,30 L66,30"/><polygon class="arrowhead" points="66,27 70,30 66,33"/>
+            <path class="rope" d="M72,30 L120,30"/>
+            <path class="rope" d="M76,8 C88,8 86,20 96,20 C106,20 104,8 116,8"/>
+          </svg>
+          <figcaption><span class="label">Lift off a loop</span>On top at both of its crossings, a loop slides off.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 124 54" role="img" aria-label="A strand passing over a crossing on one side, then slid across to the other side">
+            <path class="rope" d="M8,6 L52,48"/>
+            <path class="gap" d="M8,48 L52,6"/><path class="rope" d="M8,48 L52,6"/>
+            <path class="gap" d="M4,39 L56,39"/><path class="rope" d="M4,39 L56,39"/>
+            <path class="arrow" d="M59,30 L66,30"/><polygon class="arrowhead" points="66,27 70,30 66,33"/>
+            <path class="rope" d="M74,6 L118,48"/>
+            <path class="gap" d="M74,48 L118,6"/><path class="rope" d="M74,48 L118,6"/>
+            <path class="gap" d="M70,15 L122,15"/><path class="rope" d="M70,15 L122,15"/>
+          </svg>
+          <figcaption><span class="label">Slide over a crossing</span>A strand on top of both strands slides across.</figcaption>
+        </figure>
+      </div>
       <div class="cols">
         <div>
-          <h2>The Library</h2>
-          <p>Every exercise has a Library card: its level with the likely range and the real settings you handle, its Path stage, How to play, the strategy cards, a "where it is used" note, any off-screen challenge, and buttons to practise it in each mode.</p>
-          <h3>Where spatial thinking is used</h3>
-          <p>Each card says honestly where its skill shows up, with the limitation next to it. Rotate's reads: <i>"Chemists ask the same question about molecules (is this drawing the same molecule or its mirror image?). Engineers turn objects in their heads too. Practice here improves this kind of task and often similar ones; it has not been shown to improve grades or job performance."</i></p>
-          <h3>Same model, same answer</h3>
-          <p>A solver checks every item before you see it; cheap shortcuts (counting cubes or holes, the odd one out, the shape as seen from here) must score near chance; show-me is drawn from the model that grades your answer. Chapter 8 gives the limits.</p>
+          <p><b>1 · Take it apart.</b> The validator applies these three moves, which never change whether a knot is there, wherever they remove crossings. If every crossing comes off, the rope holds no knot, and that list of moves is the Show me you watch.</p>
+          <p><b>2 · A determinant.</b> If crossings remain, it computes a number from the diagram (its determinant, by Fox colouring). A rope with no knot always gives 1, so any other number proves a knot.</p>
+          <p><b>3 · The Jones polynomial.</b> Otherwise it tries slide-overs and the moves again, and then computes the Jones polynomial. For any diagram of up to 24 crossings, that polynomial equals 1 only for a rope with no knot <span class="cite">(Tuzun &amp; Sikora)</span>; ropes here have at most 12.</p>
         </div>
-        <figure class="app-fig phone lib"><div class="shot"><img src="../shots/app-library-phone.png" alt="The Library on a phone: the Track card, with no level yet on a small screen"></div>
-          <figcaption><span class="label">Fig. 3.1</span>The Library on a phone. Track is rated per screen size, so it has no level here yet.</figcaption></figure>
+        <div>
+          <p><b>Untie and tie</b> items are proved crossing by crossing: switched, exactly one of the four marked crossings changes the answer. <b>Linked</b> loops are proved by a linking number other than zero or by the Jones polynomial; <b>apart</b> only by moves that leave no crossing between the loops.</p>
+          <p><b>No cheap tells.</b> Every knot comes paired with a plain rope drawn from the same outline and matched on how often the rope alternates over and under, on its twist and on the moves in plain sight; before this pairing, alternation alone told knots apart 75 to 92 % of the time; after it, no cheap rule tested beat 52.3 % on Pull items, where guessing scores 50 %. A fifth format, a knot against its mirror image, was left out of 1.1: in flat drawings the crossings give it away.</p>
+        </div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ======================================================= 12d · the DAT-style formats -->
+<section class="page" id="dat" data-chapter="03 · The exercises">
+  <div class="content">
+    <h2>DAT-style formats <span class="spec">EX-14 to EX-19</span></h2>
+    <p class="lead">Six exercises practise the six question formats of the Perceptual Ability Test (PAT), the perceptual part of the Dental Admission Test (DAT®), in the test's order. Every item is generated by Parallax and checked by a solver like every other exercise, and the rules are written in Parallax's own words.</p>
+    <table class="small">
+      <thead><tr><th style="width:9mm">Part</th><th style="width:33mm">In the test</th><th style="width:36mm">Exercise</th><th>What you do</th><th style="width:20mm">Answers</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">1</td><td>apertures</td><td><span class="spec">EX-14</span> Openings</td><td>find the opening a pictured solid passes through, turned the right way, with nothing to spare</td><td>5 openings</td></tr>
+        <tr><td class="mono">2</td><td>view recognition</td><td><span class="spec">EX-15</span> Missing View</td><td>two of the top, front and end views are given: pick the third, hidden edges dotted</td><td>4 drawings</td></tr>
+        <tr><td class="mono">3</td><td>angle discrimination</td><td><span class="spec">EX-16</span> Angles</td><td>rank four angles from smallest to largest</td><td>4 orderings</td></tr>
+        <tr><td class="mono">4</td><td>paper folding</td><td><span class="spec">EX-17</span> Hole Punch</td><td>a 4 × 4 sheet folded two or three times and punched once: pick the unfolded sheet</td><td>5 sheets</td></tr>
+        <tr><td class="mono">5</td><td>cube counting</td><td><span class="spec">EX-18</span> Painted Cubes</td><td>how many cubes of a painted figure have exactly so many painted sides</td><td>1 to 5 cubes</td></tr>
+        <tr><td class="mono">6</td><td>form development</td><td><span class="spec">EX-19</span> Form</td><td>which of four solids a flat pattern folds into</td><td>4 solids</td></tr>
+      </tbody>
+    </table>
+    <div class="cols">
+      <div>
+        <h3>The DAT-style focus, opt-in</h3>
+        <p>Off by default. Off, the six formats stay in the Library, Free play and Section practice, and never come up in Train, Today's plan or the Daily Challenge. Switch the focus on, in the Library's DAT-style group or in Settings, when you are preparing for the test: they then join Train and Today's plan like any exercise. Every switch is kept in your record and its backup, so pooled data can tell practice with and without the focus apart.</p>
+        <h3>Why opt-in</h3>
+        <p>Practising a test's formats raises scores on those formats. Leaving them out of default training keeps the choice with you, and keeps the Spatial Check clean: no format here puts oriented marks on cubes, which is the Cube Match probe's format. "Every exercise" and "Broad base" do not count these six.</p>
+        <h3>Angles is perceptual-judgement practice</h3>
+        <p>Like Track's attention-practice label: judging angles by eye improves with practice, but the gains tend to stay with this kind of figure. Once you have practised Angles since your starting checks, Progress adds a note to compare the Level probe with care, since judging angles by eye may carry over a little to it.</p>
+      </div>
+      <div>
+        <figure class="app-fig libpat"><div class="shot"><img src="../shots/app-library-pat.png" alt="The Library's DAT-style group: the focus switch, Section practice with Mini and Full, the limitation line and the non-affiliation line"></div>
+          <figcaption><span class="label">Fig. 3.4</span>The Library's DAT-style group: the focus switch, Section practice (page <span class="pgref" data-for="section"></span>) and the limitation line.</figcaption></figure>
+        <div class="panel signal" style="margin-top:4mm">
+          <span class="label">What practice here can and cannot do</span>
+          <p>Practice on a format usually raises scores on that format: near transfer, in this guide's terms. Parallax has not measured any effect on scores in the test itself, and predicts no score. In the ADA's own validity study, PAT scores correlated .16 to .36 with dental-school grades after corrections, highest for second-year technique courses <span class="cite">(American Dental Association, 2026)</span>. The project's search found no study that trained these formats and then measured the test against a control group.</p>
+        </div>
+      </div>
+    </div>
+    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 12e · EX-14 to EX-16 -->
+<section class="page ex-page" data-chapter="03 · The exercises">
+  <div class="content">
+    <article class="fmt-card" id="ex-openings">
+      <header class="ex-head"><span class="spec">EX-14 · Openings · Vz</span><h2>Openings</h2><span class="kind">Which opening fits the solid</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex14-openings.png" alt="Openings: a solid with a slot and slanted cuts, and five black openings, each turned or flipped"></div><figcaption><span class="label">Question</span>Two features, slanted cuts; the fitting face is the side. Each opening is turned or flipped at random.</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">How to play</span>The solid may be turned any way before it goes in; then it slides straight through without turning, so the opening it needs is its outline seen along that direction. It must fit exactly: the right features in the wrong proportions are wrong. Every cut runs straight through the solid, so what shows on one face continues to the opposite one.</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Features</span><span>1 to 4 notches, steps or cuts</span></li>
+            <li><span class="k">Edges</span><span>straight → slanted (45°) cuts</span></li>
+            <li><span class="k">Fitting face</span><span>front → side → top; the solid upright → lying</span></li>
+            <li><span class="k">Wrong ones</span><span>other features → the right features stretched</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Push it through:</b> pick a face and picture the hole it would cut. <b>Three outlines, then sizes:</b> the solid has only three; match width and height, then the features, then the lengths.</p>
+          <p class="ev"><span class="rk">Checked</span>Rays cast through the solid on a grid of twelfths of a unit rebuild its three outlines; every opening is compared under all eight turns and flips, and exactly one matches.</p>
+        </div>
+      </div>
+    </article>
+    <article class="fmt-card" id="ex-patviews">
+      <header class="ex-head"><span class="spec">EX-15 · Missing View · Vz</span><h2>Missing View</h2><span class="kind">Two views given, pick the third</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex15-patviews.png" alt="Missing View: top and front views of a block structure, an empty end slot, and four drawings with dotted hidden edges"></div><figcaption><span class="label">Question</span>Top and front given: which drawing is the end view? All four share one outline.</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">How to play</span>Top (upper left), front (lower left) and end (lower right) always sit in the same places, at one scale; two are drawn. The end view looks at the right side, so the front is on its left. A solid line is an edge you can see, a dotted line one hidden behind nearer cubes. Every cube stands on the ground or on another cube.</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Cubes</span><span>4–5 → 6–7 → 8–9 → 10–12, on a 3 × 3 or 4 × 4 grid</span></li>
+            <li><span class="k">Missing</span><span>end → front → top view</span></li>
+            <li><span class="k">Wrong ones</span><span>another outline → the same outline, other lines → one edge solid instead of dotted, or the reverse</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Build it, then look</b> from the missing side, or <b>line up and eliminate:</b> every line of the missing view lines up with lines in the given ones.</p>
+          <p class="ev"><span class="rk">Checked</span>Two views do not fix a structure, so every item searches all stacks of cubes that fit the two given views, and a wrong drawing is admitted only when none of them has it: exactly one drawing is possible.</p>
+        </div>
+      </div>
+    </article>
+    <article class="fmt-card" id="ex-angles">
+      <header class="ex-head"><span class="spec">EX-16 · Angles · LE</span><h2>Angles</h2><span class="kind">Angle ranking</span><span class="badge info">perceptual-judgement practice</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex16-angles.png" alt="Angles: four numbered wide angles turned freely, and four orderings of the numbers"></div><figcaption><span class="label">Question</span>Four wide angles, turned freely: which list runs from smallest to largest?</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">How to play</span>Four numbered angles; each answer lists the numbers from the smallest angle to the largest. Only the opening between the arms counts: arm length and how an angle is turned do not. Every angle is less than a straight line.</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Closest gap</span><span>6° → 5° → 4° → 3° → 2°</span></li>
+            <li><span class="k">Size</span><span>near right angles → sharp → wide</span></li>
+            <li><span class="k">Deciding pair</span><span>the smallest and largest → the middle pair → the closest pair</span></li>
+            <li><span class="k">Pose</span><span>one arm level → turned freely</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Settle the extremes first</b> and cross out every list that disagrees; often the close pair never needs judging. <b>Lay one on another:</b> corners and one arm lined up, the wider angle sticks out.</p>
+          <p class="ev"><span class="rk">Checked</span>Judging angles by eye is most precise near 90° <span class="cite">(Dillon et al., 2019)</span>. Arm lengths are drawn so that the tip distance, the area between the arms and arm length point to a random list; each angle is measured again from the drawn ends. Rated per screen size.</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ======================================================= 12f · EX-17 to EX-19 -->
+<section class="page ex-page" data-chapter="03 · The exercises">
+  <div class="content">
+    <article class="fmt-card" id="ex-patfold">
+      <header class="ex-head"><span class="spec">EX-17 · Hole Punch · Vz</span><h2>Hole Punch</h2><span class="kind">Fold, punch once, unfold</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex17-patfold.png" alt="Hole Punch: three fold panels and a punch on a 4 by 4 sheet, and five sheets of 16 positions"></div><figcaption><span class="label">Question</span>Three folds, then one punch through every layer under it: which sheet?</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">How to play</span>A square sheet of 4 × 4 cells is folded two or three times: the dashed outline is where the paper was, the shaded flap is the part that just moved. Then one punch goes through every layer under it. Pick the unfolded sheet: a filled circle is a hole, an open ring none. The paper is never turned over and never leaves its square; all five sheets have as many holes.</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Folds</span><span>2 → 3</span></li>
+            <li><span class="k">Fold type</span><span>half → corner → diagonal → mixed</span></li>
+            <li><span class="k">Idle folds</span><span>0 to 2 folds the punch misses; they make an item easier</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Unfold it in your mind,</b> the last fold first: every hole on a flap gets a twin across its crease. <b>Track the hole on the grid:</b> mark the punch, then mirror it across each crease with paper under the punch.</p>
+          <p class="ev"><span class="rk">Checked</span>Fold's exact paper model on a smaller sheet, with Fold's independent re-simulation. Unfolding backwards by symmetry about the creases, the format's own method, finds most answers; partial flaps and mixed folds are where the layers must be tracked.</p>
+        </div>
+      </div>
+    </article>
+    <article class="fmt-card" id="ex-cubes">
+      <header class="ex-head"><span class="spec">EX-18 · Painted Cubes · Vz</span><h2>Painted Cubes</h2><span class="kind">Count by painted sides</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex18-cubes.png" alt="Painted Cubes: a figure of glued cubes, the question how many cubes have exactly 4 painted sides, and answers 1 to 5"></div><figcaption><span class="label">Question</span>How many cubes have exactly 4 painted sides?</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">How to play</span>Equal cubes glued together, painted on every outside face except those resting on the ground. How many cubes have exactly the number of painted sides asked? A cube out of sight is there only to hold up cubes above it, and every column's top cube is in view. Answers run from 1 to 5 cubes.</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Cubes</span><span>6–9 → 10–13 → 14–17 → 18–22</span></li>
+            <li><span class="k">Tallest column</span><span>2 → 3 → 4 cubes</span></li>
+            <li><span class="k">Sides asked</span><span>3 or 4 → 1 or 2, which sit inside the figure or under other cubes</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Know the common positions:</b> a corner cube on the ground has 3. <b>Tally column by column,</b> hidden cubes included; tall columns call for the tally.</p>
+          <p class="ev"><span class="rk">Checked</span>Five painted sides is never asked: figures rarely hold more than two such cubes, so it would give the answer away. The count is drawn evenly from its range, and the classic error, counting the painted faces you can see <span class="cite">(Kurtuluş &amp; Yolcu, 2013)</span>, is held near chance. Section practice asks up to three questions per figure.</p>
+        </div>
+      </div>
+    </article>
+    <article class="fmt-card" id="ex-form">
+      <header class="ex-head"><span class="spec">EX-19 · Form · Vz</span><h2>Form</h2><span class="kind">Pattern folding</span></header>
+      <div class="ex-body">
+        <div class="ex-figs">
+          <figure><div class="shot"><img src="../shots/ex19-form.png" alt="Form: a flat pattern with two shaded faces, and four pictured wedges turned different ways"></div><figcaption><span class="label">Question</span>Two shaded faces; four wedges, each turned its own way.</figcaption></figure>
+        </div>
+        <div class="ex-text">
+          <p><span class="rk">How to play</span>The pattern is the outside of a solid laid flat: dashed lines fold, solid lines are cut edges that meet another edge once folded. Shaded faces carry a tone and a hatch; a half-shaded face also shows which way it turns. Pick the solid that folds from the pattern: right shape, right sizes, marks in the right places. Only faces turned toward you count.</p>
+          <span class="rk">Difficulty grows with</span>
+          <ul class="dims">
+            <li><span class="k">Solid</span><span>boxes and prisms → wedges and pyramids → frusta and five-sided prisms</span></li>
+            <li><span class="k">Marks</span><span>one face → two → a half-shaded face</span></li>
+            <li><span class="k">Pictures</span><span>upright → on a side → upside down; wrong solids: shape or marks → marks only</span></li>
+          </ul>
+          <p class="strat"><span class="rk">Strategies</span><b>Fold it up</b> around one face kept flat, or work by <b>landmarks:</b> rule out by shape, then check one marked face and its neighbours.</p>
+          <p class="ev"><span class="rk">Checked</span>The pattern is folded in 3D by the solid's own angles and must close; each pictured solid is matched by every rotation, and exactly one fits. Never a cube: oriented marks on cubes belong to the Cube Match probe.</p>
+        </div>
+      </div>
+    </article>
   </div>
 </section>
 

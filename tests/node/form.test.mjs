@@ -169,11 +169,45 @@ const shareOf = (scores, key, high) => {
   return scores[key] === best ? 1 / scores.filter((x) => x === best).length : 0;
 };
 
+// Face-shape solvers (no folding; review RV-dat-style-B §1): a seen face's shape decides its mark. "Rough"
+// compares shapes with slack: same corner count, longest side within 25 %, every side (as a share of the
+// longest) within 0.2.
+const sides = (k) => k.split(':')[1].split('/')[0].split(',').map(Number);
+const corners = (k) => k.split(':')[0];
+function alike(a, b) {
+  if (corners(a) !== corners(b)) return false;
+  const x = sides(a), y = sides(b), mx = Math.max(...x), my = Math.max(...y);
+  if (Math.abs(mx - my) > 0.25 * Math.max(mx, my)) return false;
+  return x.every((v, k) => Math.abs(v / mx - y[k] / my) <= 0.2);
+}
+const mtype = (m) => (!m ? 0 : typeof m === 'object' ? 2 : 1);
+function shapeSolvers(L, it) {
+  const net = it.net.map((n) => ({ k: shapeOfPts(n.poly.map(([x, y]) => [x, y, 0])), m: mtype(it.marks[n.face]) }));
+  const O = it.options.map((o) => {
+    const c = L.facing(o.solid, o.view), faces = o.solid.faces.map((G, g) => ({ c: c[g], k: shapeOf(o.solid, g), m: mtype(o.marks[g]) }));
+    return { clear: faces.filter((f) => f.c >= L.SEEN), drawn: faces.filter((f) => f.c > 0) };
+  });
+  const out = {};
+  for (const [name, same] of [['exact', (a, b) => a === b], ['rough', alike]]) {
+    // face by face: a clearly seen face whose shape the pattern shows only marked (or only plain) must agree
+    const contra = O.map((o) => o.clear.filter((x) => { const s = net.filter((y) => same(y.k, x.k)); if (!s.length) return name === 'exact'; const ty = new Set(s.map((y) => y.m)); return ty.size === 1 && !ty.has(x.m); }).length);
+    out[`face by face, shape decides the mark (${name})`] = contra;
+    // every drawn mark sits on a face shaped like a pattern face with that mark
+    out[`marks on faces shaped like the pattern's marked faces (${name})`] = O.map((o) => (o.drawn.filter((x) => x.m).every((x) => net.some((y) => y.m === x.m && same(y.k, x.k))) ? 0 : 1));
+  }
+  out['every drawn face shaped like a pattern face'] = O.map((o) => (o.drawn.every((x) => net.some((y) => y.k === x.k)) ? 0 : 1));
+  return out;
+}
+
 function testShortcuts(t, PX, def, L, pool) {
   t.section('form: shortcut solvers');
-  const acc = {}, cnt = {}, req = {};
-  const add = (name, v, required) => { acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; req[name] = required; };
-  for (const { it } of pool) {
+  const acc = {}, cnt = {}, req = {}, byFoil = {};
+  const add = (name, v, required, p) => {
+    acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; req[name] = required;
+    if (p) { const k = name + ' @ foil ' + p.foil; byFoil[k] = byFoil[k] || [0, 0, name]; byFoil[k][0] += v; byFoil[k][1]++; }
+  };
+  for (const { it, p } of pool) {
+    for (const [name, scores] of Object.entries(shapeSolvers(L, it))) add(name, shareOf(scores, it.key, false), true, p);
     const F = it.options.map((o) => L.feats(o)), key = it.key;
     add('most marks seen', shareOf(F.map((x) => x.marked), key, true), true);
     add('fewest marks seen', shareOf(F.map((x) => x.marked), key, false), true);
@@ -198,6 +232,9 @@ function testShortcuts(t, PX, def, L, pool) {
     if (req[name]) t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
   console.log('       form shortcuts: ' + line.join(', '));
+  // The face-shape solvers also per foil level (the proportion foil is the only foil they can rule out).
+  const over = Object.entries(byFoil).filter(([, v]) => v[0] / v[1] > LIMIT).map(([k, v]) => `${k} ${(v[0] / v[1] * 100).toFixed(1)}%`);
+  t.eq(over, [], 'face-shape solvers stay within chance + 10 at each foil level');
 }
 
 /* ------------------------------------------------------------------ tampering, fallback, timing */
@@ -210,7 +247,9 @@ function testTampering(t, PX, def, L, pool) {
     ['a foil replaced by the key', (it) => { const j = (it.key + 1) % 4; it.options[j] = JSON.parse(JSON.stringify(it.options[it.key])); }],
     ['a net piece shifted', (it) => { const n = it.net[it.net.length - 1]; n.poly = n.poly.map(([x, y]) => [x, y + 0.4]); }],
     ['the solid made a cube', (it) => { it.solid.kind = 'box'; it.solid.dims = [2, 2, 2]; }],
-    ['the key\'s marks moved to every face', (it) => { const o = it.options[it.key]; o.marks = o.marks.map((x, f) => (o.solid.faces[f].length === 4 && typeof x === 'object' ? x : 1)); }],
+    ['a plain face the key shows clearly made shaded', (it) => { const o = it.options[it.key], c = L.facing(o.solid, o.view), f = o.marks.findIndex((x, g) => !x && c[g] >= L.SEEN); if (f >= 0) o.marks[f] = 1; else it.key = (it.key + 1) % 4; }],
+    ['the key\'s half marks turned where they show', (it) => { const o = it.options[it.key], c = L.facing(o.solid, o.view); o.marks = o.marks.map((x, f) => (typeof x === 'object' && c[f] >= L.SEEN ? { h: (x.h + 1) % 4 } : x)); if (!o.marks.some((x, f) => typeof x === 'object' && c[f] >= L.SEEN)) it.key = (it.key + 1) % 4; }],
+    ['a fold line drawn where no piece hangs', (it) => { const n = it.net.find((q) => q.parent >= 0); n.parent = it.net.find((q) => q.face !== n.face && q.face !== n.parent).face; }],
   ];
   for (const [name, mod] of cases) {
     const items = pick();
