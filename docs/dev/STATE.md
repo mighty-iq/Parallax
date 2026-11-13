@@ -3,7 +3,7 @@
 Updated 2026-11-13 12:10 UTC.
 
 ## Phase
-1. Research and plan: DONE. Plan gate: the plan message was sent on 13 Nov; waiting for the owner's go (and D1–D3).
+2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in PAT focus. D3: analogical test named in v1.2.
 
 ## The brief in one line each (BRIEF.md is the word-for-word source)
 1. Time counting looks bugged; fix it and other bugs.
