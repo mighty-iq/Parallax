@@ -49,7 +49,7 @@ export async function run(t) {
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, optCount = 0, fallbacks = 0, firstBad = null, n = 0;
   const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0 };
-  const keyPos = [0, 0, 0, 0, 0], holesHist = {}, whyHist = {}, items = [];
+  const keyPos = [0, 0, 0, 0, 0], holesHist = {}, whyHist = {}, items = [], cs = {};
   for (let ci = 0; ci < all.length; ci++) {
     for (let s = 0; s < per; s++) {
       const params = all[ci], seed = PX.rng.hash('patfold-test', ci, s);
@@ -67,7 +67,7 @@ export async function run(t) {
       keyPos[item.key]++;
       holesHist[item.holes] = (holesHist[item.holes] || 0) + 1;
       item.why.forEach((w) => { if (w) { const k = w.replace(/\d+/g, '#'); whyHist[k] = (whyHist[k] || 0) + 1; } });
-      def.lib.onSheet((A) => shortcuts(A, def.lib, item, acc));
+      def.lib.onSheet((A) => { shortcuts(A, def.lib, item, acc); creaseSym(A, item, cs); });
     }
   }
   t.eq(threw, 0, 'generate never throws' + (firstBad && threw ? ` (${firstBad})` : ''));
@@ -95,6 +95,26 @@ export async function run(t) {
     const it = JSON.parse(JSON.stringify(base));
     edit(it);
     t.ok(def.validate(it) !== true, `rejects: ${name}`);
+  }
+  // The drawn panels (RV-dat-style-A §4: each of these passed before the per-step check), on the
+  // reviewer's item: seed 99, three mixed folds.
+  const panelBase = def.generate(PX.rng(99), { folds: 1, type: 3, idle: 0 });
+  const last = panelBase.folds.length;
+  const panels = [
+    ['step 1: a face shifted one cell', (it) => { it.steps[1].faces[0].poly = it.steps[1].faces[0].poly.map(([x, y]) => [x + 1, y]); }],
+    ['step 2: the flap flags cleared (no shading, no arrow)', (it) => { it.steps[2].faces.forEach((f) => { f.moved = false; }); }],
+    ['step 2: the outline mirrored left to right', (it) => { it.steps[2].outline = it.steps[2].outline.map(([x, y]) => [4 - x, y]); }],
+    [`step ${last}: the faces mirrored top to bottom`, (it) => { it.steps[last].faces.forEach((f) => { f.poly = f.poly.map(([x, y]) => [x, 4 - y]); }); }],
+    ['step 1: the arrow starts at the wrong place', (it) => { it.steps[1].faces.forEach((f) => { if (f.from) f.from = f.from.map(([x, y]) => [y, x]); }); }],
+    [`step ${last}: two faces swap layers`, (it) => { const F = it.steps[last].faces, a = F.reduce((b, f, i) => (f.layer > F[b].layer ? i : b), 0), b = F.reduce((c, f, i) => (f.layer < F[c].layer ? i : c), 0); [F[a].layer, F[b].layer] = [F[b].layer, F[a].layer]; }],
+    [`step ${last}: a hole on the wrong face`, (it) => { const F = it.steps[last].faces, a = F.findIndex((f) => f.holes.length), b = F.findIndex((f, i) => i !== a); F[b].holes.push(F[a].holes.pop()); }],
+  ];
+  t.eq([def.validate(panelBase), panelBase.folds.length], [true, 3], 'the reviewer\'s item is valid as generated (three folds)');
+  for (const [name, edit] of panels) {
+    const it = JSON.parse(JSON.stringify(panelBase));
+    edit(it);
+    const v = deepDiff(it, panelBase) !== null ? def.validate(it) : 'no change';
+    t.ok(v !== true && v !== 'no change', `rejects: ${name} (${v})`);
   }
 
   t.section('patfold: determinism');
@@ -151,6 +171,7 @@ export async function run(t) {
     ['symAny', 'most symmetric about any sheet axis'], ['like', 'most like the others'], ['odd', 'odd one out'], ['count2', 'the hole count 2^folds']]) {
     t.ok(acc[k] / acc.count <= bound, `"${name}" ≤ chance + 10 (${pct(acc[k])}, chance 20 %)`);
   }
+  creaseReport(cs, [2, 3]);
   if (process.env.PX_REPORT) {
     console.log(`       patfold: n ${acc.count}; under ${pct(acc.under)}, sym1 ${pct(acc.sym1)}, low1 ${pct(acc.low1)}, symAny ${pct(acc.symAny)}, like ${pct(acc.like)}, odd ${pct(acc.odd)}, count ${pct(acc.count2)}; CPU p95 ${p95.toFixed(1)} ms`);
     console.log('       holes', JSON.stringify(holesHist), 'keys', keyPos.join(','));
@@ -174,6 +195,30 @@ function shortcuts(A, lib, item, acc) {
   acc.symAny += pickBest(opts.map((o) => Math.max(...lib.AXES.map((L) => A.symScore(o, L)))), k);
   const want = 2 ** item.folds.length;
   acc.count2 += pickBest(opts.map((o) => -Math.abs(o.length - want)), k);
+}
+
+// Crease symmetry (RV-dat-style-A §1; the lead's decision: the format's analytic method, not a
+// shortcut): keep the options with a hole under every punch, then take the one most symmetric about
+// the item's own creases (summed). Not bounded; reported as information by fold type, by the number
+// of idle folds, by fold count, and by the key's symmetry: every crease a mirror line of the key,
+// an idle fold (a crease the punches missed) but no partial flap, or a partial flap (a fold that
+// matters, but the key is only partly symmetric about its crease).
+const TYPE_NAMES = ['half', 'corner', 'diagonal', 'mixed'];
+function creaseSym(H, item, cs) {
+  const opts = item.options, k = item.key, lines = item.folds.map((f) => f.line), pm = H.maskOf(item.punches);
+  const gate = opts.map((o) => { const m = H.maskOf(o); return (m[0] & pm[0]) === pm[0] && (m[1] & pm[1]) === pm[1] ? 10 : 0; });
+  const hit = pickBest(opts.map((o, i) => gate[i] + lines.reduce((s, L) => s + H.symScore(o, L), 0)), k);
+  const idle = item.folds.filter((f) => !f.matters).length;
+  const shape = item.folds.some((f) => f.matters && H.symScore(opts[k], f.line) < 1) ? 'a partial flap' : idle ? 'an idle fold' : 'every crease a mirror line';
+  for (const key of ['all', TYPE_NAMES[item.params.type], 'idle ' + idle, 'folds ' + item.folds.length, shape]) {
+    const a = cs[key] = cs[key] || [0, 0]; a[0] += hit; a[1]++;
+  }
+}
+function creaseReport(cs, folds) {
+  const f = (key) => (cs[key] ? (100 * cs[key][0] / cs[key][1]).toFixed(1) : '–');
+  const share = (key) => (cs[key] ? (100 * cs[key][1] / cs.all[1]).toFixed(0) : '0');
+  console.log(`       info  crease symmetry (the format's analytic method; not bounded): ${f('all')} % of ${cs.all[1]} items | ${TYPE_NAMES.map((x) => `${x} ${f(x)}`).join(', ')} | idle folds ${[0, 1, 2].map((x) => `${x}: ${f('idle ' + x)}`).join(', ')}`);
+  console.log(`             folds ${folds.map((x) => `${x}: ${f('folds ' + x)}`).join(', ')} | every crease a mirror line of the key ${f('every crease a mirror line')} (${share('every crease a mirror line')} % of items), an idle fold ${f('an idle fold')} (${share('an idle fold')} %), a partial flap ${f('a partial flap')} (${share('a partial flap')} %)`);
 }
 
 /* ---------- learn data (js/ex/patfold/learn.js) ---------- */

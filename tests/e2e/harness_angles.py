@@ -26,7 +26,7 @@ def stem(C, page, tag):
 
 
 def options(C, page, tag):
-    d = page.evaluate("""() => ({ texts: Array.from(document.querySelectorAll('.hx-grid .ex-angles-opt .ex-answer-text')).map((e) => e.textContent),
+    d = page.evaluate("""() => ({ texts: Array.from(document.querySelectorAll('.hx-grid .ex-angles-opt .ex-answer-text')).map((e) => e.textContent.replace(/\u00a0/g, ' ')),
         want: __harness.item.options.map((o) => o.map((c) => c + 1).join(' – ')) })""")
     C.ok(d['texts'] == d['want'], f'{tag}: the options read as the item\'s orderings ({d["texts"]})')
 

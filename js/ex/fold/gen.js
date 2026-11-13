@@ -45,6 +45,14 @@
    symmetric about the first fold line gets foils just as symmetric (otherwise a random rank
    target); and since the key always has a hole right under each punch, foils without one are
    rationed by the number of folds that matter.
+   Crease symmetry summed over all the item's creases, among the options with a hole under every
+   punch, is the format's analytic method, not a shortcut (the lead's decision after
+   RV-dat-style-A §1; DECISIONS.md). It finds the key in 92 % of items (node test, information
+   only): every time with one fold or when each crease is a mirror line of the key (19 % of
+   items), 98 % with an idle fold but no partial flap (20 %), and 88 % with a partial flap (62 %:
+   a fold that matters whose crease is only partly a mirror line of the key). It fails where the
+   layers must be tracked: partial flaps, four or five folds (88 %, 79 %) and mixed folds (85 %);
+   the idle dim barely moves it (idle folds 0 / 1 / 2: 93 / 92 / 91 %).
 
    Item: { ex, v, seed, params, key, n, nOptions, holes, folds: [{ cls, line: {k, c}, move,
    dir, seg, matters }], punches: [[i, j]], options: [[[i, j], …]], why: [null | text],
