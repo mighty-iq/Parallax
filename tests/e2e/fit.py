@@ -277,17 +277,18 @@ def run_check(page, size, rows, right):
 WTG_JS = r"""() => {
   const H = innerHeight;
   const box = e => { if (!e) return null; const r = e.getBoundingClientRect(); return r.height ? { top: Math.round(r.top), bottom: Math.round(r.bottom) } : null; };
-  const cap = [...document.querySelectorAll('.pl-trial .ex-caption, .pl-showme .pl-caption')].find(e => e.textContent.trim() && getComputedStyle(e).display !== 'none');
+  const cap = [...document.querySelectorAll('.pl-trial .ex-caption, .pl-showme .pl-caption, .pl-trial .ex-fp-sub')].find(e => e.textContent.trim() && getComputedStyle(e).display !== 'none');
   return { H, state: window.__play && __play.state, stage: box(document.querySelector('.pl-host .ex-stage')),
-    caption: box(cap), bar: box(document.querySelector('.pl-showme-buttons')) };
+    caption: box(cap), bar: box(document.querySelector('.pl-showme-buttons')),
+    overlay: !!(cap && cap.classList.contains('ex-fp-sub')) };
 }"""
 
 
 def run_wtg(page, size, ex, rows):
     """Watch, Try, Go on a phone (PLAN M2): while the demo plays its caption is on the screen and
     above the pinned controls, and the stage is in view above the caption (wholly, or from its top
-    when it is taller than the room left); the first Try item's stage is fully in view when it
-    plays."""
+    when it is taller than the room left; Homing and Reckon show subtitles over the view, .ex-fp-sub);
+    the first Try item's stage is fully in view when it plays."""
     page.evaluate('void __play.end()')
     page.evaluate('PX.debug.fast(true)')
     page.evaluate(f"PX.core.store.state.tour.seen['{ex}'] = false")
@@ -316,7 +317,7 @@ def run_wtg(page, size, ex, rows):
             page.wait_for_timeout(20)
     ok_demo = bool(demo) and 0 <= demo['caption']['top'] and demo['caption']['bottom'] <= (demo['bar']['top'] + 1 if demo['bar'] else demo['H']) \
         and bool(demo['stage']) and 0 <= demo['stage']['top'] < demo['H'] - 40 \
-        and (demo['stage']['bottom'] <= demo['caption']['top'] + 2 or demo['stage']['top'] <= 10)
+        and (demo.get('overlay') or demo['stage']['bottom'] <= demo['caption']['top'] + 2 or demo['stage']['top'] <= 10)
     ok_try = bool(tried) and bool(tried['stage']) and tried['stage']['top'] >= 0 and tried['stage']['bottom'] <= tried['H'] + 0.5
     rows.append({'ex': ex, 'item': 'watch', 'ok': ok_demo, 'why': '' if ok_demo else f'demo: {demo}'})
     rows.append({'ex': ex, 'item': 'try', 'ok': ok_try, 'why': '' if ok_try else f'try: {tried}'})
