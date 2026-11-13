@@ -58,6 +58,13 @@ function testNotes(t) {
   }
   for (const id of ['rotate', 'spin', 'slice', 'orient', 'homing', 'track', 'nope']) t.eq(O.noteFor(id), null, id + ': no note');
   t.eq(O.noteNode('fold'), null, 'noteNode needs the DOM helper (none in Node)');
+  PX.ui.h = (tag, attrs, ...kids) => ({ tag, attrs, kids: kids.flat().filter((k) => k !== null && k !== undefined) });
+  const legalOf = (node) => node.kids.some((k) => k && k.tag === 'p.px-overlap-legal');
+  t.ok(legalOf(O.noteNode('patviews')), 'a DAT-style note carries the ADA line');
+  PX.ex.learn('angles', { goal: 'x', bridge: 'Angle ranking … ' + ADA });
+  t.ok(!legalOf(O.noteNode('angles')), 'not when the exercise’s bridge, shown beside it, already does (How to play, the exercise page)');
+  t.ok(legalOf(O.noteNode('angles', null, { legal: true })) && !legalOf(O.noteNode('patviews', null, { legal: false })), 'opts.legal decides when given');
+  delete PX.ui.h;
   t.eq(O.patIds(), ['patviews', 'angles', 'patfold', 'cubes'], 'patIds: the DAT-style exercises this build has, PAT order');
 }
 
@@ -79,10 +86,18 @@ function testMatch(t) {
   m = O.match(['matrices']);
   t.eq(m.related, ['rotate', 'spin', 'hidden'], 'figure matrices: related only');
   m = O.match(['dat']);
-  t.eq(m.same, ['patviews', 'angles', 'patfold', 'cubes'], 'the PAT: the DAT-style exercises that exist');
-  t.eq(m.related, ['fold', 'views', 'nets'], 'and Fold, Views, Nets related');
+  t.eq(m.same, ['patviews', 'angles', 'patfold', 'cubes', 'fold'], 'the PAT: the DAT-style exercises that exist, and Fold (near: R3 §5.2, R4 §6.2)');
+  t.eq(m.related, ['views', 'nets'], 'Views and Nets related');
+  m = O.match(['rotation', 'sections']);
+  t.eq([m.same, m.related], [[], ['rotate', 'spin', 'slice']], 'turned figures and cross-sections: Rotate, Spin and Slice are related, never "same" (R4: mid / far)');
   m = O.match(['unsure']);
   t.ok(['fold', 'hidden', 'views', 'nets', 'span'].every((id) => m.same.includes(id)), 'not sure: every near format');
+  // one source of truth: "same" only ever holds near formats, which are exactly those with a note
+  const allIds = [...new Set(O.KINDS.flatMap((k) => k.same.concat(k.related)))];
+  t.ok(O.KINDS.every((k) => k.same.every((id) => O.near(id))), 'every kind’s "same" list holds near formats only');
+  t.ok(allIds.every((id) => O.near(id) === (O.noteFor(id) !== null)), 'near ⇔ an "Also in tests" note, for every exercise the helper names');
+  t.eq(O.shared().map((x) => x.format + ' (' + x.name + ')'), ['paper folding (Fold)', 'hidden shapes (Hidden)', 'counting cubes (Views)', 'cube nets (Nets)', 'block tapping (Span)'], 'About’s list comes from the same table');
+  t.ok(O.KINDS.every((k) => O.match([k.id]).same.every((id) => O.near(id))), 'match() keeps "same" near even per kind');
   t.eq(O.match(['bogus', null]).same, [], 'unknown kinds are ignored');
   t.eq(O.match('folding').same, [], 'a non-list is no ticks');
 }

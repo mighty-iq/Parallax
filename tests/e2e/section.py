@@ -119,7 +119,9 @@ def main_run(b, C, tag, phone):
     txt = page.locator('.sec-setup').inner_text()
     n_items = 5 * len(parts)
     C.ok(f'{n_items} items' in txt, f'{tag}: the setup names the mini size: {n_items} items')
-    C.ok('does not predict a DAT score' in txt and 'not affiliated with or endorsed by the ADA' in txt, f'{tag}: no score prediction, and the ADA line')
+    C.ok('does not predict your score on the real test' in txt and 'not affiliated with or endorsed by the ADA' in txt, f'{tag}: no score prediction, and the ADA line')
+    lead = page.locator('.px-screen-head .px-lead').first.inner_text()
+    C.ok(lead.find('Dental Admission Test') >= 0 and lead.find('Dental Admission Test') < lead.find('DAT'), f'{tag}: the test is spelled out before "DAT"')
     C.ok(page.locator('[data-sec-form] option').first.inner_text().startswith('Form 1'), f'{tag}: the first form is Form 1')
     C.ok('new to you' in txt and page.locator('.sec-new [data-go="library"]').count() == 1, f'{tag}: formats never practised are marked, with a way to learn them first')
     page.screenshot(path=str(OUT / f'{tag}_setup.png'), full_page=True)
@@ -154,6 +156,7 @@ def main_run(b, C, tag, phone):
     if phone:
         press(page, '[data-sec-items]', phone)
     C.ok(page.locator('.sec-strip [data-sec-item].is-flagged').count() == 1 and page.locator('.sec-strip [data-sec-item].is-answered').count() == 1, f'{tag}: the strip shows one answered and one flagged item')
+    C.ok(page.locator('.sec-strip [data-sec-item].is-answered .sec-chip-dot').count() == 1 and page.locator('.sec-strip [data-sec-item]:not(.is-answered) .sec-chip-dot').count() == 0, f'{tag}: an answered item carries a mark, not colour alone')
     page.screenshot(path=str(OUT / f'{tag}_strip.png'))
     if phone:
         press(page, '[data-sec-next]', phone)
@@ -211,6 +214,8 @@ def main_run(b, C, tag, phone):
     wait_mode(page, 'partend')
     card = page.locator('[data-card-box="sec-partend"]').inner_text()
     C.ok('Flagged: item 2' in card and 'cannot come back' in card, f'{tag}: the end-of-part card lists the flagged item and says the part closes')
+    focus = page.evaluate('document.activeElement && document.activeElement.getAttribute("data-card")')
+    C.ok(focus == 'back' and page.locator('[data-card-box="sec-partend"] [data-card="back"]').get_attribute('class').find('primary') >= 0, f'{tag}: with an item flagged, the default goes back to it, not on ({focus})')
     page.screenshot(path=str(OUT / f'{tag}_partend.png'))
     press(page, '[data-card="next"]', phone)
     wait_mode(page, 'intro')
@@ -266,7 +271,9 @@ def main_run(b, C, tag, phone):
     C.ok(out['next']['mini'] == 2 and out['live'] is None, f'{tag}: the next mini form is 2; nothing is left live')
     C.ok(out['sess']['mode'] == 'section' and out['sess']['trials'] == 6, f'{tag}: one session with mode "section" and 6 answers')
     C.ok(page.evaluate('JSON.stringify(PX.core.store.state.ex)') == ex_before, f'{tag}: no rating changed')
-    C.ok('not reached' in rv and 'does not turn them into a DAT score' in rv, f'{tag}: parts not reached are marked; no DAT score')
+    C.ok('not reached' in rv and 'does not turn them into a score or a prediction for the Dental Admission Test' in rv, f'{tag}: parts not reached are marked; no score prediction')
+    shown = page.evaluate('__section.state.run.parts.reduce((n, P) => n + P.items.filter((x) => x.status === "seen" || x.status === "answered").length, 0)')
+    C.ok(page.locator('[data-sec-chip]').count() <= shown and page.evaluate('[...document.querySelectorAll("[data-sec-chip]")].every((b) => { const [p, i] = b.getAttribute("data-sec-chip").split(":").map(Number); const it = __section.state.run.parts[p].items[i]; return it.status === "seen" || it.status === "answered"; })'), f'{tag}: the review lists only items that were shown')
     page.screenshot(path=str(OUT / f'{tag}_review.png'), full_page=True)
 
     # the review: a wrong item replays with the answer marked and plays its show-me

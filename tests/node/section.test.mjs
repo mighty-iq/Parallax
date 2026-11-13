@@ -52,8 +52,11 @@ export async function run(t) {
   testLogging(t);
   testFinish(t);
   testAskLog(t);
+  testCaps(t);
   testLive(t);
+  testRepair(t);
   testField(t);
+  testAchievement(t);
   testReal(t);
 }
 
@@ -206,27 +209,73 @@ function testFinish(t) {
   const res = S.finish(run, rec, now, { usedMs: used, pausedMs: 12345, ended: 'time' });
   t.eq([res.total.n, res.total.right, res.total.answered, res.total.unanswered], [30, 5, 7, 23], 'totals: the void’s replacement counts, unanswered = never answered');
   t.eq(res.parts.map((p) => [p.n, p.right, p.answered, p.voided]), [[5, 3, 4, 0], [5, 1, 2, 1], [5, 1, 1, 0], [5, 0, 0, 0], [5, 0, 0, 0], [5, 0, 0, 0]], 'per part');
-  t.eq(res.parts.map((p) => p.reached), [true, true, true, true, true, true], 'every part was reached');
+  t.eq(res.parts.map((p) => p.reached), [true, true, true, false, false, false], 'reached: parts with an item shown (the last three were passed through without one)');
   t.eq(res.parts[0].timeMs, 25000, 'part time from the clock readings');
   t.eq([res.summary.ended, res.summary.usedMs, res.summary.pausedMs, res.summary.form, res.summary.size], ['time', used, 12345, 1, 'mini'], 'the summary');
   t.eq(rec.section.runs.length, 1, 'kept in rec.section.runs');
   t.eq([rec.section.next.mini, rec.section.next.full, rec.section.live], [2, 1, null], 'the next mini form is 2; nothing live');
   const s = rec.sessions[0];
   t.eq([s.mode, s.trials, s.right, s.practiceMs, s.id], ['section', 7, 5, used, run.id], 'a session with mode "section", answered items and active time');
+  t.eq(s.exs, ['openings', 'patviews', 'angles'], 'its exercises: the parts reached');
+  t.eq([res.summary.parts.map((p) => p.reached), res.summary.app], [[true, true, true, false, false, false], PX.version], 'the summary keeps reached parts and the app version (forms come from its item models)');
   t.eq(rec.practiceMs, used, 'active time joins the practice total');
   t.eq(rec.trials.length, 9, 'every shown item logged once (5 + 3 with the void + 1; the unshown replacement has no row)');
   t.eq(S.finish(run, rec, now + 5000, { usedMs: 1 }), res, 'finishing twice changes nothing');
   t.eq(rec.sessions.length, 1, 'still one session');
   const again = S.review(res), every = S.review(res, 'all');
-  t.eq(again.length, 30 - 5, 'look again: wrong, unanswered or flagged');
-  t.eq(every.length, 30, 'all: every item that counts (no void)');
+  t.eq(again.length, 3, 'look again: shown items that were wrong, skipped or flagged');
+  t.eq(every.length, 8, 'all: every item that was shown and counts (no void, nothing never shown)');
+  t.ok(every.every((x) => x.status !== 'new'), 'never-shown items are not listed');
   t.ok(again.every((x) => x.status !== 'answered' || !x.correct || x.flag), 'none of them right and unflagged');
   t.ok(every.every((x) => typeof x.seed === 'number' && x.params && typeof x.exId === 'string'), 'each with what show-me needs');
 
   const rec2 = rec0(), r2 = S.start(rec2, { size: 'full', now: T0 });
   const res2 = S.finish(r2, rec2, T0 + 1000, { usedMs: 1000, ended: 'user' });
   t.eq([res2.total.answered, rec2.sessions.length, rec2.trials.length, rec2.section.runs.length, rec2.section.next.full], [0, 0, 0, 1, 2], 'ended at once: no session, no rows, the form is used');
-  t.eq(res2.parts.map((p) => p.reached), [true, false, false, false, false, false], 'only the first part was reached');
+  t.eq(res2.parts.map((p) => p.reached), [false, false, false, false, false, false], 'a part left during its instructions was not reached');
+  t.eq(S.review(res2, 'all'), [], 'nothing shown: nothing to review');
+  const rec3 = rec0(), r3 = S.start(rec3, { size: 'mini', now: T0 });
+  t.eq(S.finish(r3, rec3, T0 + 5000, { usedMs: r3.budgetMs + 50000, ended: 'time' }).summary.usedMs, r3.budgetMs, 'time used never exceeds the budget');
+}
+
+// Voids: one replacement per original item at most; items that keep failing to draw end the part.
+function testCaps(t) {
+  t.section('section voids: caps and broken parts');
+  const PX = mk(t), S = PX.engine.section, rec = rec0();
+  let run = S.start(rec, { size: 'mini', now: T0 });
+  const P = run.parts[0];
+  let o = S.answer(run, 0, { voided: true, voidReason: 'error' }, T0);
+  t.eq([o.replaced, o.broken], [5, undefined], 'a first error is replaced');
+  o = S.answer(run, 1, { voided: true, voidReason: 'error' }, T0);
+  t.eq(o.replaced, 6, 'so is a second one in a row');
+  o = S.answer(run, 2, { voided: true, voidReason: 'error' }, T0);
+  t.eq([o.replaced, o.broken, P.broken], [null, 'could not be shown here', 'could not be shown here'], 'the third error in a row ends the part');
+  const info = S.partInfo(run);
+  t.eq([info.n, info.voided], [0, 3], 'a broken part counts no item it never showed');
+  // stutters: replaced up to the cap, then voided without a new item
+  run = S.start(rec0(), { size: 'mini', now: T0 });
+  for (let k = 0; k < 4; k++) { S.visit(run, k, 900, T0); S.answer(run, k, { response: 0, correct: true, rtMs: 800 }, T0); }
+  let last = null, i = 4, guard = 0;
+  while (guard++ < 100) {
+    const items = run.parts[0].items;
+    if (i >= items.length) break;
+    last = S.answer(run, i, { voided: true, voidReason: 'stutter' }, T0);
+    i++;
+  }
+  t.eq(run.parts[0].items.length, 10, 'stutter voids: at most one replacement per original item (5 + 5)');
+  t.ok(last && last.capped === true && last.replaced === null && !run.parts[0].broken, 'past the cap a void is not replaced, and the part goes on');
+  // an item that was on screen resets the error count
+  run = S.start(rec0(), { size: 'mini', now: T0 });
+  S.answer(run, 0, { voided: true, voidReason: 'error' }, T0);
+  S.answer(run, 1, { voided: true, voidReason: 'error' }, T0);
+  S.visit(run, 2, 1500, T0);
+  S.answer(run, 2, { voided: true, voidReason: 'error' }, T0);
+  t.ok(!run.parts[0].broken, 'an item that was on screen in between: no "in a row"');
+  S.breakPart(run, 1, 'cannot run on this device');
+  t.eq(run.parts[1].broken, 'cannot run on this device', 'breakPart marks a part with its reason');
+  while (run.part < 1) S.endPart(run, rec0(), T0, 1000);
+  const res = S.finish(run, rec0(), T0 + 1000, { usedMs: 1000, ended: 'done' });
+  t.eq([res.parts[1].broken, res.parts[1].n, res.summary.parts[1].broken], ['cannot run on this device', 0, 'cannot run on this device'], 'the results say so, and its unshown items do not count');
 }
 
 // Painted Cubes rows keep the question asked (params.ask) in the value column.
@@ -272,6 +321,55 @@ function testLive(t) {
   t.eq(field.fix(odd).live.index, 0, 'an index past the part goes to its first item');
   S.drop(rec);
   t.eq(rec.section.live, null, 'drop()');
+}
+
+// A saved run from an older build can be bloated or damaged: the repair trims or refuses it.
+function testRepair(t) {
+  t.section('section live run repair');
+  const PX = mk(t), S = PX.engine.section, rec = rec0();
+  const run = S.start(rec, { size: 'mini', now: T0 });
+  const P = run.parts[0], base = P.items[0];
+  for (let k = 0; k < 500; k++) P.items.push(Object.assign(clone(base), { rep: true, replaces: 0, status: 'new', seed: base.seed + k + 1 }));
+  P.items[3].status = 'answered'; P.items[3].correct = 'yes';
+  run.budgetMs = -5;
+  const fixed = S.fixLive(clone(run));
+  t.eq(fixed.parts[0].items.length, 10, 'a bloated part keeps its originals and one replacement each');
+  t.eq(fixed.budgetMs, 30 * S.PACE_MS, 'a budget out of range is recomputed at the test’s pace');
+  t.eq(fixed.parts[0].items[3].correct, false, 'a stored correctness that is not `true` ("yes") counts as wrong');
+  const empty = clone(run);
+  empty.parts[1].items = [];
+  t.eq(S.fixLive(empty), null, 'a part without items: refused');
+  const shown = clone(run);
+  shown.parts[0].items.forEach((x) => { if (x.rep) x.status = 'seen'; });
+  t.eq(S.fixLive(shown), null, 'more shown replacements than items: not a run this app made');
+  const broken = clone(run);
+  broken.parts[2].broken = 'could not be shown here';
+  broken.parts[2].errRun = 3;
+  const fb = S.fixLive(broken);
+  t.eq([fb.parts[2].broken, fb.parts[2].errRun], ['could not be shown here', 3], 'a broken part stays broken');
+}
+
+function testAchievement(t) {
+  t.section('section: the Full section achievement');
+  const PX = mk(t), S = PX.engine.section, A = PX.engine.achievements;
+  function runRec(answerShare, skipPart) {
+    const rec = Object.assign(rec0(), { achievements: {}, assess: [], daily: {}, strategies: [] });
+    const run = S.start(rec, { size: 'full', now: T0 });
+    run.parts.forEach((Pt, p) => {
+      if (p > 0) S.endPart(run, rec, T0 + p, p * 1000);
+      if (p === skipPart) return;
+      Pt.items.forEach((it, i) => {
+        S.visit(run, i, 1000, T0 + p);
+        if (i < Math.round(answerShare * Pt.items.length)) S.answer(run, i, { response: 0, correct: true, rtMs: 900 }, T0 + p);
+      });
+    });
+    S.finish(run, rec, T0 + 10000, { usedMs: 10000, ended: 'done' });
+    return rec;
+  }
+  const has = (rec) => A.check(rec, T0 + 20000).some((a) => a.id === 'full-section');
+  t.ok(has(runRec(0.6)), 'every part reached and more than half answered: earned');
+  t.ok(!has(runRec(0)), 'every part passed through with nothing answered: not earned');
+  t.ok(!has(runRec(0.6, 3)), 'a part never reached: not earned');
 }
 
 function testField(t) {

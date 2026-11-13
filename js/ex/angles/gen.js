@@ -70,8 +70,10 @@
   var ARM = [0.3, 1.0];
   // The longer arm of each angle is at least LONG_MIN·L (see the header), and the cue weights of
   // chooseArms: tip distance, area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint.
-  var LONG_MIN = 0.3;
+  var LONG_MIN = 0.58;
   var CUE_W = [2.5, 1.5, 1, 1, 1, 2];
+  var FOIL_SLACK = 0.75, REV_PEN = 0.3;
+  var ARM_ROUNDS = 6, ARM_TRIES = 20;
   function armMin() { return ARM[0]; }
   var MARGIN = 0.07, LMAX = 0.9, MIN_ARM = 0.1, FLOOR = 2, TOL = 0.02;
 
@@ -219,7 +221,26 @@
       s1.push(d1); fl.push(f + l); f1.push(f); l1.push(l); ad.push(sh); pa.push(ag); kt.push(k);
     }
     return [hit0(s1, true), hit0(fl, true), hit0(fl, false), hit0(f1, true), hit0(l1, true), hit0(ad, false), hit0(ad, true),
-      hit0(pa, true), hit0(pa, false), hit0(kt, false), hit0(kt, true)];
+      hit0(pa, true), hit0(pa, false), hit0(kt, false), hit0(kt, true), bordaHit(ids)];
+  }
+  // Borda: the four things by their summed position over the lists, then the nearest list. Ties in
+  // the sums are broken by the screen numbers, which are random here, so the key's chance is the
+  // mean over every order the ties allow.
+  function bordaHit(ids) {
+    var sum = [0, 0, 0, 0], i, j, total = 0, count = 0;
+    for (i = 0; i < 4; i++) for (j = 0; j < 4; j++) sum[PERMS[ids[i]][j]] += j;
+    for (var pi = 0; pi < 24; pi++) {
+      var o = PERMS[pi], fits = true;
+      for (j = 0; j < 3 && fits; j++) fits = sum[o[j]] <= sum[o[j + 1]];
+      if (!fits) continue;
+      count++;
+      var d0 = KD[pi][ids[0]], best = d0, t = 0;
+      for (i = 1; i < 4; i++) if (KD[pi][ids[i]] < best) best = KD[pi][ids[i]];
+      if (d0 !== best) continue;
+      for (i = 0; i < 4; i++) if (KD[pi][ids[i]] === best) t++;
+      total += 1 / t;
+    }
+    return total / count;
   }
   // Three foils: every allowed triple containing the required foil is scored by how far each
   // answer-only rule's chance of picking the key is from one in four (summed); one triple is drawn
@@ -231,12 +252,15 @@
     var scored = [], minCost = Infinity, a, b, c;
     for (a = 0; a < ids.length; a++) for (b = a + 1; b < ids.length; b++) for (c = b + 1; c < ids.length; c++) {
       if (needId >= 0 && ids[a] !== needId && ids[b] !== needId && ids[c] !== needId) continue;
-      var h = answerHits([K0, ids[a], ids[b], ids[c]]), cost = 0;
+      var four = [K0, ids[a], ids[b], ids[c]], h = answerHits(four), cost = 0;
       for (var q = 0; q < h.length; q++) cost += abs(h[q] - 0.25);
+      // Lists that are each other's reverse turn opposite cues (the tip distance grows with the
+      // angle, the vertex-to-midpoint length shrinks) into a pair of pointers at the same two lists.
+      for (var u = 0; u < 4; u++) for (var w = u + 1; w < 4; w++) if (KD[four[u]][four[w]] === 6) cost += REV_PEN;
       scored.push([cost, a, b, c]);
       if (cost < minCost) minCost = cost;
     }
-    var ok = scored.filter(function (x) { return x[0] <= minCost + 0.5 + 1e-9; });
+    var ok = scored.filter(function (x) { return x[0] <= minCost + FOIL_SLACK + 1e-9; });
     if (!ok.length) return null;
     var pick = ok[rint(r, ok.length)];
     return [cand[pick[1]], cand[pick[2]], cand[pick[3]]];
@@ -255,31 +279,52 @@
     }
     return hit ? 1 - 1 / ties : 1;
   }
+  // One angle's arm pair, its longer arm at least LONG_MIN.
+  function armPair(r, lo) {
+    var a1, a2;
+    do { a1 = rnd(lo + r.next() * (ARM[1] - lo), 1000); a2 = rnd(lo + r.next() * (ARM[1] - lo), 1000); } while ((a1 > a2 ? a1 : a2) < LONG_MIN);
+    return [a1, a2];
+  }
+  // The six cue values of one angle (cs = [sin, cos] of its size).
+  function cueVals(a, cs) {
+    var a1 = a[0], a2 = a[1], cr = 2 * a1 * a2 * cs[1];
+    return [
+      sqrt(a1 * a1 + a2 * a2 - cr),      // tip distance
+      a1 * a2 * cs[0],                   // enclosed area (×2)
+      a1 + a2,                           // arm-length sum
+      a1 > a2 ? a1 : a2,                 // longer arm
+      a1 > a2 ? a2 : a1,                 // shorter arm
+      sqrt(a1 * a1 + a2 * a2 + cr),      // vertex to the tips' midpoint (×2)
+    ];
+  }
+  // Every cue here grows with the arms' size, so with arms of random sizes they all order the four
+  // angles alike, by size. One random order τ is drawn, and the arms are searched (one angle at a
+  // time, keeping changes that help) so that each cue's ascending order is as near τ as possible
+  // (weighted Kendall distance). Each cue then points at a random list, read either way round. The
+  // angle itself pulls the tip distance up and the vertex-to-midpoint length down as it grows;
+  // unequal arms weaken both pulls, and the search uses that.
   function chooseArms(r, deg, opts, lo) {
-    var targets = [], t, NC = CUE_W.length;
-    for (t = 0; t < 2 * NC; t++) targets.push(rint(r, 4));
-    var cs = deg.map(function (d) { return sincos(d); }), best = null, bestCost = Infinity;
-    for (var k = 0; k < 400 && bestCost > 0; k++) {
-      var arms = [], cue = [[], [], [], [], [], []];
-      for (var i = 0; i < 4; i++) {
-        var a1, a2;
-        do {
-          a1 = rnd(lo + r.next() * (ARM[1] - lo), 1000); a2 = rnd(lo + r.next() * (ARM[1] - lo), 1000);
-        } while ((a1 > a2 ? a1 : a2) < LONG_MIN);
-        arms.push([a1, a2]);
-        var cr = 2 * a1 * a2 * cs[i][1];
-        cue[0].push(sqrt(a1 * a1 + a2 * a2 - cr));     // tip distance
-        cue[1].push(a1 * a2 * cs[i][0]);               // enclosed area (×2)
-        cue[2].push(a1 + a2);                          // arm-length sum
-        cue[3].push(a1 > a2 ? a1 : a2);                // longer arm
-        cue[4].push(a1 > a2 ? a2 : a1);                // shorter arm
-        cue[5].push(sqrt(a1 * a1 + a2 * a2 + cr));     // vertex to the tips' midpoint (×2)
-      }
-      var cost = 0;
-      for (t = 0; t < 2 * NC && cost < bestCost; t++) cost += CUE_W[t >> 1] * cueHit(cue[t >> 1], t & 1 ? -1 : 1, opts, targets[t]);
-      if (cost < bestCost) { bestCost = cost; best = arms; }
+    var tau = shuffle(r, [0, 1, 2, 3]), NC = CUE_W.length;
+    var cs = deg.map(function (d) { return sincos(d); });
+    var arms = [0, 1, 2, 3].map(function () { return armPair(r, lo); });
+    var vals = arms.map(function (a, i) { return cueVals(a, cs[i]); });
+    function costOf(v) {
+      var c = 0;
+      for (var q = 0; q < NC; q++) c += CUE_W[q] * kendall(orderOf([v[0][q], v[1][q], v[2][q], v[3][q]]), tau);
+      return c;
     }
-    return best;
+    var cost = costOf(vals);
+    for (var round = 0; round < ARM_ROUNDS && cost > 0; round++) {
+      for (var i = 0; i < 4 && cost > 0; i++) {
+        for (var k = 0; k < ARM_TRIES; k++) {
+          var a = armPair(r, lo), keep = vals[i];
+          vals[i] = cueVals(a, cs[i]);
+          var c2 = costOf(vals);
+          if (c2 < cost) { cost = c2; arms[i] = a; } else vals[i] = keep;
+        }
+      }
+    }
+    return arms;
   }
 
   // The bounding box of an angle drawn from the origin: arm 1 at direction phi, arm 2 at phi + s·θ.
