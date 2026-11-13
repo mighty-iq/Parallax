@@ -1306,21 +1306,23 @@
   }
   // Keeps the item on the screen once it plays: its stimulus and every answer control above what is
   // pinned to the bottom (a show-me's caption and bar on phones, the reading strip on wider screens),
-  // with the status strip (HUD) at or below the top (under the sticky header on wide screens). When
-  // both cannot hold, the top wins. pinned: a demo or show-me runs, or is about to (before its bar
-  // is up, phones keep 7.5rem for it). Watch, Try, Go's own header may scroll away above.
+  // and a top edge in view: the status strip (HUD), or while a demo or show-me runs the item itself
+  // (the strip and the goal may scroll away above it then). Under the sticky header on wide screens.
+  // When both cannot hold, the top wins. pinned: a demo or show-me runs, or is about to (before its
+  // bar is up, phones keep 7.5rem for it). Watch, Try, Go's own header may scroll away above.
   function stageIntoView(P, pinned) {
     try {
       var vh = win.innerHeight || 640, top = 0, rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
       var head = doc.querySelector('.px-header');
       if (head && win.getComputedStyle(head).display !== 'none') { var hr = head.getBoundingClientRect(); if (hr.bottom > 0 && hr.top <= 0) top = hr.bottom; }
-      var hud = P.el.hud.getBoundingClientRect(), bottom = 0;
+      var hud = P.el.hud.getBoundingClientRect(), bottom = 0, itemTop = vh;
       [P.el.host, P.el.grid, P.el.confirmRow].forEach(function (e) {
         if (!e || e.hidden) return;
         var r = e.getBoundingClientRect();
-        if (r.height) bottom = Math.max(bottom, r.bottom);
+        if (r.height) { bottom = Math.max(bottom, r.bottom); itemTop = Math.min(itemTop, r.top); }
       });
       if (!bottom || !hud.height) return;
+      var anchor = pinned ? itemTop - 8 : hud.top;
       var limit = vh - 8;
       if (pinned) {
         var found = false;
@@ -1334,8 +1336,8 @@
         if (!found && isPhone()) limit = Math.min(limit, vh - 7.5 * rem);
       }
       var by = 0;
-      if (bottom > limit) by = Math.min(bottom - limit, hud.top - top);
-      else if (hud.top < top) by = Math.max(hud.top - top, bottom - limit);
+      if (bottom > limit) by = Math.min(bottom - limit, anchor - top);
+      else if (anchor < top) by = Math.max(anchor - top, bottom - limit);
       if (Math.abs(by) >= 1) win.scrollBy(0, by);
     } catch (e) { /* cosmetic */ }
   }
@@ -1393,17 +1395,18 @@
     function stageSoon(item, demo) {
       P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
     }
-    // Phones size the item from --pl-avail (css/play.css). Here the goal and tip shown above it, and
-    // in Watch the show-me caption and bar pinned under it, take their share first (--pl-extra on
-    // the host, read by .is-wtg), so a Try item fits like a scored one (RV-play-dat).
+    // Phones size the item from --pl-avail (css/play.css), the screen less the status strip. Here a
+    // Try item's goal and tip shown above it take their share first (--pl-extra on the host, read by
+    // .is-wtg), so a Try item fits like a scored one (RV-play-dat). In Watch the strip and the goal
+    // scroll away while the demo plays (stageIntoView), and the item gives up what the show-me
+    // caption and bar pinned under it need beyond that strip's room: 7.5rem less about 3.5rem.
     function makeRoom(goal, tip, demo) {
       if (!isPhone()) { host.style.removeProperty('--pl-extra'); return; }
       try {
         P.setGoal(goal); P.setTip(tip); // run() sets the same again
         var g = P.el.guide, gh = g ? g.getBoundingClientRect().height : 0;
         var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
-        var land = !!(win.matchMedia && win.matchMedia('(max-height: 500px)').matches);
-        var extra = (gh > 0 ? gh + 0.5 * rem : 0) + (demo && !land ? 7.5 * rem : 0);
+        var extra = demo ? 4 * rem : gh > 0 ? gh + 0.5 * rem : 0;
         host.style.setProperty('--pl-extra', Math.round(extra) + 'px');
       } catch (e) { /* the item keeps its usual size */ }
     }
