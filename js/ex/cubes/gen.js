@@ -433,8 +433,8 @@
       seenN[na] = true;
     }
     if (N !== (isInt(p.ask) ? asks[p.ask % asks.length] : asks[0])) return 'the asked N is not the question params.ask picks';
-    // The picture: every column's top at least half visible, so the tops fix every height and
-    // the only hidden cubes are supports.
+    // The picture, by the validator's own ray cast: every column's top at least half visible, so
+    // the tops fix every height and a cube out of sight can only be a support.
     var s = rayView(H);
     if (s.minTop < TOP_SHOW) return 'a column top is only ' + (100 * s.minTop).toFixed(0) + ' % visible (ray cast)';
     if (item.hidden !== s.hidden) return 'stated hidden count differs from the ray cast (' + s.hidden + ')';

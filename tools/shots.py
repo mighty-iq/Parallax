@@ -16,7 +16,11 @@ probe, the Spatial Check report and the weekly goal in Progress, the Lab and Set
 1366 × 768, plus Today, the Library and an item at 412 × 880 (phone). Screens that need history
 get a record built in the page by the engine (tests/e2e/screens.py SIM: about six weeks of real
 sessions with a simulated learner), never a hand-written one. Browser runs go through
-tests/e2e/pwslot.sh (two slots per machine). """
+tests/e2e/pwslot.sh (two slots per machine).
+v1.1 adds Reckon (a near miss played by keys for its feedback), Knots (pull, and untie as an EXTRA shot),
+the six DAT-style formats, and the screens of V11_NAMES (phones at 360 × 740 with touch: an item and its
+Help, Homing and Reckon answered by their touch controls; the Section practice review; About's Test
+hygiene; the Library's DAT-style group). `app` shoots them all; app-<name> one of them. """
 import json
 import pathlib
 import sys
@@ -62,6 +66,16 @@ EXERCISES = [
     ('span', 'ex09', 7, 'len:3,cross:1,turn:0', 'forward', ('fb', 0)),
     ('hidden', 'ex10', 7, 'extra:2,sim:1,size:1', None, ('fb', 0)),
     ('homing', 'ex11', 7, 'route:2,landmarks:0,tolerance:1', None, ('sm', 4200)),
+    # v1.1: Reckon (its walk in fast mode; the second shot is a near miss, see reckon_miss), Knots and the
+    # six DAT-style formats (one shot each: the guide gives them half a card).
+    ('reckon', 'ex12', 33, 'route:3,flow:0,speed:1,tolerance:1', 'return', ('fb', 0)),
+    ('knots', 'ex13', 4, 'rope:3,spacing:0', 'pull', ('sm', 1400)),
+    ('openings', 'ex14', 7, 'features:1,edges:1,keyview:1,pose:0,foils:0', None, None),
+    ('patviews', 'ex15', 7, 'cubes:1,grid:0,missing:0,foil:2', None, None),
+    ('angles', 'ex16', 9, 'gap:1,size:2,resolve:1,pose:1', None, None),
+    ('patfold', 'ex17', 7, 'folds:1,type:1,idle:0', None, None),
+    ('cubes', 'ex18', 7, 'cubes:1,height:1,asked:0', None, None),
+    ('form', 'ex19', 7, 'solid:1,marks:1,view:1,foil:1', None, None),
     ('cubematch', 'pr1', 7, 'rotation:1,change:0,glyphs:1', None, None),
     ('viewmatch', 'pr2', 7, 'angle:2,objects:1,foils:0', None, None),
     ('mechanisms', 'pr3', 7, 'gears:1,structure:2,question:0', None, None),
@@ -69,10 +83,18 @@ EXERCISES = [
     ('level', 'pr5', 7, 'tilt:2,task:0,gap:1', None, None),
     ('wordlinks', 'pr0', 7, 'relation:1,words:0,foils:1', None, None),
 ]
+# Further shots of an exercise under their own names: (id, name, seed, params, variant, second).
+EXTRA = [
+    ('knots', 'ex13-knots-untie', 4, 'rope:0,spacing:0', 'untie', ('sm', 1300)),
+]
 COVER = {'rotate', 'nets', 'slice', 'views'}   # stage-only crops for the guide's cover
+FAST = {'reckon'}                              # walks played at the harness's fast speed (the shots are after the walk)
 LABEL = {'track': 'EX-01 · Track', 'rotate': 'EX-02 · Rotate', 'spin': 'EX-03 · Spin', 'fold': 'EX-04 · Fold',
          'nets': 'EX-05 · Nets', 'slice': 'EX-06 · Slice', 'views': 'EX-07 · Views', 'orient': 'EX-08 · Orient',
-         'span': 'EX-09 · Span', 'hidden': 'EX-10 · Hidden', 'homing': 'EX-11 · Homing', 'cubematch': 'PR-1 · Cube Match',
+         'span': 'EX-09 · Span', 'hidden': 'EX-10 · Hidden', 'homing': 'EX-11 · Homing', 'reckon': 'EX-12 · Reckon',
+         'knots': 'EX-13 · Knots', 'openings': 'EX-14 · Openings', 'patviews': 'EX-15 · Missing View',
+         'angles': 'EX-16 · Angles', 'patfold': 'EX-17 · Hole Punch', 'cubes': 'EX-18 · Painted Cubes',
+         'form': 'EX-19 · Form', 'cubematch': 'PR-1 · Cube Match',
          'viewmatch': 'PR-2 · View Match', 'mechanisms': 'PR-3 · Mechanisms', 'patterns': 'PR-4 · Pattern Memory',
          'level': 'PR-5 · Level', 'wordlinks': 'PR-0 · Word Links'}
 # App screens. Screens that need history get a realistic record built in the page by the engine
@@ -81,6 +103,12 @@ LABEL = {'track': 'EX-01 · Track', 'rotate': 'EX-02 · Rotate', 'spin': 'EX-03 
 APP_NAMES = ['app-welcome', 'app-watch', 'app-today', 'app-today-phone', 'app-library', 'app-player-feedback',
              'app-player-showme', 'app-player-phone', 'app-summary', 'app-share', 'app-check', 'app-progress',
              'app-goal', 'app-lab', 'app-settings', 'app-library-phone']
+# v1.1 screens (shoot_v11_screens): phones at 360 × 740 with touch (an item, its Help, Homing and Reckon),
+# the Section practice review, About's Test hygiene and the Library's DAT-style group. They need no
+# history: the record only marks every exercise as met, so no Watch, Try, Go comes first.
+V11_NAMES = ['app-phone-item', 'app-phone-help', 'app-homing-phone', 'app-reckon-phone', 'app-section-review',
+             'app-about-hygiene', 'app-library-pat']
+APP_NAMES += V11_NAMES
 APP_READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 APP_SCALE = 1.5          # 1366 × 768 at 1.5: sharp at full text width in print, files of a sensible size
 NICE = ('rotate', 'fold', 'nets', 'slice', 'views', 'spin')   # exercises that read well in a still picture
@@ -117,8 +145,30 @@ def placeholder(page, name, label, why):
 
 
 def open_harness(page, ex, seed, params, variant):
-    page.goto(file_url('tests/dev/harness.html', ex=ex, seed=seed, p=params, v=variant, theme='light'))
+    page.goto(file_url('tests/dev/harness.html', ex=ex, seed=seed, p=params, v=variant, theme='light', fast=1 if ex in FAST else None))
     page.add_style_tag(content=HIDE)
+
+
+def reckon_miss(page):
+    """A near miss on a Reckon item by keys, as a player might make it: turn about 12° past the start
+    (← →, Shift for 1°), then for a return item hold ↑ for about 80 % of the way back and stop (Enter)."""
+    it = page.evaluate('() => ({ key: __harness.item.keyDeg, d: __harness.item.distance, v: __harness.item.walkSpeed, ret: __harness.item.answer === "position" })')
+    want = round(it['key'] + 12)
+    t = ((want + 540) % 360) - 180
+    k, n = ('ArrowRight', t) if t >= 0 else ('ArrowLeft', -t)
+    for _ in range(int(n) // 5):
+        page.keyboard.press(k)
+    for _ in range(int(n) % 5):
+        page.keyboard.press('Shift+' + k)
+    page.wait_for_timeout(300)
+    if it['ret']:
+        page.keyboard.down('ArrowUp')
+        page.wait_for_timeout(int(1000 * 0.8 * it['d'] / it['v']))
+        page.keyboard.up('ArrowUp')
+        page.wait_for_timeout(500)
+    page.keyboard.press('Enter')
+    page.wait_for_function(STATE, arg='reveal', timeout=15000)
+    page.wait_for_timeout(900)
 
 
 def wrong_answer(page, wait_ms=1600):
@@ -140,14 +190,14 @@ def voided(page):
     return bool(page.evaluate('() => !!(__harness.last && __harness.last.void)'))
 
 
-def shoot_exercise(page, ex, code, seed, params, variant, second):
-    name = f'{code}-{ex}'
+def shoot_exercise(page, ex, code, seed, params, variant, second, name=None):
+    name = name or f'{code}-{ex}'
     if not (ROOT / 'js' / 'ex' / ex / 'view.js').exists():
         placeholder(page, name, LABEL[ex], 'its view is not built yet')
         if second:
             placeholder(page, name + ('-feedback' if second[0] == 'fb' else '-showme'), LABEL[ex], 'its view is not built yet')
         return
-    tries = 6 if ex in ('homing', 'track') else 3   # timed 3D stimuli can stutter under software WebGL;
+    tries = 6 if ex in ('homing', 'track', 'reckon') else 3   # timed 3D stimuli can stutter under software WebGL;
     for attempt in range(tries):                    # a stuttered trial says so on screen, so try again
         open_harness(page, ex, seed, params, variant)
         if ex == 'track':
@@ -174,6 +224,16 @@ def shoot_exercise(page, ex, code, seed, params, variant, second):
             page.wait_for_timeout(3600)     # on the walk, a landmark in view
             save(page, name)
             page.wait_for_function(STATE, arg='respond', timeout=120000)
+        elif ex == 'reckon':                # after the walk (fast), the answer state: nothing marks the start
+            page.wait_for_function(STATE, arg='respond', timeout=120000)
+            page.wait_for_timeout(600)
+            save(page, name)
+            if second:
+                reckon_miss(page)
+                if voided(page) and attempt < tries - 1:
+                    continue
+                save(page, name + '-feedback', page.evaluate(CLIP_TRIAL))
+            return
         else:
             page.wait_for_function(STATE, arg='respond', timeout=60000)
             page.wait_for_timeout(400)
@@ -442,6 +502,126 @@ def shoot_app_screens(b, want):
         c.close()
 
 
+MET = """() => { const r = PX.core.store.state, t = Date.now();
+  r.tour = r.tour || {}; r.tour.done = true; r.tour.seen = r.tour.seen || {};
+  PX.ex.list('train').forEach((d) => { r.tour.seen[d.id] = true; });
+  r.ui = r.ui || {}; r.ui.seen = r.ui.seen || {}; r.ui.seen.motionNotice = r.ui.seen.motionNotice || t;
+  PX.core.store.save(); }"""
+
+
+def free_play(page, ex, params, fast=False):
+    """Free play with fixed settings (no rating changes); True once an item is up."""
+    if fast:
+        page.evaluate('PX.debug.fast(true)')
+    go_route(page, 'play', {'mode': 'free', 'exId': ex, 'run': '1', 'trials': 10, 'params': params})
+    return click_through(page, 30)
+
+
+def turn_keys(page, deg):
+    """Turn a Homing or Reckon answer by keys: → and ← in 5° steps, with Shift 1°."""
+    t = ((round(deg) + 540) % 360) - 180
+    k, n = ('ArrowRight', t) if t >= 0 else ('ArrowLeft', -t)
+    for _ in range(int(n) // 5):
+        page.keyboard.press(k)
+        page.wait_for_timeout(30)
+    for _ in range(int(n) % 5):
+        page.keyboard.press('Shift+' + k)
+        page.wait_for_timeout(30)
+    page.wait_for_timeout(400)
+
+
+def section_run(page):
+    """A mini Section practice played to its review: every part, about three answers in four right."""
+    page.evaluate('PX.debug.fast(true)')
+    go_route(page, 'section', {'size': 'mini'})
+    page.locator('[data-sec-start]').first.click()
+    n = 0
+    for _ in range(400):
+        mode = page.evaluate('window.__section && __section.state ? __section.state.mode : null')
+        if mode == 'review':
+            return True
+        if mode == 'intro' and page.locator('[data-card="start"]').count():
+            page.locator('[data-card="start"]').first.click()
+        elif mode == 'partend' and page.locator('[data-card="next"]').count():
+            page.locator('[data-card="next"]').first.click()
+        elif mode == 'item' and page.evaluate('window.__play && __play.state === "respond"'):
+            page.evaluate(f'__play.answer({"false" if n % 4 == 3 else "true"}).catch(() => 0)')
+            n += 1
+        page.wait_for_timeout(350)
+    return False
+
+
+def shoot_v11_screens(b, want):
+    def phone():
+        c = b.new_context(viewport={'width': 360, 'height': 740}, device_scale_factor=2, color_scheme='light',
+                          has_touch=True, is_mobile=True)
+        p = c.new_page()
+        boot_app(p)
+        p.evaluate(MET)
+        return c, p
+
+    if any(n in want for n in ('app-phone-item', 'app-phone-help')):   # an item on a 360 px phone, then its Help
+        c, page = phone()
+        if free_play(page, 'rotate', {'variant': 'pick', 'angle': 4, 'axis': 1, 'cubes': 1}):
+            page.wait_for_timeout(900)
+            if 'app-phone-item' in want:
+                save(page, 'app-phone-item', viewport(page))
+            if 'app-phone-help' in want and page.locator('.pl-hud-guide').count():
+                page.locator('.pl-hud-guide').first.tap()
+                page.wait_for_timeout(500)
+                save(page, 'app-phone-help', viewport(page))
+        else:
+            print('  phone item: no item came up', flush=True)
+        c.close()
+    if 'app-homing-phone' in want:                  # Homing's answer by touch controls, turned part way
+        c, page = phone()
+        if free_play(page, 'homing', {'route': 2, 'landmarks': 0, 'tolerance': 1}, fast=True):
+            page.wait_for_timeout(600)
+            turn_keys(page, 60)
+            save(page, 'app-homing-phone', viewport(page))
+        else:
+            print('  homing phone: no item came up', flush=True)
+        c.close()
+    if 'app-reckon-phone' in want:                  # Reckon's walk back: turned to the start, part of the way walked
+        c, page = phone()
+        if free_play(page, 'reckon', {'variant': 'return', 'route': 1, 'flow': 0, 'speed': 1, 'tolerance': 1}, fast=True):
+            page.wait_for_timeout(600)
+            it = page.evaluate('() => ({ key: __play.item.keyDeg, d: __play.item.distance, v: __play.item.walkSpeed })')
+            turn_keys(page, it['key'])
+            page.keyboard.down('ArrowUp')
+            page.wait_for_timeout(int(1000 * 0.55 * it['d'] / it['v']))
+            page.keyboard.up('ArrowUp')
+            page.wait_for_timeout(700)
+            save(page, 'app-reckon-phone', viewport(page))
+        else:
+            print('  reckon phone: no item came up', flush=True)
+        c.close()
+    if any(n in want for n in ('app-section-review', 'app-about-hygiene', 'app-library-pat')):
+        c = b.new_context(viewport={'width': 1366, 'height': 768}, device_scale_factor=APP_SCALE, color_scheme='light')
+        page = c.new_page()
+        boot_app(page)
+        page.evaluate(MET)
+        if 'app-about-hygiene' in want:
+            go_route(page, 'about')
+            cut(page, 'app-about-hygiene', '[data-section="hygiene"]')
+        if 'app-library-pat' in want:
+            go_route(page, 'library')
+            cut(page, 'app-library-pat', 'section.px-lib-group[data-group="pat"]', max_h=620)
+        if 'app-section-review' in want:
+            page.reload()
+            boot_app(page)
+            try:
+                if section_run(page):
+                    page.wait_for_timeout(900)
+                    page.evaluate('() => window.scrollTo(0, 0)')
+                    cut(page, 'app-section-review', '.sec-results')
+                else:
+                    print('  section: the review did not come', flush=True)
+            except Exception as e:
+                print(f'  section: FAILED {str(e)[:200]}', flush=True)
+        c.close()
+
+
 def main(args):
     only = set(args)
     with sync_playwright() as p:
@@ -458,6 +638,14 @@ def main(args):
             except Exception as e:  # keep going; the figure gets a placeholder
                 print(f'  {ex}: FAILED {str(e)[:200]}', flush=True)
                 placeholder(page, f'{code}-{ex}', LABEL[ex], 'the capture failed (see tools/shots.py output)')
+        for ex, name, seed, params, variant, second in EXTRA:
+            if only and ex not in only and name not in only:
+                continue
+            print(name, flush=True)
+            try:
+                shoot_exercise(page, ex, None, seed, params, variant, second, name=name)
+            except Exception as e:
+                print(f'  {name}: FAILED {str(e)[:200]}', flush=True)
         want = set(APP_NAMES) if (not only or 'app' in only) else {n for n in only if n.startswith('app-')}
         if want:
             print('app screens:', ', '.join(sorted(want)), flush=True)
@@ -465,6 +653,10 @@ def main(args):
                 shoot_app_screens(b, want)
             except Exception as e:  # report and keep the figures made so far
                 print(f'  app screens: FAILED {str(e)[:300]}', flush=True)
+            try:
+                shoot_v11_screens(b, want)
+            except Exception as e:
+                print(f'  v1.1 screens: FAILED {str(e)[:300]}', flush=True)
         errs = cons.errors()
         b.close()
     old = {}

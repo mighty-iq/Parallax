@@ -22,6 +22,7 @@
      1  the closest pair sits at one end, and one foil swaps only the middle pair (its gap κ·δ);
         no foil hinges on the closest pair;
      2  one foil swaps only the closest pair (gap δ), so that pair has to be judged.
+
    The foils. Answer-only rules read the four lists and never the angles (RV-dat-style-A §3): most
    like the others or odd one out (Kendall distance), a list with a twin one swap away, the first
    or last numbers most or least common, the neighbour pairs or the positions shared, the consensus

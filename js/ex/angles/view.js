@@ -88,12 +88,39 @@
   }
   function setMode(mode) { st.cells.hidden = mode !== 'cells'; st.big.hidden = mode !== 'big'; }
 
+  // Corners for the cell's number and the reveal's size label, clear of the arms. Boxes in cell
+  // units, measured on a phone cell (about 150 px; on larger cells the labels take less room):
+  // the number about 0.12 × 0.2 of the cell, the size about 0.38 × 0.16. A long arm reaches the
+  // top-left number box in about 4 % of angles, and some corner is always free. Left corners come
+  // first, so a moved number never sits right beside the next cell's number.
+  var CORNERS = ['tl', 'bl', 'tr', 'br'];
+  function segHitsBox(P, Q, x0, y0, x1, y1) {
+    var t0 = 0, t1 = 1, dx = Q[0] - P[0], dy = Q[1] - P[1];
+    var pp = [-dx, dx, -dy, dy], qq = [P[0] - x0, x1 - P[0], P[1] - y0, y1 - P[1]];
+    for (var i = 0; i < 4; i++) {
+      if (pp[i] === 0) { if (qq[i] < 0) return false; continue; }
+      var r = qq[i] / pp[i];
+      if (pp[i] < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+    }
+    return true;
+  }
+  function cornerFree(g, corner, w, hh) {
+    var x0 = corner[1] === 'l' ? 0 : 1 - w, y0 = corner[0] === 't' ? 0 : 1 - hh;
+    return !segHitsBox(g.v, g.a, x0, y0, x0 + w, y0 + hh) && !segHitsBox(g.v, g.b, x0, y0, x0 + w, y0 + hh);
+  }
+  function labelCorners(g) {
+    var num = CORNERS.filter(function (k) { return cornerFree(g, k, 0.12, 0.2); })[0] || 'tl';
+    var size = ['br', 'bl', 'tr', 'tl'].filter(function (k) { return k !== num && cornerFree(g, k, 0.38, 0.16); })[0] || (num === 'br' ? 'bl' : 'br');
+    return [num, size];
+  }
+
   function drawCells(item) {
     PX.ui.clear(st.cells);
     st.cellEls = []; st.sizeEls = [];
     item.angles.forEach(function (g, c) {
-      var num = h('span.ex-label.ex-angles-n', String(c + 1));
-      var size = h('span.ex-angles-size', { hidden: true });
+      var corners = labelCorners(g);
+      var num = h('span.ex-label.ex-angles-n', { 'data-corner': corners[0] }, String(c + 1));
+      var size = h('span.ex-angles-size', { hidden: true, 'data-corner': corners[1] });
       var cell = h('div.ex-angles-cell', { 'data-cell': String(c + 1) }, num, cellSvg(g), size);
       st.cellEls.push(cell); st.sizeEls.push(size);
       st.cells.appendChild(cell);
