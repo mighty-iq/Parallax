@@ -295,18 +295,19 @@ def walk_pause_void(b, cons):
     C.ok(mid is not None, f'the view moves during the walk (pose at 2.5 s: {mid})')
     drawn_ok(page, 'normal speed')
     moving = "() => { const p = PX.ex.view('homing').pose(), it = __harness.item; return Math.hypot(p.x - it.path[0][0], p.y - it.path[0][1]) > 0.3; }"
-    # Esc freezes the walk and voids it
+    # the player's pause during the walk (Esc or its Pause button) calls view.pause(), later view.resume(): the
+    # walk freezes and is void, then goes on to its end (the view has no pause of its own any more)
     page.goto(file_url('tests/dev/harness.html', ex='homing', seed=8, p='route:0,landmarks:1,tolerance:0'))
     page.wait_for_function(moving, timeout=60000)
-    page.keyboard.press('Escape')
+    page.evaluate("() => PX.ex.view('homing').pause()")
     page.wait_for_timeout(300)
     s1, p1 = hs(page), pose(page)
     page.wait_for_timeout(700)
     p2 = pose(page)
     shot(page, 'homing_1366_light_paused.png')
-    page.keyboard.press('Escape')
+    page.evaluate("() => PX.ex.view('homing').resume()")
     page.wait_for_function(READY, timeout=60000)
-    C.ok(s1['paused'] and s1['voided'] == 'paused' and p1 == p2, f'Esc freezes the walk and voids the trial ({s1["voided"]}, frozen {p1 == p2})')
+    C.ok(s1['voided'] == 'paused' and p1 == p2, f'pause() freezes the walk and voids the trial ({s1["voided"]}, frozen {p1 == p2}); resume() walks on to the end')
     x, y = dial_point(page, 90)
     page.mouse.click(x, y)
     page.keyboard.press('Enter')

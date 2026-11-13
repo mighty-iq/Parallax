@@ -11,8 +11,16 @@
    Model (shared with view.js and the tests through def.lib):
    - An item's truth is its geometry: integer control points of a uniform cubic B-spline (an open
      rope whose ends run off the 320 px plate, or closed loops) and one over flag per crossing
-     (crossings numbered by their first passage along the curves; the flag says the first passage
-     is on top). The view draws the same spline as exact Bézier pieces.
+     (the flag says the crossing's first passage is on top). The view draws the same spline as
+     exact Bézier pieces.
+   - Crossing numbers: crossings are found on the sampled polylines (SUB = 8 samples per control
+     interval, each in the middle of its eighth, so the first sample of a curve sits at 1/16 of
+     interval 0) and numbered by their first passage in sample order: along curve 0 (the rope, or
+     loop A), then curve 1 (loop B). On a loop, the stretch from its last sample back to its first
+     (the last 1/16 of the last interval and the first 1/16 of interval 0) comes last, so a crossing
+     there takes the loop's highest number. The validator and the view share crossingsOf, so items
+     agree with themselves; a change of SUB or of the sampler would re-number such crossings and
+     re-map stored items' flags (tests/node/knots.test.mjs pins three link items).
    - Outlines are walks on a lattice whose pitch is the spacing level, so every crossing is a right
      angle at a lattice point, crossings are ≥ 36 px apart and strands keep the level's gap.
    - The validator re-derives the crossings from the samples of the spline, checks legibility, builds
