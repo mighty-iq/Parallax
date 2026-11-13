@@ -155,7 +155,8 @@
       biasWalkLong: 'you walked about {pct} % too far',
       biasWalkEven: 'your distances were about right on average',
       biasSwaps: '{k} answers on the wrong side',
-      chartLabel: 'Your last routes: the angle errors (dots, filled when right) against the current tolerance (band).',
+      chartLabel: 'Your last routes: how far round you turned, one dot each, above the line too far and below too little, filled when right, against the current tolerance (band).',
+      chartNote: 'Above the line: turned too far round; below: too little. Filled: right; shaded: the current tolerance.',
       // show me: the route from above (shared kit keys) and Reckon's extra steps
       hideMap: 'Hide the map',
       mapStart: 'start',
