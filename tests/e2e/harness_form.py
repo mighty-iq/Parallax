@@ -136,6 +136,9 @@ def normal_speed(b, cons):
         return { n: list.length, edge: out.edge || 0, mirror: out.mirror || 0, endsOnKey: cells[it.key].classList.contains('ex-focus') }; }""")
     C.ok(w['edge'] >= 2 and w['mirror'] >= 1 and w['endsOnKey'], f'the Watch shows a wrong-size solid (edge marked in solid and pattern) and a mirror image, then ends on the answer ({w})')
     page.screenshot(path=str(DIR / 'form_demo_end.png'))
+    for name, pat in (('wrongsize', 'marked edge'), ('mirror', 'mirror image')):
+        page.evaluate("""(pat) => { const list = PX.ex.view('form').demoSteps(__harness.item), s = list.find((x) => (x.caption || '').indexOf(pat) >= 0); if (s) s.enter(); }""", pat)
+        page.screenshot(path=str(DIR / f'form_demo_{name}.png'))
     ctx.close()
     return pl
 

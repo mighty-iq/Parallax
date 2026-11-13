@@ -133,7 +133,7 @@
     'homing.landmarks': function (v) { return v === 'none' ? 'no landmarks' : v === 'one' ? 'one landmark' : v + ' landmarks'; },
     'reckon.route': function (v) { return String(v).replace(', ', ' with '); },
     'reckon.flow': function (v) { return v === 'textured' || v === 'sparse' ? v + ' ground' : v + ' on the ground'; },
-    'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + v; },
+    'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + String(v).replace(/^varied/, 'varies'); },
     'reckon.tolerance': function (v) { return 'right within ' + v; },
     'track.time': function (v) { return v + ' s of tracking'; },
     'knots.rope': function (v) { var m = /^(\d+)( slide-over)?$/.exec(String(v)); return m ? m[1] + ' crossings' + (m[2] ? ' with a slide-over move' : '') : String(v); },

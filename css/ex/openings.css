@@ -48,18 +48,20 @@
 .ex-openings .px-choice-key { z-index: 1; }
 
 @media (max-width: 1000px) { .ex-openings { --op-s: 8rem; } }
-/* Narrow pages outside the player (the dev harness): two columns. */
+/* Narrow pages outside the player (the dev harness): two columns, sized like the player's below
+   with the viewport's height in place of --pl-avail. */
 @media (max-width: 40rem) {
   .ex-openings .px-choices[style*="--px-cols:5"] { --px-cols: 2 !important; }
-  .ex-openings { --op-s: min(9.5rem, calc((100vw - 2.5rem) / 2 - 1.25rem - 10px)); }
+  .ex-openings { --op-s: min(9.5rem, calc((100vw - 2.5rem) / 2 - 1.25rem - 10px), calc((100vh - 10rem) / 4.47)); }
 }
 
 /* Phones in the player (B2's contract; css/play.css sets --pl-avail, --pl-w, --pl-col): two columns
    (2 + 2 + 1) under the solid, the drawings as large as the width and the height allow: the stage
-   (1.465 s + 1.5rem), three rows of s + 6 px and the gaps fit --pl-avail. Sideways: the solid left,
+   (1.465 s + 1.5rem), three rows of s + 6 px and the gaps fit --pl-avail, with room left for the
+   "Your turn" strip that follows the Watch (fit.py, 360×640). Sideways: the solid left,
    the openings right in three columns, the digit on top. */
 @media (max-width: 719px), (max-height: 500px) {
-  .pl-trial.ex-openings { --op-s: min(calc((var(--pl-w) - var(--s2)) / 2 - 1.25rem - 6px), calc((var(--pl-avail) - 5rem) / 4.47)); }
+  .pl-trial.ex-openings { --op-s: min(calc((var(--pl-w) - var(--s2)) / 2 - 1.25rem - 6px), calc((var(--pl-avail) - 6.5rem) / 4.47)); }
   .pl-trial.ex-openings .px-choices { --px-cols: 2 !important; }
   .pl-trial.ex-openings .px-choice { height: calc(var(--op-s) + 6px); min-height: 0; }
   .pl-trial.ex-openings .px-choice .ex-opt { position: relative; }

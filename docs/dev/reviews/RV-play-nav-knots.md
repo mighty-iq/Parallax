@@ -44,3 +44,29 @@ Make the Try layout fit one phone screen: put the Tip inside the scene caption (
 - Turn item: "✓ 23° off: within 40°. You turned 116° left in all; turning back by as much faces the way you started." Clear.
 - Distance item: "✓ 0 m off: within 35 % of the distance (3.4 m). The first walk was 9.6 m; you walked 9.6 m (0 % too far)." Clear; "0 % too far" reads oddly when exact (r11_t2_fb.png).
 - A miss on a point-home item opens the top-down map by itself and replays it: route, the turn ("106°"), the start angle ("126°"), and a grey arrow labelled "you" for my answer; the dial shows my answer in red and the right one in green with the ±40° wedge; "The right answer is shown." The text adds a diagnosis: "Your answer points where the start would be if you had never turned. Keep each turn as it happens: it moves the start round you." (r13_t3_fb.png, r14_map_09.png). Very good. The label "you" on the answer arrow could be read as "your position"; "your answer" would be clearer.
+
+### Results
+- Verdict: plays correctly within 2 minutes for point-home; walk-back needs a little more (the Walk / Here controls were off screen on the first try, see problem 1).
+- Try result, first pass (counted): Try 1 ✓ (23° off), Try 2 ✓ (0 m off), Try 3 ✗ (106° off: I misjudged the turn direction from my sparse screenshots). Try 4 seen on a second pass (Try items repeat exactly on a second run): walk back home ✓ (0.1 m from the start).
+- Scored (Path stage 1): 5 of 5 right. Four point-home items (3°, 2°, 4°, 21° off) and one walk-back item (0.7 m from the start, "2° off in direction, 4 % too far").
+- 360x640: the point-home answer screen fits completely (scene, compact dial with ◀5° ◀1° 1°▶ 5°▶ beside it, readout, Confirm) (r41_small_walk.png, r42_small_answer.png). I could not reach a walk-back item at 360x640 before my browser slot ran out.
+
+### Is the answer feedback understandable and useful?
+Yes, with one layout problem.
+- Point home: "✓ 3° off: within 40°. The start was 125° to your left, 12 m away. Filled arrow: the way to the start; shaded: ± 40°." Plain and exact.
+- Walk back: "✓ 0.7 m from the start: within 50 % of the way back (5.4 m). The start was 123° to your left, 11 m away. You turned 121° left and walked 11.3 m: 2° off in direction, 4 % too far in distance. Drift: 0.7 m off after 28 m walked, about 2 cm per metre." Splitting the miss into direction and distance is the most useful part. "Drift … after 28 m walked" needs a word of context: it counts the outbound route plus the walk back, which a beginner will not guess, and there is no hint whether 2 cm per metre is good.
+- Habit over recent routes: "Your last 5 routes: your turns were about right on average." with a dot strip and the key "Above the line: turned too far round; below: too little. Filled: right; shaded: the current tolerance." (r38_s5_fb_scrolled.png). The sentence is clear; the strip is not (no axis, the dots sit in a clump at the left, "Filled: right" is easy to misread as "to the right").
+- Layout: on a 390x844 phone all of this text sits below the fixed result bar ("✓ Correct 90.8 s / See solution / Next"); without scrolling the player sees only the green chip (r37_s5_fb.png). Most players will tap Next without ever seeing the direction/distance split or the habit line.
+
+### Problems
+1. Walk-back controls off screen in the Try step. On 390x844, Try 2 ("Hold Walk: walk the same distance again, then tap Here.") shows no Walk button at all: Back / Walk / Here sit below the fold under a greyed, unused arrow circle (r08_t2_answer.png). After scrolling 117 px the buttons and the scene both fit (r09_t2_scrolled.png). In the scored layout they fit (Walk at y 731).
+2. The ◀ 5° / 5° ▶ buttons fire on touch-down and swallow scrolls. Controlled test on 390x844: answer set to "Facing 138° right"; a vertical swipe in the empty right margin changed nothing; the same swipe starting on ◀ 5° changed it to "Facing 133° right" and the page did not scroll. Holding 5° ▶ for 1.5 s auto-repeats (133° right → 162° left). In real play this changed two of my answers while I scrolled to reach Confirm: "Facing 99° right" became "You faced 94° right", and "Facing 123° left" became "You faced 128° left" (Try step, Confirm below the fold). Cancel the step when the finger moves, and let a vertical drag scroll the page.
+3. Feedback text hidden behind the result bar (see above; r37_s5_fb.png, r11_t2_fb.png).
+4. Tip does not match the item: "After each turn, say to yourself where the start is now: behind, behind-left, left…" is shown on Try 2, a straight walk with no turns (r08_t2_answer.png).
+5. Stage text and items disagree, as in Homing: stage 1 says "2 legs, large turns (120–160°)" but scored item 2 was "3 straight legs" (the item's own description) with turns of about 47° and 53° by my frame measurement, and scored items 4 and 5 turned about 108° and 105°.
+6. "Parts" during the Watch demo opens a long glossary above the scene, so the demo keeps playing off screen (r20_parts.png).
+7. Small text: in the newer Watch layout the arrow circle shrank to 136 px and its labels "ahead", "left", "right" are about 7 px high (r21_yourturn.png). On 360x640 the compact circle has no labels at all (the readout "Facing straight ahead" compensates).
+8. Small: the miss map labels the answer arrow "you" (reads like your position).
+
+### Suggested change
+Put the result explanation (direction error, distance error, habit line) above the fixed result bar, or make the bar collapse after a second, so the feedback that makes Reckon trainable is actually seen.
