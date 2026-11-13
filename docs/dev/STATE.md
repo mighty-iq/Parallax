@@ -1,6 +1,6 @@
 # STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-13 17:48 UTC. All 19 exercises are active in index.html (Knots and B6's three included).
+Updated 2026-11-13 18:00 UTC. All 19 exercises are active in index.html (Knots and B6's three included).
 
 ## Phase
 2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in focus on the DAT-style formats. D3: analogical test named in v1.2.
@@ -52,7 +52,7 @@ Updated 2026-11-13 17:48 UTC. All 19 exercises are active in index.html (Knots a
 - Reviews done: RV-A docs/dev/reviews/RV-dat-style-A.md (no wrong items; 2 rule-5 issues in Angles; Hole Punch symmetry = method); RV-B docs/dev/reviews/RV-section-overlap.md (no blockers; 8 should-fix).
 - B7 fix round done (2c68b6a). B5 fix round done (625eb27); B5 follow-up done: Angles LONG_MIN 0.7 kept; Fold validator re-simulates every drawn step (items identical).
 - RV-D done (docs/dev/reviews/RV-dat-style-B.md): no wrong items; Form face-shape cue 71 %, Openings cues; B6 fix round done (e5e1508).
-- RV-E done (docs/dev/reviews/RV-reckon-homing.md): scoring right; 2 blockers (turn-only strategies beat chance + 10 in Reckon and Homing; strategy card side error), 6 should-fix; B3 fix round done (3435dbc) except the turn-only bound: decision (a), B3 implementing (a4766dc5c229a6ee1); B1 added trial column value2.
+- RV-E done (docs/dev/reviews/RV-reckon-homing.md): scoring right; 2 blockers (turn-only strategies beat chance + 10 in Reckon and Homing; strategy card side error), 6 should-fix; B3 fix round and decision (a) done; B1 added trial column value2.
 - RV-H done (docs/dev/reviews/RV-code-core.md): no blockers; 4 should-fix (closing-item cap, check time as practice, two-tab merge of new fields, idle cap on late timers); B1 fix round done (value2 = trial column 13; CSV 18 columns).
 - Guide writer G1 handed back (7f255a6): guide 1.1.0, 50 pages, clean build; README, CHANGELOG. Remaining after B3/B4: Reckon/Homing/Knots facts and figures, the Knots hygiene row (now near), rebuild (G1.md "Remaining after B3 and B4"); resume G1 (ac14d632f5849a4a9) then.
 - Play-through RV-F (fresh player, no source: six DAT-style tutorials, Section mini, focus; phone 390×844 and 360×640, desktop): a76c1d49da2d6b2fa → docs/dev/reviews/RV-play-dat.md. A second play-through for Reckon, Homing and Knots after B3/B4.
