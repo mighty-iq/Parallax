@@ -139,7 +139,11 @@
     if (plan.lastServed) return 'over';
     if (plan.boxed) {
       var m = paceOf(plan) || msPer || plan.avgMs || 0, warm = plan.pos > C.session.warmup;
-      if (warm && plan.activeMs + m >= plan.budgetMs) return 'last';
+      if (warm && plan.activeMs + m >= plan.budgetMs) {
+        // A closing item that keeps being voided (a device that stutters, a phone turned during the
+        // stimulus) is replaced at most C.session.lastRetries times; then the session ends.
+        return (plan.lastVoids || 0) >= C.session.lastRetries ? 'over' : 'last';
+      }
       if (plan.pos >= effTotal(plan) - 1) extend(plan, m || 9000);
       return plan.pos >= effTotal(plan) ? 'over' : null;
     }
@@ -218,7 +222,7 @@
     plan.log.push({ exId: step.exId, kind: step.kind, oc: oc, rt: row[6], p: step.pPred, target: step.target, b: step.b, g: step.g, stage: step.stage, sw: !!step.switched, i: step.i, code: step.code });
     if (oc === 2 || oc === 3) {
       plan.extra += 1;
-      if (step.kind === 'last') plan.lastServed = false;
+      if (step.kind === 'last') { plan.lastServed = false; plan.lastVoids = (plan.lastVoids || 0) + 1; }
       if (MODES[plan.mode].void) MODES[plan.mode].void(plan, rec, step);
     } else {
       plan.count[step.exId] = (plan.count[step.exId] || 0) + 1;
@@ -290,7 +294,8 @@
       if (xs && typeof xs.input === 'string') session.input = xs.input;
       if (!isArray(rec.sessions)) rec.sessions = [];
       rec.sessions.push(session);
-      rec.practiceMs = (isNum(rec.practiceMs) ? rec.practiceMs : 0) + session.practiceMs;
+      // a Spatial Check is a measurement, not practice: its time stays out of the practice total
+      if (plan.mode !== 'check') rec.practiceMs = (isNum(rec.practiceMs) ? rec.practiceMs : 0) + session.practiceMs;
       res.session = session;
     }
     res.streak = E.streak.status(rec, now);
