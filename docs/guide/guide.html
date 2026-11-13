@@ -91,7 +91,7 @@
       </div>
       <div class="panel">
         <h3>Knots <span class="spec">EX-13</span></h3>
-        <p>Pull both ends: does a knot remain? Which marked crossing, switched, unties the rope, or ties it? Are two loops linked? Every answer is proved before you see the item, by the moves that take a rope apart, a determinant or the Jones polynomial, and Show me replays the proof. <span class="see">Page <span class="pgref" data-for="ex-knots"></span></span></p>
+        <p>Pull both ends: does a knot remain? Which marked crossing, switched, unties the rope, or ties it? Are two loops linked? Every answer is proved before you see the item, by the moves that take a rope apart, a determinant or the Jones polynomial; Show me replays the moves, checking each one. <span class="see">Page <span class="pgref" data-for="ex-knots"></span></span></p>
       </div>
       <div class="panel">
         <h3>Six DAT-style formats <span class="spec">EX-14 to EX-19</span></h3>
@@ -440,7 +440,7 @@
           <h3>Where spatial thinking is used</h3>
           <p>Each card says honestly where its skill shows up, with the limitation next to it. Rotate's reads: <i>"Chemists ask the same question about molecules (is this drawing the same molecule or its mirror image?). Engineers turn objects in their heads too. Practice here improves this kind of task and often similar ones; it has not been shown to improve grades or job performance."</i></p>
           <h3>Also in tests</h3>
-          <p>Exercises whose format parts of published tests share, such as Fold, Hidden, Views (counting), Nets, Span and the six test formats, carry an "Also in tests" note on their page and in How to play (page <span class="pgref" data-for="hygiene"></span>).</p>
+          <p>Exercises whose format parts of published tests share, such as Fold, Hidden, Views (counting), Nets, Span, Knots and the six test formats, carry an "Also in tests" note on their page and in How to play (page <span class="pgref" data-for="hygiene"></span>).</p>
           <h3>Same model, same answer</h3>
           <p>A solver checks every item before you see it; cheap shortcuts (counting cubes or holes, the odd one out, the shape as seen from here) must score near chance; show-me is drawn from the model that grades your answer. Chapter 8 gives the limits.</p>
         </div>
@@ -700,8 +700,8 @@
       <header class="ex-head"><span class="spec">EX-11 · Homing · NAV</span><h2>Homing</h2><span class="kind">Navigation with landmarks</span><span class="badge warn">experimental</span></header>
       <div class="ex-body">
         <div class="ex-figs">
-          <figure><div class="shot"><img src="../shots/ex11-homing.png" alt="Homing: a first-person view of a plain with a windmill on the horizon, an arrow circle and fine-turn buttons"></div><figcaption><span class="label">Question</span>On the walk: a windmill on the horizon is a landmark. The circle and the turn buttons wait.</figcaption></figure>
-          <figure><div class="shot"><img src="../shots/ex11-homing-showme.png" alt="Homing show me: the route from above with its turn and three landmarks, and your arrow on the circle"></div><figcaption><span class="label">Show me, paused</span>The route from above, with its 137° turn and three landmarks.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex11-homing.png" alt="Homing: a first-person view of a plain with marks on the ground, an arrow circle and fine-turn buttons"></div><figcaption><span class="label">Question</span>On the walk: the circle and the turn buttons wait until the route ends.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex11-homing-showme.png" alt="Homing show me: the route from above with its turn and three landmarks, your arrow on the circle, and a hint about the slip"></div><figcaption><span class="label">Show me, paused</span>The route from above, with its 122° turn and three landmarks; a hint names the slip.</figcaption></figure>
         </div>
         <div class="ex-text">
           <p><span class="rk">Trains</span>Navigation (NAV): keeping track of where you started as you move, with far landmarks as fixes on the easier levels. Extrinsic-dynamic. <b>Experimental.</b> It is the landmark-aided stage before Reckon.</p>
@@ -726,12 +726,12 @@
         </div>
         <div class="ex-text">
           <p><span class="rk">Trains</span>Navigation (NAV): path integration by dead reckoning, keeping track of home from your own turns and steps alone. Extrinsic-dynamic. <b>Experimental;</b> rated per screen size.</p>
-          <p><span class="rk">How to play</span>Watch a walk of 2 to 4 legs across an endless plain. <b>Point:</b> turn to face the start and confirm. <b>Return:</b> turn, then hold Walk (↑) to walk back, Back (↓) to step back, and tap Here (Enter) where the start is. Nothing in the world, the sky or the screen marks a place, and speeds vary, so seconds do not measure distance (page <span class="pgref" data-for="nav-phone"></span>).</p>
+          <p><span class="rk">How to play</span>Watch a walk of 2 to 4 legs across an endless plain. <b>Point:</b> turn to face the start and confirm. <b>Return:</b> turn, then hold Walk (↑) to walk back, Back (↓) to step back, and tap Here (Enter) where the start is. Nothing in the world, the sky or the screen marks a place; above the first speed level, speeds vary, so seconds do not measure distance (page <span class="pgref" data-for="nav-phone"></span>).</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Route</span><span>Homing's eight steps</span></li>
             <li><span class="k">Ground</span><span>textured → sparse → short-lived dots that fade within about a second</span></li>
-            <li><span class="k">Speed</span><span>steady, about 1.8 m/s → varied between legs (1.2 to 2.0 m/s) → varied within legs</span></li>
+            <li><span class="k">Speed</span><span>steady, about 1.8 m/s → varied between legs (0.5 to 2.0 m/s) → within legs too</span></li>
             <li><span class="k">Tolerance</span><span>±40°, 30° or 20°; on return items within 50, 35 or 25 % of the way back</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Picture the shape from above,</b> most accurate on longer routes, or <b>keep the start as a direction from you,</b> updated with every turn and leg, quick when the turns come fast. <span class="rk">Switch</span>after two misses in a row.</p>
@@ -747,9 +747,9 @@
   <div class="content">
     <h2>Navigation without fixes</h2>
     <div class="phone-row narrow">
-      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-homing-phone.png" alt="Homing on a phone: a mountain on the horizon, the arrow circle turned 60 degrees right, fine-turn buttons and Confirm"></div>
-        <figcaption><span class="label">Fig. 3.2</span>Homing on a phone, turned 60° right; the mountain is a landmark.</figcaption></figure>
-      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-reckon-phone.png" alt="Reckon on a phone during the walk back: the circle set at 145 degrees right, and Back, Walk and Here"></div>
+      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-homing-phone.png" alt="Homing on a phone: a far landmark at the right edge of the horizon, the arrow circle turned 60 degrees right, fine-turn buttons and Confirm"></div>
+        <figcaption><span class="label">Fig. 3.2</span>Homing on a phone, turned 60° right; a far landmark stands at the right edge.</figcaption></figure>
+      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-reckon-phone.png" alt="Reckon on a phone during the walk back: the circle set at 139 degrees right, and Back, Walk and Here"></div>
         <figcaption><span class="label">Fig. 3.3</span>Reckon on a phone, part of the way back.</figcaption></figure>
       <div>
         <h3>Why Reckon has no landmarks</h3>
@@ -759,7 +759,7 @@
           <li>ground marks laid out anew for every item: they show turning and walking, but mark no place;</li>
           <li>a start ring that is gone once you leave it;</li>
           <li>no map, compass or counter during the walk;</li>
-          <li>speeds that change, so seconds do not measure distance.</li>
+          <li>above the first speed level, speeds that change, so seconds do not measure distance.</li>
         </ul>
         <p>Homing keeps its landmarks as the easier stage before Reckon.</p>
       </div>
@@ -767,13 +767,13 @@
     <div class="cols">
       <div>
         <h3>Feedback that trains the error</h3>
-        <p>A Reckon answer is right within the tolerance, and only that moves your rating. The feedback says more: the angle error; on return items the distance error and the drift, how far off you ended per metre walked; a hint when an answer matches a typical slip (turns left out, left and right swapped, turning straight round, a heading never updated); and, after five routes, your habit over the last 20, turning too far or too little and walking short or long, with a chart. Harder items bring tighter tolerances.</p>
-        <p>Answers that skip the work (turns reversed, heading not updated, the mirror image) always miss by more than the tolerance. Routes run 12 to 28 m, the start lies 5 to 20 m away, and no walk moves for more than 30 seconds.</p>
+        <p>A Reckon answer is right within the tolerance, and only that moves your rating. The feedback says more: the angle error; on return items the distance error and the drift, how far off you ended per metre walked; a hint when an answer matches a typical slip (turns left out, left and right swapped, turning straight round, a heading never updated); and, after five routes, your habit over the last 20, turning too far or too little and walking short or long, with a chart. Harder items bring tighter tolerances. The trial log keeps the signed angle error and, on walks back, the distance walked as a share of the true one, so pooled data can tell the two apart.</p>
+        <p>Answers that need no tracking (the turns reversed, a heading never updated, the mirror image) always miss, and turning straight round or giving one fixed answer stays near chance wherever the routes allow. As the Library says: "On the easier routes the turns alone tell you much of the way home; distances matter more with bigger turns, at tighter tolerances and when you walk back." Routes run 12 to 28 m, the start lies 5 to 20 m away, and no walk moves for more than 30 seconds.</p>
       </div>
       <div>
         <h3>Touch, and comfort</h3>
-        <p>Both exercises play by touch: drag the view to turn, then fine-tune with the 1° and 5° buttons; captions sit over the view as subtitles, and held sideways the view and the controls sit side by side. Pause freezes the walk at once. The motion is gentle: Homing walks at 1.8 m/s, Reckon between 1.2 and 2.0 m/s, and turns run at 45°/s at most, with soft starts and stops. If the motion makes you feel unwell, pause or stop.</p>
-        <p>A trial is voided only when the walk itself was harmed: a freeze of more than a second while moving, slow frames for more than half of it, a lost 3D view, the view changing shape, or a pause. Homing's items changed in 1.1, so its new trials are logged as version 2.</p>
+        <p>Both exercises play by touch: drag the view to turn, then fine-tune with the 1° and 5° buttons; captions sit over the view as subtitles, and held sideways the view and the controls sit side by side. Pause freezes the walk at once. The motion is gentle: Homing walks at 1.8 m/s; Reckon too on its steady level, and between 0.5 and 2.0 m/s above it, so a leg's walking time says little about its length. Turns run at 45°/s at most, with soft starts and stops. If the motion makes you feel unwell, pause or stop.</p>
+        <p>A trial is voided only when the walk itself was harmed: a freeze of more than a second while moving, slow frames for more than half of it, a lost 3D view, the screen changing shape during the walk or while you answer, or a pause. Homing's items changed in 1.1, so its new trials are logged as version 2.</p>
       </div>
     </div>
   </div>
@@ -843,13 +843,13 @@
       </div>
       <div class="cols">
         <div>
-          <p><b>1 · Take it apart.</b> Apply the moves wherever they remove crossings. If every crossing comes off, there is no knot, and that list of moves is the Show me you watch.</p>
+          <p><b>1 · Take it apart.</b> Apply the moves wherever they remove crossings. If every crossing comes off, there is no knot. Show me replays these moves, checking each one, and stops with a caption where one cannot be drawn safely.</p>
           <p><b>2 · A determinant.</b> If crossings remain, compute the diagram's determinant (by Fox colouring). A rope without a knot always gives 1, so any other number proves a knot.</p>
-          <p><b>3 · The Jones polynomial.</b> Otherwise try slide-overs and the moves again, then the Jones polynomial: for diagrams of up to 24 crossings it equals 1 only when there is no knot <span class="cite">(Tuzun &amp; Sikora)</span>. Ropes here have at most 12.</p>
+          <p><b>3 · The Jones polynomial.</b> Otherwise slide-overs and the moves again, then the Jones polynomial, which for up to 24 crossings equals 1 only without a knot <span class="cite">(Tuzun &amp; Sikora)</span>; ropes here have at most 12.</p>
         </div>
         <div>
           <p><b>Untie and tie</b>: switched, exactly one of the four marked crossings changes the answer. <b>Linked</b> loops are proved by a linking number other than zero or by the Jones polynomial; <b>apart</b> only by moves that leave no crossing between them.</p>
-          <p><b>No cheap tells.</b> Each knot is paired with a plain rope from the same outline, matched on over-under alternation, twist and the moves in plain sight. Unpaired, alternation alone told knots apart 75 to 92 % of the time; paired, no cheap rule tested beat 52.3 % on Pull, where guessing scores 50 %.</p>
+          <p><b>No cheap tells.</b> Each knot is paired with a plain rope from the same outline, matched on over-under alternation, twist and the moves in plain sight. Unpaired, alternation alone told knots apart 75 to 92 % of the time; paired, no cheap rule tested beat 52.3 % on Pull, where guessing scores 50 %, or 33 % on Untie and Tie, where it scores 25 %.</p>
         </div>
       </div>
     </div>
@@ -1604,7 +1604,7 @@
         <h2>No clones of clinical tests</h2>
         <p>Parallax has no version of Wechsler Block Design or Visual Puzzles, the two subtests of the Wechsler Visual Spatial Index, and no packing or piece-assembly tasks that resemble them. On retest, the perceptual-reasoning subtests that include them show the largest practice effects <span class="cite">(Canivez, 2010)</span>. Practising their formats would inflate exactly the scores that psychologists use, probably without changing the ability <span class="cite">(Scharfen et al., 2018; te Nijenhuis et al., 2007)</span>, and would invite claims such as "my VSI went up". No Parallax score is called VSI, and no item, figure or layout is copied from a published test: every item is generated.</p>
         <h2>Formats you may meet elsewhere</h2>
-        <p>Several exercises share a format with parts of published tests: paper folding, hidden shapes, counting cubes, cube nets, block tapping, and the six test formats of page <span class="pgref" data-for="dat"></span>, on purpose. A gain on such a test after practice here is near transfer, not mid transfer. The next page gives the formats, the size of practice effects, and what Parallax does about them.</p>
+        <p>Several exercises share a format with parts of published tests: paper folding, hidden shapes, counting cubes, cube nets, block tapping, knots pulled tight, and the six test formats of page <span class="pgref" data-for="dat"></span>, on purpose. A gain on such a test after practice here is near transfer, not mid transfer. The next page gives the formats, the size of practice effects, and what Parallax does about them.</p>
         <div class="panel signal">
           <span class="label">If you take a test</span>
           <p>Take a test that matters before you practise its kind of puzzle here, or mention your practice: for a clinical, school or job assessment with spatial tasks, say that you have practised similar tasks, so the result can be read fairly. Settings has a "Taking a test soon?" helper (page <span class="pgref" data-for="hygiene"></span>).</p>
@@ -1649,7 +1649,7 @@
             <tr><td>Nets, Form</td><td>folding a net into a cube or solid</td><td>a note</td></tr>
             <tr><td>Span</td><td>tapping blocks in order, as in clinical memory tests</td><td>a note</td></tr>
             <tr><td>Openings, Missing View, Angles</td><td>openings, views and angle ranking: with Hole Punch, Painted Cubes and Form, the six DAT-style formats follow the Perceptual Ability Test on purpose</td><td>a note</td></tr>
-            <tr><td>Knots (Pull)</td><td>"knot or not" items in a design entrance exam, a maths competition and a research test of knot reasoning</td><td>none yet</td></tr>
+            <tr><td>Knots (Pull)</td><td>"knot or not" items in a design entrance exam, a maths competition and a research test of knot reasoning</td><td>a note</td></tr>
             <tr><td>Slice, Orient, Homing, Reckon, Rotate, Spin</td><td>cross-sections, directions and maps, turned or mirrored figures</td><td>related only</td></tr>
           </tbody>
         </table>
@@ -1741,7 +1741,7 @@
           <thead><tr><th style="width:36mm">Export</th><th>What it holds</th></tr></thead>
           <tbody>
             <tr><td><b>Backup</b> (JSON)</td><td>The whole record: ratings, sessions, trials, Spatial Checks with their one-tap answers, Threshold runs, Section runs, strategy check-ins, the tests you noted, the focus switches, achievements, settings. The only format that can be imported again.</td></tr>
-            <tr><td><b>Trials</b> (CSV)</td><td>One row per trial: time, exercise and its version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class, the input, and a second number where an exercise reports one. For a spreadsheet; cannot be imported.</td></tr>
+            <tr><td><b>Trials</b> (CSV)</td><td>One row per trial: time, exercise and its version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class, the input, and a second number where an exercise reports one (Reckon: on walks back, the distance walked as a share of the true one). For a spreadsheet; cannot be imported.</td></tr>
             <tr><td><b>Research</b> (CSV, in the Lab)</td><td>The trial rows plus each item's difficulty and guessing rate under the current item model (chapter 10).</td></tr>
           </tbody>
         </table>
