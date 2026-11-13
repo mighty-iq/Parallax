@@ -558,7 +558,7 @@ def demo_bias_srcdoc(b, cons):
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})
     page = ctx.new_page()
     cons.append(Console(page))
-    page.goto(url('demo', seed=10, p='route:0,flow:0,speed:0,tolerance:0', v='point', fast=True))
+    page.goto(url('demo', seed=34, p='route:0,flow:0,speed:0,tolerance:0', v='point', fast=True))
     page.wait_for_function(READY, timeout=90000)
     before = page.evaluate('() => __harness.played.finished')
     page.evaluate('() => { __harness.demo(); }')
