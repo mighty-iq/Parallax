@@ -36,7 +36,6 @@ STATE = "(s) => window.__harness && __harness.state === s"
 FILES = [f'js/ex/{x}/{f}' for x in ('homing', 'reckon') for f in ('gen.js', 'learn.js', 'view.js')]
 CSS = ['css/ex/homing.css', 'css/ex/reckon.css']
 PHONE = {'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True}
-SLOW_SHARE = 0.5  # the kit's void rule (js/ex/homing/view.js): slow frames above this share of the moving time void
 # the player's phone item screen: no header, goal or tip above the item (B2's layout), one ~60 px strip
 FOLD = '.hx-bar, .hx-goal, .hx-tip { display: none !important; } .hx-main { padding-top: 60px !important; }'
 REPORT = {'touch': {}, 'voids': {}, 'throttle4x': {}, 'fit': {}}
@@ -486,9 +485,10 @@ def throttled(b, cons):
     for flow, name in ((0, 'textured'), (1, 'sparse'), (2, 'dots')):
         s, f, info, js, loop = walk(flow, name)
         first = None
-        # one freeze over 1 s with few slow frames otherwise is a stall of this shared machine, not the walk's
-        # own load (see harness_homing.py): the rule rightly voids it, and the walk runs again
-        if s['voided'] == 'stutter' and (f.get('slowShare') or 1) < SLOW_SHARE:
+        # a timing void here comes from this shared machine (two browsers on 2 CPUs drawing WebGL in software;
+        # the walk's own script is a few ms a frame, walkFrameJsMs): the rule rightly voids it, and the walk
+        # runs once more; a walk too slow by itself voids twice and fails
+        if s['voided'] == 'stutter':
             first = {'voided': s['voided'], 'maxGapMs': f.get('maxGapMs'), 'slowShare': f.get('slowShare')}
             s, f, info, js, loop = walk(flow, name)
         REPORT['throttle4x'][name] = {'voided': s['voided'], 'frames': f, 'dots': s['dots'], 'fade': s['fade'], 'render': info, 'scriptMsPerFrame': round(js, 2), 'walkFrameJsMs': loop, 'firstTry': first}

@@ -44,9 +44,14 @@
 .ex-angles .ex-angles-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
 .ex-angles .ex-verdict[data-kind="key"], .ex-angles .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
 .ex-angles .ex-tag[data-kind="foil"] { color: var(--ink, #1A1D21); border-style: dashed; }
-/* Options: a list of four numbers, read left to right. */
-.ex-angles .ex-angles-opt { flex-direction: column; gap: 0.15rem; }
-.ex-angles .ex-angles-opt .ex-answer-text { font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; white-space: nowrap; }
+/* Options: a list of four numbers, read left to right. Each dash is bound to the number before it
+   (view.js), so at large text sizes a list breaks after a dash ("3 – 1 –" over "4 – 2") instead of
+   overflowing the button. */
+.ex-angles .ex-angles-opt { flex-direction: column; gap: 0.15rem; min-width: 0; max-width: 100%; }
+.ex-angles .ex-angles-opt .ex-answer-text {
+  font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  max-width: 100%; text-align: center; white-space: normal; overflow-wrap: anywhere; text-wrap: balance;
+}
 
 /* Phones: the cells in two rows of two, as large as the width allows. */
 @media (max-width: 719px) {
@@ -59,14 +64,18 @@
 }
 
 /* In the player on phones (css/play.css sets --pl-avail, the height left for the item, --pl-w its
-   width and, held sideways, --pl-col one of its two columns): the 2 × 2 cells take what the two
-   rows of answers leave, so the item never scrolls. */
+   width and, held sideways, --pl-col one of its two columns): the 2 × 2 cells (--ang-size each; the
+   cells' colour is --ang-cell) take what the two rows of answers leave, so the item never scrolls. */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-angles {
-    --ang-cell: min(calc((var(--pl-w) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 2 * 3.5rem - 3 * var(--s2, 0.5rem) - 3 * var(--s1, 0.25rem) - 4px) / 2));
+    --ang-size: min(calc((var(--pl-w) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 2 * 3.5rem - 3 * var(--s2, 0.5rem) - 3 * var(--s1, 0.25rem) - 4px) / 2));
   }
-  .pl-trial.ex-angles .ex-angles-cells { grid-template-columns: repeat(2, var(--ang-cell)); justify-content: center; max-width: none; }
+  .pl-trial.ex-angles .ex-angles-cells { grid-template-columns: repeat(2, var(--ang-size)); justify-content: center; max-width: none; }
+  /* Narrow answer buttons: a smaller size (as Rotate's answers on phones) and tighter spaces, so a
+     list stays on one line at the usual text size, takes two lines (not three) at 150 % text, and
+     keeps clear of the answer's number in the corner. */
+  .pl-trial.ex-angles .ex-angles-opt .ex-answer-text { margin-top: 0.25rem; font-size: var(--fs-md, 1rem); letter-spacing: 0; word-spacing: -0.12em; }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-angles { --ang-cell: min(calc((var(--pl-col) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 3 * var(--s1, 0.25rem) - 1rem) / 2)); }
+  .pl-trial.ex-angles { --ang-size: min(calc((var(--pl-col) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 3 * var(--s1, 0.25rem) - 1rem) / 2)); }
 }

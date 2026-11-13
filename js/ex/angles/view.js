@@ -124,7 +124,8 @@
     if (!st) mount(ctx);
     newItem(item);
     var tag = h('span.ex-tag', { hidden: true });
-    el.appendChild(h('span.ex-answer.ex-angles-opt', h('span.ex-answer-text', listText(item.options[i])), tag));
+    // A no-break space binds each dash to the number before it, so long text wraps after a dash.
+    el.appendChild(h('span.ex-answer.ex-angles-opt', h('span.ex-answer-text', listText(item.options[i]).replace(/ –/g, '\u00a0–')), tag));
     st.opts[i] = { el: el, tag: tag };
   }
   function optionLabel(item, i) { return 'Smallest to largest: ' + item.options[i].map(function (c) { return c + 1; }).join(', '); }

@@ -21,8 +21,8 @@
    every other line for one unfolding, "the punch at another place" (the true holes of a punch at
    any other cell with as many layers) and its mirrors, and "the answer turned". Five options
    (prep sources describe four or five; R3 §2.2): a fifth leaves room to match both rules above
-   when only one fold matters. The four foils are chosen against the shortcuts, so that each
-   pick-the-best heuristic lands on the key about one time in five:
+   when only one fold matters. The four foils are chosen against the cheap rules below, so that
+   each lands on the key about one time in five:
    - "a hole under the punch": the key always has one (the bottom layer there never moves), so
      as many foils as possible share it, and at least one;
    - "most symmetric about the first crease" and "most symmetric about any axis of the sheet":
@@ -31,6 +31,18 @@
    - "most like the others" / "odd one out" (total Hamming distance): a random target rank.
    With one fold that matters, the two capped rules share the foils (two each at best), so those
    items sit near one in three; the pool stays within chance + 10 points (node test).
+
+   Crease symmetry is the format's method, not a shortcut (the lead's decision after
+   RV-dat-style-A §1; DECISIONS.md): keep the sheets with a hole under the punch, then take the
+   one most symmetric about the drawn creases (summed). Prep courses teach it (R3 §3.4) and the
+   analytic strategy card describes it; on a 4 × 4 sheet the true holes are often the only sheet
+   that passes it, so no choice of foils could hide it. It finds the key in 89 % of items (node
+   test, information only): every time when each crease is a mirror line of the key (6 % of
+   items), 91 % with an idle fold (57 %), 84 % with a partial flap (37 %: a fold that matters but
+   whose crease is only partly a mirror line of the key, as the other folds' unfoldings put holes
+   off it). Partial flaps are where it fails, not idle folds (by idle folds 0 / 1 / 2: 87 / 92 /
+   84 %), together with the levels that already rate hardest: three folds (83 %) and mixed folds
+   (71 %). There the layers have to be tracked, which is the skill the exercise trains.
 
    Difficulty (hand-set; refit from pooled exports): folds 2–3 (0.9: on a 4 × 4 sheet with one
    punch every fold that matters doubles the holes and adds an unfolding step for each; Fold uses
@@ -285,7 +297,128 @@
     asFold.ex = 'fold';
     asFold.params = foldParams(p);
     var v = onSheet(function (A) { return A.check(asFold); });
-    return v === true ? true : 'fold model: ' + v;
+    if (v !== true) return 'fold model: ' + v;
+    return checkSteps(item);
+  }
+
+  /* The drawn panels against an own simulation (RV-dat-style-A §4). Fold's check compares the
+     show-me states by area and hole positions only, and the stem is drawn from item.steps. So every
+     step is re-simulated here on the 64 triangles that the cells' diagonals cut the sheet into,
+     each tracked by its centroid in sixths of a cell (exact integer reflections; no centroid lies
+     on a grid line or on a 45° line through grid points, so every point-in-polygon test is exact).
+     Per step: the outline holds exactly the positions that hold paper; the faces, rasterised at
+     the centroids, are unions of whole triangles and cover each position once per layer there; at
+     each position the faces taken by layer (top first) carry the simulated stack's flags (back
+     up, moved by this fold); a moved face's `from` is its polygon reflected across the fold line
+     and no other face has one; each face lists exactly the punched cells that lie on it. */
+  var QX = [3, 5, 3, 1], QY = [1, 3, 5, 3], W6 = 6 * SIZE, NT = 4 * SIZE * SIZE;
+  function polySix(P) {
+    if (!isArray(P) || P.length < 3) return null;
+    var out = [];
+    for (var i = 0; i < P.length; i++) {
+      var pt = P[i];
+      if (!isArray(pt) || pt.length !== 2) return null;
+      var x = Math.round(6 * pt[0]), y = Math.round(6 * pt[1]);
+      if (!(abs(6 * pt[0] - x) < 1e-6 && abs(6 * pt[1] - y) < 1e-6)) return null;
+      out.push([x, y]);
+    }
+    return out;
+  }
+  function twiceArea(P) {
+    var s = 0;
+    for (var i = 0, j = P.length - 1; i < P.length; j = i++) s += P[j][0] * P[i][1] - P[i][0] * P[j][1];
+    return abs(s);
+  }
+  // Crossing number, exact in integers (the point is never on an edge).
+  function inside(P, x, y) {
+    var c = false;
+    for (var i = 0, j = P.length - 1; i < P.length; j = i++) {
+      var xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1];
+      if ((yi > y) === (yj > y)) continue;
+      var lhs = (x - xi) * (yj - yi), rhs = (y - yi) * (xj - xi);
+      if (yj > yi ? lhs < rhs : lhs > rhs) c = !c;
+    }
+    return c;
+  }
+  function reflSix(L, x, y) {
+    var c6 = 6 * L.c;
+    return L.k === 'v' ? [2 * c6 - x, y] : L.k === 'h' ? [x, 2 * c6 - y] : L.k === 'd' ? [y + c6, x - c6] : [c6 - y, c6 - x];
+  }
+  function checkSteps(item) {
+    var F = item.folds.length, X = [], Y = [], lay = [], flip = [], mv = [], t;
+    for (t = 0; t < NT; t++) { var c0 = t >> 2; X.push(6 * (c0 % SIZE) + QX[t & 3]); Y.push(6 * floor(c0 / SIZE) + QY[t & 3]); lay.push(0); flip.push(0); mv.push(false); }
+    if (!isArray(item.steps) || item.steps.length !== F + 1) return 'steps';
+    for (var si = 0; si <= F; si++) {
+      var L = si ? item.folds[si - 1].line : null;
+      for (t = 0; t < NT; t++) mv[t] = false;
+      if (L) {
+        var m = item.folds[si - 1].move, c6 = 6 * L.c, top = 0;
+        for (t = 0; t < NT; t++) if (lay[t] > top) top = lay[t];
+        for (t = 0; t < NT; t++) {
+          var s = L.k === 'v' ? X[t] - c6 : L.k === 'h' ? Y[t] - c6 : L.k === 'd' ? X[t] - Y[t] - c6 : X[t] + Y[t] - c6;
+          if (m * s <= 0) continue;
+          var q = reflSix(L, X[t], Y[t]);
+          X[t] = q[0]; Y[t] = q[1]; lay[t] = 2 * top + 1 - lay[t]; flip[t] ^= 1; mv[t] = true;
+        }
+      }
+      var r = checkStep(item.steps[si], L, X, Y, lay, flip, mv, item.options[item.key]);
+      if (r !== true) return 'step ' + si + ': ' + r;
+    }
+    return true;
+  }
+  function checkStep(stp, L, X, Y, lay, flip, mv, keyCells) {
+    var out = stp && polySix(stp.outline), i, j, q, t, x, y, fi;
+    if (!out) return 'outline';
+    if (!isArray(stp.faces) || !stp.faces.length) return 'faces';
+    var stack = {}, cover = {}, faces = stp.faces, polys = [];
+    for (t = 0; t < NT; t++) (stack[Y[t] * W6 + X[t]] = stack[Y[t] * W6 + X[t]] || []).push(t);
+    for (fi = 0; fi < faces.length; fi++) {
+      var fc = faces[fi], P = fc && polySix(fc.poly);
+      if (!P || !isInt(fc.layer) || typeof fc.back !== 'boolean' || typeof fc.moved !== 'boolean' || !isArray(fc.holes)) return 'face ' + (fi + 1) + ' is malformed';
+      polys.push(P);
+    }
+    for (j = 0; j < SIZE; j++) for (i = 0; i < SIZE; i++) for (q = 0; q < 4; q++) {
+      x = 6 * i + QX[q]; y = 6 * j + QY[q];
+      if (inside(out, x, y) !== !!stack[y * W6 + x]) return 'the outline differs from the paper';
+      for (fi = 0; fi < faces.length; fi++) if (inside(polys[fi], x, y)) (cover[y * W6 + x] = cover[y * W6 + x] || []).push(fi);
+    }
+    var count = faces.map(function () { return 0; }), faceOf = [];
+    for (var key in stack) {
+      var ts = stack[key].slice().sort(function (a, b) { return lay[b] - lay[a]; });
+      var fs = (cover[key] || []).slice().sort(function (a, b) { return faces[b].layer - faces[a].layer; });
+      if (fs.length !== ts.length) return 'faces cover a place ' + fs.length + ' times, the paper has ' + ts.length + ' layers there';
+      for (var k = 0; k < ts.length; k++) {
+        var f = faces[fs[k]];
+        if (k && faces[fs[k - 1]].layer === f.layer) return 'two faces share a layer';
+        if (f.back !== !!flip[ts[k]]) return 'face ' + (fs[k] + 1) + ': back-up flag';
+        if (f.moved !== mv[ts[k]]) return 'face ' + (fs[k] + 1) + ': moved flag';
+        faceOf[ts[k]] = fs[k]; count[fs[k]]++;
+      }
+    }
+    for (key in cover) if (!stack[key]) return 'a face covers a place without paper';
+    for (fi = 0; fi < faces.length; fi++) {
+      if (count[fi] * 18 !== twiceArea(polys[fi])) return 'face ' + (fi + 1) + ' is not a union of whole triangles on the sheet';
+      var from = faces[fi].from;
+      if (!faces[fi].moved || !L) { if (from !== undefined && from !== null) return 'face ' + (fi + 1) + ': an arrow on a face that did not move'; continue; }
+      var Fr = polySix(from);
+      if (!Fr || Fr.length !== polys[fi].length) return 'face ' + (fi + 1) + ': no arrow origin';
+      for (q = 0; q < Fr.length; q++) {
+        var e = reflSix(L, polys[fi][q][0], polys[fi][q][1]);
+        if (Fr[q][0] !== e[0] || Fr[q][1] !== e[1]) return 'face ' + (fi + 1) + ': the arrow does not start where the flap was';
+      }
+    }
+    // Holes: each punched cell is whole (its 4 triangles together) on one face.
+    var want = faces.map(function () { return []; });
+    for (q = 0; q < keyCells.length; q++) {
+      var t0 = 4 * (keyCells[q][1] * SIZE + keyCells[q][0]), cx = floor(X[t0] / 6), cy = floor(Y[t0] / 6);
+      for (t = t0 + 1; t < t0 + 4; t++) if (faceOf[t] !== faceOf[t0] || floor(X[t] / 6) !== cx || floor(Y[t] / 6) !== cy) return 'a punched cell is split';
+      want[faceOf[t0]].push(cx + ',' + cy);
+    }
+    for (fi = 0; fi < faces.length; fi++) {
+      var has = faces[fi].holes.map(function (c) { return isArray(c) ? c.join() : '?'; }).sort().join(' ');
+      if (has !== want[fi].sort().join(' ')) return 'face ' + (fi + 1) + ': holes';
+    }
+    return true;
   }
 
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
