@@ -42,7 +42,10 @@ export async function run(t) {
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, fallbacks = 0, firstBad = null, n = 0;
   const keyPos = [0, 0, 0, 0], cues = {}, items = [];
-  let minArmPx = Infinity, sumScale = 0;
+  let minArmPx = Infinity, sumScale = 0, labelOff = 0, firstLabel = null, longShort = 0, phoneShort = 0, nAngles = 0;
+  // The reveal labels round each measured angle to 0.1° (view.js fmtDeg); with degrees on a 0.1°
+  // grid, neighbouring labels differ by exactly the gaps show-me states.
+  const lab = (d) => Math.round(d * 10);
   for (let ci = 0; ci < all.length; ci++) {
     for (let s = 0; s < per; s++) {
       const params = all[ci], seed = PX.rng.hash('angles-test', ci, s);
@@ -58,7 +61,17 @@ export async function run(t) {
       if (n % 8 === 0) items.push({ seed, params, item });
       keyPos[item.key]++;
       sumScale += item.scale;
-      L.measure(item).forEach((m) => { minArmPx = Math.min(minArmPx, m.arms[0], m.arms[1]); });
+      const ms = L.measure(item);
+      ms.forEach((m) => {
+        const lng = Math.max(m.arms[0], m.arms[1]);
+        minArmPx = Math.min(minArmPx, m.arms[0], m.arms[1]); nAngles++;
+        if (lng < L.LONG_MIN * item.scale - 1e-4) longShort++;
+        if (lng * 155 < 90) phoneShort++;
+      });
+      for (let k = 0; k < 3; k++) {
+        const a = item.order[k], b = item.order[k + 1];
+        if (lab(ms[b].deg) - lab(ms[a].deg) !== lab(item.gaps[k]) || lab(ms[a].deg) !== lab(item.deg[a])) { labelOff++; firstLabel = firstLabel || `seed ${seed}`; }
+      }
       shortcuts(L, item, cues);
     }
   }
@@ -70,6 +83,8 @@ export async function run(t) {
   t.eq(nonJson, 0, 'items survive JSON round trips');
   t.eq(fallbacks, 0, 'no item needed the fallback construction');
   t.ok(keyPos.every((c) => Math.abs(c / n - 0.25) < Math.max(0.03, 3 * Math.sqrt(0.25 * (1 - 0.25) / n))), `keys spread over the four positions (${keyPos.join(', ')})`);
+  t.eq(labelOff, 0, 'the reveal labels (0.1°) differ by exactly the stated gaps' + (firstLabel ? ` (${firstLabel})` : ''));
+  t.eq(longShort, 0, `every longer arm is at least ${L.LONG_MIN}·L (RV-dat-style-A §7; info: ${(100 * phoneShort / nAngles).toFixed(1)} % of longer arms are under 90 px in a 155 px phone cell)`);
 
   t.section('angles: validator catches broken items');
   const base = items[0].item;
@@ -79,6 +94,7 @@ export async function run(t) {
     ['two equal options', (it) => { it.options[(it.key + 1) % 4] = it.options[(it.key + 2) % 4].slice(); }],
     ['a stated degree changed', (it) => { it.deg[0] += 0.5; }],
     ['a point outside its cell', (it) => { it.angles[1].a = [1.2, 0.5]; }],
+    ['a longer arm cut below the floor', (it) => { it.angles.forEach((g) => { for (const P of [g.a, g.b]) { P[0] = g.v[0] + 0.5 * (P[0] - g.v[0]); P[1] = g.v[1] + 0.5 * (P[1] - g.v[1]); } }); }],
   ];
   for (const [name, edit] of broken) {
     const it = JSON.parse(JSON.stringify(base));
