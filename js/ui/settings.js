@@ -293,7 +293,7 @@
       end.setAttribute('data-action', 'testpause-end');
       p.body.appendChild(h('div.px-setting.px-testsoon-active', { 'data-testpause': 'on' },
         h('p', h('b', 'Left out of Train until ' + U.fmtDate(st.until, 'long') + ': '), andList(names(st.ids)) + '.'),
-        h('p.px-field-hint', 'Free play, Path, Section practice and the Library still have them. Today’s plan leaves them out too.'),
+        h('p.px-field-hint', 'Today’s plan leaves them out too. Free play, Path, Section practice and the Library still have them, and so does the Daily Challenge, which is the same for everyone.'),
         h('div.px-data-row', end)));
     } else {
       var body = h('div.px-testsoon-body', { hidden: !open });
@@ -360,7 +360,11 @@
       if (m.related.length) answer.appendChild(line('Related', andList(names(m.related)) + ': a small or unknown effect.', 'related'));
       m.untrained.forEach(function (u) { answer.appendChild(line(u.label, u.text, 'untrained')); });
       if (picked.length && !m.same.length && !m.related.length && !m.untrained.length) answer.appendChild(h('p.px-meta', 'No exercise in this version matches.'));
-      if (picked.indexOf('dat') >= 0) answer.appendChild(h('p.px-overlap-legal', O.ADA)); // the DAT is named: the ADA line goes with it
+      if (picked.indexOf('dat') >= 0) {
+        // leaving formats out keeps a result free of fresh practice; preparing is what the focus is for
+        answer.appendChild(h('p.px-testsoon-line', { 'data-line': 'focus' }, 'Preparing for this test rather than keeping its result free of practice? Turn on DAT-style focus above instead: it adds these formats to Train.'));
+        answer.appendChild(h('p.px-overlap-legal', O.ADA)); // the DAT is named: the ADA line goes with it
+      }
       var okDate = /^\d{4}-\d{2}-\d{2}$/.test(date.value) && date.value >= O.today(Date.now());
       pauseBtn.disabled = !(okDate && m.same.length);
       noteBtn.disabled = !(okDate && picked.length);
@@ -375,7 +379,7 @@
       O.noteTest(rec, { date: date.value, kinds: picked.slice(), paused: pz ? pz.ids : [] }, now);
       store.save();
       if (pz) PX.bus.emit('settings', { key: 'testPause', value: pz });
-      ui.toast(pz ? andList(names(pz.ids)) + (pz.ids.length === 1 ? ' stays' : ' stay') + ' out of Train until ' + U.fmtDate(pz.until, 'long') + '. Free play and the Library still have ' + (pz.ids.length === 1 ? 'it.' : 'them.') : 'Noted: your test on ' + U.fmtDate(date.value, 'long') + '.', { kind: 'ok' });
+      ui.toast(pz ? andList(names(pz.ids)) + (pz.ids.length === 1 ? ' stays' : ' stay') + ' out of Train until ' + U.fmtDate(pz.until, 'long') + '. Free play, the Library and the Daily Challenge (the same for everyone) still have ' + (pz.ids.length === 1 ? 'it.' : 'them.') : 'Noted: your test on ' + U.fmtDate(date.value, 'long') + '.', { kind: 'ok' });
       void m;
       done();
     }
