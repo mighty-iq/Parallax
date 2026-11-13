@@ -1548,7 +1548,9 @@
     function afterTrial(step, def, item, tr) {
       if (S.done || tr.outcome === 'aborted') return null;
       if (S.clock && tr.outcome !== 'skipped' && !tr.timeout) S.clock.touch(); // an answer is activity, however it came; a time-out is not
-      var result = { correct: !!(tr.result && tr.result.correct), rt: tr.rtMs, value: tr.result ? tr.result.value : undefined, timeout: !!tr.timeout,
+      // value2 (trial column 13): the exercise's score() result, else the view's respond meta
+      var v2 = tr.result && isNum(tr.result.value2) ? tr.result.value2 : tr.meta && isNum(tr.meta.value2) ? tr.meta.value2 : undefined;
+      var result = { correct: !!(tr.result && tr.result.correct), rt: tr.rtMs, value: tr.result ? tr.result.value : undefined, value2: v2, timeout: !!tr.timeout,
         input: tr.input || null, display: tr.display || undefined };
       if (tr.outcome === 'stutter') { result.outcome = 'stutter'; result.voided = true; }
       else if (tr.outcome === 'skipped') result.outcome = 'skipped';

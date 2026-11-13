@@ -38,6 +38,7 @@
         outcome: r[5], rt: isNum(r[6]) ? r[6] : null, value: isNum(r[7]) ? r[7] : null,
         p: isNum(r[8]) ? r[8] / 1000 : null, stage: isNum(r[9]) ? r[9] : null, session: null, raw: r,
         display: isNum(r[10]) ? r[10] : 0, input: isNum(r[11]) ? r[11] : 0, // v1.1 columns 11-12 (codes; 0 unknown)
+        value2: isNum(r[12]) ? r[12] : null, // v1.1 column 13: an exercise's second number
       });
     }
     return out;
@@ -116,7 +117,7 @@
   // The one trial CSV (Settings, the Log and the Lab's research export; store.exportCSV() writes
   // it through store.csv below): the header is PX.core.store.CSV_HEADER, plus b, g and answer for
   // the research export.
-  var HEAD = ['time_iso', 't_sec', 'exercise', 'version', 'mode', 'session', 'params_code', 'params', 'seed', 'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage', 'display', 'input'];
+  var HEAD = ['time_iso', 't_sec', 'exercise', 'version', 'mode', 'session', 'params_code', 'params', 'seed', 'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage', 'display', 'input', 'value2'];
   function csv(rs, opts) {
     var research = !!(opts && opts.research), S = PX.core.store;
     var head = (S && Array.isArray(S.CSV_HEADER) ? S.CSV_HEADER : HEAD).slice();
@@ -126,7 +127,7 @@
     rs.forEach(function (r) {
       var def = r.exId ? PX.ex.get(r.exId) : null, p = paramsOf(r), d = new Date(r.t * 1000);
       var row = [isFinite(d.getTime()) ? d.toISOString() : '', r.t, r.exId || '', r.ver, r.mode || '', r.session || '', r.code, paramsCsv(def, p), r.seed,
-        r.outcome, OUT[r.outcome], r.rt, r.value, r.p === null ? '' : U.round(r.p, 3), r.stage, DISP[r.display] || '', INP[r.input] || ''];
+        r.outcome, OUT[r.outcome], r.rt, r.value, r.p === null ? '' : U.round(r.p, 3), r.stage, DISP[r.display] || '', INP[r.input] || '', r.value2];
       if (research) {
         var b = '', g = '', ans = '';
         if (def && p) {
