@@ -50,7 +50,7 @@ Updated 2026-11-13 19:10 UTC. All 19 exercises are active in index.html (Knots a
 
 ## Running subagents and the files they write (Phase 2, launched 13 Nov ~15:20 UTC)
 - Reviews done: RV-A docs/dev/reviews/RV-dat-style-A.md (no wrong items; 2 rule-5 issues in Angles; Hole Punch symmetry = method); RV-B docs/dev/reviews/RV-section-overlap.md (no blockers; 8 should-fix).
-- B7 fix round done (2c68b6a). B5 fix round done (625eb27); B5 follow-up running (Angles LONG_MIN 0.7 if bounds hold; Fold validator re-simulates drawn steps).
+- B7 fix round done (2c68b6a). B5 fix round done (625eb27); B5 follow-up done: Angles LONG_MIN 0.7 kept; Fold validator re-simulates every drawn step (items identical).
 - RV-D done (docs/dev/reviews/RV-dat-style-B.md): no wrong items; Form face-shape cue 71 %, Openings cues; B6 fix round resumed (a0dc048b845b7fc8e).
 - Reviewer RV-E (Reckon and Homing: geometry, scoring, no-fix cues, shortcuts, feedback, voids, touch): a25ca175d24e7caab → docs/dev/reviews/RV-reckon-homing.md
 - RV-H done (docs/dev/reviews/RV-code-core.md): no blockers; 4 should-fix (closing-item cap, check time as practice, two-tab merge of new fields, idle cap on late timers); B1 fix round resumed (a34b20ea2c882325b).
