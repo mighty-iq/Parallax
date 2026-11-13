@@ -30,12 +30,13 @@ The first update, built by the Chimera community on Discord (https://discord.gg/
   served over https, Parallax has a web manifest and icons for the home screen. Track, Homing,
   Reckon and Angles keep separate ratings for small and large screens.
 - **Homing, rebuilt for touch (version 2):** slower, smoother motion (1.8 m/s, turns at 45°/s,
-  0.4-second ramps), routes of 12 to 28 m, and touch controls (drag the view, a dial, 1° and 5°
-  buttons). Routes are chosen so that answers that need no tracking (the turns reversed, a heading
-  never updated) miss, and turning straight round or a fixed answer stays near chance wherever the
-  routes allow. A trial is voided only when the walk itself was harmed, or when the screen changes
-  shape while you answer. The strategy card's side error, there since 1.0, is fixed. Its trials are
-  logged as version 2.
+  0.4-second ramps), routes of 12 to 28 m, and touch controls (drag the view, a dial, and 1° and 5°
+  buttons that act when you lift your finger, so swipes scroll). Landmarks are placed where the
+  walk shows them, ahead along a leg wherever there is room. Routes are chosen so that answers that
+  need no tracking (the turns reversed, a heading never updated) miss, and turning straight round
+  or a fixed answer stays near chance wherever the routes allow. A trial is voided only when the
+  walk itself was harmed, or when the screen changes shape while you answer. The strategy card's
+  side error, there since 1.0, is fixed. Its trials are logged as version 2.
 - **Reckon (EX-12, experimental):** path integration without landmarks. Watch a walk across an
   empty plain, with no objects, no sun and no compass, then point home or walk home. The ground's
   marks show motion but mark no place; harder levels thin them out or make them short-lived. Above
