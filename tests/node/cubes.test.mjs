@@ -40,7 +40,8 @@ export async function run(t) {
   t.section('cubes: items');
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, fallbacks = 0, firstBad = null, n = 0, hiddenItems = 0;
-  const keyHist = [0, 0, 0, 0, 0], perN = {}, items = [], acc = {};
+  const keyHist = [0, 0, 0, 0, 0], perN = {}, items = [], acc = {}, laterN = {}, cellKeys = [], asksLen = [0, 0, 0, 0, 0, 0];
+  let asksBad = 0, rayOff = 0, minTopRay = 1;
   for (let ci = 0; ci < all.length; ci++) {
     for (let s = 0; s < per; s++) {
       const params = all[ci], seed = PX.rng.hash('cubes-test', ci, s);
@@ -58,6 +59,16 @@ export async function run(t) {
       (perN[item.ask] = perN[item.ask] || [0, 0, 0, 0, 0])[item.key]++;
       if (item.hidden > 0) hiddenItems++;
       shortcuts(L, item, acc);
+      // Section mode's later questions: N in KRANGE at this size (never 5), each count in its range.
+      const hist = L.histogram(item.heights), KR = L.KRANGE[params.cubes];
+      asksLen[Math.min(5, item.asks.length)]++;
+      if (item.asks[0] !== item.ask || new Set(item.asks).size !== item.asks.length || item.asks.some((m) => !KR[m] || hist[m] < KR[m][0] || hist[m] > KR[m][1])) asksBad++;
+      item.asks.slice(1).forEach((m) => { (laterN[m] = laterN[m] || [0, 0, 0, 0, 0, 0])[hist[m]]++; });
+      cellKeys.push([`${params.cubes},${params.height},${item.ask}`, item.count, s % 2]);
+      // The validator's ray cast against the generator's z-buffer.
+      const rv = L.rayView(item.heights), zv = L.sight(item.heights);
+      if (rv.hidden !== zv.hidden || (rv.minTop < 0.5) !== (zv.minTop < 0.5)) rayOff++;
+      minTopRay = Math.min(minTopRay, rv.minTop);
     }
   }
   t.eq(threw, 0, 'generate never throws' + (firstBad && threw ? ` (${firstBad})` : ''));
@@ -72,6 +83,23 @@ export async function run(t) {
   const bestPerN = Object.values(perN).reduce((s, h) => s + Math.max(...h), 0) / n;
   t.ok(bestPerN <= 0.3, `"the most common answer for the asked N" ≤ chance + 10 (${(100 * bestPerN).toFixed(1)} %)`);
   t.ok(hiddenItems / n > 0.5, `most figures hide supports the solver must count (${(100 * hiddenItems / n).toFixed(0)} %)`);
+  // RV-dat-style-A §12: the most common answer per level and N, learned on half the items and
+  // tried on the other half (N and k are kept across the figure search's retries).
+  const prior = {};
+  cellKeys.filter((c) => c[2] === 0).forEach(([cell, k]) => { (prior[cell] = prior[cell] || [0, 0, 0, 0, 0, 0])[k]++; });
+  const test = cellKeys.filter((c) => c[2] === 1), guess = (cell) => { const h = prior[cell] || [0, 1, 0, 0, 0, 0]; return h.indexOf(Math.max(...h)); };
+  const priorHit = test.filter(([cell, k]) => guess(cell) === k).length / test.length;
+  t.ok(priorHit <= 0.3, `"the most common answer for the level and N" (learned on half the items) ≤ chance + 10 (${(100 * priorHit).toFixed(1)} %)`);
+  t.eq(rayOff, 0, `the validator's ray cast and the generator's z-buffer agree on every figure (smallest column top in view ${minTopRay.toFixed(3)})`);
+
+  t.section('cubes: later questions (Section mode)');
+  t.eq(asksBad, 0, 'asks: the item\'s own question first, then other N that KRANGE allows at this size, counts in range, never 5');
+  for (const [m, h] of Object.entries(laterN)) {
+    const tot = h.reduce((x, y) => x + y, 0), top = Math.max(...h);
+    t.ok(top / tot <= 0.3, `later questions for ${m} painted side${m === '1' ? '' : 's'}: the most common answer ≤ chance + 10 (${(100 * top / tot).toFixed(1)} % of ${tot}: ${h.slice(1).join('/')})`);
+  }
+  const meanAsks = asksLen.reduce((x, c, i) => x + c * i, 0) / n;
+  t.ok(meanAsks >= 2, `about two or more questions per figure for Section mode (mean ${meanAsks.toFixed(2)}; 1/2/3/4: ${asksLen.slice(1, 5).join('/')})`);
 
   t.section('cubes: validator catches broken items');
   const base = items.find((x) => x.item.hidden > 0).item;
@@ -82,6 +110,9 @@ export async function run(t) {
     ['options other than 1–5', (it) => { it.options = [0, 1, 2, 3, 4]; }],
     ['asked N changed', (it) => { it.ask = it.ask === 1 ? 2 : 1; }],
     ['a column split in two', (it) => { const G = it.grid; for (let z = 0; z < G; z++) it.heights[z][1] = 0; }],
+    ['a later question about 5 painted sides', (it) => { it.asks.push(5); }],
+    ['a later question asked twice', (it) => { it.asks.push(it.asks[0]); }],
+    ['the hidden count changed', (it) => { it.hidden += 1; }],
   ];
   for (const [name, edit] of broken) {
     const it = JSON.parse(JSON.stringify(base));

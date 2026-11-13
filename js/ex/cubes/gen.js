@@ -11,18 +11,21 @@
    The view. A parallel (axonometric) projection from the front right, 31° round from the front
    and 33.5° above the ground. Not isometric: in true isometric a cube one step right, up and
    forward lands on the same spot, so a column can pass for a shorter one in front of it. At this
-   angle no two lattice points of a 5 × 5 × 4 figure come closer than 0.35 cube edges on screen
-   (the node test searches every pair). Faces are drawn in three tones with outlines.
+   angle no two cube positions of a 5 × 5 × 4 figure come closer than 0.348 cube edges on screen
+   (the node test searches every pair; cube corners can come within 0.12 edges). Faces are drawn
+   in three tones with outlines.
 
-   The rules the viewer relies on (taught in learn.js): the only hidden cubes are the ones needed
-   to hold up others. So every column's top cube must be visible: validate renders the figure into
-   a software z-buffer and requires at least half of every column's top face to show, so the
-   visible tops fix every column's height and the figure has exactly one reading.
+   The rules the viewer relies on (taught in learn.js): a cube out of sight is there only to hold
+   up others. So every column's top cube must be visible: the generator renders the figure into a
+   software z-buffer and keeps it only when at least half of every column's top face shows, and
+   validate checks the same with its own ray cast (8 × 8 rays per face; RV-dat-style-A §13), so
+   the visible tops fix every column's height and the figure has exactly one reading.
 
    The question. N is asked only when 1–5 cubes have exactly N painted sides (the format's no-zero
    rule); the options are 1, 2, 3, 4 and 5 cubes. Each item draws N from its class and the count k
    evenly from N's range at that size (KRANGE) first, then searches figures with exactly k such
-   cubes, so neither N nor the figure's size points to an answer. The classic novice error, counting cubes that *show* N painted faces in
+   cubes (a failed search is retried with the same N and k), so neither N nor the figure's size
+   points to an answer. The classic novice error, counting cubes that *show* N painted faces in
    the picture (Kurtuluş & Yolcu 2013), is held near chance: an item where that count equals the
    key is redrawn three times in four; counting visible cubes only, or counting the bottom of
    ground cubes as painted, are redrawn more than half the time.
@@ -36,8 +39,10 @@
    with 5 options; the range is 4.0 logits.
 
    Section mode asks several questions about one figure: params.ask (an extra param, not a dim)
-   picks the i-th question of item.asks (every N with a count of 1–5, in a seeded order) about the
-   figure the seed draws, which does not depend on ask.
+   picks the i-th question of item.asks about the figure the seed draws, which does not depend on
+   ask. asks[0] is the item's own question; later ones are the other N that KRANGE allows at this
+   size (never 5) whose count lies in its range, in a seeded order, each kept with a probability
+   that evens out the later answers (NAT, KEEP below).
 
    Item: { ex: 'cubes', v: 1, seed, params, key, grid, heights, ask: N, count, asks, options:
    [1, 2, 3, 4, 5], hidden (cubes with no visible pixel) }. key = count − 1. */
@@ -63,18 +68,18 @@
   ];
   // Later questions about the same figure (Section mode, params.ask ≥ 1). NAT: how often each
   // count 1–5 turns up for a later question N at each size (per mille of the generator's figures,
-  // all heights and classes pooled; measured over 6,000 items, B5.md). Only N in KRANGE at that
+  // all heights and classes pooled; measured over 19,200 items, B5.md). Only N in KRANGE at that
   // size with a count in its range is asked later, and it is kept with probability KEEP[size][N]
-  // [count], which flattens the counts so that none is more than 28 % of that question's later
+  // [count], which flattens the counts so that none is more than 26 % of that question's later
   // answers (a range of three counts is made even). So neither "1 cube" nor any other answer is
   // a safe guess for a later question (RV-dat-style-A §5).
   var NAT = [
-    { 2: [360, 252, 117, 31, 0], 3: [183, 274, 263, 170, 76], 4: [76, 363, 389, 124, 4] },
-    { 1: [400, 194, 49, 2, 0], 2: [109, 179, 259, 215, 130], 3: [37, 98, 221, 291, 204], 4: [100, 217, 323, 249, 91] },
-    { 1: [212, 296, 228, 141, 25], 2: [26, 62, 101, 146, 238], 3: [3, 24, 102, 224, 268], 4: [95, 178, 306, 261, 121] },
-    { 1: [50, 107, 188, 206, 229], 2: [3, 7, 27, 43, 98], 3: [1, 11, 44, 107, 201], 4: [84, 188, 257, 249, 155] },
+    { 2: [358, 226, 130, 42, 2], 3: [187, 285, 265, 169, 64], 4: [84, 343, 400, 121, 1] },
+    { 1: [381, 194, 47, 3, 0], 2: [109, 207, 258, 217, 125], 3: [31, 107, 200, 308, 204], 4: [95, 203, 343, 263, 73] },
+    { 1: [204, 286, 248, 141, 30], 2: [24, 57, 118, 162, 231], 3: [5, 29, 103, 223, 257], 4: [88, 199, 273, 271, 127] },
+    { 1: [45, 121, 182, 228, 220], 2: [1, 10, 19, 56, 115], 3: [1, 10, 45, 114, 215], 4: [93, 183, 244, 247, 151] },
   ];
-  var LATER_MAX = 0.28;
+  var LATER_MAX = 0.26;
   // The largest cap t with max(min(nat, t)) / Σ min(nat, t) ≤ smax (bisection; the share grows with t).
   function capFor(nat, smax) {
     var lo = Mth.min.apply(null, nat), hi = Mth.max.apply(null, nat);
