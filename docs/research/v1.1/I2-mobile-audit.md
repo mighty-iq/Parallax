@@ -10,8 +10,8 @@
 | Script | What it does |
 |---|---|
 | `screens_crawl.py` | Every app screen at the four viewports, on a new record and on a simulated six-week record (the `SIM` learner from `tests/e2e/screens.py`): the welcome pop-up, the tour offer, Today, the More sheet, Library, the practise sheet, the exercise pages of Homing and Rotate, Progress, Log, Lab, Settings, About, the share sheet, the Daily Challenge intro and the Spatial Check intro. |
-| `ex_crawl.py` | Every training exercise in the app: Watch, Try, Go (the demo, the demo item answered, a Try item, its reveal and automatic show me), then a scored item in Free play (a screenshot during the stimulus for Track, Homing and Span, the answer state, the reveal). Answers by tapping the options where the layout is a choice grid. |
-| `check_crawl.py` | The Spatial Check: the intro, the expectations question, and for every probe its instruction card, the end of its worked example and its first scored item. |
+| `ex_crawl.py` | At all four sizes, every training exercise in the app: Watch, Try, Go (the demo, the demo item answered, a Try item, its reveal and automatic show me), then a scored item in Free play (a screenshot during the stimulus for Track, Homing and Span, the answer state, the reveal). Answers by tapping the options where the layout is a choice grid. |
+| `check_crawl.py` | The Spatial Check: the intro, the expectations question, and for every probe its instruction card, the end of its worked example and its first scored item; at 390 × 844 (the regular five probes) and at 360 × 740 and 844 × 390 (six, with the optional Level). |
 | `homing_touch.py` | Homing played start to finish with touch only (taps, touch drags and touch scrolls through CDP), from the welcome pop-up to the session summary, on a new record. |
 | `fps.py` | Frame intervals of the 3D exercises during their stimulus, at 1× and 4× CPU throttling. |
 | `captions.py` | Where the Watch demo's caption is, every 0.7 s while each exercise's demo plays (390 × 844, normal speed). |
@@ -100,21 +100,21 @@ Every item stacks, top to bottom: the app header (52 px, sticky), the status str
 ### 5.2 Scored items: is the whole answer on screen?
 How many px of the answer area (options, dial, Confirm) lie below the bottom edge, at the scroll position the player leaves when the item appears (scored item, Free play, adaptive settings; 0 = all visible). "Real 390" assumes the 390 × 844 phone shows about 750 px of page, which Safari does only once its toolbars have collapsed:
 
-| Exercise | 360 × 740 | 390 × 844 | real 390 (≈750) | 844 × 390 landscape (answer area, y) |
-|---|---|---|---|---|
-| Rotate (pick two, 4 options + Confirm) | 203 | 144 | 238 | all below (465–711) |
-| Spin (4 options) | 224 | 141 | 235 | all below (462–696) |
-| Fold (4 options) | 192 | 0 (ends at 832) | 82 | all below (556–739) |
-| Nets (2 options) | 0 | 0 | 0 | all below (470–558) |
-| Slice (4 options) | 88 | 3 | 97 | all below (400–586) |
-| Views (4 options) | 0 | 0 | 0 | all below (408–498) |
-| Orient (dial + Confirm) | 103 | 46 | 140 | dial 272–629, Confirm below |
-| Span (blocks + Confirm) | 0 | 0 | 0 | Confirm below (476–520) |
-| Hidden (5 options) | 0 | 0 | 0 | all below (391–479) |
-| Homing (dial + Confirm) | 149 | 64 | 158 | dial 315–656; the view 315–571 |
-| Track (Confirm under the cube) | 42 | 0 | 0 | Confirm below (574–618); the cube 294–566 |
+| Exercise | 360 × 740 | 390 × 844 | 412 × 915 | real 390 (≈750) | 844 × 390 landscape (answer area, y) |
+|---|---|---|---|---|---|
+| Rotate (pick two, 4 options + Confirm) | 203 | 144 | 82 | 238 | all below (465–711) |
+| Spin (4 options) | 224 | 141 | 91 | 235 | all below (462–696) |
+| Fold (4 options) | 192 | 0 (ends at 832) | 0 (ends at 913) | 82 | all below (556–739) |
+| Nets (2 options) | 0 | 0 | 0 | 0 | all below (470–558) |
+| Slice (4 options) | 88 | 3 | 0 | 97 | all below (400–586) |
+| Views (4 options) | 0 | 0 | 0 | 0 | all below (408–498) |
+| Orient (dial + Confirm) | 103 | 46 | 8 | 140 | dial 272–629, Confirm below |
+| Span (blocks + Confirm) | 0 | 0 | 0 | 0 | Confirm below (476–520) |
+| Hidden (5 options) | 0 | 0 | 0 | 0 | all below (391–479) |
+| Homing (dial + Confirm) | 149 | 64 | 19 | 158 | dial 315–656; the view 315–571 |
+| Track (Confirm under the cube) | 42 | 0 | 0 | 0 | Confirm below (574–618); the cube 294–566 |
 
-The items vary (the settings adapt), so a 2-option variant fits where a 4-option one does not: Rotate's same-or-mirror Try item fits at 390 (options end at 776), its pick-two scored item does not (988). The pattern is stable though: **every 4-option 3D or folding item and both dials need a scroll on a 360–390 phone**, and with a browser's bars (Safari shows about 660 px when its toolbars are expanded) nearly every item does. Choice cells are square (Rotate's are 172 × 172 px at 390 wide, with the figure using a fraction of the height; View Match's 172 × 172 cells hold pictures about 130 × 50), so two rows of options cost 350 px.
+The items vary (the settings adapt), so a 2-option variant fits where a 4-option one does not: Rotate's same-or-mirror Try item fits at 390 (options end at 776), its pick-two scored item does not (988). The pattern is stable though: **every 4-option 3D or folding item and both dials need a scroll on a 360–390 phone** (at 412 × 915 still Rotate, Spin and both dials), and with a browser's bars (Safari shows about 660 px when its toolbars are expanded) nearly every item does. Choice cells are square (Rotate's are 172 × 172 px at 390 wide, with the figure using a fraction of the height; View Match's 172 × 172 cells hold pictures about 130 × 50), so two rows of options cost 350 px.
 
 Scrolling to answer is more than a nuisance here:
 - **the stimulus leaves the screen** when you scroll down to the options (Rotate's reference, Orient's map, Homing's view), so comparing means scrolling back and forth, which is a different task from the one the item models;
@@ -127,7 +127,7 @@ Scrolling to answer is more than a nuisance here:
 - Try items show the goal and a tip above the item, so the Try item sits 90–110 px lower than a scored one (Fold's Try item needs 92 px of scroll at 390 × 844, Slice's 198, Orient's 220, Homing's 147).
 
 ### 5.4 The Spatial Check probes (timed)
-At 390 × 844 (`check_crawl.py`): Cube Match (2 answers) fits (521–595); **View Match's four pictures end at 879, so the last row needs a scroll while its 30 s clock runs** (`shots/p390_check_02_viewmatch_item.png`); Mechanisms fits (643–735); Patterns fits (grid and Confirm 310–605); Words fits (433–621). At 360 × 740 (with the optional Level probe): View Match's options end at 830 (90 px below the edge, 30 s clock), **Level's at 796 (56 px below, 20 s clock)**; Cube Match (505–579), Mechanisms (619–711), Patterns (310–605) and Words (437–625) fit. On a real phone with the browser's bars, Mechanisms and Words need a scroll too. The instruction cards fit one screen (Mechanisms' runs to 876 px at 360 × 740); the end of each worked example, where its answer is marked and the Start button waits in the sticky panel, is scrolled into place by the player (`answerIntoView`: by 201–277 px for View Match and Level), which works; the examples' captions talk keys (§5.6). Two consequences for measurement (standing rule 10):
+At 390 × 844 (`check_crawl.py`): Cube Match (2 answers) fits (521–595); **View Match's four pictures end at 879, so the last row needs a scroll while its 30 s clock runs** (`shots/p390_check_02_viewmatch_item.png`); Mechanisms fits (643–735); Patterns fits (grid and Confirm 310–605); Words fits (433–621). At 360 × 740 (with the optional Level probe): View Match's options end at 830 (90 px below the edge, 30 s clock), **Level's at 796 (56 px below, 20 s clock)**; Cube Match (505–579), Mechanisms (619–711), Patterns (310–605) and Words (437–625) fit. On a real phone with the browser's bars, Mechanisms and Words need a scroll too. **In landscape every probe's answer area starts below the 390 px edge** (Cube Match 476–532, View Match 432–567, Mechanisms 549–637), and **Patterns' memory grid itself runs to y 496, so its bottom rows are off-screen during the timed display** (`shots/l844_check_04_patterns_item.png`): in landscape that item cannot be seen whole, let alone answered fairly. The instruction cards fit one screen (Mechanisms' runs to 876 px at 360 × 740); the end of each worked example, where its answer is marked and the Start button waits in the sticky panel, is scrolled into place by the player (`answerIntoView`: by 201–277 px for View Match and Level), which works; the examples' captions talk keys (§5.6). Two consequences for measurement (standing rule 10):
 - a probe answered on a phone is partly a scrolling task, so a baseline taken on a computer and a check taken on a phone are not comparable;
 - **neither the check record nor the session record stores the screen class** (`rec.assess[]` holds `{ date, form, kind, results }`; sessions hold no `display`), so the report cannot even tell them apart. Track and Homing ratings are kept per screen class (`perDisplay`), the Check is not.
 
@@ -196,7 +196,7 @@ Landscape gets the desktop layout: the tab bar only shows under 720 px wide, so 
 | **Track** | **294–566 (794 × 270)** | Confirm 574–618 | **96 px of the cube while the spheres move** |
 | **Homing** | **315–571 (498 × 238)** | dial 315–656 | **75 px of the view (the sky) during the walk** |
 
-So in landscape the two motion exercises play their stimulus almost entirely below the edge of the screen, and every item needs a scroll before it can be answered. Wide 3D canvases are also wasted: a 794 × 150 strip shows a figure that a 150 × 150 square would show as well. Landscape is where a first-person view (Homing) and a wide field (Track) would be at their best on a phone, so it deserves its own layout rather than the desktop one: stimulus left, answers right, no header, a one-line status strip. Until then, a rotate-to-portrait hint during items would be honest. The welcome pop-up's landscape problem is in §4.
+So in landscape the two motion exercises play their stimulus almost entirely below the edge of the screen, and every item needs a scroll before it can be answered. The Spatial Check fares the same (§5.4): every probe's answers start below the edge, and Patterns' grid is cut during its timed display. Wide 3D canvases are also wasted: a 794 × 150 strip shows a figure that a 150 × 150 square would show as well. Landscape is where a first-person view (Homing) and a wide field (Track) would be at their best on a phone, so it deserves its own layout rather than the desktop one: stimulus left, answers right, no header, a one-line status strip. Until then, a rotate-to-portrait hint during items would be honest. The welcome pop-up's landscape problem is in §4.
 
 ## 9. Where Parallax gets opened: Discord, the home screen, the notch
 
@@ -214,7 +214,7 @@ Safari deletes all script-writable storage (localStorage included) of a site tha
 - Android Chrome can only make a shortcut that opens a normal tab (no standalone window, no install prompt); the menu install needs a manifest with a name, icons (192 and 512 px), `start_url` and `display` (no service worker is needed for the menu install since Chrome 108 on mobile; the automatic prompt still wants one).
 - iOS makes an icon from a page screenshot (there is no touch icon) and, before iOS 26, a bookmark that opens in Safari, not full screen. iOS 26 is reported to open any home-screen site as a web app by default; I could not confirm that here (the search budget ran out), so treat it as unverified. Either way the icon, the name and the colours are Parallax's to supply.
 - Without a service worker the home-screen icon of the GitHub Pages site does not open offline once the browser cache is gone. The single-file build (dist/Parallax.html) is the offline answer on computers; on phones a local HTML file is hard to open (iOS Files previews it without running scripts).
-- Constraints from CLAUDE.md rule 6: a `<link rel="manifest">` on `file://` makes Chrome log a CORS error (the e2e tests fail on console errors), and "no workers from files" rules out a service worker as a requirement. Both can be added as progressive enhancements that only switch on under `https:` (a small script that inserts the manifest link and registers a cache-first worker for the GitHub Pages copy), but that is the owner's call because it bends rule 6's wording.
+- Constraints from CLAUDE.md rule 6: a `<link rel="manifest">` on `file://` makes Chrome log a CORS error (checked, `manifest_check.py`: "Access to manifest at 'file:///…' from origin 'null' has been blocked by CORS policy"; the e2e tests fail on console errors), and "no workers from files" rules out a service worker as a requirement. Both can be added as progressive enhancements that only switch on under `https:` (a small script that inserts the manifest link and registers a cache-first worker for the GitHub Pages copy), but that is the owner's call because it bends rule 6's wording.
 - A full-screen home-screen app also needs the top inset handled (status bar) and a dark `theme-color` (`<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1B1F23">`).
 
 ### 9.4 Safe areas (the notch)
@@ -270,5 +270,4 @@ P1 = makes a phone session work; P2 = clear improvement; P3 = polish. "Files" ar
 - Target size: WCAG 2.2, 2.5.8 Target Size (Minimum), with its inline-link exception; Apple's 44 × 44 pt and Material's 48 × 48 dp guidance.
 
 ## Appendix: files
-In `/tmp/claude-0/-home-claude/145ff06a-4b5d-5025-8cb7-e87b9d56923b/scratchpad/v11-audit/mobile/`: `lib.py` (viewports, measurements), `screens_crawl.py` → `screens_p360_p390_p412_l844.json`; `ex_crawl.py` → `ex_<vp>_all.json`; `check_crawl.py` → `check_<vp>.json`; `homing_touch.py` → `p390_homingtouch.json`; `captions.py` → `captions_p390.json`; `fps.py` → `fps_1_4.json`; `readiness.py` → `readiness.json`; `modals.py` → `modals.json`; `touch_extras.py` → `touch_extras.json`; debugging aids `mq_check.py`, `dbg_fullshot.py`, `dbg_scroll.py` (dispatched touch events scroll the page in this headless shell; `Input.synthesizeScrollGesture` with a touch source does not). Screenshots in `shots/`, named `<viewport>_<screen or exercise>_<step>.png`.
-
+In `/tmp/claude-0/-home-claude/145ff06a-4b5d-5025-8cb7-e87b9d56923b/scratchpad/v11-audit/mobile/`: `lib.py` (viewports, measurements, the touch-restoring screenshot), `screens_crawl.py` → `screens_p360_p390_p412_l844.json`; `ex_crawl.py` → `ex_p360_all.json`, `ex_p390_all.json`, `ex_p412_all.json`, `ex_l844_all.json`; `check_crawl.py` → `check_p390.json` (5 probes), `check_p360.json` and `check_l844.json` (6 probes, with the optional Level); `homing_touch.py` → `p390_homingtouch.json`; `touch_extras.py` → `touch_extras.json`; `captions.py` → `captions_p390.json`; `fps.py` → `fps_1_4.json` (`fps_summary.py` prints it); `readiness.py` → `readiness.json`; `modals.py` → `modals.json`; `manifest_check.py` (+ `manifest_test/`); debugging aids `mq_check.py`, `dbg_fullshot.py`, `dbg_scroll.py` (dispatched touch events scroll the page in this headless shell; `Input.synthesizeScrollGesture` with a touch source does not). Screenshots in `shots/`, named `<viewport>_<screen or exercise>_<step>.png` (for exercises: A1–A4 Watch, Try, Go; B1 the stimulus, B2 the answer state, B3 the reveal).
