@@ -292,6 +292,55 @@ def app_item(page, params, until):
         page.wait_for_timeout(100)
 
 
+def app_wtg(b, cons):
+    """Watch and Try in the real player at 390 × 844 (the player's ctx.demo and ctx.practice flags): Reckon's
+    Watch runs no silent walk (the demo's captioned replay is the only one), Homing's Watch reaches its
+    captions within seconds at normal speed, and Try answers stay out of Reckon's bias record."""
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, **PHONE)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    open_app(page)
+    page.evaluate("() => { const K = PX.ex.view('homing').kit, w = K.walker; window.__walks = 0; K.walker = function () { __walks++; return w.apply(this, arguments); }; }")
+    state = lambda: page.evaluate('window.__play ? __play.state : null')
+    hist = lambda: page.evaluate("() => ((PX.core.store.state.reckon || {}).hist || []).length")
+    # Reckon: Watch, then two Try items, fast
+    page.evaluate('PX.debug.fast(true)')
+    page.evaluate("PX.core.store.state.tour.seen['reckon'] = false")
+    h0 = hist()
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "reckon" }, { force: true })')
+    page.wait_for_function("() => window.__play && __play.state === 'showme'", timeout=30000)
+    walks_watch = page.evaluate('window.__walks')
+    tries, seen_next = 0, False
+    for _ in range(1500):
+        s_ = state()
+        if s_ == 'respond':
+            page.evaluate('__play.answer(true).catch(() => 0)')
+            if seen_next:
+                tries += 1
+            page.wait_for_timeout(150)
+        elif s_ == 'reveal':
+            page.evaluate('__play.next()')
+            seen_next = True
+            if tries >= 4:  # items 3 and 4 are a regular point and return item (1 and 2 are tasks, never kept)
+                break
+            page.wait_for_timeout(150)
+        page.wait_for_timeout(40)
+    walks_all, h1 = page.evaluate('window.__walks'), hist()
+    page.evaluate('void __play.end()')
+    C.ok(walks_watch == 0 and tries >= 4 and walks_all >= tries and h1 == h0,
+         f'Reckon Watch, Try: no silent walk before the demo (walks at the demo {walks_watch}); {tries} Try items walked ({walks_all} walks) and left the bias record alone ({h0} → {h1} entries)')
+    # Homing: Watch at normal speed reaches its captions within seconds (no silent first walk)
+    page.evaluate('PX.debug.fast(false)')
+    page.evaluate("PX.core.store.state.tour.seen['homing'] = false")
+    t0 = page.evaluate('performance.now()')
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "homing" }, { force: true })')
+    page.wait_for_function("() => window.__play && __play.state === 'showme'", timeout=60000)
+    secs = (page.evaluate('performance.now()') - t0) / 1000
+    page.evaluate('void __play.end()')
+    C.ok(secs < 6, f'Homing Watch: the captioned demo starts {secs:.1f} s after Watch opens (a silent walk first would take 15–28 s)')
+    ctx.close()
+
+
 def app_pause(b, cons):
     """The real player's pause mid-walk (RV S4): Esc opens its sheet, the walk freezes and the item is void;
     Resume goes on with the walk to its end, and the answer is logged as void."""
@@ -616,6 +665,7 @@ def main():
         phone_play(b, cons)
         app_touch(b, cons)
         app_pause(b, cons)
+        app_wtg(b, cons)
         desktop_keys(b, cons)
         pauses_and_voids(b, cons)
         throttled(b, cons)
