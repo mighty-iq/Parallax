@@ -193,6 +193,14 @@
       placeTiles();
       v.render(S.scene, S.cam);
     };
+    // Input handlers (a drag on the view) only move the pose and ask for one paint on the next frame: a
+    // paint inside every pointermove keeps a slow phone's main thread busy, input queues up behind it,
+    // and a tap that follows (Confirm) can be lost.
+    S.renderSoon = function () {
+      if (S.soon) return;
+      S.soon = true;
+      timing.loop(function () { S.soon = false; S.render(); return false; });
+    };
     // The 2 × 2 tiles whose union covers [x − TILE/2, x + TILE/2] round the viewer.
     function placeTiles() {
       if (!S.tiles.length) return;
@@ -1005,7 +1013,7 @@
     st.confirm.disabled = false;
     st.mode = mode;
     st.input = inputOf(e) || (mode === 'keys' ? 'key' : st.input);
-    if (mode === 'drag') { st.S.stopLook(); st.S.setPose(st.S.pose.x, st.S.pose.y, st.item.heading + st.raw); st.S.render(); }
+    if (mode === 'drag') { st.S.stopLook(); st.S.setPose(st.S.pose.x, st.S.pose.y, st.item.heading + st.raw); st.S.renderSoon(); }
     else st.S.lookTo(st.item.heading + st.value, 160);
   }
   function turnBy(d, mode, e, exact) {

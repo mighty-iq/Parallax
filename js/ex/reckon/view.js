@@ -258,7 +258,7 @@
     st.input = st.kit.inputOf(e) || (mode === 'keys' ? 'key' : st.input);
     readout();
     controls();
-    if (mode === 'drag') { st.S.stopLook(); placeWalker(); st.S.render(); }
+    if (mode === 'drag') { st.S.stopLook(); placeWalker(); st.S.renderSoon(); }
     else { var E = endOf(st.item); st.S.lookTo(E.h + st.value, 160); }
   }
   function turnBy(d, mode, e, exact) {
