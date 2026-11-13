@@ -17,7 +17,7 @@
     ],
     rules: [
       'Every face that touches another cube or the ground is unpainted.',
-      'The only hidden cubes are the ones that hold up the cubes above them. Every column\'s top cube is in view.',
+      'A cube you cannot see is there only to hold up cubes above it. Every column\'s top cube is in view.',
       'A cube that sits under another one has no painted top.',
     ],
     demo: [
@@ -77,10 +77,10 @@
       figure: 'Equal cubes, painted on every outside face except the bottom.',
       question: 'The question names a number of painted sides to look for.',
       options: 'Answers are 1 to 5 cubes. One is right.',
-      tally: 'Cube {n}: {sides} painted sides.',
-      tallyHidden: 'Cube {n} is hidden under the cube above it: {sides} painted sides.',
+      tally: 'Cube {n}: {sides}.',
+      tallyHidden: 'Cube {n} is hidden under the cube above it: {sides}.',
       skip: 'The other cubes have a different number of painted sides.',
-      done: '{k} {cubes} exactly {N} painted sides: answer {k}.',
+      done: '{k} {cubes} exactly {sides}: answer {k}.',
       chosen: 'Answer {n} is {d} the true count: check the hidden cubes and the faces at the back.',
     },
     checkin: { whole: 'I recognised the positions at a glance', parts: 'I went through the cubes one by one', unsure: 'Not sure, or both' },
