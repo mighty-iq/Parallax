@@ -296,10 +296,10 @@ def open_app(page):
         PX.ex.list().forEach(d => { r.tour.seen[d.id] = true; }); }""")
 
 
-def app_item(page, params, until):
-    """A Free play run of Reckon with these settings, until the player reaches state `until` (an intro or
-    offer card may come first, as in fit.py)."""
-    cfg = {'mode': 'free', 'exId': 'reckon', 'run': '1', 'trials': 2, 'params': params}
+def app_item(page, params, until, ex='reckon'):
+    """A Free play run of Reckon (or `ex`) with these settings, until the player reaches state `until` (an
+    intro or offer card may come first, as in fit.py)."""
+    cfg = {'mode': 'free', 'exId': ex, 'run': '1', 'trials': 2, 'params': params}
     page.evaluate(f'void PX.core.router.go("play", {json.dumps(cfg)}, {{ force: true }})')
     for _ in range(900):
         if page.evaluate('window.__play ? __play.state : null') == until:
@@ -424,6 +424,57 @@ def app_touch(b, cons):
          f'the real player by touch: the answer shows its reveal and keeps it, no click reaches Next ({REPORT["touch"]["app"]})')
     shot(page, 'app_touch_end')
     ctx.close()
+
+
+REVEAL_VIS = """(ex) => { const q = s => document.querySelector('.pl-trial ' + s), bar = document.querySelector('.pl-feedback');
+    const v = q('.ex-fp-verdict'), n = q('.ex-fp-notes'), c = ex === 'reckon' ? q('.ex-reckon-chart') : null, last = c && !c.hidden ? c : n;
+    const r = e => e.getBoundingClientRect();
+    return { barTop: Math.round(r(bar).top), notesBottom: Math.round(r(n).bottom), lastBottom: Math.round(r(last).bottom), verdictTop: Math.round(r(v).top),
+             block: Math.round(r(last).bottom - r(v).top), chart: !!(c && !c.hidden), habit: !!q('.ex-reckon-bias'), words: n.textContent.split(/\\s+/).length,
+             scrollY: Math.round(scrollY) }; }"""
+
+
+def reveal_sizes(b, cons):
+    """RV-play-nav-knots 4 at the fit check's two phone sizes: in the real player, after a wrong answer the
+    view brings its whole explanation above the sticky result bar (kit.showAboveBar) with the verdict in
+    view. The longest texts: Reckon after five wrong answers (drift chart and habit line), a point item
+    turned as if the heading never updated (its hint), a return item walked that way too far (split,
+    drift and hint); Homing on its longest route."""
+    rows = []
+    for vp in ((360, 640), (390, 844)):
+        ctx = b.new_context(viewport={'width': vp[0], 'height': vp[1]}, **PHONE)
+        page = ctx.new_page()
+        cons.append(Console(page))
+        open_app(page)
+        page.evaluate('PX.debug.fast(true)')
+        tt = Touch(ctx, page)
+        plan = [('reckon', 'point')] * 3 + [('reckon', 'return'), ('reckon', 'point'), ('reckon', 'point'), ('reckon', 'return'), ('homing', None)]
+        for i, (ex, v) in enumerate(plan):
+            params = {'route': 7, 'flow': 1, 'speed': 1, 'tolerance': 2} if ex == 'reckon' else {'route': 7, 'landmarks': 0, 'tolerance': 2}
+            if v:
+                params['variant'] = v
+            app_item(page, params, 'respond', ex)
+            if i >= 5 and ex == 'reckon':
+                it = page.evaluate('() => ({ key: __play.item.keyDeg, S: __play.item.turns.reduce((a, b) => a + b, 0), d: __play.item.distance, v: __play.item.walkSpeed })')
+                turn_to(page, it['key'] + it['S'], tt)
+                if v == 'return':
+                    walk_back(page, 1.3 * it['d'], it['v'], tt)
+                tt.tap('.pl-trial ' + ('.ex-reckon-here' if v == 'return' else '.ex-fp-confirm'))
+            else:
+                page.evaluate('__play.answer(false).catch(() => __play.answer(true)).catch(() => 0)')
+            page.wait_for_function("() => __play.state === 'reveal'", timeout=60000)
+            page.wait_for_timeout(1400)
+            if i >= 5:
+                vis = page.evaluate(REVEAL_VIS, ex)
+                vis.update(size='%dx%d' % vp, ex=ex, v=v or 'point')
+                rows.append(vis)
+                shot(page, 'reveal_%dx%d_%s_%s' % (vp[0], vp[1], ex, v or 'point'))
+            page.evaluate('void __play.end()')
+        ctx.close()
+    REPORT['reveal'] = rows
+    for r in rows:
+        C.ok(r['lastBottom'] <= r['barTop'] + 1 and r['verdictTop'] >= 0 and (r['ex'] == 'homing' or (r['chart'] and r['habit'])),
+             f"the real player at {r['size']}, {r['ex']} {r['v']}: the explanation{' with chart and habit line' if r['ex'] == 'reckon' else ''} ends above the result bar, the verdict in view ({r})")
 
 
 def desktop_keys(b, cons):
@@ -690,6 +741,7 @@ def main():
         b = launch(p)
         phone_play(b, cons)
         app_touch(b, cons)
+        reveal_sizes(b, cons)
         app_pause(b, cons)
         app_wtg(b, cons)
         desktop_keys(b, cons)
