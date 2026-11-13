@@ -428,10 +428,13 @@
       && isInt(p.resolve) && p.resolve >= 0 && p.resolve < RESOLVE.length && isInt(p.pose) && p.pose >= 0 && p.pose < POSES.length)) return 'bad params';
     if (!isArray(item.angles) || item.angles.length !== 4) return 'four angles';
     for (var c = 0; c < 4; c++) { var g = item.angles[c]; if (!g || !isPt(g.v) || !isPt(g.a) || !isPt(g.b)) return 'angle ' + (c + 1) + ' leaves its cell'; }
-    var m = measure(item), delta = GAPS[p.gap], R = RANGE[SIZES[p.size]];
+    var m = measure(item), delta = GAPS[p.gap], R = RANGE[SIZES[p.size]], L = item.scale, eps = 1e-4;
+    if (!(typeof L === 'number' && L > 0 && L <= LMAX)) return 'bad scale';
     var lens = [];
     for (c = 0; c < 4; c++) {
-      if (!(m[c].arms[0] >= MIN_ARM && m[c].arms[1] >= MIN_ARM)) return 'angle ' + (c + 1) + ': an arm is too short';
+      var lng = Mth.max(m[c].arms[0], m[c].arms[1]), sht = Mth.min(m[c].arms[0], m[c].arms[1]);
+      if (!(sht >= MIN_ARM && sht >= armMin(delta) * L - eps)) return 'angle ' + (c + 1) + ': an arm is too short';
+      if (!(lng >= LONG_MIN * L - eps && lng <= ARM[1] * L + eps)) return 'angle ' + (c + 1) + ': the longer arm is outside [' + LONG_MIN + ', 1]·L';
       lens.push(m[c].arms[0], m[c].arms[1]);
       if (!(m[c].deg >= R[0] - TOL && m[c].deg <= R[1] + TOL)) return 'angle ' + (c + 1) + ' outside its size class (' + m[c].deg.toFixed(2) + '°)';
       if (!isArray(item.deg) || abs(m[c].deg - item.deg[c]) > TOL) return 'angle ' + (c + 1) + ': drawn ' + m[c].deg.toFixed(3) + '°, stated ' + (item.deg || [])[c];
@@ -493,7 +496,7 @@
     validate: validate,
     score: score,
     lib: {
-      GAPS: GAPS, SIZES: SIZES, RESOLVE: RESOLVE, POSES: POSES, RANGE: RANGE, ARM: ARM,
+      GAPS: GAPS, SIZES: SIZES, RESOLVE: RESOLVE, POSES: POSES, RANGE: RANGE, ARM: ARM, LONG_MIN: LONG_MIN,
       sincos: sincos, atan2d: atan2d, measure: measure, kendall: kendall, orderOf: orderOf, widestWrong: widestWrong,
       norm: normParams, fallback: fallbackFor,
     },
