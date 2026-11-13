@@ -3,7 +3,7 @@
 Updated 2026-11-13 12:10 UTC.
 
 ## Phase
-1. Research and plan. The plan gate follows: send the plan message, then stop for the owner's go.
+1. Research and plan: DONE. Plan gate: the plan message was sent on 13 Nov; waiting for the owner's go (and D1–D3).
 
 ## The brief in one line each (BRIEF.md is the word-for-word source)
 1. Time counting looks bugged; fix it and other bugs.
@@ -22,9 +22,9 @@ Updated 2026-11-13 12:10 UTC.
 - Phase 1 research and audits by subagents (see below).
 
 ## Next three steps
-1. Collect the research notes and audits; write docs/dev/PLAN.md (milestones, acceptance checks).
-2. Send the plan message (five parts), then stop for the go.
-3. After the go: build on `build` with parallel builders against a written contract.
+1. Wait for the go and the answers to D1–D3 (PLAN.md, end).
+2. After the go: write docs/dev/CONTRACT-v1.1.md (file ownership, clock API, screen class, PAT focus, new answer types).
+3. Launch the builders (clock+bugs, phone layout, Homing+Reckon, Knots, PAT A, PAT B, Section+focus+overlap notes).
 
 ## Open questions for the owner
 - Which test is the "analogical assessment test"? (name or link)
@@ -37,7 +37,7 @@ Updated 2026-11-13 12:10 UTC.
 
 ## Running subagents and the files they write (launched 2026-11-13 ~12:15 UTC)
 - R1 path integration: a5466bc6d9b282c45, docs/research/v1.1/R1-path-integration.md — DONE: new exercise 'Reckon' (EX-12, NAV, experimental) reusing Homing's route model; no fixes of any kind (plain, flat sky, re-seeded fading ground flow, varied speed); passive 2–4-leg outbound, active return (turn, hold Walk, tap Here) + point items; binary rating with logged angle/distance/drift errors, bias feedback, replay of believed vs true home vector; ladder routes 8 + flow 3 + speed 3 + tolerance 3; phone: drag to turn, big Walk button, comfort ≤2 m/s ≤45°/s. Homing keeps landmarks as an easier stage; Homing fixes: pause keeps walking unseen, rotation not voided, 6× minified texture shimmer, 3 m/s/60°/s too fast. Search budget ran out; PMC/eLife blocked.
-- R2 knots: a075373df78a5034c, docs/research/v1.1/R2-knots.md
+- R2 knots: a075373df78a5034c, docs/research/v1.1/R2-knots.md — DONE: one exercise, variants pull/untie/link/mirror; geometry-first items, pairs matched on alternation/writhe/visible moves; validator: simplify→determinant→Jones (≤12 crossings); 2D SVG ropes; prototype in scratchpad/r2/.
 - R3 DAT PAT: a5755f23e92ae406f, docs/research/v1.1/R3-dat-pat.md — DONE: 90 items/60 min, six parts (15 each per prep sites), IRT 200–600 since 3/2025; overlap: Fold high, Views medium, Nets low–medium, cube counting low, apertures/angles none. Recommends adaptive exercises + timed Section mode; build order Fold variant, Angles, Painted Cubes, Views 'complete the views', Openings, Form. ADA guide diagrams not seen (proxy) → option counts etc. from prep sites; DAT trademark line drafted.
 - R4 test overlap: ae90e4ec9093266e3, docs/research/v1.1/R4-test-overlap.md — DONE: test not identified (likeliest CORE/VISA verbal Analogies or a figural-analogies test; lead: CognitiveMetrics 'ATAT'); no exercise uses analogy format; near overlap with published spatial subtests (Fold, Hidden, Views count, Nets, Span); recommends About + per-exercise notes + one-tap check-in + optional 'Taking a test soon?' helper. Web-search budget ran out near its end.
 - I1 timing and bugs: a1e82da82a641e395, docs/research/v1.1/I1-timing-bugs.md (scratch: scratchpad/v11-audit/timing/) — DONE: four disagreeing clocks (wall-time budget drives the HUD 'min left'; sessions really end on a hidden item count from a 9–11 s/item estimate; lossy activeMs drops gaps >90 s and counts idle <90 s; answer clock correct). HUD never ticks; pause/hidden/idle eat the budget though the pause sheet says the clock stops. Plus: reload starts a new session (#/play), Daily Challenge reload spends the attempt / NaN number / UTC vs local day, achievements for stopped Threshold/Speed runs, Progress counts skipped/voided/probe rows, Speed sized from untimed estimate, CSV exports differ, Sounds setting dead, 150 % text overflow, HUD 'item 2 of 2' over feedback, deadline bar jump, label/formatting nits.

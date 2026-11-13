@@ -39,18 +39,18 @@ for, not found. Every source carries its reading level:
    linked by a linking number ≠ 0 or a Jones polynomial unlike the unlink's; "unlinked" needs a
    constructive split certificate. A mirror image is certified different when V(t) ≠ V(1/t).
 4. **Shortcuts are the main design risk, and they are measurable.** In naive pools the fraction of
-   over/under alternations predicts "knot" with 79–92 % accuracy, |writhe| 72 %, and the count of
+   over/under alternations predicts "knot" with 75–92 % accuracy, |writhe| 72 %, and the count of
    visible R2 slides 90 % [proto]. Sampling a knot and an unknot from the same picture (shadow),
    matched on alternation count and |writhe|, brought these to 50 %, 50 % and 61 % [proto]. The
    visible-slide count must be matched too.
 5. **Rendering:** 2D SVG rope diagrams with a background-coloured casing around the over-strand and
    ends running off the plate. At most 12 crossings on a 320 px plate, crossing angles ≥ 35°.
-   3D tubes (three.js `TubeGeometry`, not yet in the vendored subset) for the mirror variant and a
+   3D tubes (three.js `TubeGeometry`; the vendored subset exports neither it nor `CatmullRomCurve3`) for the mirror variant and a
    tutorial "pull tight" demo. "Show me" replays the validator's Reidemeister certificate as a 2D
    morph: exact, cheap, and from the same model that grades the answer.
 6. **Cost:** the Jones polynomial by state sum takes 0.5 ms (8 crossings), 1.6–3 ms (10), 6–12 ms
    (12), 52 ms (14) and 246 ms (16) per diagram in Node [proto]. A cheap route (greedy R1/R2
-   simplification, then the determinant) takes 0.05–0.2 ms and settles 85–100 % of diagrams; the
+   simplification, then the determinant) takes 0.05–0.2 ms and settles 85–96 % of braid-closure diagrams; the
    Jones polynomial is needed only for the rest [proto].
 7. **Licences:** SnapPy/Spherogram, Regina and KnotFolio are GPL; Topoly is non-commercial; KnotPlot
    is proprietary, and the Knot Atlas's knot pictures are KnotPlot images; KnotInfo states no
@@ -97,7 +97,7 @@ for, not found. Every source carries its reading level:
     bending r = .33, vocabulary r = .29. MRT (β = .26) and PFT (β = .38) predict the KRT jointly,
     R² ≈ .40; bending and vocabulary add nothing. For the pulling items, MRT β = .26 and PFT β = .32.
   - Men scored higher in Study 2 (d = .39); in Study 1 women scored higher on different materials
-    (d = .38). Childhood "masculine" activities predicted lower MRT and KRT scores, which the authors
+    (d = .38). Masculine-stereotyped spatial activities predicted lower MRT and KRT scores, which the authors
     call inconsistent mediation.
   - The authors state that the KRT's validity for training outcomes is untested and that no expert
     groups were compared. Materials are on OSF; their licence was not checked.
@@ -246,7 +246,7 @@ outline with its over/under information removed.
 
 | # | Item (question) | Spatial validity | Generation | Verification | Shortcut risk | Phone fit | Verdict |
 |---|---|---|---|---|---|---|---|
-| A | **Pull**: "Pull both ends: does a knot remain?" | High: simulating the whole rope; KRT pulling items load on MRT and PFT | High: one shadow yields both classes | High: certificate or det/Jones, exact up to 24 crossings | High if uncontrolled: alternation 79–92 %, writhe 72 %, visible slides 90 % [proto]; matched ≤ 61 % | High up to ~12 crossings | Build first |
+| A | **Pull**: "Pull both ends: does a knot remain?" | High: simulating the whole rope; KRT pulling items load on MRT and PFT | High: one shadow yields both classes | High: certificate or det/Jones, exact up to 24 crossings | High if uncontrolled: alternation 75–92 %, writhe 72 %, visible slides 90 % [proto]; matched ≤ 61 % | High up to ~12 crossings | Build first |
 | B | **Untie / Tie**: "Which marked crossing, switched, unties (ties) it?" | High: one crossing's effect on the whole rope | Medium: 41 % of random knotted diagrams allow 1-of-4 [proto] | High: switch each option and classify | Medium-high: "creates a removable loop" scores ~55 % vs 25 % [proto] | High (letter tags + buttons) | Build second |
 | C | **Link**: "Are these two loops linked?" (+ rope through a ring) | Medium-high | High | Linked: lk ≠ 0 or Jones; unlinked: split certificate | High: the parity of A-over-B crossings is a sound rule | High | Build third |
 | D | **Mirror**: "Same knot or its mirror?" (3D tubes, turned and deformed) | High (Vz + chirality); overlaps Rotate | Medium: 3D embeddings and checked deformations | High: discrete isotopy check for the key; V(t) vs V(1/t) for mirrors | Medium: writhe sign; silhouettes must match by construction | Medium (4 tube thumbnails) | Experimental, later |
@@ -256,6 +256,21 @@ outline with its over/under information removed.
 | H | **Hang**: "Remove this nail: does the picture fall?" | Medium-high: rope around pegs | High: free-group words | High: free reduction | Medium: exponent sums | High | Separate exercise idea, later |
 | I | **Trace**: "Which end does this rope lead to?" | Low-medium: spatial scanning (SS) | High | High | Low | High | Tutorial step only |
 | J | **Turn over**: "Which picture shows this flat knot turned over?" | Medium-high | High | High | High: stem-blind "most like the others" finds the key | High | Only inside D |
+
+**Difficulty dimensions per type** (DJ; the A–C dims are worked out in §7.2):
+
+| # | Dimensions |
+|---|---|
+| A | Crossings; untangling depth (visible R1/R2 only → a slide-over (R3) first → a detour that adds a crossing); strand spacing; later, flat vs tube look |
+| B | Crossings; whether the key's switch shows a visible move or needs a slide-over to see; how many distractor switches also create a removable loop |
+| C | Crossings between the loops; linking type (clasp, lk ±1 → double clasp, lk ±2 → Whitehead-type, lk 0); extra self-crossings; 2 → 3 rings |
+| D | Knot (3_1 → 5_x → 6_x → 7_x); deformation (rigid turn → mild → strong, with added curls); turn angle |
+| E | Strands the route crosses (1–4); loops on the rope |
+| F | Number of steps; crossing changes per step |
+| G | Catalogue size; scramble depth |
+| H | Nails (2–5); word length; nesting of commutators |
+| I | Rope length; spacing |
+| J | Crossings |
 
 ### 3.1 A. Pull ("Knot or not?"): deknotting
 
@@ -392,7 +407,7 @@ outline with its over/under information removed.
 
 | Method | How | For Parallax | Against |
 |---|---|---|---|
-| Random smooth shadow + crossing choice | Random closed planar curve (spline or short Fourier series); self-intersections are crossings; choose over/under per crossing | One shadow gives both a knot and an unknot, so crossing count tells nothing; the geometry is the display | Few crossings: 1200 accepted Fourier shadows (2.7 % acceptance) had 3 crossings: 0, 4: 780, 5: 280, 6: 104, 7: 29, 8: 4, 9: 3 [proto]; needs a better source for 8–12 |
+| Random smooth shadow + crossing choice | Random closed planar curve (spline or short Fourier series); self-intersections are crossings; choose over/under per crossing | One shadow gives both a knot and an unknot, so crossing count tells nothing; the geometry is the display | Few crossings: of 1200 accepted Fourier shadows of 4–10 crossings (2.7 % acceptance), 780 had 4, 280 had 5, 104 had 6, 29 had 7, 4 had 8 and 3 had 9 [proto]; needs a better source for 8–12 |
 | Braid closures | Random word in B_3 or B_4, closure drawn in lanes | Regular, legible, any crossing count; balanced classes: unknots 52 % at 6 crossings, 30 % at 12 [proto] | Schematic look; alternation still tells (75–92 %); 4–15 % need R3 or Jones [proto] |
 | Uniform random diagrams (Cantarella, Chapman & Mastin 2016) | All diagrams with n crossings | Exact knot probabilities for n ≤ 10 | 78 % of 10-crossing diagrams are unknots, mostly tree-like (all crossings nugatory) [abstract]; nugatory crossings are trivial to see, so filter them |
 | Grid diagrams (arc presentations; Cromwell 1995 [unverified]) | Two random permutations of size n; vertical over horizontal | Every knot has one; orthogonal and very legible; unknots recognisable by Dynnikov's monotone simplification (2006 [abstract]) | The fixed over/under rule removes the over/under reading; small n gives mostly unknots |
@@ -513,8 +528,10 @@ outline with its over/under information removed.
    - else det ≠ 1 ⇒ knot;
    - else compute Jones on the simplified diagram (≤ 24 crossings): V = 1 ⇒ unknot, otherwise knot.
 
-   In the prototype the cheap route took 0.05–0.2 ms, left 0–15 % of diagrams for the Jones step,
-   and never contradicted the Jones polynomial in 600 checks [proto].
+   In the prototype the cheap route took 0.05–0.2 ms and left 4–15 % of braid-closure diagrams
+   (6–12 crossings) for the Jones step. It never contradicted the Jones polynomial in 600 checks,
+   but those 600 were all on easy shadows where every diagram was an unknot, so the agreement check
+   must be repeated on the real generator's pools [proto].
 
 **Per item type:**
 
@@ -658,10 +675,13 @@ once data exist.
 
 ### 5.5 three.js notes
 
-- **`TubeGeometry` is not in Parallax's vendored subset** (`tools/vendor-three.mjs`, CORE list).
-  `CatmullRomCurve3` is bundled (as a dependency). Adding `'TubeGeometry'` to CORE is a one-word
-  change plus `npm run vendor`; three.js is MIT. Alternatively, build the tube by hand into a
-  `BufferGeometry` with parallel-transport frames.
+- **Neither `TubeGeometry` nor `CatmullRomCurve3` is exported by Parallax's vendored subset.** I
+  loaded `vendor/three.min.js` in Node: `THREE.TubeGeometry`, `THREE.CatmullRomCurve3` and
+  `THREE.Curve` are all undefined. The curve classes exist inside the bundle only as internals.
+  Adding `'TubeGeometry'` and `'CatmullRomCurve3'` to CORE in `tools/vendor-three.mjs`, then
+  `npm run vendor`, fixes it; three.js is MIT. Alternatively, build the tube by hand into a
+  `BufferGeometry` with parallel-transport frames, which needs no new exports and keeps the
+  geometry bit-identical to the validator's spline.
 - `TubeGeometry(path, tubularSegments, radius, radialSegments, closed)` [record: three.js docs].
   `closed = true` with a closed `CatmullRomCurve3` (centripetal by default) makes the loop.
   three.js spreads the frame twist over the loop so no seam shows [unverified detail; from general
@@ -669,3 +689,284 @@ once data exist.
 - **Budget (DJ):** about 300 tubular × 12 radial segments is ≈ 7 k triangles per knot, so four
   option thumbnails are easily affordable. Use the one shared renderer, take thumbnails with
   `stage3d.snapshot` in `drawOption` (ready phase), and do nothing heavy after `present`.
+
+## 6. Licences of code and data
+
+Parallax may not use GPL, AGPL or non-commercial code or assets. It may reimplement published
+algorithms.
+
+| Resource | What it is | Terms found | Use in Parallax |
+|---|---|---|---|
+| KnotInfo (Livingston & Moore) | Tables of knot invariants | No licence on its About page, only "please remember to cite KnotInfo" [record] | Do not ship its tables. Optionally use values as cross-checks in node tests, with citation |
+| `database_knotinfo` (PyPI, Oehms) | KnotInfo and LinkInfo as Python lists | "GPL" [record] | No |
+| The Knot Atlas (Bar-Natan, Morrison) | Wiki with PD and DT codes, invariants, pictures | No licence on the pages read. Bar-Natan's copyleft notice lets anyone reproduce material he holds copyright to, but not others' work. Knot pictures are captioned "KnotPlot image" [record] | No pictures. Codes only as test facts, with citation |
+| KnotTheory` (Mathematica) | Bar-Natan's package | Not checked [gap] | No (Mathematica in any case) |
+| SnapPy / Spherogram | Python topology software | GPLv2+ [record: PyPI] | No |
+| Regina | Low-dimensional topology software | GPLv2+ [record] | No |
+| KnotFolio (Miller) | Draw and identify knots | GPL-2.0 or later [record: GitHub] | No |
+| Topoly | Polymer topology toolkit | "Free for non-commercial use" [record: PyPI] | No |
+| pyknotid (Taylor et al.) | Knot identification in Python | No licence stated on the docs or PyPI pages read; believed MIT [unverified] | Not needed |
+| KnotPlot (Scharein) | Knot visualiser and relaxer | Proprietary; paid key; hosting its files forbidden [record] | No |
+| KnotGym (Chen & Artzi) | RL environment | MIT [full] | Ideas; code with notice if ever needed |
+| Knottingham (Finke & Weitz) | Interactive diagram editor | MIT [full] | Ideas, e.g. gap geometry |
+| three.js (`TubeGeometry`, `CatmullRomCurve3`) | 3D library | MIT | Yes: add both to the vendored subset, or build tubes by hand |
+| KRT materials (OSF) | Photos and items | Article CC BY 4.0; materials' licence not checked; photos derived from Grog's knots | Never copy items or photos |
+| Animated Knots by Grog; Rolfsen-table drawings | Photos and figures | Copyrighted | No; draw our own |
+
+**What to reimplement**, all short and all from published mathematics:
+
+- PD conventions and crossing detection;
+- the Kauffman bracket and Jones normalisation (Kauffman 1987);
+- the Fox-colouring determinant;
+- the Alexander matrix, if needed;
+- the linking number;
+- the Goeritz matrix and signature, if needed;
+- the greedy R1/R2 simplifier plus a bounded R3 search;
+- the curve rendering.
+
+Mathematical facts such as "V(3_1) = …" are not copyrightable. The EU sui generis database right
+might cover substantial extracts of a table, which is one more reason not to ship extracted tables
+(DJ, not legal advice).
+
+## 7. Recommendation for Parallax
+
+### 7.1 Item types, ranked: one exercise, "Knots" (EX-12), with variants
+
+1. **pull**: "Pull both ends: does a knot remain?" (yes/no, chance .5). The core deknotting item:
+   cleanest verification, best phone fit, and the prototype shows its shortcuts can be neutralised.
+2. **untie**: "Which marked crossing, switched, unties it?", with the knotting counterpart **tie**:
+   "Which marked crossing, switched, ties a knot?" (choice of 4, chance .25). Causal reasoning about
+   one crossing; exact verification.
+3. **link**: "Are these loops linked?" (yes/no; sub-variant: rope through a ring). Easy to verify,
+   hard to keep counting-proof (§7.4), so it suits higher levels or may be deferred.
+4. **mirror** (experimental, later): "Same knot or its mirror?" with 3D tubes. Run it as an
+   experimental variant once the 2D variants have data. It needs `TubeGeometry` and the discrete
+   isotopy check.
+
+All variants share one rating (ENGINE). Definition sketch (DJ), filling in EXERCISE-GUIDE §3:
+
+```js
+PX.ex.define({
+  id: 'knots', version: 1, code: 'EX-12', name: 'Knots', short: 'Knots',
+  abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train',
+  answer: 'yesno', answers: { pull: 'yesno', untie: 'choice', link: 'yesno' },
+  variants: ['pull', 'untie', 'link'],
+  chance: function (p) { return p.variant === 'untie' ? 0.25 : 0.5; },
+  dims: [
+    // one ladder couples crossing count and untangling depth, because many pairs cannot exist
+    // (no 3-crossing unknot needs a slide-over; detours need about 10 crossings), and the engine
+    // has no feasibility mechanism: every params combination must generate
+    { key: 'rope', label: 'Rope', levels: ['3', '4', '5', '6', '6 slide-over', '7', '8 slide-over',
+      '9 slide-over', '10 slide-over', '11–12 detour'], step: 0.40 },
+    { key: 'spacing', label: 'Spacing', levels: ['open', 'close', 'tight'], step: 0.25 },
+  ],
+  base: -1.75,   // pull: ≈ 90 % at θ = 0 with g = .5 and lapse .03 (P = .5 + .47·σ(1.75) ≈ .90)
+  // generate, validate, score, lib (geometry, PD, invariants, simplifier, certificate → show me)
+});
+```
+
+### 7.2 Difficulty dimensions and why
+
+| Dim | Levels | Step (logits) | Reason | Confidence |
+|---|---|---|---|---|
+| rope (crossings and untangling depth, one ladder) | 3, 4, 5, 6 crossings with visible moves (R1/R2 only); 6 with a slide-over (≥ 1 R3 first); 7; 8, 9, 10 with a slide-over; 11–12 with a detour (a move that adds a crossing, Culprit-like) | 0.40 per rung, 3.6 over the range | More rope to trace (tracing time grows with curve length, §1.1). More crossings also mean more possible simplifications and lower unknot base rates [proto]. KnotGym agents degrade sharply with crossings. Detours are hard by definition (hard unknots, §4.4). For knots, depth means the decoy loops to clear before the reduced core shows | Low: hand-set, no human data |
+| spacing | open (non-adjacent strands ≥ 36 px apart at 320 px); close (≥ 24 px); tight (≥ 18 px) | 0.25 per level, 0.5 over the range | Tracing slows when other curves are near (Jolicoeur & Ingleton 1991; Jeurissen et al. 2016) | Low-medium (direction known, size unknown) |
+
+- **Why one ladder:** crossing count and depth cannot be separate additive dims, because many
+  pairs do not exist. No 3-crossing unknot needs a slide-over (the prototype's small unknots were
+  R1/R2-simplifiable), and the smallest hard unknot diagrams in the sources have 10–11 crossings
+  (§4.4). The engine has no feasibility mechanism, so every params combination must generate. The
+  rungs where a slide-over first becomes possible (6 here) are a guess [unverified]: the node test
+  that enumerates all combinations will show where they really start, and the ladder should follow.
+- **Total range:** 4.1 logits, meeting the guide's ≥ 4.
+- **Anchor:** KRT pulling items, photos of real knots answered untimed, were .81 correct (Study 1).
+  With g = .5 and lapse .03 that is b ≈ −0.66 for an average adult, roughly the middle of the
+  scale. This is only a sanity check: different medium, sample and timing.
+- **Refit:** the steps must be refitted from the community's pooled research exports, as CLAUDE.md
+  says of all hand-set difficulties.
+- **Not dims** (DJ): rope look (flat or tube) stays a separate variant for later, because its
+  direction is unknown. Tags, number of options and the tie/untie direction are fixed per variant.
+
+### 7.3 Generation and verification (summary)
+
+**Generate:**
+
+1. Draw a shadow: a spline with integer control points, or a braid-like rope drop, with the right
+   crossing count and spacing level, that passes the legibility spec (§5.2).
+2. For **pull**: sample crossing assignments until there is one of the wanted class, matched to its
+   partner item on alternation count, |writhe|, visible R1/R2 counts and monotone flags. Partners
+   are drawn from the same shadow in the same generation stream. Open the rope on the outer face
+   and run the ends off the plate.
+3. Set the depth of the **rope** rung by geometric scrambles (curls, push-overs, slides), checked by the
+   simplifier.
+4. For **untie / tie**: choose the four tagged crossings (exactly one class-changing switch), with
+   distractors matched on the "switch creates a visible move" feature.
+5. For **link**: build clasps, double clasps or Whitehead patterns, or split pairs; scramble; and
+   keep the parity of A-over-B crossings balanced (§7.4).
+6. Retry up to 50 times with forked seeds, then fall back to a fixed-seed construction (EXERCISE-GUIDE
+   §4).
+
+**Validate** (independent): re-derive the crossings from the geometry, check legibility, classify
+by the cheap route (certificate, then det, then Jones ≤ 24) per §4.7, and confirm exactly one
+right answer. The certificate, recomputed by the validator, is stored in `lib` for show me.
+
+### 7.4 Shortcut solvers for the node tests (each ≤ chance + 10 over ≥ 2 000 items)
+
+- **pull** (best threshold): crossing count; alternation count (closed, and from each end);
+  |writhe| and writhe sign; visible R1, visible R2 and their sum; number of bigon faces;
+  monotone-from-either-end; rope length; bounding-box aspect.
+  - The prototype says alternation, writhe and visible R2 need matching; the rest were near 50 %
+    [proto].
+- **untie / tie** (stem-based and stem-blind), per option:
+  - Does the switch create a visible R1/R2 move? How does it change the alternation count?
+  - Distance from the centre; crossing angle; whether the crossing sits in a twist region (an
+    alternating bigon).
+  - Stem-blind: odd one out by each feature; the option most like the others.
+- **link:**
+  - Unsigned parity of A-over-B crossings, a cheap and sound tell. At most 20 % of the linked items
+    may have an odd count (§3.3).
+  - Number of crossings between the loops; layered or not.
+  - The **signed** count (the linking number) is also sound. Judging crossing handedness is a
+    demanding spatial step, so treat it as an analytic strategy (like Rotate's), not a cheap
+    heuristic, but report it in the tests. Decide with data whether to cap it (DJ). This is the
+    main reason link ranks third.
+- **mirror:** writhe sign; majority handedness; silhouette difference (zero by construction);
+  crossing count; stem-blind odd one out and the most alike pair.
+
+### 7.5 Tutorial: Watch, Try, Go (play-to-learn)
+
+- **Watch** (demo, three steps):
+  1. One crossing, labelled: "The gap shows which strand is underneath."
+  2. **The minimal pair:** two ropes with the same shape and one crossing different. Show me pulls
+     both: one falls open, the other ties tight. "Same shape, one crossing different: only the
+     crossings decide."
+  3. The three moves in plain words: **untwist** a curl (R1), **slide off** a loop that stays on top
+     (R2), **slide over** a crossing (R3).
+- **Try** (practice, not logged; easiest first):
+  - pull, rope rung "3" (visible moves only), spacing open;
+  - pull, rope rung "4", spacing open;
+  - untie on a twist knot (5_2) with one clasp crossing and three twist crossings tagged. Switching
+    the clasp unties it; switching a twist crossing leaves a trefoil (§3.2). This also teaches
+    "clasp versus twist".
+- **Go:** the first adaptive items.
+- **Strategy cards** (two, as for every exercise):
+  - **Picturing:** "Hold one end still and pull the other in your mind. Watch which loops slide off
+    and which ones tighten."
+  - **Step by step:** "Follow the rope from one end. Untwist curls. Slide off any loop where the same
+    strand is on top at both crossings. Repeat. Nothing left: no knot. If what is left goes
+    over-under-over all the way round, it is a knot." The last sentence is the reduced-alternating
+    theorem (§3.1), so it is true.
+  - **When to switch:** trace step by step when the picture is crowded (spacing "tight").
+- **Tips** (just in time, once each):
+  - "If, from one end, the rope is on top at every crossing it meets first, it falls apart."
+    (Descending ropes.)
+  - "A twist knot comes undone at its clasp, not at its twists."
+  - "The rope is perfectly slippery and cannot pass through itself: real ropes can jam, these
+    cannot."
+- **Bridge (honest):** §1.7, with its limitation line beside it (standing rule 2).
+
+### 7.6 Risks
+
+| Risk | Evidence | Mitigation |
+|---|---|---|
+| Cheap tells decide items | Alternation 75–92 %, \|writhe\| 72 %, visible R2 90 % in naive pools; link parity is sound for odd counts [proto] | Matched pair sampling; node shortcut solvers per variant; restrict link |
+| Analytic rules replace imagery (reduce then check alternation; descending; signed counting) | KRT: knot reasoning shares variance with MRT and PFT but is partly distinct | Accept as strategies, as Rotate does; record strategy-card use; probes measure transfer |
+| Difficulty steps are guesses | No human data on diagram knots [gap] | Hand-set steps flagged; refit from pooled exports; start conservatively (3–8 crossings in v1.1) |
+| Phone legibility at 10–12 crossings | Spacing rules; shadow acceptance falls with n [proto] | Validator spec §5.2; e2e phone screenshots; cap crossings by checks |
+| CPU budget (20 ms p95) | Jones 6–12 ms at 12 crossings, 52 ms at 14; Fourier shadow search 2.7 % acceptance [proto] | Cheap route first; displayed diagrams ≤ 12 crossings; spatial hashing or constructive shadows; fallback item |
+| A wrong key | Greedy simplifier misses hard unknots; Jones cannot certify unlinks | Jones fallback (≤ 24 crossings) for knots; constructive certificates for links; reject anything unproved |
+| 3D over/under ambiguity; WebGL budget | Occlusion only; one context | Keep 3D to the experimental mirror variant; projection checks; snapshots in the ready phase |
+| Test overlap | KRT pulling items, UCEED, Math Kangaroo | Count gains there as near transfer; never use the KRT as a probe |
+| Honesty | No transfer evidence for knots | Bridge text; no tying, sailing or surgery claims |
+| Licences | GPL and NC tools; KnotPlot images in the Knot Atlas | Reimplement; draw everything; cite facts |
+
+## References
+
+Reading levels as defined at the top. DOIs are given where seen; "[unverified]" marks details from
+memory.
+
+- Applebaum, T., Blackwell, S., Davies, A., Edlich, T., Juhász, A., Lackenby, M., Tomašev, N., & Zheng, D. (2024). The unknotting number, hard unknot diagrams, and reinforcement learning. arXiv:2409.09032. [record]
+- Ayres, P., Marcus, N., Chan, C., & Qian, N. (2009). Learning hand manipulative tasks: When instructional animations are superior to equivalent static representations. *Computers in Human Behavior* 25 [volume/pages unverified]. [abstract]
+- Bennett-Pierre, G., Shipley, T. F., Newcombe, N. S., & Gunderson, E. A. (2025). Developing a novel measure of non-rigid, ductile spatial skill. *Cognitive Research: Principles and Implications* 10:13. https://doi.org/10.1186/s41235-025-00621-w [full; appendices C–E not read]
+- Brandt, M. G., & Davies, E. T. (2006). Visual-spatial ability, learning modality and surgical knot tying. *Canadian Journal of Surgery* 49(6), 412–416. [full]
+- Browne, C. (2025). The Unknot Game. *Bridges 2025 Conference Proceedings*, 45–52 [pages inferred]. [full]
+- Burton, B. A., Chang, H.-C., Löffler, M., de Mesmay, A., Maria, C., Schleimer, S., Sedgwick, E., & Spreer, J. Hard diagrams of the unknot. arXiv:2104.14076 (journal version c. 2023 [venue unverified]). [full]
+- Cantarella, J., Chapman, H., & Mastin, M. (2016). Knot probabilities in random diagrams. *J. Phys. A* 49, 405001. https://doi.org/10.1088/1751-8113/49/40/405001 [abstract]
+- Chen, Z., & Artzi, Y. (2025). Knot So Simple: A minimalistic environment for spatial reasoning (KnotGym). NeurIPS 2025 Datasets & Benchmarks; arXiv:2505.18028. [full]
+- Croom, S., & Firestone, C. (2024). Tangled physics: Knots strain intuitive physical reasoning. *Open Mind* [volume/pages unverified]. [full: author manuscript]
+- de Koning, B., Marcus, N., Brucker, B., & Ayres, P. (2019). Does observing hand actions in animations and static graphics differentially affect learning of hand-manipulative tasks? *Computers & Education* 141, 103636. https://doi.org/10.1016/j.compedu.2019.103636 [abstract]
+- Demaine, E. D., Demaine, M. L., Minsky, Y. N., Mitchell, J. S. B., Rivest, R. L., & Pătraşcu, M. (2014). Picture-hanging puzzles. *Theory of Computing Systems* 54(4), 531–550. https://doi.org/10.1007/s00224-013-9501-0 [abstract]
+- De Toffoli, S., & Giardino, V. (2014). Forms and roles of diagrams in knot theory. *Erkenntnis* 79(4), 829–842. [abstract]
+- Diamantis, I. (2025). The VIBE framework: A student-centered approach to teaching knot theory in secondary mathematics. arXiv:2506.22886. [full]
+- Dowker, C. H., & Thistlethwaite, M. B. (1983). Classification of knot projections. *Topology Appl.* 16 [unverified]. [not opened]
+- Dynnikov, I. (2006). Arc-presentations of links: Monotonic simplification. *Fundamenta Mathematicae* 190 [secondary: Wikipedia]; arXiv:math/0208153. [abstract]
+- Eliahou, S., Kauffman, L. H., & Thistlethwaite, M. B. (2003). Infinite families of links with trivial Jones polynomial. *Topology* 42 [unverified]. [not opened]
+- Even-Zohar, C. Models of random knots (survey). [full]; Even-Zohar, Hass, Linial & Nowik (2016), Invariants of random knots and links, *Discrete Comput. Geom.* [unverified details]. [record]
+- Finke, L., & Weitz, E. (2024). A phenomenological approach to interactive knot diagrams (Knottingham). arXiv:2309.00445. [full]
+- Garland, T. B. (2012). *Mental rotation and learning procedural motor tasks from instructional media* (Master's thesis). Arizona State University. [full]
+- Henrich, A., MacNaughton, N., Narayan, S., Pechenik, O., Silversmith, R., & Townsend, J. A midsummer knot's dream. arXiv:1003.4494 (*College Mathematics Journal*, 2011 [unverified]). [full]
+- Jeurissen, D., Self, M. W., & Roelfsema, P. R. (2016). Serial grouping of 2D-image regions with object-based attention in humans. *eLife* 5, e14320. https://doi.org/10.7554/eLife.14320 [full]
+- Jolicoeur, P., & Ingleton, M. (1991). Size invariance in curve tracing. *Memory & Cognition* 19(1), 21–36. https://doi.org/10.3758/BF03198493 [abstract]
+- Jolicoeur, P., Ullman, S., & MacKay, M. (1986). Curve tracing: A possible basic operation in the perception of spatial relations. *Memory & Cognition* 14 [details unverified]. [secondary]
+- Kalun, P., Dunn, K., Wagner, N., Pulakunta, T., & Sonnadara, R. (2020). Recent evidence on visual-spatial ability in surgical education: A scoping review. *Canadian Medical Education Journal* 11(6). https://doi.org/10.36834/cmej.69051 [abstract]
+- Kauffman, L. H. (1987). State models and the Jones polynomial. *Topology* 26 [unverified]; Murasugi (1987) and Thistlethwaite (1987) on alternating diagrams [unverified]. [not opened; textbook results]
+- Kronheimer, P. B., & Mrowka, T. S. (2011). Khovanov homology is an unknot-detector. *Publ. Math. IHÉS* 113, 97–208. https://doi.org/10.1007/s10240-010-0030-y [abstract]
+- Lackenby, M. (2015). A polynomial upper bound on Reidemeister moves. *Annals of Mathematics* 182(2), 491–564. [secondary]; Lackenby (2021), The efficient certification of knottedness and Thurston norm, *Adv. Math.* [secondary]; Lackenby (2026), Incompressible surfaces, hierarchies and unknot recognition, arXiv:2607.23350. [full, first part]
+- Maguire, R. (2024). Relative strengths of knot invariants by experiment (slides, Dartmouth). [full]
+- McCormick, P. A., & Jolicoeur, P. (1991). Predicting the shape of distance functions in curve tracing: Evidence for a zoom lens operator. *Memory & Cognition* 19(5), 469–486. https://doi.org/10.3758/BF03199570 [abstract]
+- Patil, V. P., Sandt, J. D., Kolle, M., & Dunkel, J. (2020). Topological mechanics of knots and tangles. *Science* 367(6473), 71–75. https://doi.org/10.1126/science.aaz0135 [full]
+- Pooresmaeili, A., & Roelfsema, P. R. (2014). A growth-cone model for the spread of object-based attention during contour grouping. *Current Biology* [details unverified]. [secondary: Jeurissen et al.]
+- Ramadevi, P. Detection of chirality and mutations of knots and links. arXiv:1107.2179 (2011). [full]
+- Santos, P. E., Cabalar, P., & Casati, R. The knowledge of knots: An interdisciplinary literature review. *Spatial Cognition & Computation* (2019) [venue unverified]; 2020 draft. [full: draft]
+- Schwan, S., & Riempp, R. (2004). The cognitive benefits of interactive videos: Learning to tie nautical knots. *Learning and Instruction* 14, 293–305. [record; secondary: Garland 2012]
+- Shimizu, A. (2014). Region crossing change is an unknotting operation. *J. Math. Soc. Japan* [unverified details]; arXiv:1011.6304. [record]
+- Tuzun, R. E., & Sikora, A. S. Verification of the Jones unknot conjecture up to 24 crossings. arXiv:2003.06724 [published venue unverified]; 22 crossings: *J. Knot Theory Ramifications* 27 (2018). [full: arXiv]
+- Xiong, A., Taylor, A. J., Dennis, M. R., & Whittington, S. G. Knot probabilities in equilateral random polygons. arXiv:2108.07197 [venue unverified]. [full]
+- Product and licence pages [record]: Tangle Master 3D (App Store); Knots 3D (App Store); Unknot! (Steam, app 3544020); Region Select (omu.ac.jp); KnotPlot download page; KnotInfo About page; `database_knotinfo` (PyPI); Spherogram (PyPI); Topoly 0.9.7 (PyPI); pyknotid (docs, PyPI); Regina homepage; KnotFolio (GitHub); Bar-Natan's Copyleft notice; Knot Atlas pages (10_132; Citing The Knot Atlas); three.js `TubeGeometry` docs; UCEED 2022 item (collegedunia); Math Kangaroo 2025 grade 3–4 item 3 (video solution page); Wikipedia: Unknotting problem; Wikipedia: The Knot Atlas.
+
+## Flagged: papers a core decision rests on that I could not read in full
+
+1. **Jolicoeur, Ullman & MacKay (1986)**, *Memory & Cognition* 14, curve tracing; expected DOI
+   10.3758/BF03198373 [unverified]. **Needed:** the tracing rate and how it grows with curve length
+   and strand proximity. **Decision:** the step sizes of the rope and spacing dims.
+2. **Pooresmaeili & Roelfsema (2014)**, *Current Biology*, growth-cone model. **Needed:** the size of
+   the slowing when curves are near. **Decision:** the spacing dim.
+3. **Eliahou, Kauffman & Thistlethwaite (2003)**, *Topology* 42, and **Thistlethwaite (2001)**.
+   **Needed:** the smallest crossing number of a non-trivial link whose Jones polynomial equals the
+   unlink's. **Decision:** whether a Jones check could ever certify "unlinked" for ≤ 12 crossings.
+   Current rule: never; use split certificates.
+4. **Bennett-Pierre et al. (2025)**, https://doi.org/10.1186/s41235-025-00621-w: read except
+   appendices C–E; OSF materials not opened. **Needed:** item-level difficulty of the pulling items,
+   and the materials' licence. **Decision:** the base-difficulty anchor, and what must not be copied.
+5. **Kalun et al. (2020)**, https://doi.org/10.36834/cmej.69051: abstract only. **Needed:** the
+   knot-tying correlations. **Decision:** the wording of the bridge text and validity claims.
+6. **de Koning et al. (2019)**, https://doi.org/10.1016/j.compedu.2019.103636: abstract only.
+   **Needed:** the size of the spatial-ability × animation effect. **Decision:** show me as smooth
+   animation versus stepped frames.
+7. **Cantarella, Chapman & Mastin (2016)**, https://doi.org/10.1088/1751-8113/49/40/405001: abstract
+   only. **Needed:** knot-type probabilities per crossing number on reduced diagrams.
+   **Decision:** generator acceptance rates (the prototype partly covers this).
+8. **Tuzun & Sikora**, arXiv:2003.06724: read on arXiv, but the published version was not checked.
+   **Needed:** the venue and final wording. The arXiv theorem ("diagrams up to 24 crossings")
+   already supports the "V = 1 ⇒ unknot for ≤ 24 crossings" rule.
+
+## ACCESS: sources I could not open
+
+- pmc.ncbi.nlm.nih.gov/articles/PMC11495958 (Croom & Firestone): reCAPTCHA. I read the author
+  manuscript on PhilArchive instead.
+- cmej.ca full text of Kalun et al. (2020): the permission request was not answered. Abstract read
+  via DOAJ.
+- link.springer.com/article/10.3758/BF03198373 (Jolicoeur, Ullman & MacKay 1986, by the DOI I
+  expected): the permission request was not answered.
+- link.springer.com/article/10.1007/s11251-009-9119-4 (an *Instructional Science* article from the
+  knot-tying search; not identified): site error.
+- elifesciences.org/articles/14320: needs JavaScript. Read the PDF instead.
+- dblp.org record of Santos et al.: blocked by an anti-bot page, so the venue is unverified.
+- cognitiveresearchjournal.springeropen.com (Bennett-Pierre et al.): the permission request was
+  not answered. Read the PDF mirror at rcastoragev2.blob.core.windows.net instead.
+- apps.apple.com, "Unknot: Trivialize the Loop": site error.
+- Europe PMC REST API via curl: blocked by the session's proxy (403).
+- Not attempted, for budget: the full texts of Ayres et al. (2009), Schwan & Riempp (2004),
+  Pooresmaeili & Roelfsema (2014), Eliahou, Kauffman & Thistlethwaite (2003), Thistlethwaite
+  (2001), Cantarella et al. (2016); pyknotid's licence file on GitHub; KnotTheory`'s licence; the
+  KRT materials on OSF (https://osf.io/x9uqe/); Patil et al.'s supplement.
