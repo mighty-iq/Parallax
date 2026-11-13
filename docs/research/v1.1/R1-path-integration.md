@@ -84,6 +84,8 @@ None of these make it impossible; together they make the no-landmark level a tes
 4. **Clean logs and tutorial.** A new id starts its own "reckon@1" rows and its own Watch–Try–Go; Homing's version, ratings and logs stay valid.
 5. **Owner's wording.** "Mode" in the brief reads as "a way to practise", not one of the engine's progression modes; the Library can show Reckon next to Homing ("Homing · with landmarks", "Reckon · no landmarks") so it feels like a mode of navigation practice [DJ].
 
+6. **Community input (relayed by the coordinator, 13 Nov).** A player who knows an earlier path-integration training tool says that the absence of landmarks is essential, because landmarks are what navigators use to *reduce* dead-reckoning error, and that Parallax's Homing ("Nav mode") sidestepped this by adding landmarks (the windmill and the others); the earlier tool relied mostly on egocentric path integration and on minimising error. He pointed to Wikipedia's "Dead reckoning": the method advances a known position by speed, heading and time, "these errors tend to compound themselves over greater distances", and accuracy is restored "by using other, more reliable methods to get a new fix part way through the journey", such as a landmark coming into view [Wikipedia, read]. The critique is right for Homing as built: its ladder starts with three landmarks, its tutorial tells people to "use them like a compass", its difficulty model prices their removal at only +0.4 logit per level, and so a learner can reach mid-levels without ever practising dead reckoning. Homing's 400 m landmarks are mainly *heading fixes* (§1.2), and heading is exactly what visual-only path integration loses (§3.5). This supports the split: **Reckon never shows a landmark or any other fix, in any item, practice item or demo; Homing keeps its landmarks as the separate, easier stage before it** (§8.1 states how).
+
 Costs: one more exercise in the rotation (the "11 exercises" text, the beginner order, the scheduler tests and the guide change), and a second NAV exercise in Lab cluster B. If adding an exercise is ruled out, the fallback is Homing v2 with `variants: ['face', 'return']`, the 'return' variant forcing landmarks to none, a custom difficulty with a variant offset, and a version bump; it is workable but mixes two scales in one rating (see §8.8).
 
 ---
@@ -112,7 +114,7 @@ Notes on each:
 - **Passive transport** gives full control of the stimulus: the path, its speeds and its key are fixed by the item, so it is solver-verifiable (Homing today; Wiener & Mallot 2006; Gramann 2005; Riecke & Wiener 2007; Chrastil 2017; Stangl 2020 used a guiding baton).
 - **Active movement** (Riecke 2002 mouse; Scherer 2024 arrow keys; Apple Game joystick; firefly joystick) is closer to real navigation, adds motor (efference) information and usually reduces sickness [DJ; §7.2], but the outbound path is then partly the person's own, so the key must be computed from the logged trajectory or fixed in advance by a target (firefly, Apple Game).
 - Active and passive gave similar biases in the firefly task: a passive-transport version "still produced overshooting" (radial gain 1.38) (Lakshminarasimhan 2018 preprint).
-- Rotation is the component most sensitive to how movement is produced. When rotations were made without the body (discordant teleporting, Kelly 2020), distance error (η²p = .66) and angular error rose and latencies grew; the authors recommend keeping body rotation. Visual-only turning without a compass is where heading updating fails (Klatzky 1998, as reported by He & McNamara 2018; Riecke & Wiener 2007).
+- Rotation is the component most sensitive to how movement is produced. When rotations were made without the body (discordant teleporting, Kelly 2020), distance error (η²p = .66) and angular error rose and latencies grew; the authors recommend keeping body rotation. Visual-only turning without a compass is where heading updating fails (Klatzky 1998, as reported by He & McNamara 2018a; Riecke & Wiener 2007).
 - **Design consequence [DJ].** Keep the outbound path passive in the early rungs (exact control, verifiable, nothing to learn about controls) and make the *return* active (turn, then travel back). Add active outbound steering (the firefly format) as a later rung once the controls are familiar.
 
 ### 2.3 Visual-only set-ups in VR and desktop studies
@@ -180,7 +182,7 @@ So a strict dead-reckoning item has: a flat ground of limited-lifetime (or per-t
 
 ### 3.5 Qualitative errors in visual-only path integration
 These are not graded misses but wrong answers of a kind; feedback has to name them.
-- **Heading not updated.** With visually simulated turns, people "failed to update their heading in a triangle completion task if they could not rotate their bodies" (Klatzky 1998, as reported by He & McNamara 2018; primary not read, see ACCESS). The response then equals the correct home direction measured from the *initial* heading instead of the final one: **turn = (bearing of start) − (initial heading)**. Homing's shortcut checks do not include this answer.
+- **Heading not updated.** With visually simulated turns, people "failed to update their heading in a triangle completion task if they could not rotate their bodies" (Klatzky 1998, as reported by He & McNamara 2018a; primary not read, see ACCESS). The response then equals the correct home direction measured from the *initial* heading instead of the final one: **turn = (bearing of start) − (initial heading)**. Homing's shortcut checks do not include this answer.
 - **Left–right inversions.** 6 of 16 naive people (37.5 %) consistently pointed to the mirror direction in passive, landmark-free point-to-origin trials on an 84° × 63° projection, while still being sensitive to the turn's size; the same people made no such errors when walking (Riecke & Wiener 2007). Inversion went with lower spatial ability. The authors conclude that a good projection is "not necessarily sufficient for enabling natural spatial orientation in VR if no landmarks are provided".
 - **Reference-frame preference** (Gramann 2005, tunnel task, 19-inch monitor): roughly half of people are "turners" (respond as if they took on each new heading) and half "non-turners" (track the turn without adopting it). Both are accurate in their own frame (mean absolute errors 6–12° once classified). The preference was stable across days but people could use the other frame when instructed ("preferential rather than obligatory"). For Parallax this means the answer frame must be unambiguous: the dial's top is "the way you face *now*", said and drawn, and the non-turner answer is diagnosed, not merely marked wrong.
 - **Overshooting the homing turn.** Desktop and HMD vision-only studies report systematic overturning of the homing direction (Scherer 2024; the 2025 preprint's mean symmetric direction error of 55.3°; Harootonian 2020 Exp 1: 34.7° overshoot while walking).
@@ -189,7 +191,7 @@ These are not graded misses but wrong answers of a kind; feedback has to name th
 | Factor | Evidence | Direction and size | Use as a dim? |
 |---|---|---|---|
 | **Number of legs/turns** | Sea Hero Quest: flare accuracy fell from 1 to 5 turns in every country (19,038 players; Coutrot 2018 preprint). Gramann 2005 Exp 2: errors larger for 2 and 3 turns. Wiener & Mallot 2006: with total length, total turning and turn direction held constant, more segments did *not* impair pointing (faster, slightly more accurate). Colmant 2023: 3 waypoints too hard for older adults. Klatzky 1999: the configural model fits worse beyond triangles | Harder, mostly through more total turning, more length and more to remember | Yes, as now (legs × turn size), but control total length so the dim measures complexity |
-| **Path length** | Stangl 2020 (noise grows with distance); Harootonian 2020 (undershoot grows ~log, SD linearly); Kelly 2020 (large paths, larger distance errors); Wiener 2011 via He & McNamara 2018 (configural vs continuous strategies differed only on long paths, 15.3 m vs 8.3 m) | Harder with length | Folded into the route dim; keep legs 6–20 m on phones |
+| **Path length** | Stangl 2020 (noise grows with distance); Harootonian 2020 (undershoot grows ~log, SD linearly); Kelly 2020 (large paths, larger distance errors); Wiener 2011 via He & McNamara 2018b (configural vs continuous strategies differed only on long paths, 15.3 m vs 8.3 m) | Harder with length | Folded into the route dim; keep legs 6–20 m on phones |
 | **Turn angles** | Chrastil & Warren 2017, 2021: small turns overturned, large underturned; homing turns of ~120–135° most accurate, 90° overshot by 15–20°, ~160° underturned; Klatzky 1999 turn slope 0.48 | Regression to the mean; extreme turns hardest | Turn size bands as now; spread answers so no habitual turn pays |
 | **Speed and speed changes** | So 2001: nausea rose from 3 to 10 m/s (HMD); Petzschner & Glasauer 2011 varied speed ±60 % to stop timing; Riecke 2002: errors uncorrelated with velocity when velocities were randomised (0.75–1.5× translation, 0.5–2× rotation) | Constant speed allows timing shortcuts; variable speed forces integrating velocity | Yes: "constant → variable speed" |
 | **Optic-flow quality** | Lakshminarasimhan 2018: sparser ground, larger bias; Noel 2020: limited-lifetime elements | Sparser or shorter-lived flow is harder | Yes: "textured → sparse → short-lived dots" (late rungs) |
@@ -230,4 +232,224 @@ These are not graded misses but wrong answers of a kind; feedback has to name th
   4. Whether training heading-keeping (the qualitative errors in §3.5) transfers to other orientation tasks such as Orient or the View Match probe.
 - **Honest wording for the app (CLAUDE.md rule 2) [DJ]:** "Practising here improves this task. In a lab version of this task, feedback reduced systematic overshoot within one session. Whether it helps finding your way in real places has not been studied; walking adds body senses that a screen cannot give."
 
-<!-- R1-NEXT: section 5 -->
+---
+
+## 5. Existing apps, games and research tools
+
+### 5.1 What they do
+| Tool | Platform and reach | Path-integration part | Answer and scoring | Landmarks |
+|---|---|---|---|---|
+| **Sea Hero Quest** (Coutrot 2018 preprint; Spiers et al. review) | Phones and tablets; 2.5 million players finished level 1, 558,143 analysed; 17 languages | 15 "flare" levels: steer a boat along a river with bends to a flare gun, then shoot it back toward the start | Choose 1 of 3 proposed directions; 3, 2 or 1 stars by closeness. Accuracy fell from 1 to 5 turns | The river and its banks; no free movement |
+| **SPACE** (Colombo 2024 preprint) | 10.2-inch iPad, "serious game" | Follow a robot from a rocket to two landmarks, then return unguided to where the rocket was | Mean distance between the return point and the true spot; norms by age (n = 342) | Yes (landmarks on a planet) |
+| **Apple Game** (Bierbrauer 2020, not read; Colmant 2023; Akan 2026) | Desktop or scanner goggles, joystick (research) | Collect a basket, walk via 1–5 trees, drop the basket where it was; a pure subtask with only a grassy plain and a sky at infinity | Drop error; 0–3 stars by fixed distance thresholds | None in the pure subtask; a lighthouse in the landmark subtask |
+| **Firefly task** (Lakshminarasimhan 2018; Noel 2020) | Projection + joystick (research) | Steer to a target that was shown for 1 s on a ground of short-lived triangles | Stop position; regression gains; a bull's-eye feedback ring sized by a staircase | None |
+| **Tunnel task / Spatial Reference Frame Proclivity Test** (Gramann 2005; SILC entry) | Desktop videos; an online version on Labvanced (~20 min) | Passive passage through a tunnel or a star field with turns in yaw and pitch | Pick 1 of 2 or 4 homing arrows (classification), or adjust an arrow; side, absolute and signed errors | None |
+| **Virtual SILCton** (v1.0 notes, B §10) | Desktop | Route learning on a virtual campus, then pointing between buildings | Pointing error, map placement | Yes (buildings): wayfinding, not dead reckoning |
+| **Homing** (Parallax EX-11) | Browser; desktop first | Passive 2–4-leg walk on a plain | Turn to face the start (dial); right within 40/30/20° | Several → one → none |
+
+Notes:
+- Sea Hero Quest's wayfinding levels (not the flare levels) were the ones checked against real-world navigation (London r = .46, Paris r = .57); the team avoided circling tasks partly because circling "could potentially cause nausea" (Spiers et al.). Its tutorial levels are used to normalise for video-game skill, a good idea for any control-heavy task.
+- No commercial brain-training app with a landmark-free path-integration game turned up in the searches made before the search budget ran out; an app-store survey was not done [gap].
+
+### 5.2 How Parallax can go beyond them
+1. **Truly landmark-free and fix-free** throughout (§8.1), which Sea Hero Quest (river banks) and SPACE (landmarks) are not.
+2. **Continuous answers** (a direction to the degree, then a distance) instead of 1 of 3 directions: more information per trial and a lower guessing rate (1/3 → 6–22 %, §6).
+3. **Diagnostic feedback** that names the error type (heading not updated, sides swapped, regression of turn sizes, distance under- or overshoot) and replays the route; none of the tools above explains a miss.
+4. **Feedback aimed at the accumulated error** ("drift per distance walked", trend over sessions, bias estimates over the last trials), which the firefly feedback study suggests can remove systematic bias within a session (Noel 2020).
+5. **Adaptive difficulty with an honest rating** (level with a range, per screen class), component rungs (turn-only, distance-only) before whole routes, solver-verified keys and shortcut tests.
+6. **Phone-first controls that do not reveal the path** and comfort settings (§7).
+7. **Open and offline**, with a research export so pooled data can refit the difficulty steps and the error model.
+
+### 5.3 The player's earlier tool
+I could not identify the tool or the study behind it. The coordinator asked me not to look for its code, and the web-search budget for this turn was used up before the message arrived, so I could not search for a description either. The published protocols that match what the player describes (egocentric, landmark-free, scored on minimising error) are:
+- **The firefly task**: Lakshminarasimhan et al. 2018, https://www.biorxiv.org/content/10.1101/191817 (published in Neuron, 2018), and its human feedback version, Noel et al. 2020, PNAS 117:11158–11166, https://doi.org/10.1073/pnas.2000216117. A ground of short-lived triangles that "could not serve as landmarks", and feedback whose target ring shrinks by staircase as error falls: the closest match to "minimising errors".
+- **The Apple Game's pure path-integration subtask**: Colmant et al. 2023, Neurobiology of Aging 131:170–181, https://www.neuro.psy.ruhr-uni-bochum.de/np/mam/colmant_et_al_2023.pdf; Akan et al. 2026, PLoS Biology 24(3):e3003661, https://www.neuro.psy.ruhr-uni-bochum.de/np/mam/akan_et_al_2026.pdf.
+- **Visual homing without landmarks**: Riecke, van Veen & Bülthoff 2002, Presence 11:443–473, https://www.sfu.ca/~ber1/web/journalPapers/Riecke__02_Presence__Visual_Homing_Is_Possible_Without_Landmarks__A_Path_Integration_Study_in_Virtual_Reality.pdf.
+- **Egocentric pointing in the tunnel task**: Gramann et al. 2005, JEP:HPP 31:1199–1223, https://sccn.ucsd.edu/~klaus/pubs/Gramann%20etal%202005%20JEPHPP.pdf (demos at https://sccn.ucsd.edu/~klaus/tunnel.html).
+If the player can name the tool or its paper, its protocol can be compared with §8 directly.
+
+---
+
+## 6. Scoring and verification
+
+### 6.1 The key and the error measures
+World as in Homing: metres, x east, y north, bearings clockwise from north. The route ends at E with heading H; the start is S.
+- **Home vector** k = S − E; home distance d = ‖k‖; **key direction** θ* = wrap360(bearing(k) − H) (degrees clockwise from the way one faces at the end). For a "return" item the key is the pair (θ*, d).
+- **Response.** "Point": a direction θ. "Return": a direction θ, then a straight walk of length r, so the stop point is P = E + r·u(H + θ) with u(b) = (sin b, cos b). (A two-phase response, turn then walk, keeps the decomposition clean and is easier on a phone; §7.1.)
+- **Angular error** e_θ = wrap180(θ − θ*), absolute value in [0°, 180°]; keep the signed value (side of the miss).
+- **Distance error**: signed r − d; ratio ρ = r/d; **log ratio ℓ = ln(r/d)** (symmetric for over- and undershoot, matches the log-scale reporting noise of Stangl 2020 and the log-scale fusion of Petzschner & Glasauer 2011).
+- **Position (drop) error** e_p = ‖P − S‖ = √(r² + d² − 2rd·cos e_θ) (law of cosines); **relative error** e_p/d. For small errors e_p/d ≈ √(e_θ[rad]² + (ρ − 1)²).
+- **Drift rate** e_p / (path length travelled): the navigator's measure of dead-reckoning error (error per distance travelled); use it for feedback and trends (§8.1), not for scoring (see 6.3).
+- Log all of them per trial (`value` = the main error, `detail` = the rest), plus the qualitative flags of 6.4.
+
+### 6.2 Right or wrong for the adaptive engine
+The engine wants a binary outcome with a predicted probability (ARCHITECTURE §7), so continuous errors are cut at a tolerance that is itself a difficulty dim (as Homing does).
+- **Point items:** right when |e_θ| ≤ τ_θ (40°, 30°, 20°).
+- **Return items:** right when **e_p ≤ τ_p · d**, a disk round the start whose radius is a fixed share of the home distance (τ_p = 0.5, 0.35, 0.25). One number, symmetric, readable ("within a third of the way back"), and scale-free like the noise. The disk never contains the end point (τ_p < 1), so "stay where you are" can never be right.
+- What the disk allows, at the edges: with a perfect distance, an angle of 2·asin(τ_p/2) (29°, 20°, 14°); with a perfect direction, a distance ratio of 1 ± τ_p.
+- **Graded feedback, binary rating.** The verdict shows the continuous errors in words and numbers ("4 m off: within a third of the way back"); the rating uses the binary outcome. CLAUDE.md rule 11 (no points) argues against the stars that Sea Hero Quest and the Apple Game use.
+- **Why tolerance steps of about 0.9 logit are sensible, and when they are not.** If a learner's angular errors are roughly normal with SD σ, the hit rate is erf(τ/(σ√2)):
+
+| σ | τ = 40° | 30° | 20° | logit steps 40→30, 30→20 |
+|---|---|---|---|---|
+| 15° | .99 | .95 | .82 | 1.82, 1.54 |
+| 20° | .95 | .87 | .68 | 1.17, 1.10 |
+| 25° | .89 | .77 | .58 | 0.88, 0.90 |
+| 30° | .82 | .68 | .50 | 0.73, 0.79 |
+| 40° | .68 | .55 | .38 | 0.58, 0.67 |
+| 50° | .58 | .45 | .31 | 0.50, 0.61 |
+
+So Homing's 0.9-logit tolerance step is right for a learner with σ ≈ 25° and too small for good learners (the step grows as σ shrinks). The logistic model is an approximation; pooled exports should refit the steps (CLAUDE.md, lessons). Published visual-only figures range from mean absolute errors of 6–12° (tunnel, one turn, each person scored in their own reference frame; Gramann 2005; for normal errors σ ≈ 1.25 × the mean absolute error, so σ ≈ 8–15°) to direction SDs of 26–35° (desktop and HMD homing; Scherer 2024; the 2025 preprint).
+
+### 6.3 Chance levels
+- **Point:** a uniform guess hits with probability 2τ_θ/360 (22, 17, 11 %), as in Homing. A guesser who knows the key distribution does better: with keys spread over the allowed 280° (Homing's [20°, 160°] ∪ [200°, 340°]) the best fixed answer can reach 2τ_θ/280 (29 % at 40°). The node test bounds the cross-validated best fixed answer at chance + 10 points (rule 5), as Homing's test does.
+- **Return (disk):** an upper bound is the case where the guesser knows d exactly and guesses only the direction: the disk subtends a half-angle asin(τ_p) from E, so **chance ≤ 2·asin(τ_p)/360 = 16.7 %, 11.4 %, 8.0 %** for τ_p = 0.5, 0.35, 0.25. Use this bound as `chance(params)` (conservative: a real guesser does not know d).
+- **Why not normalise the disk by the path length?** Dead-reckoning error grows with distance travelled, so "within 10 % of the distance walked" sounds natural, but on routes that end near the start the disk would contain the end point and "do nothing" would score right. Keep scoring relative to d and show the drift rate as feedback.
+
+### 6.4 Shortcuts, error types and the solver tests
+Every generator must keep these answers out of the tolerance by a margin (rule 5; Homing's MARGIN = 2°), and the node test reports each one's hit rate per cell:
+| Answer | Formula | Requirement |
+|---|---|---|
+| Turn round | θ = 180° | miss (as Homing; free only where the target lies near 180°) |
+| Turns reversed (path-blind) | θ = 180° − Σ turns | miss (as Homing) |
+| **Heading not updated** (new) | θ = wrap360(bearing(k) − H₀) = θ* + Σ turns | miss: require \|wrap180(Σ turns)\| > τ_θ + margin, otherwise the item cannot tell heading keeping from not turning at all |
+| **Mirror** (sides swapped) | θ = 360° − θ* | miss by > τ + margin: needs the key at least (τ + margin)/2 from straight ahead or behind (21° at 40°; Homing's 20° gap leaves the mirror exactly on the edge for keys at 20°) |
+| Turns only (legs equal) | key of the same turns with equal legs | miss where the geometry allows (as Homing) |
+| Best fixed answer | the one direction that hits most items | ≤ chance + 10 (cross-validated) |
+| Encoding-error-model answer | key of the path with L′ = 0.6L + 1.2, T′ = 0.48T + 44° | *report only*: it is a typical human error, not a shortcut |
+| Distance: last leg back | r = last leg | report the radial hit rate; keep it low by varying the last leg |
+| Distance: proportional to path length or to outbound time | r = c·ΣL, r = c·T (best c) | report; with varied speeds the time version must stay near the fixed-distance rate |
+| Distance: best fixed | r = the most common d | report |
+
+The qualitative flags for feedback (6.1) are the same formulas: a response within tolerance of the heading-not-updated answer, of the mirror, or of 180°/reversed (when those differ from the key) gets the matching hint.
+
+### 6.5 What the validator re-derives
+Independent of the generator (Homing's pattern: `validate` recomputes from the stored legs and turns; the node test recomputes again with `Math.sin`/`Math.cos`):
+- the path, final heading, home vector, key direction and home distance from the start heading, legs, turns (and arcs for curved legs: centre, radius, sweep);
+- for varied speeds, that each leg's speed profile integrates to its length (∫v dt = L) and stays within the comfort limits (§7.2);
+- the route never passes within 3 m of the start before the end and ends at least END_MIN away (as Homing); the home distance fits the return control's range;
+- the key's distance from straight ahead and behind (6.4), and |wrap180(Σ turns)| for heading items;
+- that no landmark, fix or route-tied cue exists in the item: the scene description carries no objects, its texture seed is independent of the route, and the start marker is hidden from a fixed distance on (§8.1);
+- the shortcut answers of 6.4 miss by the margin.
+
+---
+
+## 7. Phone design
+
+The layout problems of today's Homing on phones (the demo walk plays below the fold, captions under the pinned bar, landscape pushes the view off the screen, no void on a device turn) are measured in `docs/research/v1.1/I2-mobile-audit.md` §3, §8 and §10; this section covers what is specific to a landmark-free dead-reckoning task.
+
+### 7.1 Controls and answers that do not reveal the path
+- **During a passive route:** no controls except a visible **Pause** button that actually freezes the motion (today the player's Pause voids Homing's trial but the walk plays on unseen; §1.3). A paused trial stays void (rule 7).
+- **Direction ("turn to face the start"):** drag horizontally anywhere on the 3D view to turn yourself (I2 §3's option (a); the gesture people try first on a 3D view), about 0.3° per CSS px, with −5° / −1° / +1° / +5° buttons (≥ 44 px) for fine steps and the arrow circle as a small readout (top = straight ahead). Keyboard: ← → 5°, Shift 1°. Turning the view is safe because nothing in the scene marks a place (§8.1); the start marker is gone by then.
+- **Distance ("walk back"):** after confirming the direction, hold a large **Walk** button at the bottom (thumb zone, ≥ 64 px tall) or hold ↑ to walk straight on; release to stop; hold **Back** to step back a little; **Here** confirms. The return speed is varied per trial (for example ±30 % round 1.5 m/s) so that holding for a counted time does not stand in for watching the ground. Walking back uses the same visual odometer as the outbound route, as in Riecke 2002 and Scherer 2024.
+- **Steering rung (firefly type):** one thumb-stick in the bottom half (up = forward speed, sideways = turn rate), velocity control with a small dead zone and ease, at most 2 m/s and 45–60°/s (Noel 2020 used 2 m/s and 90°/s on a large projection); a second Stop button. Whether inertia (acceleration control) biases responses is what Stavropoulos 2022 tested; that paper could not be opened (ACCESS), so start with plain velocity control.
+- **Never shown during an item:** a north arrow or compass ticks fixed to the world, a minimap, a trail, the distance walked, leg lengths or turn sizes, a progress bar that maps onto position, or any marker of the start. The ground texture is not centred on the route (§1.2).
+- **Reduced motion:** see 7.2. A fallback answer without walking back (tap where the start is on a blank top-down disc with you in the centre facing up) is possible but turns the distance answer into a map judgement; if offered, log the answer mode per trial and keep it out of the main rating [DJ].
+
+### 7.2 Motion-sickness mitigation
+| Measure | Evidence | Setting |
+|---|---|---|
+| Lower speeds | So 2001: nausea and vection rose from 3 to 10 m/s, then levelled (HMD, 48° field, 30 min); the slowest speed tested (3.3 m/s) was the mildest. Riecke 2002 capped rotation at 40°/s "partly to reduce simulator sickness" | Translation 1.2–2 m/s, rotation ≤ 40–45°/s (Homing uses 3 m/s and 60°/s) |
+| Smooth starts and stops | Riecke 2002 used short acceleration and deceleration phases | 0.3–0.5 s raised-cosine ramps on every start and stop; positions stay exact because the key is computed from geometry |
+| No snap turns or teleports in the route | They remove the rotation information the task is about; teleporting without body rotation raised errors (Kelly 2020) | Continuous rotation only |
+| A rest frame | Rest frames reduced visually induced sickness (Cao 2018, as reported by Cao, Grandi & Kopper 2021; primary not read) | Keep the stage's frame, the page around it and a fixed "ahead" notch at the top centre; no full-screen immersion |
+| Field of view | Larger fields give stronger vection and potentially stronger symptoms (background statement in the 2024 visual-field-occlusion preprint; not a result) | Fixed geometric field of 65–75° on every device; a phone shows it in 10–25° of visual angle, which already weakens vection; do not vignette on phones (the view is all central, and a vignette would hide the flow) |
+| Dynamic field-of-view restriction during turns | Fernandes & Feiner 2016: less sickness, no loss of presence (press release only) | Optional on large screens, logged per trial because it may change difficulty |
+| Short exposures | So 2001: ratings rose over the 30-minute exposure (speed changed their onset, not their rate of rise) | Most trials 10–25 s of motion, never over 30 s (shorter legs at the slower speeds, §8.3); a pause card after about 3 min of motion; a one-time "stop if you feel unwell" notice before the first route |
+| Active control | Widely reported to reduce sickness in VR (not verified in this pass) | Make the return, and later the outbound route, active |
+| Reduced motion | The motion is the stimulus (CLAUDE.md rule 8 applies "outside the stimulus itself") | A gentle profile (1.2 m/s, 30°/s, 0.6 s ramps), the same items; say plainly that the exercise needs on-screen motion |
+| Flicker | Rule 8: nothing faster than 3 Hz. Noel 2020's target blinked at 5 Hz | Short-lived ground dots fade in and out (no hard on/off), live ≥ 0.5 s and are out of phase with each other; any target marker is steady |
+
+### 7.3 Performance budget on mid-range phones
+- **What the app already does** (ARCHITECTURE §4, `js/core/stage3d.js`, `timing.js`): one WebGL context; device pixel ratio capped at 2; antialiasing off at DPR ≥ 2 or on phone-sized screens; quality steps down to DPR 1 after two stuttered trials; dt clamped to 100 ms so a slow frame slows motion but never jumps it; a stutter is a gap > 150 ms or > 15 % frames longer than 1.5 × the median. Homing adds its own void rule (a freeze > 400 ms or > 25 % slow frames).
+- **Today's Homing scene** is cheap in geometry (one ground disc, one ~17,000-triangle pebble mesh, at most three landmark groups, the ring and the flag: well under 15 draw calls). Its problem on phones is aliasing of sub-pixel pebbles (§1.6), not load.
+- **Budget for the new exercise [DJ]:** ≤ 10 draw calls; ≤ 50,000 triangles; one opaque pass plus one dot layer; no shadows, no post-processing; DPR ≤ 1.5 for this stimulus on phone-sized screens (a sharper image that shimmers carries less flow); flow elements 3–20 px on screen, fading with distance before they go sub-pixel; ≤ 2 ms of JavaScript per frame with no allocations in the loop; no texture uploads or saves during motion (rule 7); render on demand outside motion.
+- **The ground, two options:** (a) a static random field of blobs in one merged mesh that wraps round the camera (positions taken modulo a square tile centred on the viewer), so it never ends, never points anywhere and is re-seeded per trial; (b) limited-lifetime dots as one `Points` or `InstancedMesh`, respawned round the camera in the vertex shader from a per-dot seed and a time uniform, so the CPU does nothing per dot. Option (b) needs `ShaderMaterial` and `Points` in the vendored three.js subset (`tools/vendor-three.mjs`); check before choosing it.
+- **Measure on a real mid-range Android phone** (median frame ≤ 17 ms and < 5 % slow frames during a route) before release; the I2 audit ran in headless Chromium only.
+
+### 7.4 Portrait versus landscape
+- Portrait is one-handed and how most people hold a phone (thumb zone at the bottom; I2 §10); landscape gives the wider view a first-person stimulus wants.
+- Support both, each with its own layout (I2 §3, §8): portrait with a landscape-shaped view band on top (aspect 4:3 to 16:10, so the 65–75° horizontal field does not force a huge vertical one) and the controls in the bottom half; landscape with the view at full height on the left and the controls on the right, without the app header.
+- Hold the canvas size during motion (Track's `holdResize`) and **void the trial if the orientation or the screen class changes** during the route or the answer (rule 7, "device turned"; no code does this today, I2 §8). Log the orientation per trial.
+- Do not rely on locking the orientation: the Screen Orientation API's `lock()` generally needs full screen and is not available in iOS Safari (general knowledge; the MDN page could not be opened in this pass). A "turn your phone" card plus the void rule is the robust path.
+- Ratings stay per screen class (`perDisplay`), as for Homing and Track.
+
+### 7.5 Turning the phone itself ("magic window")
+Driving the view's rotation from the gyroscope would add real body rotation cues, the very cues whose absence makes visual-only heading keeping fail (Klatzky 1998 via He & McNamara 2018a; Kelly 2020). It would make a different, easier task with its own rating (I2 §10 says the same), needs a permission prompt on iOS and a secure context, and may be blocked in sandboxed previews (general knowledge; MDN could not be opened). Not for v1.1; a possible later, separately rated variant.
+
+---
+
+## 8. Proposed task design: Reckon (EX-12, experimental)
+
+### 8.1 Four commitments (from the community input, §1.7 point 6)
+**(a) Every landmark and every fix is removed.** A fix is anything that tells you where you are or which way you face without integrating your own motion. Reckon has none, in scored items, practice items and the demo alike:
+1. **No objects in the world, ever**: no landmarks, beacons, trees, poles or walls; the flag appears only at the reveal, after the answer.
+2. **No distal or lighting cues**: one flat sky colour, a fog horizon with no structure in azimuth, unlit materials, no sun, no shading direction, no shadows.
+3. **No boundaries**: an endless plain.
+4. **No orientation in the ground**: randomly rotated blobs, no grid, stripes or visible period; the pattern is re-seeded every trial and wraps round the viewer, so it is never tied to the route (unlike Homing's pebble disc); in the flow-only rungs each element lives about 1 s and fades, so nothing can be tracked from start to end.
+5. **No start marker after the start**: a ring under your feet during the 1.2 s lead-in, hidden once you step off it (the route ends at least 5 m away, so it cannot be seen again).
+6. **No fix during the route**: no checkpoints, no map, no compass, no counters of distance or turns, no progress bar that maps onto position, and no feedback on any mid-route answer until the route is over.
+7. **No fix from the interface**: the dial and the drag-to-turn work only in the body frame (top = straight ahead); nothing points north; turning the view while answering shows nothing that marks a place.
+8. **No fix from the clock**: leg speeds vary (from the second speed level on) and the walk-back speed varies per trial, so seconds are not a reliable odometer (Petzschner & Glasauer 2011 varied speed ±60 % for this reason).
+9. **No fix from repetition**: every route is new (procedural seeds); the feedback after an answer is a fix only for that finished route, and the next one starts from a new place facing a new direction.
+The validator checks what can be checked in data: no scene objects, a texture seed independent of the route, the start hidden from a fixed distance (§6.5).
+
+**(b) The task stays egocentric.**
+- First person only during the item; the answer is given in the body frame: "turn from the way you face now", then "walk back". The dial's top is always straight ahead; the drag turns *you*, not a map.
+- A "face the way you started" item isolates heading keeping, the egocentric part that visual-only path integration loses (§3.5); its key is −Σ turns.
+- Tips favour continuous updating ("keep the start as a direction from you: behind, behind-left, left…") over drawing a map. This is a choice of skill: in Wiener et al. 2011 continuous updating was the faster, online mode and the configural (map) strategy the more accurate one, and continuous instructions led people to an egocentric frame (He & McNamara 2018b).
+- A later rung adds mid-route probes ("point to the start now") as in Stangl 2020's four stops, which reward keeping the vector updated as you go; they get no feedback until the end.
+- Feedback starts in the body frame (the view turns to face the true start and the flag appears where it is, seen from where you stand); the replay from above then turns so that you face up, as Homing's show me already ends.
+
+**(c) Feedback trains the player to minimise accumulated error.**
+- After each answer: the angular error, the distance error (as a share of the way back), and the **drift rate** (end error per distance walked, the navigator's measure of dead-reckoning error), in words and numbers; a replay from above with the true route and the player's believed home vector, and with the probe answers when there were probes, so the player sees where the error grew.
+- **The player's own systematic bias**, re-estimated over the last ~20 routes (turn gain and distance gain from a fit of the encoding-error form, §3.1): "Over your last 20 routes you turned about 15 % too little and judged distances about 20 % short." This is what removed the radial bias in the firefly study (Noel 2020).
+- **Named qualitative errors** (heading not updated, sides swapped, turned round, path-blind; §6.4), each with a one-line explanation and a show me.
+- **A shrinking error budget**: the tolerance dims tighten as the rating rises, like Noel 2020's staircased bull's-eye; the level shows the current budget in words ("within 30°", "within a third of the way back").
+- **A drift trend** over weeks (median drift with its range) on the Progress screen, so "minimising accumulated error" is visible as a number that should fall while routes get longer and the flow poorer.
+- No feedback during a route (it would be a fix).
+
+**(d) Homing keeps its landmarks as the separate, easier stage before Reckon.**
+- Homing stays as it is (plus the phone fixes of I2): landmark-aided homing, where far landmarks act as heading fixes and fade to none at its top level. It trains *using* fixes; Reckon trains working *without* them.
+- It is the stage before Reckon, not a level inside it: the beginner order puts Homing first; Reckon's Library card says "Hard at first? Practise Homing, where landmarks help, then come back"; Path mode can sequence Homing → Reckon. Nothing is locked.
+- Homing's texts should stop presenting landmarks as part of path integration: call it "Homing · with landmarks" and say that landmarks correct dead-reckoning errors, which is why Reckon has none.
+
+### 8.2 Definition
+`id: 'reckon', code: 'EX-12', name: 'Reckon (experimental)', short: 'Reckon', abilities: ['NAV'], cell: 'extrinsic-dynamic', role: 'train', perDisplay: true`, labelled experimental like Homing.
+- **Variants:** `point` (turn to face the start; answer 'angle') and `return` (turn, then walk back; a two-number answer). A third item type, `heading` (face the way you started), is used in the tutorial and practice only, so the rating stays one scale.
+- **Integration cost:** the return answer needs a new answer type in the registry (for example `'vector'`, response `{ deg, dist }`), the player's response path, the harness's `answer(correct)` and the trial log's `value`; `estMs`; the Library and Daily lists (perDisplay, so out of the Daily); "11 exercises" in docs, the guide and tests; the beginner order; Lab cluster B.
+- **Code reuse:** Homing's route model (`lib.route`, `steer`, `drawTarget`, the shortcut checks), its view (stage3d scene, dial, show-me map) and tests are the template; shared pure helpers could move to a common `lib` both exercises read, which is a refactor to plan, not a requirement.
+
+### 8.3 Environment and movement
+- First person, eye height 1.6 m, pitch about −10° (more ground in view), fixed horizontal field 70°, unlit. An endless plain with the ground of 8.1(a)4; flat sky; fog horizon.
+- **Passive outbound route**: 2–4 straight legs of 4–12 m (total 12–28 m), on-the-spot turns between them; translation 1.8 m/s (steady) or 1.4–2.3 m/s per leg (varied, the route's mean kept near 1.8 m/s), rotation 45°/s; 0.4 s raised-cosine ramps on every start and stop. The longest route (4 legs, large turns) takes about 29 s with the lead-in; a 2-leg route about 13 s (my arithmetic: legs L/v + 0.4 s each, turns T/45 + 0.4 s each, lead-in 1.2 s).
+- **Return**: drag or buttons to turn, then hold Walk (1.5 m/s ± 30 % per trial, ramps), Back for small corrections, Here to confirm (§7.1).
+- Later rungs (after the first release): curved legs (turning while moving, ≤ 30°/s), mid-route probes, and an active "steer to the remembered spot" variant (firefly type, §2.1).
+
+### 8.4 Dims, difficulty and the ladder
+| Dim | Levels | Initial step (logits) | Basis |
+|---|---|---|---|
+| `route` | Homing's 8 levels (2 legs medium turns … 4 legs large turns), total length bounded | 0.55 per extra leg, 0.4 per turn-size step | Homing's model; Sea Hero Quest turns; §3.6 |
+| `flow` | textured blobs → sparse blobs → short-lived dots | 0.35 | Lakshminarasimhan 2018 density effect; Noel 2020 |
+| `speed` | steady → varied between legs → varied within legs | 0.3 | Petzschner & Glasauer 2011 (timing) |
+| `tolerance` | point 40/30/20°; return τ_p 0.5/0.35/0.25 | 0.9 | §6.2 table (σ ≈ 25°) |
+| variant | point → return | +0.5 | two errors must both be small |
+
+- Base −2.25 (as Homing): the easiest item (2 legs, medium turns, textured, steady, 40°, point) gives P ≈ 0.222 + 0.748 · σ(1.85) ≈ 87 % for a beginner at θ = 0 (Homing's target band 87–90 %). Range: −1.85 to 3.25, 5.1 logits (≥ 4 required). All steps are hand-set; the pooled research export should refit them (CLAUDE.md, lessons).
+- **Ladder as a learner meets it:** (0) tutorial rungs, not rated: one turn, "face the way you started"; one straight walk, "walk the same distance" with a different speed; one 2-leg route, point. (1) Point, 2 legs, textured, steady, 40°. (2) More legs and larger turns. (3) Return items join (variety). (4) Varied speed. (5) Sparse, then short-lived flow. (6) 4 legs, large turns, 20° / 0.25.
+- Generator rules beyond Homing's: |wrap180(Σ turns)| > τ + 2° (heading-not-updated misses); the key at least (τ + 2°)/2 from ahead/behind (mirror misses); answers spread uniformly over the allowed directions (Homing's target steering); home distance 5–20 m; leg speeds drawn so that outbound duration correlates weakly with home distance.
+
+### 8.5 Tutorial (Watch–Try–Go)
+- **Goal:** "Watch a walk with nothing to steer by, then point to where you started. Later, walk back to it."
+- **Parts:** View (you see through your own eyes); Start ring (only under your feet at the beginning); Ground (it shows that you move, nothing on it marks a place); Turn (drag the view or use the buttons; the top of the circle is the way you face now); Walk (hold to walk back, release to stop).
+- **Why no landmarks** (one card, no in-world landmark): "Navigators correct dead-reckoning errors with fixes: a landmark, a star, a satellite. Here there are none, so errors from every turn and every metre add up. The skill is to keep them small." (Wording after Wikipedia's "Dead reckoning", which the player cited.)
+- **Demo:** the heading rung, then a 2-leg route with captions; show me draws the route from above leg by leg with a heading needle that turns at each turn (the part people miss), then turns the map so you face up and reads off the answer. The caption must sit over the view or in the pinned bar on phones (I2 §3).
+- **Try (not logged):** heading item; distance item; 2-leg point; 2-leg return.
+- **Tips (just in time):** "After each turn, say where the start is: behind-left, left…"; "Speeds change now: watch the ground, not the seconds"; "The top of the circle is the way you face now, not the way you started"; "Fewer marks on the ground now: they still slide past at your speed".
+- **Strategy cards** (Homing's three, rewritten): continuous ("keep the start as a direction from you"), configural ("picture the shape from above"), when to switch; cite Wiener 2011 for the trade-off.
+- **Feedback** as in 8.1(c); **bridge**: "Pilots and sailors learn dead reckoning to stay oriented between fixes. Practising here improves this task; whether it helps finding your way in real places has not been studied, and walking adds body senses that a screen cannot give."
+
+### 8.6 If a new exercise is ruled out
+Homing v2 (version bump) with `variants: ['face', 'return']`, the 'return' variant forcing `landmarks: none` and the new environment, a custom difficulty with a variant offset, and the same tests. It works, but one rating then mixes landmark-aided and landmark-free homing, and the Library cannot show the dead-reckoning skill on its own.
+
+<!-- R1-NEXT: section 9 -->

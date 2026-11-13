@@ -3,8 +3,8 @@
 Audit of the released v1.0.0 (main f10f7db), for the v1.1 update. Brief item 1: "Figure out whats up with the time counting, looks bugged; and other bug fixes."
 
 - **Tested copy:** the frozen v1.0.0 tree at `scratchpad/frozen-v1.0/` (its `js/` and `tests/` are byte-identical to `/home/claude/parallax`, so every line number below is valid in the live repository).
-- **How:** code reading of every clock, then real sessions in headless Chromium (Python Playwright, `file://`, SwiftShader WebGL) through `tests/e2e/pwslot.sh`, at 1366 × 768 (mouse) and 390 × 844 (touch, DPR 3). Waiting was real (no fake clock). `PX.debug.fast` was used only to shorten show-me animations, never during a stimulus. Hidden tabs were simulated by overriding `document.hidden` and firing `visibilitychange` (headless Chromium never hides its only page), so the app's own listeners ran exactly as in a real browser; real browsers also stop `requestAnimationFrame` while hidden, which the code already treats as a stutter.
-- **Scripts, logs and JSON:** `scratchpad/v11-audit/timing/` (scratchpad = `/tmp/claude-0/-home-claude/145ff06a-4b5d-5025-8cb7-e87b9d56923b/scratchpad`). `pxlib.py` holds the helpers; one script per experiment (`exp_pace.py`, `exp_breaks.py`, `exp_reload.py`, `exp_speed.py`, `exp_check.py`, `crawl.py`); each writes `<name>.log` and `<name>.json`. Screenshots are in `scratchpad/v11-audit/timing/shots/`.
+- **How:** code reading of every clock, then real sessions in headless Chromium (Python Playwright, `file://`, SwiftShader WebGL) through `tests/e2e/pwslot.sh`, at 1366 × 768 (mouse) and 390 × 844 (touch, DPR 3). Waiting was real (no fake clock; only `exp_tz.py` pins `Date.now` to an evening in Los Angeles). `PX.debug.fast` was used only to shorten show-me animations, never during a stimulus. Hidden tabs were simulated by overriding `document.hidden` and firing `visibilitychange` (headless Chromium never hides its only page), so the app's own listeners ran exactly as in a real browser; real browsers also stop `requestAnimationFrame` while hidden, which the code already treats as a stutter.
+- **Scripts, logs and JSON:** `scratchpad/v11-audit/timing/` (scratchpad = `/tmp/claude-0/-home-claude/145ff06a-4b5d-5025-8cb7-e87b9d56923b/scratchpad`). `pxlib.py` holds the helpers; one script per experiment (`exp_pace.py`, `exp_breaks.py`, `exp_reload.py`, `exp_tz.py`, `exp_speed.py`, `exp_check.py`, `exp_stim.py`, `crawl.py`; see the appendix); each writes `<name>.log` and `<name>.json`. Screenshots are in `scratchpad/v11-audit/timing/shots/`.
 - **Severity scale:** **S1** wrong data or lost data, or a promise the app breaks every session; **S2** visibly wrong or misleading in normal use; **S3** inconsistent or confusing, with an easy workaround; **S4** cosmetic or rare.
 
 ---
@@ -81,7 +81,7 @@ Clock sources: `Date.now()` (wall clock, ms) in the UI and passed as `now` into 
 
 Today's panel, the intro line ("This session: Rotate, Fold and Spin, about 5 minutes.") and the HUD all spoke of 5 minutes; the session was 43 s. The progress bar under the HUD tracked the real end ("28 of 29") while the words said 5 minutes remained.
 
-**Why:** `atEnd()` (`js/engine/modes.js:97-104`) ends the session when `plan.pos >= effTotal` (the item count) **or** when the wall clock passes `budgetMs − msPer`. `plan.total` is `budget ÷ estimated ms per item` (`schedule.js:276-297`); for exercises without enough history the estimate is 9–11 s per item (`model.js:69`, about 10.3 s for Rotate, Fold and Spin here), so anyone faster than the estimate runs out of items first. The HUD (`js/ui/play.js:1247-1263`) shows only the clock side: `Math.max(1, Math.ceil((budgetMs − (now() − plan.start)) / 60000))`. Three smaller faults in the same line: it is recomputed only in `hud()` and `afterTrial()` (no timer), so it freezes during an item; `Math.max(1, …)` shows "about 1 min left" after the budget has run out; and `Math.ceil` shows "about 5 min left" for the first 60 s of a 5-minute session. The planning estimate itself is coarse: per-item times come from whole-second trial stamps (`model.js:355`), and gaps of 0 s are dropped (`schedule.js:155`), which biases quick exercises upward.
+**Why:** `atEnd()` (`js/engine/modes.js:97-104`) ends the session when `plan.pos >= effTotal` (the item count) **or** when the wall clock passes `budgetMs − msPer`. `plan.total` is `budget ÷ estimated ms per item` (`schedule.js:276-297`); for exercises without enough history the estimate is 9–11 s per item (`model.js:69`, about 10.3 s for Rotate, Fold and Spin here), so anyone faster than the estimate runs out of items first. The HUD (`js/ui/play.js:1247-1263`) shows only the clock side: `Math.max(1, Math.ceil((budgetMs − (now() − plan.start)) / 60000))`. Two smaller faults in the same line: it is recomputed only in `hud()` and `afterTrial()` (no timer), so it freezes during an item (100 s on one item left it at "about 3 min left" throughout, T2); and `Math.max(1, …)` keeps showing "about 1 min left" after the budget has run out. The planning estimate itself is coarse: per-item times come from whole-second trial stamps (`model.js:355`), and gaps of 0 s are dropped (`schedule.js:155`), which biases quick exercises upward.
 
 **Screenshot:** `shots/pace_fast_summary.png` (the summary after 43 s), `shots/pace_phone_first_item.png` (the HUD on a phone).
 
@@ -189,12 +189,14 @@ Notes:
 | Track, 2 s cue + 5 s tracking | 7 000 ms | 7 190 ms | 16.7 ms, 100 ms | counted (Track's own jump rule; the generic monitor flagged 41 % late frames, which Track rightly ignores) |
 | Span, length 2 | 3 100 ms | 3 177 ms | 16.7 ms, 100 ms | counted |
 | Homing, first route after load | 9 630 ms | 11 257 ms | 33.3 ms, **1 300 ms** | voided ("The display stuttered") |
+| Phone run (`exp_stim.py phone`): Track | 7 000 ms | 7 388 ms | 16.7 ms, 333 ms | counted (a 0.05-width jump, under Track's limit) |
+| Phone run: Span | 3 100 ms | 3 149 ms | 16.7 ms, 17 ms | counted |
+| Phone run: Homing, first route after load | 12 315 ms | 12 446 ms | 16.7 ms, 100 ms | counted |
 
 Pattern Memory's 3 s exposure is timed from rAF time stamps (`patterns/view.js:148-172`): in a full Spatial Check (`crawl.py desktop check`) the swap came at 3 000 ms every time and the empty grid was painted at 3 033–3 067 ms; 2 of 18 exposures were voided by the view's own 100 ms gap rule (gaps of 150 and 417 ms while the machine was loaded) and replaced, as designed. Motion is integrated from frame time clamped to 100 ms (`timing.js:15, 51-53`), so a long frame lengthens the stimulus instead of making it jump (Homing above: +1.6 s around one 1.3 s stall), and gaps over 150 ms void the trial. That is the intended trade-off.
 
-Note (S3, to re-check on a real phone): the only freeze seen was on the first Homing route after the page loaded, while this 2-CPU machine was also running another audit's browsers; Homing renders the scene once before the walk (`homing/view.js:658-659`), but if the stall is a first-use cost (textures, landmarks first entering the view), a phone would void the first Homing item of most sessions. Render every landmark once in the ready phase to rule it out.
+Note (S4, watch on real phones): the one freeze seen (1.3 s, first Homing route of the desktop run) did not recur on the phone run's first route, and the 2-CPU machine was running another audit's browsers at the time, so it is most likely load. Homing already renders the scene once before the walk starts (`homing/view.js:658-659`); if real phones show first-route voids, render every landmark once in the ready phase.
 
-<!-- T10+ go here -->
 
 ---
 
@@ -231,7 +233,7 @@ Covered: every training exercise once in Free play on desktop with real stimulus
 ### B5 (S4). Today numbers the session's exercises "in order", but the session plays them in another order
 
 **Steps:** fresh profile, Today: the plan lists "1 Rotate ~4 min, 2 Fold ~3 min, 3 Spin ~3 min" with a numbered ruler (`aria-label` "Exercises in today's session, in order", `home.js:149-163`); the intro line repeats "Rotate, Fold and Spin". Start the session.
-**Actual:** the first run was Fold in four of six fresh sessions measured (`pace_fast`: Fold → Spin → Rotate; `pace_phone`: Fold → Rotate → Spin; `breaks_hidden`: Spin → Fold). Runs are drawn at random, weighted by the remaining quota (`schedule.js:319-345`).
+**Actual:** 7 of 9 fresh Train sessions in this audit opened with Fold or Spin, not Rotate (`pace_fast`: Fold → Spin → Rotate; `pace_phone`: Fold → Rotate → Spin; `breaks_hidden`: Spin → Fold). Runs are drawn at random, weighted by the remaining quota (`schedule.js:319-345`).
 **Fix:** either play runs in the listed order when the stage is S1–S3, or present the list as "today's mix" without numbers and without "in order".
 
 ### B6 (S4). The HUD's Pause button keeps saying "Pause" while the item is paused
@@ -262,7 +264,26 @@ Covered: every training exercise once in Free play on desktop with real stimulus
 **Expected:** the weekly goal counts practice; a measurement that "Parallax never trains" is not practice (the Check's own schedule counts only training sessions: "8 practice sessions", `assess.js:106-111`).
 **Actual (`crawl.py desktop check`):** "Weekly goal: 1 of 3 sessions this week", Friday marked "practised", and the "Twelve days" achievement at "1 of 12", all from the Check alone. The check is saved as an ordinary session (80 answers, `practiceMs` 154 134) and `streak.counts()` ignores the mode (`streak.js:33-35`), as does the day count for "Twelve days" (`achievements.js:59-65`). Free play and Threshold runs count too, which may be intended; the Check should not. Filter by mode in `streak.counts()` (training modes, as `assess.js` does), or state the rule ("any session, including checks").
 
-<!-- B11+ go here -->
+### B11 (S3). After an answer, the deadline bar jumps back to full
+
+**Steps:** Speed (or Free play with a 5 s timer); let an item run out, or answer half-way through the deadline; look under the options while the result is shown.
+**Expected:** the bar stays where the time ran out (empty after "Time is up"), or disappears.
+**Actual:** the bar refills to full width next to "Time is up" (`shots/speed_phone_timeout.png`, phone; on desktop the feedback strip hides it). `respond()` removes `is-running` (`play.js:635`), which removes the CSS animation, and the fill falls back to its resting `transform: scaleX(1)` (`css/play.css:47-48`). Freeze it with `animation-play-state: paused` (as a pause does) or hide the bar at the answer.
+
+### B12 (S4). Path asks twice before its first item
+
+**Steps:** Library → Rotate → Practise → Path (a fresh exercise).
+**Actual:** the intro card "Path · stage 1 of 10 … Settings at this stage: Angle 40°, axis vertical, 6 cubes … Back / Start" is followed at once by a second card "Path stage 1 of 10 … Settings at this stage: Angle 40°, axis vertical, 6 cubes. A short demo shows how this stage's items look … Watch the demo / Start the stage" (`shots/crawl_desktop_modes_card_stage.png`), and the session's budget clock (T2) runs through both. The intro comes from `introFor()` (`play.js:1536-1544`), the second from `stageWatch()` because the first step of a stage not yet watched carries `watch: true` (`modes.js:474-479`, `play.js:1297, 1385-1402`). Merge them: one card with "Watch the demo" and "Start".
+
+
+### Checked and working
+
+- Answer times: a 100 s pause, a 100 s hidden tab and the keys sheet are all left out of `rtMs` (3 159, 3 138 ms); a hidden tab during the answer phase pauses and hides the item, and it stays paused until Resume.
+- Trial rows: one per item, never twice; End session logs one skipped row; a reload logs the cut session once.
+- Speed deadlines, Spatial Check limits and their bars (T7, T8); "Stop the check" asks first, saves nothing, and the Log lists the answers as "not finished" (`exp_check.py desktop 2`).
+- The Daily Challenge in full (8 items, "5/8", share line, Today "Played today: 5 of 8"), Free play with a 5 s timer, Threshold (Spin deadline, Track Standard), Train and Speed on desktop and phone; every training exercise in Free play on desktop, with Watch, Try, Go on Rotate, Span and Homing.
+- Settings: session length (Today follows: "10 min", blocks ~4/~3/~3), theme, text size, Back up (a real download, `parallax-backup-2026-11-13.json`, 20 top-level keys, "Last backup" updated), Export CSV dialog, Import of pasted text with Undo, a broken import refused with "Nothing was changed".
+- No page errors and no console errors in any run (desktop and phone), only SwiftShader's "GPU stall due to ReadPixels" driver warnings.
 
 ---
 
@@ -284,12 +305,8 @@ Covered: every training exercise once in Free play on desktop with real stimulus
 | 12 | B3 | S3 | The Sounds setting does nothing | `settings.js:122` |
 | 13 | B9 | S3 | 150 % text on a phone: Today 439 px wide in a 390 px screen | layout (I2) |
 | 14 | B2 | S3 | The HUD counter runs one item ahead during feedback | `play.js:1251-1259, 1329` |
-| 15 | T9 | S3 | The first Homing route after load froze 1.3 s and was voided (re-check on a phone) | `homing/view.js:630-688` |
-| 16 | B5, B6, B8, T7 edge, T8 notes | S4 | Today's numbered order is not the play order; Pause button label; Threshold units ("6810.06 ms", "0.34 speed"); deadline and answer clocks start from different stamps; the Check's "about 15 minutes" and silent bars | see each item |
-
----
-
-<!-- END-B -->
+| 15 | B11 | S3 | After an answer the deadline bar jumps back to full ("Time is up" beside a full bar) | `play.js:635`, `css/play.css:47-48` |
+| 16 | B5, B6, B8, T7 edge, T8 notes, T9 note | S4 | Today's numbered order is not the play order; Pause button label; Threshold units ("6810.06 ms", "0.34 speed"); deadline and answer clocks start from different stamps; the Check's "about 15 minutes" and silent bars | see each item |
 
 ---
 
@@ -305,5 +322,22 @@ One clock, owned by the player, measured the same way everywhere:
 6. **Words that stay true:** the pause sheet can keep "The clock is stopped" once the session clock stops too; the intro line says "about 20 minutes of practice"; the weekly-goal rule "10 answers or 5 minutes" then uses the same minutes the summary shows.
 7. **Reloads:** do not start a session from a `#/play` hash at boot; open Today with a line "Your session was saved: 14 items, 6 min" (or offer to resume the same plan within, say, 30 minutes). Mirror the summary as `#/home` or `#/log` so a restored tab never starts a session by itself.
 8. **Tests:** a Playwright run with a fake clock (`page.clock`) for pauses, hidden tabs and long idle; node tests that `activeMs` never exceeds wall time and never counts paused or hidden spans; a check that the HUD, the summary and the Log show the same minutes for one session.
+
+---
+
+## Appendix: re-running the measurements
+
+All scripts take the frozen copy's `index.html` over `file://` and write to `scratchpad/v11-audit/timing/`. Run each through the slot lock, for example `/home/claude/parallax/tests/e2e/pwslot.sh python3 exp_pace.py fast` from that folder. To test a fix, point `pxlib.FROZEN` at the working tree.
+
+| Script | What it does | Main output |
+|---|---|---|
+| `exp_pace.py fast \| slow \| phone` | Train at a fixed pace (1.4 s, 21 s, 7 s per item) with a 5, 2 or 3-minute budget | HUD per item vs wall time; summary, `practiceMs`, Log, Today (T1, T5) |
+| `exp_breaks.py pause \| hidden \| idle \| pause2` | 100 s pause, hidden tab or idle at item 4 (60 s more on a later feedback strip); `pause2` is a 2-minute phone session paused after item 2 | when the session ends; `practiceMs`; answer times (T2, T3) |
+| `exp_reload.py train \| daily \| end` | a reload mid-session; the Daily reloaded after 3 items; End session after 5 items, then a reload on the summary | sessions saved, weekly goal, the auto-started session, `rec.daily` (T4, T6, B1) |
+| `exp_tz.py` | Today's Daily panel in Los Angeles at 19:00 PST (`Date.now` pinned) | "Played today" vs the engine's day (T6) |
+| `exp_speed.py desktop \| phone` | Speed on Spin (unlocked by a passed Path stage written into the record): pause, hidden tab, a time-out | deadline bar samples, "Next deadline", the summary (T7, B11) |
+| `exp_check.py desktop N` | the first Spatial Check task: pause, time-out, hidden tab, then "Stop the check" | probe bar samples, `rtMs`, the Log row (T8) |
+| `exp_stim.py desktop \| phone` | Track, Span and Homing at real speed in Free play | `presentMs` vs nominal, frame statistics (T9) |
+| `crawl.py desktop \| phone  exercises \| modes \| screens \| check` | every exercise in Free play; Train, Path, Threshold, Daily, timed Free play; every screen, Settings, Back up, Import; a full Spatial Check | `crawl_*.json`, screenshots (§4) |
 
 <!-- END -->
