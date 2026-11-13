@@ -66,7 +66,9 @@
    together, in layer order: higher layer on top; back = the back of the paper faces up;
    moved = moved by fold k; from = where a moved face was before fold k; holes on that face).
    why[i] names the neighbouring problem that made option i (null for the key).
-   def.lib exposes the geometry helpers (for views and tests). */
+   def.lib exposes the geometry helpers (for views and tests). validate re-simulates the folds on
+   4·N² triangles, including every drawn step (outline, faces by layer, flags, arrows, holes;
+   checkSteps). */
 (function (PX) {
   'use strict';
 
@@ -1337,7 +1339,7 @@
      are large enough for 4 × 4). Fold's fallback cache is not reachable from here: it is keyed by
      Fold's params alone, so the caller keeps its own fallbacks.
      fn receives { n, attempt(rng, params, relaxed) → item | null (ex 'fold', item.n = n),
-     check(item) → true | reason (the triangle re-simulation; item.ex must be 'fold'),
+     check(item) → true | reason (the triangle re-simulation, drawn steps included; item.ex 'fold'),
      norm, maskOf, maskCells, maskKey, hamming, popcount, symScore, symMask, mirrorCell, reflCell,
      onSheet, unfoldMask(start, ctx.steps, order, count, alt) }.
      Optional hooks, active for the same call only (a small sheet has few neighbouring problems,

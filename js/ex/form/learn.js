@@ -14,8 +14,9 @@
       { id: 'solids', label: 'Solids', text: 'Four solids, each turned its own way. Only the faces turned toward you count; hidden faces may carry anything.' },
       { id: 'answer', label: 'Answer', text: 'Exactly one solid folds from the pattern: right shape, right sizes, marks in the right places. Tap it or press its key (1–4).' },
     ],
-    // The easiest level: a box or simple prism, one shaded face, upright pictures, a proportion foil.
-    demo: [{ params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 5, kind: 'box' }],
+    // The easiest level: a box or simple prism, one shaded and one half-shaded face, upright pictures,
+    // a proportion foil.
+    demo: [{ params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 8, kind: 'box' }],
     practice: [
       { solid: 0, marks: 0, view: 0, foil: 0 },
       { solid: 0, marks: 1, view: 0, foil: 0 },
@@ -23,10 +24,11 @@
       { solid: 1, marks: 2, view: 1, foil: 1 },
     ],
     tips: [
-      { id: 'shape', when: { dim: 'foil', levels: [0] }, text: 'First check the shape: count the faces and compare the sizes of the pattern with each solid.' },
+      { id: 'shape', when: { dim: 'foil', levels: [0] }, text: 'First check the shape: compare the face shapes and sizes in the pattern with each solid.' },
       { id: 'marksOnly', when: { dim: 'foil', levels: [1] }, text: 'All four have the right shape now: pick one marked face and check which faces must be its neighbours.' },
-      { id: 'two', when: { dim: 'marks', levels: [1] }, text: 'Two marked faces: do they share an edge once folded? Faces apart in the pattern can still meet.' },
-      { id: 'half', when: { dim: 'marks', levels: [2] }, text: 'A half-shaded face shows which way it turns: follow its diagonal from a corner you can name.' },
+      { id: 'half', when: { dim: 'marks', levels: [0] }, text: 'A half-shaded face shows which way it is turned: name the corner its shaded triangle points to by the faces that meet there.' },
+      { id: 'two', when: { dim: 'marks', levels: [1] }, text: 'Three marks: check the half mark first, since it tells a solid from its mirror image. Faces apart in the pattern can still meet.' },
+      { id: 'halves', when: { dim: 'marks', levels: [2] }, text: 'Two half marks: check each one\'s corner on its own, then whether the two sit right against each other.' },
       { id: 'side', when: { dim: 'view', levels: [1] }, text: 'The solids lie on their sides: find the base or the slanted faces first, then the marks.' },
       { id: 'upside', when: { dim: 'view', levels: [2] }, text: 'Upside down: the base is on top. Name it first, then work round its edges.' },
     ],
@@ -73,8 +75,8 @@
       land: 'Solid {n} folds from the pattern.',
       whyShape: 'Solid {n} has the wrong proportions: one side is {dir} than in the pattern.',
       whyMarks: 'Solid {n}: the face marked {f} cannot look like that once the pattern is folded.',
-      whyMirror: 'Solid {n} is the mirror image: the face marked {f} is turned the wrong way.',
+      whyMirror: 'Solid {n} is the mirror image of the folded pattern: see the face marked {f}.',
     },
-    bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
+    bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
   });
 })(window.PX);

@@ -56,8 +56,9 @@
    Item: { ex: 'patfold', v: 1, seed, params, key, n: 4, nOptions: 5, holes, folds, punches: [[i, j]],
    options, why, steps } with folds, steps and why exactly as in Fold (cells [column, row], steps[k]
    the state after k folds with outline, holes and faces). validate re-runs Fold's independent
-   triangle re-simulation on the item (as a 4 × 4 Fold item) and adds the PAT rules (one punch,
-   two or three folds, five options, every hole on the 16 positions). */
+   triangle re-simulation on the item (as a 4 × 4 Fold item; it checks every drawn step too, see
+   Fold's checkSteps) and adds the PAT rules (one punch, two or three folds, five options, every
+   hole on the 16 positions). */
 (function (PX) {
   'use strict';
 

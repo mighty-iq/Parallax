@@ -25,6 +25,14 @@ export async function run(t) {
 }
 
 const sig = (x) => 1 / (1 + Math.exp(-x));
+// A face's shape, turn and flip ignored: corner count, sorted sides, sorted diagonals (own code, not the generator's).
+const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+function shapeOfPts(P) {
+  const n = P.length, s = [], d = [];
+  for (let i = 0; i < n; i++) { s.push(dist3(P[i], P[(i + 1) % n])); for (let j = i + 2; j < n; j++) if (!(i === 0 && j === n - 1)) d.push(dist3(P[i], P[j])); }
+  return n + ':' + s.sort((x, y) => x - y).map((x) => x.toFixed(2)).join(',') + '/' + d.sort((x, y) => x - y).map((x) => x.toFixed(2)).join(',');
+}
+const shapeOf = (S, f) => shapeOfPts(S.faces[f].map((v) => S.verts[v]));
 const pRight = (theta, b, g = CHANCE) => g + (1 - g - 0.03) * sig(theta - b);
 const pk = (p) => `${p.solid}${p.marks}${p.view}${p.foil}`;
 
@@ -42,9 +50,11 @@ function testDefinition(t, PX, def) {
 function testModel(t, PX, L) {
   t.section('form: model');
   const r = PX.rng(31), SYM = { box: [4], tri: [2], trap: [2], pyr: [2], frus: [2, 4], house: [2], tet: [1, 3], wedge: [1, 2] }; // a square frustum has four
+  const ALL = ['box', 'tri', 'trap', 'wedge', 'pyr', 'tet', 'frus', 'house']; // every kind built ('tet' is not used by items)
+  t.eq(L.KINDS.flat().sort(), ALL.filter((k) => k !== 'tet').sort(), 'items use every kind with a four-sided face (half marks need one)');
   let n = 0, closed = 0, symOk = 0, solidOk = 0, nets = 0, mirrorOk = 0, first = '';
   for (let k = 0; k < 600; k++) {
-    const kind = L.KINDS.flat()[k % 8], S = L.build(kind, L.randomDims(r, kind));
+    const kind = ALL[k % 8], S = L.build(kind, L.randomDims(r, kind));
     n++;
     if (L.okSolid(S)) solidOk++;
     const g = L.matchings(S, S).length;
@@ -116,13 +126,22 @@ function testPool(t, PX, def, L) {
 function testItems(t, PX, def, L, pool) {
   t.section('form: items');
   const ranks = [0, 0, 0, 0], kinds = {}, solids = {};
-  let lvl = 0, marksOk = 0, viewOk = 0, shapeOk = 0, nShape = 0, noCube = 0, seen3 = 0;
+  let lvl = 0, marksOk = 0, viewOk = 0, shapeOk = 0, nShape = 0, noCube = 0, seen3 = 0, congruentOk = 0, nFoil = 0;
   for (const { p, it } of pool) {
     ranks[it.key]++;
     solids[it.solid.kind] = (solids[it.solid.kind] || 0) + 1;
     if (L.KINDS[p.solid].includes(it.solid.kind)) lvl++;
     const m = it.marks, ones = m.filter((x) => x === 1).length, halves = m.filter((x) => typeof x === 'object').length;
-    if ((p.marks === 0 && ones === 1 && !halves) || (p.marks === 1 && ones === 2 && !halves) || (p.marks === 2 && ones === 1 && halves === 1)) marksOk++;
+    if ((p.marks === 0 && ones === 1 && halves === 1) || (p.marks === 1 && ones === 2 && halves === 1) || (p.marks === 2 && ones === 1 && halves === 2)) marksOk++;
+    // Foils move marks only to congruent faces (R3 §8.6): per face shape, as many shaded and half-shaded
+    // faces as in the pattern; the proportion foil carries the pattern's own marks.
+    const tally = (S, mk) => { const o = {}; mk.forEach((x, f) => { if (x) { const k = shapeOf(S, f) + (typeof x === 'object' ? '#h' : '#f'); o[k] = (o[k] || 0) + 1; } }); return JSON.stringify(Object.entries(o).sort()); };
+    const kt = tally(it.solid, m);
+    it.options.forEach((o, i) => {
+      if (i === it.key) return;
+      nFoil++;
+      if (o.kind === 'shape' ? JSON.stringify(o.marks) === JSON.stringify(m) : tally(o.solid, o.marks) === kt && JSON.stringify(o.solid.verts) === JSON.stringify(it.solid.verts)) congruentOk++;
+    });
     if (it.options.every((o) => L.TILT_SETS[p.view].includes(o.view.tilt))) viewOk++;
     if (!(it.solid.kind === 'box' && new Set(it.solid.dims).size < 3)) noCube++;
     if (it.options.every((o) => L.seenFaces(o.solid, o.view).length >= 2)) seen3++;
@@ -132,7 +151,8 @@ function testItems(t, PX, def, L, pool) {
   }
   const N = pool.length;
   t.eq(lvl, N, 'the solid is of the level\'s kinds');
-  t.eq(marksOk, N, 'marks as the level says (one, two, one and a half face)');
+  t.eq(marksOk, N, 'marks as the level says (shaded + half; two shaded + half; shaded + two halves)');
+  t.eq(congruentOk, nFoil, `mark foils move marks only to congruent faces; proportion foils keep the pattern's marks (${nFoil} foils)`);
   t.eq(viewOk, N, 'every picture turns the solid as the level says');
   t.eq(noCube, N, 'no box is a cube (oriented marks on cubes belong to the Cube Match probe)');
   t.eq(shapeOk, N, 'foil level 0: exactly one proportion foil; level 1: none');

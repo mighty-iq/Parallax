@@ -38,13 +38,16 @@
     return { faces: faces, box: [x0, y0, x1, y1] };
   }
   function tone(light) { return light >= 0.7 ? 'px-fig-top' : light >= 0.25 ? 'px-fig-side' : 'px-fig-far'; }
+  // A hatch pattern in user units; set(pitch) resizes it (the options' pitch follows their drawn size).
   function hatchDefs(svg, pitch) {
-    var id = 'fm-hatch-' + (++uid), defs = SV.el('defs'), pat = SV.el('pattern', { id: id, patternUnits: 'userSpaceOnUse', width: pitch, height: pitch, patternTransform: 'rotate(45)' });
-    pat.appendChild(SV.el('rect', { x: 0, y: 0, width: pitch, height: pitch, class: 'fm-hatch-bg' }));
-    pat.appendChild(SV.el('line', { x1: 0, y1: 0, x2: 0, y2: pitch, class: 'fm-hatch-line', style: 'stroke-width:' + (pitch * 0.42).toFixed(3) }));
+    var id = 'fm-hatch-' + (++uid), defs = SV.el('defs'), pat = SV.el('pattern', { id: id, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' });
+    var rect = SV.el('rect', { x: 0, y: 0, class: 'fm-hatch-bg' }), line = SV.el('line', { x1: 0, y1: 0, x2: 0, class: 'fm-hatch-line' });
+    function set(p) { SV.attrs(pat, { width: p, height: p }); SV.attrs(rect, { width: p, height: p }); SV.attrs(line, { y2: p }); line.setAttribute('style', 'stroke-width:' + (p * 0.42).toFixed(3)); }
+    set(pitch);
+    pat.appendChild(rect); pat.appendChild(line);
     defs.appendChild(pat);
     svg.appendChild(defs);
-    return 'url(#' + id + ')';
+    return { url: 'url(#' + id + ')', set: set };
   }
   // The marked part of a face (a polygon), or null.
   function markPoly(pts, mark) {
@@ -64,7 +67,7 @@
     PX.ui.clear(svg);
     var k = st.k, w = Wpx / k, hh = (Hpx - top) / k, cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
     SV.attrs(svg, { viewBox: [cx - w / 2, cy - hh / 2 - top / k, w, hh + top / k] });
-    var fill = hatchDefs(svg, 5 / k), byFace = {};
+    var fill = hatchDefs(svg, 5 / k).url, byFace = {};
     st.netG = {};
     item.net.forEach(function (n) { byFace[n.face] = n; });
     var g = SV.el('g', { class: 'fm-net' });
@@ -114,7 +117,7 @@
     newItem(item);
     var o = item.options[i], P = st.proj[i], cx = (P.box[0] + P.box[2]) / 2, cy = (P.box[1] + P.box[3]) / 2, E = st.E;
     var svg = SV.el('svg', { viewBox: [cx - E / 2, cy - E / 2, E, E], class: 'fm-opt-svg', 'aria-hidden': 'true', focusable: 'false', preserveAspectRatio: 'xMidYMid meet' });
-    var fill = hatchDefs(svg, 5 / st.k), g = SV.el('g', { class: 'fm-solid' }), faces = {};
+    var hatch = hatchDefs(svg, 5 / st.k), fill = hatch.url, g = SV.el('g', { class: 'fm-solid' }), faces = {};
     P.faces.filter(function (f) { return f.c > 0; }).forEach(function (f) {
       var fg = SV.el('g');
       fg.appendChild(SV.el('path', { d: SV.pathData(f.pts, true), class: 'px-fig-face ' + tone(f.light) }));
@@ -130,7 +133,15 @@
     svg.style.maxWidth = Math.round(E * st.k) + 'px';
     var tag = h('span.ex-tag', { hidden: true });
     el.appendChild(h('span.ex-opt.fm-opt-cell', svg, tag));
-    st.opts[i] = { el: el, svg: svg, faces: faces, labels: labels, tag: tag };
+    st.opts[i] = { el: el, svg: svg, faces: faces, labels: labels, tag: tag, hatch: hatch };
+  }
+  // The hatch keeps a 5 px pitch however small an option is drawn (R3 §8.6: at least 4 px).
+  function fitHatches() {
+    st.opts.forEach(function (o) {
+      if (!o) return;
+      var w = o.svg.getBoundingClientRect().width;
+      if (w > 0) o.hatch.set(5 * st.E / w);
+    });
   }
   function optionLabel(item, i) { return 'Solid ' + (i + 1); }
   function gridCols() { return 4; }
@@ -161,6 +172,7 @@
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
     drawNet(item);
+    fitHatches();
     return timing.nextPaint();
   }
   var WHY = { shape: 'Wrong size', marks: 'Marks do not fit', mirror: 'Mirror image' };
