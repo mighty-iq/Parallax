@@ -461,6 +461,9 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 .px-tag--signal { border-color: var(--signal); color: var(--signal); }
 .px-tag--warn { border-color: var(--warn); color: var(--warn); }
 .px-tag--sample { border-style: dashed; }
+/* On phones a long tag (a role note at large text sizes) wraps inside its pill instead of widening the page. */
+.px-tag { max-width: 100%; }
+@media (max-width: 719px) { .px-tag { white-space: normal; } }
 
 /* ---------- notice ---------- */
 .px-notice {

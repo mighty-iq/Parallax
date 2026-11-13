@@ -127,7 +127,7 @@ PX.ex.view('rotate', {
 - Trials marked `stutter` or `skipped` never update the estimator, staircases, XP for correctness, or achievements based on correctness.
 
 ## 8. Learner record (store)
-- One key `parallax.v1` in localStorage. Shape:
+- One key `parallax.v1` in localStorage (the key never changes; the record's `v` is the format: 1 in 1.0.x, 2 from 1.1.0). Shape (1.0; the 1.1 additions are listed after the decisions below):
 ```js
 { v: 1, rev: 0, created, updated,
   settings: { sessionMin: 20, weeklyGoal: 3, theme: 'auto', reducedMotion: 'auto', sound: false, keyHints: true, textScale: 1, lastBackup: 0 },   // lastBackup: ms timestamp, 0 = never
@@ -147,6 +147,12 @@ PX.ex.view('rotate', {
   - Two tabs: a tab that finds a newer `rev` reloads it and emits `store:reload { reason, discarded }`. The engine registers `store.merge(theirs, mine)`: union of trials (a trial matches only an identical whole row, because two tabs can share a second, a seed and an exercise), sessions (by id), achievements, daily and assess results; for each exercise rating keep the side with more trials; settings from the newer side.
   - `PX.bus` is also `PX.core.bus`. `keys.push(map, { through: true })` makes a pass-through layer (the choice grid owns 1–9 while the player keeps Enter, Space, Esc).
   - New fields and settings are registered with `store.field()` / `store.setting()`; `store.exDefaults` gives mu 0, sd 2 until the engine sets its prior.
+- **1.1.0 (13 Nov), record format v2:**
+  - `v: 2`. A v1 record upgrades silently on load (new fields take their defaults). A 1.0 tab that meets a v2 record runs from memory instead of overwriting it, so 1.1 data is never stripped.
+  - Trial rows gain two optional columns: `[..., pPredMilli?, stage?, display?, input?]`, display class 0 unknown, 1 small, 2 large (as `est.displayClass`) and input 0 unknown, 1 mouse, 2 touch, 3 pen, 4 key. Rows of 1.0 stay valid. The CSV export is one 17-column format for every export (`store.csv`, registered by js/ui/log.js).
+  - Sessions keep `display`, `viewport` ('390x844'), `input`, `ended` and `budgetMs`; `practiceMs` (top level) is active time from `PX.core.clock` (pause, sheets, modals, a hidden tab and 60 s without input stop it).
+  - Check records may carry `display`, `viewport`, `input` (js/ui/check.js) and `overlapAnswer` ('no' | 'little' | 'lot', from the one-tap question on later checks), copied from `plan.check.extra` by `assess.finish`.
+  - Fields registered by v1.1 modules: `hygiene` ({ tests, focus }, js/ui/overlap.js), `section` ({ runs, next, live }, js/engine/section.js), `reckon` ({ v, hist }, js/ex/reckon/view.js); settings `patFocus` (bool, "DAT-style focus") and `testPause` ({ ids, until, what } or null, the json setting type).
 
 ## 9. Screens (ui/*)
 - **Screen contract (from the shell, 30 Oct):** each screen file does `PX.ui.screens = PX.ui.screens || {}; PX.ui.screens.<name> = { title, render(host, route, ctx) → cleanup }`. app.js loads last and shows a placeholder for screens nobody has registered. Shared pieces live in `PX.ui.kit` (icons, spec labels, panels, segmented controls, switches, copy field, "Last backup" line); kit is defined in app.js, so use it inside render only.
@@ -162,8 +168,9 @@ PX.ex.view('rotate', {
 - Stimuli follow research conventions: light grey cubes with dark outlines, neutral spheres, high contrast. Colour is never the only cue (shape, outline, label too). Tokens are CSS variables in css/base.css; 3D colours read from them.
 
 ## 11. Codes
-- CHC Gv narrow abilities: Vz visualization, SR speeded rotation, CS closure speed, CF flexibility of closure, MV visual memory, SS spatial scanning, PI serial perceptual integration, LE length estimation, IL perceptual illusions, PN perceptual alternations, IM imagery.
-- Other codes used here (not Gv narrow abilities, labelled as such in the UI): AT attentional tracking (Track), WM working memory (Span), PT perspective taking / spatial orientation (Orient, PR-2), NAV navigation and path integration (Homing), MA mental animation (PR-3), VB verbal reasoning (the control probe PR-0).
+- CHC Gv narrow abilities: Vz visualization, SR speeded rotation, CS closure speed, CF flexibility of closure, MV visual memory, SS spatial scanning, PI serial perceptual integration, LE length estimation, IL perceptual illusions, PN perceptual alternations, IM imagery. LE is used for Angles (EX-16, the nearest narrow ability for judging angles by eye; labelled perceptual-judgement practice).
+- Exercise codes: EX-01…EX-19 (EX-14…EX-19 are the DAT-style formats in PAT order; no code uses the mark, R3 §6); probes PR-0…PR-5.
+- Other codes used here (not Gv narrow abilities, labelled as such in the UI): AT attentional tracking (Track), WM working memory (Span), PT perspective taking / spatial orientation (Orient, PR-2), NAV navigation and path integration (Homing, Reckon), MA mental animation (PR-3), VB verbal reasoning (the control probe PR-0).
 - Uttal cells: intrinsic-static, intrinsic-dynamic, extrinsic-static, extrinsic-dynamic, or null. Used as a coverage checklist, never as a score (Mix et al. 2018 found the 2×2 does not hold as a factor structure).
 
 ## 12. Tests
