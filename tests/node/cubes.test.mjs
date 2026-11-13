@@ -35,7 +35,7 @@ export async function run(t) {
     const p = L.proj([x, y, z]);
     minSep = Math.min(minSep, Math.hypot(p[0], p[1]));
   }
-  t.ok(minSep >= 0.34, `no two lattice points of a 5 × 5 × 4 figure closer than 0.34 cube edges on screen (${minSep.toFixed(3)}; isometric would give 0)`);
+  t.ok(minSep >= 0.34, `no two cube positions of a 5 × 5 × 4 figure closer than 0.34 cube edges on screen (${minSep.toFixed(3)}; isometric would give 0)`);
 
   t.section('cubes: items');
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
@@ -180,6 +180,7 @@ export async function run(t) {
   if (process.env.PX_REPORT) {
     console.log('       cubes: ' + Object.entries(acc).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
     console.log(`       keys ${keyHist.join(',')}; per N ${JSON.stringify(perN)}; hidden in ${(100 * hiddenItems / n).toFixed(0)} %; CPU p95 ${p95.toFixed(1)} ms`);
+    console.log(`       later questions by N (counts 0–5) ${JSON.stringify(laterN)}; questions per figure 1/2/3/4 ${asksLen.slice(1, 5).join('/')} (mean ${meanAsks.toFixed(2)}); level prior ${(100 * priorHit).toFixed(1)} %; ray cast: smallest top ${minTopRay.toFixed(3)}`);
   }
   testLearn(t, PX, def);
 }

@@ -151,9 +151,11 @@ export async function run(t) {
 
   t.section('angles: shortcut solvers (all items, and per resolve level)');
   const bound = 0.25 + 0.10, pct = (x) => (100 * x).toFixed(1) + ' %';
+  // At the default size every pool (a resolve level has 3,360 items) meets the bound itself; quick
+  // runs (PX_TEST_ITEMS) with pools under 2,000 items allow three standard errors of sampling noise.
   for (const [k, v] of Object.entries(cues)) {
-    const rate = v.hit / v.n;
-    t.ok(rate <= bound, `"${k}" ≤ chance + 10 (${pct(rate)} over ${v.n} items)`);
+    const rate = v.hit / v.n, slack = v.n < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / v.n) : 0;
+    t.ok(rate <= bound + slack, `"${k}" ≤ chance + 10 (${pct(rate)} over ${v.n} items${slack ? `, quick run: +${pct(slack)} noise allowed` : ''})`);
   }
   if (process.env.PX_REPORT) {
     const worst = Object.entries(cues).sort((a, b) => b[1].hit / b[1].n - a[1].hit / a[1].n).slice(0, 12);

@@ -20,12 +20,18 @@
   background: var(--ang-cell);
 }
 .ex-angles .ex-angles-cell.is-pointed { outline: 2px solid var(--ang-mark); outline-offset: 2px; }
-/* The number sits in the cell's corner, clear of the figure (cells keep a 7 % margin). */
+/* The number sits in a corner the arms keep clear of (view.js labelCorners: top left when free). */
 .ex-angles .ex-angles-n { position: absolute; top: 0.25rem; left: 0.25rem; z-index: 1; font-size: var(--fs-md, 1rem); font-weight: 600; }
+.ex-angles .ex-angles-n[data-corner="tr"] { left: auto; right: 0.25rem; }
+.ex-angles .ex-angles-n[data-corner="bl"] { top: auto; bottom: 0.25rem; }
+.ex-angles .ex-angles-n[data-corner="br"] { top: auto; left: auto; right: 0.25rem; bottom: 0.25rem; }
 .ex-angles .ex-angles-size {
   position: absolute; right: 0.3rem; bottom: 0.2rem; font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums;
   font-size: var(--fs-sm, 0.875rem); color: var(--ang-mark); background: var(--ang-cell); padding: 0 0.15rem;
 }
+.ex-angles .ex-angles-size[data-corner="bl"] { right: auto; left: 0.3rem; }
+.ex-angles .ex-angles-size[data-corner="tr"] { bottom: auto; top: 0.2rem; }
+.ex-angles .ex-angles-size[data-corner="tl"] { bottom: auto; right: auto; top: 0.2rem; left: 0.3rem; }
 .ex-angles .ex-angles-size[hidden] { display: none; }
 .ex-angles .ex-angles-svg { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; }
 .ex-angles .ex-angles-arms {

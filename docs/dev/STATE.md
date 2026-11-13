@@ -54,7 +54,7 @@ Updated 2026-11-13 19:10 UTC. All 19 exercises are active in index.html (Knots a
 - Reviewer RV-E (Reckon and Homing: geometry, scoring, no-fix cues, shortcuts, feedback, voids, touch): a25ca175d24e7caab → docs/dev/reviews/RV-reckon-homing.md
 - Reviewer RV-H (code review of the v1.1 core/engine/ui diff: bugs, migration, clock, rules 6–7): a02feb65826393f2a → docs/dev/reviews/RV-code-core.md
 - Guide writer G1 (guide 1.1 pages, shots, PDF, README, CHANGELOG): ac14d632f5849a4a9 → docs/dev/progress/G1.md
-- Reviewer RV-C (Knots item validity, independent invariants, shortcuts, texts, timing): af47f967c9625baf4 → docs/dev/reviews/RV-knots.md
+- RV-C done (docs/dev/reviews/RV-knots.md): all answers right; Show me replay can show a type-changing move; 3 false texts; 2 untie cues at the limit; B4 fix round resumed (a0dafe0ed9a9dc012).
 - Finished: B3 (a4766dc5c229a6ee1), B2 (aed53d9e449759e47), B6 (a0dc048b845b7fc8e), B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
 
 ## Dead ends
