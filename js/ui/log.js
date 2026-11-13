@@ -145,7 +145,7 @@
     var o = opts || {};
     return PX.ui.app.exportDialog({
       title: o.title || 'Export trials',
-      intro: o.intro || ('One row per trial (' + rs.length + ' rows): time, exercise and its item-model version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class and the input. A CSV file cannot be imported; Back up keeps your whole record.'),
+      intro: o.intro || ('One row per trial (' + rs.length + ' rows): time, exercise and its item-model version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class, the input and, where an exercise records one, a second value (value2). A CSV file cannot be imported; Back up keeps your whole record.'),
       text: csv(rs, o),
       filename: o.filename || ('parallax-trials-' + U.fmtDate(Date.now()) + '.csv'),
       type: 'text/csv',

@@ -155,7 +155,7 @@
       onClick: function () {
         PX.ui.app.exportDialog({
           title: 'Export trials',
-          intro: 'One row per trial: time, exercise, session, settings, outcome, response time, screen class and input, for a spreadsheet or your own analysis (the same file as the Log’s export). A CSV file cannot be imported; use Back up now to keep your progress.',
+          intro: 'One row per trial: time, exercise, session, settings, outcome, response time, screen class, input and any second value an exercise records, for a spreadsheet or your own analysis (the same file as the Log’s export). A CSV file cannot be imported; use Back up now to keep your progress.',
           text: store.exportCSV(),
           filename: 'parallax-trials-' + U.fmtDate(Date.now()) + '.csv',
           type: 'text/csv',

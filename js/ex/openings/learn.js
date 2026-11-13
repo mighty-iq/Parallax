@@ -11,10 +11,11 @@
     parts: [
       { id: 'solid', label: 'Solid', text: 'A block with notches, steps and slanted cuts. Every cut runs straight through it, so what you see on one face continues to the opposite face.' },
       { id: 'rules', label: 'Rules', text: 'The solid may be turned any way before it goes in. Then it slides straight through without turning, so the opening is its outline seen along that direction.' },
-      { id: 'fit', label: 'Exact fit', text: 'An opening must match the outline exactly, at the same scale: one that is too large or too small is wrong.' },
+      { id: 'fit', label: 'Exact fit', text: 'An opening must match the outline exactly. The openings are drawn at the same scale as the solid, so one that is too large or too small is wrong.' },
       { id: 'options', label: 'Openings', text: 'Five openings, each shown turned or flipped at random. Exactly one fits. Tap it or press its key (1–5).' },
     ],
-    // The easiest level: one feature, straight edges, the front outline, upright, feature foils.
+    // The easiest level: one feature on each face, straight edges, the front outline (sometimes the
+    // side), upright, feature foils.
     demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 7, kind: 'front' }],
     practice: [
       { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 },
@@ -23,12 +24,12 @@
       { features: 1, edges: 1, keyview: 0, pose: 1, foils: 1 },
     ],
     tips: [
-      { id: 'front', when: { dim: 'keyview', levels: [0] }, text: 'Start with the face nearest you: push the solid in face first and trace that face\'s outline.' },
-      { id: 'side', when: { dim: 'keyview', levels: [1] }, text: 'No front fit? Try the side: turn the solid a quarter turn and push it in side first.' },
-      { id: 'top', when: { dim: 'keyview', levels: [2] }, text: 'The top counts too: the solid can go in upright, and the opening is then the outline seen from above.' },
+      { id: 'front', when: { dim: 'keyview', levels: [0] }, text: 'Start with the face nearest you: push the solid in face first and trace that face\'s outline. No fit? Try the side.' },
+      { id: 'side', when: { dim: 'keyview', levels: [1] }, text: 'Any face can fit now: check the front, the side and the top outline in turn.' },
+      { id: 'top', when: { dim: 'keyview', levels: [2] }, text: 'Mostly the top now: the solid can go in upright, and the opening is then the outline seen from above.' },
       { id: 'cham', when: { dim: 'edges', levels: [1] }, text: 'A slanted cut shows as a slanted edge in one outline only: the one seen along the cut.' },
       { id: 'lying', when: { dim: 'pose', levels: [1] }, text: 'The solid is lying on its side. Its outlines have not changed; only the picture is turned.' },
-      { id: 'proportion', when: { dim: 'foils', levels: [1] }, text: 'One opening has the right shape at the wrong size: compare how long each side is, not only the shape.' },
+      { id: 'proportion', when: { dim: 'foils', levels: [1] }, text: 'One opening is too long or too short along one side: compare how long each side is, not only the shape.' },
     ],
     // Strategies from prep courses (R3 §3.1): the "shadow" or "crush flat" view along each axis;
     // scan the options and group them; judge the widest and narrowest points; compare ratios of lengths.
@@ -41,7 +42,7 @@
           'Picture the solid pushed straight through: every notch and cut along the way shapes the hole.',
           'Turn the hole in your mind to match each opening.',
         ],
-        when: 'Quick when one face clearly carries the features.',
+        when: 'Quick when the features are few and easy to see.',
       },
       {
         id: 'analytic', title: 'Three outlines, then sizes',
@@ -70,9 +71,9 @@
       turn: 'Turn the solid so its {face} faces you.',
       outline: 'Seen straight on, its outline is the opening it needs.',
       land: 'Turned to match: that is opening {n}.',
-      whyFeature: 'Opening {n}: one notch, step or cut differs from every outline of the solid.',
-      whyProportion: 'Opening {n}: the right features at the wrong size.',
+      whyFeature: 'Opening {n}: its notches, steps or cuts differ from every outline of the solid.',
+      whyProportion: 'Opening {n}: the wrong size, too long or too short along one side.',
     },
-    bridge: 'Matching an object to an opening means finding its outline along each axis, as in reading a part\'s views. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
+    bridge: 'Matching an object to an opening means finding its outline along each axis, as in reading a part\'s views. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
   });
 })(window.PX);
