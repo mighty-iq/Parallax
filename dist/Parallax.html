@@ -324,6 +324,9 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 :root[data-keyhints="off"] .px-kbd,
 :root[data-keyhints="off"] .px-choice-key,
 :root[data-keyhints="off"] .px-keyhint { display: none; }
+/* touch screens and phone widths: no key hints on buttons (a keyboard, when there is one, still
+   works); by width too, as the player does, since a touch screen does not always say so */
+@media (hover: none) and (pointer: coarse), (max-width: 719px) { .px-kbd { display: none; } }
 
 /* ---------- panels ---------- */
 .px-panel {
@@ -392,7 +395,7 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 
 /* switch: <input type="checkbox" role="switch"> inside a label */
 .px-switch { position: relative; display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); cursor: pointer; }
-.px-switch input { position: absolute; left: 0; top: 50%; width: 2.75rem; height: 1.5rem; margin: -0.75rem 0 0; opacity: 0; cursor: pointer; }
+.px-switch input { position: absolute; left: 0; top: 50%; width: 2.75rem; height: max(var(--tap), 1.5rem); margin: calc(-0.5 * max(var(--tap), 1.5rem)) 0 0; opacity: 0; cursor: pointer; } /* the control itself is a full 44 px tall; the track drawn is 24 px */
 .px-switch-track {
   position: relative; flex: none; width: 2.75rem; height: 1.5rem;
   border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--surface-2);
@@ -2079,7 +2082,8 @@ html[data-hx-state="paused"] .ex-level .pr-timer-fill,
 .ex-fp.is-watching .ex-fp-dialbox { opacity: 0.45; }
 .ex-fp .ex-fp-fine {
   min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.25rem; white-space: nowrap;
-  font-variant-numeric: tabular-nums; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  /* pan-y: a vertical swipe that starts here scrolls the page (the view's script acts on release or a still hold) */
+  font-variant-numeric: tabular-nums; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 .ex-fp.is-revealed .ex-fp-fine { visibility: hidden; }
 .ex-fp .ex-fp-dial {
@@ -2786,6 +2790,20 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .sec-table th, .sec-table td { padding: var(--s2) var(--s2); border-top: 1px solid var(--rule); text-align: right; white-space: nowrap; }
 .sec-table th[scope="row"], .sec-table thead th:first-child { text-align: left; white-space: normal; }
 .sec-table thead th { color: var(--ink-3); font-weight: 400; border-top: 0; }
+.sec-table td.sec-unreached { text-align: left; color: var(--ink-3); }
+/* a narrow screen: each part's name on its own line, its numbers labelled under it (data-label),
+   so neighbouring columns never run together (RV-play-dat: "3 1:01" read as "31:01") */
+@media (max-width: 520px) {
+  .sec-table, .sec-table tbody { display: block; }
+  .sec-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .sec-table tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1) var(--s2); padding: var(--s2) 0; border-top: 1px solid var(--rule); }
+  .sec-table tr > th[scope="row"], .sec-table tr > td { padding: 0; border: 0; }
+  .sec-table th[scope="row"] { grid-column: 1 / -1; }
+  .sec-table td { display: flex; flex-direction: column; gap: 0.125rem; text-align: left; white-space: normal; }
+  .sec-table td::before { content: attr(data-label); font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3); }
+  .sec-table td.sec-unreached { grid-column: 1 / -1; }
+  .sec-table td.sec-unreached::before { content: none; }
+}
 .sec-results .px-meta { margin-top: var(--s3); max-width: var(--measure); }
 .sec-award { display: flex; align-items: flex-start; gap: var(--s2); margin-top: var(--s3); font-size: var(--fs-sm); color: var(--ink-2); }
 .sec-award .px-icon { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; color: var(--signal); }
@@ -2850,6 +2868,16 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .ex-reckon .ex-reckon-bias { font-weight: 500; color: var(--ink, #1A1D21); }
 .ex-reckon .ex-reckon-chartnote { margin: var(--s1, 0.25rem) 0 0; font-size: var(--fs-xs, 0.8125rem); line-height: 1.4; color: var(--ink-3, #5D646C); text-align: center; }
 
+
+/* walking back, the controls under the view are taller than the kit's (the 64 px Back / Walk / Here row and
+   two lines of readout): their room is kept so that a Try or scored item fits 360 × 640 (B2: it ended 10 px
+   below with the kit's 17rem) */
+@media (max-width: 42rem) {
+  .ex-reckon .ex-fp.is-return .ex-fp-stage { max-height: min(42svh, calc(var(--pl-avail, 100vh) - 18.25rem)); }
+}
+@media (max-width: 42rem) and (min-height: 43.75rem) {
+  .ex-reckon .ex-fp.is-return .ex-fp-dialbox { width: clamp(8.5rem, calc(var(--pl-avail, 100vh) - 75vw - 14.25rem), 13rem); }
+}
 
 </style>
 <style data-src="css/ex/angles.css">
@@ -3114,7 +3142,7 @@ p.px-overlap-legal { margin-top: var(--s3); }
    tracing layer (.op-ink). Openings: a pale plate with the outline cut out, dark inside with a
    2 px rim, so the shape reads by contrast and by its edge, not by colour. */
 .ex-openings .op-stem { width: 100%; }
-.ex-openings .op-stage { width: 100%; height: clamp(11rem, min(40vh, 64vw), 20rem); }
+.ex-openings .op-stage { width: 100%; }
 .ex-openings .op-3d { position: absolute; inset: 0; z-index: 0; }
 .ex-openings .op-ink { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
 .ex-openings .op-trace {
@@ -3145,41 +3173,43 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .ex-openings .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
 .ex-openings .ex-tag[data-kind="foil"] { color: var(--ink-2, #454B52); border-style: dashed; }
 
-/* Options: five in a row on wide screens, 3 + 2 on narrow ones. The openings' drawn size sets the
-   scale that the solid shares (view.js fitScale): at most 8.6 steps across a plate, so 6.25rem gives
-   11.6 px a step and a phone cell (104 px at 360 px wide, 98 px drawn) 11.4 px. */
-.ex-openings .px-choice { padding: var(--s2, 0.5rem); }
+/* One scale for the solid and the openings (view.js fitScale): --op-s is an opening's drawn size,
+   a plate of at most 8.6 steps across. The solid's frame is at most 12.6 steps tall (the largest box,
+   any pose, with its margin), so a stage of 1.465 × --op-s plus room for its label holds the solid at
+   the openings' scale and the solid fills it. The key digit sits in a strip beside each drawing
+   (left; on top when held sideways), never on a shape. */
+.ex-openings { --op-s: 10rem; }
+.ex-openings .op-stage { height: calc(var(--op-s) * 1.465 + 1.5rem); }
+.ex-openings .px-choice { padding: 2px 2px 2px 1.25rem; }
 .ex-openings .op-opt-cell { flex-direction: column; gap: var(--s1, 0.25rem); }
-.ex-openings .op-opt-svg { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; max-height: 9rem; margin: 0 auto; overflow: visible; }
+.ex-openings .op-opt-svg { display: block; width: var(--op-s); height: var(--op-s); max-width: 100%; margin: 0 auto; overflow: visible; }
+.ex-openings .px-choice-key { z-index: 1; }
 
+@media (max-width: 1000px) { .ex-openings { --op-s: 8rem; } }
+/* Narrow pages outside the player (the dev harness): two columns, sized like the player's below
+   with the viewport's height in place of --pl-avail. */
 @media (max-width: 40rem) {
-  .ex-openings .px-choices[style*="--px-cols:5"] { --px-cols: 3 !important; }
-  .ex-openings .op-stage { height: clamp(10rem, min(34vh, 60vw), 15rem); }
-  .ex-openings .op-opt-svg { max-height: 6.25rem; }
-  .ex-openings .px-choice { padding: 2px; }
+  .ex-openings .px-choices[style*="--px-cols:5"] { --px-cols: 2 !important; }
+  .ex-openings { --op-s: min(9.5rem, calc((100vw - 2.5rem) / 2 - 1.25rem - 10px), calc((100vh - 11.5rem) / 4.47)); }
 }
 
-/* Phones in the player (B2's contract; css/play.css sets --pl-avail, --pl-w, --pl-col): five
-   openings in 3 + 2 cells under the solid; sideways, the solid left and the openings right. */
+/* Phones in the player (B2's contract; css/play.css sets --pl-avail, --pl-w, --pl-col): two columns
+   (2 + 2 + 1) under the solid, the drawings as large as the width and the height allow: the stage
+   (1.465 s + 1.5rem), three rows of s + 6 px and the gaps fit --pl-avail, with room left for the
+   "Your turn" strip that follows the Watch (fit.py, 360×640). Sideways: the solid left,
+   the openings right in three columns, the digit on top. */
 @media (max-width: 719px), (max-height: 500px) {
-  .pl-trial.ex-openings { --op-cell: min(calc((var(--pl-w) - 2 * var(--s2)) / 3), calc((var(--pl-avail) - 10rem - 2.5rem - 2 * var(--s2)) / 2)); }
-  .pl-trial.ex-openings .px-choices { --px-cols: 3 !important; }
-  .pl-trial.ex-openings .op-stage { height: min(16rem, calc(var(--pl-w) * 0.72), calc(var(--pl-avail) - 2 * var(--op-cell) - 2.5rem - 2 * var(--s2))); }
-  .pl-trial.ex-openings .px-choice { height: var(--op-cell); padding: 2px; }
+  .pl-trial.ex-openings { --op-s: min(calc((var(--pl-w) - var(--s2)) / 2 - 1.25rem - 6px), calc((var(--pl-avail) - 6.5rem) / 4.47)); }
+  .pl-trial.ex-openings .px-choices { --px-cols: 2 !important; }
+  .pl-trial.ex-openings .px-choice { height: calc(var(--op-s) + 6px); min-height: 0; }
   .pl-trial.ex-openings .px-choice .ex-opt { position: relative; }
-  .pl-trial.ex-openings .op-opt-svg { width: calc(var(--op-cell) - 6px); max-height: calc(var(--op-cell) - 6px); max-width: 100%; }
   .pl-trial.ex-openings .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 0.75rem; }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-openings { --op-cell: min(calc((var(--pl-col) - 2 * var(--s2)) / 3), calc((var(--pl-avail) - var(--s2)) / 2)); }
-  .pl-trial.ex-openings .op-stage { height: calc(var(--pl-avail) - 2.5rem); }
-}
-
-/* The key digit (1–5) stays above the drawing in its cell, with a thin halo of the plate's tone so it
-   reads over a dark opening too (a solid chip would cut a block out of the opening's corner). */
-.ex-openings .px-choice-key {
-  z-index: 1;
-  text-shadow: 0 0 1px var(--stim-face, #ECEEF0), 0 0 2px var(--stim-face, #ECEEF0), 0 0 2px var(--stim-face, #ECEEF0);
+  .pl-trial.ex-openings { --op-s: min(calc((var(--pl-col) - 2 * var(--s2)) / 3 - 6px), calc((var(--pl-avail) - var(--s2)) / 2 - 1.25rem - 6px)); }
+  .pl-trial.ex-openings .px-choices { --px-cols: 3 !important; }
+  .pl-trial.ex-openings .op-stage { height: min(calc(var(--pl-avail) - 2.5rem), calc(var(--op-s) * 1.465 + 1.5rem)); }
+  .pl-trial.ex-openings .px-choice { height: calc(var(--op-s) + 1.25rem + 6px); padding: 1.25rem 2px 2px 2px; }
 }
 
 </style>
@@ -3227,6 +3257,7 @@ p.px-overlap-legal { margin-top: var(--s3); }
   fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 6px; stroke-dasharray: 1 7; stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
+.ex-patviews .pv-diff--show { stroke-width: 7px; }
 .ex-patviews .pv-ghost {
   fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-dasharray: 7 4; stroke-linecap: square;
   vector-effect: non-scaling-stroke;
@@ -3297,6 +3328,11 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .ex-form .fm-netface.is-pointed .fm-face,
 .ex-form .fm-solid .is-pointed .px-fig-face { stroke: var(--stim-target, #0B6A86); stroke-width: 3px; vector-effect: non-scaling-stroke; }
 
+/* Show me: an edge that differs (thick dots in the "wrong" colour: a shape as well as a colour). */
+.ex-form .fm-edge-hl {
+  fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 6px; stroke-dasharray: 1 7; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
 /* Show me: letters on faces (a ring and a letter; ✗ in the "wrong" colour and a dashed ring). */
 .ex-form .fm-tag circle { fill: var(--surface, #FFFFFF); stroke: var(--stim-target, #0B6A86); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .ex-form .fm-tag text {
@@ -3380,6 +3416,16 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .ex-knots .ex-knots-arrow {
   fill: none; stroke: var(--knots-rope); stroke-width: 2.5px; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75;
 }
+
+/* the tutorial demo: the plate's label names the rope on show; the copy (one crossing switched)
+   sits on a dashed plate (a shape cue) with an accent label */
+.ex-knots .ex-knots-label {
+  top: 0.4rem; left: 0.5rem; padding: 0.1rem 0.4rem; font-weight: 600; letter-spacing: 0.05em; color: var(--ink-2, #454B52);
+  background: var(--knots-plate-bg); border: 1px solid var(--rule-strong, #7B838A); border-radius: var(--r-control, 4px);
+}
+.ex-knots .ex-knots-stage.is-copy { outline: 2px dashed var(--signal, #0B6A86); outline-offset: -3px; }
+.ex-knots .ex-knots-stage.is-copy .ex-knots-label { color: var(--signal, #0B6A86); border: 1px dashed var(--signal, #0B6A86); }
+.ex-knots .ex-knots-tag[data-demo] { cursor: default; pointer-events: none; }
 
 /* show me: the crossings a move is about (a ring: a shape, so not colour alone) */
 .ex-knots .ex-knots-ring { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 5 3.5; }
@@ -4009,6 +4055,22 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .pl-verdict[data-kind="right"] .pl-verdict-icon { background: var(--right-wash); }
 .pl-verdict[data-kind="wrong"] .pl-verdict-icon { background: var(--wrong-wash); }
 .pl-verdict[data-kind="timeout"] .pl-verdict-icon { background: var(--warn-wash); }
+/* after a Watch demo: what to do next (play.js yourTurn), with a way on */
+.pl-verdict[data-kind="turn"] { align-items: center; }
+.pl-verdict[data-kind="turn"] .pl-verdict-icon, .pl-verdict[data-kind="turn"] .pl-verdict-word { color: var(--signal-strong); }
+.pl-verdict[data-kind="turn"] .pl-verdict-icon { background: var(--signal-wash); }
+.pl-verdict[data-kind="turn"] .pl-verdict-text { flex: 1 1 12rem; } /* beside the word, or under it next to the button on a phone */
+.pl-verdict[data-kind="turn"] [data-turn-skip] { margin-left: auto; }
+/* phones: one compact block (the word over the line, the button beside both), so the item's own
+   controls stay clear above it */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-feedback:has(> .pl-feedback-main > .pl-verdict[data-kind="turn"]) { padding-top: var(--s2); padding-bottom: calc(var(--s2) + env(safe-area-inset-bottom, 0px)); }
+  .pl-verdict[data-kind="turn"] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icon word skip" "text text skip"; align-items: center; gap: 0 var(--s2); }
+  .pl-verdict[data-kind="turn"] .pl-verdict-icon { grid-area: icon; }
+  .pl-verdict[data-kind="turn"] .pl-verdict-word { grid-area: word; font-size: var(--fs-md); }
+  .pl-verdict[data-kind="turn"] .pl-verdict-text { grid-area: text; font-size: 0.8125rem; line-height: 1.35; }
+  .pl-verdict[data-kind="turn"] [data-turn-skip] { grid-area: skip; margin: 0; }
+}
 .pl-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-left: auto; }
 .pl-showme { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); }
 .pl-caption { flex: 1 1 14rem; font-size: var(--fs-sm); color: var(--ink-2); }
@@ -4163,7 +4225,6 @@ p.px-overlap-legal { margin-top: var(--s3); }
 /* touch screens: key hints and the Keys button give way (a keyboard, when there is one, still
    works); by pointer, not by width, so a phone held sideways loses them too */
 @media (hover: none) and (pointer: coarse) {
-  .pl-screen .px-kbd { display: none; }
   .pl-hud-tools [data-help], .pl-hud-keys { display: none; }
   .pl-howto-keys { display: none; }
 }
@@ -4199,6 +4260,12 @@ p.px-overlap-legal { margin-top: var(--s3); }
   }
   body.px-item .pl-player { gap: var(--s2); }
   body.px-item .pl-session-line { display: none; } /* Today showed the plan; the item needs the room */
+  /* Watch, Try, Go: the goal and tip above the item, and in Watch the pinned caption and bar, take
+     their share first (--pl-extra, set by play.js on the host); its own header scrolls away above */
+  .is-wtg { --pl-avail: calc(var(--pl-vh) - var(--tap) - 0.25rem - 3 * var(--s2) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pl-extra, 0px)); }
+  .is-wtg .pl-guide { gap: var(--s1); }
+  .is-wtg .pl-goal { font-size: 0.8125rem; line-height: 1.4; }
+  .is-wtg .pl-tip { padding: var(--s1) var(--s2); font-size: 0.8125rem; line-height: 1.4; }
 
   /* the status strip: name over count on the left, Help and Pause on the right, the ruler under them */
   .pl-hud { padding-bottom: 0; border-bottom: 0; }
@@ -4297,6 +4364,17 @@ p.px-overlap-legal { margin-top: var(--s3); }
   .pl-wtg.is-parts-open .pl-parts { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
 }
 @media (min-width: 720px) and (min-height: 501px) { .pl-parts-btn { display: none; } }
+/* A player outside a session (the Section review) keeps the phone tab bar: its reading strip and a
+   show-me's caption and bar sit above the tab bar, never under it (RV-play-dat, Section 1). */
+@media (max-width: 719px) {
+  :root:not([data-chrome="focus"]) .pl-player { --pl-avail: calc(var(--pl-vh) - var(--tap) - 0.25rem - 3 * var(--s2) - 3.5rem - 1px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  :root:not([data-chrome="focus"]) .pl-feedback { bottom: calc(3.5rem + 1px + env(safe-area-inset-bottom, 0px)); }
+  :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-showme-buttons { bottom: calc(3.5rem + 1px + env(safe-area-inset-bottom, 0px)); padding-bottom: var(--s2); }
+  :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-trial .ex-caption:not(:empty),
+  :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-showme .pl-caption:not(:empty) {
+    bottom: calc(3.5rem + 1px + var(--tap) + 2 * var(--s2) + 1px + env(safe-area-inset-bottom, 0px));
+  }
+}
 /* Phones held sideways: the stimulus on the left at full height, the answers on the right
    (I2 §8). --pl-col is the width of one column. Views with their own controls (Orient, Span,
    Track, Patterns…) lay out their two columns in css/ex/<id>.css. */
@@ -12038,6 +12116,10 @@ void main() {
       // PAT formats after them, which join automatic choices only under the PAT focus)
       beginner: ['rotate', 'fold', 'spin', 'nets', 'knots', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing', 'reckon',
         'patfold', 'cubes', 'angles', 'patviews', 'openings', 'form'],
+      // under the PAT focus the DAT-style formats lead the beginner order, in the order of the test's
+      // six parts (apertures, view recognition, angles, hole punching, cube counting, pattern
+      // folding), and every Train session holds at least one of them (schedule.choose)
+      patOrder: ['openings', 'patviews', 'angles', 'patfold', 'cubes', 'form'],
       review: [3, 7, 14, 30], maxGapMs: 90000, maxFactor: 1.6, blockEvery: 10,
       minItemMs: 500, // a time-boxed session's item cap: one item per 0.5 s of its budget (a safety net)
       lastRetries: 2, // a voided closing item is replaced at most twice; then a time-boxed session ends
@@ -13393,7 +13475,9 @@ void main() {
      config.session.beginner, else the highest learning progress), review (most overdue, else an
      untried one), variety (least practised; a similar-looking partner when the focus is at S4+
      and every exercise has been tried). roleOf maps each exercise to its role, 'new' for an
-     untried one that is not pinned. Shares follow a softmax of
+     untried one that is not pinned. Under the PAT focus (settings.patFocus) the DAT-style
+     formats lead the beginner order (config.session.patOrder), and every session holds at least
+     one of them when one can run (in the last unpinned slot). Shares follow a softmax of
      the bandit scores, clipped to 20–50 % of trials; the time budget becomes a trial count with
      per-exercise median trial times (defaults by answer type until 10 measured trials exist).
 
@@ -13402,7 +13486,9 @@ void main() {
      stage(rec, exId, style) / stageUp(rec, def, style, opts) / switchNote(rec, exId, x, p, style)
      group(exId) / similar(a, b)
      trialTimes(rec) → { exId: { med, extra, n } }  / trialMs(rec, def, times, params) / typical(...)
-     choose(rec, opts, now) → { exs, roles (role → id), roleOf (id → role or 'new'), info }
+     beginOrder(rec) → the beginner order in force (the PAT focus puts patOrder first)
+     choose(rec, opts, now) → { exs, roles (role → id), roleOf (id → role or 'new'), info, patPick
+                               (the DAT-style format the PAT focus put in, or null) }
      build(rec, opts, now) → the Train part of a plan: exs, roles, quota, total, stage, ...
      nextRun(plan) → sets plan.run { exId, left, len, variant, stage, banner } */
 (function (PX) {
@@ -13609,15 +13695,26 @@ void main() {
   }
 
   function codeCmp(a, b) { return a.def.code < b.def.code ? -1 : a.def.code > b.def.code ? 1 : 0; }
-  // Untried exercises in the beginner order (config.session.beginner), others after it by code.
-  function beginRank(x) { var i = (C.session.beginner || []).indexOf(x.def.id); return i < 0 ? 1e3 : i; }
-  function newCmp(a, b) { return beginRank(a) - beginRank(b) || codeCmp(a, b); }
-  // Least practised first; ties among untried exercises in the beginner order.
-  function leastCmp(a, b) { return a.n - b.n || (a.n === 0 && b.n === 0 ? newCmp(a, b) : (a.last - b.last) || codeCmp(a, b)); }
+  // The beginner order (config.session.beginner). Under the PAT focus the DAT-style formats lead
+  // it in the test's order (config.session.patOrder); turned off, the usual order is back.
+  function beginOrder(rec) {
+    var b = C.session.beginner || [], p = C.session.patOrder || [];
+    if (!patFocus(rec)) return b.slice();
+    return p.concat(b.filter(function (id) { return p.indexOf(id) < 0; }));
+  }
+  // Comparators over one beginner order: untried exercises in that order, others after it by
+  // code (newCmp); least practised first, ties among untried ones in that order (leastCmp).
+  function orderCmps(order) {
+    function rank(x) { var i = order.indexOf(x.def.id); return i < 0 ? 1e3 : i; }
+    function newCmp(a, b) { return rank(a) - rank(b) || codeCmp(a, b); }
+    function leastCmp(a, b) { return a.n - b.n || (a.n === 0 && b.n === 0 ? newCmp(a, b) : (a.last - b.last) || codeCmp(a, b)); }
+    return { newCmp: newCmp, leastCmp: leastCmp };
+  }
 
   function choose(rec, opts, now) {
     opts = opts || {};
     var t = train(rec), style = opts.style || t.style;
+    var cmp = orderCmps(beginOrder(rec)), newCmp = cmp.newCmp, leastCmp = cmp.leastCmp;
     var defs = trainable(rec, opts, now);
     var info = defs.map(function (d) {
       var tt = totals(rec, d);
@@ -13667,8 +13764,29 @@ void main() {
       take(pool.sort(leastCmp)[0], 'variety');
     }
     while (exs.length < want) take(rest().sort(leastCmp)[0], 'extra');
-    return { exs: exs, roles: roles, roleOf: roleOf, info: info };
+    // Under the PAT focus a session holds at least one DAT-style format whenever one can run: if
+    // none was chosen, the last slot that is not pinned goes to the format most overdue for
+    // review, else the least practised one (untried ones in the test's order). Pins stay.
+    var patPick = null;
+    if (patFocus(rec) && !exs.some(function (id) { return isPat(id); })) {
+      var pats = rest().filter(function (x) { return x.def.pat === true; });
+      var j = exs.length - 1;
+      while (j >= 0 && pinned[exs[j]]) j--;
+      if (pats.length && j >= 0) {
+        var px = pats.filter(function (x) { return x.due.due; }).sort(function (a, b) { return b.due.overdue - a.due.overdue || codeCmp(a, b); })[0] ||
+          pats.sort(leastCmp)[0];
+        var old = exs[j], role = roleOf[old] === 'new' ? null : roleOf[old];
+        for (var rk in roles) if (hasOwn.call(roles, rk) && roles[rk] === old) role = rk;
+        delete used[old]; delete roleOf[old];
+        exs[j] = px.def.id; used[px.def.id] = true;
+        if (role) roles[role] = px.def.id;
+        roleOf[px.def.id] = px.n === 0 && !pinned[px.def.id] ? 'new' : role || 'extra';
+        patPick = px.def.id;
+      }
+    }
+    return { exs: exs, roles: roles, roleOf: roleOf, info: info, patPick: patPick };
   }
+  function isPat(id) { var d = PX.ex.get(id); return !!d && d.pat === true; }
 
   // Largest-remainder rounding of shares × total.
   function quotas(ids, sh, total) {
@@ -13686,7 +13804,7 @@ void main() {
     var t = train(rec), style = opts.style || t.style;
     var ch = choose(rec, opts, now);
     var budgetMs = Math.max(60000, (isNum(opts.minutes) ? opts.minutes : C.session.minutes) * 60000);
-    var out = { exs: ch.exs, roles: ch.roles, roleOf: ch.roleOf, quota: {}, total: 0, stage: {}, budgetMs: budgetMs, msPer: {} };
+    var out = { exs: ch.exs, roles: ch.roles, roleOf: ch.roleOf, patPick: ch.patPick || null, quota: {}, total: 0, stage: {}, budgetMs: budgetMs, msPer: {} };
     if (!ch.exs.length) return out;
     var byId = {};
     ch.info.forEach(function (x) { byId[x.def.id] = x; });
@@ -13755,7 +13873,7 @@ void main() {
   E.schedule = {
     train: train, totals: totals, due: due, practised: practised, stage: stage, stageUp: stageUp,
     switchNote: switchNote, group: group, similar: similar, trialTimes: trialTimes, trialMs: trialMs, typical: typical, estOf: estOf,
-    auto: auto, patFocus: patFocus, testPaused: testPaused,
+    auto: auto, patFocus: patFocus, testPaused: testPaused, beginOrder: beginOrder,
     trainable: trainable, choose: choose, build: build, nextRun: nextRun, runLength: runLength, quotas: quotas,
   };
 
@@ -14092,6 +14210,7 @@ void main() {
       plan.exs = b.exs;
       plan.roles = b.roles;
       plan.roleOf = b.roleOf || {}; // id → 'focus' | 'review' | 'variety' | 'extra' | 'new' (untried)
+      plan.patPick = b.patPick || null; // the DAT-style format the PAT focus put in (schedule.choose)
       plan.quota = b.quota;
       plan.total = b.total;
       plan.stage = b.stage;
@@ -25880,6 +25999,7 @@ void main() {
   var TARGET_WIN = 8;        // the key should land within this of the item's target answer
   var TRIES = 2000;          // candidate routes per attempt
   var LANDMARK_DIST = 400, LANDMARK_SEP = 60;
+  var LANDMARK_VIEW = 26;     // a landmark lies within this of a leg's heading: in view (half the 74° field, less a margin) all that leg
   var LANDMARK_KINDS = [
     { id: 'peak', name: 'mountain' }, { id: 'mast', name: 'radio mast' }, { id: 'mill', name: 'windmill' },
     { id: 'spire', name: 'spire' }, { id: 'dome', name: 'dome' },
@@ -26102,16 +26222,46 @@ void main() {
     return assemble(r, p, h0, best.legs, best.turns);
   }
 
+  // Landmarks (far, so only their directions matter) are placed where the walk shows them (RV-play-nav-knots
+  // 2: random bearings left them behind the walker on whole routes): each within LANDMARK_VIEW of a leg's
+  // heading, so it stays in view for that leg; when spacing leaves no room on a leg (two legs, three
+  // landmarks), where a turn sweeps the view past it; a random bearing only as a last resort.
+  function landmarkBearings(r, h0, legs, turns, want) {
+    var heads = [], hh = h0, out = [], i, t;
+    for (i = 0; i < legs.length; i++) { if (i) hh += turns[i - 1]; heads.push(norm360(hh)); }
+    var order = r.shuffle(heads.map(function (_, k) { return k; }));
+    function free(b) { for (var j = 0; j < out.length; j++) if (adiff(b, out[j]) < LANDMARK_SEP) return false; return true; }
+    // every spot along the legs, every 2°; with two or more landmarks the first is taken where a second
+    // still fits along a leg (on a narrow route a first one in the middle would leave no room)
+    var spots = [];
+    heads.forEach(function (hd) { for (var o = -LANDMARK_VIEW; o <= LANDMARK_VIEW; o += 2) spots.push(rnd(norm360(hd + o), 10)); });
+    var roomy = want >= 2 ? spots.filter(function (c) { return spots.some(function (d) { return adiff(c, d) >= LANDMARK_SEP; }); }) : [];
+    for (var k = 0; k < want; k++) {
+      var b = null;
+      if (k === 0 && roomy.length && roomy.length < spots.length) b = roomy[Math.min(roomy.length - 1, Math.floor(r.float(0, roomy.length)))];
+      for (t = 0; t < 60 && b === null; t++) {
+        var c = rnd(norm360(heads[order[(k + Math.floor(t / 15)) % order.length]] + r.float(-LANDMARK_VIEW, LANDMARK_VIEW)), 10);
+        if (free(c)) b = c;
+      }
+      if (b === null) { // every free spot along the legs: one is found whenever one exists
+        var open = spots.filter(free);
+        if (open.length) b = open[Math.min(open.length - 1, Math.floor(r.float(0, open.length)))];
+      }
+      for (t = 0; t < 60 && b === null && turns.length; t++) {
+        var ti = Math.min(turns.length - 1, Math.floor(r.float(0, turns.length))), c2 = rnd(norm360(heads[ti] + turns[ti] * r.float(0.2, 0.8)), 10);
+        if (free(c2)) b = c2;
+      }
+      for (t = 0; t < 200 && b === null; t++) { var c3 = rnd(r.float(0, 360), 10); if (free(c3)) b = c3; }
+      if (b !== null) out.push(b);
+    }
+    return out;
+  }
   function assemble(r, p, h0, legs, turns) {
     var g = route(h0, legs, turns), lm = [], kinds = r.shuffle(LANDMARK_KINDS), want = LANDMARKS[p.landmarks].n;
-    for (var i = 0; i < 200 && lm.length < want; i++) {
-      var b = rnd(r.float(0, 360), 10), ok = true;
-      for (var j = 0; j < lm.length; j++) if (adiff(b, lm[j].bearing) < LANDMARK_SEP) ok = false;
-      if (ok) {
-        var sc = sincos(b);
-        lm.push({ id: kinds[lm.length].id, name: kinds[lm.length].name, bearing: b, dist: LANDMARK_DIST, x: rnd(LANDMARK_DIST * sc[0], 100), y: rnd(LANDMARK_DIST * sc[1], 100) });
-      }
-    }
+    landmarkBearings(r, h0, legs, turns, want).forEach(function (b, i) {
+      var sc = sincos(b);
+      lm.push({ id: kinds[i].id, name: kinds[i].name, bearing: b, dist: LANDMARK_DIST, x: rnd(LANDMARK_DIST * sc[0], 100), y: rnd(LANDMARK_DIST * sc[1], 100) });
+    });
     var item = {
       ex: 'homing', params: { route: p.route, landmarks: p.landmarks, tolerance: p.tolerance },
       key: rnd(g.key, 100) % 360, tolerance: TOLERANCES[p.tolerance], experimental: true,
@@ -29213,7 +29363,7 @@ void main() {
    chance: point 2τ/360; return 2·asin(τ)/360 (an upper bound: a guesser who knew d exactly).
 
    Dims: route (Homing's 8 levels: legs × turn size), flow (textured blobs, sparse blobs, short-lived
-   dots), speed (steady with ±10 % jitter; varied between legs, 1.2–2.0 m/s, turns 30–45°/s; varied
+   dots), speed (steady with ±10 % jitter; varied between legs, 0.5–2.0 m/s (each leg's time drawn first), turns 30–45°/s; varied
    within legs: two speeds per leg at least 0.4 m/s apart), tolerance (as above); variants point and
    return (+0.5 logit). Initial steps (hand-set, R1 §8.4; to be refitted from pooled exports): 0.55 per
    extra leg, 0.4 per turn size, 0.35 per flow level, 0.3 per speed level, 0.9 per tolerance level.
@@ -29687,9 +29837,10 @@ void main() {
    like Track's attention practice): angle ranking is a perceptual drill, and practice tends to stay
    specific to the trained stimuli, so no transfer beyond the format is claimed.
 
-   The item. Four numbered angles (two straight arms from a vertex, no arc: an arc's size would be
-   a cue), each in its own square cell (coordinates in cell units, x right, y down). The options are
-   four orderings of the numbers, smallest angle first ("3 – 1 – 4 – 2"); exactly one is true.
+   The item. Four angles lettered A–D on screen (two straight arms from a vertex, no arc: an arc's
+   size would be a cue), each in its own square cell (coordinates in cell units, x right, y down).
+   The options are four orderings of the letters, smallest angle first ("C – A – D – B"); exactly one
+   is true. Letters keep the angles apart from the answers, whose keys are 1–4 (RV-play-dat).
 
    Values. The four sizes sit in one size class: near-right (70–110°), acute (25–72°) or obtuse
    (108–155°). Adjacent ranks differ by gaps; the closest gap is the level's δ (6, 5, 4, 3 or 2°)
@@ -29709,7 +29860,7 @@ void main() {
 
    The foils. Answer-only rules read the four lists and never the angles (RV-dat-style-A §3): most
    like the others or odd one out (Kendall distance), a list with a twin one swap away, the first
-   or last numbers most or least common, the neighbour pairs or the positions shared, the consensus
+   or last letters most or least common, the neighbour pairs or the positions shared, the consensus
    of mean positions. Every allowed triple holding the required foil is scored by how far each
    rule's chance of picking the key is from one in four, plus 0.3 for each two lists that are each
    other's reverse (two opposite cues would then point at the same pair of lists); one triple is
@@ -29747,7 +29898,7 @@ void main() {
    is 4.0 logits.
 
    Item: { ex: 'angles', v: 1, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
-   cell, numbered 1–4 on screen), deg: [design degrees by cell], order: [cells, smallest first],
+   cell, lettered A–D on screen), deg: [design degrees by cell], order: [cells, smallest first],
    options: [[cells, smallest first] × 4], gaps: [three adjacent gaps by rank], close: index of the
    closest gap, scale }. */
 (function (PX) {
@@ -29896,8 +30047,8 @@ void main() {
     return 1 / t;
   }
   // For four orderings (ids into PERMS, the key first): how often each answer-only rule picks the
-  // key. The rules (RV-dat-style-A §3): has another option one swap away; first and last numbers
-  // most / least common; first number most common; last number most common; fewest / most ordered
+  // key. The rules (RV-dat-style-A §3): has another option one swap away; first and last letters
+  // most / least common; first letter most common; last letter most common; fewest / most ordered
   // neighbour pairs shared with the others; most / fewest positions in common; smallest / largest
   // total Kendall distance (most like the others / odd one out).
   function answerHits(ids) {
@@ -29920,7 +30071,7 @@ void main() {
       hit0(pa, true), hit0(pa, false), hit0(kt, false), hit0(kt, true), bordaHit(ids)];
   }
   // Borda: the four things by their summed position over the lists, then the nearest list. Ties in
-  // the sums are broken by the screen numbers, which are random here, so the key's chance is the
+  // the sums are broken by the screen letters, which are random here, so the key's chance is the
   // mean over every order the ties allow.
   function bordaHit(ids) {
     var sum = [0, 0, 0, 0], i, j, total = 0, count = 0;
@@ -29942,7 +30093,7 @@ void main() {
   // answer-only rule's chance of picking the key is from one in four (summed), plus REV_PEN for
   // each two lists that are each other's reverse; one triple is drawn at random from those within
   // FOIL_SLACK of the best score. The one-swap foil the resolve level needs is then never the
-  // key's only near twin, and the first and last numbers do not point to the key.
+  // key's only near twin, and the first and last letters do not point to the key.
   function chooseFoils(r, res, close) {
     var cand = allowedFoils(res, close), need = mustHave(res, close), K0 = PERM_ID['0,1,2,3'];
     var ids = cand.map(function (o) { return PERM_ID[o.join()]; }), needId = need ? PERM_ID[need.join()] : -1;
@@ -34894,6 +35045,7 @@ void main() {
      ===================================================================================== */
 
   var LIFT = 12;                                  // px: a moved arc runs this far from the strand it passed
+  var PARALLEL = 1e-9;                            // |sin| below this: two segments are parallel
 
   function polyOf(cv, over, X, comp) {
     var s = sampleCurve(cv), P = { x: Array.prototype.slice.call(s.x), y: Array.prototype.slice.call(s.y), z: [], closed: s.closed };
@@ -34955,12 +35107,14 @@ void main() {
     comps.forEach(function (cp) { cp.sort(function (p, q2) { return p.t - q2.t; }); });
     return { list: out, comps: comps, D: fromPassages(comps, out.length, polys.map(function (P) { return !P.closed; })) };
   }
+  // Segments that are parallel to rounding error (two pieces of one straight run, say) do not
+  // cross: dividing by their near-zero cross product would invent a crossing at an end point.
   function polyHit(S, p1, p2) {
     var A = S[p1[0]], B = S[p2[0]];
     var ax = A.x[p1[1]], ay = A.y[p1[1]], rx = A.x[p1[2]] - ax, ry = A.y[p1[2]] - ay;
     var bx = B.x[p2[1]], by = B.y[p2[1]], sx = B.x[p2[2]] - bx, sy = B.y[p2[2]] - by;
     var den = rx * sy - ry * sx;
-    if (den === 0) return null;
+    if (Math.abs(den) <= PARALLEL * Math.sqrt((rx * rx + ry * ry) * (sx * sx + sy * sy))) return null;
     var qx = bx - ax, qy = by - ay, s = (qx * sy - qy * sx) / den, w = (qx * ry - qy * rx) / den;
     if (s < 0 || s >= 1 || w < 0 || w >= 1) return null;
     var lr = Math.sqrt(rx * rx + ry * ry), ls = Math.sqrt(sx * sx + sy * sy);
@@ -35391,7 +35545,7 @@ void main() {
   }
   function segCross(ax, ay, bx, by, cx, cy, dx, dy) {
     var rx = bx - ax, ry = by - ay, sx = dx - cx, sy = dy - cy, den = rx * sy - ry * sx;
-    if (den === 0) return null;
+    if (Math.abs(den) <= PARALLEL * Math.sqrt((rx * rx + ry * ry) * (sx * sx + sy * sy))) return null;
     var qx = cx - ax, qy = cy - ay, u = (qx * sy - qy * sx) / den, w = (qx * ry - qy * rx) / den;
     return u >= 0 && u <= 1 && w >= 0 && w <= 1 ? [u, w] : null;
   }
@@ -36543,6 +36697,7 @@ void main() {
       { id: 'start', label: 'Start', text: 'You begin inside a ring on the ground. It disappears once you walk away.' },
       { id: 'landmarks', label: 'Landmarks', text: 'Far-off shapes on the horizon (on some levels). They barely move as you walk, so like a navigator\'s fix they correct the errors of each turn. Reckon, the next stage, has none.' },
       { id: 'circle', label: 'Turn', text: 'At the end, drag the view sideways, drag or tap the arrow circle, or use the ◀ ▶ buttons (keys: ← and →, Shift for 1°). The top of the circle is the way you face; the view turns with the arrow.' },
+      { id: 'comfort', label: 'Comfort', text: 'The view moves on its own during the walk. Pause, or stop the session, if it makes you feel unwell.' },
     ],
     // 2 legs, medium turn, three landmarks, 40° (version 2): seed 1 walks 11.3 m, turns 120° right, walks 8.2 m; the start is 105° to the right.
     demo: [
@@ -37350,8 +37505,8 @@ void main() {
     labelLine: 'Angles is perceptual-judgement practice: it trains judging angles by eye, and the gains tend to stay with this kind of figure.',
     goal: 'Rank the four angles from smallest to largest. Which list gives the right order?',
     parts: [
-      { id: 'angles', label: 'Angles', text: 'Four angles, numbered 1 to 4. Only the opening between the two arms counts: arm length and how the angle is turned do not.' },
-      { id: 'options', label: 'Answers', text: 'Each answer lists the four numbers from the smallest angle to the largest. Exactly one list is right.' },
+      { id: 'angles', label: 'Angles', text: 'Four angles, lettered A to D. Only the opening between the two arms counts: arm length and how the angle is turned do not.' },
+      { id: 'options', label: 'Answers', text: 'Each answer lists the four letters from the smallest angle to the largest, for example C – A – D – B. Exactly one list is right.' },
       { id: 'answer', label: 'Answer', text: 'Pick a list with keys 1–4, or tap it.' },
     ],
     rules: [
@@ -37412,8 +37567,8 @@ void main() {
       },
     ],
     captions: {
-      angles: 'Four angles, numbered 1 to 4. Only the opening between the arms counts.',
-      options: 'Each answer lists the numbers from the smallest angle to the largest. One list is right.',
+      angles: 'Four angles, lettered A to D. Only the opening between the arms counts.',
+      options: 'Each answer lists the letters from the smallest angle to the largest. One list is right.',
       order: 'From smallest to largest: {order}.',
       overlay: 'Lay angle {b} on angle {a}, corners and one arm lined up.',
       pair: 'Angle {b} opens {d}° wider than angle {a}.',
@@ -37458,18 +37613,24 @@ void main() {
       { params: { folds: 0, type: 0, idle: 1 }, seed: 3, kind: 'straight' },
       { params: { folds: 0, type: 0, idle: 1 }, seed: 8, kind: 'straight' },
     ],
+    // Try: the Watch's level, then two straight folds that both matter, then the first slanted
+    // crease in its easiest form (two 45° folds, the punch through one flap: just the punch and its
+    // twin across the slant), then a corner fold with a straight one, then three folds. The Watch
+    // stays at the easiest level, which has straight folds only, so the slanted crease gets its own
+    // gentle step and tip before the corner fold (fresh-player test, RV-play-dat).
     practice: [
       { folds: 0, type: 0, idle: 1 },
       { folds: 0, type: 0, idle: 0 },
+      { folds: 0, type: 2, idle: 1 },
       { folds: 0, type: 1, idle: 0 },
-      { folds: 0, type: 2, idle: 0 },
       { folds: 1, type: 0, idle: 0 },
     ],
+    // In Try the first tip that fits the item is shown, so the slanted-crease tips come first.
     tips: [
-      { id: 'idle', when: { dim: 'idle', levels: [1, 2] }, text: 'Not every fold adds holes: when the punch misses a flap, unfolding that flap changes nothing.' },
-      { id: 'corner', when: { dim: 'type', levels: [1] }, text: 'A corner fold covers only part of the paper: only a hole punched through the corner flap gets a twin.' },
       { id: 'diagonal', when: { dim: 'type', levels: [2, 3] }, text: 'A slanted crease mirrors on the slant: a hole crosses straight over the crease to the same distance on the other side.' },
+      { id: 'corner', when: { dim: 'type', levels: [1] }, text: 'A corner fold has a slanted crease and covers only part of the paper: only a hole punched through the corner flap gets a twin, straight across the slant.' },
       { id: 'three', when: { dim: 'folds', levels: [1] }, text: 'Three folds: unfold the last fold first. Each unfolding copies the holes on its flap across its crease.' },
+      { id: 'idle', when: { dim: 'idle', levels: [1, 2] }, text: 'Not every fold adds holes: when the punch misses a flap, unfolding that flap changes nothing.' },
     ],
     // Burte et al. 2018: a "two holes per fold" rule fits many solvers, and the folds relevant to
     // the answer predict accuracy better than the total. Prep courses teach unfolding backwards on
@@ -37547,8 +37708,10 @@ void main() {
       'A cube you cannot see is there only to hold up cubes above it. Every column\'s top cube is in view.',
       'A cube that sits under another one has no painted top.',
     ],
+    // The easiest level, with a cube out of sight among the ones the tally counts: every tip is
+    // about hidden cubes, so the Watch shows one (fresh-player test, RV-play-dat).
     demo: [
-      { params: { cubes: 0, height: 0, asked: 0 }, seed: 2, kind: 'easy' },
+      { params: { cubes: 0, height: 0, asked: 0 }, seed: 6, kind: 'hidden' },
     ],
     practice: [
       { cubes: 0, height: 0, asked: 0 },
@@ -37602,6 +37765,7 @@ void main() {
     ],
     captions: {
       figure: 'Equal cubes, painted on every outside face except the bottom.',
+      hidden: '{what} out of sight, {where}. Hidden cubes count too.',
       question: 'The question names a number of painted sides to look for.',
       options: 'Answers are 1 to 5 cubes. One is right.',
       tally: 'Cube {n}: {sides}.',
@@ -37721,11 +37885,13 @@ void main() {
     ],
     // The easiest level (4–5 cubes, 3 × 3 grid, end view missing, outline foils).
     demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, seed: 11, kind: 'end' }],
-    practice: [ // easiest first; each view is missing once
+    // Easiest first; each view is missing once; the item that only dotted lines decide comes last,
+    // after the Watch's dotted-line step and with the dotted-line tip.
+    practice: [
       { cubes: 0, grid: 0, missing: 0, foil: 0 },
       { cubes: 0, grid: 0, missing: 1, foil: 0 },
       { cubes: 0, grid: 0, missing: 2, foil: 0 },
-      { cubes: 1, grid: 0, missing: 0, foil: 1 },
+      { cubes: 0, grid: 0, missing: 0, foil: 2 },
     ],
     tips: [
       { id: 'end', when: { dim: 'missing', levels: [0] }, text: 'Missing end view: its height comes from the front view, its width from the depth of the top view. The front is on its left.' },
@@ -37774,12 +37940,17 @@ void main() {
       options: 'Four drawings: exactly one fits both views.',
       project: 'Every line of the missing view lines up with lines in the given views.',
       build: 'Line by line, the {view} view appears.',
-      dotted: 'Dotted: edges hidden behind nearer cubes.',
+      dotted: 'Dotted lines are edges hidden behind nearer cubes. Check every one: they often decide which drawing fits.',
       object: 'One structure with these views.',
       land: 'That is drawing {n}.',
       whyHull: 'Drawing {n}: its outline cannot sit with the two given outlines.',
       whyAlign: 'Drawing {n}: its lines do not line up with the lines of the given views.',
       whySearch: 'Drawing {n}: no stack of cubes gives the two views and this one.',
+      diffDotted: 'The marked line should be dotted: nearer cubes hide that edge.',
+      diffSolid: 'The marked line should be solid: nothing nearer hides that edge.',
+      diffExtra: 'The marked line does not belong: no edge lies there.',
+      diffMissing: 'A line is missing where marked: an edge lies there.',
+      diffMixed: 'The marked lines differ from the right drawing.',
     },
     bridge: 'Drafters and machinists read top, front and end views like these. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
   });
@@ -37862,7 +38033,9 @@ void main() {
       match: 'In solid {n}, the same face sits here, with the same neighbours.',
       neighbours: 'Its neighbours match too: {list}.',
       land: 'Solid {n} folds from the pattern.',
-      whyShape: 'Solid {n} has the wrong proportions: one side is {dir} than in the pattern.',
+      foils: 'Why the others do not fold from it:',
+      whyShape: 'Solid {n} is the wrong size: the marked edge is {dir} than the same edge in the pattern.',
+      whyShapeAny: 'Solid {n} is the wrong size: one of its edges has another length than in the pattern.',
       whyMarks: 'Solid {n}: the face marked {f} cannot look like that once the pattern is folded.',
       whyMirror: 'Solid {n} is the mirror image of the folded pattern: see the face marked {f}.',
     },
@@ -37873,10 +38046,12 @@ void main() {
 </script>
 <script data-src="js/ex/knots/learn.js">
 /* EX-13 Knots: tutorial data (pure, data only; ARCHITECTURE.md §2, docs/dev/EXERCISE-GUIDE.md §7).
-   Watch–Try–Go (R2 §7.5): the gap shows which strand is under → the minimal pair (one outline, one
-   crossing switched: one rope falls open, the other ties tight) → the three moves in plain words →
-   Try on easy ropes, then one untie item → Go. Wording rules (CLAUDE.md 2, 12): about the task,
-   never the person; no IQ or "mastered"; the bridge carries its limitation line. */
+   Watch–Try–Go (R2 §7.5): the gap shows which strand is under → the minimal pair, shown as a
+   labelled copy on a dashed plate ("Copy · crossing A switched": it falls open) → back to "Your
+   rope" → the marked-crossing question in words (switching A is what "which crossing unties it"
+   items ask) → the three moves → the rope's own solution (a knot remains) → Try on easy ropes, then
+   one untie item, whose tip explains the marks → Go (RV-play-nav-knots). Wording rules (CLAUDE.md
+   2, 12): about the task, never the person; no IQ or "mastered"; the bridge carries its limitation. */
 (function (PX) {
   'use strict';
 
@@ -37912,14 +38087,16 @@ void main() {
       { rope: 1, spacing: 0, variant: 'pull' },
       { rope: 0, spacing: 0, variant: 'untie' },
     ],
+    // The player shows the first tip whose trigger fits (Try shows one every time): the format tips
+    // come first, so a marked-crossing item gets the line that explains the marks.
     tips: [
-      { id: 'descend', when: { variant: 'pull' }, text: 'If, from one end, the rope is on top at every crossing it meets first, it falls apart.' },
-      { id: 'slippery', when: { dim: 'rope', levels: [0, 1] }, text: 'The rope is perfectly slippery and cannot pass through itself: real ropes can jam, these cannot.' },
+      { id: 'untie', when: { variant: 'untie' }, text: 'Four crossings carry a letter. Switch one in your mind (the strand underneath goes on top) and pull: exactly one lets the rope fall open.' },
+      { id: 'tie', when: { variant: 'tie' }, text: 'This rope falls open as it is. Switch each marked crossing in your mind and pull: exactly one leaves a knot that holds.' },
+      { id: 'link', when: { variant: 'link' }, text: 'Slide off what you can. If one loop still goes over and under the other in a way nothing undoes, they are linked.' },
+      { id: 'slide-off', when: { variant: 'pull' }, text: 'A loop that lies on top at both of its crossings slides off, and a curl untwists. Take off what you can: if nothing is left, there is no knot.' },
+      { id: 'slippery', when: { variant: 'pull', dim: 'rope', levels: [0, 1] }, text: 'The rope is perfectly slippery and cannot pass through itself: real ropes can jam, these cannot.' },
       { id: 'slide-over', when: { dim: 'rope', levels: [4, 6, 7, 8, 9] }, text: 'Nothing comes off at first? Slide a strand over a crossing (a slide-over); then a loop may come off.' },
       { id: 'tight', when: { dim: 'spacing', levels: [2] }, text: 'The strands run close here. Follow one strand with your eyes, crossing by crossing.' },
-      { id: 'untie', when: { variant: 'untie' }, text: 'Switch each marked crossing in your mind and pull: exactly one lets the rope fall open. After a switch, look for a loop that now lies on top.' },
-      { id: 'tie', when: { variant: 'tie' }, text: 'Switch each marked crossing in your mind and pull. Only one of them leaves a knot that holds.' },
-      { id: 'link', when: { variant: 'link' }, text: 'Slide off what you can. If one loop still goes over and under the other in a way nothing undoes, they are linked.' },
     ],
     // Strategy cards (R2 §7.5). Picturing: animation and imagined epistemic actions are how knot
     // diagrams are reasoned with (De Toffoli & Giardino 2014; de Koning et al. 2019). Step by step:
@@ -37961,7 +38138,12 @@ void main() {
     ],
     captions: {
       gap: 'The gap shows which strand is underneath.',
-      pair: 'Same shape, one crossing different: only the crossings decide.',
+      pair: 'A copy of your rope with crossing A switched. Same shape: only the crossings decide.',
+      copyNone: 'Nothing is left: the copy falls open. Switching A unties your rope.',
+      backToRope: 'Back to your rope, every crossing as it was drawn.',
+      marks: 'Items with letters A–D ask exactly this: which crossing, switched, lets the rope fall open? Here it would be A.',
+      labelYours: 'Your rope',
+      labelCopy: 'Copy · crossing A switched',
       curl: 'A curl: untwist it.',
       slide: 'This loop lies on top: lift it off.',
       slideUnder: 'This loop lies underneath: drop it out.',
@@ -42702,29 +42884,53 @@ void main() {
     return D;
   }
 
-  // Fine turns: ◀5° ◀1° 1°▶ 5°▶. A press turns once, holding repeats (after 400 ms, every 90 ms); keyboard
-  // activation (a click with detail 0) turns once. opts: { cap, onTurn(deltaDeg, e) }.
+  // Fine turns: ◀5° ◀1° 1°▶ 5°▶. Mouse and pen: a press turns once, holding repeats (after 400 ms, every
+  // 90 ms). Touch (RV-play-nav-knots 1): nothing happens on touch-down, so a swipe that starts on a button
+  // scrolls the page (touch-action: pan-y) and changes nothing; a tap turns once on release, and a still hold
+  // (under TAP_SLOP px for HOLD_MS) starts the repeat. Keyboard activation (a click with detail 0) turns once.
+  // opts: { cap, onTurn(deltaDeg, e) }.
+  var TAP_SLOP = 8, HOLD_MS = 350;
   function fine(opts) {
     var kc = opts.cap, out = {};
     [[-5, 'l5'], [-1, 'l1'], [1, 'r1'], [5, 'r5']].forEach(function (d) {
       var deg = Math.abs(d[0]), left = d[0] < 0;
       var b = h('button.px-btn.px-btn--secondary.ex-fp-fine', { type: 'button', 'data-turn': String(d[0]),
         'aria-label': kc('fineLabel', { deg: deg, side: kc(left ? 'left' : 'right') || (left ? 'left' : 'right') }) || (deg + '° ' + (left ? 'left' : 'right')) },
-      left ? '◀ ' + deg + '°' : deg + '° ▶');
-      var timer = 0;
+      left ? '◀ ' + deg + '°' : deg + '° ▶');
+      var timer = 0, touch = null; // touch: { id, x, y, repeating }
       function stop() { if (timer) { window.clearTimeout(timer); timer = 0; } }
       function rep() { opts.onTurn(d[0], null); timer = window.setTimeout(rep, 90); }
+      function forget() { stop(); touch = null; }
       b.addEventListener('pointerdown', function (e) {
         if (b.disabled || (e.button !== undefined && e.button > 0)) return;
+        stop();
+        if (e.pointerType === 'touch') {
+          // no preventDefault and no capture: the browser may still turn this touch into a scroll
+          touch = { id: e.pointerId, x: e.clientX, y: e.clientY, repeating: false, ev: e };
+          timer = window.setTimeout(function () { if (touch) { touch.repeating = true; opts.onTurn(d[0], touch.ev); timer = window.setTimeout(rep, 400); } }, HOLD_MS);
+          return;
+        }
         e.preventDefault();
         try { b.setPointerCapture(e.pointerId); } catch (err) { /* optional */ }
         opts.onTurn(d[0], e);
-        stop();
         timer = window.setTimeout(rep, 400);
       });
-      ['pointerup', 'pointercancel', 'lostpointercapture', 'pointerleave'].forEach(function (ev) { b.addEventListener(ev, stop); });
+      b.addEventListener('pointermove', function (e) {
+        if (touch && e.pointerId === touch.id && !touch.repeating && Math.hypot(e.clientX - touch.x, e.clientY - touch.y) > TAP_SLOP) forget(); // a scroll or a slide: no turn
+      });
+      b.addEventListener('pointerup', function (e) {
+        if (touch && e.pointerId === touch.id) {
+          var tap = !touch.repeating && Math.hypot(e.clientX - touch.x, e.clientY - touch.y) <= TAP_SLOP;
+          forget();
+          if (tap && !b.disabled) opts.onTurn(d[0], e);
+          return;
+        }
+        stop();
+      });
+      b.addEventListener('pointercancel', forget); // the browser took the touch for a scroll
+      ['lostpointercapture', 'pointerleave'].forEach(function (ev) { b.addEventListener(ev, function (e) { if (!touch || e.pointerType !== 'touch') stop(); }); });
       b.addEventListener('click', function (e) { if (e.detail === 0 && !b.disabled) opts.onTurn(d[0], e); });
-      b.stop = stop;
+      b.stop = forget;
       out[d[1]] = b;
     });
     out.all = [out.l5, out.l1, out.r1, out.r5];
@@ -43140,6 +43346,20 @@ void main() {
     if (ctx && typeof ctx.play === 'function') return ctx.play(list, o);
     return runSteps(list, ctx, o);
   }
+  // After a reveal in the player, the explanation must not wait under its sticky result bar on a phone
+  // (RV-play-nav-knots 4): scroll just enough that `last` ends above the bar, never pushing the top of `first`
+  // out of view. Without the player's bar (the dev harness) nothing moves. Called once the bar has appeared.
+  function showAboveBar(root, first, last, ctx) {
+    try {
+      var player = root.closest && root.closest('.pl-player'), bar = player && player.querySelector('.pl-feedback');
+      if (!bar || !last || last.hidden) return 0;
+      var b = bar.getBoundingClientRect(), lr = last.getBoundingClientRect(), fr = (first && !first.hidden ? first : last).getBoundingClientRect();
+      if (!b.height || !lr.height || lr.bottom <= b.top - 4) return 0;
+      var dy = Math.min(lr.bottom - b.top + 8, fr.top - 8);
+      if (dy > 1) window.scrollBy({ top: dy, behavior: ctx && ctx.reducedMotion ? 'auto' : 'smooth' });
+      return dy > 1 ? dy : 0;
+    } catch (e) { return 0; }
+  }
   // The angle error a verdict shows (degrees): whole degrees, except that a wrong answer never shows a
   // number inside the limit (40.3° off, not 40° off: more than 40°).
   function errShown(errAbs, tol, ok) {
@@ -43187,7 +43407,7 @@ void main() {
   var kit = {
     hintOn: hintOn, hintOff: hintOff, narrow: narrow,
     stage: stage, dial: dial, fine: fine, drag: drag, tapAct: tapAct, walker: walker, mapper: mapper, layout: layout, turnRow: turnRow,
-    play: play, runSteps: runSteps, inputOf: inputOf, errShown: errShown, hostPaused: hostPaused, watchShape: watchShape, capFor: capFor, sideText: sideText, side: side,
+    play: play, runSteps: runSteps, inputOf: inputOf, errShown: errShown, hostPaused: hostPaused, watchShape: watchShape, showAboveBar: showAboveBar, capFor: capFor, sideText: sideText, side: side,
     norm360: norm360, norm180: norm180, adiff: adiff, ease: ease, sweep: sweep, keyOf: keyOf,
     FREEZE_MS: FREEZE_MS, SLOW_SHARE: SLOW_SHARE, SLOW_GAP: SLOW_GAP, DRAG_DEG: DRAG_DEG, TILE: TILE, MIN_PX: MIN_PX, DOT_R: DOT_R,
   };
@@ -43421,6 +43641,8 @@ void main() {
     PX.ui.clear(el.notes).appendChild(h('p.ex-fp-note', lines.join(' ')));
     el.notes.hidden = false;
     el.readout.textContent = resp !== null ? cap('readoutYours', { dir: sideText(cap, resp) }) : '';
+    // on a phone the player's result bar would cover the explanation: bring it up above the bar
+    window.setTimeout(function () { if (st && st.item === item) showAboveBar(el.root, el.verdict, el.notes, st.ctx); }, 450);
     return st.S.lookTo(item.heading + item.key, 600);
   }
 
@@ -47705,6 +47927,8 @@ void main() {
     if (ch) el.chart.appendChild(ch);
     el.chart.hidden = !ch;
     el.readout.textContent = dir !== null && item.task !== 'distance' ? cap('readoutYours', { dir: kit.sideText(cap, dir) }) : '';
+    // on a phone the player's result bar would cover the split, the drift and the habit line: bring them up
+    window.setTimeout(function () { if (st && st.item === item) kit.showAboveBar(el.root, el.verdict, el.chart.hidden ? el.notes : el.chart, st.ctx); }, 450);
     // turn to the flag from where you stand (the heading item: to the way you faced at the start). After a
     // walk back, a ring marks where you stopped; if that is within VIEW_MIN of the flag, the view steps
     // back from it along the line through your stop, so the flag and your ring are both in sight.
@@ -47832,11 +48056,12 @@ void main() {
 </script>
 <script data-src="js/ex/angles/view.js">
 /* EX-16 Angles: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
-   layout 'stem+options': the stem is four numbered cells (2 × 2 on phones, a row on wide screens),
-   each with one angle drawn from the item's own endpoints (cell units, 1 × 1); the options are
-   orderings of the numbers, smallest angle first.
+   layout 'stem+options': the stem is four cells lettered A–D (2 × 2 on phones, a row on wide
+   screens), each with one angle drawn from the item's own endpoints (cell units, 1 × 1); the options
+   are orderings of the letters, smallest angle first ("C – A – D – B"). Letters, not numbers, so an
+   angle is never confused with an answer, whose keys are 1–4 (fresh-player test, RV-play-dat).
    - Strokes keep 2 CSS px at any size (vector-effect), anti-aliased; no arc at the vertex.
-   - Reveal: every angle's size in degrees under its number, from the grading model.
+   - Reveal: every angle's size in degrees in a free corner of its cell, from the grading model.
    - Show me: the angles in order with their sizes, then the pair that decides the item (the one
      the key's nearest wrong list swaps) laid on top of each other, corners and one arm lined up,
      so the wider opening shows; then the order and the answer. All from item.angles / lib.measure.
@@ -47856,7 +48081,9 @@ void main() {
     return s;
   }
   function fmtDeg(d) { return (Math.round(d * 10) / 10).toFixed(1).replace(/\.0$/, '') + '°'; }
-  function listText(order) { return order.map(function (c) { return c + 1; }).join(' – '); }
+  var LETTERS = ['A', 'B', 'C', 'D'];
+  function letter(c) { return LETTERS[c]; }
+  function listText(order) { return order.map(letter).join(' – '); }
   function narrow() { return (window.innerWidth || 1024) < 720; }
 
   /* ---------- drawing ---------- */
@@ -47898,7 +48125,7 @@ void main() {
   }
 
   function describe(item) {
-    return 'Four angles, numbered 1 to 4, each in its own box. Which list orders them from the smallest angle to the largest? ' +
+    return 'Four angles, lettered A to D, each in its own box. Which list orders them from the smallest angle to the largest? ' +
       item.options.map(function (o, i) { return 'Answer ' + (i + 1) + ': ' + listText(o) + '.'; }).join(' ');
   }
 
@@ -47952,9 +48179,9 @@ void main() {
     st.cellEls = []; st.sizeEls = [];
     item.angles.forEach(function (g, c) {
       var corners = labelCorners(g);
-      var num = h('span.ex-label.ex-angles-n', { 'data-corner': corners[0] }, String(c + 1));
+      var num = h('span.ex-label.ex-angles-n', { 'data-corner': corners[0] }, letter(c));
       var size = h('span.ex-angles-size', { hidden: true, 'data-corner': corners[1] });
-      var cell = h('div.ex-angles-cell', { 'data-cell': String(c + 1) }, num, cellSvg(g), size);
+      var cell = h('div.ex-angles-cell', { 'data-cell': letter(c) }, num, cellSvg(g), size);
       st.cellEls.push(cell); st.sizeEls.push(size);
       st.cells.appendChild(cell);
     });
@@ -47984,11 +48211,11 @@ void main() {
     if (!st) mount(ctx);
     newItem(item);
     var tag = h('span.ex-tag', { hidden: true });
-    // A no-break space binds each dash to the number before it, so long text wraps after a dash.
+    // A no-break space binds each dash to the letter before it, so long text wraps after a dash.
     el.appendChild(h('span.ex-answer.ex-angles-opt', h('span.ex-answer-text', listText(item.options[i]).replace(/ –/g, '\u00a0–')), tag));
     st.opts[i] = { el: el, tag: tag };
   }
-  function optionLabel(item, i) { return 'Smallest to largest: ' + item.options[i].map(function (c) { return c + 1; }).join(', '); }
+  function optionLabel(item, i) { return 'Smallest to largest: ' + item.options[i].map(letter).join(', '); }
   function gridCols() { return narrow() ? 2 : 4; }
 
   /* ---------- reveal ---------- */
@@ -48054,7 +48281,7 @@ void main() {
       enter: function () {
         setMode('big');
         PX.ui.clear(st.big);
-        st.big.appendChild(overlaySvg({ deg: m[pair.small].deg, n: pair.small + 1 }, { deg: m[pair.large].deg, n: pair.large + 1 }));
+        st.big.appendChild(overlaySvg({ deg: m[pair.small].deg, n: letter(pair.small) }, { deg: m[pair.large].deg, n: letter(pair.large) }));
       },
     };
   }
@@ -48067,7 +48294,7 @@ void main() {
       exit: function () { point([]); },
     });
     if (pair) {
-      var vars = { a: pair.small + 1, b: pair.large + 1, d: fmtDeg(pair.gap).replace('°', '') };
+      var vars = { a: letter(pair.small), b: letter(pair.large), d: fmtDeg(pair.gap).replace('°', '') };
       out.push(overlayStep(item, pair, 1700, 'overlay', vars));
       out.push(overlayStep(item, pair, 1900, 'pair', vars));
     }
@@ -48079,12 +48306,12 @@ void main() {
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < 4) {
       var wrong = deciding(item, r);
       if (wrong) {
-        var wv = { n: r + 1, a: wrong.small + 1, b: wrong.large + 1, d: fmtDeg(wrong.gap).replace('°', '') };
+        var wv = { n: r + 1, a: letter(wrong.small), b: letter(wrong.large), d: fmtDeg(wrong.gap).replace('°', '') };
         out.push({
           ms: 2400, caption: cap('chosen', wv),
           enter: function () {
             setMode('big'); focusOption(r); PX.ui.clear(st.big);
-            st.big.appendChild(overlaySvg({ deg: m[wrong.small].deg, n: wrong.small + 1 }, { deg: m[wrong.large].deg, n: wrong.large + 1 }));
+            st.big.appendChild(overlaySvg({ deg: m[wrong.small].deg, n: letter(wrong.small) }, { deg: m[wrong.large].deg, n: letter(wrong.large) }));
           },
         });
       }
@@ -48549,7 +48776,9 @@ void main() {
    - Reveal and show me: the cubes with exactly N painted sides get numbered badges; hidden ones
      are drawn as dashed ghost cubes on top of the figure. Show me tallies them one by one, column
      by column from the back, with each cube's painted sides named (lib.cubesOf: the same neighbour
-     tests the validator recounts). */
+     tests the validator recounts).
+   - Demo (Watch): the figure, then its hidden cubes as dashed ghosts when it has any, the answers,
+     then the tally as in show me. */
 (function (PX) {
   'use strict';
 
@@ -48797,12 +49026,27 @@ void main() {
     if (!st || st.item !== item) return Promise.resolve();
     return play(steps(item, response), ctx, { name: 'show-me' }).then(function () { if (st) focusOption(-1); });
   }
+  // The cubes nothing of which shows (supports under taller columns), as dashed ghosts.
+  function ghostHidden(item) {
+    var m = marks(), rr = lib.render(item.heights), n = 0;
+    rr.cubes.forEach(function (q, i) { if (rr.perCube[i].any === 0) { m.appendChild(ghost(q)); n++; } });
+    return n;
+  }
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
+    var hid = lib.render(item.heights).perCube.filter(function (pc) { return pc.any === 0; }).length;
     var intro = [
       { ms: 2200, caption: cap('figure'), enter: function () { marks(); focusOption(-1); st.figure.classList.add('is-pointed'); }, exit: function () { st.figure.classList.remove('is-pointed'); } },
-      { ms: 1800, caption: cap('options'), enter: function () { marks(); } },
     ];
+    // The Watch item hides a cube (learn.js demo), and the tips are about hidden cubes, so the demo
+    // shows it first, dashed (RV-play-dat).
+    if (hid) {
+      intro.push({
+        ms: 2600, caption: cap('hidden', { what: hid === 1 ? 'The dashed cube is' : 'The dashed cubes are', where: hid === 1 ? 'under the cube above it' : 'under the cubes above them' }),
+        enter: function () { ghostHidden(item); focusOption(-1); }, exit: function () { marks(); },
+      });
+    }
+    intro.push({ ms: 1800, caption: cap('options'), enter: function () { marks(); } });
     return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null })
       .then(function () { if (st) focusOption(-1); });
   }
@@ -48957,7 +49201,12 @@ void main() {
     st.cur.fr = frameFor(b, W, H); // from the current size: a turn or resize never crops the solid
     placeCam(st.cam, b, st.cur.fr, W, H);
     v.render(st.scene, st.cam);
-    if (st.cur.az === VIEW0.az && st.cur.el === VIEW0.el) st.root.setAttribute('data-k-solid', (H / (2 * st.cur.fr.half)).toFixed(2)); // px per step (tests)
+    if (st.cur.az === VIEW0.az && st.cur.el === VIEW0.el) { // for the tests: px per step, and how much of the stage's height the solid fills
+      var k0 = H / (2 * st.cur.fr.half), y0 = Infinity, y1 = -Infinity;
+      boxPts(st.item).forEach(function (p) { var y = dot(p, b.up); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+      st.root.setAttribute('data-k-solid', k0.toFixed(2));
+      st.root.setAttribute('data-fill', ((y1 - y0) * k0 / H).toFixed(3));
+    }
   }
   function camAt(az, el) {
     var W = st.v3.width || 1, H = st.v3.height || 1, b = basis(az, el);
@@ -49420,6 +49669,7 @@ void main() {
       o.tag.textContent = i === item.key ? '✓ ' + NAMES[item.missing] + ' view' : WHY[op.why] || 'Does not fit';
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
+      if (i !== item.key) markDiff(item, i, 'pv-diff'); // where this drawing differs from the right one
     });
     st.verdict.textContent = '✓ Drawing ' + (item.key + 1) + ' is the ' + item.missing + ' view';
     st.verdict.setAttribute('data-kind', 'key');
@@ -49493,14 +49743,20 @@ void main() {
       var pr = projectors(item), n = Math.ceil(U.clamp(s.proj, 0, 1) * pr.length);
       if (n) ov.appendChild(SV.el('path', { d: pr.slice(0, n).join(''), class: 'pv-proj' }));
     }
+    if (s.object) {
+      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
+      ov.appendChild(isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
+    }
     if (s.built) {
       var segs = keySegs(item).slice(0, s.built);
       ov.appendChild(SV.el('path', { d: segPath(segs, at.x, at.y, c, 2), class: 'pv-line pv-dot pv-trace' + (s.dotted ? ' pv-hl' : '') }));
       ov.appendChild(SV.el('path', { d: segPath(segs, at.x, at.y, c, 1), class: 'pv-line pv-solid pv-trace' }));
     }
-    if (s.object) {
-      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
-      ov.appendChild(isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
+    if (s.dotted) { // every dotted line on the stem stands out: the given views' and the missing view's
+      Object.keys(item.given).forEach(function (v) {
+        var gd = item.given[v], ga = Lo[v];
+        ov.appendChild(SV.el('path', { d: segPath(gd.segs, ga.x, ga.y, c, 2), class: 'pv-line pv-dot pv-trace pv-hl' }));
+      });
     }
     if (s.picked >= 0) {
       var pd = item.options[s.picked].drawing, kd = item.options[item.key].drawing;
@@ -49509,6 +49765,7 @@ void main() {
       if (diff.length) ov.appendChild(SV.el('path', { d: segPath(diff, at.x, at.y, c), class: 'pv-diff' }));
     }
     focusOption(s.focus === undefined ? -1 : s.focus);
+    if (s.mark >= 0 && s.mark !== undefined) markDiff(item, s.mark, 'pv-diff pv-diff--show');
     if (s.ghostKey) {
       var o = st.opts[item.key], d = item.options[item.key].drawing;
       o.ghost = SV.el('path', { d: segPath(d.segs, 0, d.h, 1), class: 'pv-ghost' });
@@ -49531,6 +49788,37 @@ void main() {
     return out;
   }
 
+  // Marks, on option i, the unit lines where it differs from the right drawing (thick dots: a shape
+  // as well as a colour). One mark group per option; drawn again replaces it.
+  function markDiff(item, i, cls) {
+    var o = st.opts[i];
+    if (!o || i === item.key) return;
+    if (o.diff && o.diff.parentNode) o.diff.parentNode.removeChild(o.diff);
+    var d = item.options[i].drawing, diff = unitDiff(d, item.options[item.key].drawing);
+    o.diff = diff.length ? SV.el('path', { d: segPath(diff, 0, d.h, 1), class: cls }) : null;
+    if (o.diff) o.svg.appendChild(o.diff);
+  }
+  // What the marked lines of a wrong drawing get wrong: drawn the wrong way (solid or dotted), a line
+  // too many, or one missing.
+  function diffCaption(item, i) {
+    function units(d) {
+      var m = {};
+      d.segs.forEach(function (q) {
+        if (q[1] === q[3]) for (var u = q[0]; u < q[2]; u++) m['h' + u + ',' + q[1]] = q[4];
+        else for (var v = q[1]; v < q[3]; v++) m['v' + q[0] + ',' + v] = q[4];
+      });
+      return m;
+    }
+    var A = units(item.options[i].drawing), B = units(item.options[item.key].drawing), extra = 0, missing = 0, toDot = 0, toSolid = 0, k;
+    for (k in A) { if (!B[k]) extra++; else if (A[k] !== B[k]) { if (B[k] === 2) toDot++; else toSolid++; } }
+    for (k in B) if (!A[k]) missing++;
+    if (!extra && !missing && toDot && !toSolid) return cap('diffDotted');
+    if (!extra && !missing && toSolid && !toDot) return cap('diffSolid');
+    if (!toDot && !toSolid && extra && !missing) return cap('diffExtra');
+    if (!toDot && !toSolid && missing && !extra) return cap('diffMissing');
+    return cap('diffMixed');
+  }
+
   function steps(item, response) {
     var miss = item.missing, key = item.key, segs = keySegs(item), nd = segs.filter(function (q) { return q[4] === 2; }).length;
     var picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
@@ -49542,12 +49830,14 @@ void main() {
       { ms: 1400 + 110 * projectors(item).length, caption: cap('project'), enter: function () { draw(item, S({ proj: 0.001 })); }, update: function (k) { draw(item, S({ proj: Math.max(0.001, k) })); } },
       { ms: 900 + 140 * all, caption: cap('build', { view: miss }), enter: function () { draw(item, S({ proj: 1, built: 0 })); }, update: function (k) { draw(item, S({ proj: 1, built: Math.ceil(Math.min(1, k * 1.15) * all) })); } },
     ];
-    if (nd) list.push({ ms: 1700, caption: cap('dotted'), enter: function () { draw(item, S({ proj: 1, built: all, dotted: true })); } });
     list.push({ ms: 2000, caption: cap('object'), enter: function () { draw(item, S({ built: all, object: true })); } });
+    // Dotted lines often decide the item: a long step, the structure in view, every dotted line marked.
+    var ndAll = nd + Object.keys(item.given).reduce(function (a, v) { return a + item.given[v].segs.filter(function (q) { return q[4] === 2; }).length; }, 0);
+    if (ndAll) list.push({ ms: 4200, caption: cap('dotted'), enter: function () { draw(item, S({ built: all, object: true, dotted: true })); } });
     list.push({ ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
     if (picked >= 0) {
       var why = item.options[picked].why;
-      list.push({ ms: 2600, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: picked + 1 }), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true })); } });
+      list.push({ ms: 3200, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: picked + 1 }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
     }
     return list;
   }
@@ -49621,9 +49911,10 @@ void main() {
    a half mark shades one side of a diagonal. Never colour alone.
    Show me (ctx.play steps, from the grading model: lib.matchings and lib.possible give the face
    map): a landmark face (a mark the right solid shows) is numbered in the pattern and in the solid,
-   then its neighbours; after a wrong pick, the face that cannot be marked so (or the wrong size, or
-   the mirror image) is marked in that solid and in the pattern. Every step's enter() sets its
-   full state. */
+   then its neighbours; after a wrong pick, the face that cannot be marked so (or the mirror image)
+   is marked in that solid and in the pattern, or, for a wrong size, the edge that differs is marked
+   in both. The Watch adds both kinds of wrong solid (foilTour). Every step's enter() sets its full
+   state. */
 (function (PX) {
   'use strict';
 
@@ -49651,7 +49942,7 @@ void main() {
     });
     var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     P.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
-    return { faces: faces, box: [x0, y0, x1, y1] };
+    return { faces: faces, box: [x0, y0, x1, y1], P: P };
   }
   function tone(light) { return light >= 0.7 ? 'px-fig-top' : light >= 0.25 ? 'px-fig-side' : 'px-fig-far'; }
   // A hatch pattern in user units; set(pitch) resizes it (the options' pitch follows their drawn size).
@@ -49859,6 +50150,72 @@ void main() {
       if (of) { label(st.opts[i].labels, of.pts, x.t, sOpt, kind); of.g.classList.add('is-pointed'); }
     });
   }
+  // The edge of a wrong-size solid that differs most from the pattern's, preferring one on a face the
+  // picture shows clearly (vertex ids match: the same kind of solid built with another size).
+  function changedEdge(item, i) {
+    var S = item.solid, o = item.options[i], O = o.solid, c = lib.facing(O, o.view), best = null;
+    function d(s0, a, b) { var p = s0.verts[a], q = s0.verts[b]; return Math.sqrt((p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1]) + (p[2] - q[2]) * (p[2] - q[2])); }
+    lib.adjacency(O).forEach(function (e) {
+      var lo = d(O, e.a, e.b), ls = d(S, e.a, e.b), seen = Math.max(c[e.f], c[e.g]);
+      if (Math.abs(lo - ls) < 0.05 || seen <= 0) return;
+      var score = (seen >= lib.SEEN ? 10 : 0) + Math.abs(lo - ls) / Math.max(lo, ls);
+      if (!best || score > best.score) best = { a: e.a, b: e.b, f: e.f, g: e.g, longer: lo > ls, score: score };
+    });
+    return best;
+  }
+  // That edge marked (thick dots) in solid i and wherever it lies in the pattern.
+  function markEdge(item, i, e) {
+    var P = st.proj[i].P;
+    st.opts[i].labels.appendChild(SV.el('path', { d: 'M' + SV.pathData([P[e.a], P[e.b]]).slice(1), class: 'fm-edge-hl' }));
+    [e.f, e.g].forEach(function (f) {
+      var n = st.netG[f], F = item.solid.faces[f], ia = F.indexOf(e.a), ib = F.indexOf(e.b);
+      if (!n || ia < 0 || ib < 0) return;
+      st.netLabels.appendChild(SV.el('path', { d: 'M' + SV.pathData([n.pts[ia], n.pts[ib]]).slice(1), class: 'fm-edge-hl' }));
+    });
+  }
+  // Why foil i does not fold from the pattern: the wrong size (the edge that differs, marked in both
+  // places), or a face whose mark cannot look like that (✗ in the solid and in the pattern).
+  function whyStep(item, i, ms) {
+    var o = item.options[i];
+    if (o.kind === 'shape') {
+      var e = changedEdge(item, i);
+      return { ms: ms, caption: e ? cap('whyShape', { n: i + 1, dir: e.longer ? 'longer' : 'shorter' }) : cap('whyShapeAny', { n: i + 1 }), enter: function () { clearMarks(); focusOption(i); if (e) markEdge(item, i, e); } };
+    }
+    var pm = bestMap(item, i), g = pm && pm.bad.length ? pm.bad[0] : -1;
+    return {
+      ms: ms, caption: cap(o.kind === 'mirror' ? 'whyMirror' : 'whyMarks', { n: i + 1, f: '✗' }),
+      enter: function () {
+        clearMarks(); focusOption(i);
+        if (pm && g >= 0) {
+          var u = optUnit(i), of = st.opts[i].faces[g], nf = st.netG[pm.back[g]];
+          if (of) { label(st.opts[i].labels, of.pts, '✗', 15 * u, 'bad'); of.g.classList.add('is-pointed'); }
+          if (nf) { label(st.netLabels, nf.pts, '✗', 15 / st.k, 'bad'); nf.g.classList.add('is-pointed'); }
+        }
+      },
+    };
+  }
+  // The Watch also shows why two wrong ones are wrong: the wrong-size solid and the mirror image (or,
+  // without a mirror image, marks in the wrong place).
+  function foilTour(item) {
+    var shape = -1, other = -1;
+    item.options.forEach(function (o, i) {
+      if (i === item.key) return;
+      if (o.kind === 'shape' && shape < 0) shape = i;
+      if (o.kind === 'mirror') other = i;
+    });
+    if (other < 0) item.options.forEach(function (o, i) { if (i !== item.key && o.kind === 'marks' && other < 0) other = i; });
+    var list = [];
+    if (shape >= 0 || other >= 0) list.push({ ms: 1600, caption: cap('foils'), enter: function () { clearMarks(); } });
+    if (shape >= 0) list.push(whyStep(item, shape, 3400));
+    if (other >= 0) list.push(whyStep(item, other, 3400));
+    return list;
+  }
+  // The Watch: the landmark method, then both kinds of wrong solid, then back to the right one so the
+  // Watch ends on the answer.
+  function demoList(item) {
+    var base = steps(item, null), tour = foilTour(item);
+    return tour.length ? base.concat(tour, [base[base.length - 1]]) : base;
+  }
   function steps(item, response) {
     var key = item.key, picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
     var km = bestMap(item, key), S = item.solid, seenS = km ? km.seen.map(function (g) { return km.back[g]; }) : [];
@@ -49875,28 +50232,7 @@ void main() {
       { ms: 2200, caption: cap('neighbours', { list: tags.slice(1).map(function (x) { return x.t; }).join(', ') || '—' }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
       { ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
     ];
-    if (picked >= 0) {
-      var o = item.options[picked], why;
-      if (o.kind === 'shape') {
-        var d0 = item.solid.dims, d1 = o.solid.dims, j = 0;
-        for (var q = 0; q < d0.length; q++) if (d0[q] !== d1[q]) { j = q; break; }
-        why = { ms: 2600, caption: cap('whyShape', { n: picked + 1, dir: d1[j] > d0[j] ? 'longer' : 'shorter' }), enter: function () { clearMarks(); focusOption(picked); } };
-      } else {
-        var pm = bestMap(item, picked), g = pm && pm.bad.length ? pm.bad[0] : -1;
-        why = {
-          ms: 2600, caption: cap(o.kind === 'mirror' ? 'whyMirror' : 'whyMarks', { n: picked + 1, f: '✗' }),
-          enter: function () {
-            clearMarks(); focusOption(picked);
-            if (pm && g >= 0) {
-              var u = optUnit(picked), of = st.opts[picked].faces[g], nf = st.netG[pm.back[g]];
-              if (of) { label(st.opts[picked].labels, of.pts, '✗', 15 * u, 'bad'); of.g.classList.add('is-pointed'); }
-              if (nf) { label(st.netLabels, nf.pts, '✗', 15 / st.k, 'bad'); nf.g.classList.add('is-pointed'); }
-            }
-          },
-        };
-      }
-      list.push(why);
-    }
+    if (picked >= 0) list.push(whyStep(item, picked, 3000));
     return list;
   }
 
@@ -49942,7 +50278,7 @@ void main() {
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    return play(steps(item, null), ctx, { name: 'demo', caption: caption || null });
+    return play(demoList(item), ctx, { name: 'demo', caption: caption || null });
   }
   function unmount() {
     if (!st) return;
@@ -49956,6 +50292,7 @@ void main() {
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
     reveal: reveal, showMe: showMe, demo: demo, unmount: unmount,
     steps: function (item, response) { return st && st.item === item ? steps(item, response) : []; },
+    demoSteps: function (item) { return st && st.item === item ? demoList(item) : []; },
   });
 })(window.PX);
 
@@ -50115,18 +50452,21 @@ void main() {
     var svg = S.svg(P, P, { viewBox: [0, 0, P, P], class: 'ex-knots-svg', width: '100%', 'aria-hidden': 'true' });
     var ropeG = el('g', { class: 'ex-knots-layer' }), markG = el('g', { class: 'ex-knots-marks' }), tagG = el('g', { class: 'ex-knots-tags' });
     svg.appendChild(ropeG); svg.appendChild(markG); svg.appendChild(tagG);
-    var stage = h('div.ex-stage.ex-knots-stage', svg);
+    // a specimen label on the plate: in the tutorial demo it names the rope on show ("Your rope",
+    // or a dashed plate and "Copy · crossing A switched")
+    var label = h('div.ex-label.ex-knots-label', { hidden: true });
+    var stage = h('div.ex-stage.ex-knots-stage', svg, label);
     var verdict = h('div.ex-verdict.ex-knots-verdict', { hidden: true, role: 'status' });
     var caption = h('p.ex-caption', { 'aria-live': 'polite' });
     var desc = h('p.px-sr');
     var root = h('div.ex-knots-stem', stage, h('div.ex-knots-under', caption, verdict), desc);
     ctx.host.appendChild(root);
     st = { ctx: ctx, root: root, stage: stage, svg: svg, ropeG: ropeG, markG: markG, tagG: tagG, verdict: verdict, caption: caption,
-      desc: desc, item: null, optItem: null, opts: [], tags: [], dg: null, replays: {} };
+      label: label, desc: desc, item: null, optItem: null, opts: [], tags: [], dg: null, replays: {} };
     // a tap on a tag answers through the grid (the same respond path as its button)
     tagG.addEventListener('click', function (e) {
       var t = e.target && e.target.closest ? e.target.closest('.ex-knots-tag') : null;
-      if (!t || !st) return;
+      if (!t || !st || t.hasAttribute('data-demo')) return;
       var o = st.opts[+t.getAttribute('data-tag')], btn = o && o.el && o.el.closest ? o.el.closest('button') : null;
       if (btn && !btn.disabled) btn.click();
     });
@@ -50158,6 +50498,7 @@ void main() {
     st.verdict.hidden = true;
     st.verdict.textContent = '';
     st.caption.textContent = '';
+    setLabel('', false);
     st.desc.textContent = describe(item);
     drawStill(item);
     return timing.nextPaint();
@@ -50368,36 +50709,56 @@ void main() {
 
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
+    setLabel('', false);
     return play(showSteps(item, response), ctx, { name: 'show-me' });
   }
 
-  // Tutorial (R2 §7.5): the gap; for a knot, the minimal pair (the same outline with one crossing
-  // switched falls open); the three moves in words; then the item's own solution.
+  // The plate's label and the copy's dashed plate (demo only).
+  function setLabel(text, copy) {
+    if (!st) return;
+    st.label.textContent = text || '';
+    st.label.hidden = !text;
+    st.stage.classList.toggle('is-copy', !!copy);
+  }
+  // One letter tag (A) at crossing c, for the demo: drawn like an item's tags, never answers.
+  function markTag(dg, c) {
+    clearG(st.tagG);
+    drawTags(st.tagG, { tags: [c] }, dg).forEach(function (t) { t.g.setAttribute('data-demo', '1'); });
+    st.tagG.style.display = '';
+  }
+
+  // Tutorial (R2 §7.5; RV-play-nav-knots): the gap; for a knot, the minimal pair as a labelled copy
+  // on a dashed plate ("Copy · crossing A switched": it falls open), a clear step back to "Your
+  // rope" with every crossing as drawn, the marked-crossing question put in words (switching A is
+  // what "which crossing unties it" items ask for), the three moves, then the item's own solution.
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
-    var curves = curvesOf(item), dg = lib.diagramOf(curves, item.over), steps = [], X0 = dg.X[0];
-    steps.push({ ms: 2200, caption: cap('gap'), enter: function () { drawStill(item); ring(st.markG, X0.x, X0.y); } });
+    var curves = curvesOf(item), dg = lib.diagramOf(curves, item.over), steps = [], X0 = dg.X[0], pair = null;
     if (item.variant === 'pull' && item.key) {
-      for (var c = 0; c < dg.X.length; c++) {
+      for (var c = 0; c < dg.X.length && !pair; c++) {
         var o2 = item.over.slice();
         o2[c] = !o2[c];
         var cl = lib.classify(lib.switched(dg.D, c));
         if (cl.knot) continue;
         var R = replayOf(item, o2, false);
-        if (!R.reached) continue;
-        var Xc = dg.X[c];
-        steps.push({ ms: 2600, caption: cap('pair'), enter: (function (ov, x) { return function () { still(curves, ov, [[x.x, x.y]]); }; })(o2, Xc) });
-        steps = steps.concat(moveSteps(R));
-        steps.push({ ms: 1600, caption: cap('none'), enter: (function (RR) { return function () { frame(RR.polys, []); }; })(R) });
-        break;
+        if (R.reached) pair = { c: c, over: o2, R: R, X: dg.X[c] };
       }
+    }
+    var yours = pair ? cap('labelYours') : '';
+    steps.push({ ms: 2200, caption: cap('gap'), enter: function () { setLabel(yours, false); drawStill(item); ring(st.markG, X0.x, X0.y); } });
+    if (pair) {
+      steps.push({ ms: 2800, caption: cap('pair'), enter: function () { setLabel(cap('labelCopy'), true); still(curves, pair.over, [[pair.X.x, pair.X.y]]); markTag(dg, pair.c); } });
+      steps = steps.concat(moveSteps(pair.R));
+      steps.push({ ms: 2200, caption: cap('copyNone'), enter: function () { setLabel(cap('labelCopy'), true); frame(pair.R.polys, []); } });
+      steps.push({ ms: 2400, caption: cap('backToRope'), enter: function () { setLabel(yours, false); drawStill(item); ring(st.markG, pair.X.x, pair.X.y); markTag(dg, pair.c); } });
+      steps.push({ ms: 3000, caption: cap('marks'), enter: function () { setLabel(yours, false); drawStill(item); ring(st.markG, pair.X.x, pair.X.y); markTag(dg, pair.c); } });
     }
     if (item.variant === 'untie' || item.variant === 'tie') steps.push({ ms: 2000, caption: cap('tagsIntro'), enter: function () { drawStill(item); } });
     if (item.variant === 'link') steps.push({ ms: 2000, caption: cap('loopsIntro'), enter: function () { drawStill(item); } });
-    steps.push({ ms: 2600, caption: cap('moves'), enter: function () { drawStill(item); } });
+    steps.push({ ms: 2600, caption: cap('moves'), enter: function () { setLabel(yours, false); drawStill(item); } });
     // then the item as it was, to answer
     return play(steps.concat(showSteps(item, null)), ctx, { name: 'demo', caption: caption || null })
-      .then(function () { if (st && st.item === item) drawStill(item); });
+      .then(function () { if (st && st.item === item) { setLabel('', false); drawStill(item); } });
   }
 
   function unmount() {
@@ -50753,17 +51114,17 @@ void main() {
    (a dial with one segment per planned session, and the days practised), Daily Challenge,
    Spatial Check, your data (last backup, Back up now), exercise levels, recent achievements.
 
-   Real data where the record already has it: sessions this week, days practised, whether
-   today's Daily was played, Spatial Checks taken, last backup, achievements. Placeholders
-   where the engine and the Phase 3 UI will supply it (the session plan, levels): those panels
-   carry a visible "Sample data" tag and a dashed edge, so nobody mistakes them for progress.
+   Every panel shows the player's own record, never sample data: a fresh profile sees empty
+   states (no levels yet, no achievements yet), and a plan that cannot be built says so.
 
    PX.ui.home
-     catalog()        the exercises in code order: registry definitions over the list below
-     plan(rec, now)   hook → { minutes, mode, style, blocks: [{ role, ex, min, why }] } or null
-                      (null shows the sample plan). Phase 3 replaces it.
-     levels(rec, now) hook → { <exId>: { level, lo, hi, settings, stage } } or null
-     MOCK             the sample data */
+     catalog()        the exercises in code order, one entry per id: registry definitions over
+                      the list below
+     count()          the training exercises the Library lists (registered definitions)
+     plan(rec, now)   hook → { minutes, mode, style, blocks: [{ role, ex, min, why, pat }], patFocus }
+                      or null (nothing to plan: the panel says so); js/ui/play.js homePlan
+     levels(rec)      hook → [{ ex, n, last, level, lo, hi, settings, stage }] or null (the
+                      record's own levels are used then); js/ui/play.js homeLevels */
 (function (PX) {
   'use strict';
 
@@ -50788,7 +51149,6 @@ void main() {
     { id: 'homing', code: 'EX-11', name: 'Homing', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a route, turn to face the place where you started.' },
     { id: 'reckon', code: 'EX-12', name: 'Reckon', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a walk with nothing to steer by, point or walk back to where you started.' },
     { id: 'knots', code: 'EX-13', name: 'Knots', kind: 'Knot diagrams', abilities: ['Vz'], blurb: 'Pull a rope in your mind: does a knot remain? Which crossing unties it? Are two loops linked?' },
-    { id: 'knots', code: 'EX-13', name: 'Knots', kind: 'Knots and links', abilities: ['Vz'], blurb: 'Picture a rope pulled tight: does a knot remain, and which crossing would untie it?' },
     // v1.1 DAT-style formats (opt-in: they join Train only under the DAT-style focus).
     { id: 'openings', code: 'EX-14', name: 'Openings', kind: 'Openings (apertures)', abilities: ['Vz'], note: 'DAT-style', blurb: 'Find the opening a solid would pass through, turned the right way, with nothing to spare.' },
     { id: 'patviews', code: 'EX-15', name: 'Missing View', kind: 'Orthographic views', abilities: ['Vz'], note: 'DAT-style', blurb: 'Two drawings of a block structure are given: pick the missing third view.' },
@@ -50798,37 +51158,12 @@ void main() {
     { id: 'form', code: 'EX-19', name: 'Form', kind: 'Pattern folding', abilities: ['Vz'], note: 'DAT-style', blurb: 'Fold a flat pattern in your mind and pick the solid it makes.' },
   ];
 
-  /* ---- SAMPLE DATA (Phase 1b placeholder) -------------------------------------------
-     Shows the layout until js/engine/* and the Phase 3 screens supply real values. Every
-     panel that uses it says "Sample data". Delete with the hooks below once they are real. */
-  var MOCK = {
-    plan: {
-      mode: 'Train', style: 'Balanced',
-      blocks: [
-        { role: 'Focus', ex: 'rotate', share: 0.4, why: 'Improving fastest this week' },
-        { role: 'Review', ex: 'fold', share: 0.3, why: 'Last practised 7 days ago' },
-        { role: 'Variety', ex: 'span', share: 0.3, why: 'Practised least so far' },
-      ],
-    },
-    levels: [
-      { ex: 'rotate', level: 34, lo: 28, hi: 41, settings: '120° turns about a vertical axis, 10 cubes', stage: 3 },
-      { ex: 'fold', level: 41, lo: 33, hi: 49, settings: 'three folds including a diagonal, 2 punches', stage: 4 },
-      { ex: 'span', level: 47, lo: 40, hi: 55, settings: 'sequences of 5 blocks, backwards', stage: 4 },
-      { ex: 'track', level: 22, lo: 15, hi: 30, settings: '3 of 8 spheres for 8 seconds at a slow speed', stage: 2 },
-      { ex: 'views', level: 18, lo: 9, hi: 28, settings: 'front and side views of 6 cubes', stage: 1 },
-    ],
-    achievements: [
-      { name: 'Two baselines', desc: 'Took two Spatial Checks before judging change', date: '2026-10-28' },
-      { name: 'Both strategies', desc: 'Reported picturing the object and reasoning step by step', date: '2026-10-26' },
-      { name: 'Span 7', desc: 'Repeated a sequence of 7 blocks', date: '2026-10-24' },
-    ],
-  };
-
+  // One entry per id (a repeated catalog line never counts twice: RV-play-dat).
   function catalog() {
     var reg = PX.ex && typeof PX.ex.list === 'function' ? PX.ex.list('train') : [];
-    var byId = {};
+    var byId = {}, seen = {};
     reg.forEach(function (d) { byId[d.id] = d; });
-    var out = CATALOG.map(function (c) {
+    var out = CATALOG.filter(function (c) { return hasOwn.call(seen, c.id) ? false : (seen[c.id] = true); }).map(function (c) {
       var d = byId[c.id];
       if (!d) return c;
       delete byId[c.id];
@@ -50840,6 +51175,8 @@ void main() {
     });
     return out;
   }
+  // The training exercises the Library lists (its "N training exercises"): the registered ones.
+  function count() { return catalog().filter(function (e) { return !!e.def; }).length; }
   function entry(id) {
     var list = catalog();
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
@@ -50882,30 +51219,22 @@ void main() {
     return { sessions: n, goal: goal, left: Math.max(0, goal - n), days: Array.isArray(w.days) ? w.days : [] };
   }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
-  function hasAnyTrials(rec) {
-    return (rec.trials && rec.trials.length) || (rec.sessions && rec.sessions.length) || Object.keys(rec.trialDays || {}).length > 0;
-  }
-
-  function samplePlan(minutes) {
-    var blocks = MOCK.plan.blocks.map(function (b) { return { role: b.role, ex: b.ex, why: b.why, min: Math.max(1, Math.round(minutes * b.share)) }; });
-    var used = blocks.reduce(function (a, b) { return a + b.min; }, 0);
-    blocks[0].min += minutes - used; // the parts add up to the session length
-    return { minutes: minutes, mode: MOCK.plan.mode, style: MOCK.plan.style, blocks: blocks, sample: true };
-  }
 
   /* ---------- slots ---------- */
 
   function sessionSlot(rec, now) {
     var K = PX.ui.kit;
-    var minutes = rec.settings.sessionMin || 20;
     var plan = null;
     try { plan = PX.ui.home.plan(rec, now); } catch (e) { plan = null; }
-    if (!plan) plan = samplePlan(minutes);
+    if (!plan || !plan.blocks || !plan.blocks.length) return noSession();
     var p = K.panel({
-      title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session', sample: !!plan.sample,
+      title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session',
       aside: h('span.px-num', PX.core.clock.fmtMinutes(plan.minutes * 60000) + ' · ' + plan.mode + ' · ' + plan.style),
     });
     p.head.querySelector('.px-panel-title').classList.add('px-session-title');
+    // the DAT-style focus first, so the first screen shows it (on phones Start sticks above the tab bar)
+    var focus = patFocusLine(plan);
+    if (focus) p.body.appendChild(focus);
     // Today's mix: the exercises take turns in runs, so the list has no order (I1 B5); a key mark
     // (data-seg) ties each one to its segment of the ruler.
     var list = h('ul.px-protocol', { 'aria-label': 'Exercises in today’s session (they take turns)' });
@@ -50930,6 +51259,25 @@ void main() {
     p.body.appendChild(h('div.px-session-actions', start,
       ui.button('Choose exercises', { kind: 'ghost', go: 'library' })));
     return p.el;
+  }
+
+  // Nothing to plan: every exercise is paused before a test or cannot run in this browser (or the
+  // plan failed). Never a sample plan.
+  function noSession() {
+    var p = PX.ui.kit.panel({ title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session' });
+    p.head.querySelector('.px-panel-title').classList.add('px-session-title');
+    p.body.appendChild(h('p.px-slot-text', { 'data-plan': 'none' }, 'No session can be planned right now. Exercises paused before a test, and exercises this browser cannot show, stay out of the plan; the Library shows the state of each one.'));
+    p.body.appendChild(h('div.px-session-actions', ui.button('Open the Library', { kind: 'primary', go: 'library' })));
+    return p.el;
+  }
+
+  // The DAT-style focus says what it does to the plan (RV-play-dat: the switch seemed to do nothing).
+  function patFocusLine(plan) {
+    if (!plan.patFocus) return null;
+    var has = plan.blocks.some(function (b) { var d = entry(b.ex).def; return b.pat === true || (!!d && d.pat === true); });
+    return h('p.px-meta.px-plan-focus', { 'data-patfocus': has ? 'on' : 'none' }, has
+      ? 'DAT-style focus is on: every session includes at least one DAT-style format, and the ones you have not tried come first. Switch it off in the Library or in Settings.'
+      : 'DAT-style focus is on, but none of the DAT-style formats can run here right now.');
   }
 
   // The session as a ruler: one segment per block (its share of the time, keyed like the list's
@@ -51101,25 +51449,25 @@ void main() {
       set.length ? h('div.px-level-set', set.join('')) : null);
   }
 
-  function levelsSlot(rec, sample) {
+  function levelsSlot(rec) {
     var K = PX.ui.kit;
     var hook = null;
     try { hook = PX.ui.home.levels(rec); } catch (e) { hook = null; }
-    var useSample = !hook && sample;
-    var rows = hook || (sample ? MOCK.levels : realLevels(rec));
-    var p = K.panel({ title: 'Exercise levels', className: 'px-slot px-slot--levels', sample: useSample, aside: 'level 1–100, likely range' });
+    var rows = hook || realLevels(rec);
+    var p = K.panel({ title: 'Exercise levels', className: 'px-slot px-slot--levels', aside: 'level 1–100, likely range' });
     if (rows.length) {
       var list = h('ul.px-levels');
       rows.slice(0, 5).forEach(function (r) { list.appendChild(levelRow(r)); });
       p.body.appendChild(list);
     } else {
-      p.body.appendChild(h('p.px-slot-text', 'Levels appear after your first few items in an exercise, each with a range that narrows as you practise.'));
+      p.body.appendChild(h('p.px-slot-text', { 'data-empty': '' }, 'No levels yet: they appear after your first few items in an exercise, each with a range that narrows as you practise.'));
     }
-    p.body.appendChild(h('div.px-slot-foot', h('span.px-meta', catalog().length + ' exercises in the Library'), ui.button('Open the Library', { kind: 'ghost', small: true, go: 'library' })));
+    var n = count();
+    p.body.appendChild(h('div.px-slot-foot', h('span.px-meta', { 'data-count': String(n) }, n + ' exercises in the Library'), ui.button('Open the Library', { kind: 'ghost', small: true, go: 'library' })));
     return p.el;
   }
 
-  function achievementsSlot(rec, sample) {
+  function achievementsSlot(rec) {
     var K = PX.ui.kit;
     var A = PX.engine && PX.engine.achievements;
     var items = Object.keys(rec.achievements || {}).map(function (id) {
@@ -51128,9 +51476,7 @@ void main() {
       if (!meta && A && typeof A.get === 'function') return null; // an id from an older version: not shown
       return { name: (meta && meta.name) || id.replace(/[-_.]/g, ' '), desc: (meta && meta.desc) || '', date: rec.achievements[id] };
     }).filter(Boolean).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
-    var useSample = !items.length && sample;
-    if (useSample) items = MOCK.achievements;
-    var p = K.panel({ title: 'Recent achievements', className: 'px-slot px-slot--achievements', sample: useSample });
+    var p = K.panel({ title: 'Recent achievements', className: 'px-slot px-slot--achievements' });
     if (items.length) {
       var list = h('ul.px-ach');
       items.slice(0, 3).forEach(function (a) {
@@ -51139,7 +51485,7 @@ void main() {
       });
       p.body.appendChild(list);
     } else {
-      p.body.appendChild(h('p.px-slot-text', 'Achievements mark skills and good practice, such as trying every exercise or taking two baselines. None yet.'));
+      p.body.appendChild(h('p.px-slot-text', { 'data-empty': '' }, 'No achievements yet: the first ones come with your first sessions. They mark skills and good practice, such as trying every exercise or taking two baselines.'));
     }
     return p.el;
   }
@@ -51148,7 +51494,6 @@ void main() {
 
   function render(host) {
     var rec = PX.core.store.state, now = Date.now(), d = new Date(now);
-    var sample = !hasAnyTrials(rec);
     host.appendChild(h('div.px-screen-head',
       h('p.px-screen-meta', DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · week ' + isoWeek(d)),
       h('h1', 'Today')));
@@ -51156,20 +51501,20 @@ void main() {
       sessionSlot(rec, now),
       goalSlot(rec, now),
       dailySlot(rec, now),
-      levelsSlot(rec, sample),
+      levelsSlot(rec),
       checkSlot(rec, now),
-      achievementsSlot(rec, sample),
+      achievementsSlot(rec),
       dataSlot()));
   }
 
   PX.ui.home = {
     catalog: catalog,
+    count: count,             // the training exercises the Library lists
     checkStatus: checkStatus, // the next Spatial Check in words (Today and Progress)
     weekStatus: weekStatus,   // the weekly goal as the engine counts it
     // Phase 3 hooks (Builder A): the real plan and levels from js/ui/play.js (engine data).
     plan: function (rec, now) { var P = PX.ui.play; return P && typeof P.homePlan === 'function' ? P.homePlan(rec, now) : null; },
     levels: function (rec) { var P = PX.ui.play; return P && typeof P.homeLevels === 'function' ? P.homeLevels(rec) : null; },
-    MOCK: MOCK,
   };
   PX.ui.screens = PX.ui.screens || {};
   PX.ui.screens.home = { title: 'Today', render: render };
@@ -52062,17 +52407,57 @@ void main() {
     'span.len': function (v) { return v + ' blocks'; },
     'span.turn': function (v) { return v ? 'board turned ' + v + '°' : 'no board turn'; },
     'slice.curved': function (v) { return v === 'yes' ? 'curved solid' : 'flat-sided solid'; },
-    'fold.idle': function (v) { return v === 0 ? 'no idle folds' : v + (v === 1 ? ' fold that does not matter' : ' folds that do not matter'); },
+    'fold.folds': function (v) { return v === 1 ? 'one fold' : v + ' folds'; },
+    'fold.punches': function (v) { return v === 1 ? 'one punch' : v + ' punches'; },
+    'fold.idle': function (v) { return v === 0 ? 'every fold matters' : v + (v === 1 ? ' fold that does not matter' : ' folds that do not matter'); },
+    // Fold's and Hole Punch's fold types (all straight; a corner among straight ones; 45° only; both)
+    'fold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
+    'patfold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
+    // Hole Punch: folds whose flap the punch misses (at most folds − 1 of them)
+    'patfold.idle': function (v) { return v === 0 ? 'every fold matters' : v === 1 ? 'one fold the punch misses' : 'up to ' + v + ' folds the punch misses'; },
+    // Openings: the cuts dealt over the three faces, the outline that fits, the wrong openings
+    'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },
+    'openings.edges': function (v) { return v === 'chamfers' ? 'slanted cuts too' : 'right-angled cuts only'; },
+    'openings.keyview': function (v) { return v === 'front, side or top' ? 'any of the three outlines fits' : 'mostly the ' + String(v).split(',')[0] + ' outline fits (sometimes the side)'; },
+    'openings.pose': function (v) { return v === 'lying' ? 'solid shown lying on its side' : 'solid shown upright'; },
+    'openings.foils': function (v) { return v === 'proportion' ? 'one wrong opening with the wrong proportions' : 'wrong openings differ in a cut'; },
+    // Missing View
+    'patviews.cubes': function (v) { return v + ' cubes'; },
+    'patviews.grid': function (v) { return 'on a ' + v + ' grid'; },
+    'patviews.missing': function (v) { return 'the ' + v + ' view to find'; },
+    'patviews.foil': function (v) { return v === 'same outline' ? 'wrong drawings with the same outline' : v === 'solid or dotted' ? 'wrong drawings that differ in one line (solid or dotted)' : 'wrong drawings with another outline'; },
+    // Angles (size ranges from the generator)
+    'angles.gap': function (v) { return 'closest two angles ' + v + '° apart'; },
+    'angles.size': function (v) {
+      var d = PX.ex.get('angles'), r = d && d.lib && d.lib.RANGE ? d.lib.RANGE[v] : null, span = r ? ' (' + r[0] + '–' + r[1] + '°)' : '';
+      return (v === 'right' ? 'angles near a right angle' : v + ' angles') + span;
+    },
+    'angles.resolve': function (v) { return v === 'extremes' ? 'the smallest and largest settle it' : 'the ' + (v === 'middle' ? 'middle' : 'closest') + ' two settle it'; },
+    'angles.pose': function (v) { return v === 'aligned' ? 'one arm of each angle horizontal' : 'angles turned any way'; },
+    // Painted Cubes
+    'cubes.cubes': function (v) { return v + ' cubes'; },
+    'cubes.height': function (v) { return 'columns up to ' + v + ' cubes high'; },
+    'cubes.asked': function (v) { return 'asked for cubes with ' + v + ' painted sides'; },
+    // Form
+    'form.solid': function (v) { return v === 'frusta and five-sided' ? 'cut-off pyramids and five-sided prisms' : String(v); },
+    'form.marks': function (v) { return FORM_MARKS[v] || 'marks: ' + v; },
+    'form.view': function (v) { return 'solids pictured ' + v; },
+    'form.foil': function (v) { return v === 'marks only' ? 'wrong solids differ only in their marks' : 'wrong solids differ in size or in marks'; },
     'views.view': function (v) { return v + ' view'; },
-    'homing.route': function (v) { return String(v); },
+    'homing.route': function (v) { return String(v).replace(', ', ' with '); }, // '3 legs with small turns (30–60°)': no comma inside a list
     'homing.landmarks': function (v) { return v === 'none' ? 'no landmarks' : v === 'one' ? 'one landmark' : v + ' landmarks'; },
-    'reckon.route': function (v) { return String(v); },
+    'reckon.route': function (v) { return String(v).replace(', ', ' with '); },
     'reckon.flow': function (v) { return v === 'textured' || v === 'sparse' ? v + ' ground' : v + ' on the ground'; },
-    'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + v; },
+    'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + String(v).replace(/^varied/, 'varies'); },
     'reckon.tolerance': function (v) { return 'right within ' + v; },
     'track.time': function (v) { return v + ' s of tracking'; },
-    'knots.rope': function (v) { var m = /^(\d+)( slide-over)?$/.exec(String(v)); return m ? m[1] + ' crossings' + (m[2] ? ', a slide-over move' : '') : String(v); },
-    'knots.spacing': function (v) { return v + ' spacing'; },
+    'knots.rope': function (v) { var m = /^(\d+)( slide-over)?$/.exec(String(v)); return m ? m[1] + ' crossings' + (m[2] ? ' with a slide-over move' : '') : String(v); },
+    'knots.spacing': function (v) { return v === 'open' ? 'strands far apart' : v === 'close' ? 'strands close together' : v === 'tight' ? 'strands tightly packed' : v + ' spacing'; },
+  };
+  var FOLD_TYPE = { half: 'straight folds only', corner: 'a corner folded in among straight folds', diagonal: 'diagonal folds only', mixed: 'diagonal and straight folds' };
+  var FORM_MARKS = {
+    'shaded and half': 'one shaded face and one half-shaded', 'two shaded and half': 'two shaded faces and one half-shaded',
+    'shaded and two halves': 'one shaded face and two half-shaded',
   };
   function dimText(def, dim, v) {
     var f = def && PHRASE[def.id + '.' + dim.key];
@@ -54522,6 +54907,7 @@ void main() {
   var VOID_NOTICE = 3;      // voided trials in a row before the calm device notice
   var DYNAMIC_MS = 400;     // a present() longer than this held a moving or timed stimulus
   var DEMO_MS = 5000;       // a Watch demo lasts at least this long (slow, with captions)
+  var DEMO_CAPTION_MS = 3000; // and each of its captions stays on the screen at least this long
   var MODE_NAMES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', watch: 'Watch, Try, Go', tour: 'Watch, Try, Go' };
 
   function E() { return PX.engine; }
@@ -54676,6 +55062,18 @@ void main() {
         // A Watch demo plays slowly: at least DEMO_MS in all (PLAN §8), unless motion is reduced.
         var total = steps.reduce(function (a, st) { return a + Math.max(0, (st && st.ms) || 0); }, 0);
         if (P.demoing && !FAST && !rm && total > 0 && total < DEMO_MS) scale = DEMO_MS / total;
+        // ...and every caption of a Watch demo stays up at least DEMO_CAPTION_MS (RV-play-dat: about
+        // 1.7 s a caption was too fast to read): a hold at the end of the caption's last step, after
+        // its motion, also with reduced motion (reading is not motion). Show-me keeps its pace.
+        var holds = steps.map(function () { return 0; });
+        if (P.demoing && !FAST) {
+          for (var a = 0; a < steps.length; a++) {
+            if (!steps[a] || !steps[a].caption) continue;
+            var b = a, sum = 0;
+            do { sum += Math.max(1, ((steps[b] && steps[b].ms) || 0) * scale); b++; } while (b < steps.length && !(steps[b] && steps[b].caption));
+            if (sum < DEMO_CAPTION_MS) holds[b - 1] += DEMO_CAPTION_MS - sum;
+          }
+        }
         // A demo plays before any answer, when the feedback area is hidden: its controls show anyway.
         var fbHidden = P.el.feedback.hidden;
         if (fbHidden) { P.el.feedback.hidden = false; P.el.actions.hidden = true; }
@@ -54712,7 +55110,7 @@ void main() {
           if (rm && k < 1) { var nk = Math.max(1, Math.round(d / 400)); k = Math.floor(k * nk) / nk; }
           if (steps[i].update && k !== lastK) safe(steps[i].update, k);
           lastK = k;
-          if (t >= d) {
+          if (t >= d + holds[i]) {
             finish();
             if (i + 1 < steps.length) enter(i + 1); else { end(); return false; }
           }
@@ -54725,7 +55123,7 @@ void main() {
           close: function () { while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
         };
         P.played.started++;
-        P.played.plannedMs = Math.round(steps.reduce(function (a, st) { return a + Math.max(1, (st.ms || 0) * scale); }, 0));
+        P.played.plannedMs = Math.round(steps.reduce(function (a, st, k) { return a + Math.max(1, (st.ms || 0) * scale) + holds[k]; }, 0));
         if (!steps.length) { end(); return; }
         if (prev !== 'showme') P.setState('showme');
         P.el.player.hidden = false;
@@ -55214,7 +55612,8 @@ void main() {
       el.verdict.setAttribute('data-kind', kind);
       el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, ok ? '✓' : '✗'));
       el.verdict.appendChild(h('strong.pl-verdict-word', ok ? 'Correct' : tr.timeout ? 'Time is up' : 'Incorrect'));
-      if (!tr.timeout && isNum(tr.rtMs)) el.verdict.appendChild(h('span.pl-verdict-rt.px-num', fmtRt(tr.rtMs)));
+      // No time on the Watch item: the demo has just solved it, so a time says nothing (RV-play-dat).
+      if (!tr.timeout && isNum(tr.rtMs) && !cfg.demo) el.verdict.appendChild(h('span.pl-verdict-rt.px-num', fmtRt(tr.rtMs)));
       if (!ok) el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'The right answer is marked ✓.' : 'The right answer is shown.'));
       if (tr.outcome === 'stutter') el.verdict.appendChild(h('span.pl-verdict-void', voidText(tr.voidReason)));
       else sound.play(ok ? 'right' : 'wrong'); // a short tone when the setting is on (never during a stimulus)
@@ -55300,8 +55699,11 @@ void main() {
 
     // Watch: the item is presented, view.demo plays its solution with captions, then the
     // player is back in 'respond' and the item can be answered (practice, never logged).
+    // cfg.turn: { skip } shows "Your turn" in the reading strip when the demo ends, with a
+    // button (label skip) that leaves the item unanswered and goes on.
     function demo(item, cfg) {
-      var p = run(item, Object.assign({ practice: true, demo: true }, cfg || {}));
+      cfg = cfg || {};
+      var p = run(item, Object.assign({ practice: true, demo: true }, cfg));
       var tok = P.token;
       when('respond').then(function () {
         if (tok !== P.token || !P.view || !P.view.demo) return;
@@ -55318,12 +55720,32 @@ void main() {
           // The answer clock starts again now: the demo's time is never answer time.
           P.paintTs = timing.now(); P.pausedMs = 0; P.pauseStart = 0;
           if (P.grid) P.grid.lock(false);
-          if (cfg && typeof cfg.onDemoEnd === 'function') cfg.onDemoEnd();
+          if (typeof cfg.onDemoEnd === 'function') cfg.onDemoEnd();
+          if (cfg.turn) yourTurn(cfg.turn);
         });
       });
       return p;
     }
     P.demo = demo;
+
+    // After a Watch demo the next step is said where the demo's controls were (the reading strip),
+    // so the screen is never a dead end: answer it as the demo did, or go on (RV-play-dat).
+    function yourTurn(o) {
+      if (P.state !== 'respond') return;
+      ui.clear(el.verdict);
+      el.verdict.setAttribute('data-kind', 'turn');
+      el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, '→'));
+      el.verdict.appendChild(h('strong.pl-verdict-word', 'Your turn'));
+      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'Pick the answer the demo found.' : 'Answer it yourself, the way the demo did.'));
+      if (o.skip) {
+        var b = ui.button(o.skip, { kind: 'ghost', small: true, onClick: function () { skipItem(false); } });
+        b.setAttribute('data-turn-skip', '');
+        el.verdict.appendChild(b);
+      }
+      el.actions.hidden = true;
+      el.feedback.hidden = false;
+      marksIntoView();
+    }
 
     /* ---------- pause, emergency skip, abort ---------- */
     // quiet: a pause under a modal, which keeps its own key layer and focus on top.
@@ -55743,22 +56165,41 @@ void main() {
   function isPhone() {
     try { return !!(win.matchMedia && win.matchMedia('(max-width: 719px), (max-height: 500px)').matches); } catch (e) { return false; }
   }
-  // Scrolls the item's stage fully into the window when it is not (phones: the Watch, Try, Go
-  // header sits above the player); never past its top edge.
-  // demo: a Watch demo pins its caption and the show-me bar to the bottom (css/play.css), so keep
-  // the stage above them (at least 7.5rem, more under a taller caption).
-  function stageIntoView(P, demo) {
-    if (!isPhone()) return;
+  // Keeps the item on the screen once it plays: its stimulus and every answer control above what is
+  // pinned to the bottom (a show-me's caption and bar on phones, the reading strip on wider screens),
+  // and a top edge in view: the status strip (HUD), or while a demo or show-me runs the item itself
+  // (the strip and the goal may scroll away above it then). Under the sticky header on wide screens.
+  // When both cannot hold, the top wins. pinned: a demo or show-me runs, or is about to (before its
+  // bar is up, phones keep 7.5rem for it). Watch, Try, Go's own header may scroll away above.
+  function stageIntoView(P, pinned) {
     try {
-      var st = P.el.host.querySelector('.ex-stage') || P.el.host, r = st.getBoundingClientRect(), vh = win.innerHeight || 640;
-      if (!r.height) return;
-      var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
-      var by = 0, bottom = vh - (demo ? 7.5 * rem : 8);
-      var cap = demo ? P.el.host.querySelector('.ex-caption') : null, cr = cap && cap.textContent ? cap.getBoundingClientRect() : null;
-      if (cr && cr.height && win.getComputedStyle(cap).position === 'fixed') bottom = Math.min(bottom, cr.top - 4);
-      if (r.bottom > bottom) by = Math.min(r.bottom - bottom, r.top - 8);
-      else if (r.top < 0) by = r.top - 8;
-      if (by) win.scrollBy(0, by);
+      var vh = win.innerHeight || 640, top = 0, rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
+      var head = doc.querySelector('.px-header');
+      if (head && win.getComputedStyle(head).display !== 'none') { var hr = head.getBoundingClientRect(); if (hr.bottom > 0 && hr.top <= 0) top = hr.bottom; }
+      var hud = P.el.hud.getBoundingClientRect(), bottom = 0, itemTop = vh;
+      [P.el.host, P.el.grid, P.el.confirmRow].forEach(function (e) {
+        if (!e || e.hidden) return;
+        var r = e.getBoundingClientRect();
+        if (r.height) { bottom = Math.max(bottom, r.bottom); itemTop = Math.min(itemTop, r.top); }
+      });
+      if (!bottom || !hud.height) return;
+      var anchor = pinned ? itemTop - 8 : hud.top;
+      var limit = vh - 8;
+      if (pinned) {
+        var found = false;
+        [P.el.feedback, P.el.root.querySelector('.pl-showme-buttons'), P.el.host.querySelector('.ex-caption'), P.el.caption].forEach(function (e) {
+          if (!e || e.closest('[hidden]')) return;
+          var cs = win.getComputedStyle(e);
+          if (cs.display === 'none' || (cs.position !== 'fixed' && cs.position !== 'sticky')) return;
+          var r = e.getBoundingClientRect();
+          if (r.height && r.top > top && r.top < vh) { limit = Math.min(limit, r.top - 4); found = true; }
+        });
+        if (!found && isPhone()) limit = Math.min(limit, vh - 7.5 * rem);
+      }
+      var by = 0;
+      if (bottom > limit) by = Math.min(bottom - limit, anchor - top);
+      else if (anchor < top) by = Math.max(anchor - top, bottom - limit);
+      if (Math.abs(by) >= 1) win.scrollBy(0, by);
     } catch (e) { /* cosmetic */ }
   }
 
@@ -55809,12 +56250,42 @@ void main() {
       });
       partsOn(!!parts.firstChild);
     }
-    // On a phone the header above the item can push the stimulus down: just before an item
-    // plays (its first frame comes after this), its stage is brought fully onto the screen.
+    // The header above the item can push it down: just before an item plays (its first frame comes
+    // after this), the item is brought onto the screen (the header may scroll away). A demo is
+    // fitted again when it starts, under its pinned caption and bar (makeRunner).
     function stageSoon(item, demo) {
       P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
-      // Again when the demo starts: its caption and bar are pinned then, and the page has room to scroll.
-      if (demo) P.when('showme').then(function () { if (P.item === item) stageIntoView(P, true); });
+      // and once its answer controls are up (Span's Undo and Done, Reckon's Walk and Here come then)
+      if (!demo) P.when('respond').then(function () { if (P.item === item) stageIntoView(P, false); });
+    }
+    // Phones size the item from --pl-avail (css/play.css), the screen less the status strip. Here a
+    // Try item's goal and tip shown above it take their share first (--pl-extra on the host, read by
+    // .is-wtg), so a Try item fits like a scored one (RV-play-dat). In Watch the strip and the goal
+    // scroll away while the demo plays (stageIntoView), and the item gives up what the show-me
+    // caption and bar pinned under it need beyond that strip's room: 7.5rem less about 3.5rem.
+    function makeRoom(goal, tip, demo) {
+      if (!isPhone()) { host.style.removeProperty('--pl-extra'); return; }
+      try {
+        P.setGoal(goal); P.setTip(tip); // run() sets the same again
+        var g = P.el.guide, gh = g ? g.getBoundingClientRect().height : 0;
+        var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
+        var extra = demo ? 4 * rem : gh > 0 ? gh + 0.5 * rem : 0;
+        host.style.setProperty('--pl-extra', Math.round(extra) + 'px');
+      } catch (e) { /* the item keeps its usual size */ }
+    }
+    // The answers so far (the demo's, then each Try item's): a Try item's answer differs from the one
+    // before, and yes/no never comes three times the same in a row (RV-play-dat: Hole Punch's Try
+    // answers were 2, 2, 2, 2, 2). Deterministic: the first of a few seeded candidates that passes.
+    var answers = [];
+    function keyOf(it) {
+      var k = it ? it.key : null;
+      return typeof k === 'number' || typeof k === 'boolean' ? k : Array.isArray(k) ? k.join(',') : null;
+    }
+    function varied(k) {
+      if (k === null || !answers.length) return true;
+      var prev = answers[answers.length - 1];
+      if (typeof k === 'boolean') return !(answers.length >= 2 && prev === k && answers[answers.length - 2] === k);
+      return k !== prev;
     }
     function watchStep() {
       if (!demoSpec || skipped) return Promise.resolve();
@@ -55824,10 +56295,13 @@ void main() {
       showParts(item);
       P.setMeta('Watch');
       P.setProgress(0, practice.length + 1);
+      answers.push(keyOf(item));
+      makeRoom(goalOf(learn, item), null, true);
       stageSoon(item, true);
       return P.demo(item, {
         goal: goalOf(learn, item),
-        onDemoEnd: function () { text.textContent = 'Now answer it yourself. It is practice and never counts.'; partsOn(false); }, // the item and its options fit again
+        turn: { skip: practice.length ? 'Skip to Try' : 'Skip to Go' },
+        onDemoEnd: function () { text.textContent = 'Your turn: answer the demo item yourself. Practice never counts.'; partsOn(false); }, // the item and its options fit again
       }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; } // End session (or the tour) from the pause sheet
@@ -55836,13 +56310,22 @@ void main() {
     }
     function tryStep(i) {
       if (skipped || i >= practice.length) return Promise.resolve();
-      var params = fillParams(def, practice[i]), item;
-      try { item = def.generate(PX.rng(seedOf(['px-try', exId, i, counter('tries', exId)])), params); } catch (e) { log('practice item failed', e); return tryStep(i + 1); }
+      var params = fillParams(def, practice[i]), item = null, seed0 = ['px-try', exId, i, counter('tries', exId)];
+      for (var c = 0; c < 6; c++) {
+        var cand = null;
+        try { cand = def.generate(PX.rng(seedOf(c ? seed0.concat([c]) : seed0)), params); } catch (e) { log('practice item failed', e); }
+        if (!cand) continue;
+        if (!item) item = cand;
+        if (varied(keyOf(cand))) { item = cand; break; }
+      }
+      if (!item) return tryStep(i + 1);
+      answers.push(keyOf(item));
       stage(1, 'Try: practice item ' + (i + 1) + ' of ' + practice.length + '. Practice items never count.');
       partsOn(false); // the labelled parts belong to Watch; Try keeps the item in view
       P.setMeta('Try ' + (i + 1) + ' of ' + practice.length);
       P.setProgress(i + 1, practice.length + 1);
       var tip = tipFor(exId, learn, item, true);
+      makeRoom(goalOf(learn, item), tip ? tip.text : null, false);
       stageSoon(item);
       return P.run(item, { practice: true, goal: goalOf(learn, item), tip: tip ? tip.text : null }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
@@ -55861,6 +56344,7 @@ void main() {
       stage(2, 'Go: the next items count.');
       if (head.parentNode) head.parentNode.removeChild(head);
       host.classList.remove('is-wtg');
+      host.style.removeProperty('--pl-extra');
       P.setTip(null);
       return ended ? 'end' : skipped ? 'skipped' : 'done';
     });
@@ -56105,7 +56589,7 @@ void main() {
       var set = step.preset ? settingsText(def, step.preset) : '';
       return showCard(wrap, P.el.root, {
         id: 'stage', title: 'Path stage ' + step.pathStage + ' of 10', def: def, hide: P.el.root,
-        lines: [set ? 'Settings at this stage: ' + set + '.' : '', 'A short demo shows how this stage’s items look. It never counts.'],
+        lines: [set ? 'This stage goes up to: ' + set + '. Its items mix easier settings too.' : '', 'A short demo shows how this stage’s items look. It never counts.'],
         actions: [{ label: 'Start the stage', value: 'start' }, { label: 'Watch the demo', value: 'watch', primary: true }],
       }).then(function (v) {
         if (S.done || v !== 'watch') return null;
@@ -56277,7 +56761,7 @@ void main() {
       h('p', h('strong', o.first ? name + ': first level ' + a.level : moved ? name + ' level ' + b.level + ' → ' + a.level : name + ' level ' + a.level + ', unchanged'),
         h('span.px-num.pl-note-range', ' likely ' + a.lo + '–' + a.hi), ' after the last 10 items'),
       h('div.pl-note-bar', bar),
-      set ? h('p.px-meta', 'At this level: ' + set + '.') : null);
+      set ? h('p.px-meta', 'Typical at this level: ' + set + '.') : null);
   }
 
   function pathNote(def, x) {
@@ -56343,7 +56827,7 @@ void main() {
       var watchIt = !(plan.rechecks && plan.rechecks.length) && !(isObj(ps) && isObj(ps.watched) && ps.watched[st]) && !!(viewOf(def.id) && viewOf(def.id).demo) && wtgSeen(def.id);
       var acts = watchIt ? [back, { label: 'Start the stage', value: 'start' }, { label: 'Watch the demo', value: 'watch', primary: true }] : [back, go];
       return { title: 'Path · stage ' + st + ' of 10', def: def, actions: acts, offersDemo: watchIt, lines: [
-        pre ? 'Settings at this stage: ' + settingsText(def, pre) + '.' : '',
+        pre ? 'This stage goes up to: ' + settingsText(def, pre) + '. Its items mix easier settings too.' : '',
         'Ten stages from easy to hard, practised one at a time. A stage is passed when your recent answers and your level both show it holds; passed stages come back now and then for a short recheck.',
         plan.rechecks && plan.rechecks.length ? 'First, a short recheck of stage ' + plan.rechecks[0].s + '.' : '',
         watchIt ? 'A short demo shows how this stage’s items look. It never counts.' : '',
@@ -56438,7 +56922,7 @@ void main() {
         h('div.pl-res-bar', bar),
         h('p.px-meta', lv.before === null || lv.before === undefined ? 'A first level: it narrows as you practise.' :
           r.clear ? 'A clear change: larger than the usual ±' + r.noise + ' between sessions.' : 'Within the usual session-to-session noise (±' + r.noise + ').'),
-        lv.settings ? h('p.px-meta', 'At this level: ' + settingsText(def, lv.settings) + '.') : null));
+        lv.settings ? h('p.px-meta', 'Typical at this level: ' + settingsText(def, lv.settings) + '.') : null));
     }
     return h('li.pl-res', { 'data-ex': r.exId }, kids);
   }
@@ -56524,7 +57008,7 @@ void main() {
       var def = PX.ex.get(res.path.exId);
       p = K.panel({ title: 'Path', className: 'pl-panel', aside: 'stage ' + res.path.stage + ' of 10' });
       if (res.path.passed && res.path.passed.length) rows.push('Passed this session: stage ' + res.path.passed.join(', ') + '.');
-      if (res.path.preset && def) rows.push('Stage ' + res.path.stage + ' settings: ' + settingsText(def, res.path.preset) + '.');
+      if (res.path.preset && def) rows.push('Stage ' + res.path.stage + ' goes up to: ' + settingsText(def, res.path.preset) + '.');
       (res.path.rechecks || []).forEach(function (r) { rows.push('Recheck of stage ' + r.s + ': ' + (r.held === false ? 'it opens again for practice.' : 'it still holds.')); });
       rows.push('A stage counts as passed only while it holds: passed stages come back for short rechecks after 3, 7, 14, 30 and 60 days.');
     } else if (mode === 'speed' && res.speed) {
@@ -56793,7 +57277,8 @@ void main() {
   function homePlan(r, t) {
     r = r || rec();
     t = isNum(t) ? t : now();
-    var key = [r.rev, (r.trials || []).length, (r.sessions || []).length, U.dayKey(t), r.settings.sessionMin, Math.floor(t / 3600000), Object.keys(r.tour && r.tour.seen || {}).length].join(':');
+    var key = [r.rev, (r.trials || []).length, (r.sessions || []).length, U.dayKey(t), r.settings.sessionMin, Math.floor(t / 3600000), Object.keys(r.tour && r.tour.seen || {}).length,
+      r.settings.patFocus === true, JSON.stringify(r.settings.testPause || null)].join(':');
     if (planCache.key === key) return planCache.val;
     var val = null;
     try {
@@ -56808,12 +57293,14 @@ void main() {
             var d = E().schedule.due(copy, def, t), days = tt.last ? Math.max(1, Math.round((t - tt.last) / 86400000)) : null;
             why = !tt.n ? 'New: not tried yet' : d.due ? 'Due for review' + (days ? ': last practised ' + days + (days === 1 ? ' day' : ' days') + ' ago' : '') : 'Rested longest';
           } else why = !tt.n ? 'New: not tried yet' : 'Practised least so far';
+          // the DAT-style format the PAT focus put in (schedule.choose): say why it is there
+          if (id === plan.patPick && tt.n) why = 'DAT-style focus: ' + (E().schedule.due(copy, def, t).due ? 'due for review' : 'practised least of the formats');
           var ms = (plan.quota[id] || 0) * (plan.msPer[id] || 0);
-          return { role: role.charAt(0).toUpperCase() + role.slice(1), ex: id, min: Math.max(1, Math.round(ms / 60000)), why: why };
+          return { role: role.charAt(0).toUpperCase() + role.slice(1), ex: id, min: Math.max(1, Math.round(ms / 60000)), why: why, pat: !!def && def.pat === true };
         });
         var used = blocks.reduce(function (a, b) { return a + b.min; }, 0);
         blocks[0].min = Math.max(1, blocks[0].min + minutes - used);
-        val = { minutes: minutes, mode: 'Train', style: styleName(plan.style), blocks: blocks };
+        val = { minutes: minutes, mode: 'Train', style: styleName(plan.style), blocks: blocks, patFocus: E().schedule.patFocus(r) };
       }
     } catch (e) { log('Today’s plan failed', e); val = null; }
     planCache = { key: key, val: val };
@@ -57038,7 +57525,7 @@ void main() {
       var sizes = K.segmented({
         key: 'secSize', legend: 'Length', value: size,
         options: ['mini', 'full'].map(function (s) { var x = SE().shape(s, opts()); return { value: s, label: (s === 'mini' ? 'Mini' : 'Full') + ' · ' + x.items + ' items', aria: (s === 'mini' ? 'Mini' : 'Full') + ', ' + x.items + ' items in ' + SE().fmtMinutes(x.budgetMs) }; }),
-        hint: size === 'mini' ? 'Five items a part: a short section that fits a phone and a break.' : 'Fifteen items a part' + (sh.parts.length === sh.of ? ', the length of the real test’s perceptual section.' : '.'),
+        hint: size === 'mini' ? 'Five items a part: a short section that fits a phone and a break.' : 'Fifteen items a part' + (sh.parts.length === sh.of ? ', as in each part of the Perceptual Ability Test.' : '.'),
         onChange: function (v) { size = v; draw(); },
       });
       body.appendChild(sizes);
@@ -57061,10 +57548,10 @@ void main() {
           ui.button('Open the Library', { kind: 'ghost', small: true, go: 'library' })) : null,
         sh.missing.length ? h('p.px-field-hint.sec-missing', andList(sh.missing.map(function (m) { return PART_NAMES[m.id] || shortOf(m.id); })) + (sh.missing.length === 1 ? ' is' : ' are') + ' not part of this section here, so it has ' + sh.parts.length + ' of the ' + sh.of + ' parts: ' + sh.items + ' items in ' + SE().fmtMinutes(sh.budgetMs) + ', the same pace.') : null));
       body.appendChild(h('ul.sec-rules',
-        h('li', 'One clock for the whole section: ' + sh.items + ' items in ' + SE().fmtMinutes(sh.budgetMs) + ', about 40 seconds an item, the real test’s average pace.'),
+        h('li', 'One clock for the whole section: ' + sh.items + ' items in ' + SE().fmtMinutes(sh.budgetMs) + ', about 40 seconds an item, the Perceptual Ability Test’s average pace.'),
         h('li', 'No feedback until the end. Skip, flag and go back to any item of the part you are in; once you move on to the next part, you cannot return.'),
         h('li', 'Pause stops the clock, and so does reading a part’s instructions. The review reports your pauses.'),
-        h('li', 'Your levels do not change. The review shows each part’s results and pacing, with a show-me for every item. Parallax does not predict your score on the real test.')));
+        h('li', 'Your levels do not change. The review shows each part’s results and pacing, with a show-me for every item. Parallax does not predict a score on the Dental Admission Test.')));
       var start = ui.button('Start the section', { kind: 'primary', onClick: function () {
         var form = parseInt(formSel.value, 10);
         var run = SE().start(rec(), { size: size, form: isNum(form) ? form : next, now: now(), display: display(), can: can, why: why });
@@ -57216,7 +57703,7 @@ void main() {
     el.items = ui.button('Items', { kind: 'ghost', small: true, onClick: function () { setStrip(X, !X.stripOpen); } });
     el.items.setAttribute('data-sec-items', '');
     el.items.setAttribute('aria-expanded', 'false');
-    el.next = ui.button('Skip', { kind: 'primary', small: true, key: '→', onClick: function () { next(X); } });
+    el.next = ui.button('Skip', { kind: 'secondary', small: true, key: '→', onClick: function () { next(X); } }); // answers are the main action: Skip must not look like Next
     el.next.setAttribute('data-sec-next', '');
     el.strip = h('div.sec-strip', { hidden: true, role: 'group', 'aria-label': 'Items of this part' });
     el.endPart = ui.button('End this part', { kind: 'ghost', small: true, onClick: function () { leave(X); partEnd(X); } });
@@ -57307,7 +57794,7 @@ void main() {
     if (L.goal) lines.push(L.goal);
     lines.push(n + (n === 1 ? ' item.' : ' items.') + ' The clock is stopped while you read this; ' + clockText(run.budgetMs - used(X)) + ' left in all.');
     if (p === 0) lines.push('Choosing an answer moves on. Back, Flag and Skip are under the item, and Items shows the part’s items. Pause stops the clock.');
-    if (exId === 'angles') lines.push('Judge by eye: in the real test, rulers and other measuring tools are not allowed.');
+    if (exId === 'angles') lines.push('Judge by eye: the Perceptual Ability Test does not allow rulers or other measuring tools.');
     if (def && (def.extraParams || []).indexOf('ask') >= 0) lines.push('Up to three questions in a row ask about the same figure, as in the test, so a figure you have just seen can come back with a new question.');
     Play().showCard(X.wrap, X.P.el.root, {
       id: 'sec-part', title: 'Part ' + (p + 1) + ' of ' + run.parts.length + ': ' + shortOf(exId), def: def, hide: X.P.el.root, lines: lines,
@@ -57561,7 +58048,8 @@ void main() {
   /* ---------- the review ---------- */
 
   function statusText(e) {
-    var s = e.status === 'answered' ? (e.correct ? 'right' : 'wrong') : 'skipped'; // the list holds shown items only
+    // the list holds shown items only; one without an answer was skipped or left when the section ended
+    var s = e.status === 'answered' ? (e.correct ? 'right' : 'wrong') : 'not answered';
     return s + (e.flag ? ', flagged' : '');
   }
   function mark(e) { return e.status === 'answered' ? (e.correct ? '✓' : '✗') : '–'; }
@@ -57581,17 +58069,20 @@ void main() {
     var p = K.panel({ title: 'Results', className: 'pl-panel sec-results', aside: K.fmtWhen(s.end) });
     p.body.appendChild(h('dl.px-facts.sec-totals', fact('Right', s.right + ' of ' + s.n), fact('Answered', s.answered + ' of ' + s.n),
       fact('Time used', clockText(s.usedMs) + ' of ' + clockText(s.budgetMs)), fact('Paused', s.pausedMs >= 1000 ? minutesText(s.pausedMs) : 'no pauses')));
+    // Each cell carries its column's name (data-label): on a phone a part's numbers stack under its
+    // name, labelled, instead of running together (RV-play-dat: "3 1:01" read as "31:01").
     var rows = res.parts.map(function (x, i) {
       var per = x.seen ? Math.round(x.timeMs / x.seen / 1000) + ' s' : '–';
-      return h('tr', { 'data-part': x.exId },
-        h('th', { scope: 'row' }, (i + 1) + '. ' + shortOf(x.exId)),
-        h('td.px-num', x.reached ? x.right + '/' + x.n : '–'), h('td.px-num', x.broken && !x.reached ? 'not shown here' : x.reached ? String(x.answered) + (x.broken ? ' (ended early)' : '') : 'not reached'),
-        h('td.px-num', x.reached ? clockText(x.timeMs) : '–'), h('td.px-num', x.reached ? per : '–'));
+      var name = h('th', { scope: 'row' }, (i + 1) + '. ' + shortOf(x.exId));
+      if (!x.reached) return h('tr', { 'data-part': x.exId, class: 'is-unreached' }, name, h('td.sec-unreached', { colSpan: 4 }, x.broken ? 'not shown here' : 'not reached'));
+      return h('tr', { 'data-part': x.exId }, name,
+        h('td.px-num', { 'data-label': 'Right' }, x.right + '/' + x.n), h('td.px-num', { 'data-label': 'Answered' }, String(x.answered) + (x.broken ? ' (ended early)' : '')),
+        h('td.px-num', { 'data-label': 'Time' }, clockText(x.timeMs)), h('td.px-num', { 'data-label': 'Per item' }, per));
     });
     p.body.appendChild(h('div.sec-tablewrap', h('table.sec-table', h('caption.px-sr', 'Results by part'),
       h('thead', h('tr', h('th', { scope: 'col' }, 'Part'), h('th', { scope: 'col' }, 'Right'), h('th', { scope: 'col' }, 'Answered'), h('th', { scope: 'col' }, 'Time'), h('th', { scope: 'col' }, 'Per item'))),
       h('tbody', rows))));
-    p.body.appendChild(h('p.px-meta', 'Per item: the part’s time over the items you looked at. The real test averages about ' + Math.round(SE().PACE_MS / 1000) + ' seconds an item over its six parts.'));
+    p.body.appendChild(h('p.px-meta', 'Per item: the part’s time over the items you looked at. The Perceptual Ability Test allows about ' + Math.round(SE().PACE_MS / 1000) + ' seconds an item over its six parts.'));
     p.body.appendChild(h('p.px-meta', 'These counts are for comparing your own sections. Parallax does not turn them into a score or a prediction for the Dental Admission Test.'));
     (res.achievements || []).forEach(function (a) { p.body.appendChild(h('p.sec-award', K.icon('award'), h('span', h('b', a.name), ': ' + a.desc))); });
     if (run.missing && run.missing.length) p.body.appendChild(h('p.px-meta', andList(run.missing.map(function (m) { return PART_NAMES[m.id] || shortOf(m.id); })) + ' could not be part of this section.'));
@@ -57721,7 +58212,7 @@ void main() {
 <script data-src="js/ui/check.js">
 /* PX.ui.check: the Spatial Check (mode 'check'; PLAN §4, §6; ENGINE.md §10, §17).
    Probes are tasks that are never trained: no feedback, no reveal, no show me. The flow:
-     intro (what it is, about 15 minutes) → the expectations question once at baseline
+     intro (what it is, 15 to 25 minutes) → the expectations question once at baseline
      (PX.engine.assess.expect) → per probe: its instruction screen (learn.instruction) and its
      worked example (step.probe.example = learn.demo[0], played by view.demo, never scored or
      logged) → 16 adaptive items; def.timeLimit(params) ends an item as a time-out (scored
@@ -58235,23 +58726,19 @@ void main() {
     return el;
   }
 
-  function sampleTag() {
-    return h('span.px-tag.px-tag--sample', { title: 'Placeholder values that show the layout until there is real data' }, 'Sample data');
-  }
-
-  // A panel: { title, aside (text or node), sample, className, tag, level } → { el, head, body }
+  // A panel: { title, aside (text or node), className, tag, level } → { el, head, body }. No panel
+  // shows sample data (v1.1, RV-play-dat): an empty record gets empty states, never placeholders.
   function panel(o) {
     o = o || {};
     var headId = o.title ? 'px-panel-' + (++seq) : null;
     var asideKids = [];
-    if (o.sample) asideKids.push(sampleTag());
     if (o.aside) asideKids.push(o.aside);
     var head = o.title || asideKids.length ? h('div.px-panel-head',
       o.title ? h(o.level || 'h2', { class: 'px-panel-title', id: headId }, o.title) : null,
       asideKids.length ? h('span.px-panel-aside', asideKids) : null) : null;
     var body = h('div.px-panel-body');
     var el = h(o.tag || 'section', {
-      class: ['px-panel', o.className], 'aria-labelledby': headId, 'data-sample': o.sample ? '' : null,
+      class: ['px-panel', o.className], 'aria-labelledby': headId,
     }, head, body);
     return { el: el, head: head, body: body };
   }
@@ -58394,7 +58881,7 @@ void main() {
   })();
 
   var kit = {
-    icon: icon, mark: mark, spec: spec, sampleTag: sampleTag, panel: panel,
+    icon: icon, mark: mark, spec: spec, panel: panel,
     segmented: segmented, toggle: toggle, copyField: copyField, download: download,
     fmtWhen: fmtWhen, lastBackupText: lastBackupText, backupLine: backupLine, live: live,
     storageText: storageText,
@@ -58533,7 +59020,7 @@ void main() {
   }
 
   function openMore() {
-    var curNav = NAV_OF[router.current().name];
+    var curNav = navOf(router.current().name);
     var close = null;
     var list = h('ul.px-more-list');
     NAV.forEach(function (n) {
@@ -58602,8 +59089,16 @@ void main() {
     if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
   }
 
+  // A session or tutorial (play) belongs to the screen it was opened from: started from the Library
+  // (or an exercise's page) it keeps the Library lit, from Progress Progress, else Today (RV-play-dat).
+  var navFrom = 'home';
+  function navOf(name) {
+    if (name === 'play') return navFrom || 'home';
+    return NAV_OF[name] || null;
+  }
   function updateNav(name) {
-    var cur = NAV_OF[name] || null;
+    var cur = navOf(name);
+    if (name !== 'play' && cur) navFrom = cur;
     var els = shell.root.querySelectorAll('[data-nav]');
     for (var i = 0; i < els.length; i++) attr(els[i], 'aria-current', els[i].getAttribute('data-nav') === cur ? 'page' : null);
     var inMore = cur === 'lab' || cur === 'settings' || cur === 'about';
@@ -58983,6 +59478,40 @@ void main() {
   bus.on('store:saved', function () { if (!persistAsked && api && api.ready) askPersist(); });
   bus.on('route', chartUnitsSoon);
   window.addEventListener('resize', function () { window.clearTimeout(chartTimer); chartTimer = window.setTimeout(chartUnits, 200); });
+
+  // A tap on the tab bar or the header's nav while a pop-up is open lands on the pop-up's backdrop,
+  // which closes the pop-up; the tap then went nowhere and seemed ignored (RV-play-nav-knots: on a
+  // first run the tour offer opens as the welcome closes, and the first tap on Library only closed
+  // it). Now, once that pop-up has closed and no other opened, the tap goes where it was aimed.
+  var navTap = null;
+  function navAt(x, y) {
+    var els = shell.root ? shell.root.querySelectorAll('.px-tabbar [data-go], .px-tabbar [data-more], .px-header [data-go], .px-header [data-more]') : [];
+    for (var i = 0; i < els.length; i++) {
+      var r = els[i].getBoundingClientRect();
+      if (r.width && r.height && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return els[i];
+    }
+    return null;
+  }
+  doc.addEventListener('mousedown', function (e) {
+    var bd = e.target;
+    if (!bd || !bd.classList || !bd.classList.contains('px-modal-backdrop') || !ui.modalOpen()) return;
+    var nav = navAt(e.clientX, e.clientY);
+    if (!nav) return;
+    var tap = navTap = { el: nav, t: Date.now(), done: false };
+    window.setTimeout(function () { // after the backdrop's own handler has closed it (or kept it)
+      if (navTap !== tap || bd.parentNode || ui.modalOpen()) return;
+      tap.done = true;
+      nav.click();
+    }, 0);
+  }, true);
+  // The browser may deliver the tap's own click to the button after all: then it is not sent twice.
+  doc.addEventListener('click', function (e) {
+    var tap = navTap;
+    if (!tap || !e.isTrusted || !tap.el.contains(e.target)) return;
+    navTap = null;
+    if (Date.now() - tap.t > 1500) return;
+    if (tap.done) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
 
   var api = {
     ready: false,
