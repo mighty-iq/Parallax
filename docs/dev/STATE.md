@@ -51,7 +51,7 @@ Updated 2026-11-13 19:10 UTC. All 19 exercises are active in index.html (Knots a
 ## Running subagents and the files they write (Phase 2, launched 13 Nov ~15:20 UTC)
 - Reviews done: RV-A docs/dev/reviews/RV-dat-style-A.md (no wrong items; 2 rule-5 issues in Angles; Hole Punch symmetry = method); RV-B docs/dev/reviews/RV-section-overlap.md (no blockers; 8 should-fix).
 - B7 fix round done (2c68b6a). B5 fix round done (625eb27); B5 follow-up done: Angles LONG_MIN 0.7 kept; Fold validator re-simulates every drawn step (items identical).
-- RV-D done (docs/dev/reviews/RV-dat-style-B.md): no wrong items; Form face-shape cue 71 %, Openings cues; B6 fix round resumed (a0dc048b845b7fc8e).
+- RV-D done (docs/dev/reviews/RV-dat-style-B.md): no wrong items; Form face-shape cue 71 %, Openings cues; B6 fix round done (e5e1508).
 - RV-E done (docs/dev/reviews/RV-reckon-homing.md): scoring right; 2 blockers (turn-only strategies beat chance + 10 in Reckon and Homing; strategy card side error), 6 should-fix; B3 fix round resumed (a4766dc5c229a6ee1); B1 added trial column value2.
 - RV-H done (docs/dev/reviews/RV-code-core.md): no blockers; 4 should-fix (closing-item cap, check time as practice, two-tab merge of new fields, idle cap on late timers); B1 fix round done (value2 = trial column 13; CSV 18 columns).
 - Guide writer G1 (guide 1.1 pages, shots, PDF, README, CHANGELOG): ac14d632f5849a4a9 → docs/dev/progress/G1.md
