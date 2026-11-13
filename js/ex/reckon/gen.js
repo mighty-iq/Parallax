@@ -63,7 +63,12 @@
   var TOL_RETURN = [0.5, 0.35, 0.25];    // share of the home distance
   var MODEL = { base: -2.25, leg: 0.55, turn: 0.4, flow: 0.35, speed: 0.3, tolerance: 0.9, ret: 0.5 };
   var STEADY = 1.8, JITTER = 0.1;        // m/s, ± share per item at the steady level (R1 §9 risk 7)
-  var V = [1.2, 2.0], V_GAP = 0.4;       // varied speeds (m/s); two speeds in one leg differ by ≥ V_GAP
+  var V = [0.5, 2.0], V_GAP = 0.4;       // varied speeds (m/s); two speeds in one leg differ by ≥ V_GAP
+  // Above 'steady' a leg's time must say little about its length (RV S1: |r| ≤ 0.5). Each leg's mean speed is
+  // its length over a duration T0 · ((1 − KAPPA) + KAPPA · L / 7 m) · (1 + SIGMA · u), u ∈ [−1, 1], redrawn
+  // while the speed falls outside V: time and speed each carry part of the length, the ground flow all of it.
+  var T0 = 6.6, KAPPA = 0, SIGMA = 0.3;
+  var V_MEAN = 1.15;                     // m/s: the varied levels' mean walking speed over a route (estMs; the node test checks it)
   var W = [30, 45];                      // varied turn rates (deg/s)
   var BLEND = 0.8, SPLIT = [0.3, 0.7];   // s to change speed within a leg; share of the leg at the first speed
   var WALK = [1.05, 1.95];               // the walk back (m/s): 1.5 ± 30 %, new every item
@@ -145,29 +150,46 @@
   function speedPlan(r, level, legs, turns) {
     var best = null;
     for (var k = 0; k < 30; k++) {
-      var sp = drawSpeeds(k ? r.fork('again' + k) : r, level, legs.length, turns.length), s = motionOf(legs, turns, sp);
+      var sp = drawSpeeds(k ? r.fork('again' + k) : r, level, legs, turns.length), s = motionOf(legs, turns, sp);
       if (s <= MAX_MOTION) return sp;
       if (!best || s < best.s) best = { sp: sp, s: s };
     }
-    var f = best.s / MAX_MOTION + 0.01;
-    best.sp.speeds = best.sp.speeds.map(function (v) { return v.map(function (x) { return Math.min(V[1], rnd(x * f, 100)); }); });
-    best.sp.rates = best.sp.rates.map(function (w) { return Math.min(W[1], rnd(w * f, 10)); });
-    return best.sp;
+    // sped up in steps until it fits: a leg that would pass V[1] keeps its two speeds' gap (both shift down)
+    var sp = best.sp, s = best.s;
+    for (var it = 0; it < 24 && s > MAX_MOTION; it++) {
+      var f = Math.min(1.25, s / MAX_MOTION + 0.01);
+      sp.speeds = sp.speeds.map(function (v) {
+        var w = v.map(function (x) { return x * f; }), over = Math.max.apply(null, w) - V[1];
+        return w.map(function (x) { return rnd(over > 0 ? x - over : x, 100); });
+      });
+      sp.rates = sp.rates.map(function (w) { return Math.min(W[1], rnd(w * f, 10)); });
+      s = motionOf(legs, turns, sp);
+    }
+    return sp;
   }
   function motionOf(legs, turns, sp) {
     return H.motionSeconds({ legs: legs, turns: turns, speeds: sp.speeds, splits: sp.splits, turnRates: sp.rates, ramp: H.RAMP, blend: BLEND,
       startHeading: 0, path: [[0, 0]] });
   }
-  function drawSpeeds(r, level, nLegs, nTurns) {
-    var out = { speeds: [], splits: [], rates: [] }, i;
+  function legMean(r, L) {
+    var base = T0 * ((1 - KAPPA) + KAPPA * L / 7);
+    for (var k = 0; k < 40; k++) { var v = L / (base * (1 + SIGMA * r.float(-1, 1))); if (v >= V[0] && v <= V[1]) return rnd(v, 100); }
+    return rnd(Math.max(V[0], Math.min(V[1], L / base)), 100);
+  }
+  function drawSpeeds(r, level, legs, nTurns) {
+    var nLegs = legs.length, out = { speeds: [], splits: [], rates: [] }, i;
     var steady = rnd(STEADY * (1 + r.float(-JITTER, JITTER)), 100);
     for (i = 0; i < nLegs; i++) {
       if (level === 0) { out.speeds.push([steady]); out.splits.push(null); }
-      else if (level === 1) { out.speeds.push([rnd(r.float(V[0], V[1]), 100)]); out.splits.push(null); }
+      else if (level === 1) { out.speeds.push([legMean(r, legs[i])]); out.splits.push(null); }
       else {
-        var a = rnd(r.float(V[0], V[1] - V_GAP), 100), b = rnd(r.float(a + V_GAP, V[1]), 100);
-        out.speeds.push(r.chance(0.5) ? [a, b] : [b, a]);
-        out.splits.push(rnd(r.float(SPLIT[0], SPLIT[1]), 100));
+        // two speeds round the leg's mean, at least V_GAP apart, the split chosen so that the leg takes the
+        // time its mean speed gives (the harmonic mean of the two, by distance)
+        var m = legMean(r, legs[i]), g = r.float(V_GAP, V_GAP + 0.3), lo = Math.max(V[0], Math.min(m - g / 2, V[1] - g)), hi = rnd(lo + g, 100);
+        lo = rnd(lo, 100);
+        var first = r.chance(0.5) ? lo : hi, second = first === lo ? hi : lo, f = (1 / m - 1 / second) / (1 / first - 1 / second);
+        out.speeds.push([first, second]);
+        out.splits.push(rnd(Math.max(SPLIT[0], Math.min(SPLIT[1], f)), 100));
       }
     }
     for (i = 0; i < nTurns; i++) out.rates.push(level === 0 ? W[1] : rnd(r.float(W[0], W[1]), 10));
@@ -208,7 +230,8 @@
   // then face the way you faced at the start (key −T). distance: walk straight, then walk the same
   // distance again at another speed (key { x: 0, z: L }: L ahead of where the first walk ended).
   function taskItem(r, p) {
-    var h0 = rnd(r.float(0, 360), 100), sp = drawSpeeds(r.fork('speeds'), p.speed, p.task === 'distance' ? 1 : 0, p.task === 'heading' ? 1 : 0);
+    var h0 = rnd(r.float(0, 360), 100), L = p.task === 'distance' ? rnd(r.float(DIST_LEG[0], DIST_LEG[1]), 10) : 0;
+    var sp = drawSpeeds(r.fork('speeds'), p.speed, p.task === 'distance' ? [L] : [], p.task === 'heading' ? 1 : 0);
     if (p.task === 'heading') {
       var T = rnd((r.chance(0.5) ? 1 : -1) * r.float(HEADING_TURN[0], HEADING_TURN[1]), 10), key = rnd(norm360(-T), 100) % 360;
       return base(r, { variant: 'point', route: p.route, flow: p.flow, speed: p.speed, tolerance: p.tolerance }, {
@@ -217,7 +240,7 @@
         returnBearing: null, pathLength: 0, speeds: [], splits: [], turnRates: sp.rates,
       });
     }
-    var L = rnd(r.float(DIST_LEG[0], DIST_LEG[1]), 10), sc = sincos(h0);
+    var sc = sincos(h0);
     var it = base(r, { variant: 'return', route: p.route, flow: p.flow, speed: p.speed, tolerance: p.tolerance }, {
       task: 'distance', key: { x: 0, z: L }, keyDeg: 0, tolerance: TOL_RETURN[p.tolerance], tolDeg: rnd(tolDeg({ variant: 'return', tolerance: p.tolerance }), 100),
       startHeading: h0, legs: [L], turns: [], path: [[0, 0], [rnd(L * sc[0], 1000), rnd(L * sc[1], 1000)]], heading: h0, distance: L,
@@ -411,7 +434,7 @@
   var MEAN_PATH = { 2: 16.8, 3: 23.0, 4: 24.5 }, MEAN_D = { 2: 8.8, 3: 10.8, 4: 10.6 };
   function estMs(params) {
     var p = normParams(params), rt = ROUTES[p.route], band = TURNS[rt.turns];
-    var v = p.speed === 0 ? STEADY : (V[0] + V[1]) / 2, w = p.speed === 0 ? W[1] : (W[1] - W[0]) / Math.log(W[1] / W[0]);
+    var v = p.speed === 0 ? STEADY : V_MEAN, w = p.speed === 0 ? W[1] : (W[1] - W[0]) / Math.log(W[1] / W[0]);
     var motion = MEAN_PATH[rt.legs] / v + (rt.legs - 1) * (band.lo + band.hi) / 2 / w + (2 * rt.legs - 1) * H.RAMP;
     var answer = RESPONSE_MS + (p.variant === 'return' ? 1000 * MEAN_D[rt.legs] / ((WALK[0] + WALK[1]) / 2) + STOP_MS : 0);
     return Math.round(LEAD_MS + 1000 * motion + answer);

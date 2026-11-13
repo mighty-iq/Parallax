@@ -315,6 +315,78 @@ export async function run(t) {
 
 // Caption keys the view asks for: string literals that start the first argument of cap(…) or follow
 // a ? or : inside it (cap(ok ? 'a' : 'b', …)).
+// Turn-only shortcuts per route × tolerance cell (RV-reckon-homing B1, the reviewer's definitions; constants
+// cross-validated in two folds). items: [{ p: { route, tolerance, variant? }, it }]. Returns the rows and
+// prints a report; the caller decides what to assert. Point answers are angles (deg clockwise from the final
+// heading); return answers are positions { x right, z ahead } in metres.
+export function shortcutReport(def, items, label) {
+  const sgn = (x) => (x >= 0 ? 1 : -1), sum = (a) => a.reduce((x, y) => x + y, 0);
+  const at = (a, r) => ({ x: r * Math.sin(rad(a)), z: r * Math.cos(rad(a)) });
+  const eqKey = (it, len) => walk(it.startHeading, it.legs.map(() => len || 1), it.turns);
+  const cvBest = (list, cand, hit) => {
+    const A = list.filter((_, i) => i % 2 === 0), B = list.filter((_, i) => i % 2 === 1);
+    const best = (l) => { let b = -1, bc = cand[0]; for (const c of cand) { let h = 0; for (const y of l) if (hit(y, c)) h++; if (h > b) { b = h; bc = c; } } return bc; };
+    const ca = best(A), cb = best(B);
+    let h = 0; for (const y of B) if (hit(y, ca)) h++; for (const y of A) if (hit(y, cb)) h++;
+    return h / list.length;
+  };
+  const cells = new Map();
+  for (const x of items) { const k = `${x.p.variant || 'point'}/${x.p.route}/${x.p.tolerance}`; (cells.get(k) || cells.set(k, []).get(k)).push(x); }
+  const rows = [];
+  for (const [k, list] of cells) {
+    const [variant] = k.split('/'), ch = def.chance(list[0].p), ret = variant === 'return';
+    const hitA = (x, a) => def.score(x.it, ret ? at(a, x.it.distance) : norm360(a)).correct;
+    const hitP = (x, q) => def.score(x.it, q).correct;
+    const keyOf = (it) => (ret ? it.keyDeg : it.key), T = (it) => sum(it.turns), Tl = (it) => it.turns.at(-1);
+    const rate = (f) => list.filter(f).length / list.length;
+    const meanD = sum(list.map((x) => x.it.distance)) / list.length;
+    const S = {};
+    // the listed turn-only strategies (bounded)
+    if (!ret) {
+      S['equal legs'] = rate((x) => hitA(x, eqKey(x.it).key));
+      S['180 − ΣT/2'] = rate((x) => hitA(x, 180 - T(x.it) / 2));
+      S['180 − c·ΣT'] = cvBest(list, Array.from({ length: 41 }, (_, i) => i * 0.025), (x, c) => hitA(x, 180 - c * T(x.it)));
+      S['the 130° prior'] = cvBest(list, Array.from({ length: 37 }, (_, i) => i * 5), (x, A) => hitA(x, 180 - sgn(T(x.it)) * A));
+      S['reverse the last turn'] = rate((x) => hitA(x, 180 - Tl(x.it)));
+      S['undo the last turn'] = rate((x) => hitA(x, -Tl(x.it)));
+      S['always the same angle'] = cvBest(list, Array.from({ length: 72 }, (_, i) => i * 5), (x, a) => hitA(x, a));
+      S['mirror'] = rate((x) => hitA(x, 360 - keyOf(x.it)));
+    } else {
+      const grid = [], sgrid = [];
+      for (let a = 0; a < 360; a += 10) for (let r = 3; r <= 20; r += 1) grid.push([a, r]);
+      for (let A = 0; A <= 180; A += 10) for (let r = 3; r <= 20; r += 1) sgrid.push([A, r]);
+      S['equal legs'] = rate((x) => { const n = x.it.legs.length, e = eqKey(x.it, x.it.pathLength / n); return hitP(x, at(e.key, e.distance)); });
+      S['equal legs, average distance'] = rate((x) => hitP(x, at(eqKey(x.it).key, meanD)));
+      S['the 130° prior'] = cvBest(list, sgrid, (x, g) => hitP(x, at(180 - sgn(T(x.it)) * g[0], g[1])));
+      S['reverse the last turn, average distance'] = rate((x) => hitP(x, at(180 - Tl(x.it), meanD)));
+      S['always the same place'] = cvBest(list, grid, (x, g) => hitP(x, at(g[0], g[1])));
+      S['last leg only'] = rate((x) => hitP(x, at(180, x.it.legs.at(-1))));
+      S['average distance'] = rate((x) => hitP(x, at(180, meanD)));
+      S['mirror'] = rate((x) => hitP(x, at(360 - keyOf(x.it), x.it.distance)));
+      // diagnostics with the true direction (they need the direction solved): reported, not bounded
+      S['(true direction, average distance)'] = rate((x) => hitP(x, at(keyOf(x.it), meanD)));
+      S['(true direction, last leg)'] = rate((x) => hitP(x, at(keyOf(x.it), x.it.legs.at(-1))));
+    }
+    const bounded = Object.entries(S).filter(([n]) => !n.startsWith('('));
+    const worst = bounded.reduce((w, e) => (e[1] > w[1] ? e : w), ['', -1]);
+    rows.push({ cell: k, n: list.length, chance: ch, S, worst: worst[0], worstRate: worst[1], over: worst[1] > ch + 0.10 });
+  }
+  rows.sort((a, b) => a.cell.localeCompare(b.cell, 'en', { numeric: true }));
+  const names = Object.keys(rows[0].S);
+  const lines = [`       ${label}: turn-only shortcuts per route/tolerance cell (bound chance + 10 points; n per cell ${Math.min(...rows.map((r) => r.n))}–${Math.max(...rows.map((r) => r.n))})`];
+  for (const v of [...new Set(rows.map((r) => r.cell.split('/')[0]))]) {
+    const rv = rows.filter((r) => r.cell.startsWith(v + '/'));
+    for (const nm of names) {
+      if (!(nm in rv[0].S)) continue;
+      const over = rv.filter((r) => r.S[nm] > r.chance + 0.10), w = rv.reduce((m, r) => (r.S[nm] - r.chance > m.d ? { d: r.S[nm] - r.chance, r } : m), { d: -1, r: null });
+      lines.push(`         ${v} · ${nm}: over in ${over.length} of ${rv.length} cells; worst ${w.r.cell} ${pct(w.r.S[nm])} vs chance ${pct(w.r.chance)}`);
+    }
+    lines.push(`         ${v} · cells within the bound for every listed strategy: ${rv.filter((r) => !r.over).map((r) => r.cell).join(', ') || 'none'}`);
+  }
+  console.log(lines.join('\n'));
+  return rows;
+}
+
 export function viewCaptionKeys(id) {
   let src = '';
   try { src = readFileSync(new URL('../../js/ex/' + id + '/view.js', import.meta.url), 'utf8'); } catch (e) { return null; }
@@ -339,7 +411,10 @@ export function checkLearn(t, PX, def, id, kindOf) {
     t.ok(!item.fallback && def.validate(item) === true, `demo seed ${d.seed} is a regular, valid item`);
   }
   t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
-  t.ok(PX.ex.difficulty(def, L.practice[0]) <= PX.ex.minDifficulty(def) + 1e-9, 'practice starts at the easiest level');
+  // a tutorial task item (Reckon's turn-back item) may use short-lived dots so that the ground pattern cannot be
+  // matched (RV N11): its route, speed and tolerance are still the easiest; the ground level is not counted
+  const p0 = L.practice[0].task ? Object.assign({}, L.practice[0], { flow: 0 }) : L.practice[0];
+  t.ok(PX.ex.difficulty(def, p0) <= PX.ex.minDifficulty(def) + 1e-9, 'practice starts at the easiest level');
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
@@ -349,7 +424,7 @@ export function checkLearn(t, PX, def, id, kindOf) {
   }
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok((L.strategies || []).every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  t.ok(typeof L.bridge === 'string' && /improves this task; whether it helps real wayfinding has not been studied/.test(L.bridge), 'the "where it is used" card carries its limitation line');
+  t.ok(typeof L.bridge === 'string' && /improves this task; whether it helps real wayfinding has not been tested in any study we found/.test(L.bridge), 'the "where it is used" card carries its limitation line');
   const all = JSON.stringify(L).toLowerCase();
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered|genius/.test(all), 'no IQ, intelligence or "mastered" claims (CLAUDE.md rules 2 and 12)');
   const keys = viewCaptionKeys(id);

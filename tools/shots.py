@@ -103,11 +103,12 @@ LABEL = {'track': 'EX-01 · Track', 'rotate': 'EX-02 · Rotate', 'spin': 'EX-03 
 APP_NAMES = ['app-welcome', 'app-watch', 'app-today', 'app-today-phone', 'app-library', 'app-player-feedback',
              'app-player-showme', 'app-player-phone', 'app-summary', 'app-share', 'app-check', 'app-progress',
              'app-goal', 'app-lab', 'app-settings', 'app-library-phone']
-# v1.1 screens (shoot_v11_screens): phones at 360 × 740 with touch (an item, its Help, Homing and Reckon),
-# the Section practice review, About's Test hygiene and the Library's DAT-style group. They need no
-# history: the record only marks every exercise as met, so no Watch, Try, Go comes first.
-V11_NAMES = ['app-phone-item', 'app-phone-help', 'app-phone-landscape', 'app-homing-phone', 'app-reckon-phone',
-             'app-section-review', 'app-about-hygiene', 'app-library-pat']
+# v1.1 screens (shoot_v11_screens): phones at 360 × 740 with touch (an item, its Help, the pause sheet of
+# a timed session, Homing and Reckon), the Section practice review, About's Test hygiene and the Library's
+# DAT-style group. They need no history: the record only marks every exercise as met, so no Watch, Try,
+# Go comes first.
+V11_NAMES = ['app-phone-item', 'app-phone-help', 'app-phone-landscape', 'app-clock-pause', 'app-homing-phone',
+             'app-reckon-phone', 'app-section-review', 'app-about-hygiene', 'app-library-pat']
 APP_NAMES += V11_NAMES
 APP_READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 APP_SCALE = 1.5          # 1366 × 768 at 1.5: sharp at full text width in print, files of a sensible size
@@ -586,6 +587,19 @@ def shoot_v11_screens(b, want):
             save(page, 'app-phone-landscape', viewport(page))
         else:
             print('  phone landscape: no item came up', flush=True)
+        c.close()
+    if 'app-clock-pause' in want:                   # a 5-minute Free play: the HUD counts active time; Pause stops it
+        c, page = phone()
+        go_route(page, 'play', {'mode': 'free', 'exId': 'rotate', 'run': '1', 'minutes': 5,
+                                'params': {'variant': 'pick', 'angle': 2, 'axis': 0, 'cubes': 0}})
+        if click_through(page, 30):
+            page.wait_for_timeout(6500)             # the HUD's countdown refreshes every 5 s
+            page.get_by_role('button', name='Pause').first.tap()
+            page.wait_for_timeout(700)
+            print('  clock: ' + page.evaluate('() => (document.querySelector(".pl-trial") || document.body).innerText.slice(0, 160).replace(/\\s+/g, " ")'), flush=True)
+            save(page, 'app-clock-pause', viewport(page))
+        else:
+            print('  clock pause: no item came up', flush=True)
         c.close()
     if 'app-homing-phone' in want:                  # Homing's answer by touch controls, turned part way
         c, page = phone()
