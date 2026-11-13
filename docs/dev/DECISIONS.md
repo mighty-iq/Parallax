@@ -30,3 +30,6 @@
 - 2026-11-13: "Full section" needs every part reached and at least half the items answered (RV-B: it could be earned with zero answers).
 - 2026-11-13: Phones held sideways get two-column layouts (stem left, answers right; Track, Span, Orient and Patterns their own) instead of "turn upright" cards; every item fits 844×390 (B2's fit.py). A turn during a stimulus still voids the trial (H3). PLAN M2's acceptance line reworded.
 - 2026-11-13: A show-me after an answer scrolls the stage above the pinned caption on phones, as Watch's demo does (B2's gap: Orient's dial at 360×640).
+- 2026-11-13: Section practice departs from R3 §9 in two ways (B7): moving between items is limited to the current part (the PAT lets test-takers move within a section; Parallax times parts separately, so a part closes for good), and forms are numbered without limit (form k is the same for everyone with the same exercise versions) rather than A–C.
+- 2026-11-13: Tests the player noted ("Taking a test soon?") and the Check's one-tap answer stay in the JSON backup and its research export, not in the per-trial CSV, which keeps one row per trial.
+- 2026-11-13: Known limit: Train pins saved in settings would skip the test pause; nothing in 1.1 writes such pins.

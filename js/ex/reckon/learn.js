@@ -95,7 +95,7 @@
       readoutNone: 'Facing straight ahead (not turned yet)',
       readoutWatch: 'Watch the walk first',
       readoutYours: 'You faced {dir}',
-      readoutLocked: 'Direction set: {dir}. To turn again, hold Back to where the route ended.',
+      readoutLocked: "Set: {dir}. To turn again, hold Back to the route's end.",
       setFirst: 'Turn first: drag the view or the circle, or use ◀ ▶.',
       hintTouch: 'Drag the view or the circle to turn; ◀ ▶ for fine steps.',
       hintKeys: '← → turn 5°, with Shift 1°.',
