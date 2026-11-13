@@ -22,19 +22,29 @@
      1  the closest pair sits at one end, and one foil swaps only the middle pair (its gap κ·δ);
         no foil hinges on the closest pair;
      2  one foil swaps only the closest pair (gap δ), so that pair has to be judged.
-   The foils are then chosen (over every allowed triple) so that the key's rank on total Kendall
-   distance to the other options meets a random target: neither "most like the others" nor "odd
-   one out" finds it more than about one time in four.
+   The foils. Answer-only rules read the four lists and never the angles (RV-dat-style-A §3): most
+   like the others or odd one out (Kendall distance), a list with a twin one swap away, the first
+   or last numbers most or least common, the neighbour pairs or the positions shared, the consensus
+   of mean positions. Every allowed triple holding the required foil is scored by how far each
+   rule's chance of picking the key is from one in four, plus 0.3 for each two lists that are each
+   other's reverse (two opposite cues would then point at the same pair of lists); one triple is
+   drawn at random from those within 0.75 of the best score. The node test bounds every rule at
+   each resolve level.
 
-   Arms are drawn after the angles, in [0.3, 1]·L. A quick look could rank by a cue instead of
-   the angle: the tip distance, the enclosed area, the arm-length sum, the longer or the shorter
-   arm, each either way round; a cue "answers" with the option nearest its order. Every cue gets a
-   random target option, and of 400 random arm sets the one whose cues land nearest their targets
-   is kept (tip distance weighted 2.5, area 1.5), so no cue picks the key much more than one time
-   in four. Within an item the angles differ by up to 4.2·δ, so tip distance, area and arm length
-   cannot all be independent of size at the widest gaps (one follows the angle, or the arms must
-   shrink as it grows); the weights share that out, and the node test bounds every cue. The widest
-   closest gap is 6°, not the 8° R3 lists, for the same reason.
+   Arms are drawn after the angles, in [0.3, 1]·L, the longer arm of each angle at least 0.58·L
+   (R3 §8.3 asks for long arms on phones; RV-dat-style-A §7). A quick look could rank by a cue
+   instead of the angle: the tip distance, the enclosed area, the arm-length sum, the longer or the
+   shorter arm, or the length from the vertex to the tips' midpoint, each either way round; a cue
+   "answers" with the option nearest its order. All six grow with the arms' size, so random arms
+   make them agree with each other. One random order of the four cells is drawn per item, and the
+   arms are searched (one angle at a time, keeping changes that help) so that every cue's order
+   lies near it (weighted Kendall distance: tip distance 2.5, vertex to midpoint 2, area 1.5, the
+   others 1). Each cue then points at a random list, read either way round. The angle itself pulls
+   the tip distance up and the vertex-to-midpoint length down as it grows (chord² + mid² =
+   2(a1² + a2²), mid² − chord² = 4·a1·a2·cos θ), and within an item the angles differ by up to
+   4.2·δ, so at the widest gaps the arms work against that pull; for the same reason the widest
+   closest gap is 6°, not the 8° R3 lists. Degrees sit on a 0.1° grid, so the reveal's labels
+   (rounded to 0.1°) differ by exactly the gaps that show-me states.
    Pose (dim): aligned (one arm horizontal, the "laser" comparison against a shared base: easier)
    or free (any rotation). Each angle's rotation is the best-fitting of a few random tries, and the
    item's scale L is the largest that fits all four cells with a margin.
@@ -68,8 +78,9 @@
   var RANGE = { right: [70, 110], acute: [25, 72], obtuse: [108, 155] };
   var KAPPA = [1.3, 1.6];
   var ARM = [0.3, 1.0];
-  // The longer arm of each angle is at least LONG_MIN·L (see the header), and the cue weights of
-  // chooseArms: tip distance, area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint.
+  // The longer arm of each angle is at least LONG_MIN·L (see the header; 0.58 kept every cue and
+  // answer-only rule within its bound, B5.md), and the cue weights of chooseArms: tip distance,
+  // area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint.
   var LONG_MIN = 0.58;
   var CUE_W = [2.5, 1.5, 1, 1, 1, 2];
   var FOIL_SLACK = 0.75, REV_PEN = 0.3;
@@ -243,9 +254,10 @@
     return total / count;
   }
   // Three foils: every allowed triple containing the required foil is scored by how far each
-  // answer-only rule's chance of picking the key is from one in four (summed); one triple is drawn
-  // at random from those within 0.5 of the best score. The one-swap foil the resolve level needs
-  // is then never the key's only near twin, and the first and last numbers do not point to the key.
+  // answer-only rule's chance of picking the key is from one in four (summed), plus REV_PEN for
+  // each two lists that are each other's reverse; one triple is drawn at random from those within
+  // FOIL_SLACK of the best score. The one-swap foil the resolve level needs is then never the
+  // key's only near twin, and the first and last numbers do not point to the key.
   function chooseFoils(r, res, close) {
     var cand = allowedFoils(res, close), need = mustHave(res, close), K0 = PERM_ID['0,1,2,3'];
     var ids = cand.map(function (o) { return PERM_ID[o.join()]; }), needId = need ? PERM_ID[need.join()] : -1;
