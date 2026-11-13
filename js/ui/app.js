@@ -809,13 +809,16 @@
     } catch (e) { return false; }
   }
 
-  // Ask the browser to keep this site's storage (it may still say no). Only once the record holds
-  // practice, and not on desktop Firefox, which asks the person with a prompt.
+  // Ask the browser to keep this site's storage (it may still say no). Once per page, as soon as the
+  // record holds a session (at the start, or after the first session is saved), never while a
+  // stimulus plays, and not on desktop Firefox, which asks the person with a prompt.
+  var persistAsked = false;
   function askPersist() {
     try {
       var st = window.navigator && window.navigator.storage, R = store.state;
-      if (!st || typeof st.persist !== 'function' || store.volatile || env.framed) return;
-      if (!(R.sessions && R.sessions.length)) return;
+      if (persistAsked || !st || typeof st.persist !== 'function' || store.volatile || env.framed) return;
+      if (!(R.sessions && R.sessions.length) || (doc.body && doc.body.classList.contains('px-stim'))) return;
+      persistAsked = true;
       var ua = String(window.navigator.userAgent || ''), touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
       if (/Firefox\//.test(ua) && !touch) return;
       Promise.resolve(typeof st.persisted === 'function' ? st.persisted() : false).then(function (yes) {
@@ -839,6 +842,7 @@
   var chartTimer = 0;
 
   bus.on('app:ready', function () { homeScreenLinks(); askPersist(); chartUnitsSoon(); });
+  bus.on('store:saved', function () { if (!persistAsked && api && api.ready) askPersist(); });
   bus.on('route', chartUnitsSoon);
   window.addEventListener('resize', function () { window.clearTimeout(chartTimer); chartTimer = window.setTimeout(chartUnits, 200); });
 
