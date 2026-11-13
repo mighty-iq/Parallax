@@ -30,7 +30,15 @@
    no turn had happened) and "mirror" (360° − key, sides swapped) miss by more than the tolerance + 2°
    (for return items the tolerance in angle is 2·asin(τ/2), the miss of a perfect distance at the disk's
    edge); "turn around" (180°) misses unless the drawn target lies within it; the key is never within
-   max(20°, (tol + 2°)/2) of straight ahead or behind; home distance 5–20 m; routes 12–28 m in all.
+   max(20°, (tol + 2°)/2) of straight ahead or behind; home distance 5–20 m; routes 12–28 m in all. One
+   target answer per item, kept across its attempts, so answers spread evenly where routes allow; a fixed
+   angle (or place) stays within chance + 10 points there (tests/node/reckon.test.mjs; EXEMPT_FIXED lists
+   the cells where R1's rules leave no room: routes 0, 1, 4, and route 2 at 40° and 30°).
+   Turn-only answers (the legs taken as equal, "the start is on the side I turned") are not held down: they
+   integrate every turn, which is partial path integration, and on 2-leg and small-turn routes the start
+   always lies on the side of the net turn, so no route choice could hide it (RV-reckon-homing B1, the
+   lead's decision (a)). The trial log keeps the angle error (value) and, for walks back, the distance ratio
+   (value2) apart, so the leg part stays measurable.
 
    Item (JSON): { ex: 'reckon', seed, params: { variant, route, flow, speed, tolerance }, task?, answer,
      key (deg | { x, z }), keyDeg, tolerance (deg | share), tolDeg, frame: 'end', experimental: true,
@@ -74,7 +82,7 @@
   var WALK = [1.05, 1.95];               // the walk back (m/s): 1.5 ± 30 %, new every item
   var D_MAX = 20;                        // home distance (m): 5–20
   var LEAD_MS = 1200;                    // standing in the start ring before the walk
-  var MARGIN = H.MARGIN, TARGET_WIN = H.TARGET_WIN, STRICT = H.STRICT || 8;
+  var MARGIN = H.MARGIN, TARGET_WIN = H.TARGET_WIN, STRICT = 16; // on-target attempts where answers can spread (Homing: 8; more keeps a fixed angle under chance + 10 at route 7)
   var HEADING_TURN = [70, 150];          // the heading task's one turn (deg)
   var DIST_LEG = [6, 10];                // the distance task's walk (m)
 
@@ -123,9 +131,13 @@
 
   // Scores a candidate route (Homing's search): 8 the shortcuts miss (and "turn around" unless the target
   // lies within it), 4 the key lands on the target, 2 turning alone with equal legs misses too.
-  function build(r, p, strict) {
+  // target: the answer this item aims at, drawn once per item (generate), so an attempt that fails does not
+  // trade a hard-to-reach answer for an easy one (answers would pile up where routes end easily: RV B1).
+  function build(r, p, strict, target) {
     var rt = ROUTES[p.route], tol = tolDeg(p), gap = axisGap(tol);
-    var h0 = rnd(r.float(0, 360), 100), target = H.drawTarget(r, gap), aroundFree = adiff(target, 180) <= tol + MARGIN;
+    var h0 = rnd(r.float(0, 360), 100), aroundFree;
+    if (!isNum(target)) target = H.drawTarget(r, gap);
+    aroundFree = adiff(target, 180) <= tol + MARGIN;
     var best = H.search(r, {
       n: rt.legs, band: TURNS[rt.turns], h0: h0, target: target, gap: gap, dMax: D_MAX, good: 12, full: 14, patience: H.EQUAL_TRIES,
       score: function (g, legs, turns) {
@@ -255,9 +267,9 @@
   function generate(rng, params) {
     var p = normParams(params), item = null;
     if (p.task) { item = taskItem(rng, p); item.seed = rng.seed; return item; }
-    var strict = spreads(p) ? STRICT : 0;
+    var strict = spreads(p) ? STRICT : 0, target = H.drawTarget(rng.fork('target'), axisGap(tolDeg(p)));
     for (var i = 0; i < 50 && !item; i++) {
-      var it = build(i === 0 ? rng : rng.fork('retry' + i), p, i < strict);
+      var it = build(i === 0 ? rng : rng.fork('retry' + i), p, i < strict, target);
       if (it && validate(it) === true) item = it;
     }
     if (!item) { item = fallback(rng, p); item.fallback = true; } // ARCHITECTURE §5: the engine voids fallback trials

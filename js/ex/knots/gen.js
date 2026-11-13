@@ -1842,9 +1842,10 @@
       return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from, hi: e.from + mid.length - 1, zMove: zMove, curl: false };
     }
     // A curl (R1) shrinks inside its own loop, which encloses nothing: ears of the loop are cut,
-    // the smallest first, each one drawn in to its chord while the clock runs through its share of
-    // the loop's area. The crossing stays put (the first and last two points of the curl are never
-    // cut); at the end the loop goes and the rope runs straight through (the step's after).
+    // the one farthest from the crossing first (the loop draws in towards its crossing), each one
+    // drawn in to its chord while the clock runs through its share of the loop's area. The crossing
+    // stays put (the first and last two points of the curl are never cut); at the end the loop goes
+    // and the rope runs straight through (the step's after).
     var C = curlClip(step), run = C.pts, gone = {}, target = k * C.total, cum = 0, mv = null;
     for (j = 0; j < C.order.length; j++) {
       var o = C.order[j];
@@ -1867,7 +1868,8 @@
   }
   // The ear-cutting plan of a curl, cached on its step: the run's points, and in cutting order each
   // cut point v with its neighbours a, b at that moment (−1 = the crossing point) and the area cut.
-  // The polygon is the crossing point and the run; its first and last two points are never cut.
+  // The polygon is the crossing point and the run; its first and last two points are never cut;
+  // of the ears, the one whose point lies farthest from the crossing goes first.
   function curlClip(step) {
     if (step.clip) return step.clip;
     var e = step.edit, P = step.before[e.poly], Q = e.rot ? rotateTo(P, e.rot) : P, X = e.path[0], i;
@@ -1893,9 +1895,10 @@
     }
     var ear = new Float64Array(L);
     for (i = 0; i < L; i++) ear[i] = earArea(i);
+    var far = pts.map(function (q) { return (q[0] - X[0]) * (q[0] - X[0]) + (q[1] - X[1]) * (q[1] - X[1]); });
     while (left > 4) {
       var best = -1;
-      for (i = 2; i < L - 2; i++) if (alive[i] && ear[i] >= 0 && (best < 0 || ear[i] < ear[best])) best = i;
+      for (i = 2; i < L - 2; i++) if (alive[i] && ear[i] >= 0 && (best < 0 || far[i] > far[best])) best = i;
       if (best < 0) break;
       order.push({ v: best, a: prev[best], b: next[best], area: ear[best] });
       total += ear[best];

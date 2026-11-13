@@ -1,8 +1,14 @@
 /* EX-12 Reckon (experimental): generator, validator, scorer, shortcut solvers and the error summary
    (ARCHITECTURE.md §5, §12; docs/research/v1.1/R1-path-integration.md §6, §8). Route geometry here is
-   written independently of the generators (Math.sin/cos/atan2 on the stored legs and turns). */
+   written independently of the generators (Math.sin/cos/atan2 on the stored legs and turns).
+   Shortcut bounds (RV-reckon-homing B1, the lead's decision (a), 13 Nov 2026): the answers that need no
+   integration (a fixed angle or place, turn around, the mirror, the turns reversed, heading not updated)
+   stay within chance + 10 points in every route/tolerance cell; a fixed answer is exempt only where R1's
+   item rules leave no room (EXEMPT_FIXED). Turn-only answers (the legs taken as equal, the net-turn prior)
+   are printed per cell as information, not bounded: they integrate every turn, which is partial path
+   integration, and on 2-leg and small-turn routes the start always lies on the side of the net turn. Return items also print "true direction + average distance" (it needs the direction solved). */
 import { deepDiff } from './run.mjs';
-import { checkLearn, shortcutReport } from './homing.test.mjs';
+import { checkLearn, shortcutReport, boundShortcuts } from './homing.test.mjs';
 import { performance } from 'node:perf_hooks';
 import { readFileSync } from 'node:fs';
 
@@ -178,12 +184,17 @@ export async function run(t) {
   t.ok(groundBad === 0, 'the ground matches the flow level; no landmarks or objects in any item');
   t.ok(groundSeeds.size >= items.length * 0.999, `the ground is re-seeded every item (${groundSeeds.size} seeds for ${items.length} items)`);
   t.ok(L.stats.fallbacks <= items.length / 1000, `fallback construction rarely needed (${L.stats.fallbacks})`);
-  // Turn-only shortcuts per cell (RV B1), with the reviewer's definitions: reported, pending the lead's decision
-  // (most cells cannot meet chance + 10 under the current route levels; docs/dev/progress/B3.md has the proof)
-  {
-    const scRows = shortcutReport(def, items, 'Reckon');
-    t.ok(scRows.every((r) => r.S.mirror <= r.chance + 0.10), 'the mirror answer stays within chance + 10 in every variant/route/tolerance cell');
+  // Shortcuts per cell (RV B1, the lead's decision (a)): the no-integration answers within chance + 10 in every
+  // cell (a fixed answer except in the structural cells, EXEMPT_FIXED); the turn-only family as information.
+  // The cells where answers can spread (3–4 legs, medium or large turns) sit a few points under the bound for a
+  // fixed angle (at 40° the axis gap alone allows 29 % against 32.2 %), and a CV estimate from ~420 items moves
+  // by about 2 points, so their point items get 2 000 more each for this check.
+  const extra = [];
+  for (const route of [3, 5, 6, 7]) for (let tol = 0; tol < 3; tol++) for (let k = 0; k < 2000; k++) {
+    const p = { variant: 'point', route, flow: k % 3, speed: Math.floor(k / 3) % 3, tolerance: tol };
+    extra.push({ p, it: def.generate(PX.rng(PX.rng.hash('reckon-shortcuts', route, tol, k)), p) });
   }
+  boundShortcuts(t, shortcutReport(def, items.concat(extra), 'Reckon'));
   // time as a cue to leg length (RV S1): above 'steady' a leg's walking time says little about its length
   {
     const byLevel = [0, 1, 2].map((lv) => {
@@ -312,10 +323,10 @@ export async function run(t) {
   const cvs = [];
   for (const variant of ['point', 'return']) for (const ti of [0, 1, 2]) {
     const list = items.filter((x) => x.p.variant === variant && x.p.tolerance === ti && L.spreads(x.p)), cv = cvFixed(list);
-    t.ok(cv <= def.chance({ variant, tolerance: ti }) + CHANCE_MARGIN, `best fixed direction, ${variant}, 3–4 legs with medium/large turns, tolerance level ${ti}: ≤ chance + 10 (${pct(cv)} cross-validated)`);
+    // information only: the per-cell bound on larger samples (shortcutReport, boundShortcuts) is the check
     cvs.push(`${variant[0]}${ti} ${pct(cv)}`);
   }
-  report.push(`best fixed direction where answers spread: ${cvs.join(' ')}`);
+  report.push(`[info] best fixed direction where answers spread (main sample): ${cvs.join(' ')}`);
   // The encoding-error model's answer (Fujita 1993 as fitted by Loomis 1993: L' = 0.6 L + 1.2, |T'| = 0.48 |T| + 44°):
   // a typical human error, reported only.
   const encHit = items.filter((x) => x.p.variant === 'point').filter((x) => {
