@@ -1,6 +1,6 @@
 # STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-13 15:26 UTC. All 19 exercises are active in index.html (Knots and B6's three included).
+Updated 2026-11-13 15:27 UTC. All 19 exercises are active in index.html (Knots and B6's three included).
 
 ## Phase
 2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in focus on the DAT-style formats. D3: analogical test named in v1.2.
@@ -51,6 +51,7 @@ Updated 2026-11-13 15:26 UTC. All 19 exercises are active in index.html (Knots a
 - B6 Openings, Missing View, Form (EX-14/15/19): a0dc048b845b7fc8e (B6.md)
 - Reviewer RV-A (DAT-style A: Angles, Hole Punch, Painted Cubes; items, shortcuts, texts): a882c052e4e6f956f → docs/dev/reviews/RV-dat-style-A.md
 - Reviewer RV-B (Section practice, overlap notes, claims vs code): a3268094abb5c4c1a → docs/dev/reviews/RV-section-overlap.md
+- Reviewer RV-C (Knots item validity, independent invariants, shortcuts, texts, timing): af47f967c9625baf4 → docs/dev/reviews/RV-knots.md
 - Finished: B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
 
 ## Dead ends
