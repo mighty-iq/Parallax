@@ -1,9 +1,10 @@
 /* EX-16 Angles: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
-   layout 'stem+options': the stem is four numbered cells (2 × 2 on phones, a row on wide screens),
-   each with one angle drawn from the item's own endpoints (cell units, 1 × 1); the options are
-   orderings of the numbers, smallest angle first.
+   layout 'stem+options': the stem is four cells lettered A–D (2 × 2 on phones, a row on wide
+   screens), each with one angle drawn from the item's own endpoints (cell units, 1 × 1); the options
+   are orderings of the letters, smallest angle first ("C – A – D – B"). Letters, not numbers, so an
+   angle is never confused with an answer, whose keys are 1–4 (fresh-player test, RV-play-dat).
    - Strokes keep 2 CSS px at any size (vector-effect), anti-aliased; no arc at the vertex.
-   - Reveal: every angle's size in degrees under its number, from the grading model.
+   - Reveal: every angle's size in degrees in a free corner of its cell, from the grading model.
    - Show me: the angles in order with their sizes, then the pair that decides the item (the one
      the key's nearest wrong list swaps) laid on top of each other, corners and one arm lined up,
      so the wider opening shows; then the order and the answer. All from item.angles / lib.measure.
@@ -23,7 +24,9 @@
     return s;
   }
   function fmtDeg(d) { return (Math.round(d * 10) / 10).toFixed(1).replace(/\.0$/, '') + '°'; }
-  function listText(order) { return order.map(function (c) { return c + 1; }).join(' – '); }
+  var LETTERS = ['A', 'B', 'C', 'D'];
+  function letter(c) { return LETTERS[c]; }
+  function listText(order) { return order.map(letter).join(' – '); }
   function narrow() { return (window.innerWidth || 1024) < 720; }
 
   /* ---------- drawing ---------- */
@@ -65,7 +68,7 @@
   }
 
   function describe(item) {
-    return 'Four angles, numbered 1 to 4, each in its own box. Which list orders them from the smallest angle to the largest? ' +
+    return 'Four angles, lettered A to D, each in its own box. Which list orders them from the smallest angle to the largest? ' +
       item.options.map(function (o, i) { return 'Answer ' + (i + 1) + ': ' + listText(o) + '.'; }).join(' ');
   }
 
@@ -119,9 +122,9 @@
     st.cellEls = []; st.sizeEls = [];
     item.angles.forEach(function (g, c) {
       var corners = labelCorners(g);
-      var num = h('span.ex-label.ex-angles-n', { 'data-corner': corners[0] }, String(c + 1));
+      var num = h('span.ex-label.ex-angles-n', { 'data-corner': corners[0] }, letter(c));
       var size = h('span.ex-angles-size', { hidden: true, 'data-corner': corners[1] });
-      var cell = h('div.ex-angles-cell', { 'data-cell': String(c + 1) }, num, cellSvg(g), size);
+      var cell = h('div.ex-angles-cell', { 'data-cell': letter(c) }, num, cellSvg(g), size);
       st.cellEls.push(cell); st.sizeEls.push(size);
       st.cells.appendChild(cell);
     });
@@ -151,11 +154,11 @@
     if (!st) mount(ctx);
     newItem(item);
     var tag = h('span.ex-tag', { hidden: true });
-    // A no-break space binds each dash to the number before it, so long text wraps after a dash.
+    // A no-break space binds each dash to the letter before it, so long text wraps after a dash.
     el.appendChild(h('span.ex-answer.ex-angles-opt', h('span.ex-answer-text', listText(item.options[i]).replace(/ –/g, '\u00a0–')), tag));
     st.opts[i] = { el: el, tag: tag };
   }
-  function optionLabel(item, i) { return 'Smallest to largest: ' + item.options[i].map(function (c) { return c + 1; }).join(', '); }
+  function optionLabel(item, i) { return 'Smallest to largest: ' + item.options[i].map(letter).join(', '); }
   function gridCols() { return narrow() ? 2 : 4; }
 
   /* ---------- reveal ---------- */
@@ -221,7 +224,7 @@
       enter: function () {
         setMode('big');
         PX.ui.clear(st.big);
-        st.big.appendChild(overlaySvg({ deg: m[pair.small].deg, n: pair.small + 1 }, { deg: m[pair.large].deg, n: pair.large + 1 }));
+        st.big.appendChild(overlaySvg({ deg: m[pair.small].deg, n: letter(pair.small) }, { deg: m[pair.large].deg, n: letter(pair.large) }));
       },
     };
   }
@@ -234,7 +237,7 @@
       exit: function () { point([]); },
     });
     if (pair) {
-      var vars = { a: pair.small + 1, b: pair.large + 1, d: fmtDeg(pair.gap).replace('°', '') };
+      var vars = { a: letter(pair.small), b: letter(pair.large), d: fmtDeg(pair.gap).replace('°', '') };
       out.push(overlayStep(item, pair, 1700, 'overlay', vars));
       out.push(overlayStep(item, pair, 1900, 'pair', vars));
     }
@@ -246,12 +249,12 @@
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < 4) {
       var wrong = deciding(item, r);
       if (wrong) {
-        var wv = { n: r + 1, a: wrong.small + 1, b: wrong.large + 1, d: fmtDeg(wrong.gap).replace('°', '') };
+        var wv = { n: r + 1, a: letter(wrong.small), b: letter(wrong.large), d: fmtDeg(wrong.gap).replace('°', '') };
         out.push({
           ms: 2400, caption: cap('chosen', wv),
           enter: function () {
             setMode('big'); focusOption(r); PX.ui.clear(st.big);
-            st.big.appendChild(overlaySvg({ deg: m[wrong.small].deg, n: wrong.small + 1 }, { deg: m[wrong.large].deg, n: wrong.large + 1 }));
+            st.big.appendChild(overlaySvg({ deg: m[wrong.small].deg, n: letter(wrong.small) }, { deg: m[wrong.large].deg, n: letter(wrong.large) }));
           },
         });
       }

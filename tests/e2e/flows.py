@@ -12,6 +12,10 @@
 - Path (stage card with its demo, level change at a block end, the strategy check-in), Speed
   (deadline bar; unavailable until unlocked), Threshold (Span length), Free play setup, Watch,
   Try, Go from How to play, and a Train session from it with the exercise pinned.
+- Today on a fresh phone profile (RV-play-dat): no sample data (empty states instead), the
+  exercise count agrees with the Library's, and the DAT-style focus switched on in the Library
+  puts the formats into Today's plan with a line saying so, after a reload too; off again, the
+  usual plan is back. The settings read as plain words (the Library's phrases, Free play).
 Screenshots go to tests/e2e/out/play/flows_*.png. Run: tests/e2e/pwslot.sh python3 tests/e2e/flows.py
 """
 import json, pathlib, re, sys
@@ -283,11 +287,109 @@ def run_modes(b, C):
     ctx.close()
 
 
+NEW_IDS = ['openings', 'patviews', 'angles', 'patfold', 'cubes', 'form', 'knots', 'reckon']
+# The plan Today should show: the first three of the beginner order in force that this browser
+# can draw (play.js plans with the cheap capability check).
+EXPECT = '''(focus) => {
+  const C = PX.engine.config.session, can = (id) => { const d = PX.ex.get(id); return !!d && PX.ui.play.canRun(d, true); };
+  const order = focus ? C.patOrder.concat(C.beginner.filter((id) => !C.patOrder.includes(id))) : C.beginner.filter((id) => !PX.ex.get(id) || !PX.ex.get(id).pat);
+  return order.filter(can).slice(0, 3).map((id) => PX.ex.get(id).short);
+}'''
+# Every level of the new exercises' settings in the Library's words: none may read as the raw
+# "label value" fallback (RV-play-dat item 4: "Features 2 + 1 + 1, edges straight, ...").
+PHRASES = '''(ids) => {
+  const X = PX.ui.exinfo, out = [], bad = [];
+  ids.forEach((id) => {
+    const d = PX.ex.get(id);
+    if (!d) return;
+    d.dims.forEach((dim) => dim.levels.forEach((v) => {
+      const s = X.dimText(d, dim, v), low = (dim.label || dim.key).toLowerCase();
+      out.push(id + '.' + dim.key + ' = ' + s);
+      if (s.toLowerCase() === low + ' ' + X.valueText(dim, v).toLowerCase() || s === String(v)) bad.push(id + '.' + dim.key + ': ' + s);
+    }));
+  });
+  return { out, bad };
+}'''
+
+
+def today_names(page):
+    return page.evaluate('[...document.querySelectorAll(".px-slot--session .px-protocol-name")].map((e) => e.textContent.trim())')
+
+
+def to_today(page):
+    page.evaluate('void PX.core.router.go("home", {}, { force: true })')
+    page.wait_for_selector('.px-slot--session', timeout=10000)
+    page.wait_for_timeout(150)
+
+
+def lib_switch(page):
+    page.evaluate('void PX.core.router.go("library", {}, { force: true })')
+    page.wait_for_selector('.px-excards', timeout=10000)
+    sw = page.locator('[data-setting="patFocus"] label').first
+    sw.scroll_into_view_if_needed()
+    sw.tap()
+    page.wait_for_timeout(250)
+
+
+def run_today(b, C):
+    tag = 'today'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page, knobs=False)
+    to_today(page)
+    body = page.locator('body').inner_text()
+    C.ok(page.locator('.px-tag--sample, [data-sample]').count() == 0 and 'Sample data' not in body, f'{tag}: a fresh profile shows no sample data')
+    ach, lv = page.locator('.px-slot--achievements [data-empty]'), page.locator('.px-slot--levels [data-empty]')
+    C.ok(ach.count() == 1 and 'No achievements yet' in ach.inner_text() and lv.count() == 1 and 'No levels yet' in lv.inner_text(),
+         f'{tag}: achievements and levels show empty states')
+    shot(page, 'flows_today_fresh.png', full=True)
+    off = page.evaluate(EXPECT, False)
+    names = today_names(page)
+    C.ok(names == off and page.locator('[data-patfocus]').count() == 0, f'{tag}: focus off: {names} (expected {off}), no focus line')
+    n_today = int(page.locator('[data-count]').first.get_attribute('data-count'))
+    page.evaluate('void PX.core.router.go("library", {}, { force: true })')
+    page.wait_for_selector('.px-excards', timeout=10000)
+    m = re.match(r'(\d+) training exercises', page.locator('.px-screen-head .px-screen-meta').first.inner_text())
+    n_lib = int(m.group(1)) if m else -1
+    C.ok(n_today == n_lib == page.evaluate('PX.ex.list("train").length'), f'{tag}: Today and the Library count the same exercises ({n_today}, {n_lib})')
+    # on, from the Library's switch: the formats lead Today's plan, which says so; also after a reload
+    lib_switch(page)
+    C.ok(page.evaluate('PX.core.store.state.settings.patFocus') is True, f'{tag}: the Library switch turns the DAT-style focus on')
+    on = page.evaluate(EXPECT, True)
+    for when in ('at once', 'after a reload'):
+        if when == 'after a reload':
+            page.wait_for_timeout(400)  # the save
+            boot(page, knobs=False)
+        to_today(page)
+        names, line = today_names(page), page.locator('[data-patfocus="on"]')
+        C.ok(names == on and line.count() == 1 and 'DAT-style focus is on' in line.inner_text(), f'{tag}: focus on, {when}: {names} (expected {on}) with the focus line')
+    shot(page, 'flows_today_focus.png', full=True)
+    lib_switch(page)
+    to_today(page)
+    names = today_names(page)
+    C.ok(page.evaluate('PX.core.store.state.settings.patFocus') is False and names == off and page.locator('[data-patfocus]').count() == 0,
+         f'{tag}: focus off again: {names} (expected {off}), no focus line')
+    # the settings in plain words (summaries and Free play use the Library's phrases)
+    ph = page.evaluate(PHRASES, NEW_IDS)
+    C.ok(len(ph['out']) > 50 and not ph['bad'], f'{tag}: every setting of the new exercises reads as words ({len(ph["out"])} levels; raw: {ph["bad"][:4]})')
+    (OUT / 'flows_today_phrases.txt').write_text('\n'.join(ph['out']) + '\n', encoding='utf-8')
+    go(page, {'mode': 'free'})
+    page.wait_for_selector('select[data-free="exercise"]', timeout=10000)
+    page.select_option('select[data-free="exercise"]', 'openings')
+    page.get_by_text('Fixed settings', exact=True).first.tap()
+    page.wait_for_timeout(150)
+    opts = page.locator('select[data-free="keyview"] option').all_inner_texts()
+    C.ok(bool(opts) and opts[0] == 'mostly the front outline fits (sometimes the side)', f'{tag}: Free play lists Openings settings in words ({opts})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('flows')
     with sync_playwright() as p:
         b = launch(p)
-        for fn in (run_tour, run_check, run_daily, run_modes):
+        for fn in (run_tour, run_check, run_daily, run_modes, run_today):
             try:
                 fn(b, C)
             except Exception as e:

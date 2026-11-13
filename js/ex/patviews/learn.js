@@ -19,11 +19,13 @@
     ],
     // The easiest level (4–5 cubes, 3 × 3 grid, end view missing, outline foils).
     demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, seed: 11, kind: 'end' }],
-    practice: [ // easiest first; each view is missing once
+    // Easiest first; each view is missing once; the item that only dotted lines decide comes last,
+    // after the Watch's dotted-line step and with the dotted-line tip.
+    practice: [
       { cubes: 0, grid: 0, missing: 0, foil: 0 },
       { cubes: 0, grid: 0, missing: 1, foil: 0 },
       { cubes: 0, grid: 0, missing: 2, foil: 0 },
-      { cubes: 1, grid: 0, missing: 0, foil: 1 },
+      { cubes: 0, grid: 0, missing: 0, foil: 2 },
     ],
     tips: [
       { id: 'end', when: { dim: 'missing', levels: [0] }, text: 'Missing end view: its height comes from the front view, its width from the depth of the top view. The front is on its left.' },
@@ -72,12 +74,17 @@
       options: 'Four drawings: exactly one fits both views.',
       project: 'Every line of the missing view lines up with lines in the given views.',
       build: 'Line by line, the {view} view appears.',
-      dotted: 'Dotted: edges hidden behind nearer cubes.',
+      dotted: 'Dotted lines are edges hidden behind nearer cubes. Check every one: they often decide which drawing fits.',
       object: 'One structure with these views.',
       land: 'That is drawing {n}.',
       whyHull: 'Drawing {n}: its outline cannot sit with the two given outlines.',
       whyAlign: 'Drawing {n}: its lines do not line up with the lines of the given views.',
       whySearch: 'Drawing {n}: no stack of cubes gives the two views and this one.',
+      diffDotted: 'The marked line should be dotted: nearer cubes hide that edge.',
+      diffSolid: 'The marked line should be solid: nothing nearer hides that edge.',
+      diffExtra: 'The marked line does not belong: no edge lies there.',
+      diffMissing: 'A line is missing where marked: an edge lies there.',
+      diffMixed: 'The marked lines differ from the right drawing.',
     },
     bridge: 'Drafters and machinists read top, front and end views like these. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
   });

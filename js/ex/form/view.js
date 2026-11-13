@@ -5,9 +5,10 @@
    a half mark shades one side of a diagonal. Never colour alone.
    Show me (ctx.play steps, from the grading model: lib.matchings and lib.possible give the face
    map): a landmark face (a mark the right solid shows) is numbered in the pattern and in the solid,
-   then its neighbours; after a wrong pick, the face that cannot be marked so (or the wrong size, or
-   the mirror image) is marked in that solid and in the pattern. Every step's enter() sets its
-   full state. */
+   then its neighbours; after a wrong pick, the face that cannot be marked so (or the mirror image)
+   is marked in that solid and in the pattern, or, for a wrong size, the edge that differs is marked
+   in both. The Watch adds both kinds of wrong solid (foilTour). Every step's enter() sets its full
+   state. */
 (function (PX) {
   'use strict';
 
@@ -35,7 +36,7 @@
     });
     var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     P.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
-    return { faces: faces, box: [x0, y0, x1, y1] };
+    return { faces: faces, box: [x0, y0, x1, y1], P: P };
   }
   function tone(light) { return light >= 0.7 ? 'px-fig-top' : light >= 0.25 ? 'px-fig-side' : 'px-fig-far'; }
   // A hatch pattern in user units; set(pitch) resizes it (the options' pitch follows their drawn size).
@@ -243,6 +244,72 @@
       if (of) { label(st.opts[i].labels, of.pts, x.t, sOpt, kind); of.g.classList.add('is-pointed'); }
     });
   }
+  // The edge of a wrong-size solid that differs most from the pattern's, preferring one on a face the
+  // picture shows clearly (vertex ids match: the same kind of solid built with another size).
+  function changedEdge(item, i) {
+    var S = item.solid, o = item.options[i], O = o.solid, c = lib.facing(O, o.view), best = null;
+    function d(s0, a, b) { var p = s0.verts[a], q = s0.verts[b]; return Math.sqrt((p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1]) + (p[2] - q[2]) * (p[2] - q[2])); }
+    lib.adjacency(O).forEach(function (e) {
+      var lo = d(O, e.a, e.b), ls = d(S, e.a, e.b), seen = Math.max(c[e.f], c[e.g]);
+      if (Math.abs(lo - ls) < 0.05 || seen <= 0) return;
+      var score = (seen >= lib.SEEN ? 10 : 0) + Math.abs(lo - ls) / Math.max(lo, ls);
+      if (!best || score > best.score) best = { a: e.a, b: e.b, f: e.f, g: e.g, longer: lo > ls, score: score };
+    });
+    return best;
+  }
+  // That edge marked (thick dots) in solid i and wherever it lies in the pattern.
+  function markEdge(item, i, e) {
+    var P = st.proj[i].P;
+    st.opts[i].labels.appendChild(SV.el('path', { d: 'M' + SV.pathData([P[e.a], P[e.b]]).slice(1), class: 'fm-edge-hl' }));
+    [e.f, e.g].forEach(function (f) {
+      var n = st.netG[f], F = item.solid.faces[f], ia = F.indexOf(e.a), ib = F.indexOf(e.b);
+      if (!n || ia < 0 || ib < 0) return;
+      st.netLabels.appendChild(SV.el('path', { d: 'M' + SV.pathData([n.pts[ia], n.pts[ib]]).slice(1), class: 'fm-edge-hl' }));
+    });
+  }
+  // Why foil i does not fold from the pattern: the wrong size (the edge that differs, marked in both
+  // places), or a face whose mark cannot look like that (✗ in the solid and in the pattern).
+  function whyStep(item, i, ms) {
+    var o = item.options[i];
+    if (o.kind === 'shape') {
+      var e = changedEdge(item, i);
+      return { ms: ms, caption: e ? cap('whyShape', { n: i + 1, dir: e.longer ? 'longer' : 'shorter' }) : cap('whyShapeAny', { n: i + 1 }), enter: function () { clearMarks(); focusOption(i); if (e) markEdge(item, i, e); } };
+    }
+    var pm = bestMap(item, i), g = pm && pm.bad.length ? pm.bad[0] : -1;
+    return {
+      ms: ms, caption: cap(o.kind === 'mirror' ? 'whyMirror' : 'whyMarks', { n: i + 1, f: '✗' }),
+      enter: function () {
+        clearMarks(); focusOption(i);
+        if (pm && g >= 0) {
+          var u = optUnit(i), of = st.opts[i].faces[g], nf = st.netG[pm.back[g]];
+          if (of) { label(st.opts[i].labels, of.pts, '✗', 15 * u, 'bad'); of.g.classList.add('is-pointed'); }
+          if (nf) { label(st.netLabels, nf.pts, '✗', 15 / st.k, 'bad'); nf.g.classList.add('is-pointed'); }
+        }
+      },
+    };
+  }
+  // The Watch also shows why two wrong ones are wrong: the wrong-size solid and the mirror image (or,
+  // without a mirror image, marks in the wrong place).
+  function foilTour(item) {
+    var shape = -1, other = -1;
+    item.options.forEach(function (o, i) {
+      if (i === item.key) return;
+      if (o.kind === 'shape' && shape < 0) shape = i;
+      if (o.kind === 'mirror') other = i;
+    });
+    if (other < 0) item.options.forEach(function (o, i) { if (i !== item.key && o.kind === 'marks' && other < 0) other = i; });
+    var list = [];
+    if (shape >= 0 || other >= 0) list.push({ ms: 1600, caption: cap('foils'), enter: function () { clearMarks(); } });
+    if (shape >= 0) list.push(whyStep(item, shape, 3400));
+    if (other >= 0) list.push(whyStep(item, other, 3400));
+    return list;
+  }
+  // The Watch: the landmark method, then both kinds of wrong solid, then back to the right one so the
+  // Watch ends on the answer.
+  function demoList(item) {
+    var base = steps(item, null), tour = foilTour(item);
+    return tour.length ? base.concat(tour, [base[base.length - 1]]) : base;
+  }
   function steps(item, response) {
     var key = item.key, picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
     var km = bestMap(item, key), S = item.solid, seenS = km ? km.seen.map(function (g) { return km.back[g]; }) : [];
@@ -259,28 +326,7 @@
       { ms: 2200, caption: cap('neighbours', { list: tags.slice(1).map(function (x) { return x.t; }).join(', ') || '—' }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
       { ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
     ];
-    if (picked >= 0) {
-      var o = item.options[picked], why;
-      if (o.kind === 'shape') {
-        var d0 = item.solid.dims, d1 = o.solid.dims, j = 0;
-        for (var q = 0; q < d0.length; q++) if (d0[q] !== d1[q]) { j = q; break; }
-        why = { ms: 2600, caption: cap('whyShape', { n: picked + 1, dir: d1[j] > d0[j] ? 'longer' : 'shorter' }), enter: function () { clearMarks(); focusOption(picked); } };
-      } else {
-        var pm = bestMap(item, picked), g = pm && pm.bad.length ? pm.bad[0] : -1;
-        why = {
-          ms: 2600, caption: cap(o.kind === 'mirror' ? 'whyMirror' : 'whyMarks', { n: picked + 1, f: '✗' }),
-          enter: function () {
-            clearMarks(); focusOption(picked);
-            if (pm && g >= 0) {
-              var u = optUnit(picked), of = st.opts[picked].faces[g], nf = st.netG[pm.back[g]];
-              if (of) { label(st.opts[picked].labels, of.pts, '✗', 15 * u, 'bad'); of.g.classList.add('is-pointed'); }
-              if (nf) { label(st.netLabels, nf.pts, '✗', 15 / st.k, 'bad'); nf.g.classList.add('is-pointed'); }
-            }
-          },
-        };
-      }
-      list.push(why);
-    }
+    if (picked >= 0) list.push(whyStep(item, picked, 3000));
     return list;
   }
 
@@ -326,7 +372,7 @@
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    return play(steps(item, null), ctx, { name: 'demo', caption: caption || null });
+    return play(demoList(item), ctx, { name: 'demo', caption: caption || null });
   }
   function unmount() {
     if (!st) return;
@@ -340,5 +386,6 @@
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
     reveal: reveal, showMe: showMe, demo: demo, unmount: unmount,
     steps: function (item, response) { return st && st.item === item ? steps(item, response) : []; },
+    demoSteps: function (item) { return st && st.item === item ? demoList(item) : []; },
   });
 })(window.PX);

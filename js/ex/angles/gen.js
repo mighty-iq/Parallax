@@ -3,9 +3,10 @@
    like Track's attention practice): angle ranking is a perceptual drill, and practice tends to stay
    specific to the trained stimuli, so no transfer beyond the format is claimed.
 
-   The item. Four numbered angles (two straight arms from a vertex, no arc: an arc's size would be
-   a cue), each in its own square cell (coordinates in cell units, x right, y down). The options are
-   four orderings of the numbers, smallest angle first ("3 – 1 – 4 – 2"); exactly one is true.
+   The item. Four angles lettered A–D on screen (two straight arms from a vertex, no arc: an arc's
+   size would be a cue), each in its own square cell (coordinates in cell units, x right, y down).
+   The options are four orderings of the letters, smallest angle first ("C – A – D – B"); exactly one
+   is true. Letters keep the angles apart from the answers, whose keys are 1–4 (RV-play-dat).
 
    Values. The four sizes sit in one size class: near-right (70–110°), acute (25–72°) or obtuse
    (108–155°). Adjacent ranks differ by gaps; the closest gap is the level's δ (6, 5, 4, 3 or 2°)
@@ -25,7 +26,7 @@
 
    The foils. Answer-only rules read the four lists and never the angles (RV-dat-style-A §3): most
    like the others or odd one out (Kendall distance), a list with a twin one swap away, the first
-   or last numbers most or least common, the neighbour pairs or the positions shared, the consensus
+   or last letters most or least common, the neighbour pairs or the positions shared, the consensus
    of mean positions. Every allowed triple holding the required foil is scored by how far each
    rule's chance of picking the key is from one in four, plus 0.3 for each two lists that are each
    other's reverse (two opposite cues would then point at the same pair of lists); one triple is
@@ -63,7 +64,7 @@
    is 4.0 logits.
 
    Item: { ex: 'angles', v: 1, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
-   cell, numbered 1–4 on screen), deg: [design degrees by cell], order: [cells, smallest first],
+   cell, lettered A–D on screen), deg: [design degrees by cell], order: [cells, smallest first],
    options: [[cells, smallest first] × 4], gaps: [three adjacent gaps by rank], close: index of the
    closest gap, scale }. */
 (function (PX) {
@@ -212,8 +213,8 @@
     return 1 / t;
   }
   // For four orderings (ids into PERMS, the key first): how often each answer-only rule picks the
-  // key. The rules (RV-dat-style-A §3): has another option one swap away; first and last numbers
-  // most / least common; first number most common; last number most common; fewest / most ordered
+  // key. The rules (RV-dat-style-A §3): has another option one swap away; first and last letters
+  // most / least common; first letter most common; last letter most common; fewest / most ordered
   // neighbour pairs shared with the others; most / fewest positions in common; smallest / largest
   // total Kendall distance (most like the others / odd one out).
   function answerHits(ids) {
@@ -236,7 +237,7 @@
       hit0(pa, true), hit0(pa, false), hit0(kt, false), hit0(kt, true), bordaHit(ids)];
   }
   // Borda: the four things by their summed position over the lists, then the nearest list. Ties in
-  // the sums are broken by the screen numbers, which are random here, so the key's chance is the
+  // the sums are broken by the screen letters, which are random here, so the key's chance is the
   // mean over every order the ties allow.
   function bordaHit(ids) {
     var sum = [0, 0, 0, 0], i, j, total = 0, count = 0;
@@ -258,7 +259,7 @@
   // answer-only rule's chance of picking the key is from one in four (summed), plus REV_PEN for
   // each two lists that are each other's reverse; one triple is drawn at random from those within
   // FOIL_SLACK of the best score. The one-swap foil the resolve level needs is then never the
-  // key's only near twin, and the first and last numbers do not point to the key.
+  // key's only near twin, and the first and last letters do not point to the key.
   function chooseFoils(r, res, close) {
     var cand = allowedFoils(res, close), need = mustHave(res, close), K0 = PERM_ID['0,1,2,3'];
     var ids = cand.map(function (o) { return PERM_ID[o.join()]; }), needId = need ? PERM_ID[need.join()] : -1;

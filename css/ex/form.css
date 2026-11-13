@@ -17,6 +17,11 @@
 .ex-form .fm-netface.is-pointed .fm-face,
 .ex-form .fm-solid .is-pointed .px-fig-face { stroke: var(--stim-target, #0B6A86); stroke-width: 3px; vector-effect: non-scaling-stroke; }
 
+/* Show me: an edge that differs (thick dots in the "wrong" colour: a shape as well as a colour). */
+.ex-form .fm-edge-hl {
+  fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 6px; stroke-dasharray: 1 7; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
 /* Show me: letters on faces (a ring and a letter; ✗ in the "wrong" colour and a dashed ring). */
 .ex-form .fm-tag circle { fill: var(--surface, #FFFFFF); stroke: var(--stim-target, #0B6A86); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .ex-form .fm-tag text {

@@ -14,8 +14,8 @@
     labelLine: 'Angles is perceptual-judgement practice: it trains judging angles by eye, and the gains tend to stay with this kind of figure.',
     goal: 'Rank the four angles from smallest to largest. Which list gives the right order?',
     parts: [
-      { id: 'angles', label: 'Angles', text: 'Four angles, numbered 1 to 4. Only the opening between the two arms counts: arm length and how the angle is turned do not.' },
-      { id: 'options', label: 'Answers', text: 'Each answer lists the four numbers from the smallest angle to the largest. Exactly one list is right.' },
+      { id: 'angles', label: 'Angles', text: 'Four angles, lettered A to D. Only the opening between the two arms counts: arm length and how the angle is turned do not.' },
+      { id: 'options', label: 'Answers', text: 'Each answer lists the four letters from the smallest angle to the largest, for example C – A – D – B. Exactly one list is right.' },
       { id: 'answer', label: 'Answer', text: 'Pick a list with keys 1–4, or tap it.' },
     ],
     rules: [
@@ -76,8 +76,8 @@
       },
     ],
     captions: {
-      angles: 'Four angles, numbered 1 to 4. Only the opening between the arms counts.',
-      options: 'Each answer lists the numbers from the smallest angle to the largest. One list is right.',
+      angles: 'Four angles, lettered A to D. Only the opening between the arms counts.',
+      options: 'Each answer lists the letters from the smallest angle to the largest. One list is right.',
       order: 'From smallest to largest: {order}.',
       overlay: 'Lay angle {b} on angle {a}, corners and one arm lined up.',
       pair: 'Angle {b} opens {d}° wider than angle {a}.',

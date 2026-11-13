@@ -398,7 +398,7 @@
   }
 
   function openMore() {
-    var curNav = NAV_OF[router.current().name];
+    var curNav = navOf(router.current().name);
     var close = null;
     var list = h('ul.px-more-list');
     NAV.forEach(function (n) {
@@ -467,8 +467,16 @@
     if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
   }
 
+  // A session or tutorial (play) belongs to the screen it was opened from: started from the Library
+  // (or an exercise's page) it keeps the Library lit, from Progress Progress, else Today (RV-play-dat).
+  var navFrom = 'home';
+  function navOf(name) {
+    if (name === 'play') return navFrom || 'home';
+    return NAV_OF[name] || null;
+  }
   function updateNav(name) {
-    var cur = NAV_OF[name] || null;
+    var cur = navOf(name);
+    if (name !== 'play' && cur) navFrom = cur;
     var els = shell.root.querySelectorAll('[data-nav]');
     for (var i = 0; i < els.length; i++) attr(els[i], 'aria-current', els[i].getAttribute('data-nav') === cur ? 'page' : null);
     var inMore = cur === 'lab' || cur === 'settings' || cur === 'about';

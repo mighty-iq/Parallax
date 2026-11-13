@@ -4,10 +4,11 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_form.py
 1. desktop 1366 x 768 and phone 390 x 844 (DPR 2, touch), light and dark: the pattern is drawn with
    cut edges and fold lines; four solids at one scale; a right answer by keyboard, a wrong one by
    pointer or tap; marks in their own tone with a hatch of at least 4 px; show me letters a
-   landmark face in the pattern and in the right solid (after a
-   wrong pick: the face that cannot be marked so, or the wrong size); no horizontal scroll
+   landmark face in the pattern and in the right solid (after a wrong size: the edge that differs
+   marked in the solid and in the pattern; after another wrong pick: the face that cannot be marked
+   so); no horizontal scroll
 2. 360 x 640: the stem and all four solids within one screen, targets >= 44 px
-3. show me at normal speed, the tutorial demo with captions
+3. show me at normal speed, the tutorial demo with captions; the Watch's tour of both wrong kinds
 4. the harness inlined into a sandboxed srcdoc frame; no console errors
 Screenshots: tests/e2e/out/form/form_<case>_<viewport>_<theme>[_reveal|_showme|_wrong_showme].png """
 import sys
@@ -29,8 +30,9 @@ DONE = """() => {
     const it = __harness.item, cells = document.querySelectorAll('.hx-grid .px-choice'), wrong = !__harness.last.result.correct;
     const netTags = document.querySelectorAll('.fm-svg .fm-tag').length, keyTags = cells[it.key].querySelectorAll('.fm-tag').length;
     const bad = document.querySelectorAll('.fm-tag--bad').length, pk = __harness.last.response, kind = typeof pk === 'number' ? it.options[pk].kind : '';
-    const ok = wrong ? (kind === 'shape' ? cells[pk].classList.contains('ex-focus') : bad >= 1) : (netTags >= 1 && keyTags >= 1);
-    return { ok, netTags, keyTags, bad, wrong, kind }; }"""
+    const edges = document.querySelectorAll('.fm-edge-hl').length;
+    const ok = wrong ? (kind === 'shape' ? cells[pk].classList.contains('ex-focus') && edges >= 2 : bad >= 1) : (netTags >= 1 && keyTags >= 1);
+    return { ok, netTags, keyTags, bad, edges, wrong, kind }; }"""
 
 
 def go(page, case, theme='light', fast=True, seed_add=0):
@@ -120,6 +122,20 @@ def normal_speed(b, cons):
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=40000)
     cap = page.locator('.hx-caption').inner_text()
     C.ok(len(cap) > 10, f'the demo plays to the end with captions ({cap!r})')
+    # The Watch item (learn.js demo) shows both kinds of wrong solid: the wrong size, with the edge that
+    # differs marked in the solid and in the pattern, and the mirror image, with its face marked; it ends
+    # back on the right solid.
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=8, p='solid:0,marks:0,view:0,foil:0', fast=1))
+    page.wait_for_function(READY, timeout=60000)
+    w = page.evaluate("""() => { const it = __harness.item, L = PX.ex.learn('form'), list = PX.ex.view('form').demoSteps(it), out = {};
+        list.forEach((s, i) => { s.enter(); const t = s.caption || '';
+          if (t.indexOf('marked edge') >= 0) out.edge = document.querySelectorAll('.fm-edge-hl').length;
+          if (/mirror image/.test(t)) out.mirror = document.querySelectorAll('.fm-tag--bad').length; });
+        const last = list[list.length - 1]; last.enter();
+        const cells = document.querySelectorAll('.hx-grid .px-choice');
+        return { n: list.length, edge: out.edge || 0, mirror: out.mirror || 0, endsOnKey: cells[it.key].classList.contains('ex-focus') }; }""")
+    C.ok(w['edge'] >= 2 and w['mirror'] >= 1 and w['endsOnKey'], f'the Watch shows a wrong-size solid (edge marked in solid and pattern) and a mirror image, then ends on the answer ({w})')
+    page.screenshot(path=str(DIR / 'form_demo_end.png'))
     ctx.close()
     return pl
 

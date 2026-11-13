@@ -5,9 +5,10 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_patviews.py
    front, top): the stem shows two drawn views and the "?" slot in the third-angle places; four
    option drawings share one scale; a right answer by keyboard, a wrong one by pointer or tap; show
    me ends with the key traced in the slot and its drawing on the right option (after a wrong pick:
-   the picked drawing laid over the slot with its differences marked); no horizontal scroll
+   the picked drawing laid over the slot with its differences marked, on the picked option too); the
+   feedback marks where each wrong drawing differs; no horizontal scroll
 2. 360 x 640: the stem and all four options within one screen, targets >= 44 px
-3. show me at normal speed (planned time), the tutorial demo with captions
+3. show me at normal speed (planned time), the tutorial demo with captions, its dotted-line step
 4. the harness inlined into a sandboxed srcdoc frame; no console errors
 Screenshots: tests/e2e/out/patviews/patviews_<case>_<viewport>_<theme>[_reveal|_showme|_wrong].png """
 import sys
@@ -31,7 +32,10 @@ DONE = """() => {
     const it = __harness.item, cells = document.querySelectorAll('.hx-grid .px-choice'), wrong = !__harness.last.result.correct;
     const traced = document.querySelectorAll('.pv-over .pv-trace').length, picked = document.querySelectorAll('.pv-over .pv-picked').length;
     const ghost = !!cells[it.key].querySelector('.pv-ghost');
-    return { ok: ghost && (wrong ? picked === 1 : traced >= 1), traced, ghost, picked, wrong }; }"""
+    // feedback points to the decisive lines: every wrong drawing carries its difference marks
+    const marked = Array.from(cells).filter((c, i) => i !== it.key && c.querySelector('.pv-diff')).length;
+    const pk = __harness.last.response, pickMarked = wrong ? !!cells[pk].querySelector('.pv-diff--show') : true;
+    return { ok: ghost && marked === 3 && pickMarked && (wrong ? picked === 1 : traced >= 1), traced, ghost, picked, wrong, marked, pickMarked }; }"""
 
 
 def shot(page, name):
@@ -122,6 +126,14 @@ def normal_speed(b, cons):
     cap = page.locator('.hx-caption').inner_text()
     C.ok(len(cap) > 10, f'the demo plays to the end with captions ({cap!r})')
     page.screenshot(path=str(DIR / 'patviews_demo_end.png'))
+    # The Watch's dotted-line step: long, after the structure is shown, every dotted line marked.
+    d = page.evaluate("""() => { const v = PX.ex.view('patviews'), L = PX.ex.learn('patviews'), list = v.steps(__harness.item, null);
+        const i = list.findIndex((s) => s.caption === L.captions.dotted); if (i < 0) return { found: false };
+        list[i].enter();
+        return { found: true, ms: list[i].ms, hl: document.querySelectorAll('.pv-over .pv-hl').length, obj: document.querySelectorAll('.pv-over .pv-cover').length,
+          after: !!(list[i - 1] && list[i - 1].caption === L.captions.object) }; }""")
+    C.ok(d.get('found') and d['ms'] >= 4000 and d['hl'] >= 3 and d['obj'] == 1 and d['after'], f"the Watch's dotted-line step is long, follows the structure and marks every dotted line ({d})")
+    page.screenshot(path=str(DIR / 'patviews_demo_dotted.png'))
     ctx.close()
     return pl
 

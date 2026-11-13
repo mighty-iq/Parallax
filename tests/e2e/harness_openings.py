@@ -2,7 +2,8 @@
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_openings.py
 
 1. desktop 1366 x 768 and phone 390 x 844 (DPR 2, touch), light and dark: the solid is drawn
-   (non-blank stage); five openings at the solid's scale; a right answer by keyboard, a wrong one by pointer
+   (non-blank stage) filling its stage; five openings at the solid's scale, key digits beside the
+   drawings; a right answer by keyboard, a wrong one by pointer
    or tap; show me turns to the fitting face and ends with the outline on the right opening (after a
    wrong pick: the nearest true outline laid over the chosen one); no horizontal scroll
 2. 360 x 640: the stem and all five openings within one screen, targets >= 44 px, a step >= 11 px
@@ -47,6 +48,13 @@ def opts_ok(page, tag, min_px=0):
     C.ok(k['open'] > 0 and abs(k['solid'] - k['open']) <= 0.02 * k['open'] and abs(k['drawn'] - k['open']) <= 0.02 * k['open'], f'{tag}: solid and openings at the same scale ({k})')
     if min_px:
         C.ok(k['drawn'] >= min_px, f'{tag}: a step of an opening is at least {min_px} px ({k["drawn"]:.1f})')
+    # The solid fills its box (its height at least 60 % of the stage), and no key digit sits on a drawing.
+    f = page.evaluate("""() => { const fill = +document.querySelector('.op-stem').getAttribute('data-fill');
+        const hit = Array.from(document.querySelectorAll('.hx-grid .px-choice')).filter((c) => { const k = c.querySelector('.px-choice-key'), s = c.querySelector('.op-opt-svg');
+          if (!k || !s) return false; const a = k.getBoundingClientRect(), b = s.getBoundingClientRect();
+          return a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom; }).length;
+        return { fill, hit }; }""")
+    C.ok(f['fill'] >= 0.6 and f['hit'] == 0, f'{tag}: the solid fills its stage ({f["fill"]:.2f} of its height) and no key digit overlaps a drawing ({f["hit"]})')
 
 
 def desktop_and_phone(b, cons):

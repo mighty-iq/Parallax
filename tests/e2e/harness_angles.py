@@ -1,8 +1,8 @@
 """E2E: the dev harness with Angles (EX-16, SVG). Shared flow in tests/e2e/pat_harness.py.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_angles.py
-Own checks: four numbered cells, each drawing exactly the item's endpoints; options read as
-lists of the four numbers; reveal shows every angle's size; show me ends on the cells with the
-sizes in view. Screenshots: tests/e2e/out/angles/. """
+Own checks: four cells lettered A–D, each drawing exactly the item's endpoints; options read as
+lists of the four letters (the answers keep their keys 1–4); reveal shows every angle's size;
+show me ends on the cells with the sizes in view. Screenshots: tests/e2e/out/angles/. """
 import sys
 
 from pat_harness import Pat
@@ -20,14 +20,14 @@ def stem(C, page, tag):
         const box = cells.map((c) => c.getBoundingClientRect().width);
         return { n: cells.length, labels: cells.map((c) => c.querySelector('.ex-angles-n').textContent), drawn, minCell: Math.round(Math.min(...box)) };
     }""")
-    C.ok(d['n'] == 4 and d['labels'] == ['1', '2', '3', '4'], f'{tag}: four cells numbered 1–4 ({d["labels"]})')
+    C.ok(d['n'] == 4 and d['labels'] == ['A', 'B', 'C', 'D'], f'{tag}: four cells lettered A–D ({d["labels"]})')
     C.ok(all(d['drawn']), f'{tag}: every cell draws exactly the item\'s vertex and arm ends ({d["drawn"]})')
     C.ok(d['minCell'] >= 150, f'{tag}: cells at least 150 px wide ({d["minCell"]} px)')
 
 
 def options(C, page, tag):
     d = page.evaluate("""() => ({ texts: Array.from(document.querySelectorAll('.hx-grid .ex-angles-opt .ex-answer-text')).map((e) => e.textContent.replace(/\u00a0/g, ' ')),
-        want: __harness.item.options.map((o) => o.map((c) => c + 1).join(' – ')) })""")
+        want: __harness.item.options.map((o) => o.map((c) => 'ABCD'[c]).join(' – ')) })""")
     C.ok(d['texts'] == d['want'], f'{tag}: the options read as the item\'s orderings ({d["texts"]})')
 
 
