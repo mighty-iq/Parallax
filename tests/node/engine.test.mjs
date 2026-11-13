@@ -102,9 +102,12 @@ function testModel(t) {
     [2, 0, 0, 0, 0, 2], 'a timeout is scored wrong, never a skip; a stutter still voids the trial');
   const rec = newRecord(PX, T0);
   const row = E.log.row(rec, fold, 'train', { code: 5, seed: 42, pPred: 0.77549, stage: 3 }, 1, { rt: 1234.6, value: 2 }, T0 + 1500);
-  t.eq(row, [Math.floor((T0 + 1500) / 1000), 0, 0, 5, 42, 1, 1235, 2, 775, 3], 'trial row: 10 columns with pPred × 1000 and stage');
+  t.eq(row, [Math.floor((T0 + 1500) / 1000), 0, 0, 5, 42, 1, 1235, 2, 775, 3, 0, 0], 'trial row: 12 columns with pPred × 1000, stage, display and input (unknown: 0)');
   t.eq([rec.idx.ex, rec.idx.mode], [['fold@1'], ['train']], "index lists hold 'id@version' and mode names");
-  t.eq(E.log.row(rec, fold, 'free', { code: 0, seed: 1 }, 0, {}, T0).slice(6), [null, null, null, null], 'missing rt, value, pPred and stage are null');
+  t.eq(E.log.row(rec, fold, 'free', { code: 0, seed: 1 }, 0, {}, T0).slice(6), [null, null, null, null, 0, 0], 'missing rt, value, pPred and stage are null; display and input 0');
+  t.eq(['small', 'large', 'huge', 2, 7].map((v) => E.log.codeOf(E.log.DISPLAYS, v)), [1, 2, 0, 2, 0], 'display codes: 1 small, 2 large (est.displayClass), else 0');
+  t.eq(['mouse', 'touch', 'pen', 'key', 'pointer', 'api', null].map((v) => E.log.codeOf(E.log.INPUTS, v)), [1, 2, 3, 4, 1, 0, 0], 'input codes: 1 mouse, 2 touch, 3 pen, 4 key; a click of unknown type is a mouse');
+  t.eq(E.log.row(rec, fold, 'train', { code: 1, seed: 2 }, 1, { rt: 900, display: 'small', input: 'touch' }, T0).slice(10), [1, 2], 'columns 11-12 from result.display and result.input');
   const names = E.log.names({ idx: { ex: ['fold@1', 'nets', null], mode: ['train'] } });
   t.eq([names.ex, names.ver], [['fold', 'nets', null], [1, 1, 1]], "names() reads 'id@version' and plain ids");
 }
@@ -470,16 +473,19 @@ function testSchedule(t) {
   settled('homing', 0);
   t.eq(SCH.choose(rf, {}, T0).roles.focus, 'span', '… then the highest learning progress does');
 
-  // A new user meets untried exercises in the beginner order (Track and Homing last), each
+  // A new user meets untried exercises in the beginner order (Track, Homing and Reckon last), each
   // marked 'new' in roleOf; a pinned one keeps its 'focus' role.
   const rb = newRecord(PX, T0), seen = [];
-  for (let k = 0; k < 4; k++) {
+  const order = E.config.session.beginner.filter((id) => PX.ex.get(id));
+  for (let k = 0; k * 3 < order.length; k++) {
     const cb = SCH.choose(rb, {}, T0 + k * DAY);
     seen.push(...cb.exs.filter((id) => !(rb.ex[id] && rb.ex[id].n > 0)));
     cb.exs.forEach((id) => { E.est.exEntry(rb, id); Object.assign(rb.ex[id], { n: 30, mu: 0, sd: 0.6, last: T0 + k * DAY, rev: { iv: 0, next: T0 + 30 * DAY } }); });
     if (k === 0) t.eq([cb.exs, cb.roleOf], [['rotate', 'fold', 'spin'], { rotate: 'new', fold: 'new', spin: 'new' }], 'first session: Rotate, Fold, Spin, each with the role ‘new’');
   }
-  t.eq(seen, ['rotate', 'fold', 'spin', 'nets', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing'], 'untried exercises come in the beginner order, Track and Homing last');
+  t.eq(seen.slice(0, order.length), order, 'untried exercises come in the beginner order, Track, Homing and Reckon last (' + order.length + ' exercises)');
+  t.eq(order.slice(0, 11).filter((id) => ['knots', 'reckon'].indexOf(id) < 0), ['rotate', 'fold', 'spin', 'nets', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing'].slice(0, order.filter((id) => ['knots', 'reckon'].indexOf(id) < 0).length), 'v1.0 order kept');
+  t.ok(E.config.session.beginner.indexOf('knots') === E.config.session.beginner.indexOf('nets') + 1 && E.config.session.beginner.indexOf('reckon') === E.config.session.beginner.indexOf('homing') + 1, 'Knots comes after Nets and Reckon after Homing (H6)');
   t.eq(SCH.choose(newRecord(PX, T0), { pin: 'track' }, T0).roleOf, { track: 'focus', rotate: 'new', fold: 'new' }, 'a pinned exercise keeps the focus role; the other untried ones are ‘new’');
   const fresh0 = newRecord(PX, T0), p0 = E.modes.start(fresh0, 'train', { now: T0, minutes: 20 });
   t.ok(['rotate', 'fold', 'spin'].includes(E.modes.next(p0, fresh0, T0).exId) && p0.roleOf.rotate === 'new', 'a new user’s first Train session opens with a visuospatial exercise, never Track (plan.roleOf)');
@@ -524,7 +530,7 @@ function testTrain(t) {
   t.eq(lastS.kind, 'last', 'the session ends on its closing item');
   t.near(lastS.target, M.kindTarget('last', r.plan.k, lastS.g), 1e-12, 'the closing item aims at p* + 0.10');
   t.eq(rec.trials.length, steps.length, 'one trial row per answer');
-  t.ok(rec.trials.every((row) => row.length === 10), 'rows have 10 columns');
+  t.ok(rec.trials.every((row) => row.length === 12), 'rows have 12 columns');
   t.ok(steps.every((s) => s.out.row[8] === Math.round(s.step.pPred * 1000) && s.out.row[9] === s.step.stage && s.step.stage >= 1 && s.step.stage <= 5), 'rows carry pPred × 1000 and the interleaving stage');
   t.eq(new Set(rec.trials.map((row) => row[4])).size, rec.trials.length, 'every item has its own seed');
   t.eq(rec.idx.mode, ['train'], "trials are logged under the mode 'train'");
@@ -874,7 +880,8 @@ function testDaily(t) {
   t.section('daily');
   const PX = t.mk(), E = PX.engine, D = E.daily;
   t.eq([D.number('2026-11-01'), D.number('2026-11-30'), D.number('2027-01-01')], [1, 30, 62], 'Daily #N counts from 1 Nov 2026');
-  t.eq([D.day(Date.UTC(2026, 10, 1, 23, 30)), D.day(Date.UTC(2026, 10, 2, 0, 10))], ['2026-11-01', '2026-11-02'], 'the day is the UTC date');
+  const tz = [Date.UTC(2026, 10, 1, 23, 30), Date.UTC(2026, 10, 2, 0, 10), Date.UTC(2026, 10, 2, 13, 0)];
+  t.eq(tz.map(D.day), tz.map(E.day), 'the day is the local date, the same day boundary as everywhere else (v1.1)');
   t.eq(D.share(5, 6, 8), 'Parallax Daily #5 · 6/8 · discord.gg/chmr', 'the share line');
   const items = D.items('2026-11-05'), other = t.mk().engine.daily.items('2026-11-05');
   t.eq(items, other, 'the same 8 items for everyone (another context, another record)');
@@ -896,6 +903,29 @@ function testDaily(t) {
   E.modes.answer(plan, rr, s1, { outcome: 'stutter' }, now + 1000);
   const s2 = E.modes.next(plan, rr, now + 2000);
   t.eq([s2.seed, s2.exId], [s1.seed, s1.exId], 'a stuttered Daily item comes back unchanged');
+
+  // v1.1: an attempt left part-way (End now, a reload) is kept as partial and goes on later.
+  const key = D.day(now), rp = newRecord(PX, T0), pp = E.modes.start(rp, 'daily', { now });
+  for (let i = 0; i < 3; i++) { const s = E.modes.next(pp, rp, now + i); E.modes.answer(pp, rp, s, { correct: i !== 1, rt: 1000 }, now + i); }
+  const f1 = E.modes.finish(pp, rp, now + 10, { activeMs: 30000, ended: 'early' });
+  const e1 = rp.daily[key];
+  t.eq([e1.partial, e1.answered, e1.right, e1.outcomes], [true, 3, 2, [1, 0, 1, null, null, null, null, null]], 'End now keeps a partial attempt; unanswered items are null, never wrong');
+  const st1 = D.status(rp, now);
+  t.ok(!st1.done && st1.partial && st1.result === null && f1.daily.partial && f1.daily.share === null && f1.daily.answered === 3, 'status: not done but partial; no share line yet');
+  const pq = E.modes.start(rp, 'daily', { now: now + 60000 });
+  t.ok(pq.daily.scored && pq.daily.resumed && pq.daily.n === 3 && pq.daily.right === 2, 'the next start resumes the scored attempt');
+  const rest = [];
+  for (let g = 0; g < 20; g++) {
+    const s = E.modes.next(pq, rp, now + 70000);
+    if (s.done) break;
+    rest.push(s.daily.index);
+    const o = E.modes.answer(pq, rp, s, g === 0 ? { outcome: 'skipped' } : { correct: true, rt: 900 }, now + 70000);
+    if (g === 4) t.ok(!o.done, 'not over while a skipped item is still to come');
+  }
+  t.eq(rest, [3, 3, 4, 5, 6, 7], 'only unanswered items come, and a skipped one comes back at once');
+  const f2 = E.modes.finish(pq, rp, now + 80000);
+  t.eq([rp.daily[key].partial, rp.daily[key].right, rp.daily[key].answered, D.status(rp, now).done, f2.daily.share], [undefined, 7, 8, true, 'Parallax Daily #5 · 7/8 · discord.gg/chmr'], 'answering the rest spends the attempt and gives the share line');
+  t.ok(E.daily.pool().every((d) => !d.perDisplay && d.pat !== true), 'the pool: no screen-dependent and no PAT-format exercises');
 }
 
 /* ============================================================= Spatial Check */
@@ -1121,8 +1151,8 @@ function testStreak(t) {
 function testAchievements(t) {
   t.section('achievements');
   const PX = t.mk(), E = PX.engine, AC = E.achievements;
-  t.eq(AC.DEFS.length, 20, 'about 20 achievements (20)');
-  t.eq(new Set(AC.DEFS.map((d) => d.id)).size, 20, 'unique ids');
+  t.eq(AC.DEFS.length, 21, 'about 20 achievements (21 since v1.1: a full Section practice)');
+  t.eq(new Set(AC.DEFS.map((d) => d.id)).size, 21, 'unique ids');
   t.ok(!AC.DEFS.some((d) => ['first-session', 'answers-1000', 'daily-first', 'daily-seven'].includes(d.id)), 'nothing for showing up: no first-session, answer-count or Daily Challenge achievements');
   t.ok(AC.DEFS.every((d) => d.name && d.desc && typeof d.check === 'function' && (d.kind === 'skill' || d.kind === 'practice')), 'visible criteria and a check each');
   t.ok(!/master/i.test(JSON.stringify(AC.DEFS.map((d) => [d.name, d.desc]))), 'no achievement says "mastered"');
@@ -1132,7 +1162,7 @@ function testAchievements(t) {
   t.ok(Array.isArray(r.fin.achievements) && rec.sessions.length === 1, 'a finished session checks achievements');
   const old = newRecord(PX, T0);
   old.achievements['first-session'] = '2026-10-01T00:00:00.000Z';
-  t.ok(AC.get('first-session') === null && AC.list(old, T0).length === 20 && Array.isArray(AC.check(old, T0)), 'a record holding a removed id still works; the id is unknown to get()');
+  t.ok(AC.get('first-session') === null && AC.list(old, T0).length === 21 && Array.isArray(AC.check(old, T0)), 'a record holding a removed id still works; the id is unknown to get()');
   const track =PX.ex.get('track'), ti = E.log.exIndex(rec, track), mi = E.log.modeIndex(rec, 'train');
   const code5 = PX.ex.paramsCode(track, { speed: 0, targets: 3, spheres: 2, time: 0, variant: 'still' });
   const code5of8 = PX.ex.paramsCode(track, { speed: 0, targets: 3, spheres: 1, time: 0, variant: 'still' });
@@ -1149,7 +1179,7 @@ function testAchievements(t) {
   t.ok(AC.check(rec, T0 + 6000).some((a) => a.id === 'both-strategies'), 'both strategies reported on one exercise');
   t.ok(!E.modes.checkin(rec, 'fold', 'guess', T0) && !E.modes.checkin(rec, 'nope', 'whole', T0), 'invalid check-ins are refused');
   const list = AC.list(rec, T0 + 7000);
-  t.ok(list.length === 20 && list.every((x) => Array.isArray(x.progress) && x.progress[0] <= x.progress[1]), 'list() shows progress for each');
+  t.ok(list.length === 21 && list.every((x) => Array.isArray(x.progress) && x.progress[0] <= x.progress[1]), 'list() shows progress for each');
   const plan = { mode: 'train', rated: { fold: { n: 10 } } };
   const rr = newRecord(PX, T0);
   t.ok(E.modes.checkinDue(rr, plan, 'fold', T0) && !E.modes.checkinDue(rr, { mode: 'free', rated: plan.rated }, 'fold', T0), 'strategy check-ins after the 10th answer in Train or Path');

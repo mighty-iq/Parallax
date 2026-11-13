@@ -49,3 +49,16 @@
 html[data-hx-state="paused"] .ex-patterns .pr-timer-fill,
 [data-paused] .ex-patterns .pr-timer-fill { animation-play-state: paused; }
 @keyframes pm-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Phones held sideways (css/play.css: --pl-avail): the grid on the left at full height, so the
+   whole pattern is on the screen while it shows; the question, the bar and Confirm on the right. */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-patterns .ex-patterns-stem {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
+    align-items: start; column-gap: var(--s4);
+  }
+  .pl-trial.ex-patterns .pm-stage { grid-column: 1; grid-row: 1 / -1; padding: 1.6rem 0.5rem 0.5rem; }
+  .pl-trial.ex-patterns .ex-patterns-stem > :not(.pm-stage) { grid-column: 2; }
+  .pl-trial.ex-patterns .pm-wrap { width: auto; }
+  .pl-trial.ex-patterns .pm-svg { width: auto; height: calc(var(--pl-avail) - 2.2rem - 2px); max-width: calc(var(--pl-w) * 0.6); }
+}

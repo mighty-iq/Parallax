@@ -5,8 +5,12 @@
    (Train with the exercise as focus, Path, Speed once open, Threshold where a protocol exists,
    Free play through the player's own setup screen), and the exercise page (route exercise/<id>) with strategy cards, the "where spatial
    thinking is used" card with its limitation line, and the off-screen challenge where present.
-   Track is labelled attention practice, Homing experimental (larger screens). An exercise whose
-   view is not registered yet (or needs WebGL that is missing) says so instead of starting.
+   Track is labelled attention practice; Homing and exercises flagged `experimental` (Reckon) are
+   labelled experimental. An exercise whose view is not registered yet (or needs WebGL that is
+   missing) says so instead of starting.
+   v1.1 (B7): the DAT-style formats (def.pat) form their own group with the PAT focus switch, the
+   Section practice entry (route 'section'), the where-used card with its limitation line and the
+   ADA line (R3 §6, §8.0); an exercise page shows its "Also in tests" note (PX.ui.overlap, R4 §6.3).
 
    PX.ui.exinfo: helpers shared by the Library, Progress, Log and Lab (and share.js):
      defs()                       training definitions in code order
@@ -34,8 +38,17 @@
     samediff: 'same or mirror', pick: 'pick two', opposite: 'opposite face', edges: 'meeting edges',
     cube: 'does it fold into a cube', toview: 'object to view', toobject: 'views to object', count: 'count blocks',
     forward: 'forward', backward: 'backward', still: 'still camera', orbit: 'orbiting camera',
+    point: 'point home', 'return': 'walk back home',
   };
-  var MODES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check' };
+  // A few words after the name on cards and pages (R1 §8.1 d: Homing is the stage with landmarks).
+  var NAME_TAIL = { homing: 'with landmarks', reckon: 'no landmarks' };
+  // Notes under an experimental exercise's lead (B3's wording for Homing and Reckon).
+  var EXPERIMENTAL = {
+    homing: 'Homing is experimental: its item model is new and untested. It is the landmark-aided stage before Reckon: far landmarks correct dead-reckoning errors.',
+    reckon: 'Reckon is experimental: dead reckoning with no landmarks or fixes of any kind. Hard at first? Practise Homing, where landmarks help, then come back.',
+  };
+  var CARD_NOTE = { reckon: 'Hard at first? Practise Homing, where landmarks help, then come back.' };
+  var MODES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', section: 'Section practice' };
   var PROTOCOL_NAMES = {
     'track-standard': 'Track Standard 3D-MOT protocol',
     'track': 'Track speed at your target',
@@ -80,6 +93,10 @@
     'views.view': function (v) { return v + ' view'; },
     'homing.route': function (v) { return String(v); },
     'homing.landmarks': function (v) { return v === 'none' ? 'no landmarks' : v === 'one' ? 'one landmark' : v + ' landmarks'; },
+    'reckon.route': function (v) { return String(v); },
+    'reckon.flow': function (v) { return v === 'textured' || v === 'sparse' ? v + ' ground' : v + ' on the ground'; },
+    'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + v; },
+    'reckon.tolerance': function (v) { return 'right within ' + v; },
     'track.time': function (v) { return v + ' s of tracking'; },
   };
   function dimText(def, dim, v) {
@@ -152,14 +169,19 @@
     return true;
   }
 
+  function experimental(def) { return !!def && (def.experimental === true || def.id === 'homing'); }
   function tags(def) {
     var out = [];
     if (def.practice === 'attention') out.push({ text: 'attention practice', kind: 'signal' });
-    if (def.id === 'homing') out.push({ text: 'experimental', kind: 'warn' }, { text: 'larger screens', kind: null });
+    if (def.practice === 'perception') out.push({ text: 'perceptual-judgement practice', kind: 'signal' });
+    if (def.pat === true) out.push({ text: 'DAT-style', kind: null });
+    if (experimental(def)) out.push({ text: 'experimental', kind: 'warn' });
     return out;
   }
-  function tagEls(def, extra) {
-    return tags(def).concat(extra || []).map(function (t) { return h('span', { class: ['px-tag', t.kind ? 'px-tag--' + t.kind : null] }, t.text); });
+  function tagEls(def, extra, inGroup) {
+    // inGroup: a card inside the DAT-style group, whose heading already says it
+    return tags(def).filter(function (t) { return !(inGroup && t.text === 'DAT-style'); }).concat(extra || [])
+      .map(function (t) { return h('span', { class: ['px-tag', t.kind ? 'px-tag--' + t.kind : null] }, t.text); });
   }
 
   function modeName(m) { return hasOwn.call(MODES, m) ? MODES[m] : m ? m.charAt(0).toUpperCase() + m.slice(1) : 'Unknown'; }
@@ -327,9 +349,10 @@
     how.setAttribute('data-card', 'howto');
     var more = ui.button('Details', { kind: 'ghost', small: true, go: 'exercise/' + def.id });
     return h('article', { class: ['px-panel', 'px-excard'], 'data-ex': def.id, 'data-state': why === 'coming soon' ? 'soon' : why ? 'off' : 'ready' },
-      h('div.px-excard-head', PX.ui.kit.spec([e.code, e.kind, e.abilities.join(' ')]), h('span.px-excard-tags', tagEls(def, stateTags(def, lv, why, due)))),
-      h('h2.px-excard-title', name),
+      h('div.px-excard-head', PX.ui.kit.spec([e.code, e.kind, e.abilities.join(' ')]), h('span.px-excard-tags', tagEls(def, stateTags(def, lv, why, due), def.pat === true))),
+      h('h2.px-excard-title', name, NAME_TAIL[def.id] ? h('span.px-excard-tail', ' · ' + NAME_TAIL[def.id]) : null),
       e.blurb ? h('p.px-excard-blurb', e.blurb) : null,
+      CARD_NOTE[def.id] ? h('p.px-meta.px-excard-note', CARD_NOTE[def.id]) : null,
       levelBlock(def, lv),
       factsList([
         ['Path', 'stage ' + pi.stage + ' of 10' + (pi.passed ? ', ' + pi.passed + ' passed' : '')],
@@ -340,6 +363,7 @@
 
   function renderLibrary(host) {
     var rec = PX.core.store.state, now = Date.now(), list = defs();
+    var main = list.filter(function (d) { return d.pat !== true; }), pat = list.filter(function (d) { return d.pat === true; });
     var started = list.filter(function (d) { return level(rec, d, now).n > 0; }).length;
     host.appendChild(h('div.px-screen-head',
       h('p.px-screen-meta', list.length + ' training exercises · ' + (started ? started + ' started' : 'none started yet')),
@@ -347,13 +371,64 @@
       h('p.px-lead', 'Every exercise with your level, how to play it, and the ways to practise it. Tasks used to measure change are kept out of training, so they are not here.')));
     var box = PX.ui.share && PX.ui.share.challenge ? PX.ui.share.challenge.box({ className: 'px-panel px-lib-challenge' }) : null;
     if (box) host.appendChild(box);
-    var grid = h('div.px-excards');
-    list.forEach(function (def) { grid.appendChild(card(def, rec, now)); });
+    var grid = h('div.px-excards', { 'data-group': 'main' });
+    main.forEach(function (def) { grid.appendChild(card(def, rec, now)); });
     host.appendChild(grid);
+    if (pat.length) host.appendChild(patGroup(pat, rec, now));
     if (!started) {
       host.appendChild(h('p.px-lib-foot', 'New here? Today’s session picks three exercises for you. ',
         ui.button('Go to Today', { kind: 'ghost', small: true, go: 'home' })));
     }
+  }
+
+  /* ---------- the DAT-style formats (v1.1 PLAN M5; R3 §6, §8.0, §9) ---------- */
+
+  // How long a Section is here, from the engine (parts missing in this build shorten it).
+  function sectionText() {
+    var S = E().section;
+    if (!S || typeof S.shape !== 'function') return null;
+    var o = { can: function (d) { return !unavailable(d); } }; // as the Section screen counts them
+    var mini = S.shape('mini', o), full = S.shape('full', o);
+    if (!mini.items) return null;
+    return { mini: mini, full: full, text: 'a mini section of ' + mini.items + ' items in ' + S.fmtMinutes(mini.budgetMs) + ', or a full one of ' + full.items + ' items in ' + S.fmtMinutes(full.budgetMs) };
+  }
+
+  function patGroup(list, rec, now) {
+    var O = PX.ui.overlap, K = PX.ui.kit, store = PX.core.store;
+    var panel = h('div.px-panel.px-lib-pat');
+    if (O) {
+      panel.appendChild(K.toggle({
+        key: 'patFocus', label: 'PAT focus', checked: rec.settings.patFocus === true,
+        hint: 'On: these formats join Train and Today’s plan. Off: they stay here, in Free play and in Section practice.',
+        onChange: function (on) {
+          O.setFocus(store.state, on, Date.now());
+          store.save();
+          PX.bus.emit('settings', { key: 'patFocus', value: !!on });
+        },
+      }));
+    }
+    var st = sectionText();
+    if (st) {
+      var go = function (size) {
+        var b = ui.button(size === 'mini' ? 'Mini section' : 'Full section', { kind: size === 'mini' ? 'primary' : 'secondary', small: true, go: 'section?size=' + size });
+        b.setAttribute('data-section-start', size);
+        return b;
+      };
+      panel.appendChild(h('div.px-lib-section', { 'data-lib': 'section' },
+        h('h3', 'Section practice'),
+        h('p', 'The parts in the test’s order against one clock: ' + st.text + '. No feedback until a review at the end, with a show-me for every item; your levels do not change.'),
+        h('div.px-data-row', go('mini'), go('full'))));
+    }
+    panel.appendChild(h('p.px-lib-pat-use', 'These formats appear in the Perceptual Ability Test of the Dental Admission Test. ',
+      h('span.px-limit', 'Practice on a format usually raises scores on that format. Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades.')));
+    if (O) panel.appendChild(h('p.px-meta.px-overlap-legal', O.ADA));
+    var grid = h('div.px-excards', { 'data-group': 'pat' });
+    list.forEach(function (def) { grid.appendChild(card(def, rec, now)); });
+    return h('section.px-lib-group', { 'data-group': 'pat', 'aria-labelledby': 'px-lib-pat-h' },
+      h('div.px-lib-group-head',
+        h('h2', { id: 'px-lib-pat-h' }, 'DAT-style formats'),
+        h('p.px-lead', 'Practice in the six question formats of the Perceptual Ability Test (PAT) of the Dental Admission Test (DAT®). Every item is generated by Parallax.')),
+      panel, grid);
   }
 
   /* ---------- one exercise ---------- */
@@ -394,10 +469,14 @@
     var best = rec.ex && rec.ex[def.id] && rec.ex[def.id].best && rec.ex[def.id].best.block;
     host.appendChild(h('div.px-screen-head.px-ex-head',
       h('p.px-screen-meta', PX.ui.kit.spec([e.code, e.kind, e.abilities.join(' ')])),
-      h('h1', e.name, ' ', h('span.px-ex-tags', tagEls(def, stateTags(def, lv, why, null)))),
+      h('h1', e.name, NAME_TAIL[def.id] ? h('span.px-ex-tail', ' · ' + NAME_TAIL[def.id]) : null, ' ', h('span.px-ex-tags', tagEls(def, stateTags(def, lv, why, null)))),
       h('p.px-lead', (L && L.goal) || e.blurb)));
     if (def.practice === 'attention') host.appendChild(h('p.px-notice.px-ex-note', PX.ui.kit.icon('about'), h('span', 'Track is attention practice: it trains following several moving objects at once, which relates to attention and working memory rather than to visuospatial ability, and evidence that its gains carry over to other tasks is weak.')));
-    if (def.id === 'homing') host.appendChild(h('p.px-notice.px-ex-note', PX.ui.kit.icon('about'), h('span', 'Homing is experimental: its item model is new and untested, and it works best on a larger screen held at a steady distance.')));
+    if (def.practice === 'perception' && L && L.labelLine) host.appendChild(h('p.px-notice.px-ex-note', PX.ui.kit.icon('about'), h('span', L.labelLine)));
+    if (experimental(def)) host.appendChild(h('p.px-notice.px-ex-note', PX.ui.kit.icon('about'), h('span', EXPERIMENTAL[def.id] || def.short + ' is experimental: its item model is new and untested.')));
+    var adaBelow = !!(L && typeof L.bridge === 'string' && /American Dental Association/.test(L.bridge)); // the bridge carries the ADA line
+    var ov = PX.ui.overlap ? PX.ui.overlap.noteNode(def.id, 'px-notice px-ex-note', { legal: !adaBelow }) : null;
+    if (ov) host.appendChild(ov);
     if (why) host.appendChild(h('p.px-notice.px-notice--warn.px-ex-note', PX.ui.kit.icon('warn'), h('span', why === 'coming soon' ? 'This exercise is coming soon: its screen is still being built. Your level and its settings below are already kept.' : why)));
 
     var top = h('div.px-ex-top');
@@ -433,7 +512,7 @@
 
     if (L && L.bridge) {
       var lim = /not been shown|not been studied|little or no|not established/i.test(L.bridge) ? null : h('p.px-limit', LIMIT);
-      host.appendChild(section(def.practice === 'attention' ? 'Where this skill is used' : 'Where spatial thinking is used', [h('p', L.bridge), lim], { 'data-section': 'bridge' }));
+      host.appendChild(section(def.practice === 'attention' || def.practice === 'perception' ? 'Where this skill is used' : 'Where spatial thinking is used', [h('p', L.bridge), lim], { 'data-section': 'bridge' }));
     }
     if (L && L.offscreen) {
       var o = L.offscreen;

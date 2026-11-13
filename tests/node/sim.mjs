@@ -205,8 +205,11 @@ function checkStats(PX, L, rec, res, S) {
 function finishLearner(PX, run, rec, L, S, passLog, favs, display) {
   const E = PX.engine, end = T0 + DAYS * DAY;
   S.learners++;
-  // Answered items only: a voided Daily item is shown again with its own (shared) seed.
-  const seeds = rec.trials.filter((r) => r[5] === 0 || r[5] === 1).map((r) => r[4]);
+  // Answered training items only: a voided Daily item is shown again with its own (shared) seed,
+  // and a Daily replay (practice) repeats the day's shared seeds by design; since v1.1 the Daily
+  // follows the local date, so evening sessions can replay it.
+  const dailyIdx = (rec.idx && rec.idx.mode || []).indexOf('daily');
+  const seeds = rec.trials.filter((r) => (r[5] === 0 || r[5] === 1) && r[2] !== dailyIdx).map((r) => r[4]);
   S.dupSeeds += seeds.length - new Set(seeds).size;
   const trainDefs = PX.ex.list('train');
   const practised = trainDefs.filter((d) => E.schedule.totals(rec, d).n > 0).length;
@@ -317,7 +320,7 @@ function report(run, S, secs) {
     out.push('  composite outcome at the end: ' + Object.entries(S.check.outcomes).map(([k, v]) => `${k} ${pct(v / S.learners)} %`).join(', '));
     if (!run.transfer && !run.misspec) check((S.check.outcomes['beyond familiarity'] || 0) / S.learners <= 0.05, `${run.id}: "beyond familiarity" in at most 5 % of learners without transfer`);
   }
-  if (S.guardKept) out.push(`  store guard round trip: engine fields kept ${S.guardKept.engineFields}; trial columns kept ${S.guardKept.trialColumns} of 10; probe rtMed kept ${S.guardKept.assessRtMed}; id@version names kept ${S.guardKept.idxNames}`);
+  if (S.guardKept) out.push(`  store guard round trip: engine fields kept ${S.guardKept.engineFields}; trial columns kept ${S.guardKept.trialColumns} of 12; probe rtMed kept ${S.guardKept.assessRtMed}; id@version names kept ${S.guardKept.idxNames}`);
   return { text: out.join('\n'), hard };
 }
 

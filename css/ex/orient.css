@@ -108,3 +108,32 @@
   .ex-orient .ex-orient-note { flex: 1 1 100%; }
   .ex-orient .ex-orient-q { font-size: var(--fs-sm, 0.875rem); }
 }
+
+/* Phones in the player (css/play.css sets --pl-avail and --pl-w): the question, the map and the
+   circle share one screen. Sideways: the map on the left at full height; the question, the
+   circle and its controls on the right. */
+@media (max-width: 719px) {
+  .pl-trial.ex-orient .ex-orient-body { row-gap: var(--s2); }
+  .pl-trial.ex-orient .ex-orient-q { line-height: 1.45; }
+  .pl-trial.ex-orient .ex-orient-stage { max-width: min(100%, calc(var(--pl-avail) - 17.5rem)); }
+  .pl-trial.ex-orient .ex-orient-dialbox { width: min(54vw, calc(var(--pl-avail) * 0.33), 16rem); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-orient .ex-orient-body {
+    grid-template-columns: var(--pl-avail) minmax(0, 1fr); grid-template-areas: "map q" "map side"; grid-template-rows: auto 1fr;
+    justify-content: start; justify-items: stretch; column-gap: var(--s4); row-gap: var(--s2);
+  }
+  .pl-trial.ex-orient .ex-orient-stage { width: var(--pl-avail); max-width: none; }
+  .pl-trial.ex-orient .ex-orient-q { font-size: var(--fs-sm); line-height: 1.45; }
+  .pl-trial.ex-orient .ex-orient-side { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; }
+  .pl-trial.ex-orient .ex-orient-dialbox { flex: none; width: min(calc(var(--pl-avail) - 5rem), 14rem); max-width: none; margin: 0; }
+  .pl-trial.ex-orient .ex-orient-ctl { flex: 1 1 0; min-width: 0; }
+  .pl-trial.ex-orient .ex-orient-note { flex: 1 1 100%; }
+}
+
+/* Labels never under 13 px on the screen, also on a small map or circle: the view sets --px-u
+   (the drawing's units per CSS px) on each SVG; a large drawing keeps its sizes above. */
+.ex-orient .ex-orient-name, .ex-orient .ex-orient-angle { font-size: max(3.6px, calc(13px * var(--px-u, 0))); }
+.ex-orient .ex-orient-badge { font-size: max(2.9px, calc(13px * var(--px-u, 0))); }
+.ex-orient .ex-orient-dial-name { font-size: max(7px, calc(13px * var(--px-u, 0))); }
+.ex-orient .ex-orient-dial-side { font-size: max(6.5px, calc(13px * var(--px-u, 0))); }

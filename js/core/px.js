@@ -3,7 +3,7 @@
 (function (win) {
   'use strict';
   var PX = win.PX || {};
-  PX.version = '1.0.0';
+  PX.version = '1.1.0';
   PX.core = PX.core || {};
   PX.engine = PX.engine || {};
   PX.ex = PX.ex || {};

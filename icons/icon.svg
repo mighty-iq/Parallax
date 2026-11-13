@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Parallax app icon (CC BY-SA 4.0 with the guide; MIT with the code): the header mark on the
+       drafting-paper ground with its measurement grid. The mark sits inside the central 60 %,
+       so the same drawing also serves as a maskable icon. -->
+  <defs>
+    <pattern id="minor" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path d="M16 0H0V16" fill="none" stroke="#0B6A86" stroke-opacity="0.07" stroke-width="1"/>
+    </pattern>
+    <pattern id="major" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#0B6A86" stroke-opacity="0.14" stroke-width="1.5"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" fill="#F2F4F3"/>
+  <rect width="512" height="512" fill="url(#minor)"/>
+  <rect width="512" height="512" fill="url(#major)"/>
+  <g transform="translate(96 96) scale(13.333)">
+    <path d="M3.5 8.5 9.5 3.5M14.5 8.5l6-5M14.5 19.5l6-5" fill="none" stroke="#5D646C" stroke-width="1.1" stroke-linecap="round"/>
+    <rect x="9.5" y="3.5" width="11" height="11" fill="none" stroke="#0B6A86" stroke-width="1.5" stroke-dasharray="2.2 1.8"/>
+    <rect x="3.5" y="8.5" width="11" height="11" fill="#F2F4F3" stroke="#1A1D21" stroke-width="1.5"/>
+  </g>
+</svg>

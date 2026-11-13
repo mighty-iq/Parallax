@@ -6,8 +6,9 @@
              (default: what the app shows), label (replaces the kind's label, e.g. 'Daily #12'),
              marks: [1, 0, …] (a row of right/wrong squares, Daily), ruler: { value, lo, hi } (level) }
      Every card carries "Parallax" and "Built by the Chimera community · discord.gg/chmr".
-   open(opts) → close    the share sheet: the card as a picture, the size, Download PNG (blocked
-     in sandboxed previews, which then say how to save the picture), Copy text, and the Chimera
+   open(opts) → close    the share sheet: the card as a picture, the size, Share… (the device's own
+     share sheet with the picture and the text, where Web Share with files exists), Download PNG
+     (blocked in sandboxed previews, which then say how to save the picture), Copy text, and the Chimera
      Discord link with its address and Copy. opts as card(), plus text (the text to copy; default
      title, lines, footer and the Chimera line) and filename.
    text(opts) → the text a card stands for (cards are pictures; the sheet always offers the text).
@@ -244,18 +245,31 @@
     });
   }
 
+  // The phone's own share sheet (Web Share with files: Safari 15+, Chrome on Android and some
+  // desktops), with Discord in it; never in a sandboxed preview, where it is blocked.
+  function canShareFiles() {
+    try {
+      var n = window.navigator;
+      if (sandboxed() || !n || typeof n.share !== 'function' || typeof n.canShare !== 'function' || typeof window.File !== 'function') return false;
+      return !!n.canShare({ files: [new window.File([new window.Blob(['x'], { type: 'image/png' })], 'parallax.png', { type: 'image/png' })] });
+    } catch (e) { return false; }
+  }
+
   function open(opts) {
     var o = opts || {}, K = PX.ui.kit, C = PX.ui.chimera;
-    var size = o.size === 'square' ? 'square' : 'wide', canvas = null, close = null;
+    var size = o.size === 'square' ? 'square' : 'wide', canvas = null, close = null, file = null;
     var body = text(o);
     var filename = o.filename || ('parallax-' + (o.kind || 'card') + '-' + PX.util.fmtDate(Date.now()) + '.png');
     var img = h('img.px-share-img', { alt: body.replace(/\n/g, '. '), width: SIZES[size][0], height: SIZES[size][1] });
     var fig = h('div.px-share-fig', { 'data-size': size, 'aria-busy': 'true' }, img);
     var status = h('p.px-meta.px-share-status', { role: 'status', 'aria-live': 'polite' });
+    var shareable = canShareFiles();
+    function pngName() { return filename.replace(/\.png$/, '') + (size === 'square' ? '-square' : '') + '.png'; }
 
     function render() {
       fig.setAttribute('aria-busy', 'true');
       fig.setAttribute('data-size', size);
+      file = null;
       return card({ title: o.title, lines: o.lines, footer: o.footer, kind: o.kind, size: size, theme: o.theme, label: o.label, marks: o.marks, ruler: o.ruler })
         .then(function (cv) {
           canvas = cv;
@@ -263,6 +277,10 @@
           img.width = cv.width; img.height = cv.height;
           fig.setAttribute('aria-busy', 'false');
           fig.setAttribute('data-ready', '1');
+          // The file is made now, so a tap on Share calls the share sheet at once (it needs the tap's activation).
+          if (shareable && cv.toBlob) {
+            try { cv.toBlob(function (blob) { if (blob && canvas === cv) file = new window.File([blob], pngName(), { type: 'image/png' }); }, 'image/png'); } catch (e) { file = null; }
+          }
           return cv;
         }, function (e) {
           fig.setAttribute('aria-busy', 'false');
@@ -279,16 +297,34 @@
     });
     var parts = [fig, sizes];
     if (!sandboxed()) {
-      var dl = ui.button('Download PNG', { kind: 'primary' });
+      var row = h('div.px-data-row.px-share-actions');
+      if (shareable) {
+        var sh = ui.button('Share…', { kind: 'primary', ariaLabel: 'Share the picture and the text' });
+        sh.setAttribute('data-share', 'native');
+        sh.addEventListener('click', function () {
+          if (!file) { status.textContent = 'The picture is still being drawn. Try again in a moment.'; return; }
+          var data = { files: [file], title: o.title || 'Parallax', text: body };
+          try { if (!window.navigator.canShare(data)) data = { title: data.title, text: body }; } catch (e) { data = { title: data.title, text: body }; }
+          var p;
+          try { p = window.navigator.share(data); } catch (e) { p = Promise.reject(e); }
+          Promise.resolve(p).then(function () { status.textContent = 'Shared.'; }, function (e) {
+            status.textContent = e && e.name === 'AbortError' ? '' : 'Sharing did not work here. Download the picture or copy the text below.';
+          });
+        });
+        row.appendChild(sh);
+      }
+      var dl = ui.button('Download PNG', { kind: shareable ? 'secondary' : 'primary' });
       dl.setAttribute('data-share', 'download');
       dl.addEventListener('click', function () {
-        (canvas ? Promise.resolve(canvas) : render()).then(function (cv) { return savePng(cv, filename.replace(/\.png$/, '') + (size === 'square' ? '-square' : '') + '.png'); })
+        (canvas ? Promise.resolve(canvas) : render()).then(function (cv) { return savePng(cv, pngName()); })
           .then(function (ok) {
             status.textContent = ok ? 'Downloading the picture. Check your downloads folder.' :
               'The download was refused here. Right-click or long-press the picture to save it, or copy the text below.';
           });
       });
-      parts.push(h('div.px-data-row.px-share-actions', dl, status));
+      row.appendChild(dl);
+      row.appendChild(status);
+      parts.push(row);
     } else {
       parts.push(h('div.px-notice.px-notice--warn', K.icon('warn'),
         h('span', 'Downloads are blocked in this preview. Right-click or long-press the picture to save it, or copy the text below.')));

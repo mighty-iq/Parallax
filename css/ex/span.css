@@ -88,3 +88,21 @@
 @media (max-width: 40rem) {
   .ex-span .ex-span-stage, .ex-span .ex-span-phase { width: min(100%, 58vh); }
 }
+
+/* Phones in the player (css/play.css sets --pl-avail and --pl-w): the board as large as the
+   screen allows above its buttons. Sideways: the board on the left at full height; the phase
+   line, the taps so far, the buttons and the hint on the right. */
+@media (max-width: 719px) {
+  .pl-trial.ex-span .ex-span-stage, .pl-trial.ex-span .ex-span-phase { width: min(100%, 30rem, calc(var(--pl-avail) - 7.5rem)); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-span .ex-span-stem {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr;
+    align-items: start; justify-items: start; gap: var(--s2) var(--s4);
+  }
+  .pl-trial.ex-span .ex-span-stage { grid-column: 1; grid-row: 1 / -1; width: var(--pl-avail); }
+  .pl-trial.ex-span .ex-span-stem > :not(.ex-span-stage) { grid-column: 2; }
+  .pl-trial.ex-span .ex-span-phase { width: auto; }
+  .pl-trial.ex-span .ex-span-actions { width: 100%; }
+  .pl-trial.ex-span .ex-span-hint { text-align: left; }
+}

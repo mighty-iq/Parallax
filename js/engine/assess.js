@@ -259,7 +259,17 @@
     });
     if (!Object.keys(results).length) return;
     if (!isArray(rec.assess)) rec.assess = [];
-    rec.assess.push({ date: new Date(now).toISOString(), form: plan.check.form, kind: plan.check.kind, results: results });
+    var entry = { date: new Date(now).toISOString(), form: plan.check.form, kind: plan.check.kind, results: results };
+    // Extras the screen collected (v1.1: display, viewport and input of the check; the one-tap
+    // overlap answer): plain JSON values only, never over the fields above.
+    var extra = plan.check.extra;
+    if (isObj(extra)) Object.keys(extra).forEach(function (k) {
+      var v = extra[k];
+      if (hasOwn.call(entry, k) || k === '__proto__' || k === 'constructor' || k === 'prototype' || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k)) return;
+      if (v === null || typeof v === 'string' || typeof v === 'boolean' || isNum(v)) entry[k] = typeof v === 'string' ? v.slice(0, 200) : v;
+      else if (isObj(v) || isArray(v)) { try { entry[k] = JSON.parse(JSON.stringify(v)); } catch (e) { /* not JSON: dropped */ } }
+    });
+    rec.assess.push(entry);
     res.check = { kind: plan.check.kind, form: plan.check.form, results: results, report: report(rec, now) };
   }
 

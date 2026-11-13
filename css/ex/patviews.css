@@ -1,0 +1,87 @@
+/* PAT-2 Missing View (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-patviews; tokens from
+   css/base.css with fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict,
+   .ex-tag, .ex-opt, .ex-focus) come from css/ex.css. The stem is one SVG in px (third-angle layout),
+   the options are SVGs in units with non-scaling strokes. Solid = seen edge, dotted = hidden edge:
+   a shape difference, never colour alone. */
+.ex-patviews .pv-stem { width: 100%; }
+.ex-patviews .pv-stage { width: 100%; height: clamp(12rem, min(44vh, 74vw), 22rem); }
+.ex-patviews .pv-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.ex-patviews .pv-fill { fill: var(--stim-face-2, #C9CED3); fill-opacity: 0.5; }
+.ex-patviews .pv-line { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.ex-patviews .pv-solid { stroke-linecap: square; }
+.ex-patviews .pv-dot { stroke-dasharray: 4 3.5; stroke-linecap: butt; stroke-width: 2px; }
+.ex-patviews .pv-label {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 12px; letter-spacing: 0.08em;
+  text-transform: uppercase; fill: var(--ink-3, #5D646C); text-anchor: middle; dominant-baseline: central;
+}
+.ex-patviews .pv-label--miss { fill: var(--signal, #0B6A86); font-weight: 600; }
+.ex-patviews .pv-slot-frame {
+  fill: none; stroke: var(--signal, #0B6A86); stroke-width: 1.5px; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke;
+}
+.ex-patviews .pv-q {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 26px; font-weight: 600;
+  fill: var(--signal, #0B6A86); text-anchor: middle; dominant-baseline: central;
+}
+.ex-patviews .pv-mitre { fill: none; stroke: var(--ink-3, #5D646C); stroke-width: 1px; stroke-opacity: 0.35; stroke-dasharray: 2 4; }
+.ex-patviews .pv-given.is-pointed .pv-fill,
+.ex-patviews .pv-slot.is-pointed .pv-slot-frame { fill: var(--stim-target, #0B6A86); fill-opacity: 0.12; }
+.ex-patviews .pv-given.is-pointed .pv-label,
+.ex-patviews .pv-slot.is-pointed .pv-label { fill: var(--signal, #0B6A86); }
+
+/* Show me: projection lines (thin, dashed long), the traced key, highlights, the laid-over pick and
+   the lines that differ (thick dots: a shape as well as a colour), the isometric structure. */
+.ex-patviews .pv-proj { fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 1px; stroke-dasharray: 9 4; stroke-opacity: 0.7; }
+.ex-patviews .pv-trace { stroke: var(--stim-target, #0B6A86); stroke-width: 2.5px; }
+.ex-patviews .pv-trace.pv-hl { stroke-width: 3.5px; }
+.ex-patviews .pv-cover { fill: var(--stim-ground, #F7F8F7); fill-opacity: 0.92; }
+.ex-patviews .pv-picked .pv-fill { fill: var(--wrong, #B33A2F); fill-opacity: 0.08; }
+.ex-patviews .pv-picked .pv-line { stroke: var(--ink-2, #454B52); }
+.ex-patviews .pv-diff {
+  fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 6px; stroke-dasharray: 1 7; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.ex-patviews .pv-ghost {
+  fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-dasharray: 7 4; stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+
+.ex-patviews .pv-under {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem);
+}
+.ex-patviews .pv-under .ex-caption { flex: 1 1 14rem; min-width: 0; }
+.ex-patviews .pv-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+.ex-patviews .pv-verdict[data-kind="key"],
+.ex-patviews .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
+.ex-patviews .ex-tag[data-kind="foil"] { color: var(--ink-2, #454B52); border-style: dashed; }
+
+/* Options: four in a row on wide screens, 2 × 2 on narrow ones; each drawing at the stem's scale
+   (max-width set by the view) and never taller than the cell allows. */
+.ex-patviews .px-choice { padding: var(--s2, 0.5rem); }
+.ex-patviews .pv-opt-cell { flex-direction: column; gap: var(--s1, 0.25rem); }
+.ex-patviews .pv-opt-svg { display: block; width: 100%; height: auto; max-height: 9.5rem; margin: 0 auto; overflow: visible; }
+
+@media (max-width: 40rem) {
+  .ex-patviews .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; }
+  .ex-patviews .pv-stage { height: clamp(11rem, min(36vh, 64vw), 16rem); }
+  .ex-patviews .pv-opt-svg { max-height: 6.25rem; }
+  .ex-patviews .px-choice { padding: var(--s1, 0.25rem); }
+}
+.ex-patviews .pv-slot.is-filled .pv-q { display: none; }
+
+/* Phones in the player (B2's contract; css/play.css sets --pl-avail, --pl-w, --pl-col): the stem
+   keeps at least 11rem, the 2 × 2 drawings take the rest; tags sit over the cell's foot. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-patviews { --pv-cell: min(calc((var(--pl-w) - var(--s2)) / 2), calc((var(--pl-avail) - 11rem - 2.5rem - 2 * var(--s2)) / 2)); }
+  .pl-trial.ex-patviews .px-choices { --px-cols: 2 !important; }
+  .pl-trial.ex-patviews .pv-stage { height: min(16rem, calc(var(--pl-w) * 0.78), calc(var(--pl-avail) - 2 * var(--pv-cell) - 2.5rem - 2 * var(--s2))); }
+  .pl-trial.ex-patviews .px-choice { height: var(--pv-cell); padding: var(--s1); }
+  .pl-trial.ex-patviews .px-choice .ex-opt { position: relative; }
+  .pl-trial.ex-patviews .pv-opt-svg { width: calc(var(--pv-cell) - 1.25rem); max-height: calc(var(--pv-cell) - 1.5rem); max-width: 100%; }
+  .pl-trial.ex-patviews .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+  .pl-trial.ex-patviews .pv-label { font-size: 13px; }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-patviews { --pv-cell: min(calc((var(--pl-col) - var(--s2)) / 2), calc((var(--pl-avail) - var(--s2)) / 2)); }
+  .pl-trial.ex-patviews .pv-stage { height: calc(var(--pl-avail) - 2.5rem); }
+}

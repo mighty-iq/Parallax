@@ -181,8 +181,27 @@
     st.desc.textContent = describe(item);
     PX.ui.clear(st.holder);
     st.holder.appendChild(stemPicture(item));
+    fitLabels(st.holder.firstChild);
     timerStart(item);
     return timing.nextPaint();
+  }
+
+  // Phones: the specimen labels keep 13 px on the screen. A small drawing gets larger labels, and
+  // the strip above the figures grows when they need it (the figures and their spacing stay as
+  // they are). Read before the first frame, never during the stimulus.
+  function fitLabels(svg) {
+    try {
+      var vb0 = svg.viewBox.baseVal, x = vb0.x, y = vb0.y, w = vb0.width, h0 = vb0.height, fs = 0.17;
+      for (var k = 0; k < 3; k++) {
+        var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+        if (!r.width || !r.height) return;
+        fs = Math.max(0.17, 13 / Math.min(r.width / vb.width, r.height / vb.height));
+        var grow = Math.max(0, 0.8 * fs - 0.23);
+        if (Math.abs(vb.height - (h0 + grow)) < 1e-3) break;
+        svg.setAttribute('viewBox', [x, y - grow, w, h0 + grow].join(' '));
+      }
+      if (fs > 0.17) Array.prototype.forEach.call(svg.querySelectorAll('.lv-fig-label'), function (t) { t.style.fontSize = fs.toFixed(3) + 'px'; });
+    } catch (e) { /* the labels keep their drawing size */ }
   }
 
   /* ---------- reveal (development; the Check shows nothing), ≤ 700 ms ---------- */

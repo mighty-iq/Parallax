@@ -25,6 +25,9 @@
 .pl-hud-bar .px-bar { height: 0.375rem; }
 .pl-tag { font-size: 0.6875rem; }
 
+/* the goal and the tip (one container, .pl-guide; on phones behind Help during items) */
+.pl-guide { display: flex; flex-direction: column; gap: var(--s3); }
+.pl-guide:not(:has(> :not([hidden]))) { display: none; }
 .pl-goal { font-size: var(--fs-md); color: var(--ink); max-width: var(--measure); }
 .pl-tip {
   display: flex; gap: var(--s2); align-items: baseline; max-width: var(--measure);
@@ -230,39 +233,158 @@
 .pl-keylist li { display: grid; grid-template-columns: 4.5rem 1fr; align-items: center; gap: var(--s3); }
 .pl-keylist .px-kbd { justify-self: start; opacity: 1; }
 .pl-howto-goal { color: var(--ink); font-size: var(--fs-lg); }
+.pl-howto-note { padding: var(--s2) var(--s3); border-left: 3px solid var(--signal); background: var(--signal-wash); font-size: var(--fs-sm); color: var(--ink-2); }
+.pl-howto-note > p + p { margin-top: var(--s2); }
+.pl-howto-note b { color: var(--ink); }
 .pl-howto-h { margin-top: var(--s4); font-size: var(--fs-md); }
 .pl-strategy + .pl-strategy { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--rule); }
 .pl-strategy h3 { font-size: var(--fs-md); color: var(--ink); }
 .pl-strategy ol { margin: var(--s2) 0 0; padding-left: 1.25rem; }
 .pl-strategy li + li { margin-top: var(--s1); }
 
-@media (max-width: 599px) {
-  /* phones: the label and Pause share the first row, the count sits under them; key hints and
-     the Keys button give way (the keys still work), and while a solution plays the reading
-     strip flows under the item instead of covering the options */
-  .pl-hud-row { gap: var(--s1) var(--s2); }
-  .pl-hud-id { flex: 1 1 0; }
-  .pl-hud-meta { order: 3; flex-basis: 100%; white-space: normal; }
-  .pl-hud-tools [data-help] { display: none; }
-  .pl-player .px-kbd { display: none; }
-  .pl-player[data-state="showme"] .pl-feedback { position: static; box-shadow: none; }
-  /* ...but its controls (Pause, Step, Replay, Close) stay at the bottom of the window */
-  .pl-player[data-state="showme"] { padding-bottom: 4.5rem; }
-  .pl-player[data-state="showme"] .pl-showme-buttons {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-    padding: var(--s2) var(--gutter) calc(var(--s2) + env(safe-area-inset-bottom, 0px));
-    background: var(--surface); border-top: 1px solid var(--rule); box-shadow: 0 -10px 24px -18px rgba(26, 29, 33, 0.35);
+/* touch screens: key hints and the Keys button give way (a keyboard, when there is one, still
+   works); by pointer, not by width, so a phone held sideways loses them too */
+@media (hover: none) and (pointer: coarse) {
+  .pl-screen .px-kbd { display: none; }
+  .pl-hud-tools [data-help], .pl-hud-keys { display: none; }
+  .pl-howto-keys { display: none; }
+}
+
+/* =====================================================================================
+   Phones (PLAN M2; docs/research/v1.1/I2-mobile-audit.md §11). A phone is narrower than
+   720 px (the tab-bar tier), or at most 500 px tall when held sideways.
+   While an item is up (body.px-item, set by the player) a phone shows the item alone, on one
+   screen that does not scroll: the app header and the storage banner step aside (the Discord
+   link stays in the header outside items, in the More sheet, the footer and About), the status
+   strip keeps to one 44 px row with the progress ruler as its lower edge, the goal and the tip
+   wait behind Help (.pl-guide; .pl-guide-open on the player shows it), demo and show-me
+   captions sit in the pinned bar, and every exercise sizes its figure and its options from
+   --pl-avail, the height left for the item (css/ex.css, css/ex/<id>.css, under .pl-trial.ex-<id>).
+   --pl-avail = screen − 8 px above the strip − the strip (44 + 4 px) − 8 px under it − 8 px at
+   the bottom − the safe-area insets. --pl-w is the width of the item.
+   ===================================================================================== */
+:root { --pl-vh: 100vh; }
+@supports (height: 100dvh) { :root { --pl-vh: 100dvh; } }
+/* No pull-to-refresh or overscroll bounce while a session runs (Chrome; iOS Safari ignores it,
+   which is why the item screen itself does not scroll). */
+:root[data-chrome="focus"], :root[data-chrome="focus"] body { overscroll-behavior-y: none; }
+.pl-notice-slot:empty { display: none; }
+
+@media (max-width: 719px), (max-height: 500px) {
+  :root {
+    --pl-avail: calc(var(--pl-vh) - var(--tap) - 0.25rem - 3 * var(--s2) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    --pl-w: calc(100vw - 2 * max(var(--gutter), env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)));
   }
-  .pl-showme-buttons { width: 100%; }
-  .pl-showme-buttons .px-btn { flex: 1 1 auto; padding-left: var(--s2); padding-right: var(--s2); }
+  body.px-item .px-header, body.px-item .px-banner { display: none; }
+  :root body.px-item .px-main > .px-wrap {
+    padding-top: calc(var(--s2) + env(safe-area-inset-top, 0px)); padding-bottom: calc(var(--s2) + env(safe-area-inset-bottom, 0px));
+  }
+  body.px-item .pl-player { gap: var(--s2); }
+  body.px-item .pl-session-line { display: none; } /* Today showed the plan; the item needs the room */
+
+  /* the status strip: name over count on the left, Help and Pause on the right, the ruler under them */
+  .pl-hud { padding-bottom: 0; border-bottom: 0; }
+  .pl-hud-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "id tools" "meta tools";
+    align-content: center; align-items: center; gap: 0 var(--s2); min-height: var(--tap);
+  }
+  .pl-hud-id { grid-area: id; flex-wrap: nowrap; gap: var(--s2); min-width: 0; overflow: hidden; white-space: nowrap; }
+  .pl-hud-id .px-spec { flex-wrap: nowrap; font-size: var(--fs-sm); line-height: 1.3; }
+  .pl-hud-id .px-spec > :not(:nth-child(3)) { display: none; } /* the exercise's name; its code and abilities are on its cards */
+  .pl-hud-id .px-spec > :nth-child(3) { color: var(--ink); font-weight: 500; }
+  .pl-hud-text { font-size: var(--fs-sm); line-height: 1.3; }
+  .pl-tag { font-size: 0.8125rem; line-height: 1.3; }
+  .pl-hud-meta { grid-area: meta; font-family: var(--font-sans); font-size: 0.8125rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; }
+  .pl-hud-tools { grid-area: tools; gap: var(--s1); }
+  .pl-hud-tools .px-btn--small { padding-left: 0.625rem; padding-right: 0.625rem; }
+  .pl-hud-tools [data-help], .pl-hud-keys { display: none; }
+  .pl-hud-bar { margin-top: 0; }
+  .pl-hud-bar .px-bar { height: 0.25rem; }
+  .pl-player .px-kbd { display: none; }
+
+  /* the goal and the tip: behind Help on phones; Watch, Try, Go shows them (it is the tutorial) */
+  body.px-item .pl-player:not(.pl-guide-open) > :is(.pl-guide, .pl-goal, .pl-tip) { display: none; }
+  .is-wtg .pl-player:not(.pl-guide-open) > .pl-guide:not([hidden]),
+  .is-wtg .pl-player:not(.pl-guide-open) > .pl-goal:not([hidden]),
+  .is-wtg .pl-player:not(.pl-guide-open) > .pl-tip:not([hidden]) { display: flex; flex-direction: column; }
+  .is-wtg .pl-player:not(.pl-guide-open) > .pl-tip:not([hidden]) { flex-direction: row; }
+  .is-wtg .pl-hud-guide { display: none; }
+  .pl-guide { display: flex; flex-direction: column; gap: var(--s2); }
+  .pl-goal { font-size: var(--fs-sm); }
+
+  /* the item */
+  .pl-trial { gap: var(--s2); }
+  .pl-trial .px-choices { gap: var(--s2); }
+  .pl-trial .px-choice { min-height: 3.5rem; -webkit-touch-callout: none; }
+  .pl-trial .ex-caption:empty { display: none; } /* captions show in the pinned bar while they play */
+  .pl-confirm { flex-wrap: nowrap; gap: var(--s3); }
+  .pl-confirm-text { flex: 1 1 auto; min-width: 0; }
+  .pl-confirm .px-btn { flex: 0 0 auto; min-width: 9rem; }
+
+  /* the reading strip spans the screen; while a solution plays it flows under the item, and its
+     controls (Pause, Step, Replay, Close) and the caption stay pinned to the bottom */
   .pl-feedback { margin: 0 calc(-1 * var(--gutter)); border-left: 0; border-right: 0; border-radius: 0; }
   .pl-actions { width: 100%; }
   .pl-actions .px-btn--primary { flex: 1 1 auto; }
-  .pl-wtg-step { padding: 0 var(--s2); }
+  .pl-player[data-state="showme"] .pl-feedback { position: static; box-shadow: none; }
+  .pl-player[data-state="showme"] { padding-bottom: 10rem; }
+  .pl-player[data-state="showme"] .pl-showme-buttons {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    padding: var(--s2) var(--gutter) calc(var(--s2) + env(safe-area-inset-bottom, 0px));
+    padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+    background: var(--surface); border-top: 1px solid var(--rule); box-shadow: 0 -10px 24px -18px rgba(26, 29, 33, 0.35);
+  }
+  .pl-player[data-state="showme"] .pl-trial .ex-caption:not(:empty),
+  .pl-player[data-state="showme"] .pl-showme .pl-caption:not(:empty) {
+    position: fixed; left: 0; right: 0; z-index: 31;
+    bottom: calc(var(--tap) + 2 * var(--s2) + 1px + env(safe-area-inset-bottom, 0px));
+    width: auto; max-height: 40vh; margin: 0; overflow: auto;
+    padding: var(--s2) max(var(--gutter), env(safe-area-inset-right, 0px)) var(--s1) max(var(--gutter), env(safe-area-inset-left, 0px));
+    background: var(--surface); border-top: 1px solid var(--rule);
+    font-size: var(--fs-sm); line-height: 1.4; color: var(--ink);
+  }
+  .pl-showme-buttons { width: 100%; flex-wrap: nowrap; }
+  .pl-showme-buttons .px-btn { flex: 1 1 auto; min-width: 0; padding-left: var(--s2); padding-right: var(--s2); }
+  /* a demo has no verdict yet: with its caption and controls pinned, the strip has nothing left to show */
+  .pl-player[data-state="showme"] .pl-feedback:has(> .pl-feedback-main > .pl-verdict:empty) { padding: 0; border: 0; background: none; }
+  .pl-player[data-state="showme"] .pl-feedback:has(> .pl-feedback-main > .pl-verdict:empty) .pl-showme { margin: 0; padding: 0; border: 0; }
   .pl-card-actions .px-btn { flex: 1 1 auto; }
+
+  /* Watch, Try, Go: one row of steps (the current one named) and tools, one line of text; the
+     labelled parts fold behind "Parts" */
+  .pl-wtg { gap: var(--s1); padding-bottom: var(--s1); }
+  .pl-wtg-top { flex-wrap: nowrap; gap: var(--s2); }
+  .pl-wtg-step { padding: 0 var(--s2); }
+  .pl-wtg-step:not(.is-current) .pl-wtg-name { display: none; }
+  .pl-wtg-tools { flex-wrap: nowrap; gap: 0; }
+  .pl-wtg-tools .px-btn--small { padding-left: var(--s2); padding-right: var(--s2); }
+  .pl-wtg-text { font-size: var(--fs-sm); }
+  .pl-wtg:not(.is-parts-open) .pl-parts { display: none; }
+  .pl-wtg.is-parts-open .pl-parts { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
+}
+@media (min-width: 720px) and (min-height: 501px) { .pl-parts-btn { display: none; } }
+/* Phones held sideways: the stimulus on the left at full height, the answers on the right
+   (I2 §8). --pl-col is the width of one column. Views with their own controls (Orient, Span,
+   Track, Patterns…) lay out their two columns in css/ex/<id>.css. */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  :root { --pl-col: calc((var(--pl-w) - var(--s4)) / 2); }
+  body.px-item .pl-trial:has(> .pl-grid > .px-choices) {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
+    align-items: start; gap: 0 var(--s4); /* no row gaps: a hidden Confirm or deadline bar must not leave one */
+  }
+  body.px-item .pl-trial:has(> .pl-grid > .px-choices) > .pl-host { grid-column: 1; grid-row: 1 / -1; }
+  body.px-item .pl-trial:has(> .pl-grid > .px-choices) > .pl-grid { grid-column: 2; grid-row: 1; }
+  body.px-item .pl-trial:has(> .pl-grid > .px-choices) > .pl-confirm { grid-column: 2; grid-row: 2; margin-top: var(--s2); }
+  body.px-item .pl-trial:has(> .pl-grid > .px-choices) > .pl-limit { grid-column: 2; grid-row: 3; margin-top: var(--s2); }
+  /* four options in two rows of two, whatever the exercise asks for on a wide screen */
+  body.px-item .pl-trial .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; }
+  body.px-item .pl-trial .px-choices[style*="--px-cols:5"],
+  body.px-item .pl-trial .px-choices[style*="--px-cols:6"] { --px-cols: 3 !important; }
+  .pl-player[data-state="showme"] .pl-trial .ex-caption:not(:empty),
+  .pl-player[data-state="showme"] .pl-showme .pl-caption:not(:empty) { max-height: 30vh; }
 }
 
-/* touch screens: key hints on the play screens give way (a keyboard, when there is one, still works) */
-@media (hover: none) and (pointer: coarse) {
-  .pl-screen .px-kbd { display: none; }
+/* desktop: the goal and the tip stay in view, so the Help toggle is for phones only */
+@media (min-width: 720px) and (min-height: 501px) {
+  .pl-hud-guide { display: none; }
 }

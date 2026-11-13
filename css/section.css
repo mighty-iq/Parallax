@@ -1,0 +1,141 @@
+/* Section practice and test hygiene (v1.1 PLAN M5, M6; B7): the Section screen (js/ui/section.js),
+   the "Also in tests" notes and the ADA line (js/ui/overlap.js), the "Taking a test soon?" helper
+   and PAT focus in Settings, the DAT-style group in the Library, the helper link in About.
+   Tokens and components come from base.css; the item itself is the trial player's (play.css).
+   Phone first: on a phone the section's controls take one row under the item, and the item
+   gets the height that is left (B2's --pl-avail, less that row), so nothing scrolls. */
+
+/* ---------- "Also in tests" notes, the ADA line ---------- */
+.px-overlap-note { display: block; max-width: var(--measure); }
+.px-overlap-note > p { margin: 0; }
+.px-overlap-note > p + p { margin-top: var(--s2); }
+.px-overlap-note b { color: var(--ink); font-weight: 600; }
+.px-notice.px-overlap-note { border-left-color: var(--signal); }
+.px-overlap-legal { font-size: var(--fs-xs); color: var(--ink-3); max-width: var(--measure); line-height: 1.45; }
+p.px-overlap-legal { margin-top: var(--s3); }
+
+/* ---------- Settings: the helper ---------- */
+.px-testsoon-intro { margin: 0 0 var(--s3); }
+.px-testsoon-body { display: grid; gap: var(--s4); margin-top: var(--s3); }
+.px-testsoon-body[hidden] { display: none; }
+.px-testsoon-kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: var(--s1) var(--s4); }
+.px-tick { display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); cursor: pointer; font-size: var(--fs-sm); line-height: 1.35; }
+.px-tick input { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; margin: 0; accent-color: var(--signal); }
+.px-tick input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.px-testsoon-answer { display: grid; gap: var(--s2); padding: var(--s3) var(--s4); border: 1px solid var(--rule); border-left: 3px solid var(--signal); border-radius: var(--r-control); background: var(--paper); font-size: var(--fs-sm); }
+.px-testsoon-line { margin: 0; color: var(--ink-2); }
+.px-testsoon-line b { color: var(--ink); }
+.px-testsoon-msg:empty { display: none; }
+.px-testsoon-active p { margin: 0; }
+.px-testsoon-noted { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.px-testsoon-noted li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s1) var(--s3); padding: var(--s1) 0; border-top: 1px solid var(--rule); font-size: var(--fs-sm); color: var(--ink-2); }
+.px-testsoon-noted li > span { flex: 1 1 14rem; }
+.px-testsoon input[type="date"] { max-width: 14rem; }
+
+/* ---------- About: the helper link ---------- */
+.px-about-helper { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); padding: var(--s3) var(--s4); border: 1px solid var(--rule); border-radius: var(--r-control); background: var(--surface); }
+.px-about-helper p { flex: 1 1 16rem; margin: 0; }
+
+/* ---------- Library: names with a tail (Homing · with landmarks), the DAT-style group ---------- */
+.px-excard-tail, .px-ex-tail { font-weight: 400; color: var(--ink-3); }
+.px-ex-tail { font-size: 0.6em; letter-spacing: 0; }
+.px-excard-note { margin-top: var(--s1); }
+.px-lib-group { margin-top: var(--s7); }
+.px-lib-group-head { margin-bottom: var(--s4); max-width: var(--measure); }
+.px-lib-group-head h2 { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -0.006em; }
+.px-lib-group-head .px-lead { margin-top: var(--s2); }
+.px-lib-pat { display: grid; gap: var(--s4); margin-bottom: var(--s4); max-width: 46rem; }
+.px-lib-section { display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--rule); }
+.px-lib-section h3 { font-size: var(--fs-md); font-weight: 600; }
+.px-lib-section p { color: var(--ink-2); font-size: var(--fs-sm); max-width: var(--measure); }
+.px-lib-pat-use { font-size: var(--fs-sm); color: var(--ink-2); max-width: var(--measure); }
+.px-lib-pat-use .px-limit { display: block; }
+
+/* ---------- Section practice: setup ---------- */
+.sec-setup { display: grid; gap: var(--s5); max-width: 46rem; }
+.sec-formrow .px-select { max-width: 16rem; }
+.sec-parts { margin: 0; padding-left: 1.5rem; display: grid; gap: var(--s1); }
+.sec-parts li { padding: var(--s1) 0; }
+.sec-parts li.is-missing { color: var(--ink-3); }
+.sec-parts li.is-missing b { font-weight: 400; text-decoration: line-through; }
+.sec-rules { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s2); color: var(--ink-2); max-width: var(--measure); }
+.sec-missing { color: var(--ink-2); }
+
+/* ---------- Section practice: running ---------- */
+.sec-timer {
+  display: inline-flex; align-items: center; min-height: 2rem; padding: 0 var(--s2);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-control);
+  font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.sec-timer.is-low { border-color: var(--warn); color: var(--warn); }
+.sec-timer:empty { display: none; }
+.sec-foot {
+  position: sticky; bottom: 0; z-index: 5; display: grid; gap: var(--s2);
+  margin-top: var(--s3); padding: var(--s2) 0 calc(var(--s2) + env(safe-area-inset-bottom, 0px));
+  background: var(--paper); border-top: 1px solid var(--rule);
+}
+.sec-foot[hidden] { display: none; }
+.sec-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.sec-controls .px-btn { min-height: var(--tap); min-width: 7rem; }
+.sec-controls [data-sec-next] { margin-left: auto; min-width: 10rem; }
+.sec-controls [data-sec-flag].is-on { border-color: var(--warn); color: var(--warn); background: var(--warn-wash); }
+.sec-stripwrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2) var(--s4); }
+.sec-stripwrap[hidden] { display: none; }
+.sec-strip, .sec-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.sec-strip-actions { display: flex; justify-content: flex-end; }
+.sec-chip {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
+  min-width: var(--tap); min-height: var(--tap); padding: 0 var(--s2);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-control); background: var(--surface);
+  font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink); cursor: pointer;
+}
+.sec-chip:hover { background: var(--surface-2); }
+.sec-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sec-chip.is-answered { background: var(--signal-wash); border-color: var(--signal); }
+.sec-chip.is-seen { border-style: dashed; }
+.sec-chip.is-current { box-shadow: inset 0 0 0 2px var(--ink); }
+.sec-chip-flag { color: var(--warn); font-size: var(--fs-xs); }
+.sec-chip.is-flagged { border-color: var(--warn); }
+.sec-chip.is-right { border-color: var(--right); background: var(--right-wash); }
+.sec-chip.is-wrong { border-color: var(--wrong); background: var(--wrong-wash); }
+.sec-chip.is-open { border-style: dashed; }
+.sec-chip-mark { font-family: var(--font-sans); font-size: var(--fs-xs); }
+.sec-chip.is-right .sec-chip-mark { color: var(--right); }
+.sec-chip.is-wrong .sec-chip-mark { color: var(--wrong); }
+
+/* ---------- Section practice: review ---------- */
+.sec-review { display: grid; gap: var(--s5); }
+.px-facts.sec-totals > div { grid-template-columns: minmax(0, 8rem) minmax(0, 1fr); }
+.sec-tablewrap { overflow-x: auto; margin-top: var(--s4); }
+.sec-table { width: 100%; max-width: 46rem; border-collapse: collapse; font-size: var(--fs-sm); }
+.sec-table th, .sec-table td { padding: var(--s2) var(--s2); border-top: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+.sec-table th[scope="row"], .sec-table thead th:first-child { text-align: left; white-space: normal; }
+.sec-table thead th { color: var(--ink-3); font-weight: 400; border-top: 0; }
+.sec-results .px-meta { margin-top: var(--s3); max-width: var(--measure); }
+.sec-award { display: flex; align-items: flex-start; gap: var(--s2); margin-top: var(--s3); font-size: var(--fs-sm); color: var(--ink-2); }
+.sec-award .px-icon { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; color: var(--signal); }
+.sec-lists { display: grid; gap: var(--s4); margin-top: var(--s4); }
+.sec-partlist h3 { font-size: var(--fs-sm); font-weight: 600; margin-bottom: var(--s2); }
+.sec-stage { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--rule-strong); scroll-margin-top: var(--s4); }
+.sec-stage[hidden] { display: none; }
+.sec-stage-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.sec-stage-head { font-weight: 600; margin: 0; }
+.sec-stage-hint { margin: var(--s1) 0 var(--s3); }
+.sec-stage .pl-verdict-rt { display: none; } /* a replayed answer has no answer time */
+.pl-expect.pl-overlap-q { grid-template-columns: repeat(3, minmax(0, 1fr)); } /* section.css loads before play.css */
+
+/* ---------- phones ---------- */
+@media (max-width: 719px), (max-height: 500px) {
+  /* the item gets the screen less the strip (play.css) and the controls row */
+  .sec-screen[data-sec-state="item"] {
+    --pl-avail: calc(var(--pl-vh) - 2 * var(--tap) - 0.25rem - 6 * var(--s2) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  .sec-foot { margin: var(--s2) calc(-1 * var(--gutter)) 0; padding-left: var(--gutter); padding-right: var(--gutter); }
+  .sec-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); }
+  .sec-controls .px-btn { width: 100%; min-width: 0; padding-left: var(--s1); padding-right: var(--s1); }
+  .sec-controls [data-sec-next] { margin-left: 0; min-width: 0; }
+  .sec-stripwrap { display: grid; justify-content: stretch; }
+  .sec-controls .px-kbd { display: none; }
+  .sec-timer { min-height: 1.75rem; padding: 0 var(--s1); }
+  .sec-table th, .sec-table td { padding: var(--s2) var(--s1); }
+}

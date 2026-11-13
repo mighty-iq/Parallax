@@ -58,14 +58,17 @@
       stay5: 0.3,                                  // S5: chance to stay (≈ 70 % switches)
       upTrials: 40, upSd: 0.45, upSessionTrials: 10,
       switchWindow: 20, switchDrop: 0.10, stretchStart: 3,
-      groups: [['fold', 'nets', 'slice', 'views', 'hidden'], ['rotate', 'spin', 'orient']],
+      // similar-looking exercises (S4 alternates within a group); groups may overlap (v1.1: Knots
+      // looks like Nets and Fold; Reckon is Homing without landmarks)
+      groups: [['fold', 'nets', 'slice', 'views', 'hidden'], ['rotate', 'spin', 'orient'], ['knots', 'nets', 'fold'], ['homing', 'reckon']],
     },
     session: {
       minutes: 20, exercises: 3, warmup: 2, explore: 0.15, minShare: 0.20, maxShare: 0.50, minTrials: 10,
       extraShare: 0.25, checkinEvery: 14, checkinAfter: 10,
-      // untried exercises come in this order (visuospatial first; Track and Homing last)
-      beginner: ['rotate', 'fold', 'spin', 'nets', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing'],
+      // untried exercises come in this order (visuospatial first; Track, Homing and Reckon last)
+      beginner: ['rotate', 'fold', 'spin', 'nets', 'knots', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing', 'reckon'],
       review: [3, 7, 14, 30], maxGapMs: 90000, maxFactor: 1.6, blockEvery: 10,
+      minItemMs: 500, // a time-boxed session's item cap: one item per 0.5 s of its budget (a safety net)
       trialMs: { choice: 9000, multi: 11000, yesno: 6000, angle: 10000, targets: 16000, sequence: 12000 }, overheadMs: 2500,
     },
     bandit: { window: 60, clip: 2, fresh: 1.5, snapEvery: 10, snapKeep: 13, temp: 1 },
@@ -87,7 +90,7 @@
     },
     streak: { goal: 3, min: 2, max: 6, graceWeeks: 4, minTrials: 10, minMs: 300000 },
     daily: { items: 8, epoch: '2026-11-01', link: 'discord.gg/chmr' },
-    lab: { A: ['rotate', 'spin', 'fold', 'nets', 'slice'], B: ['views', 'orient', 'span', 'hidden', 'track', 'homing'], weeks: 3 },
+    lab: { A: ['rotate', 'spin', 'fold', 'nets', 'slice'], B: ['views', 'orient', 'span', 'hidden', 'track', 'homing', 'reckon'], weeks: 3 },
   };
 
   var config = U.deepCopy(DEFAULTS);
@@ -281,8 +284,19 @@
 
   /* ---------- trial rows ---------- */
 
-  // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage] (§8)
-  var COL = { t: 0, ex: 1, mode: 2, code: 3, seed: 4, outcome: 5, rt: 6, value: 7, pp: 8, stage: 9 };
+  // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage, display,
+  // input] (§8; display and input since v1.1: codes into DISPLAYS and INPUTS, 0 = unknown, the
+  // same lists as PX.core.store.DISPLAYS / INPUTS)
+  var COL = { t: 0, ex: 1, mode: 2, code: 3, seed: 4, outcome: 5, rt: 6, value: 7, pp: 8, stage: 9, display: 10, input: 11 };
+  var DISPLAYS = ['', 'small', 'large'];
+  var INPUTS = ['', 'mouse', 'touch', 'pen', 'key'];
+  // A name ('small', 'touch'; 'pointer' is a click of unknown type: mouse) or a code → the code.
+  function codeOf(list, v) {
+    if (typeof v === 'number') return v >= 1 && v < list.length && mfloor(v) === v ? v : 0;
+    if (v === 'pointer' && list === INPUTS) return 1;
+    var i = typeof v === 'string' ? list.indexOf(v) : -1;
+    return i > 0 ? i : 0;
+  }
   var OUT = { wrong: 0, right: 1, stutter: 2, skipped: 3, voided: 2, timeout: 0 };
 
   // Outcome code from what the player reports: a code, { outcome } (a name in OUT), or
@@ -346,13 +360,15 @@
     return i >= 0 ? i : list.push(mode) - 1;
   }
 
-  // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage]
+  // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage, display,
+  // input]: result.display ('small' | 'large') and result.input ('mouse' | 'touch' | 'pen' | 'key')
   function makeRow(rec, def, mode, step, oc, result, now) {
     var rt = result && typeof result.rt === 'number' && isFin(result.rt) && result.rt >= 0 ? mround(result.rt) : null;
     var value = result && typeof result.value === 'number' && isFin(result.value) ? result.value : null;
     var pp = typeof step.pPred === 'number' && isFin(step.pPred) ? mround((step.pPred < 0 ? 0 : step.pPred > 1 ? 1 : step.pPred) * 1000) : null;
     var stage = typeof step.stage === 'number' && isFin(step.stage) ? step.stage : null;
-    return [mfloor(now / 1000), exIndex(rec, def), modeIndex(rec, mode), step.code, step.seed, oc, rt, value, pp, stage];
+    var dc = codeOf(DISPLAYS, result ? result.display : null), ic = codeOf(INPUTS, result ? result.input : null);
+    return [mfloor(now / 1000), exIndex(rec, def), modeIndex(rec, mode), step.code, step.seed, oc, rt, value, pp, stage, dc, ic];
   }
   function append(rec, row) {
     if (!isArray(rec.trials)) rec.trials = [];
@@ -385,7 +401,7 @@
   E.fields = fields;
   E.fix = fix;
   E.log = {
-    COL: COL, OUT: OUT, outcome: outcome, scan: scan, names: idxNames, rowParams: rowParams,
+    COL: COL, OUT: OUT, DISPLAYS: DISPLAYS, INPUTS: INPUTS, codeOf: codeOf, outcome: outcome, scan: scan, names: idxNames, rowParams: rowParams,
     exIndex: exIndex, modeIndex: modeIndex, row: makeRow, append: append,
   };
   E.day = day;

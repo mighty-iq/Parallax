@@ -39,8 +39,9 @@
   var hasOwn = Object.prototype.hasOwnProperty;
 
   var FAST = false;
-  // Test knobs: slowMs overrides the "See solution" threshold; limitScale scales time limits.
-  var CONFIG = { slowMs: null, limitScale: 1 };
+  // Test knobs: slowMs overrides the "See solution" threshold; limitScale scales time limits;
+  // budgetMs replaces a time-boxed session's budget of active time (sessions of a few seconds).
+  var CONFIG = { slowMs: null, limitScale: 1, budgetMs: null };
   var AUTO_SHOWME = 3;      // automatic show-me replays per exercise, then a "Why?" button instead
   var VOID_NOTICE = 3;      // voided trials in a row before the calm device notice
   var DYNAMIC_MS = 400;     // a present() longer than this held a moving or timed stimulus
@@ -289,12 +290,23 @@
     el.meta = h('div.pl-hud-meta.px-num', { 'aria-live': 'polite' });
     el.helpBtn = ui.button('Keys', { kind: 'ghost', small: true, key: '?', ariaLabel: 'Keyboard keys', onClick: function () { help(); } });
     el.helpBtn.setAttribute('data-help', '');
+    el.helpBtn.classList.add('pl-hud-keys');
+    // H2: the goal and the tip live in one container; Help shows or hides it (css decides when it
+    // is hidden: on phones during items).
+    P.guideId = 'pl-guide-' + (++playerSeq);
+    el.guideBtn = ui.button('Help', { kind: 'ghost', small: true, ariaLabel: 'Goal and tips', onClick: function () { toggleGuide(); } });
+    el.guideBtn.classList.add('pl-hud-guide');
+    el.guideBtn.setAttribute('data-guide', '');
+    el.guideBtn.setAttribute('aria-expanded', 'false');
+    el.guideBtn.setAttribute('aria-controls', P.guideId);
+    el.guideBtn.hidden = true;
     el.pauseBtn = ui.button('Pause', { kind: 'secondary', small: true, key: 'Escape', onClick: function () { togglePause(); } });
     el.pauseBtn.setAttribute('data-pause', '');
     el.bar = ui.bar(0, 1, { label: 'Progress', kind: 'signal' });
-    el.hud = h('div.pl-hud', h('div.pl-hud-row', el.label, el.meta, h('div.pl-hud-tools', el.helpBtn, el.pauseBtn)), h('div.pl-hud-bar', el.bar));
+    el.hud = h('div.pl-hud', h('div.pl-hud-row', el.label, el.meta, h('div.pl-hud-tools', el.guideBtn, el.helpBtn, el.pauseBtn)), h('div.pl-hud-bar', el.bar));
     el.goal = h('p.pl-goal', { hidden: true });
     el.tip = h('p.pl-tip', { role: 'note', hidden: true });
+    el.guide = h('div.pl-guide', { id: P.guideId }, el.goal, el.tip);
     el.notice = h('div.pl-notice-slot');
     el.host = h('div.pl-host');
     el.grid = h('div.pl-grid');
@@ -336,13 +348,24 @@
     el.actions = h('div.pl-actions', el.showBtn, el.nextBtn);
     el.feedback = h('section.pl-feedback', { hidden: true, 'aria-label': 'Result' },
       h('div.pl-feedback-main', el.verdict, el.actions), el.player, el.notes);
-    el.root = h('div.pl-player', { 'data-state': 'idle' }, el.hud, el.goal, el.tip, el.notice, el.trial, el.feedback);
+    el.root = h('div.pl-player', { 'data-state': 'idle' }, el.hud, el.guide, el.notice, el.trial, el.feedback);
+    function toggleGuide(on) {
+      var open = on === undefined ? !el.root.classList.contains('pl-guide-open') : !!on;
+      el.root.classList.toggle('pl-guide-open', open);
+      el.guideBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      return open;
+    }
+    // Help is offered only when the guide holds something.
+    function syncGuide() { el.guideBtn.hidden = el.goal.hidden && el.tip.hidden; }
+    P.toggleGuide = toggleGuide;
 
     /* ---------- state ---------- */
     function setState(s) {
       P.state = s;
       el.root.setAttribute('data-state', s);
       el.pauseBtn.disabled = !(s === 'respond' || s === 'paused' || s === 'present');
+      el.pauseBtn.firstChild.textContent = s === 'paused' ? 'Resume' : 'Pause'; // it resumes while paused
+      syncBody();
       var w = P.waiters.slice();
       P.waiters = P.waiters.filter(function (x) { return x.state !== s; });
       w.forEach(function (x) { if (x.state === s) x.resolve(s); });
@@ -354,6 +377,15 @@
     }
     P.setState = setState;
     P.when = when;
+
+    // H1: px-item on <body> while this player has an item mounted (any state from ready on; the
+    // pause sheet keeps it), px-stim while a stimulus plays (present) or a timed item runs.
+    var ITEM_STATES = { ready: 1, present: 1, respond: 1, paused: 1, reveal: 1, showme: 1, done: 1 };
+    function syncBody() {
+      P.itemOn = ITEM_STATES[P.state] === 1 && !!P.item;
+      P.stimOn = P.state === 'present' || (P.state === 'respond' && !!P.limit.timer);
+      bodyClasses();
+    }
 
     function holdStore() { if (!P.held) { P.held = true; try { store.hold(); } catch (e) { /* ignore */ } } }
     function releaseStore() { if (P.held) { P.held = false; try { store.release(); } catch (e) { /* ignore */ } } }
@@ -421,32 +453,41 @@
       if (P.limit.timer) win.clearTimeout(P.limit.timer);
       P.limit = { timer: null, left: null, start: 0 };
       el.limit.classList.remove('is-running');
+      el.limitFill.style.animationPlayState = '';
+      syncBody();
     }
     function startLimit() {
       var ms = P.cfg.limitMs > 0 ? Math.max(1, Math.round(P.cfg.limitMs * (CONFIG.limitScale > 0 ? CONFIG.limitScale : 1))) : 0;
       if (!(ms > 0) || P.limit.timer || P.state !== 'respond') return;
+      var t = timing.now();
       if (P.limit.left === null) {
         P.limit.left = ms;
+        // The limit runs from the paint, the same stamp the answer time is measured from, so an
+        // answer is never judged late while the timer still runs (I1 T7).
+        P.limit.start = P.paintTs > 0 && P.paintTs <= t ? P.paintTs : t;
         if (P.cfg.limitBar) {
           el.limit.hidden = false;
+          el.limitFill.style.animationPlayState = '';
           el.limitFill.style.animationDuration = ms + 'ms';
+          el.limitFill.style.animationDelay = -Math.round(t - P.limit.start) + 'ms';
           void el.limitFill.offsetWidth; // restart the countdown for this item
           el.limit.classList.add('is-running');
         }
-      }
-      P.limit.start = timing.now();
+      } else P.limit.start = t;
       var token = P.token;
       P.limit.timer = win.setTimeout(function () {
         P.limit.timer = null;
         P.limit.left = 0;
         if (token === P.token && P.state === 'respond') respond(null, 'timeout');
-      }, Math.max(0, P.limit.left));
+      }, Math.max(0, P.limit.left - (t - P.limit.start)));
+      syncBody();
     }
     function pauseLimit() {
       if (!P.limit.timer) return;
       win.clearTimeout(P.limit.timer);
       P.limit.timer = null;
       P.limit.left = Math.max(0, P.limit.left - (timing.now() - P.limit.start));
+      syncBody();
     }
 
     function markVoid(reason) { if (!P.voided) { P.voided = true; P.voidReason = reason || 'void'; } }
@@ -509,6 +550,7 @@
           if (token !== P.token) return;
           el.trial.style.visibility = '';
           bringIntoView();
+          P.shape0 = shape(); // H3: a turn or a new screen class during the stimulus voids it
           setState('present');
           var mon = P.mon = timing.monitor(), t0 = timing.now(), p;
           try { p = Promise.resolve(view.present(item, P.ctx)); } catch (e) { p = Promise.reject(e); }
@@ -611,7 +653,9 @@
       if (P.state !== 'respond') return false;
       var t = timing.now(), item = P.item, def = P.def, cfg = P.cfg, timeout = source === 'timeout';
       if (P.pauseStart) { P.pausedMs += t - P.pauseStart; P.pauseStart = 0; }
-      stopLimit();
+      // The countdown bar stays where the time stood (empty after a time-out) instead of refilling.
+      if (P.limit.timer) { win.clearTimeout(P.limit.timer); P.limit.timer = null; }
+      el.limitFill.style.animationPlayState = 'paused';
       var result = timeout ? { correct: false, timeout: true } : safeScore(def, item, response);
       var rt = timeout ? Math.round(cfg.limitMs) : Math.max(0, Math.round(t - P.paintTs - P.pausedMs));
       // The frame verdict: the generic rule for long stimuli, unless the view judged itself.
@@ -629,11 +673,12 @@
         item: item, response: response, result: result, rtMs: rt, source: timeout ? 'timeout' : inputOf(source, meta), meta: isObj(meta) ? meta : null,
         timeout: timeout, outcome: P.voided ? 'stutter' : result.correct ? 'right' : 'wrong', voidReason: P.voided ? P.voidReason : null,
         pausedMs: Math.round(P.pausedMs), exId: P.exId,
+        // H4: the input of the answering event and the screen class the item was shown on
+        input: timeout ? null : inputName(source, t), display: P.shape0 ? P.shape0.c : display(),
       };
       P.last = tr;
       if (P.grid) P.grid.lock(true);
       el.confirmRow.hidden = true;
-      el.limit.classList.remove('is-running');
       releaseStore();
       if (cfg.feedback !== false) { setState('reveal'); reveal(tr); }
       else {
@@ -663,7 +708,7 @@
     var VOID_TEXT = {
       stutter: 'The display stuttered', lost: 'The 3D view was interrupted', paused: 'Paused while the item played',
       fallback: 'A back-up item was used', error: 'The item could not be drawn', jump: 'The display skipped frames',
-      late: 'Many frames came late',
+      late: 'Many frames came late', turned: 'The screen turned or changed size while the item played',
     };
     function voidText(reason) { return (VOID_TEXT[reason] || 'The item was interrupted') + ', so it does not count.'; }
 
@@ -681,6 +726,7 @@
       if (!tr.timeout && isNum(tr.rtMs)) el.verdict.appendChild(h('span.pl-verdict-rt.px-num', fmtRt(tr.rtMs)));
       if (!ok) el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'The right answer is marked ✓.' : 'The right answer is shown.'));
       if (tr.outcome === 'stutter') el.verdict.appendChild(h('span.pl-verdict-void', voidText(tr.voidReason)));
+      else sound.play(ok ? 'right' : 'wrong'); // a short tone when the setting is on (never during a stimulus)
       var canShow = !!(P.view && P.view.showMe);
       var slow = ok && !cfg.practice && isNum(tr.rtMs) && tr.rtMs > slowMs(P.exId);
       var auto = !ok && canShow && (cfg.practice || counter('showMe', P.exId) < AUTO_SHOWME);
@@ -795,7 +841,11 @@
       // Esc during a stimulus the view did not take (it owns Esc while it plays): the item
       // cannot be judged fairly any more, so it is voided and replaced. A notice before the
       // stimulus (Track's motion notice) has shown nothing yet: no void.
-      if (P.state === 'present') { if (viewPhase() !== 'notice') markVoid('paused'); }
+      if (P.state === 'present') {
+        if (viewPhase() !== 'notice') markVoid('paused');
+        // a view with its own moving stimulus (Homing, Reckon) freezes it under the sheet
+        if (P.view && typeof P.view.pause === 'function') { try { P.view.pause(P.ctx); } catch (e) { log('view pause failed', e); } P.viewPaused = true; }
+      }
       else if (!P.pauseStart) P.pauseStart = timing.now(); // a second pause keeps the first start
       pauseLimit();
       setState('paused');
@@ -813,6 +863,7 @@
     function resume() {
       if (P.state !== 'paused') return false;
       if (P.pauseStart && P.presentDone) { P.pausedMs += timing.now() - P.pauseStart; P.pauseStart = 0; }
+      if (P.viewPaused) { P.viewPaused = false; if (P.view && typeof P.view.resume === 'function') { try { P.view.resume(P.ctx); } catch (e) { log('view resume failed', e); } } }
       if (P.popPause) { P.popPause(); P.popPause = null; }
       el.trial.removeAttribute('data-paused');
       setInert(false);
@@ -851,7 +902,7 @@
       runner.cmd('close');
       stopLimit();
       if (P.mon) { try { P.mon.stop(); } catch (e) { /* ignore */ } P.mon = null; }
-      P.presentLater = null; P.collectLater = false; P.modalPause = false; P.demoing = false;
+      P.presentLater = null; P.collectLater = false; P.modalPause = false; P.demoing = false; P.viewPaused = false;
       if (P.popPause) { P.popPause(); P.popPause = null; }
       el.pause.hidden = true;
       el.trial.removeAttribute('data-paused');
@@ -883,12 +934,14 @@
         if (tag) el.label.appendChild(h('span.px-tag.pl-tag', tag));
       } else if (text) el.label.appendChild(h('span.pl-hud-text', text));
     }
-    function setMeta(text) { el.meta.textContent = text || ''; }
+    // (aria-live: the text is replaced only when it changes, so the countdown's ticks are quiet)
+    function setMeta(text) { text = text || ''; if (el.meta.textContent !== text) el.meta.textContent = text; }
     function setProgress(v, max) { el.bar.set(v, Math.max(1, max)); el.bar.setAttribute('aria-valuetext', Math.min(v, max) + ' of ' + max); }
-    function setGoal(text) { el.goal.textContent = text || ''; el.goal.hidden = !text; }
+    function setGoal(text) { el.goal.textContent = text || ''; el.goal.hidden = !text; syncGuide(); }
     function setTip(t) {
       ui.clear(el.tip);
       el.tip.hidden = !t;
+      syncGuide();
       if (!t) return;
       el.tip.appendChild(h('span.pl-tip-k', 'Tip'));
       el.tip.appendChild(h('span', typeof t === 'string' ? t : t.text));
@@ -982,6 +1035,35 @@
     function onVisibility() { if (doc.hidden && P.state === 'respond') pause(); }
     doc.addEventListener('visibilitychange', onVisibility);
 
+    // H3: the shape of the screen (orientation and screen class); a change while a stimulus plays
+    // or a timed item runs voids the trial (CLAUDE.md rule 7).
+    function shape() {
+      var w = win.innerWidth || 0, hh = win.innerHeight || 0;
+      return { o: w > hh ? 'landscape' : 'portrait', c: display() };
+    }
+    function onShape() {
+      if (!P.stimOn || !P.shape0) return;
+      var now2 = shape();
+      if (now2.o !== P.shape0.o || now2.c !== P.shape0.c) voidNow('turned');
+    }
+    P.shape = shape;
+    win.addEventListener('resize', onShape);
+    win.addEventListener('orientationchange', onShape);
+    // H4: the last input event (pointer type or key) tells how an answer was given; a tap also
+    // lets the browser play sounds (it needs a user gesture).
+    function onInputEv(e) {
+      P.lastInput = { kind: e.type === 'keydown' ? 'key' : e.pointerType === 'touch' || e.pointerType === 'pen' ? e.pointerType : 'mouse', t: timing.now() };
+      if (sound.wanted()) sound.unlock();
+    }
+    doc.addEventListener('pointerdown', onInputEv, true);
+    doc.addEventListener('keydown', onInputEv, true);
+    function inputName(source, t) {
+      if (source === 'api' || source === 'timeout' || source === 'skip' || source === 'error') return null;
+      var li = P.lastInput;
+      if (li && t - li.t <= 3000) return li.kind; // the event that gave the answer (a click by Enter is a key)
+      return source === 'key' ? 'key' : source === 'touch' ? 'touch' : source === 'pointer' ? (P.lastPointer === 'touch' ? 'touch' : 'mouse') : null;
+    }
+
     P.answer = function (correct) {
       if (P.state !== 'respond') return Promise.reject(new Error('not answering now (state ' + P.state + ')'));
       var def = P.def, item = P.item, type = answerType(def, item), resp = responseFor(def, item, correct);
@@ -1005,15 +1087,77 @@
       P.offs.forEach(function (off) { off(); });
       P.offs = [];
       doc.removeEventListener('visibilitychange', onVisibility);
+      win.removeEventListener('resize', onShape);
+      win.removeEventListener('orientationchange', onShape);
+      doc.removeEventListener('pointerdown', onInputEv, true);
+      doc.removeEventListener('keydown', onInputEv, true);
       if (el.root.parentNode) el.root.parentNode.removeChild(el.root);
+      P.item = null;
       setState('idle');
+      var at = livePlayers.indexOf(P);
+      if (at >= 0) livePlayers.splice(at, 1);
+      bodyClasses();
       if (current === P) current = null;
     };
     current = P;
+    livePlayers.push(P);
     return P;
   }
 
   var current = null; // the live player (tests, PX.debug)
+  var playerSeq = 0, livePlayers = [];
+  // H1: the body classes say whether any live player has an item mounted or a stimulus playing.
+  function bodyClasses() {
+    var b = doc.body, item = false, stim = false;
+    if (!b) return;
+    livePlayers.forEach(function (x) { if (x.itemOn) item = true; if (x.stimOn) stim = true; });
+    b.classList.toggle('px-item', item);
+    b.classList.toggle('px-stim', stim);
+  }
+
+  /* Sounds (settings.sound, off by default): short synthesized tones after an answer, a rising
+     pair when right and one low tone when not; never while a stimulus plays (body.px-stim). The
+     browser lets a page play sound only after a user gesture, so the first tap or key after the
+     setting is on creates (or resumes) the AudioContext; Settings plays a sample on the tap that
+     turns it on. Nothing is downloaded: the tones are made with Web Audio oscillators. */
+  var sound = (function () {
+    var ctx = null;
+    function Ctor() { return win.AudioContext || win.webkitAudioContext || null; }
+    function wanted() { try { return !!(store.state.settings && store.state.settings.sound === true); } catch (e) { return false; } }
+    function unlock() {
+      try {
+        var A = Ctor();
+        if (!A) return false;
+        if (!ctx) ctx = new A();
+        if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+        return true;
+      } catch (e) { return false; }
+    }
+    function tone(freq, start, dur, type, peak) {
+      var o = ctx.createOscillator(), g = ctx.createGain(), t0 = ctx.currentTime + start;
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(peak, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start(t0);
+      o.stop(t0 + dur + 0.02);
+    }
+    // kind: 'right' | 'wrong'. Returns true when a tone was scheduled.
+    function play(kind) {
+      if (!wanted() || !ctx || ctx.state === 'closed') return false;
+      if (doc.body && doc.body.classList.contains('px-stim')) return false;
+      try {
+        if (kind === 'right') { tone(660, 0, 0.09, 'sine', 0.07); tone(880, 0.08, 0.12, 'sine', 0.07); }
+        else tone(220, 0, 0.18, 'triangle', 0.08);
+        sound.played++;
+        return true;
+      } catch (e) { return false; }
+    }
+    return { wanted: wanted, unlock: unlock, play: play, ready: function () { return !!ctx; }, played: 0 };
+  })();
 
   // A correct answer slower than this gets "See solution": 1.5 × the person's median right
   // answer time on the exercise (last 30), at least 4 s; 15 s before 5 right answers exist.
@@ -1105,6 +1249,23 @@
      wtg(P, exId, { host, before, tour }) → Promise<'done' | 'skipped' | 'none'>
      ===================================================================================== */
 
+  function isPhone() {
+    try { return !!(win.matchMedia && win.matchMedia('(max-width: 719px), (max-height: 500px)').matches); } catch (e) { return false; }
+  }
+  // Scrolls the item's stage fully into the window when it is not (phones: the Watch, Try, Go
+  // header sits above the player); never past its top edge.
+  function stageIntoView(P) {
+    if (!isPhone()) return;
+    try {
+      var st = P.el.host.querySelector('.ex-stage') || P.el.host, r = st.getBoundingClientRect(), vh = win.innerHeight || 640;
+      if (!r.height) return;
+      var by = 0;
+      if (r.bottom > vh - 8) by = Math.min(r.bottom - vh + 8, r.top - 8);
+      else if (r.top < 0) by = r.top - 8;
+      if (by) win.scrollBy(0, by);
+    } catch (e) { /* cosmetic */ }
+  }
+
   function wtg(P, exId, o) {
     o = o || {};
     var def = PX.ex.get(exId), learn = PX.ex.learn(exId);
@@ -1115,15 +1276,27 @@
     var practice = Array.isArray(learn.practice) ? learn.practice.slice(0, 5) : [];
     var host = o.host || P.el.root.parentNode, skipped = false, ended = false;
     var names = ['Watch', 'Try', 'Go'];
-    var marks = names.map(function (n, i) { return h('li.pl-wtg-step', h('span.pl-wtg-n.px-num', String(i + 1)), h('span', n)); });
+    var marks = names.map(function (n, i) { return h('li.pl-wtg-step', h('span.pl-wtg-n.px-num', String(i + 1)), h('span.pl-wtg-name', n)); });
     var text = h('p.pl-wtg-text', { 'aria-live': 'polite' });
-    var parts = h('ul.pl-parts');
+    // The labelled parts: listed in full on a wide screen; on a phone folded behind "Parts", so the
+    // demo item stays on the screen (css/play.css).
+    var parts = h('ul.pl-parts', { id: 'pl-parts-' + exId });
+    var partsBtn = ui.button('Parts', { kind: 'ghost', small: true, ariaLabel: 'What the parts of the item are', onClick: function () {
+      var open = !head.classList.contains('is-parts-open');
+      head.classList.toggle('is-parts-open', open);
+      partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    } });
+    partsBtn.classList.add('pl-parts-btn');
+    partsBtn.setAttribute('aria-expanded', 'false');
+    partsBtn.setAttribute('aria-controls', parts.id);
+    function partsOn(on) { parts.hidden = !on; partsBtn.hidden = !on; }
     var skipBtn = ui.button(o.tour ? 'Skip this exercise' : 'Skip', { kind: 'ghost', small: true, onClick: function () { skipped = true; P.abort(); } });
     skipBtn.setAttribute('data-wtg-skip', '');
     var endBtn = o.tour ? ui.button('End the tour', { kind: 'ghost', small: true, onClick: function () { skipped = true; ended = true; P.abort(); } }) : null;
     if (endBtn) endBtn.setAttribute('data-tour-end', '');
     var head = h('section.pl-wtg', { 'aria-label': 'Watch, Try, Go: ' + (def.short || def.name), 'data-wtg': exId },
-      h('div.pl-wtg-top', h('ol.pl-wtg-steps', marks), h('div.pl-wtg-tools', skipBtn, endBtn)), text, parts);
+      h('div.pl-wtg-top', h('ol.pl-wtg-steps', marks), h('div.pl-wtg-tools', partsBtn, skipBtn, endBtn)), text, parts);
+    partsOn(false);
     if (o.lead) head.insertBefore(h('p.pl-wtg-lead.px-meta', o.lead), head.firstChild);
     host.insertBefore(head, P.el.root);
     host.classList.add('is-wtg'); // css/play.css sizes Watch, Try, Go to fit one screen
@@ -1138,7 +1311,12 @@
       (learn.parts || []).filter(function (pt) { return !pt.variant || pt.variant === v; }).forEach(function (pt) {
         parts.appendChild(h('li', h('b', pt.label), h('span', pt.text)));
       });
-      parts.hidden = !parts.firstChild;
+      partsOn(!!parts.firstChild);
+    }
+    // On a phone the header above the item can push the stimulus down: just before an item
+    // plays (its first frame comes after this), its stage is brought fully onto the screen.
+    function stageSoon(item) {
+      P.when('present').then(function () { if (P.item === item) stageIntoView(P); });
     }
     function watchStep() {
       if (!demoSpec || skipped) return Promise.resolve();
@@ -1148,9 +1326,10 @@
       showParts(item);
       P.setMeta('Watch');
       P.setProgress(0, practice.length + 1);
+      stageSoon(item);
       return P.demo(item, {
         goal: goalOf(learn, item),
-        onDemoEnd: function () { text.textContent = 'Now answer it yourself. It is practice and never counts.'; parts.hidden = true; }, // the item and its options fit again
+        onDemoEnd: function () { text.textContent = 'Now answer it yourself. It is practice and never counts.'; partsOn(false); }, // the item and its options fit again
       }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; } // End session (or the tour) from the pause sheet
@@ -1162,10 +1341,11 @@
       var params = fillParams(def, practice[i]), item;
       try { item = def.generate(PX.rng(seedOf(['px-try', exId, i, counter('tries', exId)])), params); } catch (e) { log('practice item failed', e); return tryStep(i + 1); }
       stage(1, 'Try: practice item ' + (i + 1) + ' of ' + practice.length + '. Practice items never count.');
-      parts.hidden = true; // the labelled parts belong to Watch; Try keeps the item in view
+      partsOn(false); // the labelled parts belong to Watch; Try keeps the item in view
       P.setMeta('Try ' + (i + 1) + ' of ' + practice.length);
       P.setProgress(i + 1, practice.length + 1);
       var tip = tipFor(exId, learn, item, true);
+      stageSoon(item);
       return P.run(item, { practice: true, goal: goalOf(learn, item), tip: tip ? tip.text : null }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; }
@@ -1225,14 +1405,29 @@
     }
     var mode = hasOwn.call(E().modes.MODES, p.mode) && p.mode !== 'check' ? String(p.mode) : 'train';
     var S = { mode: mode, plan: null, step: null, res: null, done: false, ended: false, answered: 0, voidRun: 0, skipRun: 0,
-      misses: {}, offered: {}, noticed: false, hidden: false, named: false, challenge: typeof p.challenge === 'string' ? p.challenge : null };
+      misses: {}, offered: {}, noticed: false, hidden: false, named: false, challenge: typeof p.challenge === 'string' ? p.challenge : null,
+      params: routeParams(p), itemNo: 1, inputs: {}, offs: [], clock: null, viewport: viewport() };
     var wrap = h('div.pl-screen', { 'data-mode': mode });
     host.appendChild(wrap);
     var P = null;
     try { S.plan = E().modes.start(rec(), mode, startOpts(p)); } catch (e) { log('start failed', e); S.plan = { unavailable: 'This session could not start.', done: true }; }
     if (S.plan.unavailable) { renderUnavailable(wrap, mode, S.plan.unavailable); return function () { setChrome(false); }; }
+    if (S.plan.boxed && isNum(CONFIG.budgetMs) && CONFIG.budgetMs > 0) S.plan.budgetMs = CONFIG.budgetMs; // tests only
     setChrome(true);
-    P = createPlayer({ endLabel: mode === 'daily' ? 'End now' : 'End session' });
+    // The session's one clock (PX.core.clock): it starts with the first item (after an intro card)
+    // and stops for the pause sheet, any modal or sheet, a hidden tab and idle time over 60 s.
+    var CK = PX.core.clock;
+    S.clock = CK.create({ idleMs: 60000, tickMs: 5000 });
+    P = createPlayer({ endLabel: mode === 'daily' ? 'End now' : 'End session', onState: function (st) {
+      if (!S.clock) return;
+      if (st === 'paused') S.clock.pause('sheet'); else S.clock.resume('sheet');
+    } });
+    if (ui.modalOpen()) S.clock.pause('modal');
+    S.offs.push(bus.on('modal:open', function () { if (S.clock) S.clock.pause('modal'); }));
+    S.offs.push(bus.on('modal:close', function () { if (S.clock && !ui.modalOpen()) S.clock.resume('modal'); }));
+    // The HUD's minutes move on their own (every 5 s), never while a stimulus plays.
+    S.clock.on('tick', function () { if (!S.done && !(doc.body && doc.body.classList.contains('px-stim'))) progress(); });
+    S.clock.on('resume', function () { if (!S.done) progress(); });
     wrap.appendChild(h('h1.px-sr', MODE_NAMES[mode]));
     wrap.appendChild(P.el.root);
     session.S = S;
@@ -1241,23 +1436,31 @@
     if (mode === 'train' && S.plan.exs && S.plan.exs.length) {
       var exNames = S.plan.exs.map(function (id) { var d = PX.ex.get(id); return d ? d.short || d.name : id; });
       var exList = exNames.length > 1 ? exNames.slice(0, -1).join(', ') + ' and ' + exNames[exNames.length - 1] : exNames[0];
-      S.introLine = h('p.px-meta.pl-session-line', 'This session: ' + exList + ', about ' + plural(Math.max(1, Math.round(S.plan.budgetMs / 60000)), 'minute') + '.');
+      S.introLine = h('p.px-meta.pl-session-line', 'This session: ' + exList + ', about ' + CK.fmtMinutes(S.plan.budgetMs) + ' of practice.');
       P.notice(S.introLine);
     }
 
     function progress() {
       var pl = S.plan, total, done, txt;
+      if (!P) return;
       if (mode === 'daily' && pl.daily) {
         total = pl.daily.items.length; done = pl.daily.n;
-        txt = 'Daily #' + pl.daily.number + (pl.daily.scored ? '' : ' · practice') + ' · ' + Math.min(total, done + 1) + ' of ' + total;
+        txt = 'Daily #' + pl.daily.number + (pl.daily.scored ? '' : ' · practice') + ' · item ' + Math.min(total, S.itemNo) + ' of ' + total;
+      } else if (pl.boxed) {
+        // A time-boxed session counts down its active minutes ("item 1 of about 105" reads as a
+        // mountain); the bar shows the time used.
+        var act = S.clock ? S.clock.activeMs() : pl.activeMs || 0;
+        txt = MODE_NAMES[mode] + ' · ' + (pl.lastServed ? 'last item' : CK.fmtLeft(pl.budgetMs - act));
+        P.setProgress(Math.round(Math.min(act, pl.budgetMs) / 1000), Math.round(pl.budgetMs / 1000));
+        P.el.bar.setAttribute('aria-valuetext', CK.fmtMinutes(act) + ' of ' + CK.fmtMinutes(pl.budgetMs) + ' practised');
+        P.setMeta(txt);
+        return;
       } else if (mode === 'threshold') {
         total = pl.total; done = pl.sc ? pl.sc.n : S.answered;
-        txt = 'Threshold · ' + Math.min(total, done + 1) + ' of ' + total;
+        txt = 'Threshold · item ' + Math.min(total, S.itemNo) + ' of ' + total;
       } else {
         total = Math.max(1, pl.total + Math.min(pl.extra || 0, Math.ceil(pl.total * 0.25))); done = S.answered;
-        // A timed session counts down its minutes ("item 1 of about 105" reads as a mountain).
-        if (isNum(pl.budgetMs) && pl.budgetMs !== Infinity) txt = MODE_NAMES[mode] + ' · about ' + Math.max(1, Math.ceil((pl.budgetMs - (now() - pl.start)) / 60000)) + ' min left';
-        else txt = MODE_NAMES[mode] + ' · item ' + Math.min(total, done + 1) + ' of ' + total;
+        txt = MODE_NAMES[mode] + ' · item ' + Math.min(total, S.itemNo) + ' of ' + total;
       }
       P.setMeta(txt);
       P.setProgress(done, total);
@@ -1267,8 +1470,11 @@
       if (step.banner || !S.named) { S.named = true; S.hidden = false; P.setLabel(def); }
       else if (step.switched) { S.hidden = true; P.setLabel(null, 'Mixed set'); } // S4+: no name banner
       if (!S.hidden) P.setGoal(goalOf(learn, item)); else P.setGoal('');
+      // the number of the item on screen (it stays during its feedback)
+      S.itemNo = step.daily ? step.daily.index + 1 : S.answered + 1;
       progress();
     }
+    function clockNow() { return { activeMs: S.clock ? S.clock.activeMs() : 0 }; }
     function cfgFor(step, def, item) {
       var learn = PX.ex.learn(def.id), tip = step.feedback !== false && !S.hidden ? tipFor(def.id, learn, item) : null;
       var limit = step.deadlineMs || (def.timeLimit ? def.timeLimit(item.params) : null) || null;
@@ -1278,8 +1484,10 @@
     function loop() {
       if (S.done) return;
       if (S.ended) { end(); return; }
+      if (!S.clock.started()) S.clock.start();
+      S.clock.touch(); // going on to an item is activity (also when a test drives the player)
       var step;
-      try { step = E().modes.next(S.plan, rec(), now()); } catch (e) { log('next failed', e); end(); return; }
+      try { step = E().modes.next(S.plan, rec(), now(), clockNow()); } catch (e) { log('next failed', e); end(); return; }
       if (!step || step.done) { end(); return; }
       // A friend challenge: item i takes the code's seed i, and i moves on only for counted
       // answers, so a voided or skipped item's replacement is the same item (same as the friend's).
@@ -1295,6 +1503,7 @@
       hud(step, def, item);
       var pre = Promise.resolve(null);
       if (!wtgSeen(def.id) && mode !== 'speed' && mode !== 'threshold') pre = offerWtg(def);
+      else if (step.watch && S.introDemo !== undefined) { pre = S.introDemo ? stageDemo(step, def) : Promise.resolve(null); S.introDemo = undefined; } // asked on the intro card
       else if (step.watch) pre = stageWatch(step, def);
       pre.then(function (r) {
         if (S.done) return null;
@@ -1307,19 +1516,22 @@
 
     // An exercise that cannot be shown: logged as skipped (counts nowhere), never a dead end.
     function skipStep(step) {
-      try { E().modes.answer(S.plan, rec(), step, { correct: false, outcome: 'skipped' }, now()); } catch (e) { log('answer failed', e); }
+      try { E().modes.answer(S.plan, rec(), step, { correct: false, outcome: 'skipped' }, now(), clockNow()); } catch (e) { log('answer failed', e); }
       if (++S.skipRun > 4) { end('Some items could not be shown on this device, so the session ended early.'); return; }
       loop();
     }
 
     function afterTrial(step, def, item, tr) {
       if (S.done || tr.outcome === 'aborted') return null;
-      var result = { correct: !!(tr.result && tr.result.correct), rt: tr.rtMs, value: tr.result ? tr.result.value : undefined, timeout: !!tr.timeout, input: tr.source };
+      if (S.clock && tr.outcome !== 'skipped') S.clock.touch(); // an answer is activity, however it came
+      var result = { correct: !!(tr.result && tr.result.correct), rt: tr.rtMs, value: tr.result ? tr.result.value : undefined, timeout: !!tr.timeout,
+        input: tr.input || null, display: tr.display || undefined };
       if (tr.outcome === 'stutter') { result.outcome = 'stutter'; result.voided = true; }
       else if (tr.outcome === 'skipped') result.outcome = 'skipped';
       if (item.fallback === true) result.fallback = true;
+      if (tr.input) S.inputs[tr.input] = (S.inputs[tr.input] || 0) + 1;
       var out;
-      try { out = E().modes.answer(S.plan, rec(), step, result, now()); } catch (e) { log('answer failed', e); out = { done: false, outcome: 3 }; }
+      try { out = E().modes.answer(S.plan, rec(), step, result, now(), clockNow()); } catch (e) { log('answer failed', e); out = { done: false, outcome: 3 }; }
       save();
       S.last = { step: step, tr: tr, out: out };
       if (out.outcome === 0 || out.outcome === 1) {
@@ -1382,7 +1594,8 @@
       });
     }
 
-    // Path: the first item of a new stage names its settings and offers the demo.
+    // Path: the first item of a new stage names its settings and offers the demo (the session's
+    // first stage asks on the intro card instead, so there is one card, not two: I1 B12).
     function stageWatch(step, def) {
       var set = step.preset ? settingsText(def, step.preset) : '';
       return showCard(wrap, P.el.root, {
@@ -1390,24 +1603,48 @@
         lines: [set ? 'Settings at this stage: ' + set + '.' : '', 'A short demo shows how this stage’s items look. It never counts.'],
         actions: [{ label: 'Start the stage', value: 'start' }, { label: 'Watch the demo', value: 'watch', primary: true }],
       }).then(function (v) {
-        if (S.done || v !== 'watch' || !P.view.demo) return null;
-        var params = step.preset && step.preset.params ? fillParams(def, step.preset.params) : step.params, item;
-        try { item = def.generate(PX.rng(seedOf(['px-stage', def.id, step.pathStage])), params); } catch (e) { return null; }
-        P.setMeta('Demo · never counts');
-        return P.demo(item, { goal: goalOf(PX.ex.learn(def.id), item) }).then(function (tr) {
-          if (tr.outcome === 'aborted') return null;
-          if (tr.end) return 'end';
-          return P.waitNext({ label: 'Start the stage' });
-        });
+        if (S.done || v !== 'watch') return null;
+        return stageDemo(step, def);
       });
     }
+    function stageDemo(step, def) {
+      if (S.done || !P.view || !P.view.demo) return Promise.resolve(null);
+      var params = step.preset && step.preset.params ? fillParams(def, step.preset.params) : step.params, item;
+      try { item = def.generate(PX.rng(seedOf(['px-stage', def.id, step.pathStage])), params); } catch (e) { return Promise.resolve(null); }
+      P.setMeta('Demo · never counts');
+      return P.demo(item, { goal: goalOf(PX.ex.learn(def.id), item) }).then(function (tr) {
+        if (tr.outcome === 'aborted') return null;
+        if (tr.end) return 'end';
+        return P.waitNext({ label: 'Start the stage' });
+      });
+    }
+
+    // The engine's finish with the clock's reading: how it ended, and where it was played.
+    function finishPlan(ended) {
+      if (S.clock) S.clock.stop(); // first: the reading stored is the reading kept
+      var t = clockNow(), best = null;
+      Object.keys(S.inputs).forEach(function (k) { if (!best || S.inputs[k] > S.inputs[best]) best = k; });
+      t.ended = ended;
+      t.session = { viewport: S.viewport, input: best || undefined };
+      var res = null;
+      try { res = E().modes.finish(S.plan, rec(), now(), t); } catch (e) { log('finish failed', e); }
+      return res;
+    }
+    function dropClock() {
+      S.offs.forEach(function (off) { off(); });
+      S.offs = [];
+      if (S.clock) { S.clock.destroy(); }
+    }
+    S.finishPlan = finishPlan;
+    S.dropClock = dropClock;
 
     function end(msg) {
       if (S.done) return;
       S.done = true;
       if (P) P.abort();
-      var res = null;
-      try { res = E().modes.finish(S.plan, rec(), now()); } catch (e) { log('finish failed', e); }
+      var res = finishPlan(S.ended ? 'early' : undefined);
+      keepSummary(S, res, msg || null);
+      dropClock();
       save();
       try { store.flush(); } catch (e) { /* the debounced save runs later */ }
       S.res = res;
@@ -1422,13 +1659,15 @@
     }
     S.end = end;
 
-    // Intros: Today's Start button is Train's intro; the other modes say what comes.
+    // Intros: Today's Start button is Train's intro; the other modes say what comes. The clock
+    // starts with the first item, after the card.
     var intro = introFor(mode, S.plan, p);
     if (intro) {
       showCard(wrap, P.el.root, Object.assign({ id: 'intro', hide: P.el.root }, intro)).then(function (v) {
         if (S.done) return;
-        if (v === 'back') { S.done = true; router.go('home'); return; }
-        if (v === 'free-setup') { S.done = true; router.go('play', { mode: 'free', exId: p.exId, setup: '1' }, { force: true }); return; }
+        if (v === 'back') { S.done = true; dropClock(); router.go('home'); return; }
+        if (v === 'free-setup') { S.done = true; dropClock(); router.go('play', { mode: 'free', exId: p.exId, setup: '1' }, { force: true }); return; }
+        if (mode === 'path' && intro.offersDemo) S.introDemo = v === 'watch'; // the first stage's demo was offered here
         loop();
       });
     } else loop();
@@ -1438,9 +1677,10 @@
       if (!S.done && S.plan && !S.plan.unavailable) {
         S.done = true;
         if (P) P.abort();
-        try { E().modes.finish(S.plan, rec(), now()); } catch (e) { log('finish failed', e); }
+        keepSummary(S, finishPlan('early'), null);
         save();
       }
+      dropClock();
       closeCards();
       if (P) { P.destroy(); P = null; }
       if (session.S === S) { session.S = null; session.P = null; }
@@ -1449,18 +1689,72 @@
   var session = { S: null, P: null }; // the running session (tests)
 
   // A reload or a closed tab ends a running session the way leaving its screen does (the
-  // cleanup above): what was answered becomes a saved session, so the weekly goal, the Log and
-  // the achievements count it. A page kept in the back/forward cache (persisted) may come back
-  // and goes on where it was. A Spatial Check left part-way is never saved (js/ui/check.js).
+  // cleanup above): what was answered becomes a saved session (ended: 'closed'), so the weekly
+  // goal, the Log and the achievements count it, and its summary is kept: the reopened page shows
+  // it instead of starting a session by itself (bootRoute). A page kept in the back/forward cache
+  // (persisted) may come back and goes on where it was. A Spatial Check left part-way is never
+  // saved (js/ui/check.js).
   win.addEventListener('pagehide', function (e) {
     var S = session.S;
     if ((e && e.persisted) || !S || S.done || !S.plan || S.plan.unavailable) return;
     S.done = true;
     if (session.P) { try { session.P.abort(); } catch (x) { /* ignore */ } }
-    try { E().modes.finish(S.plan, rec(), now()); } catch (x) { log('finish failed', x); }
+    var res = S.finishPlan ? S.finishPlan('closed') : null;
+    keepSummary(S, res, S.mode === 'daily' ? null : 'The page closed during this session. Everything you answered was saved.');
+    if (S.dropClock) S.dropClock();
     save();
     try { store.flush({ evenIfHeld: true }); } catch (x) { /* nothing more can be done while the page goes */ }
   });
+
+  /* ---------- reloads (I1 T4): #/play never starts a session by itself ---------- */
+
+  var RESTORE_MS = 12 * 3600000; // a summary older than this is not brought back
+  function viewport() { return Math.round(win.innerWidth || 0) + 'x' + Math.round(win.innerHeight || 0); }
+  // The route params worth keeping for "Again" (plain values; never the restore marker).
+  function routeParams(p) {
+    var out = {};
+    for (var k in p) if (hasOwn.call(p, k) && k !== 'restore' && k !== 'setup') { var v = p[k]; if (v === null || typeof v !== 'object' || k === 'params') out[k] = v; }
+    return out;
+  }
+  // The finished session's summary, kept in the record (store.state.ui.lastSummary) so that a
+  // reloaded or reopened page shows it again.
+  function keepSummary(S, res, msg) {
+    try {
+      // nothing answered: nothing to bring back (a reload then opens Today)
+      if (!res || (!res.session && !(res.daily && res.daily.answered))) { uiRec().lastSummary = null; return; }
+      var D = S.plan && S.plan.daily;
+      uiRec().lastSummary = JSON.parse(JSON.stringify({
+        id: S.plan && S.plan.id || null, at: now(), mode: S.mode, msg: msg || null, params: S.params || {}, start: S.plan && S.plan.start || now(),
+        daily: D ? { day: D.day, number: D.number, items: D.items.map(function (it) { return { exId: it.exId }; }), outcomes: D.outcomes.slice(), scored: D.scored } : null,
+        res: res || null,
+      }));
+    } catch (e) { log('keeping the summary failed', e); }
+  }
+  // The route to open at boot instead of a #/play hash (js/ui/app.js): the kept summary of that
+  // session when it is recent, else null (Today). Free play's setup form starts nothing and stays.
+  function bootRoute(r) {
+    var p = (r && r.params) || {}, m = String(p.mode || 'train');
+    if (m === 'free' && !p.run && !p.params && !p.challenge) return r;
+    var L = uiRec().lastSummary;
+    if (isObj(L) && isNum(L.at) && now() - L.at >= 0 && now() - L.at < RESTORE_MS && L.mode === m && (L.res || L.daily)) {
+      return { route: 'play', params: { mode: m, restore: '1' } };
+    }
+    return null;
+  }
+  function restoreScreen(host) {
+    var L = uiRec().lastSummary;
+    var wrap = h('div.pl-screen', { 'data-mode': isObj(L) ? L.mode : 'train', 'data-restored': '' });
+    host.appendChild(wrap);
+    if (!isObj(L) || !(L.res || L.daily)) {
+      wrap.appendChild(screenHead(null, 'Nothing to show here', 'This session’s summary is no longer kept. Your answers are in the Log.'));
+      wrap.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' }), ui.button('Open the Log', { kind: 'secondary', go: 'log' })));
+      return null;
+    }
+    var S = { mode: L.mode, plan: { id: L.id, start: L.start, daily: L.daily }, params: L.params || {}, restored: true };
+    if (L.mode === 'daily') renderDailyEnd(wrap, S, L.res);
+    else renderSummary(wrap, S, L.res, L.msg);
+    return null;
+  }
 
   /* ---------- notes under the verdict ---------- */
 
@@ -1535,12 +1829,16 @@
     var def = plan.exs && plan.exs[0] ? PX.ex.get(plan.exs[0]) : null;
     var back = { label: 'Back', value: 'back' }, go = { label: 'Start', value: 'start', primary: true };
     if (mode === 'path' && def) {
-      var st = plan.pathStage0 || 1, pre = null;
+      var st = plan.pathStage0 || 1, pre = null, ps = rec().path && rec().path[def.id];
       try { pre = E().path.preset(def, st); } catch (e) { pre = null; }
-      return { title: 'Path · stage ' + st + ' of 10', def: def, actions: [back, go], lines: [
+      // A stage not yet watched offers its demo here, on the one card (I1 B12).
+      var watchIt = !(plan.rechecks && plan.rechecks.length) && !(isObj(ps) && isObj(ps.watched) && ps.watched[st]) && !!(viewOf(def.id) && viewOf(def.id).demo);
+      var acts = watchIt ? [back, { label: 'Start the stage', value: 'start' }, { label: 'Watch the demo', value: 'watch', primary: true }] : [back, go];
+      return { title: 'Path · stage ' + st + ' of 10', def: def, actions: acts, offersDemo: watchIt, lines: [
         pre ? 'Settings at this stage: ' + settingsText(def, pre) + '.' : '',
         'Ten stages from easy to hard, practised one at a time. A stage is passed when your recent answers and your level both show it holds; passed stages come back now and then for a short recheck.',
         plan.rechecks && plan.rechecks.length ? 'First, a short recheck of stage ' + plan.rechecks[0].s + '.' : '',
+        watchIt ? 'A short demo shows how this stage’s items look. It never counts.' : '',
       ] };
     }
     if (mode === 'speed' && def) {
@@ -1565,9 +1863,11 @@
     }
     if (mode === 'daily' && plan.daily) {
       var D = plan.daily, prev = rec().daily && rec().daily[D.day];
-      return { title: 'Daily Challenge #' + D.number, actions: [back, go], lines: [
-        D.items.length + ' items, the same for everyone today (by the UTC date), at a medium difficulty.',
-        D.scored ? 'One scored attempt a day: this one. Items do not change your levels.' : 'Today’s scored attempt is done' + (prev ? ' (' + prev.right + '/' + prev.n + ')' : '') + '. This round is practice.',
+      return { title: 'Daily Challenge #' + D.number, actions: [back, D.resumed ? { label: 'Go on', value: 'start', primary: true } : go], lines: [
+        D.items.length + ' items, the same for everyone on this date, at a medium difficulty.',
+        D.resumed ? 'Your scored attempt goes on where it stopped: ' + D.n + ' of ' + D.items.length + ' answered so far. Items do not change your levels.' :
+          D.scored ? 'One scored attempt a day: this one. It counts once all ' + D.items.length + ' items are answered; if you stop, it goes on later today. Items do not change your levels.' :
+          'Today’s scored attempt is done' + (prev ? ' (' + prev.right + '/' + prev.n + ')' : '') + '. This round is practice.',
         'Compare notes in the Chimera Discord afterwards.',
       ] };
     }
@@ -1606,7 +1906,8 @@
     var st = res && res.streak;
     if (av && av.check && av.check.due) return { text: av.check.why, label: av.check.kind && /^B/.test(av.check.kind) ? 'Measure your starting point' : 'Take the Spatial Check', go: 'play?mode=check' };
     if (st && st.week && st.week.left > 0) return { text: st.week.left + (st.week.left === 1 ? ' more session' : ' more sessions') + ' this week meets your goal of ' + st.week.goal + '. Any days work, and spreading them out helps.' };
-    if (av && av.daily && !av.daily.done) return { text: 'Today’s Daily Challenge is open: ' + 8 + ' items, the same for everyone.', label: 'Play the Daily Challenge', go: 'play?mode=daily' };
+    if (av && av.daily && av.daily.partial) return { text: 'Today’s Daily Challenge is waiting where you stopped: ' + av.daily.partial.answered + ' of ' + av.daily.partial.n + ' answered.', label: 'Go on with the Daily Challenge', go: 'play?mode=daily' };
+    if (av && av.daily && !av.daily.done) return { text: 'Today’s Daily Challenge is open: ' + E().config.daily.items + ' items, the same for everyone.', label: 'Play the Daily Challenge', go: 'play?mode=daily' };
     return { text: 'Weekly goal met. Extra sessions still count in your log, and a rest day is fine too.' };
   }
 
@@ -1634,10 +1935,16 @@
     return h('li.pl-res', { 'data-ex': r.exId }, kids);
   }
 
+  // The session's practice time, from the one clock (the same number the Log and share card show).
+  function practiceOf(res) {
+    if (res && res.session && isNum(res.session.practiceMs)) return res.session.practiceMs;
+    var sm = res && res.summary;
+    return sm && isNum(sm.ms) ? sm.ms : sm && isNum(sm.minutes) ? sm.minutes * 60000 : null;
+  }
   function renderSummary(wrap, S, res, msg) {
-    var K = PX.ui.kit, mode = S.mode, sm = res && res.summary, pl = S.plan;
+    var K = PX.ui.kit, mode = S.mode, sm = res && res.summary, pl = S.plan, ms = practiceOf(res);
     var when = K.fmtWhen(pl.start || now());
-    var meta = MODE_NAMES[mode] + ' · ' + when + (sm && isNum(sm.minutes) ? ' · ' + sm.minutes + ' min' : '');
+    var meta = MODE_NAMES[mode] + ' · ' + when + (sm && isNum(ms) ? ' · ' + PX.core.clock.fmtMinutes(ms) : '');
     wrap.appendChild(screenHead(meta, sm ? 'Session summary' : 'Session ended', msg || null));
     var out = h('div.pl-summary');
     wrap.appendChild(out);
@@ -1646,7 +1953,8 @@
     } else {
       var p1 = K.panel({ title: 'Results', className: 'pl-panel', aside: sm.trials + ' answered' });
       var pastTxt = sm.past && sm.past.sessions && isNum(sm.past.accMedian) ? ' Your last ' + (sm.past.sessions === 1 ? MODE_NAMES[mode] + ' session: ' : sm.past.sessions + ' ' + MODE_NAMES[mode] + ' sessions: a median of ') + Math.round(sm.past.accMedian * 100) + ' % right.' : '';
-      p1.body.appendChild(h('p.pl-sum-line', 'This session: ' + sm.right + ' of ' + sm.trials + ' right' + (isNum(sm.acc) ? ' (' + Math.round(sm.acc * 100) + ' %)' : '') + '.' + pastTxt));
+      p1.body.appendChild(h('p.pl-sum-line', 'This session: ' + sm.right + ' of ' + sm.trials + ' right' + (isNum(sm.acc) ? ' (' + Math.round(sm.acc * 100) + ' %)' : '') +
+        (isNum(ms) ? ', ' + PX.core.clock.fmtMinutes(ms) + ' of practice' : '') + '.' + pastTxt));
       if (sm.lines && sm.lines[0] && E().modes.RATED[mode]) p1.body.appendChild(h('p.px-meta.pl-sum-noise', sm.lines[0]));
       if (mode === 'free') p1.body.appendChild(h('p.px-meta', 'Free play is logged; it does not change your levels.'));
       p1.body.appendChild(h('ul.pl-results', sm.per.map(function (r) { return resultRow(r, mode === 'speed'); })));
@@ -1672,7 +1980,7 @@
     }
     if (res && res.streak) {
       var pw = K.panel({ title: 'This week', className: 'pl-panel', aside: 'goal ' + res.streak.goal + ' a week' });
-      pw.body.appendChild(h('p', res.streak.text));
+      pw.body.appendChild(h('p', res.streak.text + (res.streak.week && isNum(res.streak.week.ms) ? ' Practice this week: ' + PX.core.clock.fmtMinutes(res.streak.week.ms) + '.' : '')));
       pw.body.appendChild(weekDots(res.streak));
       if (res.streak.current > 1) pw.body.appendChild(h('p.px-meta', res.streak.current + ' weeks in a row at your goal. One missed week in four is forgiven automatically.'));
       out.appendChild(pw.el);
@@ -1688,8 +1996,8 @@
       acts.appendChild(sh);
     }
     var again = ui.button(mode === 'train' ? 'Another session' : 'Again', { kind: nx.go ? 'secondary' : 'primary', onClick: function () {
-      var prm = {}, src = router.current().params || {};
-      for (var k in src) if (hasOwn.call(src, k)) prm[k] = src[k];
+      var prm = {}, src = S.params || router.current().params || {};
+      for (var k in src) if (hasOwn.call(src, k) && k !== 'restore') prm[k] = src[k];
       prm.mode = mode;
       router.go('play', prm, { force: true });
     } });
@@ -1716,10 +2024,14 @@
       p = K.panel({ title: 'Speed', className: 'pl-panel', aside: 'deadline now ' + fmtRt(s.deadlineMs) });
       if (isNum(s.rcs)) rows.push('Right answers in time: ' + U.round(s.rcs, 1) + ' a minute (' + Math.round(s.pc * 100) + ' % of ' + s.n + ').');
       if (isNum(s.bis)) rows.push('Balanced score against your first timed sessions: ' + (s.bis > 0 ? '+' : '') + U.round(s.bis, 2) + ' (speed and accuracy together; 0 is where you started).');
+    } else if (mode === 'threshold' && res.threshold && res.threshold.stopped) {
+      var ts = res.threshold;
+      p = K.panel({ title: 'Threshold', className: 'pl-panel', aside: ts.n + ' of ' + plural(ts.trials, 'item') });
+      rows.push('The run stopped after ' + ts.n + ' of its ' + ts.trials + ' items, so no threshold was saved: a threshold needs the whole run. Your answers are in the Log.');
     } else if (mode === 'threshold' && res.threshold) {
       var t = res.threshold;
       p = K.panel({ title: 'Threshold', className: 'pl-panel', aside: plural(t.n, 'item') + ' · ' + plural(t.reversals, 'reversal') });
-      rows.push('Threshold: ' + U.round(t.threshold, 2) + ' ' + t.unit + '.');
+      rows.push('Threshold: ' + thresholdText(t) + '.');
       rows.push(t.ok ? 'The staircase settled, so this estimate is usable. Runs on other days show how much it moves.' : 'The staircase did not settle yet, so treat this as a rough estimate; another run makes it steadier.');
     }
     if (!p) return null;
@@ -1727,8 +2039,19 @@
     return p.el;
   }
 
+  // A threshold in its own unit (I1 B8): a deadline in seconds, Track's speed in cw/s (widths of
+  // the box per second, rule 9), a span length in items.
+  function thresholdText(t) {
+    var v = t.threshold;
+    if (!isNum(v)) return '–';
+    if (t.unit === 'ms') return fmtRt(v);
+    if (t.unit === 'speed') return U.round(v, 2) + ' cw/s (widths of the box per second)';
+    if (t.unit === 'items') return U.round(v, 1) + ' items';
+    return U.round(v, 2) + ' ' + t.unit;
+  }
+
   function shareSession(S, res) {
-    var sm = res.summary, lines = [plural(sm.trials, 'item') + (isNum(sm.minutes) ? ' in ' + Math.max(1, Math.round(sm.minutes)) + ' min' : '')];
+    var sm = res.summary, ms = practiceOf(res), lines = [plural(sm.trials, 'item') + (isNum(ms) ? ' in ' + PX.core.clock.fmtMinutes(ms) : '')];
     sm.per.forEach(function (r) {
       var def = PX.ex.get(r.exId), name = def ? def.short || def.name : r.exId, lv = r.level;
       if (!lv || !isNum(lv.after)) { lines.push(name + ': ' + plural(r.n, 'item')); return; }
@@ -1757,14 +2080,25 @@
       out.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' })));
       return;
     }
-    var marks = D.items.map(function (it, i) { return D.outcomes[i] === 1 ? 1 : 0; });
-    var p = K.panel({ title: d.scored ? 'Today’s score' : 'Practice round', className: 'pl-panel', aside: d.day + ' (UTC)' });
-    p.body.appendChild(h('p.pl-daily-score', h('b.px-num', d.right + '/' + d.n), h('span', ' right')));
-    p.body.appendChild(h('ol.pl-marks', { 'aria-label': 'Items, right or wrong' }, D.items.map(function (it, i) {
-      var def = PX.ex.get(it.exId), ok = D.outcomes[i] === 1;
-      return h('li', { class: ok ? 'is-right' : 'is-wrong' }, h('span.pl-mark-g', { 'aria-hidden': 'true' }, ok ? '✓' : '✗'),
-        h('span.pl-mark-n.px-num', String(i + 1)), h('span.pl-mark-x', def ? def.short || def.name : it.exId), h('span.px-sr', ok ? ': right' : ': wrong'));
+    // 1 right, 0 wrong, null not answered (never drawn as wrong: I1 T6)
+    var outs = Array.isArray(d.outcomes) ? d.outcomes : D.items.map(function (it, i) { return D.outcomes[i] === 1 || D.outcomes[i] === 0 ? D.outcomes[i] : null; });
+    var marks = outs.map(function (o) { return o === 1 ? 1 : o === 0 ? 0 : null; });
+    var p = K.panel({ title: d.partial && d.scored ? 'Today’s attempt so far' : d.scored ? 'Today’s score' : 'Practice round', className: 'pl-panel', aside: d.day });
+    p.body.appendChild(h('p.pl-daily-score', h('b.px-num', d.right + '/' + d.n), h('span', ' right'),
+      d.partial ? h('span.px-meta', ' · ' + (isNum(d.answered) ? d.answered : outs.filter(function (o) { return o !== null; }).length) + ' of ' + d.n + ' answered') : null));
+    p.body.appendChild(h('ol.pl-marks', { 'aria-label': 'Items: right, wrong or not answered' }, D.items.map(function (it, i) {
+      var def = PX.ex.get(it.exId), o = marks[i], cls = o === 1 ? 'is-right' : o === 0 ? 'is-wrong' : 'is-open';
+      return h('li', { class: cls }, h('span.pl-mark-g', { 'aria-hidden': 'true' }, o === 1 ? '✓' : o === 0 ? '✗' : '–'),
+        h('span.pl-mark-n.px-num', String(i + 1)), h('span.pl-mark-x', def ? def.short || def.name : it.exId), h('span.px-sr', o === 1 ? ': right' : o === 0 ? ': wrong' : ': not answered'));
     })));
+    if (d.partial && d.scored) {
+      var go = ui.button('Go on now', { kind: 'primary', onClick: function () { router.go('play', { mode: 'daily' }, { force: true }); } });
+      go.setAttribute('data-daily-resume', '');
+      p.body.appendChild(h('p', 'The scored attempt counts once all ' + d.n + ' items are answered. It goes on where it stopped whenever you open it today.'));
+      p.body.appendChild(h('div.pl-summary-actions', go, ui.button('Back to Today', { kind: 'ghost', go: 'home' })));
+      out.appendChild(p.el);
+      return;
+    }
     if (!d.scored) {
       var prev = rec().daily && rec().daily[d.day];
       p.body.appendChild(h('p.px-meta', 'A practice round: today’s scored result stays ' + (prev ? prev.right + '/' + prev.n : 'as it was') + '.'));
@@ -1775,7 +2109,7 @@
     ps.body.appendChild(h('p', 'Your share line. Paste it in the Chimera Discord to compare notes.'));
     ps.body.appendChild(K.copyField(line, { rows: 1, ariaLabel: 'Daily share line', label: 'Copy' }));
     var card = ui.button('Share card', { kind: 'secondary', onClick: function () {
-      openShare({ kind: 'daily', title: 'Daily Challenge #' + d.number, label: 'Daily #' + d.number, lines: [d.right + ' of ' + d.n + ' right'], footer: d.day, marks: marks, text: line });
+      openShare({ kind: 'daily', title: 'Daily Challenge #' + d.number, label: 'Daily #' + d.number, lines: [d.right + ' of ' + d.n + ' right'], footer: d.day, marks: marks.map(function (m) { return m === 1 ? 1 : 0; }), text: line });
     } });
     card.setAttribute('data-share', '');
     ps.body.appendChild(h('div.pl-summary-actions', card));
@@ -1905,7 +2239,16 @@
     if (learn && Array.isArray(learn.parts) && learn.parts.length) {
       body.push(h('ul.pl-parts', learn.parts.map(function (pt) { return h('li', h('b', pt.label), h('span', pt.text)); })));
     }
-    body.push(h('p.px-meta', 'Keys: 1–9 pick · Enter confirm · Space next · Esc pause · S show me the solution.'));
+    // "Also in tests": the formats this exercise shares with published tests (B7, js/ui/overlap.js).
+    var ov = null;
+    try { ov = PX.ui.overlap && PX.ui.overlap.noteFor ? PX.ui.overlap.noteFor(exId) : null; } catch (e) { ov = null; }
+    if (ov) {
+      var node = null;
+      try { node = PX.ui.overlap.noteNode ? PX.ui.overlap.noteNode(exId, 'pl-howto-note') : null; } catch (e) { node = null; }
+      body.push(node || h('p.px-meta.px-overlap-note', h('b', (ov.label || 'Also in tests') + ': '), ov.text || String(ov)));
+    }
+    // The key line is for keyboards: touch screens leave it out (css/play.css).
+    body.push(h('p.px-meta.pl-howto-keys', 'Keys: 1–9 pick · Enter confirm · Space next · Esc pause · S show me the solution.'));
     if (learn && Array.isArray(learn.strategies) && learn.strategies.length) {
       body.push(h('h3.pl-howto-h', 'Ways to solve it'));
       body.push(h('ul.pl-list', learn.strategies.map(function (s) { return h('li', h('b', s.title), ': ', s.text); })));
@@ -1996,6 +2339,7 @@
         renderUnavailable(host, 'check', 'The Spatial Check is not in this build.');
         return null;
       }
+      if (p.restore) return restoreScreen(host); // a reloaded or reopened page: the kept summary
       if (m === 'watch') return watchScreen(host, route);
       if (m === 'free' && !p.run && !isObj(p.params) && !p.challenge) return freeSetup(host, route);
       return sessionScreen(host, route);
@@ -2014,6 +2358,7 @@
     homePlan: homePlan, homeLevels: homeLevels, fast: setFast, showCard: showCard, closeCards: closeCards, setChrome: setChrome,
     fillParams: fillParams, responseFor: responseFor, openShare: openShare, screenHead: screenHead,
     goalOf: goalOf, specOf: specOf, tagOf: tagOf, fmtRt: fmtRt, MODE_NAMES: MODE_NAMES,
+    bootRoute: bootRoute, sound: sound, thresholdText: thresholdText,
     isFast: function () { return FAST; },
     config: CONFIG,
     state: function () { return current ? current.state : 'idle'; },
@@ -2037,8 +2382,11 @@
     get paused() { return current ? { start: current.pauseStart, ms: current.pausedMs } : null; },
     get session() {
       var S = session.S;
-      return S ? { mode: S.mode, answered: S.answered, done: S.done, voidRun: S.voidRun, res: S.res, planDone: !!(S.plan && S.plan.done) } : null;
+      return S ? { mode: S.mode, answered: S.answered, done: S.done, voidRun: S.voidRun, res: S.res, planDone: !!(S.plan && S.plan.done),
+        activeMs: S.clock ? S.clock.activeMs() : null, clock: S.clock ? S.clock.reasons() : null, running: S.clock ? S.clock.running() : false,
+        budgetMs: S.plan ? S.plan.budgetMs : null, lastServed: !!(S.plan && S.plan.lastServed), hud: session.P ? session.P.el.meta.textContent : null } : null;
     },
+    get sound() { return { ready: sound.ready(), played: sound.played }; },
     answer: function (c) { return current ? current.answer(c) : Promise.reject(new Error('no player')); },
     next: function () { return current ? current.goNext() : false; },
     pause: function () { return current ? current.pause() : false; },

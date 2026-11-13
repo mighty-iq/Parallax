@@ -42,6 +42,7 @@
     }
     var probes = S.plan.check.probes.map(function (x) { return x.id; });
     var kind = S.plan.check.kind, baseline = /^B/.test(kind || '');
+    S.device = { display: displayOf(), viewport: Math.round(win.innerWidth || 0) + 'x' + Math.round(win.innerHeight || 0), inputs: {} };
     Play.setChrome(true);
     var P = S.P = Play.player({ endLabel: 'Stop the check' });
     wrap.appendChild(h('h1.px-sr', 'Spatial Check'));
@@ -66,7 +67,7 @@
 
     function intro() {
       var lines = [
-        probes.length + ' short tasks that Parallax never trains, about 3 minutes each: roughly ' + Math.max(5, Math.round(probes.length * 3)) + ' minutes in all.',
+        probes.length + ' short tasks that Parallax never trains, 3 to 5 minutes each: ' + probes.length * 3 + ' to ' + probes.length * 5 + ' minutes in all.',
         'There is no feedback. The items adapt to your answers, so expect to get roughly 6 to 8 in 10 right, depending on the task: the difficulty you reach carries the information, not the count.',
         'Answer as well as you can, and guess when you are unsure. Each task has a time limit per item, shown as a slow bar.',
         baseline ? 'This is ' + (KIND[kind] || 'a baseline') + ': your starting point. Two baselines make it steadier.' : 'Your results are compared with your baseline, a control task and what familiarity alone would give.',
@@ -126,6 +127,9 @@
       var lines = (Array.isArray(ins) ? ins : ins.lines || []).slice();
       if (!lines.length && learn.goal) lines.push(learn.goal);
       var ex = step.probe && step.probe.example;
+      // The time limit in words, for everyone (the bar alone says nothing to a screen reader).
+      var lim = limitRange(def);
+      if (lim) lines.push((lim.lo === lim.hi ? 'Each item has up to ' + lim.lo + ' seconds' : 'Each item has ' + lim.lo + ' to ' + lim.hi + ' seconds (harder items get more)') + ', shown as a slow bar under it.');
       return Play.showCard(wrap, P.el.root, {
         id: 'probe-intro', title: 'Task ' + (probes.indexOf(def.id) + 1) + ' of ' + probes.length + ': ' + (ins.title || name(def)), def: def, hide: P.el.root,
         lines: lines.concat(ex && P.view && P.view.demo ? ['First, one worked example. It is never scored.'] : []),
@@ -204,7 +208,10 @@
           var out;
           try { out = E().modes.answer(S.plan, rec(), step, result, now()); } catch (e) { log('answer failed', e); out = {}; }
           save();
-          if (out.outcome === 0 || out.outcome === 1) S.answered++;
+          if (out.outcome === 0 || out.outcome === 1) {
+            S.answered++;
+            if (!tr.timeout) { var inp = inputName(tr.input || tr.source); S.device.inputs[inp] = (S.device.inputs[inp] || 0) + 1; }
+          }
           progress(step);
           return P.waitNext().then(loop);
         });
@@ -217,7 +224,7 @@
       P.destroy();
       Play.setChrome(false);
       PX.ui.clear(wrap);
-      wrap.appendChild(Play.screenHead('Spatial Check', 'Check stopped', 'A check counts only when it is complete, so this one is not used for your results. Your answers stay in the Log, marked “not finished”. Take the whole check again any time: it takes about 15 minutes.'));
+      wrap.appendChild(Play.screenHead('Spatial Check', 'Check stopped', 'A check counts only when it is complete, so this one is not used for your results. Your answers stay in the Log, marked “not finished”. Take the whole check again any time: it takes 15 to 25 minutes.'));
       wrap.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' }), ui.button('Open the Log', { kind: 'secondary', go: 'log' })));
     }
 
@@ -225,6 +232,7 @@
       if (S.done) return;
       S.done = true;
       var res = null;
+      deviceExtra(S);
       try { res = E().modes.finish(S.plan, rec(), now()); } catch (e) { log('finish failed', e); }
       save();
       try { store.flush(); } catch (e) { /* the debounced save runs later */ }
@@ -247,7 +255,7 @@
     intro().then(function (v) {
       if (S.done) return null; // the screen was left with the intro open
       if (v !== 'start') { S.done = true; P.destroy(); Play.setChrome(false); router.go('home'); return null; }
-      return expectations().then(function () { if (!S.done) loop(); });
+      return expectations().then(function () { return S.done ? null : askOverlap(S, wrap); }).then(function () { if (!S.done) loop(); });
     });
 
     PX.ui.check.session = S;
@@ -261,6 +269,43 @@
   }
 
   function displayOf() { try { return E().est.displayClass(win.innerWidth, win.innerHeight); } catch (e) { return 'large'; } }
+
+  // A probe's time limits over every combination of its settings, in whole seconds (null: untimed).
+  function limitRange(def) {
+    if (!def || typeof def.timeLimit !== 'function') return null;
+    var lo = Infinity, hi = 0, n = 0;
+    function walk(i, p) {
+      if (n > 600) return;
+      if (i === def.dims.length) {
+        n++;
+        var ms = null;
+        try { ms = def.timeLimit(p); } catch (e) { ms = null; }
+        if (isNum(ms) && ms > 0) { lo = Math.min(lo, ms); hi = Math.max(hi, ms); }
+        return;
+      }
+      for (var k = 0; k < def.dims[i].levels.length; k++) { var q = Object.assign({}, p); q[def.dims[i].key] = k; walk(i + 1, q); }
+    }
+    walk(0, def.variants && def.variants.length ? { variant: def.variants[0] } : {});
+    return hi > 0 ? { lo: Math.round(lo / 1000), hi: Math.round(hi / 1000) } : null;
+  }
+
+  // What a check was taken with, so results compare like with like (CONTRACT B2): the screen
+  // class and size at the start, and the input that answered most items ('touch', 'mouse',
+  // 'pen', 'key'; 'unknown' when nothing says). assess.finish copies plan.check.extra onto the record.
+  function inputName(src) {
+    var s = String(src || '').toLowerCase();
+    return s === 'touch' ? 'touch' : s === 'pen' ? 'pen' : s === 'key' || s === 'keys' || s === 'keyboard' ? 'key' : s === 'mouse' || s === 'pointer' ? 'mouse' : 'unknown';
+  }
+  function deviceExtra(S) {
+    var c = S.plan && S.plan.check;
+    if (!c) return;
+    if (!c.extra || typeof c.extra !== 'object') c.extra = {};
+    c.extra.display = S.device.display;
+    c.extra.viewport = S.device.viewport;
+    var best = 'unknown', most = 0;
+    Object.keys(S.device.inputs).forEach(function (k) { if (k !== 'unknown' && S.device.inputs[k] > most) { most = S.device.inputs[k]; best = k; } });
+    c.extra.input = best;
+  }
 
   function renderEnd(wrap, res) {
     var K = PX.ui.kit, Play = PX.ui.play, c = res && res.check;
@@ -293,4 +338,37 @@
   }
 
   PX.ui.check = { run: run, session: null };
+
+  /* ---------- B7: the outside-practice question (v1.1 PLAN M6; R4 §6.3 c) ----------
+     askOverlap(S, wrap) → Promise<answer | null>: at the start of every check after the first
+     (one complete check already in rec.assess), one tap, before the first item. The answer
+     ('no' | 'little' | 'lot') goes to S.plan.check.extra.overlapAnswer, which assess.finish copies
+     onto the check record; Skip stores nothing. Logged for the Lab, never scored. */
+  var OVERLAP = [['no', 'No'], ['little', 'A little'], ['lot', 'A lot']];
+  function askOverlap(S, wrap) {
+    var Play = PX.ui.play, list = rec().assess;
+    if (!S || S.done || !S.P || !S.plan || !S.plan.check || !Array.isArray(list) || !list.length) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      var row = h('div.pl-expect.pl-overlap-q', { role: 'group', 'aria-label': 'Outside practice since your last check' }), close = null;
+      OVERLAP.forEach(function (x) {
+        var b = ui.button(x[1], { kind: 'secondary', onClick: function () {
+          var c = S.plan.check;
+          if (!c.extra || typeof c.extra !== 'object') c.extra = {};
+          c.extra.overlapAnswer = x[0];
+          S.overlapAnswer = x[0];
+          if (close) close('answered');
+        } });
+        b.setAttribute('data-overlap-answer', x[0]);
+        row.appendChild(b);
+      });
+      Play.showCard(wrap, S.P.el.root, {
+        id: 'overlap', title: 'One question first', hide: S.P.el.root,
+        lines: ['Since your last check, have you practised or taken another test with puzzles like these, or with word analogies?', row,
+          h('p.px-meta', 'Outside practice changes results too, so the Lab keeps your answer next to your data. It is never scored.')],
+        actions: [{ label: 'Skip', value: 'skip' }],
+        onShow: function (pnl, done) { close = done; },
+      }).then(function () { resolve(S.overlapAnswer || null); });
+    });
+  }
+  PX.ui.check.askOverlap = askOverlap;
 })(window.PX);

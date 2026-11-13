@@ -74,10 +74,39 @@
 .ex-views .ex-views-count .ex-answer-text { font-size: var(--fs-2xl, 2rem); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .ex-views .ex-views-unit { font-size: var(--fs-xs, 0.75rem); color: var(--ink-3, #5D646C); text-transform: uppercase; letter-spacing: 0.06em; }
 
+/* Phones in the player: the item fits one screen (css/play.css sets --pl-avail and --pl-w).
+   Drawings and structures in a 2 × 2 grid of cells as wide as the screen allows; the stage takes
+   what is left, less the two-line hint of "to the object". The tag a reveal adds sits over the
+   picture's lower edge, so the cells keep their size. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-views { --views-cell: min(calc((var(--pl-w) - var(--s2)) / 2), calc((var(--pl-avail) - 12rem - 2.5rem - 3 * var(--s2)) / 2)); }
+  .pl-trial.ex-views .ex-views-under { gap: 0 var(--s2); }
+  .pl-trial.ex-views .ex-views-hint { margin: 0; font-size: 0.8125rem; line-height: 1.35; }
+  .pl-trial.ex-views .ex-views-stage { height: min(17rem, calc(var(--pl-w) * 0.7), calc(var(--pl-avail) - 2 * var(--views-cell) - 2 * var(--s2))); }
+  .pl-trial.ex-views .ex-views-stem[data-variant="toobject"] .ex-views-stage { height: min(17rem, calc(var(--pl-avail) - 2 * var(--views-cell) - 2.5rem - 3 * var(--s2))); }
+  .pl-trial.ex-views .ex-views-stem[data-variant="count"] .ex-views-stage { height: min(20rem, calc(var(--pl-w) * 0.85), calc(var(--pl-avail) - 5.5rem - 2 * var(--s2))); }
+  .pl-trial.ex-views .px-choices:has(.ex-views-opt) .px-choice { height: var(--views-cell); padding: var(--s1); }
+  .pl-trial.ex-views .px-choice .ex-opt { position: relative; }
+  .pl-trial.ex-views .px-choice .ex-thumb { width: calc(var(--views-cell) - 0.5rem - 2px); max-width: 100%; }
+  .pl-trial.ex-views .px-choice .ex-views-svg { width: calc(var(--views-cell) - 1.25rem); max-width: 100%; }
+  .pl-trial.ex-views .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+}
+/* sideways: the stage on the left at full height (less the hint), the options right */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-views { --views-cell: min(calc((var(--pl-col) - var(--s2)) / 2), calc((var(--pl-avail) - var(--s2)) / 2)); }
+  .pl-trial.ex-views .ex-views-stage,
+  .pl-trial.ex-views .ex-views-stem[data-variant="count"] .ex-views-stage { height: var(--pl-avail); }
+  .pl-trial.ex-views .ex-views-stem[data-variant="toobject"] .ex-views-stage { height: calc(var(--pl-avail) - 2.5rem); }
+}
+
 @media (max-width: 40rem) {
   .ex-views .px-choices[style*="--px-cols:4"]:has(.ex-views-opt) { --px-cols: 2 !important; }
   .ex-views .ex-views-stage { height: clamp(10rem, min(36vh, 66vw), 17rem); }
   .ex-views .ex-views-svg { max-width: 8.5rem; }
   .ex-views .px-choice .ex-thumb { max-width: none; }
   .ex-views .ex-views-count .ex-answer-text { font-size: var(--fs-xl, 1.5rem); }
+}
+/* phones: the three views' names no smaller than 13 px */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-views .ex-views-dlabel { font-size: 13px; }
 }

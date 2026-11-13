@@ -62,7 +62,8 @@
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s1) var(--s3);
   padding-bottom: var(--s2); border-bottom: 1px solid var(--rule);
 }
-.px-excard-tags { display: inline-flex; flex-wrap: wrap; gap: var(--s1); }
+.px-excard-tags { display: inline-flex; flex-wrap: wrap; gap: var(--s1); min-width: 0; max-width: 100%; }
+.px-excard-tags .px-tag { max-width: 100%; white-space: normal; } /* a long tag wraps inside its pill at large text sizes */
 .px-excard-title { font-size: var(--fs-xl); margin-top: calc(-1 * var(--s1)); }
 .px-excard-name {
   display: inline-flex; align-items: center; min-height: var(--tap); min-width: var(--tap); padding: 0; margin: 0;
@@ -278,7 +279,8 @@
 .px-curve figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s1) var(--s3); margin-bottom: var(--s1); font-size: var(--fs-sm); }
 .px-curve figcaption .px-num { color: var(--ink-3); font-size: var(--fs-xs); }
 .px-curve-grid { stroke: var(--rule); stroke-width: 1; }
-.px-curve-lab { font-family: var(--font-mono); font-size: 9px; fill: var(--ink-3); }
+.px-curve-lab { font-family: var(--font-mono); font-size: max(9px, calc(13px * var(--px-u, 0))); fill: var(--ink-3); }
+.px-curve-svg, .px-lab-svg { overflow: visible; } /* a 13 px label may reach a little past the plot's edge, inside the figure's padding */
 .px-curve-band { fill: var(--signal-wash); stroke: none; }
 .px-curve-bandline { stroke: var(--signal); stroke-opacity: 0.45; stroke-width: 6; }
 .px-curve-line { fill: none; stroke: var(--signal); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
@@ -449,4 +451,10 @@
   .px-log-table td:nth-child(6) { grid-area: rt; text-align: right; font-size: var(--fs-xs); }
   .px-log-table td:nth-child(7) { grid-area: p; text-align: right; font-size: var(--fs-xs); color: var(--ink-3); }
   .px-log-table td:nth-child(7)::before { content: "predicted "; font-family: var(--font-sans); }
+}
+
+/* ---------- phones: no text under 13 px (I2 §4) ---------- */
+@media (max-width: 719px), (max-height: 500px) {
+  .px-fp-tick span, .px-cal-head { font-size: 0.8125rem; }
+  .px-lab-step-mark { font-size: var(--fs-xs); }
 }

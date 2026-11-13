@@ -1,6 +1,8 @@
 /* PX.engine.streak: weekly goal and weekly streak (PLAN §7; D §2 and §b).
    No daily chain and no loss framing. Weeks run Monday to Sunday (local days). A session
-   counts when it has at least 10 answers or 5 minutes of practice.
+   counts when it has at least 10 answers or 5 minutes of practice (the active-time clock's
+   minutes, as the summary shows them); a Spatial Check is a measurement, not practice, and
+   never counts (v1.1).
    - Goal: 2–6 sessions a week (default 3), from settings.weeklyGoal; changes are kept in
      rec.streak.goals as [weekKey, goal] so past weeks keep the goal they had.
    - Grace: one missed week in any four is forgiven automatically (the run continues).
@@ -31,7 +33,7 @@
   }
 
   function counts(s) {
-    return isObj(s) && isNum(s.start) && ((s.trials || 0) >= C.streak.minTrials || (s.practiceMs || 0) >= C.streak.minMs);
+    return isObj(s) && isNum(s.start) && s.mode !== 'check' && ((s.trials || 0) >= C.streak.minTrials || (s.practiceMs || 0) >= C.streak.minMs);
   }
 
   function clampGoal(g) {
@@ -90,8 +92,12 @@
     });
     var dots = [];
     for (var i = 0; i < 7; i++) dots.push(!!perDay[U.addDays(cur, i)]);
-    var thisN = perWeek[cur] || 0;
-    var week = { key: cur, sessions: thisN, goal: goal, met: thisN >= goal, left: Math.max(0, goal - thisN), days: dots };
+    var thisN = perWeek[cur] || 0, weekMs = 0;
+    // practice minutes this week: every practice session (not only those that count for the goal)
+    (isArray(rec.sessions) ? rec.sessions : []).forEach(function (s) {
+      if (isObj(s) && isNum(s.start) && s.mode !== 'check' && isNum(s.practiceMs) && E.day(s.start) <= today && weekKey(E.day(s.start)) === cur) weekMs += s.practiceMs;
+    });
+    var week = { key: cur, sessions: thisN, goal: goal, met: thisN >= goal, left: Math.max(0, goal - thisN), days: dots, ms: Math.round(weekMs) };
     var out = { goal: goal, week: week, current: 0, best: 0, weeks: [], repair: null, hidden: isObj(rec.streak) && rec.streak.hidden === true, text: '' };
     if (first === null) { out.text = '0 of ' + goal + ' sessions this week.'; return out; }
     var run = 0, best = 0, lastGrace = -Infinity, idx = 0;

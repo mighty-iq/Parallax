@@ -8,6 +8,14 @@
              Speed, Free), params / deadlineMs / trials (Free), protocol (Threshold), optional (Check),
              variant (Speed and the deadline protocol keep to one variant: this one, else the first)
        plan.unavailable: a sentence when the mode cannot run now (then plan.done is true)
+     The clock (v1.1): next, answer and finish take an optional last argument t = { activeMs } (the
+     player's active-time clock, PX.core.clock). Train, Path, Speed and Free play without a set
+     length are time-boxed on that active time: an easier closing item comes when about one item
+     (at the session's own pace) is left, or right after an item that ran past the budget; the
+     item count is only a safety cap that extends itself when the player is fast. Without t (tests, the
+     simulations) active time is the sum of the gaps between answers up to 90 s each, as in v1.0.
+     finish's t may also carry ended ('early' | 'closed': the player ended it or the page closed;
+     else 'complete' when the plan reached its end) and session extras { viewport, input }.
      step = modes.next(plan, rec, now)     { done:false, exId, params, seed, kind, pPred, target,
              stage, banner, newRun, switched, watch, deadlineMs, feedback, ... } or { done:true }
              The UI builds the item: PX.ex.get(step.exId).generate(PX.rng(step.seed), step.params)
@@ -72,8 +80,10 @@
       exs: [], count: {}, rated: {}, log: [], shown: {}, level0: {}, blockN: {}, blocks: {}, stage: {},
       lastEx: null, lastAt: now, activeMs: 0, deck: [], can: typeof opts.can === 'function' ? opts.can : null,
       rng: E.select.rng(rec, 'plan:' + mode + ':' + now), unavailable: null, finished: null, stageBacks: [],
+      clocked: false, lastActive: 0, paces: [], boxed: false, natural: false, ended: null,
     };
     MODES[mode].start(plan, rec, opts, now);
+    plan.boxed = isNum(plan.budgetMs) && plan.budgetMs !== Infinity;
     if (!plan.unavailable && !plan.exs.length) plan.unavailable = 'No exercise is available for this mode on this device.';
     if (plan.unavailable) plan.done = true;
     if (RATED[mode] && !plan.done) {
@@ -93,14 +103,56 @@
     return plan.total + Math.min(plan.extra, Math.ceil(plan.total * C.session.extraShare));
   }
 
-  // 'over' (no more items), 'last' (serve the closing item now) or null.
+  // The player's active-time clock reading (t.activeMs) moves the plan's clock forward.
+  function clockIn(plan, t) {
+    if (t && isNum(t.activeMs) && t.activeMs >= 0) {
+      plan.clocked = true;
+      if (t.activeMs > plan.activeMs) plan.activeMs = t.activeMs;
+    }
+  }
+
+  // This session's own pace: the median active time between its last answers (3 or more), else null.
+  function paceOf(plan) {
+    var p = plan.paces;
+    return p && p.length >= 3 ? U.median(p) : null;
+  }
+
+  // A time-boxed plan that runs out of planned items while time is left plans more: as many as
+  // the time left holds at this session's pace, up to one item per C.session.minItemMs (a safety cap).
+  function extend(plan, msPer) {
+    if (!plan.boxed || !(msPer > 0)) return false;
+    var left = Math.max(0, plan.budgetMs - plan.activeMs);
+    var cap = Math.max(C.session.minTrials, Math.ceil(plan.budgetMs / C.session.minItemMs));
+    var want = Math.min(cap, plan.pos + Math.ceil(left / msPer) + 2);
+    if (want <= plan.total) return false;
+    plan.total = want;
+    if (plan.quota && plan.shares) plan.quota = E.schedule.quotas(plan.exs, plan.exs.map(function (id) { return plan.shares[id] || 0; }), want);
+    plan.extended = (plan.extended || 0) + 1;
+    return true;
+  }
+
+  // 'over' (no more items), 'last' (serve the closing item now) or null. Time-boxed plans end on
+  // active time: the easier closing item comes once about one item is left (at this session's
+  // pace, else msPer), so the session ends near its budget, and at the latest right after the
+  // item during which the budget ran out. The warm-ups and one more item always come first.
   function atEnd(plan, now, msPer) {
     if (plan.lastServed) return 'over';
+    if (plan.boxed) {
+      var m = paceOf(plan) || msPer || plan.avgMs || 0, warm = plan.pos > C.session.warmup;
+      if (warm && plan.activeMs + m >= plan.budgetMs) return 'last';
+      if (plan.pos >= effTotal(plan) - 1) extend(plan, m || 9000);
+      return plan.pos >= effTotal(plan) ? 'over' : null;
+    }
     var total = effTotal(plan);
     if (plan.pos >= total) return 'over';
     if (plan.pos === total - 1) return 'last';
-    if (isNum(now) && now - plan.start >= plan.budgetMs - (msPer || 0) && plan.pos > C.session.warmup) return 'last';
     return null;
+  }
+
+  // Active time left in a time-boxed plan (ms; Infinity when it ends by its item count).
+  function timeLeft(plan, t) {
+    clockIn(plan, t);
+    return plan.boxed ? Math.max(0, plan.budgetMs - plan.activeMs) : Infinity;
   }
 
   // 80 % target, 10 % easier, 10 % stretch, dealt from shuffled decks of 10; two warm-ups first.
@@ -131,23 +183,36 @@
     return step;
   }
 
-  function next(plan, rec, now) {
+  function next(plan, rec, now, t) {
     if (plan.done) return { done: true, reason: plan.unavailable || 'finished' };
     if (!isNum(now)) now = plan.lastAt;
+    clockIn(plan, t);
     var step = MODES[plan.mode].next(plan, rec, now);
-    if (!step) { plan.done = true; return { done: true, reason: 'finished' }; }
+    if (!step) { plan.done = true; plan.natural = true; return { done: true, reason: 'finished' }; }
     return step;
   }
 
-  function answer(plan, rec, step, result, now) {
+  function answer(plan, rec, step, result, now, t) {
     if (!step || step.done) throw new Error('PX.engine.modes.answer: needs a step from next()');
     if (step.answered) return step.answered; // a second call for the same step changes nothing
     if (!isNum(now)) now = plan.lastAt;
     var def = defOf(step.exId);
     var oc = E.log.outcome(result);
-    var row = E.log.append(rec, E.log.row(rec, def, plan.mode, step, oc, result, now));
-    var dt = now - plan.lastAt;
-    if (dt > 0 && dt <= C.session.maxGapMs) plan.activeMs += dt;
+    // the display class of the row: the player's (result.display), else the plan's
+    var res1 = result && typeof result === 'object' && result.display === undefined ? Object.assign({}, result, { display: plan.display }) : result;
+    var row = E.log.append(rec, E.log.row(rec, def, plan.mode, step, oc, res1, now));
+    var dt;
+    clockIn(plan, t);
+    if (plan.clocked) dt = plan.activeMs - plan.lastActive;
+    else { // no clock: the gaps between answers, up to 90 s each (v1.0)
+      dt = now - plan.lastAt;
+      if (dt > 0 && dt <= C.session.maxGapMs) plan.activeMs += dt; else dt = 0;
+    }
+    if (dt > 0) { // this session's pace (time-boxed plans predict their last item from it)
+      plan.paces.push(dt);
+      if (plan.paces.length > 10) plan.paces.shift();
+    }
+    plan.lastActive = plan.activeMs;
     plan.lastAt = Math.max(plan.lastAt, now);
     var out = { row: row, outcome: oc, rated: false, p: step.pPred, blockEnd: null, done: false };
     plan.log.push({ exId: step.exId, kind: step.kind, oc: oc, rt: row[6], p: step.pPred, target: step.target, b: step.b, g: step.g, stage: step.stage, sw: !!step.switched, i: step.i, code: step.code });
@@ -176,6 +241,7 @@
     }
     var M2 = MODES[plan.mode];
     out.done = plan.done || (M2.over ? M2.over(plan) : atEnd(plan, now, 0) === 'over');
+    if (out.done) plan.natural = true;
     step.answered = out;
     return out;
   }
@@ -190,9 +256,13 @@
     return out;
   }
 
-  function finish(plan, rec, now) {
+  function finish(plan, rec, now, t) {
     if (plan.finished) return plan.finished;
     if (!isNum(now)) now = plan.lastAt;
+    clockIn(plan, t);
+    // how it ended: the plan's own end, else the player's word ('early': ended on purpose;
+    // 'closed': the page closed); without a word, an unfinished plan ended early
+    plan.ended = plan.natural ? 'complete' : t && (t.ended === 'closed' || t.ended === 'early') ? t.ended : 'early';
     plan.done = true;
     var res = {
       mode: plan.mode, unavailable: plan.unavailable, stageUps: [], stageBacks: plan.stageBacks.slice(),
@@ -212,7 +282,12 @@
       var session = {
         id: plan.id, start: plan.start, end: Math.max(now, plan.start), mode: plan.mode, trials: answered, right: right,
         practiceMs: Math.round(plan.activeMs), exs: exs, summary: E.stats.compact(res.summary),
+        display: plan.display, ended: plan.ended,
       };
+      if (plan.boxed) session.budgetMs = Math.round(plan.budgetMs);
+      var xs = t && isObj(t.session) ? t.session : null;
+      if (xs && typeof xs.viewport === 'string') session.viewport = xs.viewport;
+      if (xs && typeof xs.input === 'string') session.input = xs.input;
       if (!isArray(rec.sessions)) rec.sessions = [];
       rec.sessions.push(session);
       rec.practiceMs = (isNum(rec.practiceMs) ? rec.practiceMs : 0) + session.practiceMs;
@@ -438,6 +513,8 @@
         def = defs.filter(function (d) { return d.id === opts.exId; })[0] || null;
         if (!def) { plan.unavailable = 'This exercise is not available here.'; return; }
       } else {
+        // no exercise chosen: an automatic choice (CONTRACT-v1.1 H5)
+        defs = defs.filter(function (d) { return E.schedule.auto(rec, d, now); });
         var due = null, recent = null, at = -Infinity;
         defs.forEach(function (d) {
           if (!due && dueRechecks(rec, d, now).length) due = d;
@@ -631,7 +708,9 @@
       });
       plan.refRt = tm.refRt;
       plan.timedLog = [];
-      plan.avgMs = E.schedule.trialMs(rec, def, E.schedule.trialTimes(rec), E.schedule.typical(rec, def, { display: plan.display }, now, plan.k));
+      // A timed item lasts at most its deadline (plus feedback), far less than an untimed one.
+      var untimed = E.schedule.trialMs(rec, def, E.schedule.trialTimes(rec), E.schedule.typical(rec, def, { display: plan.display }, now, plan.k));
+      plan.avgMs = Math.max(1000, Math.min(untimed, Math.pow(10, E.staircase.value(plan.sc)) + C.session.overheadMs));
       plan.total = Math.max(C.session.minTrials, Math.round(plan.budgetMs / plan.avgMs));
     },
     next: function (plan, rec, now) {
@@ -666,7 +745,8 @@
       if (!L.length) return;
       var right = L.filter(function (x) { return x[0]; }), rts = right.map(function (x) { return x[1]; }).filter(isNum);
       var pc = right.length / L.length, rt = rts.length ? U.mean(rts) : null;
-      tm.sessions.push([E.day(now), U.round(pc, 4), rt === null ? null : Math.round(rt), L.length]);
+      // [day, share in time, mean right time, answers, 1 when the session ran its full time]
+      tm.sessions.push([E.day(now), U.round(pc, 4), rt === null ? null : Math.round(rt), L.length, plan.ended === 'complete' ? 1 : 0]);
       if (tm.sessions.length > 200) tm.sessions.splice(0, tm.sessions.length - 200);
       var minutes = plan.activeMs / 60000;
       res.speed = {
@@ -860,9 +940,17 @@
       var pr = plan.protocol;
       if (!plan.sc.n) return;
       var th = E.staircase.threshold(plan.sc);
+      // A run stopped before its end (ended by the player, or by a closed page) is no
+      // measurement: reported, never saved (rec.mot holds complete runs only, for the Lab's history
+      // and the "Measured" achievement). A run the protocol itself ended (all its items, or the cap
+      // on replaced items) is complete; ok says whether its staircase settled.
+      if (plan.ended !== 'complete') {
+        res.threshold = { stopped: true, n: plan.sc.n, trials: plan.total, unit: pr.unit, rule: pr.rule, id: pr.id };
+        return;
+      }
       var entry = {
         date: new Date(now).toISOString(), threshold: U.round(xValue(pr, th.x), 4), x: U.round(th.x, 4), unit: pr.unit,
-        n: th.n, reversals: th.reversals, ok: th.ok, method: th.method, atBound: th.atBound, rule: pr.rule,
+        n: th.n, reversals: th.reversals, ok: th.ok, method: th.method, atBound: th.atBound, rule: pr.rule, complete: true,
         p: U.round(plan.sc.p, 4), display: plan.display, variant: plan.tg ? plan.tg.variant : null,
         // every trial's exact value (speed, length or deadline) and outcome
         hist: plan.sc.hist.map(function (h) { return [U.round(xValue(pr, h[0]), 4), h[1]]; }),
@@ -881,7 +969,7 @@
     start: function (plan, rec, opts, now) { E.daily.start(plan, rec, opts, now); },
     next: function (plan, rec, now) { return E.daily.next(plan, rec, now); },
     void: function (plan, rec, step) { E.daily.void(plan, rec, step); },
-    over: function (plan) { return plan.daily.at >= plan.daily.items.length && !plan.daily.redo.length; },
+    over: function (plan) { return E.daily.over(plan); },
     answer: function (plan, rec, step, ok, result, now, out) { E.daily.answer(plan, rec, step, ok, result, now, out); },
     finish: function (plan, rec, now, res) { E.daily.finish(plan, rec, now, res); },
   };
@@ -972,7 +1060,7 @@
       if (!isObj(t)) return undefined;
       var o = fixRating(t);
       if (isObj(t.small)) o.small = fixRating(t.small);
-      o.sessions = F.list(t.sessions, function (s) { return isArray(s) && F.day(s[0]) && isNum(s[1]) ? s.slice(0, 4) : undefined; }, 200) || [];
+      o.sessions = F.list(t.sessions, function (s) { return isArray(s) && F.day(s[0]) && isNum(s[1]) ? s.slice(0, 5) : undefined; }, 200) || [];
       ['deadline', 'refRt', 'unlocked'].forEach(function (k) { if (o[k] !== undefined && !isNum(o[k])) delete o[k]; });
       if (o.variant !== undefined && !(typeof o.variant === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(o.variant))) delete o.variant;
       return o;
@@ -991,6 +1079,7 @@
   E.modes = {
     start: start, next: next, answer: answer, finish: finish, MODES: MODES, RATED: RATED,
     available: available, checkin: checkin, checkinDue: checkinDue, STRATEGIES: STRATEGIES,
-    _: { atEnd: atEnd, kindFor: kindFor, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup },
+    timeLeft: timeLeft, pace: paceOf,
+    _: { atEnd: atEnd, kindFor: kindFor, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn },
   };
 })(window.PX);

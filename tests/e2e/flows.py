@@ -126,6 +126,11 @@ def run_check(b, C):
     # a second check stopped part-way is not used for results
     go(page, {'mode': 'check'})
     click_card(page, 'start')
+    # v1.1 (M6): later checks ask one unscored question about other tests first (B7's card)
+    C.ok(card(page) == 'overlap', f'{tag}: a later check asks the one-tap question about other tests ({card(page)})')
+    if card(page) == 'overlap':
+        page.locator('[data-overlap-answer]').first.click()
+        page.wait_for_timeout(150)
     C.ok(card(page) == 'probe-intro', f'{tag}: the expectations question is asked once only')
     click_card(page, 'skip')
     wait_state(page, 'respond')
@@ -188,14 +193,16 @@ def run_modes(b, C):
     con = Console(page)
     boot(page)
     seen_all(page)
-    page.evaluate('PX.core.store.state.settings.sessionMin = 3')
-    # Path: the stage card offers its demo; a block end shows the level; the check-in comes once
+    # v1.1: sessions are time-boxed on active time; 20 s keeps this test quick
+    page.evaluate('PX.core.store.state.settings.sessionMin = 3; PX.ui.play.config.budgetMs = 20000;')
+    # Path: the intro card names the stage and offers its demo (one card, I1 B12); a block end
+    # shows the level; the check-in comes once
     go(page, {'mode': 'path', 'exId': 'hidden'})
     C.ok(card(page) == 'intro' and 'stage 1 of 10' in page.locator('[data-card-box]').inner_text(), f'{tag}: Path intro names the stage')
-    click_card(page, 'start')
-    C.ok(card(page) == 'stage', f'{tag}: the first item of a new stage offers the demo')
+    C.ok(page.locator('[data-card-box="intro"] [data-card="watch"]').count() == 1 and page.locator('[data-card-box="intro"] [data-card="start"]').count() == 1, f'{tag}: the intro offers the stage demo itself')
     page.screenshot(path=str(OUT / 'flows_path_stage.png'))
     click_card(page, 'watch')
+    C.ok(card(page) is None, f'{tag}: no second stage card')
     page.wait_for_function('__play.played.demos >= 1', timeout=10000)
     page.wait_for_function('__play.state === "respond"', timeout=10000)
     C.ok(page.evaluate('PX.core.store.state.trials.length') == 0, f'{tag}: the stage demo is never logged')

@@ -108,3 +108,26 @@
 @media (prefers-reduced-motion: reduce) {
   .ex-track .ex-track-mark { transition: none; }
 }
+
+/* Phones in the player (css/play.css sets --pl-avail and --pl-w): the plate as large as the
+   screen allows above its phase line and Confirm. Sideways: the plate on the left at full
+   height, so the spheres never move off the screen; the phase line and Confirm on the right. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-track .ex-track-stage { height: clamp(14rem, min(26rem, calc(var(--pl-w) * 0.98), calc(var(--pl-avail) - 6.5rem)), 32rem); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-track .ex-track-root {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
+    align-items: start; column-gap: var(--s4);
+  }
+  .pl-trial.ex-track .ex-track-stage { grid-column: 1; grid-row: 1 / -1; width: min(calc(var(--pl-avail) * 1.2), calc(var(--pl-w) * 0.62)); height: var(--pl-avail); }
+  .pl-trial.ex-track .ex-track-void, .pl-trial.ex-track .ex-track-bar, .pl-trial.ex-track .ex-caption { grid-column: 2; }
+  .pl-trial.ex-track .ex-track-void { margin-top: 0; }
+  .pl-trial.ex-track .ex-track-bar { flex-direction: column; align-items: stretch; margin-top: 0; }
+  .pl-trial.ex-track .ex-track-status { flex: none; }
+  .pl-trial.ex-track .ex-track-confirm { width: 100%; }
+}
+/* touch screens, also held sideways: the key legend gives way (a keyboard, if any, still works) */
+@media (hover: none) and (pointer: coarse) {
+  .ex-track .ex-track-keys[data-kind="keys"] { display: none; }
+}
