@@ -13,11 +13,14 @@
 #   RUN_ALL_SKIP=regex   leave out the e2e files whose name matches (e.g. 'longrun')
 #   RUN_ALL_NODE=0       leave out the node suite
 #   RUN_ALL_JOBS=1|2     parallel e2e files (default 2, never more)
+#   RUN_ALL_TAG=name     logs in tests/e2e/out/run_all_<name>/ and the report in run_all_<name>.json, so that
+#                        chunks of the suite (each under a 2-hour limit) keep their own results
 set -u
 cd "$(dirname "$0")/.." || exit 2
 ROOT=$(pwd)
 OUT="$ROOT/tests/e2e/out"
-LOGS="$OUT/run_all"
+TAG=${RUN_ALL_TAG:+_$RUN_ALL_TAG}
+LOGS="$OUT/run_all$TAG"
 mkdir -p "$LOGS"
 rm -f "$LOGS"/*.res "$LOGS"/*.log
 JOBS=${RUN_ALL_JOBS:-2}
@@ -72,7 +75,7 @@ wait
 
 # 3. the report
 T1=$(date +%s.%N)
-python3 - "$LOGS" "$OUT/run_all.json" "$(echo "$T1 - $T0" | bc)" <<'PY'
+python3 - "$LOGS" "$OUT/run_all$TAG.json" "$(echo "$T1 - $T0" | bc)" <<'PY'
 import json, pathlib, re, sys
 logs, dest, total = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), float(sys.argv[3])
 files, bad = {}, []
