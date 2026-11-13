@@ -1,6 +1,6 @@
 # STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-13 18:17 UTC. Every builder and fix round is done; verification phase. All 19 exercises are active in index.html (Knots and B6's three included).
+Updated 2026-11-13 18:23 UTC. Every builder and fix round is done; verification phase. All 19 exercises are active in index.html (Knots and B6's three included).
 
 ## Phase
 2. Build (started 13 Nov ~14:00 UTC after the owner's go). D1: keep Parallax's own rules (game layer = v1.2). D2: opt-in focus on the DAT-style formats. D3: analogical test named in v1.2.
@@ -54,7 +54,7 @@ Updated 2026-11-13 18:17 UTC. Every builder and fix round is done; verification 
 - RV-D done (docs/dev/reviews/RV-dat-style-B.md): no wrong items; Form face-shape cue 71 %, Openings cues; B6 fix round done (e5e1508).
 - RV-E done (docs/dev/reviews/RV-reckon-homing.md): scoring right; 2 blockers (turn-only strategies beat chance + 10 in Reckon and Homing; strategy card side error), 6 should-fix; B3 fix round and decision (a) done; B1 added trial column value2.
 - RV-H done (docs/dev/reviews/RV-code-core.md): no blockers; 4 should-fix (closing-item cap, check time as practice, two-tab merge of new fields, idle cap on late timers); B1 fix round done (value2 = trial column 13; CSV 18 columns).
-- Play-through RV-F (fresh player, no source: six DAT-style tutorials, Section mini, focus; phone 390×844 and 360×640, desktop): a76c1d49da2d6b2fa → docs/dev/reviews/RV-play-dat.md. 
+- RV-F done (docs/dev/reviews/RV-play-dat.md): all six learnable; Form > 2 min; tutorial flow, Section phone review, focus effect, sample data. Fix rounds resumed: B2 (aed53d9e449759e47), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B6 (a0dc048b845b7fc8e). 
 - Play-through RV-F2 (fresh player: Homing, Reckon, Knots): a8c9191d53e6416d6 → docs/dev/reviews/RV-play-nav-knots.md
 - Full suite run 1 (tests/run_all.sh incl. longrun and clock full) from 0c8daf6+: background b4w592kpu, log scratchpad/run_all_1.log, results tests/e2e/out/run_all.json
 - G1 finished (80fe43f): guide 1.1.0, 50 pages, clean build; README; CHANGELOG.
