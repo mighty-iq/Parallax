@@ -179,10 +179,13 @@ def simulate(page, tag, lab=True):
 def library_checks(page, tag, w, phone):
     go(page, 'library')
     n_train = page.evaluate("PX.ex.list('train').length")
-    # every exercise the simulated learner practised shows its level (v1.1 adds exercises it does not train)
-    n_practised = page.evaluate("PX.engine.stats.overview(PX.core.store.state, Date.now(), {}).filter(x => x.n > 0).length")
+    # every exercise the simulated learner practised shows its level (v1.1 adds exercises it does not
+    # train); exercises rated per screen size (perDisplay) show no level on a small screen when the
+    # simulated practice was on a larger one
+    n_practised = page.evaluate("""(() => { const small = PX.engine.est.displayClass(innerWidth, innerHeight) === 'small';
+        return PX.engine.stats.overview(PX.core.store.state, Date.now(), {}).filter(x => x.n > 0 && !(small && PX.ex.get(x.exId).perDisplay)).length; })()""")
     with_level = page.locator('.px-excard .px-lvl-row').count()
-    C.ok(with_level >= min(n_train, n_practised) - (2 if phone else 0), f'{tag}: levels with ranges on the cards ({with_level} of {n_practised} practised)')
+    C.ok(with_level >= min(n_train, n_practised), f'{tag}: levels with ranges on the cards ({with_level} of {n_practised} practised and rated on this screen size)')
     rot = page.locator('.px-excard[data-ex="rotate"]').inner_text()
     C.ok(re.search(r'\d+\s*\n?\s*\d+–\d+', rot) is not None and 'Handles' in rot, f'{tag}: Rotate card shows level, range and settings')
     if phone:
