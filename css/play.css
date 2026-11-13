@@ -95,8 +95,18 @@
 .pl-verdict[data-kind="turn"] { align-items: center; }
 .pl-verdict[data-kind="turn"] .pl-verdict-icon, .pl-verdict[data-kind="turn"] .pl-verdict-word { color: var(--signal-strong); }
 .pl-verdict[data-kind="turn"] .pl-verdict-icon { background: var(--signal-wash); }
-.pl-verdict[data-kind="turn"] .pl-verdict-text { flex: 1 1 12rem; flex-basis: auto; }
+.pl-verdict[data-kind="turn"] .pl-verdict-text { flex: 1 1 12rem; } /* beside the word, or under it next to the button on a phone */
 .pl-verdict[data-kind="turn"] [data-turn-skip] { margin-left: auto; }
+/* phones: one compact block (the word over the line, the button beside both), so the item's own
+   controls stay clear above it */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-feedback:has(> .pl-feedback-main > .pl-verdict[data-kind="turn"]) { padding-top: var(--s2); padding-bottom: calc(var(--s2) + env(safe-area-inset-bottom, 0px)); }
+  .pl-verdict[data-kind="turn"] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icon word skip" "text text skip"; align-items: center; gap: 0 var(--s2); }
+  .pl-verdict[data-kind="turn"] .pl-verdict-icon { grid-area: icon; }
+  .pl-verdict[data-kind="turn"] .pl-verdict-word { grid-area: word; font-size: var(--fs-md); }
+  .pl-verdict[data-kind="turn"] .pl-verdict-text { grid-area: text; font-size: 0.8125rem; line-height: 1.35; }
+  .pl-verdict[data-kind="turn"] [data-turn-skip] { grid-area: skip; margin: 0; }
+}
 .pl-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-left: auto; }
 .pl-showme { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); }
 .pl-caption { flex: 1 1 14rem; font-size: var(--fs-sm); color: var(--ink-2); }
@@ -393,6 +403,7 @@
 /* A player outside a session (the Section review) keeps the phone tab bar: its reading strip and a
    show-me's caption and bar sit above the tab bar, never under it (RV-play-dat, Section 1). */
 @media (max-width: 719px) {
+  :root:not([data-chrome="focus"]) .pl-player { --pl-avail: calc(var(--pl-vh) - var(--tap) - 0.25rem - 3 * var(--s2) - 3.5rem - 1px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
   :root:not([data-chrome="focus"]) .pl-feedback { bottom: calc(3.5rem + 1px + env(safe-area-inset-bottom, 0px)); }
   :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-showme-buttons { bottom: calc(3.5rem + 1px + env(safe-area-inset-bottom, 0px)); padding-bottom: var(--s2); }
   :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-trial .ex-caption:not(:empty),

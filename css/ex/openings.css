@@ -52,7 +52,7 @@
    with the viewport's height in place of --pl-avail. */
 @media (max-width: 40rem) {
   .ex-openings .px-choices[style*="--px-cols:5"] { --px-cols: 2 !important; }
-  .ex-openings { --op-s: min(9.5rem, calc((100vw - 2.5rem) / 2 - 1.25rem - 10px), calc((100vh - 10rem) / 4.47)); }
+  .ex-openings { --op-s: min(9.5rem, calc((100vw - 2.5rem) / 2 - 1.25rem - 10px), calc((100vh - 11.5rem) / 4.47)); }
 }
 
 /* Phones in the player (B2's contract; css/play.css sets --pl-avail, --pl-w, --pl-col): two columns

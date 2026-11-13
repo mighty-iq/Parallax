@@ -105,6 +105,7 @@ FIT_JS = r'''() => {
   const scrollH = Math.max(de.scrollHeight, document.body.scrollHeight);
   const lowest = Math.max(0, ...stim.concat(ctl).map(b => b.bottom));
   const highest = Math.min(H, ...stim.concat(ctl).map(b => b.top));
+  const ctlLow = Math.max(0, ...ctl.map(b => b.bottom)), ctlHigh = Math.min(H, ...ctl.map(b => b.top));
   // Text under 13 px in the item and its status strip (SVG text by its size on the screen).
   const small = {};
   const scope = document.querySelector('.pl-player') || trial;
@@ -119,7 +120,7 @@ FIT_JS = r'''() => {
     if (fs < 12.95) { const k = name(p).split(' "')[0] + ' @' + fs.toFixed(1); if (!small[k]) small[k] = t.slice(0, 16); }
   }
   const scrollW = Math.max(de.scrollWidth, document.body.scrollWidth);
-  return { H, W, scrollY: Math.round(scrollY), scrollH, scrolls: scrollH > H + 1, scrollW, stim: stim.length, ctl: ctl.length, bad, lowest, highest, small,
+  return { H, W, scrollY: Math.round(scrollY), scrollH, scrolls: scrollH > H + 1, scrollW, stim: stim.length, ctl: ctl.length, bad, lowest, highest, ctlLow, ctlHigh, small,
     header: !!(document.querySelector('.px-header') && shown(document.querySelector('.px-header'))),
     overscroll: getComputedStyle(de).overscrollBehaviorY, pxItem: document.body.classList.contains('px-item'),
     touchAction: getComputedStyle(de).touchAction,
@@ -293,8 +294,9 @@ def run_wtg(page, size, ex, rows):
     - watch: while the demo plays, its caption is on the screen above the pinned controls, and the
       stimulus and every answer control are on the screen above the caption (Homing and Reckon show
       subtitles over the view, .ex-fp-sub: there only the bar must clear them);
-    - turn: when the demo ends, "Your turn" says what to do next in the reading strip, and the
-      item and its options stay above that strip;
+    - turn: when the demo ends, "Your turn" says what to do next in the reading strip, and every
+      answer control is on the screen above that strip (a demo may leave its stem taller, with the
+      solution drawn: its top may scroll away);
     - try1..: every Try item, tip shown, fits like a scored item: its stimulus and every answer
       control within the screen (the Watch, Try, Go header may scroll away above)."""
     page.evaluate('void __play.end()')
@@ -340,11 +342,11 @@ def run_wtg(page, size, ex, rows):
         and bool(dfit) and not dfit.get('error') and dfit['ctl'] > 0 and dfit['highest'] >= -0.5 and dfit['lowest'] <= clear_line + 2
     strip_top = turn['turn']['strip']['top'] if turn and turn.get('turn') and turn['turn'].get('strip') else 0
     ok_turn = bool(turn) and bool(turn.get('turn')) and 'Your turn' in turn['turn']['text'] and bool(tfit) and not tfit.get('error') \
-        and tfit['highest'] >= -0.5 and tfit['lowest'] <= strip_top + 2
+        and tfit['ctl'] > 0 and tfit['ctlHigh'] >= -0.5 and tfit['ctlLow'] <= strip_top + 2
     rows.append({'ex': ex, 'item': 'watch', 'ok': ok_demo, 'why': '' if ok_demo else f'demo: {demo}; lowest {dfit and dfit.get("lowest")}, highest {dfit and dfit.get("highest")}'})
-    rows.append({'ex': ex, 'item': 'turn', 'ok': ok_turn, 'why': '' if ok_turn else f'turn: {turn and turn.get("turn")}; lowest {tfit and tfit.get("lowest")}, highest {tfit and tfit.get("highest")}'})
+    rows.append({'ex': ex, 'item': 'turn', 'ok': ok_turn, 'why': '' if ok_turn else f'turn: {turn and turn.get("turn")}; controls {tfit and tfit.get("ctlHigh")}..{tfit and tfit.get("ctlLow")}'})
     print(f'  {"ok  " if ok_demo else "FAIL"} {size} {ex} watch caption {demo and demo["caption"]} bar {demo and demo["bar"]} item {dfit and dfit.get("highest")}..{dfit and dfit.get("lowest")}', flush=True)
-    print(f'  {"ok  " if ok_turn else "FAIL"} {size} {ex} turn {turn and turn.get("turn")} item {tfit and tfit.get("highest")}..{tfit and tfit.get("lowest")}', flush=True)
+    print(f'  {"ok  " if ok_turn else "FAIL"} {size} {ex} turn {turn and turn.get("turn")} controls {tfit and tfit.get("ctlHigh")}..{tfit and tfit.get("ctlLow")}', flush=True)
     if not tries:
         rows.append({'ex': ex, 'item': 'try', 'ok': False, 'why': 'no Try item reached'})
         print(f'  FAIL {size} {ex} try: no Try item reached', flush=True)

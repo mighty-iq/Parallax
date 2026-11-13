@@ -312,8 +312,9 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 :root[data-keyhints="off"] .px-kbd,
 :root[data-keyhints="off"] .px-choice-key,
 :root[data-keyhints="off"] .px-keyhint { display: none; }
-/* touch screens: no key hints on buttons (a keyboard, when there is one, still works) */
-@media (hover: none) and (pointer: coarse) { .px-kbd { display: none; } }
+/* touch screens and phone widths: no key hints on buttons (a keyboard, when there is one, still
+   works); by width too, as the player does, since a touch screen does not always say so */
+@media (hover: none) and (pointer: coarse), (max-width: 719px) { .px-kbd { display: none; } }
 
 /* ---------- panels ---------- */
 .px-panel {
