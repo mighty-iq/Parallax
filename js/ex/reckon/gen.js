@@ -17,7 +17,7 @@
    chance: point 2τ/360; return 2·asin(τ)/360 (an upper bound: a guesser who knew d exactly).
 
    Dims: route (Homing's 8 levels: legs × turn size), flow (textured blobs, sparse blobs, short-lived
-   dots), speed (steady with ±10 % jitter; varied between legs, 1.2–2.0 m/s, turns 30–45°/s; varied
+   dots), speed (steady with ±10 % jitter; varied between legs, 0.5–2.0 m/s (each leg's time drawn first), turns 30–45°/s; varied
    within legs: two speeds per leg at least 0.4 m/s apart), tolerance (as above); variants point and
    return (+0.5 logit). Initial steps (hand-set, R1 §8.4; to be refitted from pooled exports): 0.55 per
    extra leg, 0.4 per turn size, 0.35 per flow level, 0.3 per speed level, 0.9 per tolerance level.

@@ -40,21 +40,6 @@ Line numbers are guide.html lines unless a file is named.
   (reckon/learn.js:26); then the sentence is true as written. The nav page (line 775, "If the motion
   makes you feel unwell, pause or stop") already speaks for both exercises.
 
-**M3. Knots, "How every item is proved": the shortcut rates (line 852)**
-- Text: "paired, no cheap rule tested beat 52.3 % on Pull, where guessing scores 50 %, or 33 % on
-  Untie and Tie, where it scores 25 %."
-- Truth: 52.3 % is one rule (crossing count, pooled) from the review's table; the same table shows
-  other cheap rules on Pull up to 53.6 % (docs/dev/reviews/RV-knots.md:189–196: near-centre ≤ 53.3 %,
-  descending ≤ 53.2 %, "alternations, writhe, first/last crossing, curls, slide-offs, rope length
-  ≤ 53.6 %"). The test's own report (PX_REPORT=1, 2,000 items per variant) gives Pull: bigons 52.5 %,
-  aspect 52.3 %; Untie: worst 31.4 %, per rung 32.6 %; Tie: worst 32.8 %. The test bounds are ≤ 60 %
-  (Pull) and ≤ 35 % (Untie, Tie) (tests/node/knots.test.mjs:368, 397, 416). So "52.3 %" is not the
-  maximum, and "33 %" sits within sampling noise of what is measured.
-- 10,000-item run: see the addendum at the end.
-- Corrected: "paired, every cheap rule tested stayed within about 4 points of guessing on Pull (at
-  most about 54 %, where guessing scores 50 %) and at or below 35 % on Untie and Tie, where guessing
-  scores 25 %."
-
 ### Should fix
 
 **S1. Painted Cubes card, "Checked": the Kurtuluş & Yolcu attribution (line 999)**
@@ -128,6 +113,15 @@ Line numbers are guide.html lines unless a file is named.
 
 ### Nice to have
 
+- **N0. Knots shortcut rates are one sample's maxima** (line 852): "paired, no cheap rule tested beat
+  52.3 % on Pull, where guessing scores 50 %, or 33 % on Untie and Tie, where it scores 25 %." True of
+  the test's default report: `PX_REPORT=1 node tests/node/run.mjs knots` (10,000 items per variant,
+  all 463 checks pass) gives Pull at most 52.3 % (slide-over triangles), Untie at most 31.5 %, Tie at
+  most 32.9 %. But other samples go higher: the reviewer's measures reached 53.6 % on Pull
+  (docs/dev/reviews/RV-knots.md:189–196) and a 2,000-item run gives 52.5 % (bigons); the test bounds
+  are ≤ 60 % and ≤ 35 % (tests/node/knots.test.mjs:368, 397, 416). Sturdier wording: "paired, no cheap
+  rule tested scored more than about 54 % on Pull, where guessing scores 50 %, or about a third on
+  Untie and Tie, where it scores 25 %."
 - **N1. Heading before the full name** (guide line 97 h3 "Six DAT-style formats", spelled out in the
   same panel at line 98; guide line 862 h2 likewise; CHANGELOG.md:55 bullet title). R3:440. Option:
   "Six admissions-test formats" in the What's new heading; elsewhere acceptable as is.
@@ -185,11 +179,13 @@ Line numbers are guide.html lines unless a file is named.
   Corrected: "after seven days of use without a visit".
 
 ## Side notes for the lead (outside the reviewed files)
-- `PX_REPORT=1 PX_TEST_ITEMS=2000 node tests/node/run.mjs knots`: 1 of 463 checks failed:
+- The default Knots run passes (463 of 463, 10,000 items per variant, 878 s), but
+  `PX_REPORT=1 PX_TEST_ITEMS=2000 node tests/node/run.mjs knots` fails 1 check on another seed:
   "[knots: show me] pull: no frame inside a move passes a strand through another (14793 frames) (pull
   seed 530622980: step 4 (R2) at k = 0.5137)". It bears on the guide's and CHANGELOG's "Show me …
   checks every move" (lines 94, 846; CHANGELOG.md:52–53). It may be the near-k = ½ projection case B4
-  describes (docs/dev/progress/B4.md:37–39), or a real pass-through; B4 should look.
+  describes (docs/dev/progress/B4.md:37–39), or a real pass-through that the default seeds miss; B4
+  should look at that seed.
 - js/ex/reckon/gen.js:20 (header) still says "varied between legs, 1.2–2.0 m/s"; the code uses 0.5–2.0
   (line 74), as the guide and CHANGELOG say.
 - js/ui/check.js:3 (header) says "about 15 minutes"; the screen computes 15 to 25 (line 95).

@@ -16,6 +16,7 @@
       { id: 'start', label: 'Start', text: 'You begin inside a ring on the ground. It disappears once you walk away.' },
       { id: 'landmarks', label: 'Landmarks', text: 'Far-off shapes on the horizon (on some levels). They barely move as you walk, so like a navigator\'s fix they correct the errors of each turn. Reckon, the next stage, has none.' },
       { id: 'circle', label: 'Turn', text: 'At the end, drag the view sideways, drag or tap the arrow circle, or use the ◀ ▶ buttons (keys: ← and →, Shift for 1°). The top of the circle is the way you face; the view turns with the arrow.' },
+      { id: 'comfort', label: 'Comfort', text: 'The view moves on its own during the walk. Pause, or stop the session, if it makes you feel unwell.' },
     ],
     // 2 legs, medium turn, three landmarks, 40° (version 2): seed 1 walks 11.3 m, turns 120° right, walks 8.2 m; the start is 105° to the right.
     demo: [

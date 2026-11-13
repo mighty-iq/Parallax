@@ -1,6 +1,6 @@
 /* PX.ui.check: the Spatial Check (mode 'check'; PLAN §4, §6; ENGINE.md §10, §17).
    Probes are tasks that are never trained: no feedback, no reveal, no show me. The flow:
-     intro (what it is, about 15 minutes) → the expectations question once at baseline
+     intro (what it is, 15 to 25 minutes) → the expectations question once at baseline
      (PX.engine.assess.expect) → per probe: its instruction screen (learn.instruction) and its
      worked example (step.probe.example = learn.demo[0], played by view.demo, never scored or
      logged) → 16 adaptive items; def.timeLimit(params) ends an item as a time-out (scored
