@@ -292,7 +292,8 @@
   // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage, display,
   // input] (§8; display and input since v1.1: codes into DISPLAYS and INPUTS, 0 = unknown, the
   // same lists as PX.core.store.DISPLAYS / INPUTS)
-  var COL = { t: 0, ex: 1, mode: 2, code: 3, seed: 4, outcome: 5, rt: 6, value: 7, pp: 8, stage: 9, display: 10, input: 11 };
+  // value2 (column 13, since v1.1): a second number an exercise reports, only when finite
+  var COL = { t: 0, ex: 1, mode: 2, code: 3, seed: 4, outcome: 5, rt: 6, value: 7, pp: 8, stage: 9, display: 10, input: 11, value2: 12 };
   var DISPLAYS = ['', 'small', 'large'];
   var INPUTS = ['', 'mouse', 'touch', 'pen', 'key'];
   // A name ('small', 'touch'; 'pointer' is a click of unknown type: mouse) or a code → the code.
@@ -366,14 +367,17 @@
   }
 
   // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage, display,
-  // input]: result.display ('small' | 'large') and result.input ('mouse' | 'touch' | 'pen' | 'key')
+  // input, value2?]: result.display ('small' | 'large'), result.input ('mouse' | 'touch' | 'pen' |
+  // 'key') and result.value2 (a finite number; the column is left out otherwise)
   function makeRow(rec, def, mode, step, oc, result, now) {
     var rt = result && typeof result.rt === 'number' && isFin(result.rt) && result.rt >= 0 ? mround(result.rt) : null;
     var value = result && typeof result.value === 'number' && isFin(result.value) ? result.value : null;
     var pp = typeof step.pPred === 'number' && isFin(step.pPred) ? mround((step.pPred < 0 ? 0 : step.pPred > 1 ? 1 : step.pPred) * 1000) : null;
     var stage = typeof step.stage === 'number' && isFin(step.stage) ? step.stage : null;
     var dc = codeOf(DISPLAYS, result ? result.display : null), ic = codeOf(INPUTS, result ? result.input : null);
-    return [mfloor(now / 1000), exIndex(rec, def), modeIndex(rec, mode), step.code, step.seed, oc, rt, value, pp, stage, dc, ic];
+    var row = [mfloor(now / 1000), exIndex(rec, def), modeIndex(rec, mode), step.code, step.seed, oc, rt, value, pp, stage, dc, ic];
+    if (result && typeof result.value2 === 'number' && isFin(result.value2)) row.push(result.value2);
+    return row;
   }
   function append(rec, row) {
     if (!isArray(rec.trials)) rec.trials = [];
