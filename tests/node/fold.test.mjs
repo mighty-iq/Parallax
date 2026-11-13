@@ -45,7 +45,7 @@ export async function run(t) {
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, optCount = 0, fallbacks = 0, firstBad = null;
   let sumChance = 0;
   const acc = { count: 0, sym1: 0, like: 0, odd: 0, punchHoles: 0, symAny: 0, dKey: 0 };
-  const holesHist = {}, whyHist = {};
+  const holesHist = {}, whyHist = {}, cs = {};
   const items = [];
   let n = 0;
   for (let ci = 0; ci < all.length; ci++) {
@@ -67,6 +67,7 @@ export async function run(t) {
       item.why.forEach((w) => { if (w) { const k = w.replace(/\d+/g, '#'); whyHist[k] = (whyHist[k] || 0) + 1; } });
       sumChance += def.chance(params);
       shortcuts(H, item, acc);
+      creaseSym(H, item, cs);
     }
   }
   t.eq(threw, 0, 'generate never throws' + (firstBad && threw ? ` (${firstBad})` : ''));
@@ -138,6 +139,7 @@ export async function run(t) {
   t.ok(acc.punchHoles / acc.count <= bound, `"a hole under every punch" ≤ chance + 10 (${pct(acc.punchHoles)})`);
   t.ok(acc.symAny / acc.count <= bound, `"most symmetric about any sheet axis" ≤ chance + 10 (${pct(acc.symAny)})`);
   t.ok(acc.dKey / acc.count <= bound, `"the hole count 2^folds × punches" ≤ chance + 10 (${pct(acc.dKey)})`);
+  creaseReport(cs, [1, 2, 3, 4, 5]);
   if (process.env.PX_REPORT) {
     console.log(`       fold: n ${acc.count}, chance ${(100 * chance).toFixed(1)} %, sym1 ${pct(acc.sym1)}, like ${pct(acc.like)}, odd ${pct(acc.odd)}, under-punch ${pct(acc.punchHoles)}, sym-any ${pct(acc.symAny)}, count ${pct(acc.dKey)}; CPU p95 ${p95.toFixed(1)} ms, wall p95 ${wall95.toFixed(1)} ms`);
     console.log('       holes', JSON.stringify(holesHist));
@@ -211,4 +213,28 @@ function shortcuts(H, item, acc) {
   // Stem-blind symmetry: the option most symmetric about any axis of the sheet.
   const axes = [{ k: 'v', c: H.N / 2 }, { k: 'h', c: H.N / 2 }, { k: 'd', c: 0 }, { k: 'a', c: H.N }];
   acc.symAny += pickBest(opts.map((o) => Math.max(...axes.map((L) => H.symScore(o, L)))), k);
+}
+
+// Crease symmetry (RV-dat-style-A §1; the lead's decision: the format's analytic method, not a
+// shortcut): keep the options with a hole under every punch, then take the one most symmetric about
+// the item's own creases (summed). Not bounded; reported as information by fold type, by the number
+// of idle folds, by fold count, and by the key's symmetry: every crease a mirror line of the key,
+// an idle fold (a crease the punches missed) but no partial flap, or a partial flap (a fold that
+// matters, but the key is only partly symmetric about its crease).
+const TYPE_NAMES = ['half', 'corner', 'diagonal', 'mixed'];
+function creaseSym(H, item, cs) {
+  const opts = item.options, k = item.key, lines = item.folds.map((f) => f.line), pm = H.maskOf(item.punches);
+  const gate = opts.map((o) => { const m = H.maskOf(o); return (m[0] & pm[0]) === pm[0] && (m[1] & pm[1]) === pm[1] ? 10 : 0; });
+  const hit = pickBest(opts.map((o, i) => gate[i] + lines.reduce((s, L) => s + H.symScore(o, L), 0)), k);
+  const idle = item.folds.filter((f) => !f.matters).length;
+  const shape = item.folds.some((f) => f.matters && H.symScore(opts[k], f.line) < 1) ? 'a partial flap' : idle ? 'an idle fold' : 'every crease a mirror line';
+  for (const key of ['all', TYPE_NAMES[item.params.type], 'idle ' + idle, 'folds ' + item.folds.length, shape]) {
+    const a = cs[key] = cs[key] || [0, 0]; a[0] += hit; a[1]++;
+  }
+}
+function creaseReport(cs, folds) {
+  const f = (key) => (cs[key] ? (100 * cs[key][0] / cs[key][1]).toFixed(1) : '–');
+  const share = (key) => (cs[key] ? (100 * cs[key][1] / cs.all[1]).toFixed(0) : '0');
+  console.log(`       info  crease symmetry (the format's analytic method; not bounded): ${f('all')} % of ${cs.all[1]} items | ${TYPE_NAMES.map((x) => `${x} ${f(x)}`).join(', ')} | idle folds ${[0, 1, 2].map((x) => `${x}: ${f('idle ' + x)}`).join(', ')}`);
+  console.log(`             folds ${folds.map((x) => `${x}: ${f('folds ' + x)}`).join(', ')} | every crease a mirror line of the key ${f('every crease a mirror line')} (${share('every crease a mirror line')} % of items), an idle fold ${f('an idle fold')} (${share('an idle fold')} %), a partial flap ${f('a partial flap')} (${share('a partial flap')} %)`);
 }

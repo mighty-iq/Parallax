@@ -61,6 +61,38 @@
     { 1: [1, 5], 2: [2, 5], 3: [2, 5], 4: [1, 5] },       // 14–17
     { 1: [1, 5], 2: [3, 5], 3: [3, 5], 4: [1, 5] },       // 18–22
   ];
+  // Later questions about the same figure (Section mode, params.ask ≥ 1). NAT: how often each
+  // count 1–5 turns up for a later question N at each size (per mille of the generator's figures,
+  // all heights and classes pooled; measured over 6,000 items, B5.md). Only N in KRANGE at that
+  // size with a count in its range is asked later, and it is kept with probability KEEP[size][N]
+  // [count], which flattens the counts so that none is more than 28 % of that question's later
+  // answers (a range of three counts is made even). So neither "1 cube" nor any other answer is
+  // a safe guess for a later question (RV-dat-style-A §5).
+  var NAT = [
+    { 2: [360, 252, 117, 31, 0], 3: [183, 274, 263, 170, 76], 4: [76, 363, 389, 124, 4] },
+    { 1: [400, 194, 49, 2, 0], 2: [109, 179, 259, 215, 130], 3: [37, 98, 221, 291, 204], 4: [100, 217, 323, 249, 91] },
+    { 1: [212, 296, 228, 141, 25], 2: [26, 62, 101, 146, 238], 3: [3, 24, 102, 224, 268], 4: [95, 178, 306, 261, 121] },
+    { 1: [50, 107, 188, 206, 229], 2: [3, 7, 27, 43, 98], 3: [1, 11, 44, 107, 201], 4: [84, 188, 257, 249, 155] },
+  ];
+  var LATER_MAX = 0.28;
+  // The largest cap t with max(min(nat, t)) / Σ min(nat, t) ≤ smax (bisection; the share grows with t).
+  function capFor(nat, smax) {
+    var lo = Mth.min.apply(null, nat), hi = Mth.max.apply(null, nat);
+    var share = function (t) { var s = 0; nat.forEach(function (v) { s += Mth.min(v, t); }); return Mth.min(hi, t) / s; };
+    if (share(hi) <= smax) return hi;
+    for (var i = 0; i < 50; i++) { var mid = (lo + hi) / 2; if (share(mid) <= smax + 1e-12) lo = mid; else hi = mid; }
+    return lo;
+  }
+  var KEEP = KRANGE.map(function (KR, c) {
+    var out = {};
+    Object.keys(KR).forEach(function (key) {
+      var n = +key, lo = KR[n][0], hi = KR[n][1], nat = NAT[c][n].slice(lo - 1, hi), keep = [0, 0, 0, 0, 0, 0];
+      var cap = capFor(nat, Mth.max(LATER_MAX, 1 / nat.length));
+      for (var j = lo; j <= hi; j++) keep[j] = Mth.min(1, cap / NAT[c][n][j - 1]);
+      out[n] = keep;
+    });
+    return out;
+  });
   var GRIDS = [[3, 4], [4], [4, 5], [5]];
   var OPTIONS = [1, 2, 3, 4, 5];
   var TOP_SHOW = 0.5, CLEAR = 0.2;
@@ -238,9 +270,13 @@
   // Cubes that show exactly N painted faces in the picture (the novice error).
   function shownCount(s, N) { var c = 0; s.showN.forEach(function (v) { if (v === N) c++; }); return c; }
 
-  function build(r, p) {
+  // The question: N from the level's class, the count k evenly from N's range at this size.
+  function question(r, p) {
     var KR = KRANGE[p.cubes], asks0 = ASK_OF[ASKED[p.asked]].filter(function (n) { return KR[n]; });
-    var N = asks0[rint(r, asks0.length)], kr = KR[N], k = kr[0] + rint(r, kr[1] - kr[0] + 1);
+    var N = asks0[rint(r, asks0.length)], kr = KR[N];
+    return [N, kr[0] + rint(r, kr[1] - kr[0] + 1)];
+  }
+  function build(r, p, N, k) {
     var Gs = GRIDS[p.cubes], cr = CUBES[p.cubes], hMax = HEIGHT[p.height];
     for (var t = 0; t < 400; t++) {
       var G = Gs[rint(r, Gs.length)];
@@ -262,10 +298,13 @@
     return null;
   }
   // The question list (Section mode) and the item; ask (params.ask) re-asks about the same figure.
+  // Later questions: N in KRANGE at this size with a count in its range, kept by KEEP (see NAT).
   function finish(r, p, H, N, hist, hidden) {
-    var asks = shuffle(r, [1, 2, 3, 4, 5].filter(function (n) { return hist[n] >= 1 && hist[n] <= 5; }));
-    asks.splice(asks.indexOf(N), 1);
-    asks.unshift(N);
+    var KR = KRANGE[p.cubes], keep = KEEP[p.cubes], asks = [N];
+    shuffle(r, Object.keys(KR).map(Number)).forEach(function (n) {
+      var c = hist[n];
+      if (n !== N && c >= KR[n][0] && c <= KR[n][1] && r.next() < keep[n][c]) asks.push(n);
+    });
     var ask = isInt(p.ask) ? asks[p.ask % asks.length] : N;
     return {
       ex: 'cubes', v: 1, seed: 0, params: p, key: hist[ask] - 1, grid: H.length, heights: H.map(function (row) { return row.slice(); }),
@@ -273,10 +312,12 @@
     };
   }
 
+  // N and k are drawn once and kept across retries (only the figure search is retried), so hard
+  // counts are not under-represented in any level (RV-dat-style-A §12).
   function generate(rng, params) {
-    var p = normParams(params), item;
+    var p = normParams(params), q = question(rng, p), item;
     for (var i = 0; i < 50; i++) {
-      item = build(i === 0 ? rng : rng.fork('retry' + i), p);
+      item = build(i === 0 ? rng : rng.fork('retry' + i), p, q[0], q[1]);
       if (item) { item.seed = rng.seed; if (validate(item) === true) return item; }
     }
     item = fallbackFor(p);
@@ -287,7 +328,7 @@
   function fallbackFor(params) {
     var p = normParams(params), base = { cubes: p.cubes, height: p.height, asked: p.asked }, pk = PX.ex.paramsKey(base);
     for (var i = 0; i < 300 && !fallbackCache[pk]; i++) {
-      var it = build(PX.rng(PX.rng.hash('cubes-fallback', pk, i)), base);
+      var r = PX.rng(PX.rng.hash('cubes-fallback', pk, i)), q = question(r, base), it = build(r, base, q[0], q[1]);
       if (it && validate(it) === true) fallbackCache[pk] = it;
     }
     var out = PX.util.deepCopy(fallbackCache[pk]);
@@ -297,6 +338,50 @@
   }
 
   /* ---------- validator ---------- */
+
+  // The validator's own view, independent of the generator's z-buffer (R3 §8.4; RV-dat-style-A
+  // §13): a ray cast. From RAYS × RAYS points on each face that turns towards the viewer, a ray
+  // runs towards the viewer (D, which points right, up and to the front); it is blocked when it
+  // crosses a column's footprint below that column's top (the ray climbs, so inside a footprint it
+  // is lowest where it enters). Returns the smallest share of a column top in view and the number
+  // of cubes with no ray getting out.
+  var RAYS = 8, EPS_RAY = 1e-7;
+  function blocked(H, px, py, pz) {
+    var G = H.length, x0 = Mth.max(0, floor(px)), z0 = Mth.max(0, floor(pz));
+    for (var z = z0; z < G; z++) for (var x = x0; x < G; x++) {
+      var h = H[z][x];
+      if (!h) continue;
+      var tIn = Mth.max(0, (x - px) / D[0], (z - pz) / D[2]), tOut = Mth.min((x + 1 - px) / D[0], (z + 1 - pz) / D[2]);
+      if (tIn < tOut && py + tIn * D[1] < h) return true;
+    }
+    return false;
+  }
+  // Rays out of one face (side 0 top, 1 front, 2 right) of the cube at x, y, z: how many are free.
+  function freeRays(H, x, y, z, side, stopAtOne) {
+    var free = 0;
+    for (var i = 0; i < RAYS; i++) for (var j = 0; j < RAYS; j++) {
+      var a = (i + 0.5) / RAYS, b = (j + 0.5) / RAYS, P;
+      if (side === 0) P = [x + a, y + 1 + EPS_RAY, z + b];
+      else if (side === 1) P = [x + a, y + b, z + 1 + EPS_RAY];
+      else P = [x + 1 + EPS_RAY, y + a, z + b];
+      if (!blocked(H, P[0], P[1], P[2])) { free++; if (stopAtOne) return 1; }
+    }
+    return free;
+  }
+  function rayView(H) {
+    var G = H.length, minTop = 1, hidden = 0;
+    for (var z = 0; z < G; z++) for (var x = 0; x < G; x++) {
+      var h = H[z][x];
+      if (!h) continue;
+      minTop = Mth.min(minTop, freeRays(H, x, h - 1, z, 0, false) / (RAYS * RAYS));
+      // A column's top cube shows its top (held to TOP_SHOW above); the others show a front or a
+      // right side or nothing.
+      for (var y = 0; y < h - 1; y++) {
+        if (!((hAt(H, x, z + 1) <= y && freeRays(H, x, y, z, 1, true)) || (hAt(H, x + 1, z) <= y && freeRays(H, x, y, z, 2, true)))) hidden++;
+      }
+    }
+    return { minTop: minTop, hidden: hidden };
+  }
 
   function validate(item) {
     try { return check(item); } catch (e) { return 'validate threw: ' + (e && e.message); }
@@ -332,13 +417,22 @@
     if (item.count !== counts[N]) return 'stated count differs from the recount';
     if (!(isInt(item.key) && item.key === counts[N] - 1)) return 'key does not match the recount';
     if (!isArray(item.options) || item.options.join() !== '1,2,3,4,5') return 'options must be 1–5 cubes';
-    if (!isInt(p.ask) && (ASK_OF[ASKED[p.asked]].indexOf(N) < 0 || !KRANGE[p.cubes][N])) return 'N ' + N + ' not asked at this level';
-    if (!isArray(item.asks) || item.asks[0] === undefined || item.asks.some(function (a) { return !(counts[a] >= 1 && counts[a] <= 5); })) return 'asks';
+    // The questions: the first from the level's class, later ones (Section mode) any N in KRANGE
+    // at this size with a count in its range; all different, never N = 5.
+    var KR = KRANGE[p.cubes], asks = item.asks, seenN = {};
+    if (!isArray(asks) || !asks.length) return 'asks';
+    if (ASK_OF[ASKED[p.asked]].indexOf(asks[0]) < 0 || !KR[asks[0]]) return 'N ' + asks[0] + ' not asked at this level';
+    for (var a = 0; a < asks.length; a++) {
+      var na = asks[a];
+      if (!isInt(na) || seenN[na] || !KR[na] || counts[na] < KR[na][0] || counts[na] > KR[na][1]) return 'asks: N ' + na;
+      seenN[na] = true;
+    }
+    if (N !== (isInt(p.ask) ? asks[p.ask % asks.length] : asks[0])) return 'the asked N is not the question params.ask picks';
     // The picture: every column's top at least half visible, so the tops fix every height and
     // the only hidden cubes are supports.
-    var s = sight(H);
-    if (s.minTop < TOP_SHOW) return 'a column top is only ' + (100 * s.minTop).toFixed(0) + ' % visible';
-    if (item.hidden !== s.hidden) return 'stated hidden count differs';
+    var s = rayView(H);
+    if (s.minTop < TOP_SHOW) return 'a column top is only ' + (100 * s.minTop).toFixed(0) + ' % visible (ray cast)';
+    if (item.hidden !== s.hidden) return 'stated hidden count differs from the ray cast (' + s.hidden + ')';
     return true;
   }
 
@@ -362,7 +456,7 @@
     lib: {
       CUBES: CUBES, HEIGHT: HEIGHT, ASKED: ASKED, ASK_OF: ASK_OF, KRANGE: KRANGE, GRIDS: GRIDS, AZ: AZ, EL: EL, D: D, R: R, U: U,
       cubesOf: cubesOf, histogram: histogram, total: total, connected: connected, proj: proj, depth: depth, facesOf: facesOf,
-      render: render, sight: sight, shownCount: shownCount, norm: normParams, fallback: fallbackFor,
+      render: render, sight: sight, rayView: rayView, shownCount: shownCount, norm: normParams, fallback: fallbackFor, KEEP: KEEP, NAT: NAT,
     },
   });
 })(window.PX);
