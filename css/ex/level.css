@@ -66,7 +66,7 @@ html[data-hx-state="paused"] .ex-level .pr-timer-fill,
    Sideways: the stem on the left as tall as the screen allows, the four pictures right. */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-level { --lv-cell: min(calc((var(--pl-w) - var(--s2)) / 2), calc((var(--pl-avail) - 8rem - 1.75rem) / 2)); }
-  .pl-trial.ex-level .lv-stem-svg { max-height: min(14rem, calc(var(--pl-avail) - 2 * var(--lv-cell) - 2.75rem)); }
+  .pl-trial.ex-level .lv-stem-svg { max-height: min(14rem, calc(var(--pl-avail) - 2 * var(--lv-cell) - 3rem)); } /* the stage's padding and border, the timer, two gaps */
   .pl-trial.ex-level .px-choices[style*="--px-cols:4"] .px-choice { height: var(--lv-cell); }
   /* !important: PX.core.svg sets height:auto inline */
   .pl-trial.ex-level .px-choices[style*="--px-cols:4"] .lv-svg { width: auto; height: calc(var(--lv-cell) - 6px) !important; max-width: 100%; }

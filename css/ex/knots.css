@@ -13,7 +13,10 @@
 }
 .ex-knots .ex-knots-stem { width: 100%; display: flex; flex-direction: column; align-items: center; }
 .ex-knots .ex-knots-stage { width: var(--knots-plate); height: var(--knots-plate); max-width: 100%; }
-.ex-knots .ex-knots-svg { display: block; width: 100%; height: 100%; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.ex-knots .ex-knots-svg {
+  display: block; width: 100%; height: 100%;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
 
 /* the rope */
 .ex-knots .ex-knots-rope {
