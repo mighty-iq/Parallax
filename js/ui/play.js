@@ -1263,8 +1263,8 @@
   }
   // Scrolls the item's stage fully into the window when it is not (phones: the Watch, Try, Go
   // header sits above the player); never past its top edge.
-  // demo: a Watch demo will pin its caption and the show-me bar to the bottom (css/play.css), so
-  // keep the stage above them (about 7.5rem).
+  // demo: a Watch demo pins its caption and the show-me bar to the bottom (css/play.css), so keep
+  // the stage above them (at least 7.5rem, more under a taller caption).
   function stageIntoView(P, demo) {
     if (!isPhone()) return;
     try {
@@ -1272,6 +1272,8 @@
       if (!r.height) return;
       var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
       var by = 0, bottom = vh - (demo ? 7.5 * rem : 8);
+      var cap = demo ? P.el.host.querySelector('.ex-caption') : null, cr = cap && cap.textContent ? cap.getBoundingClientRect() : null;
+      if (cr && cr.height && win.getComputedStyle(cap).position === 'fixed') bottom = Math.min(bottom, cr.top - 4);
       if (r.bottom > bottom) by = Math.min(r.bottom - bottom, r.top - 8);
       else if (r.top < 0) by = r.top - 8;
       if (by) win.scrollBy(0, by);
@@ -1329,6 +1331,8 @@
     // plays (its first frame comes after this), its stage is brought fully onto the screen.
     function stageSoon(item, demo) {
       P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
+      // Again when the demo starts: its caption and bar are pinned then, and the page has room to scroll.
+      if (demo) P.when('showme').then(function () { if (P.item === item) stageIntoView(P, true); });
     }
     function watchStep() {
       if (!demoSpec || skipped) return Promise.resolve();

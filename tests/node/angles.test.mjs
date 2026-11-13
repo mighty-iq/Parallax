@@ -133,14 +133,15 @@ export async function run(t) {
   }
   t.ok(p95 < 20, `generation p95 at the hardest level under 20 ms (CPU ${p95.toFixed(1)} ms)`);
 
-  t.section('angles: shortcut solvers');
+  t.section('angles: shortcut solvers (all items, and per resolve level)');
   const bound = 0.25 + 0.10, pct = (x) => (100 * x).toFixed(1) + ' %';
   for (const [k, v] of Object.entries(cues)) {
     const rate = v.hit / v.n;
     t.ok(rate <= bound, `"${k}" ≤ chance + 10 (${pct(rate)} over ${v.n} items)`);
   }
   if (process.env.PX_REPORT) {
-    console.log('       angles: ' + Object.entries(cues).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
+    const worst = Object.entries(cues).sort((a, b) => b[1].hit / b[1].n - a[1].hit / a[1].n).slice(0, 12);
+    console.log('       angles, worst rules: ' + worst.map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
     console.log(`       keys ${keyPos.join(',')}; mean scale ${(sumScale / n).toFixed(2)}; shortest arm ${minArmPx.toFixed(3)} cell; CPU p95 ${p95.toFixed(1)} ms`);
   }
   testLearn(t, PX, def);
@@ -152,8 +153,18 @@ function nearest(L, pred, options, key) {
   const d = options.map((o) => L.kendall(o, pred)), best = Math.min(...d);
   return d[key] === best ? 1 / d.filter((x) => x === best).length : 0;
 }
+function pickBest(scores, key, larger = true) {
+  const best = larger ? Math.max(...scores) : Math.min(...scores);
+  const ties = scores.filter((s) => Math.abs(s - best) < 1e-9).length;
+  return Math.abs(scores[key] - best) < 1e-9 ? 1 / ties : 0;
+}
+// Every rule is counted over all items and again per resolve level (a player trains at one level at
+// a time; RV-dat-style-A §3), each against chance + 10 points.
 function shortcuts(L, item, acc) {
-  const add = (name, hit) => { const a = acc[name] = acc[name] || { hit: 0, n: 0 }; a.hit += hit; a.n++; };
+  const lvl = ' | ' + L.RESOLVE[item.params.resolve];
+  const add = (name, hit) => {
+    for (const k of [name, name + lvl]) { const a = acc[k] = acc[k] || { hit: 0, n: 0 }; a.hit += hit; a.n++; }
+  };
   const f = item.angles.map((g) => {
     const ux = g.a[0] - g.v[0], uy = g.a[1] - g.v[1], wx = g.b[0] - g.v[0], wy = g.b[1] - g.v[1];
     const lu = Math.hypot(ux, uy), lw = Math.hypot(wx, wy), xs = [g.v[0], g.a[0], g.b[0]], ys = [g.v[1], g.a[1], g.b[1]];
@@ -161,6 +172,7 @@ function shortcuts(L, item, acc) {
     return {
       'tip distance': Math.hypot(g.a[0] - g.b[0], g.a[1] - g.b[1]), area: Math.abs(ux * wy - uy * wx), 'arm sum': lu + lw,
       'longer arm': Math.max(lu, lw), 'shorter arm': Math.min(lu, lw),
+      'vertex to the tips\' midpoint': Math.hypot((ux + wx) / 2, (uy + wy) / 2),
       'bounding box': (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)),
       'bisector slope': ((bis % Math.PI) + Math.PI) % Math.PI, 'bisector height': Math.abs(Math.sin(bis)),
       'vertex x': g.v[0], 'vertex y': g.v[1],
@@ -174,13 +186,33 @@ function shortcuts(L, item, acc) {
     add(name + ' (larger = larger)', nearest(L, L.orderOf(vals), item.options, item.key));
     add(name + ' (larger = smaller)', nearest(L, L.orderOf(vals.map((x) => -x)), item.options, item.key));
   }
-  // Stem-blind: the ordering most like the others / the odd one out; the numbers in order.
-  const tot = item.options.map((o, i) => item.options.reduce((s, o2, j) => s + (i === j ? 0 : L.kendall(o, o2)), 0));
-  const mn = Math.min(...tot), mx = Math.max(...tot);
-  add('most like the others', tot[item.key] === mn ? 1 / tot.filter((x) => x === mn).length : 0);
-  add('odd one out', tot[item.key] === mx ? 1 / tot.filter((x) => x === mx).length : 0);
-  add('numbers in order 1-2-3-4', nearest(L, [0, 1, 2, 3], item.options, item.key));
-  add('numbers reversed 4-3-2-1', nearest(L, [3, 2, 1, 0], item.options, item.key));
+  // Answer-only rules: they read the four lists, never the angles.
+  const o = item.options, k = item.key, kd = o.map((a) => o.map((b) => L.kendall(a, b)));
+  const tot = kd.map((row) => row.reduce((x, y) => x + y, 0));
+  add('most like the others (Kendall)', pickBest(tot, k, false));
+  add('odd one out (Kendall)', pickBest(tot, k, true));
+  const d1 = o.map((_, i) => (kd[i].some((d, j) => j !== i && d === 1) ? 1 : 0));
+  add('has another option one swap away', pickBest(d1, k));
+  const fl = o.map((x) => o.filter((y) => y[0] === x[0]).length + o.filter((y) => y[3] === x[3]).length);
+  add('first and last numbers most common', pickBest(fl, k));
+  add('first and last numbers least common', pickBest(fl, k, false));
+  add('first number most common', pickBest(o.map((x) => o.filter((y) => y[0] === x[0]).length), k));
+  add('last number most common', pickBest(o.map((x) => o.filter((y) => y[3] === x[3]).length), k));
+  const adj = (x) => [x[0] + '>' + x[1], x[1] + '>' + x[2], x[2] + '>' + x[3]];
+  const shared = o.map((x, i) => o.reduce((t, y, j) => t + (i === j ? 0 : adj(x).filter((q) => adj(y).includes(q)).length), 0));
+  add('fewest neighbour pairs shared', pickBest(shared, k, false));
+  add('most neighbour pairs shared', pickBest(shared, k, true));
+  const agree = o.map((x, i) => o.reduce((t, y, j) => t + (i === j ? 0 : x.filter((v, q) => v === y[q]).length), 0));
+  add('most positions in common', pickBest(agree, k, true));
+  add('fewest positions in common', pickBest(agree, k, false));
+  // Borda: the numbers by mean position over the lists (ties by number), then the nearest list.
+  const pos = [0, 1, 2, 3].map((c) => o.reduce((t, x) => t + x.indexOf(c), 0));
+  add('consensus by mean position (Borda)', nearest(L, L.orderOf(pos), o, k));
+  add('numbers in order 1-2-3-4', nearest(L, [0, 1, 2, 3], o, k));
+  add('numbers reversed 4-3-2-1', nearest(L, [3, 2, 1, 0], o, k));
+  // A one-swap pair, then the list nearest the tip-distance order (answers and one cue).
+  const chordOrder = L.orderOf(f.map((x) => x['tip distance']));
+  add('one-swap option nearest the tip-distance order', pickBest(o.map((x, i) => (d1[i] ? 10 - L.kendall(x, chordOrder) : -1)), k));
 }
 
 /* ---------- learn data (js/ex/angles/learn.js) ---------- */

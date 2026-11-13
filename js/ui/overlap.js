@@ -2,13 +2,17 @@
    R3-dat-pat.md §6). Data and logic only, plus two small DOM helpers; Settings, About, the Library
    and the Spatial Check draw the screens.
 
-   "Also in tests" notes: the exercises whose formats published tests share (Fold, Hidden, Views
-   count, Nets, Span, and every DAT-style exercise, which follows the Dental Admission Test's
-   Perceptual Ability Test on purpose).
+   One source of truth for shared formats (R4 §6.2): NEAR lists the exercises whose formats parts of
+   published tests use (Fold, Hidden, Views count, Nets, Span), each with its format's name and its
+   "Also in tests" note; every DAT-style exercise is near by design (it follows the Dental Admission
+   Test's Perceptual Ability Test). Everything else is at most "related" (R4: Slice mid; Rotate and
+   Spin mid to far; Orient, Homing, Reckon mid). About's list, the notes and the helper all read it.
+     near(exId)     true for a near format       shared() → [{ id, format, name }] (About's list)
      noteFor(exId)  → { label: 'Also in tests', text, legal } or null (legal: the ADA line when the
                       text names the DAT, else null)
-     noteNode(exId, cls?, { legal: false }?) → <div class="px-overlap-note"> or null (How to play, the
-                    exercise page; legal: false leaves out the ADA line where the page shows it already)
+     noteNode(exId, cls?, { legal }?) → <div class="px-overlap-note"> or null (How to play, the
+                    exercise page). The ADA line is left out when the exercise's learn.bridge, shown
+                    on both, already carries it; opts.legal true or false decides instead.
      ADA            the non-affiliation line, shown wherever the DAT is named
      patIds()       ids of the DAT-style exercises that exist in this build (def.pat), PAT order
 
@@ -41,18 +45,21 @@
   var PAT = ['openings', 'patviews', 'angles', 'patfold', 'cubes', 'form'];
 
   var SAY = ', so if you take one, say that you have practised.';
-  var NOTES = {
-    fold: 'folding and punching paper is part of some school, admissions and ability tests. Practising it here will likely raise your score on that part, through practice with the format' + SAY,
-    hidden: 'finding a hidden shape is part of some school and ability tests. Practising it here will likely raise your score on that part, through practice with the format' + SAY,
-    views: 'counting the cubes in a stack, as in the count format, is part of some ability and military aptitude tests. Practice here helps with that part (here every cube is visible; in tests some are hidden)' + SAY,
-    nets: 'folding a net into a cube is a common item in spatial and admissions tests. Practising it here will likely raise your score on such items' + SAY,
-    span: 'tapping blocks in order is part of some clinical memory tests. Practising it here can raise your score on such a test' + SAY,
-  };
+  var NEAR = [
+    { id: 'fold', format: 'paper folding', note: 'folding and punching paper is part of some school, admissions and ability tests. Practising it here will likely raise your score on that part, through practice with the format' + SAY },
+    { id: 'hidden', format: 'hidden shapes', note: 'finding a hidden shape is part of some school and ability tests. Practising it here will likely raise your score on that part, through practice with the format' + SAY },
+    { id: 'views', format: 'counting cubes', note: 'counting the cubes in a stack, as in the count format, is part of some ability and military aptitude tests. Practice here helps with that part (here every cube is visible; in tests some are hidden)' + SAY },
+    { id: 'nets', format: 'cube nets', note: 'folding a net into a cube is a common item in spatial and admissions tests. Practising it here will likely raise your score on such items' + SAY },
+    { id: 'span', format: 'block tapping', note: 'tapping blocks in order is part of some clinical memory tests. Practising it here can raise your score on such a test' + SAY },
+  ];
+  var NEAR_BY = {}, NOTES = {};
+  NEAR.forEach(function (x) { NEAR_BY[x.id] = x; NOTES[x.id] = x.note; });
   var PAT_NOTE = 'this format follows one of the six parts of the Perceptual Ability Test in the Dental Admission Test, on purpose. Practice on a format usually raises scores on that format; Parallax has not measured its effect on DAT scores.';
 
   /* ---------- what a test can contain (the helper's ticks) ---------- */
-  // same: practice here is practice with that format (near); related: a small or unknown effect;
-  // untrained: what Parallax says when nothing here practises it.
+  // same: practice here is practice with that format (near: NEAR or DAT-style only, which match()
+  // enforces); related: a small or unknown effect; untrained: what Parallax says when nothing here
+  // practises it.
   var KINDS = [
     { id: 'folding', label: 'Folding and punching paper', same: ['fold', 'patfold'], related: [] },
     { id: 'hidden', label: 'Finding a hidden shape', same: ['hidden'], related: [] },
@@ -61,16 +68,17 @@
     { id: 'views', label: 'Top, front and side views of objects', same: ['views', 'patviews'], related: ['openings', 'slice'] },
     { id: 'openings', label: 'Which opening a solid passes through', same: ['openings'], related: ['views', 'patviews', 'slice'] },
     { id: 'angles', label: 'Ranking angles by size', same: ['angles'], related: [] },
-    { id: 'sections', label: 'Cross-sections of solids', same: ['slice'], related: ['openings'] },
-    { id: 'rotation', label: 'Turned or mirrored block figures', same: ['rotate', 'spin'], related: [] },
+    { id: 'sections', label: 'Cross-sections of solids', same: [], related: ['slice', 'openings'] },
+    { id: 'rotation', label: 'Turned or mirrored block figures', same: [], related: ['rotate', 'spin'] },
     { id: 'directions', label: 'Directions, maps and finding your way', same: [], related: ['orient', 'homing', 'reckon'] },
     { id: 'tapping', label: 'Remembering positions in order (block tapping)', same: ['span'], related: [] },
     { id: 'analogies', label: 'Word analogies (“A is to B as C is to …”)', same: [], related: [],
       untrained: 'Not trained here. Only the Spatial Check’s word task uses this format, for a few minutes per check and without feedback.' },
     { id: 'matrices', label: 'Figure analogies or matrices', same: [], related: ['rotate', 'spin', 'hidden'],
       untrained: 'No exercise here teaches their rules. Turning, mirroring and hidden shapes appear inside some of them.' },
-    { id: 'dat', label: 'The Perceptual Ability Test of the Dental Admission Test', same: PAT.slice(), related: ['fold', 'views', 'nets'] },
-    { id: 'unsure', label: 'Not sure', same: ['fold', 'hidden', 'views', 'nets', 'span'].concat(PAT), related: ['rotate', 'spin', 'slice', 'orient'] },
+    // Fold is near for the PAT's paper folding (R3 §5.2 "High: Fold is a superset"; R4 §6.2 near)
+    { id: 'dat', label: 'The Perceptual Ability Test of the Dental Admission Test', same: PAT.concat(['fold']), related: ['views', 'nets'] },
+    { id: 'unsure', label: 'Not sure', same: NEAR.map(function (x) { return x.id; }).concat(PAT), related: ['rotate', 'spin', 'slice', 'orient'] },
   ];
   var KIND_BY = {};
   KINDS.forEach(function (k) { KIND_BY[k.id] = k; });
@@ -89,36 +97,50 @@
     return out;
   }
   function isPat(id) { var d = defOf(id); return !!(d && d.pat === true) || PAT.indexOf(id) >= 0; }
+  function near(id) { return hasOwn.call(NEAR_BY, id) || isPat(id); }
+  // About's list: the near formats this build has (DAT-style exercises are named apart).
+  function shared() {
+    return NEAR.filter(function (x) { return !!trainDef(x.id); }).map(function (x) {
+      var d = trainDef(x.id);
+      return { id: x.id, format: x.format, name: d.short || d.name };
+    });
+  }
 
   function noteFor(exId) {
-    if (hasOwn.call(NOTES, exId)) return { label: 'Also in tests', text: cap(NOTES[exId]), legal: null };
+    if (hasOwn.call(NEAR_BY, exId)) return { label: 'Also in tests', text: cap(NEAR_BY[exId].note), legal: null };
     if (isPat(exId)) return { label: 'Also in tests', text: cap(PAT_NOTE), legal: ADA };
     return null;
   }
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-  // opts.legal === false leaves the ADA line out (a page that already shows it nearby).
+  // The exercise's learn.bridge already ends with the ADA line (the DAT-style exercises' bridges do).
+  function bridgeHasAda(exId) {
+    try { var L = PX.ex && PX.ex.learn ? PX.ex.learn(exId) : null; return !!(L && typeof L.bridge === 'string' && /American Dental Association/.test(L.bridge)); } catch (e) { return false; }
+  }
+  // The ADA line goes with the note unless the bridge shown on the same page carries it
+  // (How to play and the exercise page both show the bridge); opts.legal decides when given.
   function noteNode(exId, cls, opts) {
     var n = noteFor(exId), ui = PX.ui;
     if (!n || !ui || typeof ui.h !== 'function') return null;
-    var h = ui.h;
+    var h = ui.h, legal = !!n.legal && (opts && typeof opts.legal === 'boolean' ? opts.legal : !bridgeHasAda(exId));
     return h('div', { class: ['px-overlap-note', cls || null], 'data-overlap': exId },
       h('p', h('b', n.label + ': '), n.text),
-      n.legal && !(opts && opts.legal === false) ? h('p.px-overlap-legal', n.legal) : null);
+      legal ? h('p.px-overlap-legal', n.legal) : null);
   }
 
   /* ---------- the helper's matching ---------- */
 
   function uniq(list) { var out = []; list.forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); }); return out; }
 
-  // Exercises are listed only when they exist here; an id that is "same" for one ticked kind is
-  // never also listed as "related".
+  // Exercises are listed only when they exist here; "same" holds near formats only (NEAR or
+  // DAT-style; anything else a kind lists there counts as related), and an id that is "same" for
+  // one ticked kind is never also listed as "related".
   function match(kinds) {
     var same = [], related = [], untrained = [];
     (Array.isArray(kinds) ? kinds : []).forEach(function (k) {
       var K = KIND_BY[k];
       if (!K) return;
-      same = same.concat(K.same);
+      K.same.forEach(function (id) { (near(id) ? same : related).push(id); });
       related = related.concat(K.related);
       if (K.untrained) untrained.push({ kind: K.id, label: K.label, text: K.untrained });
     });
@@ -217,8 +239,8 @@
 
   PX.ui = PX.ui || {};
   PX.ui.overlap = {
-    ADA: ADA, PAT: PAT, KINDS: KINDS, NOTES: NOTES, registered: registered,
-    noteFor: noteFor, noteNode: noteNode, patIds: patIds, isPat: isPat, match: match,
+    ADA: ADA, PAT: PAT, KINDS: KINDS, NOTES: NOTES, NEAR: NEAR, registered: registered,
+    noteFor: noteFor, noteNode: noteNode, patIds: patIds, isPat: isPat, near: near, shared: shared, match: match,
     setFocus: setFocus, pause: pause, clearPause: clearPause, pauseState: pauseState,
     noteTest: noteTest, removeTest: removeTest, today: today,
     fix: { pause: fixPause, hygiene: fixHygiene },

@@ -68,6 +68,10 @@
   var RANGE = { right: [70, 110], acute: [25, 72], obtuse: [108, 155] };
   var KAPPA = [1.3, 1.6];
   var ARM = [0.3, 1.0];
+  // The longer arm of each angle is at least LONG_MIN·L (see the header), and the cue weights of
+  // chooseArms: tip distance, area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint.
+  var LONG_MIN = 0.3;
+  var CUE_W = [2.5, 1.5, 1, 1, 1, 2];
   function armMin() { return ARM[0]; }
   var MARGIN = 0.07, LMAX = 0.9, MIN_ARM = 0.1, FLOOR = 2, TOL = 0.02;
 
@@ -169,23 +173,73 @@
     if (res === 2) { var s = [0, 1, 2, 3]; s[close] = close + 1; s[close + 1] = close; return s; }
     return null;
   }
-  // Three foils: every allowed triple containing the required foil, scored by how far the key's
-  // rank on total Kendall distance (0 = most like the others) is from a random target; one of the
-  // best triples at random.
-  function chooseFoils(r, res, close) {
-    var cand = allowedFoils(res, close), need = mustHave(res, close), key = [0, 1, 2, 3];
-    var tc = rint(r, 4), best = [], bestCost = Infinity, a, b, c;
-    for (a = 0; a < cand.length; a++) for (b = a + 1; b < cand.length; b++) for (c = b + 1; c < cand.length; c++) {
-      var tri = [cand[a], cand[b], cand[c]];
-      if (need && !tri.some(function (o) { return same(o, need); })) continue;
-      var opts = [key].concat(tri), tot = [0, 0, 0, 0];
-      for (var i = 0; i < 4; i++) for (var j = i + 1; j < 4; j++) { var d = kendall(opts[i], opts[j]); tot[i] += d; tot[j] += d; }
-      var below = 0, tie = 0;
-      for (i = 1; i < 4; i++) { if (tot[i] < tot[0]) below++; else if (tot[i] === tot[0]) tie++; }
-      var cost = tc < below ? below - tc : tc > below + tie ? tc - below - tie : 0;
-      if (cost < bestCost) { bestCost = cost; best = [tri]; } else if (cost === bestCost) best.push(tri);
+  // Answer-only heuristics read the four lists and never the angles. Tables over the 24 orderings
+  // (Kendall distance, positions in common, ordered neighbour pairs as bits) keep them cheap.
+  var KD = [], PA = [], AD = [];
+  PERMS.forEach(function (a, i) {
+    var m = 0, q;
+    for (q = 0; q < 3; q++) m |= 1 << (a[q] * 4 + a[q + 1]);
+    AD.push(m); KD.push([]); PA.push([]);
+    PERMS.forEach(function (b) {
+      var pa = 0;
+      for (q = 0; q < 4; q++) if (a[q] === b[q]) pa++;
+      KD[i].push(kendall(a, b)); PA[i].push(pa);
+    });
+  });
+  var PERM_ID = {};
+  PERMS.forEach(function (o, i) { PERM_ID[o.join()] = i; });
+  function popc(x) { var c = 0; while (x) { x &= x - 1; c++; } return c; }
+  // The chance that a pick-the-best rule with these scores lands on option 0 (ties shared).
+  function hit0(sc, larger) {
+    var best = sc[0], i, t = 0;
+    for (i = 1; i < 4; i++) if (larger ? sc[i] > best : sc[i] < best) best = sc[i];
+    if (sc[0] !== best) return 0;
+    for (i = 0; i < 4; i++) if (sc[i] === best) t++;
+    return 1 / t;
+  }
+  // For four orderings (ids into PERMS, the key first): how often each answer-only rule picks the
+  // key. The rules (RV-dat-style-A §3): has another option one swap away; first and last numbers
+  // most / least common; first number most common; last number most common; fewest / most ordered
+  // neighbour pairs shared with the others; most / fewest positions in common; smallest / largest
+  // total Kendall distance (most like the others / odd one out).
+  function answerHits(ids) {
+    var s1 = [], fl = [], f1 = [], l1 = [], ad = [], pa = [], kt = [], i, j;
+    for (i = 0; i < 4; i++) {
+      var a = PERMS[ids[i]], d1 = 0, f = 0, l = 0, sh = 0, ag = 0, k = 0;
+      for (j = 0; j < 4; j++) {
+        var b = PERMS[ids[j]];
+        if (a[0] === b[0]) f++;
+        if (a[3] === b[3]) l++;
+        if (j === i) continue;
+        if (KD[ids[i]][ids[j]] === 1) d1 = 1;
+        sh += popc(AD[ids[i]] & AD[ids[j]]);
+        ag += PA[ids[i]][ids[j]];
+        k += KD[ids[i]][ids[j]];
+      }
+      s1.push(d1); fl.push(f + l); f1.push(f); l1.push(l); ad.push(sh); pa.push(ag); kt.push(k);
     }
-    return best.length ? best[rint(r, best.length)] : null;
+    return [hit0(s1, true), hit0(fl, true), hit0(fl, false), hit0(f1, true), hit0(l1, true), hit0(ad, false), hit0(ad, true),
+      hit0(pa, true), hit0(pa, false), hit0(kt, false), hit0(kt, true)];
+  }
+  // Three foils: every allowed triple containing the required foil is scored by how far each
+  // answer-only rule's chance of picking the key is from one in four (summed); one triple is drawn
+  // at random from those within 0.5 of the best score. The one-swap foil the resolve level needs
+  // is then never the key's only near twin, and the first and last numbers do not point to the key.
+  function chooseFoils(r, res, close) {
+    var cand = allowedFoils(res, close), need = mustHave(res, close), K0 = PERM_ID['0,1,2,3'];
+    var ids = cand.map(function (o) { return PERM_ID[o.join()]; }), needId = need ? PERM_ID[need.join()] : -1;
+    var scored = [], minCost = Infinity, a, b, c;
+    for (a = 0; a < ids.length; a++) for (b = a + 1; b < ids.length; b++) for (c = b + 1; c < ids.length; c++) {
+      if (needId >= 0 && ids[a] !== needId && ids[b] !== needId && ids[c] !== needId) continue;
+      var h = answerHits([K0, ids[a], ids[b], ids[c]]), cost = 0;
+      for (var q = 0; q < h.length; q++) cost += abs(h[q] - 0.25);
+      scored.push([cost, a, b, c]);
+      if (cost < minCost) minCost = cost;
+    }
+    var ok = scored.filter(function (x) { return x[0] <= minCost + 0.5 + 1e-9; });
+    if (!ok.length) return null;
+    var pick = ok[rint(r, ok.length)];
+    return [cand[pick[1]], cand[pick[2]], cand[pick[3]]];
   }
 
   // Arm lengths (relative to L). Cues a quick look could rank by instead of the angle: the tip
@@ -202,22 +256,27 @@
     return hit ? 1 - 1 / ties : 1;
   }
   function chooseArms(r, deg, opts, lo) {
-    var targets = [], t;
-    for (t = 0; t < 10; t++) targets.push(rint(r, 4));
+    var targets = [], t, NC = CUE_W.length;
+    for (t = 0; t < 2 * NC; t++) targets.push(rint(r, 4));
     var cs = deg.map(function (d) { return sincos(d); }), best = null, bestCost = Infinity;
     for (var k = 0; k < 400 && bestCost > 0; k++) {
-      var arms = [], cue = [[], [], [], [], []];
+      var arms = [], cue = [[], [], [], [], [], []];
       for (var i = 0; i < 4; i++) {
-        var a1 = rnd(lo + r.next() * (ARM[1] - lo), 1000), a2 = rnd(lo + r.next() * (ARM[1] - lo), 1000);
+        var a1, a2;
+        do {
+          a1 = rnd(lo + r.next() * (ARM[1] - lo), 1000); a2 = rnd(lo + r.next() * (ARM[1] - lo), 1000);
+        } while ((a1 > a2 ? a1 : a2) < LONG_MIN);
         arms.push([a1, a2]);
-        cue[0].push(sqrt(a1 * a1 + a2 * a2 - 2 * a1 * a2 * cs[i][1]));
-        cue[1].push(a1 * a2 * cs[i][0]);
-        cue[2].push(a1 + a2);
-        cue[3].push(a1 > a2 ? a1 : a2);
-        cue[4].push(a1 > a2 ? a2 : a1);
+        var cr = 2 * a1 * a2 * cs[i][1];
+        cue[0].push(sqrt(a1 * a1 + a2 * a2 - cr));     // tip distance
+        cue[1].push(a1 * a2 * cs[i][0]);               // enclosed area (×2)
+        cue[2].push(a1 + a2);                          // arm-length sum
+        cue[3].push(a1 > a2 ? a1 : a2);                // longer arm
+        cue[4].push(a1 > a2 ? a2 : a1);                // shorter arm
+        cue[5].push(sqrt(a1 * a1 + a2 * a2 + cr));     // vertex to the tips' midpoint (×2)
       }
       var cost = 0;
-      for (t = 0; t < 10 && cost < bestCost; t++) cost += (t < 2 ? 2.5 : t < 4 ? 1.5 : 1) * cueHit(cue[t >> 1], t & 1 ? -1 : 1, opts, targets[t]);
+      for (t = 0; t < 2 * NC && cost < bestCost; t++) cost += CUE_W[t >> 1] * cueHit(cue[t >> 1], t & 1 ? -1 : 1, opts, targets[t]);
       if (cost < bestCost) { bestCost = cost; best = arms; }
     }
     return best;
@@ -252,12 +311,12 @@
     var delta = GAPS[p.gap], cls = SIZES[p.size], res = p.resolve, aligned = POSES[p.pose] === 'aligned';
     var close = res === 0 ? 1 : res === 1 ? (r.next() < 0.5 ? 0 : 2) : rint(r, 3);
     var gaps = [0, 1, 2].map(function (k) {
-      return k === close ? delta : rnd(delta * (KAPPA[0] + r.next() * (KAPPA[1] - KAPPA[0])), 20);
+      return k === close ? delta : rnd(delta * (KAPPA[0] + r.next() * (KAPPA[1] - KAPPA[0])), 10);
     });
     var span = gaps[0] + gaps[1] + gaps[2], R = RANGE[cls], lo = R[0], hi = R[1] - span;
     if (hi < lo) return null;
-    var t0 = rnd(lo + r.next() * (hi - lo), 20);
-    var byRank = [t0, t0 + gaps[0], t0 + gaps[0] + gaps[1], t0 + span].map(function (x) { return rnd(x, 20); });
+    var t0 = rnd(lo + r.next() * (hi - lo), 10);
+    var byRank = [t0, t0 + gaps[0], t0 + gaps[0] + gaps[1], t0 + span].map(function (x) { return rnd(x, 10); });
     var cellOfRank = shuffle(r, [0, 1, 2, 3]);
     var rankOfCell = [0, 0, 0, 0];
     cellOfRank.forEach(function (c, k) { rankOfCell[c] = k; });

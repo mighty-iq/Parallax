@@ -19,14 +19,17 @@
      start(rec, { size, form, now, display, can }) → run, or { unavailable: text }
      current(run) → { part, index, it, exId }        go(run, index) → it (current part only)
      visit(run, index, ms) adds viewing time         flag(run, index, on)
-     answer(run, index, { response, correct, rtMs, input, voided, voidReason }, now) → { it, replaced }
-       a voided item does not count: a replacement (same settings, new seed) joins the end of its part
+     answer(run, index, { response, correct, rtMs, input, voided, voidReason }, now) → { it, replaced, capped?, broken? }
+       a voided item does not count: a replacement (same settings, new seed) joins the end of its
+       part, at most one per original item (capped); ERR_RUN 'error' voids in a row end the part
+       (broken: its never-shown items do not count, and the screen moves on with a note)
+     breakPart(run, p, why)          the same for a part that cannot be shown at all (no view, no WebGL)
      partInfo(run, p) → { n, answered, unanswered, flagged, right? }   (right only after the run ends)
      endPart(run, rec, now, usedMs) → the next part index, or -1 when it was the last
      finish(run, rec, now, { usedMs, pausedMs, ended: 'done' | 'time' | 'user' }) → result
        logs what is not logged yet, pushes a session (mode 'section') and a summary to
        rec.section.runs, adds the active time to rec.practiceMs, clears rec.section.live
-     review(result, which) → [{ part, index, exId, seed, params, status, resp, correct, flag }]
+     review(result, which) → [{ part, index, exId, seed, params, status, resp, correct, flag }]   shown items only
    Trial rows (one per presented item, written when its part ends): 1 right, 0 wrong, 3 seen but
    unanswered, 2 voided; the row's time is the item's last answer (or visit). For an exercise with
    the extra param `ask` (Painted Cubes: several questions about one figure), the row's value
@@ -47,6 +50,7 @@
   var BAND = [0.35, 0.65];
   var MODE = 'section';
   var MAX_RUNS = 200;
+  var ERR_RUN = 3;   // a part whose items fail to draw this many times in a row ends ("broken")
   var config = { parts: null, paceMs: null }; // tests: other parts, a faster pace
 
   function isNum(x) { return typeof x === 'number' && isFin(x); }
@@ -205,9 +209,20 @@
   }
   function itemAt(run, index) { var P = partOf(run); return P ? P.items[index] || null : null; }
 
+  function originals(P) { var n = 0; P.items.forEach(function (x) { if (!x.rep) n++; }); return n; }
+  function reps(P) { return P.items.length - originals(P); }
+  // A part that cannot be shown (its exercise does not mount, or keeps failing to draw): it ends,
+  // and its items that were never shown do not count.
+  function breakPart(run, p, why) {
+    var P = partOf(run, p);
+    if (P && !P.broken) P.broken = typeof why === 'string' && why ? why.slice(0, 60) : 'could not be shown here';
+    return P;
+  }
+
   function visit(run, index, ms, now) {
     var it = itemAt(run, index);
     if (!it) return null;
+    if (isNum(ms) && ms > 0) partOf(run).errRun = 0; // it was on screen: the part draws
     if (it.status === 'new') it.status = 'seen';
     it.visits += 1;
     if (isNum(ms) && ms > 0) it.timeMs += Math.round(ms);
@@ -231,13 +246,18 @@
       it.status = 'void';
       it.voidReason = typeof r.voidReason === 'string' ? r.voidReason.slice(0, 24) : 'void';
       it.flag = false;
+      // Items that keep failing to draw end the part; replacements stop at one per original item.
+      P.errRun = it.voidReason === 'error' ? (P.errRun || 0) + 1 : 0;
+      if (P.errRun >= ERR_RUN) { P.broken = P.broken || 'could not be shown here'; return { it: it, replaced: null, broken: P.broken }; }
+      if (reps(P) >= originals(P)) return { it: it, replaced: null, capped: true };
       // The replacement keeps the settings, with a seed of its own (R3 §9: replaced at the end of its part).
-      var k = P.items.filter(function (x) { return x.rep; }).length + 1;
+      var k = reps(P) + 1;
       var seed = E.select.sharedSeed(PX.rng.hash('px-section', run.size, run.form, P.exId, it.j, 'r', k));
       var rep = newItem({ params: U.deepCopy(it.params), seed: seed, code: it.code, b: it.b, g: it.g, p: it.p }, it.j, { rep: true, replaces: index });
       P.items.push(rep);
       return { it: it, replaced: P.items.length - 1 };
     }
+    P.errRun = 0;
     it.status = 'answered';
     it.resp = r.response === undefined ? null : U.deepCopy(r.response);
     it.correct = !!r.correct;
@@ -246,11 +266,12 @@
     return { it: it, replaced: null };
   }
 
-  function counts(items, withRight) {
+  function counts(items, withRight, broken) {
     var o = { n: 0, answered: 0, unanswered: 0, flagged: 0, voided: 0, seen: 0 };
     if (withRight) o.right = 0;
     items.forEach(function (it) {
       if (it.status === 'void') { o.voided++; return; }
+      if (broken && it.status === 'new') return; // a broken part: what was never shown does not count
       o.n++;
       if (it.status === 'answered') { o.answered++; if (withRight && it.correct) o.right++; } else o.unanswered++;
       if (it.status !== 'new') o.seen++;
@@ -258,7 +279,7 @@
     });
     return o;
   }
-  function partInfo(run, p) { var P = partOf(run, p); return P ? counts(P.items, run.done) : null; }
+  function partInfo(run, p) { var P = partOf(run, p); return P ? counts(P.items, run.done, !!P.broken) : null; }
 
   /* ---------- logging ---------- */
 
@@ -299,7 +320,7 @@
   function finish(run, rec, now, o) {
     o = o || {};
     if (run.done && run.result) return run.result;
-    var used = isNum(o.usedMs) ? Math.max(0, Math.round(o.usedMs)) : run.usedMs;
+    var used = Math.min(isNum(o.usedMs) ? Math.max(0, Math.round(o.usedMs)) : run.usedMs, run.budgetMs); // never more than the clock had
     var P = partOf(run);
     if (P && !isNum(P.t1)) P.t1 = used;
     run.parts.forEach(function (x) { logPart(run, rec, x, now); });
@@ -307,16 +328,22 @@
     run.ended = o.ended === 'time' || o.ended === 'user' ? o.ended : 'done';
     run.usedMs = used;
     run.pausedMs = isNum(o.pausedMs) ? Math.max(0, Math.round(o.pausedMs)) : run.pausedMs;
-    var parts2 = run.parts.map(function (x, p) {
-      var c = counts(x.items, true);
+    var parts2 = run.parts.map(function (x) {
+      var c = counts(x.items, true, !!x.broken);
       var t = isNum(x.t0) ? Math.max(0, Math.round((isNum(x.t1) ? x.t1 : used) - x.t0)) : 0;
-      return { exId: x.exId, n: c.n, right: c.right, answered: c.answered, unanswered: c.unanswered, flagged: c.flagged, voided: c.voided, seen: c.seen, timeMs: t, reached: p <= run.part };
+      // reached: at least one of its items was shown (a part left during its instructions was not)
+      return { exId: x.exId, n: c.n, right: c.right, answered: c.answered, unanswered: c.unanswered, flagged: c.flagged, voided: c.voided, seen: c.seen, timeMs: t, reached: c.seen > 0, broken: x.broken || null };
     });
     var tot = parts2.reduce(function (a, x) { a.n += x.n; a.right += x.right; a.answered += x.answered; a.unanswered += x.unanswered; return a; }, { n: 0, right: 0, answered: 0, unanswered: 0 });
     var summary = {
       id: run.id, size: run.size, form: run.form, start: run.start, end: now, usedMs: used, pausedMs: run.pausedMs,
       budgetMs: run.budgetMs, ended: run.ended, right: tot.right, n: tot.n, answered: tot.answered, unanswered: tot.unanswered,
-      parts: parts2.map(function (x) { return { exId: x.exId, n: x.n, right: x.right, answered: x.answered, flagged: x.flagged, voided: x.voided, timeMs: x.timeMs }; }),
+      app: typeof PX.version === 'string' ? PX.version : null, // forms come from the item models of this version
+      parts: parts2.map(function (x) {
+        var o2 = { exId: x.exId, n: x.n, right: x.right, answered: x.answered, flagged: x.flagged, voided: x.voided, seen: x.seen, reached: x.reached, timeMs: x.timeMs };
+        if (x.broken) o2.broken = x.broken;
+        return o2;
+      }),
     };
     var s = sec(rec);
     s.runs.push(summary);
@@ -327,7 +354,7 @@
     if (tot.answered > 0) {
       session = {
         id: run.id, start: run.start, end: Math.max(now, run.start), mode: MODE, trials: tot.answered, right: tot.right,
-        practiceMs: used, exs: run.parts.filter(function (x, p) { return p <= run.part; }).map(function (x) { return x.exId; }),
+        practiceMs: used, exs: parts2.filter(function (x) { return x.reached; }).map(function (x) { return x.exId; }),
         summary: { section: { size: run.size, form: run.form, right: tot.right, n: tot.n, unanswered: tot.unanswered, ended: run.ended } },
       };
       if (!isArray(rec.sessions)) rec.sessions = [];
@@ -338,13 +365,14 @@
     return run.result;
   }
 
-  // Items to look at again ('again': wrong, unanswered or flagged) or every item ('all').
+  // Items to look at again ('again': wrong, skipped or flagged) or every item ('all'): only items
+  // that were shown (never-shown items, as in a part not reached, are not listed).
   function review(result, which) {
     var out = [];
     if (!result || !result.run) return out;
     result.run.parts.forEach(function (P, p) {
       P.items.forEach(function (it, i) {
-        if (it.status === 'void') return;
+        if (it.status === 'void' || it.status === 'new') return;
         var again = it.status !== 'answered' || !it.correct || it.flag;
         if (which !== 'all' && !again) return;
         out.push({ part: p, index: i, exId: P.exId, seed: it.seed, params: it.params, status: it.status, resp: it.resp, correct: it.correct, flag: it.flag, rtMs: it.rtMs, timeMs: it.timeMs });
@@ -377,17 +405,34 @@
     out.timeMs = F.num(x.timeMs, 0, 1e9) || 0;
     out.visits = F.int(x.visits, 0, 1e6) || 0;
     out.flag = x.flag === true;
+    out.correct = st === 'answered' ? x.correct === true : null;
     return out;
   }
+  // A saved run, repaired: replacements beyond the cap (one per original item) that were never
+  // shown are dropped (a run saved by an older build could hold thousands); a part without original
+  // items, a damaged item or part, or a finished run is refused; a budget outside 1 s to 10 min an
+  // item is recomputed at the test's pace.
   function fixLive(r) {
     if (!isObj(r) || !hasOwn.call(SIZES, r.size) || !isArray(r.parts) || !r.parts.length || r.done === true) return null;
-    var parts2 = [];
+    var parts2 = [], nOrig = 0;
     for (var i = 0; i < r.parts.length; i++) {
       var P = r.parts[i];
       if (!isObj(P) || !F.id(P.exId) || !isArray(P.items)) return null;
       var items = P.items.map(fixItem);
       if (items.some(function (x) { return x === undefined; })) return null;
-      parts2.push({ exId: P.exId, version: F.int(P.version, 1, 9999) || 1, items: items, logged: P.logged === true, t0: isNum(P.t0) ? P.t0 : null, t1: isNum(P.t1) ? P.t1 : null });
+      var orig = items.filter(function (x) { return !x.rep; }).length, kept = 0;
+      if (!orig) return null;
+      items = items.filter(function (x) {
+        if (!x.rep) return true;
+        if (x.status !== 'new') { kept++; return true; }
+        return kept < orig ? (kept++, true) : false;
+      });
+      if (items.length > 2 * orig) return null; // more shown replacements than items: not a run this app made
+      nOrig += orig;
+      var Q = { exId: P.exId, version: F.int(P.version, 1, 9999) || 1, items: items, logged: P.logged === true, t0: isNum(P.t0) ? P.t0 : null, t1: isNum(P.t1) ? P.t1 : null };
+      if (typeof P.broken === 'string' && P.broken) Q.broken = P.broken.slice(0, 60);
+      if (isNum(P.errRun)) Q.errRun = F.int(P.errRun, 0, 1e4) || 0;
+      parts2.push(Q);
     }
     var out = U.deepCopy(r);
     out.parts = parts2;
@@ -395,7 +440,8 @@
     out.index = F.int(r.index, 0, 1e4) || 0;
     out.usedMs = F.num(r.usedMs, 0, 1e9) || 0;
     out.pausedMs = F.num(r.pausedMs, 0, 1e10) || 0;
-    out.budgetMs = F.num(r.budgetMs, 1, 1e9) || PACE_MS;
+    var b = r.budgetMs;
+    out.budgetMs = isNum(b) && b >= nOrig * 1000 && b <= nOrig * 600000 ? b : nOrig * PACE_MS;
     out.form = F.int(r.form, 1, 1e6) || 1;
     if (out.index >= parts2[out.part].items.length) out.index = 0;
     return out;
@@ -410,8 +456,8 @@
   E.section = {
     PARTS: PARTS, SIZES: SIZES, PACE_MS: PACE_MS, BAND: BAND, MODE: MODE, config: config,
     parts: parts, shape: shape, nextForm: nextForm, formItems: formItems, fmtMinutes: fmtMinutes,
-    start: start, current: current, go: go, item: itemAt, visit: visit, flag: flag, answer: answer,
-    partInfo: partInfo, endPart: endPart, finish: finish, review: review,
+    start: start, current: current, go: go, item: itemAt, visit: visit, flag: flag, answer: answer, breakPart: breakPart,
+    partInfo: partInfo, endPart: endPart, finish: finish, review: review, ERR_RUN: ERR_RUN,
     save: save, live: live, drop: drop, fixLive: fixLive, defaults: defaults,
   };
 })(window.PX);
