@@ -32,7 +32,7 @@
    drawn at random from those within 0.75 of the best score. The node test bounds every rule at
    each resolve level.
 
-   Arms are drawn after the angles, in [0.3, 1]·L, the longer arm of each angle at least 0.58·L
+   Arms are drawn after the angles, in [0.3, 1]·L, the longer arm of each angle at least 0.7·L
    (R3 §8.3 asks for long arms on phones; RV-dat-style-A §7). A quick look could rank by a cue
    instead of the angle: the tip distance, the enclosed area, the arm-length sum, the longer or the
    shorter arm, or the length from the vertex to the tips' midpoint, each either way round; a cue
@@ -79,10 +79,10 @@
   var RANGE = { right: [70, 110], acute: [25, 72], obtuse: [108, 155] };
   var KAPPA = [1.3, 1.6];
   var ARM = [0.3, 1.0];
-  // The longer arm of each angle is at least LONG_MIN·L (see the header; 0.58 kept every cue and
+  // The longer arm of each angle is at least LONG_MIN·L (see the header; 0.7 keeps every cue and
   // answer-only rule within its bound, B5.md), and the cue weights of chooseArms: tip distance,
   // area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint.
-  var LONG_MIN = 0.58;
+  var LONG_MIN = 0.7;
   var CUE_W = [2.5, 1.5, 1, 1, 1, 2];
   var FOIL_SLACK = 0.75, REV_PEN = 0.3;
   var ARM_ROUNDS = 6, ARM_TRIES = 20;

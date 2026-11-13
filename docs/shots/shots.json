@@ -1,11 +1,19 @@
 {
+ "app-about-hygiene": {
+  "h": 965,
+  "w": 1104
+ },
  "app-check": {
   "h": 1152,
   "w": 2049
  },
  "app-goal": {
-  "h": 726,
+  "h": 759,
   "w": 1704
+ },
+ "app-homing-phone": {
+  "h": 1480,
+  "w": 720
  },
  "app-lab": {
   "h": 1152,
@@ -15,9 +23,21 @@
   "h": 1152,
   "w": 2049
  },
+ "app-library-pat": {
+  "h": 930,
+  "w": 1704
+ },
  "app-library-phone": {
   "h": 1760,
   "w": 824
+ },
+ "app-phone-help": {
+  "h": 1480,
+  "w": 720
+ },
+ "app-phone-item": {
+  "h": 1480,
+  "w": 720
  },
  "app-player-feedback": {
   "h": 1152,
@@ -33,6 +53,14 @@
  },
  "app-progress": {
   "h": 1080,
+  "w": 1704
+ },
+ "app-reckon-phone": {
+  "h": 1480,
+  "w": 720
+ },
+ "app-section-review": {
+  "h": 941,
   "w": 1704
  },
  "app-settings": {

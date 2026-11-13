@@ -434,12 +434,13 @@ def shoot_app_screens(b, want):
                 page.wait_for_function('__play.state === "reveal"', timeout=10000)
                 page.wait_for_timeout(600)
                 save(page, 'app-player-feedback', viewport(page))
-                # A short real session for the summary and the share card: eleven more items.
+                # A short real session for the summary and the share card: eleven more items, at a
+                # person's pace (about 20 s an item), so the active-time clock reads a few minutes.
                 for ok in (True, True, False, True, True, True, False, True, True, True, True):
                     page.evaluate('__play.next()')
                     if not click_through(page):
                         break
-                    page.wait_for_timeout(2000 if ok else 2800)
+                    page.wait_for_timeout(17000 if ok else 23000)
                     page.evaluate(f'__play.answer({"true" if ok else "false"}).catch(() => 0)')
                     page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
                     page.wait_for_timeout(300)
@@ -545,6 +546,7 @@ def section_run(page):
         elif mode == 'partend' and page.locator('[data-card="next"]').count():
             page.locator('[data-card="next"]').first.click()
         elif mode == 'item' and page.evaluate('window.__play && __play.state === "respond"'):
+            page.wait_for_timeout(8000 + (n * 3700) % 9000)   # 8 to 17 s an item: a quick person's pace
             page.evaluate(f'__play.answer({"false" if n % 4 == 3 else "true"}).catch(() => 0)')
             n += 1
         page.wait_for_timeout(350)
@@ -604,9 +606,10 @@ def shoot_v11_screens(b, want):
         if 'app-about-hygiene' in want:
             go_route(page, 'about')
             cut(page, 'app-about-hygiene', '[data-section="hygiene"]')
-        if 'app-library-pat' in want:
+        if 'app-library-pat' in want:               # the group's head and panel (its six cards left out)
             go_route(page, 'library')
-            cut(page, 'app-library-pat', 'section.px-lib-group[data-group="pat"]', max_h=620)
+            page.add_style_tag(content='.px-excards[data-group="pat"] { display: none !important; }')
+            cut(page, 'app-library-pat', 'section.px-lib-group[data-group="pat"]')
         if 'app-section-review' in want:
             page.reload()
             boot_app(page)

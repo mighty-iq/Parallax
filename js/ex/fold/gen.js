@@ -1155,6 +1155,142 @@
       if (!hm || !sm || maskKey(hm) !== maskKey(sm) || popcount(sm[0]) + popcount(sm[1]) !== stp.holes.length) return 'step ' + si + ': hole positions';
     }
     if (maskKey(maskOf(item.steps[F].holes)) !== maskKey(maskOf(item.punches))) return 'last step holes are not the punches';
+    return checkSteps(item);
+  }
+
+  /* The drawn panels against their own simulation (RV-dat-style-A §4; first written for Hole Punch,
+     now for every sheet size). The checks above compare the show-me states by area and hole
+     positions only, and the stem and show-me are drawn from item.steps. So every step is simulated
+     again here on the 4·N² triangles, tracked by their centroids in sixths of a cell (exact integer
+     reflections; no centroid lies on a grid line or on a 45° line through grid points, so every
+     point-in-polygon test is exact), with each triangle's layer (a fold puts its flap on top, in
+     reverse order) and side up. Per step: the outline holds exactly the places that hold paper; the
+     faces, rasterised at the centroids, are unions of whole triangles on the sheet and cover each
+     place once per layer there; at each place the faces taken by layer (top first) carry the
+     simulated stack's flags (back up, moved by this fold); a moved face's `from` is its polygon
+     reflected across the fold line and no other face has one; each face lists exactly the punched
+     cells that lie on it. */
+  function polySix(P) {
+    if (!isArray(P) || P.length < 3) return null;
+    var out = [];
+    for (var i = 0; i < P.length; i++) {
+      var pt = P[i];
+      if (!isArray(pt) || pt.length !== 2) return null;
+      var x = round(6 * pt[0]), y = round(6 * pt[1]);
+      if (!(abs(6 * pt[0] - x) < 1e-6 && abs(6 * pt[1] - y) < 1e-6)) return null;
+      out.push([x, y]);
+    }
+    return out;
+  }
+  function twiceArea(P) {
+    var s = 0;
+    for (var i = 0, j = P.length - 1; i < P.length; j = i++) s += P[j][0] * P[i][1] - P[i][0] * P[j][1];
+    return abs(s);
+  }
+  // Crossing number, exact in integers (the point is never on an edge).
+  function inPoly(P, x, y) {
+    var c = false;
+    for (var i = 0, j = P.length - 1; i < P.length; j = i++) {
+      var xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1];
+      if ((yi > y) === (yj > y)) continue;
+      var lhs = (x - xi) * (yj - yi), rhs = (y - yi) * (xj - xi);
+      if (yj > yi ? lhs < rhs : lhs > rhs) c = !c;
+    }
+    return c;
+  }
+  function reflSix(L, x, y) {
+    var c6 = 6 * L.c;
+    return L.k === 'v' ? [2 * c6 - x, y] : L.k === 'h' ? [x, 2 * c6 - y] : L.k === 'd' ? [y + c6, x - c6] : [c6 - y, c6 - x];
+  }
+  function checkSteps(item) {
+    var n = N, NT = 4 * n * n, F = item.folds.length, t;
+    var X = new I32(NT), Y = new I32(NT), lay = new I32(NT), flip = new U8(NT), mv = new U8(NT);
+    for (t = 0; t < NT; t++) { var c0 = t >> 2; X[t] = 6 * (c0 % n) + QX[t & 3]; Y[t] = 6 * floor(c0 / n) + QY[t & 3]; }
+    for (var si = 0; si <= F; si++) {
+      var L = si ? item.folds[si - 1].line : null;
+      mv.fill(0);
+      if (L) {
+        var m = item.folds[si - 1].move, top = 0;
+        for (t = 0; t < NT; t++) if (lay[t] > top) top = lay[t];
+        for (t = 0; t < NT; t++) {
+          if (m * side6(L, X[t], Y[t]) <= 0) continue;
+          var q = reflSix(L, X[t], Y[t]);
+          X[t] = q[0]; Y[t] = q[1]; lay[t] = 2 * top + 1 - lay[t]; flip[t] ^= 1; mv[t] = 1;
+        }
+      }
+      var r = checkStep(item.steps[si], L, X, Y, lay, flip, mv, item.options[item.key], n);
+      if (r !== true) return 'step ' + si + ' as drawn: ' + r;
+    }
+    return true;
+  }
+  function checkStep(stp, L, X, Y, lay, flip, mv, keyCells, n) {
+    var W6 = 6 * n, NT = 4 * n * n, out = stp && polySix(stp.outline), faces = stp && stp.faces, i, j, q, t, x, y, fi, k;
+    if (!out) return 'outline';
+    if (!isArray(faces) || !faces.length) return 'faces';
+    var polys = [];
+    for (fi = 0; fi < faces.length; fi++) {
+      var fc = faces[fi], P = fc && polySix(fc.poly);
+      if (!P || !isInt(fc.layer) || typeof fc.back !== 'boolean' || typeof fc.moved !== 'boolean' || !isArray(fc.holes)) return 'face ' + (fi + 1) + ' is malformed';
+      polys.push(P);
+    }
+    // The triangles at each place (by centroid) and the outline: exactly the places with paper.
+    var stack = [];
+    for (t = 0; t < NT; t++) { k = Y[t] * W6 + X[t]; (stack[k] || (stack[k] = [])).push(t); }
+    for (j = 0; j < n; j++) for (i = 0; i < n; i++) for (q = 0; q < 4; q++) {
+      x = 6 * i + QX[q]; y = 6 * j + QY[q];
+      if (inPoly(out, x, y) !== !!stack[y * W6 + x]) return 'the outline differs from the paper';
+    }
+    // Faces, rasterised at the centroids of the cells their bounding box touches.
+    var cover = [], count = [];
+    for (fi = 0; fi < faces.length; fi++) {
+      var Pf = polys[fi], x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, c = 0;
+      for (q = 0; q < Pf.length; q++) { x0 = Math.min(x0, Pf[q][0]); y0 = Math.min(y0, Pf[q][1]); x1 = Math.max(x1, Pf[q][0]); y1 = Math.max(y1, Pf[q][1]); }
+      var i0 = Math.max(0, floor(x0 / 6)), i1 = Math.min(n - 1, ceil(x1 / 6) - 1), j0 = Math.max(0, floor(y0 / 6)), j1 = Math.min(n - 1, ceil(y1 / 6) - 1);
+      for (j = j0; j <= j1; j++) for (i = i0; i <= i1; i++) for (q = 0; q < 4; q++) {
+        x = 6 * i + QX[q]; y = 6 * j + QY[q];
+        if (!inPoly(Pf, x, y)) continue;
+        c++; k = y * W6 + x; (cover[k] || (cover[k] = [])).push(fi);
+      }
+      if (c * 18 !== twiceArea(Pf)) return 'face ' + (fi + 1) + ' is not a union of whole triangles on the sheet';
+      count.push(c);
+    }
+    // At each place: one face per layer, and the faces by layer carry the stack's flags.
+    var faceOf = new I32(NT), byLayer = function (a, b) { return faces[b].layer - faces[a].layer; };
+    for (k = 0; k < cover.length; k++) if (cover[k] && !stack[k]) return 'a face covers a place without paper';
+    for (k = 0; k < stack.length; k++) {
+      if (!stack[k]) continue;
+      var ts = stack[k].slice().sort(function (a, b) { return lay[b] - lay[a]; }), fs = (cover[k] || []).slice().sort(byLayer);
+      if (fs.length !== ts.length) return 'faces cover a place ' + fs.length + ' times, the paper has ' + ts.length + ' layers there';
+      for (q = 0; q < ts.length; q++) {
+        var f = faces[fs[q]];
+        if (q && faces[fs[q - 1]].layer === f.layer) return 'two faces share a layer';
+        if (f.back !== (flip[ts[q]] === 1)) return 'face ' + (fs[q] + 1) + ': back-up flag';
+        if (f.moved !== (mv[ts[q]] === 1)) return 'face ' + (fs[q] + 1) + ': moved flag';
+        faceOf[ts[q]] = fs[q];
+      }
+    }
+    // Arrows: a moved face's `from` is its polygon reflected across the fold line.
+    for (fi = 0; fi < faces.length; fi++) {
+      var from = faces[fi].from;
+      if (!faces[fi].moved || !L) { if (from !== undefined && from !== null) return 'face ' + (fi + 1) + ': an arrow on a face that did not move'; continue; }
+      var Fr = polySix(from);
+      if (!Fr || Fr.length !== polys[fi].length) return 'face ' + (fi + 1) + ': no arrow origin';
+      for (q = 0; q < Fr.length; q++) {
+        var e = reflSix(L, polys[fi][q][0], polys[fi][q][1]);
+        if (Fr[q][0] !== e[0] || Fr[q][1] !== e[1]) return 'face ' + (fi + 1) + ': the arrow does not start where the flap was';
+      }
+    }
+    // Holes: each punched cell is whole (its 4 triangles together) on one face.
+    var want = faces.map(function () { return []; });
+    for (q = 0; q < keyCells.length; q++) {
+      var t0 = 4 * (keyCells[q][1] * n + keyCells[q][0]), cx = floor(X[t0] / 6), cy = floor(Y[t0] / 6);
+      for (t = t0 + 1; t < t0 + 4; t++) if (faceOf[t] !== faceOf[t0] || floor(X[t] / 6) !== cx || floor(Y[t] / 6) !== cy) return 'a punched cell is split';
+      want[faceOf[t0]].push(cx + ',' + cy);
+    }
+    for (fi = 0; fi < faces.length; fi++) {
+      var has = faces[fi].holes.map(function (c2) { return isArray(c2) ? c2.join() : '?'; }).sort().join(' ');
+      if (has !== want[fi].sort().join(' ')) return 'face ' + (fi + 1) + ': holes';
+    }
     return true;
   }
 
