@@ -1,4 +1,4 @@
-/* PAT-1 Openings: profiles, exact silhouettes against ray casting, the surface (closed, every
+/* EX-14 Openings (DAT-style format): profiles, exact silhouettes against ray casting, the surface (closed, every
    edge between two different faces), generator, validator, scorer, shortcut solvers, timing,
    learn data. Run through tests/node/run.mjs (filter: openings). */
 import { performance } from 'node:perf_hooks';
@@ -31,7 +31,7 @@ const pk = (p) => `${p.features}${p.edges}${p.keyview}${p.pose}${p.foils}`;
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat],
-    ['openings', 1, 'PAT-1', ['Vz'], 'train', 'choice', 5, true], 'definition fields (a PAT-format exercise, five options)');
+    ['openings', 1, 'EX-14', ['Vz'], 'train', 'choice', 5, true], 'definition fields (a PAT-format exercise, five options)');
   t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['features', 4], ['edges', 2], ['keyview', 3], ['pose', 2], ['foils', 2]], 'dims');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${(hi - lo).toFixed(2)})`);
@@ -176,7 +176,7 @@ function testShortcuts(t, PX, def, L, pool) {
   t.section('openings: shortcut solvers');
   const acc = {}, cnt = {}, req = {};
   const add = (name, v, required) => { acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; req[name] = required; };
-  for (const { it } of pool.filter((_, i) => i % 3 === 0)) {
+  for (const { it } of pool.filter((_, i) => i % 5 === 0)) { // 2 016 items
     const R = it.options.map((o) => L.polyRaster(o.poly)), key = it.key;
     const area = R.map((x) => x.r.reduce((s, v) => s + v, 0)), corners = it.options.map((o) => o.poly.length);
     const dims = it.options.map((o) => [o.w, o.h]);

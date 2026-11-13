@@ -1,4 +1,4 @@
-/* PAT-3 Angles: rank four angles from smallest to largest (pure; ARCHITECTURE.md §5,
+/* EX-16 Angles: rank four angles from smallest to largest (pure; ARCHITECTURE.md §5,
    docs/research/v1.1/R3-dat-pat.md §3.3, §8.3). Perceptual-judgement practice (labelled as such,
    like Track's attention practice): angle ranking is a perceptual drill, and practice tends to stay
    specific to the trained stimuli, so no transfer beyond the format is claimed.
@@ -375,7 +375,7 @@
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
 
   PX.ex.define({
-    id: 'angles', version: 1, code: 'PAT-3', name: 'Angle ranking', short: 'Angles',
+    id: 'angles', version: 1, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
     abilities: ['LE'], cell: null, role: 'train', pat: true, perDisplay: true,
     practice: 'perception', // shown as perceptual-judgement practice, not visuospatial training
     answer: 'choice', nOptions: 4,

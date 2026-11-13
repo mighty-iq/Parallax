@@ -1,4 +1,4 @@
-/* PAT-6 Form: tutorial data (pure, data only; EXERCISE-GUIDE §7).
+/* EX-19 Form (DAT-style format): tutorial data (pure, data only; EXERCISE-GUIDE §7).
    Rules in Parallax's own words (R3 §6). Wording: about the task, never the person; no claim about
    DAT scores (CLAUDE.md rule 2). */
 (function (PX) {
@@ -72,8 +72,8 @@
       neighbours: 'Its neighbours match too: {list}.',
       land: 'Solid {n} folds from the pattern.',
       whyShape: 'Solid {n} has the wrong proportions: one side is {dir} than in the pattern.',
-      whyMarks: 'Solid {n}: face {f} cannot be marked like that.',
-      whyMirror: 'Solid {n} is the mirror image: its half-shaded face is turned the other way.',
+      whyMarks: 'Solid {n}: the face marked {f} cannot look like that once the pattern is folded.',
+      whyMirror: 'Solid {n} is the mirror image: the face marked {f} is turned the wrong way.',
     },
     bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
   });

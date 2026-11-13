@@ -1,4 +1,4 @@
-/* PAT-2 Missing View: view (DOM and SVG; ARCHITECTURE.md §6). layout 'stem+options'.
+/* EX-15 Missing View (DAT-style format): view (DOM and SVG; ARCHITECTURE.md §6). layout 'stem+options'.
    The stem is one SVG in third-angle layout at one scale: TOP upper left, FRONT lower left, END
    lower right; the missing slot is a dashed frame of the missing view's size with a "?". Solid
    lines are seen edges, dotted lines hidden ones, a light tone fills each outline. Options are the

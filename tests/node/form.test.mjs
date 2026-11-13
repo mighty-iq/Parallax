@@ -1,4 +1,4 @@
-/* PAT-6 Form: solids, nets that fold back (closure), symmetry groups, generator, validator, scorer,
+/* EX-19 Form (DAT-style format): solids, nets that fold back (closure), symmetry groups, generator, validator, scorer,
    shortcut solvers, timing, learn data. Run through tests/node/run.mjs (filter: form). */
 import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
@@ -30,7 +30,7 @@ const pk = (p) => `${p.solid}${p.marks}${p.view}${p.foil}`;
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat],
-    ['form', 1, 'PAT-6', ['Vz'], 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise)');
+    ['form', 1, 'EX-19', ['Vz'], 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise)');
   t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['solid', 3], ['marks', 3], ['view', 3], ['foil', 2]], 'dims');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${(hi - lo).toFixed(2)})`);

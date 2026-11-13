@@ -1184,7 +1184,7 @@
     },
   });
 
-  /* ===== v1.1 EXPORT BLOCK (owner: B5; used by PAT-4 Hole Punch, js/ex/patfold/gen.js) =====
+  /* ===== v1.1 EXPORT BLOCK (owner: B5; used by EX-17 Hole Punch, js/ex/patfold/gen.js) =====
      A non-breaking addition: nothing above changes, and Fold's ids, ratings, items and lib keys
      stay as they were. Hole Punch runs this exact model on a 4 × 4 sheet. sheet(n, fn) sets the
      sheet size to n for the duration of one synchronous call of fn and always restores 8 in a

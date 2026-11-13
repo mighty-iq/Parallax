@@ -113,6 +113,7 @@
    circle share one screen. Sideways: the map on the left at full height; the question, the
    circle and its controls on the right. */
 @media (max-width: 719px) {
+  .pl-trial.ex-orient .ex-orient-dialbox { scroll-margin: 4rem 0 9rem; } /* above the pinned caption bar of a demo */
   .pl-trial.ex-orient .ex-orient-body { row-gap: var(--s2); }
   .pl-trial.ex-orient .ex-orient-q { line-height: 1.45; }
   .pl-trial.ex-orient .ex-orient-stage { max-width: min(100%, calc(var(--pl-avail) - 17.5rem)); }

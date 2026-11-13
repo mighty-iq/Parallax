@@ -233,19 +233,24 @@
 
   // The storage hint: where a phone can lose a record (iOS clears a site's storage after seven days
   // of Safari use without a visit; an app's built-in browser keeps its own copy). Shown in the
-  // welcome on iPhones and iPads and in recognisable in-app browsers, not from the home screen; with
-  // a Back up button once there is something to back up and no backup in the last 14 days.
+  // welcome on iPhones and iPads and in recognisable in-app browsers, not from the home screen:
+  // before any practice, and later only while a backup is due, with a Back up button.
   function storageHint() {
     var d = device(), st = PX.core.store, rec = st && st.state;
     var framed = false;
     try { framed = !!(PX.ui.app && PX.ui.app.env && (PX.ui.app.env.framed || PX.ui.app.env.sandboxed)); } catch (e) { framed = false; }
     if (framed || d.standalone || !(d.ios || d.inApp) || !rec) return null;
+    // A home-screen app and an app's built-in browser each keep a record of their own, so the
+    // advice says how to move progress (Back up, then Import), not only where to open Parallax.
     var text = d.ios
-      ? 'Your progress is saved in this browser only, and Safari can clear it after seven days of use without a visit. Opened from Discord or another app? That app keeps its own copy. To keep your progress, add Parallax to your home screen (Share, then Add to Home Screen) and back up from Settings now and then.'
-      : 'Your progress is saved in this browser only. Opened from Discord or another app? That app may keep its own copy. To keep your progress, open Parallax in your browser or add it to your home screen, and back up from Settings now and then.';
-    var box = h('div.px-welcome-store', { 'data-welcome': 'storage' }, h('p', text));
+      ? 'Your progress is saved in this browser only. Safari can clear it after seven days of use without a visit, and an app’s built-in browser (Discord’s too) keeps a copy of its own. For a lasting home, add Parallax to your home screen (Share, then Add to Home Screen) and move your progress there: Back up here, then Import in Settings there.'
+      : 'Your progress is saved in this browser only, and an app’s built-in browser keeps a copy of its own. For a lasting home, open Parallax in your browser or add it to your home screen, and move your progress there: Back up here, then Import in Settings there.';
+    // Once before any practice, then only while a backup is due (none in the last 14 days).
     var last = rec.settings && rec.settings.lastBackup || 0, has = (rec.sessions && rec.sessions.length) || (rec.trials && rec.trials.length);
-    if (has && Date.now() - last > 14 * 864e5 && PX.ui.app && typeof PX.ui.app.backup === 'function') {
+    var due = has && Date.now() - last > 14 * 864e5;
+    if (has && !due) return null;
+    var box = h('div.px-welcome-store', { 'data-welcome': 'storage' }, h('p', text));
+    if (due && PX.ui.app && typeof PX.ui.app.backup === 'function') {
       var b = ui.button(last ? 'Back up now' : 'Back up now (never backed up)', { kind: 'secondary', small: true, onClick: function () { PX.ui.app.backup(); } });
       b.setAttribute('data-welcome', 'backup');
       box.appendChild(b);

@@ -1,4 +1,4 @@
-/* PAT-6 Form: a flat pattern and four solids; which solid folds from it?
+/* EX-19 Form (DAT-style format): a flat pattern and four solids; which solid folds from it?
    (pure; ARCHITECTURE.md §5; design: docs/research/v1.1/R3-dat-pat.md §8.6.)
 
    Solids (convex, so every face facing the viewer is wholly seen): boxes with three different
@@ -503,7 +503,7 @@
   // marks to place, then an oriented half mark: a turn and a flip to check), view +0.5 per level
   // (on a side, upside down), mark foils only +0.8 (no wrong shape to rule out first). Range 4.0.
   PX.ex.define({
-    id: 'form', version: 1, code: 'PAT-6', name: 'Form', short: 'Form',
+    id: 'form', version: 1, code: 'EX-19', name: 'Form', short: 'Form',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 4, pat: true,
     dims: [
       { key: 'solid', label: 'Solid', levels: ['boxes and prisms', 'wedges and pyramids', 'frusta and five-sided'], step: 0.5 },

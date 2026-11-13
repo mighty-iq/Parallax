@@ -80,7 +80,8 @@ function testModel(t) {
   t.near(M.p(50, 0, 0), 0.97, 1e-9, "configure('reset') restores the defaults");
 
   const fields = E.fields();
-  t.eq(fields.map((f) => f.key).sort(), ['eng', 'lab', 'path', 'spatial', 'strategies', 'timed', 'train'], 'engine-owned record fields');
+  // v1.1: js/engine/section.js (Section mode, B7) adds 'section' when it is loaded
+  t.eq(fields.map((f) => f.key).filter((k) => k !== 'section').sort(), ['eng', 'lab', 'path', 'spatial', 'strategies', 'timed', 'train'], 'engine-owned record fields');
   for (const f of fields) {
     const d = f.def();
     t.eq(f.fix(clone(d)), d, `${f.key}: the default survives its fixer`);

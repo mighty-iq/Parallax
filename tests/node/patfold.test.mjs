@@ -1,4 +1,4 @@
-/* PAT-4 Hole Punch: generator, validator, scorer, difficulty, shortcut solvers, fallback, timing,
+/* EX-17 Hole Punch: generator, validator, scorer, difficulty, shortcut solvers, fallback, timing,
    Fold's unchanged behaviour and learn data (ARCHITECTURE §12; R3 §8.1). Run through
    tests/node/run.mjs. PX_REPORT=1 prints the numbers; PX_TEST_ITEMS=<n> shortens the seed loop. */
 import { MANIFEST, deepDiff } from './run.mjs';
@@ -22,7 +22,7 @@ export async function run(t) {
   t.ok(def, 'patfold is registered');
   if (!def) return;
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat, def.perDisplay],
-    ['patfold', 1, 'PAT-4', ['Vz'], 'intrinsic-dynamic', 'train', 'choice', 5, true, false], 'id, version, code, abilities, cell, role, answer, 5 options, pat');
+    ['patfold', 1, 'EX-17', ['Vz'], 'intrinsic-dynamic', 'train', 'choice', 5, true, false], 'id, version, code, abilities, cell, role, answer, 5 options, pat');
   t.eq(def.dims.map((d) => d.key), ['folds', 'type', 'idle'], 'dims');
   t.eq(def.dims[0].levels, [2, 3], 'two or three folds (the official rules: more than one fold)');
   const all = PX.ex.enumerate(def);

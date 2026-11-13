@@ -1,4 +1,4 @@
-"""E2E: the dev harness with Painted Cubes (PAT-5, SVG). Shared flow in tests/e2e/pat_harness.py.
+"""E2E: the dev harness with Painted Cubes (EX-18, SVG). Shared flow in tests/e2e/pat_harness.py.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_cubes.py
 Own checks: one drawn face per exposed top, front and right face of the model (lib.facesOf);
 the question shows the item's N; options read 1–5; after show me, one numbered badge per cube with

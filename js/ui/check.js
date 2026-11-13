@@ -10,6 +10,10 @@
    A check counts only when it is complete: one stopped part-way (Stop the check asks first)
    never becomes a result, so a half check never distorts the baseline; its answered items stay
    in the trial log and show in the Log as "not finished".
+   Each check record also says what it was taken with (v1.1, so results compare like with like):
+   display ('small' | 'large', at the start), viewport ('390x844') and input (the input of most
+   answered items: 'touch' | 'mouse' | 'pen' | 'key' | 'unknown'), through plan.check.extra.
+   Later checks ask B7's one outside-practice question (askOverlap) before the first item.
    PX.ui.check.run(host, route, ctx) → cleanup   (js/ui/play.js routes mode 'check' here) */
 (function (PX) {
   'use strict';

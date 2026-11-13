@@ -1,4 +1,4 @@
-/* PAT-1 Openings (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-openings; tokens from css/base.css
+/* EX-14 Openings, a DAT-style format (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-openings; tokens from css/base.css
    with fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag, .ex-opt,
    .ex-focus) come from css/ex.css. The stage holds the stage3d canvas (.op-3d) and the show-me
    tracing layer (.op-ink). Openings: a pale plate with the outline cut out, dark inside with a

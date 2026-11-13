@@ -124,18 +124,41 @@
     });
   }
 
+  // Exercises whose gen.js reads another exercise as it loads (def.requires, known only after the
+  // gen.js ran): Reckon binds Homing's route model at load time. Keep in step with def.requires;
+  // tests/e2e/common.py harness_single reads def.requires from the gen.js source instead.
+  var PRELOAD = { reckon: ['homing'] };
+
   // gen.js, learn.js, view.js in this order (ARCHITECTURE §3), each after the previous one ran.
-  function loadExercise(id) {
+  // Every exercise in def.requires (v1.1: Reckon → Homing, Missing View → Views, Hole Punch → Fold)
+  // is loaded whole, with its stylesheet, before the exercise's learn.js and view.js.
+  function loadExercise(id, seen) {
     if (!ID_RE.test(id)) return Promise.reject(new Error('bad exercise id ' + JSON.stringify(id)));
+    seen = seen || {};
+    if (seen[id]) return Promise.resolve('loaded');
+    seen[id] = true;
     if (PX.ex.get(id) && PX.ex.view(id)) return Promise.resolve('inlined');
     var base = '../../js/ex/' + id + '/';
-    var files = ['gen.js', 'learn.js', 'view.js'].filter(function (f) {
-      return !(f === 'gen.js' && PX.ex.get(id)) && !(f === 'learn.js' && PX.ex.learn(id)) && !(f === 'view.js' && PX.ex.view(id));
-    });
-    return files.reduce(function (p, f) { return p.then(function () { return loadScript(base + f); }); }, Promise.resolve())
+    function file(f) {
+      if ((f === 'gen.js' && PX.ex.get(id)) || (f === 'learn.js' && PX.ex.learn(id)) || (f === 'view.js' && PX.ex.view(id))) return Promise.resolve(null);
+      return loadScript(base + f);
+    }
+    function deps(list) {
+      return (Array.isArray(list) ? list : []).reduce(function (p, r) {
+        return p.then(function () { return loadExercise(r, seen); });
+      }, Promise.resolve());
+    }
+    return deps(PRELOAD[id])
+      .then(function () { return file('gen.js'); })
+      .then(function () {
+        var def = PX.ex.get(id);
+        if (!def) throw new Error('js/ex/' + id + '/gen.js loaded but did not define "' + id + '"');
+        return deps(def.requires);
+      })
+      .then(function () { return file('learn.js'); })
+      .then(function () { return file('view.js'); })
       .then(function () {
         var v = PX.ex.view(id);
-        if (!PX.ex.get(id)) throw new Error('js/ex/' + id + '/gen.js loaded but did not define "' + id + '"');
         if (!v) throw new Error('js/ex/' + id + '/view.js loaded but did not register a view');
         if (v.css === true && !cfg.inlinedCss) return loadStyle('../../css/ex/' + id + '.css');
         return null;
@@ -576,7 +599,8 @@
 
   // A wrong response of the item's own answer type, one step from the key: targets swap one id
   // for the first id outside the key (a key never holds every id); a sequence swaps two positions
-  // that differ; an angle misses by the tolerance + 20°; yes/no, choice and multi as the grid does.
+  // that differ; an angle misses by the tolerance + 20°; a position (Reckon's walk-back) is the key
+  // mirrored through the end point; yes/no, choice and multi as the grid does.
   function wrongResponse(item, type) {
     var key = item.key, out, i, j, t, free = 0;
     if (type === 'yesno') return !key;
@@ -585,6 +609,7 @@
       var a = (key + Math.min((item.tolerance || 0) + 20, 180)) % 360;
       return Math.round((a < 0 ? a + 360 : a) * 100) / 100;
     }
+    if (type === 'position') return key && typeof key.x === 'number' && typeof key.z === 'number' ? { x: -key.x, z: -key.z } : undefined;
     if (!Array.isArray(key) || !key.length) return undefined;
     if (type === 'sequence') {
       out = key.slice();

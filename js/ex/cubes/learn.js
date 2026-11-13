@@ -1,4 +1,4 @@
-/* PAT-5 Painted Cubes: tutorial data (pure, data only; ARCHITECTURE.md §2, EXERCISE-GUIDE.md §7).
+/* EX-18 Painted Cubes: tutorial data (pure, data only; ARCHITECTURE.md §2, EXERCISE-GUIDE.md §7).
    The rules are the format's, in Parallax's own words (R3 §6). Wording rules (CLAUDE.md 2, 12):
    about the task, never the person; no IQ or "mastered"; no claim of test-score gains; the ADA
    line wherever the DAT is named. */

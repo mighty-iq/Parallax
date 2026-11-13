@@ -398,7 +398,7 @@
     var panel = h('div.px-panel.px-lib-pat');
     if (O) {
       panel.appendChild(K.toggle({
-        key: 'patFocus', label: 'PAT focus', checked: rec.settings.patFocus === true,
+        key: 'patFocus', label: 'DAT-style focus', checked: rec.settings.patFocus === true,
         hint: 'On: these formats join Train and Today’s plan. Off: they stay here, in Free play and in Section practice.',
         onChange: function (on) {
           O.setFocus(store.state, on, Date.now());

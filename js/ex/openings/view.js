@@ -1,4 +1,4 @@
-/* PAT-1 Openings: view (DOM, SVG and 3D through PX.core.stage3d; ARCHITECTURE.md §6).
+/* EX-14 Openings (DAT-style format): view (DOM, SVG and 3D through PX.core.stage3d; ARCHITECTURE.md §6).
    layout 'stem+options'. The stem is the solid (its exact surface from lib.surface, flat shaded,
    with edge bars along lib.edges) in an orthographic view from the front-right-top, posed as the
    item says. Options are SVG openings: a plate with the outline cut out (dark, outlined), all at
@@ -120,7 +120,8 @@
     var v = st.v3;
     if (!v.width || !v.height) v.resize();
     var W = v.width || 1, H = v.height || 1, b = basis(st.cur.az, st.cur.el);
-    placeCam(st.cam, b, st.cur.fr || frame(boxPts(st.item), b, W, H), W, H);
+    st.cur.fr = frame(boxPts(st.item), b, W, H); // from the current size: a turn or resize never crops the solid
+    placeCam(st.cam, b, st.cur.fr, W, H);
     v.render(st.scene, st.cam);
   }
   function camAt(az, el) {

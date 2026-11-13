@@ -1,4 +1,4 @@
-"""E2E: the dev harness with Angles (PAT-3, SVG). Shared flow in tests/e2e/pat_harness.py.
+"""E2E: the dev harness with Angles (EX-16, SVG). Shared flow in tests/e2e/pat_harness.py.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_angles.py
 Own checks: four numbered cells, each drawing exactly the item's endpoints; options read as
 lists of the four numbers; reveal shows every angle's size; show me ends on the cells with the
