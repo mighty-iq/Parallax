@@ -111,6 +111,7 @@
     if (type === 'yesno') cands = [!key];
     else if (type === 'choice') for (var i = 1; i < n; i++) cands.push((key + i) % n);
     else if (type === 'angle') cands = [(key + 180) % 360, (key + 90) % 360];
+    else if (type === 'position' && key && isNum(key.x) && isNum(key.z)) cands = [{ x: -key.x, z: -key.z }, { x: key.x * 3 + 5, z: key.z * 3 + 5 }];
     else if (Array.isArray(key)) {
       cands.push(key.slice().reverse());
       if (key.length > 1) cands.push(key.slice(1).concat(key[0]));
