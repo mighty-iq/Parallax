@@ -139,7 +139,7 @@
   function fitHatches() {
     st.opts.forEach(function (o) {
       if (!o) return;
-      var w = o.svg.getBoundingClientRect().width;
+      var r = o.svg.getBoundingClientRect(), w = Math.min(r.width, r.height); // the square viewBox fits the smaller side
       if (w > 0) o.hatch.set(5 * st.E / w);
     });
   }

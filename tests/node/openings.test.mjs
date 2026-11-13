@@ -235,7 +235,10 @@ function testShortcuts(t, PX, def, L, pool) {
       if (d < bd) { bd = d; bp = [i, j]; }
     }
     add('one of the most alike pair (shape, size ignored)', bp.includes(key) ? 0.5 : 0, true);
-    if (p.foils === 1) add('one of the most alike pair, proportion level', bp.includes(key) ? 0.5 : 0, true);
+    if (p.foils === 1) {
+      add('one of the most alike pair, proportion level', bp.includes(key) ? 0.5 : 0, true);
+      add('avoid the most alike pair, proportion level', bp.includes(key) ? 0 : 1 / 3, true);
+    }
     // Partial strategies: checking only the outline on one face of the picture (reported: the keyview
     // dim spreads the key over the faces), or only the most featured profile (bounded at 50 %: it
     // cannot fall to chance while the key's outline carries features; a third of 1 + two thirds of a

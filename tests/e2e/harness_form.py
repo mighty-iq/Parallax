@@ -3,7 +3,8 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_form.py
 
 1. desktop 1366 x 768 and phone 390 x 844 (DPR 2, touch), light and dark: the pattern is drawn with
    cut edges and fold lines; four solids at one scale; a right answer by keyboard, a wrong one by
-   pointer or tap; show me letters a landmark face in the pattern and in the right solid (after a
+   pointer or tap; marks in their own tone with a hatch of at least 4 px; show me letters a
+   landmark face in the pattern and in the right solid (after a
    wrong pick: the face that cannot be marked so, or the wrong size); no horizontal scroll
 2. 360 x 640: the stem and all four solids within one screen, targets >= 44 px
 3. show me at normal speed, the tutorial demo with captions
@@ -45,6 +46,14 @@ def stem_ok(page, tag):
     C.ok(r['faces'] >= 4 and r['cut'] > 10 and r['fold'] > 10 and r['marks'] >= 1, f'{tag}: the pattern shows faces, cut edges, fold lines and marks ({r["faces"]}, {r["marks"]})')
     o = r['opts']
     C.ok(len(o) == 4 and len({x['vb'] for x in o}) == 1 and all(x['w'] >= 60 and x['f'] >= 2 for x in o), f'{tag}: four solids at one scale, each at least 60 px with two or more faces ({o})')
+    # A mark has its own tone (never the far-lit face's) and a hatch of at least 4 px in every solid.
+    t = page.evaluate("""() => Array.from(document.querySelectorAll('.hx-grid .fm-opt-svg')).map((s) => {
+        const bg = s.querySelector('.fm-hatch-bg'), pat = s.querySelector('pattern'), probe = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        probe.setAttribute('class', 'px-fig-face px-fig-far'); s.appendChild(probe);
+        const far = getComputedStyle(probe).fill; probe.remove();
+        const b = s.getBoundingClientRect(), k = Math.min(b.width, b.height) / s.viewBox.baseVal.width;
+        return { mark: getComputedStyle(bg).fill, far, pitch: Math.round(+pat.getAttribute('width') * k * 10) / 10 }; })""")
+    C.ok(all(x['mark'] != x['far'] and x['pitch'] >= 4 for x in t), f'{tag}: marks have their own tone and a hatch of at least 4 px ({t[0]}, pitches {[x["pitch"] for x in t]})')
 
 
 def desktop_and_phone(b, cons):

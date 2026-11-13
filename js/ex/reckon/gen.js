@@ -351,34 +351,42 @@
     if (item.answer === 'angle') {
       if (!isNum(response)) return bad;
       var signed = norm180(response - item.key), error = Math.abs(signed);
-      return { correct: error <= item.tolerance + 1e-9, value: rnd(error, 100), detail: { signed: rnd(signed, 100) } };
+      // value: the signed angle error (degrees, + clockwise of the start); the trial log keeps it as is
+      return { correct: error <= item.tolerance + 1e-9, value: rnd(signed, 100), detail: { signed: rnd(signed, 100), error: rnd(error, 100) } };
     }
     if (!response || typeof response !== 'object' || !isNum(response.x) || !isNum(response.z)) return bad;
     var dx = response.x - item.key.x, dz = response.z - item.key.z, posErr = Math.sqrt(dx * dx + dz * dz), d = item.distance;
     var r = Math.sqrt(response.x * response.x + response.z * response.z), dir = r > 1e-6 ? compass(response.x, response.z) : null;
+    // value: the signed angle error of the way walked (degrees; null without a walk); value2 (trial column
+    // 13): the distance ratio, walked ÷ true. The position error stays in the detail (posErr, rel).
+    var signedR = dir === null ? null : rnd(norm180(dir - item.keyDeg), 10);
     return {
-      correct: posErr <= item.tolerance * d + 1e-9, value: rnd(posErr / d, 1000),
-      detail: { posErr: rnd(posErr, 100), dist: rnd(r, 100), ratio: rnd(r / d, 1000), dir: dir === null ? null : rnd(dir, 10), signed: dir === null ? null : rnd(norm180(dir - item.keyDeg), 10) },
+      correct: posErr <= item.tolerance * d + 1e-9, value: signedR, value2: rnd(r / d, 1000),
+      detail: { posErr: rnd(posErr, 100), rel: rnd(posErr / d, 1000), dist: rnd(r, 100), ratio: rnd(r / d, 1000), dir: dir === null ? null : rnd(dir, 10), signed: signedR },
     };
   }
 
   /* ------------------------------------------------------------ the player's own errors (feedback) */
   // One entry per answered scored item, kept by the view (last HIST_N): [tSec, variant (0 point, 1
   // return), key (deg), answer direction (deg, null if none), home distance d (m), walked r (m; −1 for
-  // point items), route length (m), right (1/0)].
+  // point items), route length (m), right (1/0), display class (0 phone, 1 wide; entries without it are
+  // older)]. Reckon is rated per display, so the bias line counts one class at a time.
   var HIST_N = 40;
-  function entry(item, response, result, tSec) {
-    if (!item || item.task || !result || !result.detail || result.detail.invalid) return null;
+  function entry(item, response, result, tSec, display) {
+    if (!item || item.task || item.fallback || !result || !result.detail || result.detail.invalid) return null;
     var ret = item.answer === 'position', dir = ret ? result.detail.dir : norm360(response);
-    return [Math.round(tSec || 0), ret ? 1 : 0, item.keyDeg, dir === null || dir === undefined ? null : rnd(dir, 10), rnd(item.distance, 100),
+    var e = [Math.round(tSec || 0), ret ? 1 : 0, item.keyDeg, dir === null || dir === undefined ? null : rnd(dir, 10), rnd(item.distance, 100),
       ret ? rnd(result.detail.dist, 100) : -1, rnd(item.pathLength, 10), result.correct ? 1 : 0];
+    if (display === 0 || display === 1) e.push(display);
+    return e;
   }
   function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   // A robust summary of the last n entries (R1 §8.1(c), §9 risk 6: worded as a tendency):
   //   turn: median overshoot of the homing turn (|answer| − |key|, same side only; + = turned too far)
   //   ratio: median walked / home distance over return items; swaps: answers on the other side
-  function bias(hist, n) {
-    var list = (Array.isArray(hist) ? hist : []).filter(function (e) { return Array.isArray(e) && e.length >= 8; }).slice(-(n || 20));
+  // display (0 or 1): only that class's entries (older entries without a class count for both).
+  function bias(hist, n, display) {
+    var list = (Array.isArray(hist) ? hist : []).filter(function (e) { return Array.isArray(e) && e.length >= 8 && (display === undefined || e.length < 9 || e[8] === display); }).slice(-(n || 20));
     var over = [], ratios = [], swaps = 0, sides = 0;
     list.forEach(function (e) {
       if (e[3] === null) return;

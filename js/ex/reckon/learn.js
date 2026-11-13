@@ -31,7 +31,7 @@
       { params: { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 }, seed: 10, kind: 'right' },
     ],
     practice: [
-      { variant: 'point', task: 'heading', route: 0, flow: 0, speed: 0, tolerance: 0 },
+      { variant: 'point', task: 'heading', route: 0, flow: 2, speed: 0, tolerance: 0 }, // short-lived dots: no ground pattern to match
       { variant: 'return', task: 'distance', route: 0, flow: 0, speed: 0, tolerance: 1 },
       { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 },
       { variant: 'return', route: 0, flow: 0, speed: 0, tolerance: 0 },
@@ -39,7 +39,8 @@
     tips: [
       { id: 'update', when: { dim: 'route', levels: [0, 1, 2] }, text: 'After each turn, say to yourself where the start is now: behind, behind-left, left…' },
       { id: 'walkback', when: { variant: 'return' }, text: 'Turn first, then hold Walk. The ground slides past at your walking speed, which changes from item to item: judge the distance by the ground, not by counting.' },
-      { id: 'speeds', when: { dim: 'speed', levels: [1, 2] }, text: 'Speeds change now, even within a leg: watch the ground flow, not the seconds.' },
+      { id: 'speeds', when: { dim: 'speed', levels: [1] }, text: 'Speeds change from leg to leg now: watch the ground flow, not the seconds.' },
+      { id: 'speedsWithin', when: { dim: 'speed', levels: [2] }, text: 'Speeds now change even within a leg: watch the ground flow, not the seconds.' },
       { id: 'sparse', when: { dim: 'flow', levels: [1] }, text: 'Fewer marks on the ground now. They still slide past at your speed.' },
       { id: 'dots', when: { dim: 'flow', levels: [2] }, text: 'The marks now fade after a moment, so no single one can be followed. Their flow still shows each turn and each metre.' },
       { id: 'legs', when: { dim: 'route', levels: [4, 5, 6, 7] }, text: 'Long routes: keep updating where the start is after every leg, or picture the shape from above as it grows.' },
@@ -65,8 +66,8 @@
         text: 'Hold one direction in mind, from your own point of view: where the start is. Update it with every turn and every leg.',
         steps: [
           'After the first leg, the start is straight behind you.',
-          'A turn of 90° to the right moves it 90° round to your left.',
-          'Walking on pulls it further behind you; it also gets further away.',
+          'A turn of 90° to the right swings it 90° round the other way: from straight behind you to your right.',
+          'Walking on swings it further round behind you; once it is beside or behind you, it also gets further away.',
         ],
         when: 'Quick and steady when there is nothing to steer by and the turns come fast.',
       },
@@ -97,6 +98,7 @@
       readoutYours: 'You faced {dir}',
       readoutLocked: "Set: {dir}. To turn again, hold Back to the route's end.",
       setFirst: 'Turn first: drag the view or the circle, or use ◀ ▶.',
+      walkFirst: 'Walk first: hold Walk (or ↑), then Here (Enter).',
       hintTouch: 'Drag the view or the circle to turn; ◀ ▶ for fine steps.',
       hintKeys: '← → turn 5°, with Shift 1°.',
       hintKeysWalk: '↑ hold to walk, ↓ to step back, Enter: Here.',
@@ -106,10 +108,11 @@
       here: 'Here',
       experimental: 'Experimental',
       // the walk: pause and void
-      paused: 'Paused. This route will not count. Resume to go on.',
       voidPaused: 'The walk was paused, so this answer will not count.',
       voidStutter: 'The view froze during the walk, so this answer will not count.',
       voidTurned: 'The screen changed shape during the walk, so this answer will not count.',
+      voidTurnedAnswer: 'The screen changed shape while you answered, so this answer will not count.',
+      voidLost: 'The 3D view was interrupted, so this answer will not count.',
       describe: 'A first-person view of a walk across an empty plain with nothing to steer by: {legs} straight legs with turns between them. Then turn to face where you started with the left and right arrow keys (5°, with Shift 1°){walk}, and confirm with Enter. The top of the circle is the way you face.',
       describeWalk: ', walk back by holding the up arrow (the down arrow steps back)',
       describeHeading: 'A first-person view: you stand in a ring and turn on the spot. Then turn back to the way you faced at the start with the left and right arrow keys, and confirm with Enter.',
@@ -169,6 +172,7 @@
       mapRotate: 'Turn the map so that you face up again.',
       mapAngle: 'The start is {deg}° to your {side}: that is the arrow on the circle.',
       mapYours: 'Your answer: {deg}° to the {side} (the open arrow).',
+      mapYoursLine: 'Your answer: {deg}° to the {side} (the solid line).',
       mapYoursWalk: 'You walked {r} m that way and stopped at the ring: {ep} m from the start.',
       mapYou: 'you',
       // the demo
@@ -176,8 +180,9 @@
       demoWalk: 'Watch the walk: straight legs with turns on the spot between them. The ground shows every metre and every degree.',
       demoEnd: 'The walk ends here. The start is somewhere off the screen, and nothing points to it.',
       demoTurn: 'Turn {deg}° to the {side}: now you face the start.',
+      demoTurnHeading: 'Turn {deg}° to the {side}: now you face the way you faced at the start.',
       demoAnswer: 'To answer, drag the view or the circle, or use ◀ ▶ (keys ← →). Then Confirm (Enter).',
     },
-    bridge: 'Pilots and sailors use dead reckoning to stay oriented between fixes. Practising here improves this task; whether it helps real wayfinding has not been studied, and walking adds body senses that a screen cannot give.',
+    bridge: 'Pilots and sailors use dead reckoning to stay oriented between fixes. Practising here improves this task; whether it helps real wayfinding has not been tested in any study we found, and walking adds body senses that a screen cannot give.',
   });
 })(window.PX);

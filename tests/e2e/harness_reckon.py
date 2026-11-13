@@ -263,13 +263,8 @@ def phone_play(b, cons):
         ctx.close()
 
 
-def app_touch(b, cons):
-    """The real player at 360 × 740 by touch: drag, then Confirm 40 ms later (point); drag, hold Walk, Here
-    (return). The reveal must come and stay, and no click may reach the player's Next (kit.tapAct cancels
-    the tap's touchend, so the answer changing the screen never clicks what is under the finger)."""
-    ctx = b.new_context(viewport={'width': 360, 'height': 740}, **PHONE)
-    page = ctx.new_page()
-    cons.append(Console(page))
+def open_app(page):
+    """The app itself, its welcome closed and every tutorial marked seen."""
     page.goto((ROOT / 'index.html').resolve().as_uri())
     page.wait_for_function('document.documentElement.getAttribute("data-px-ready") === "1"', timeout=30000)
     for _ in range(4):
@@ -278,24 +273,68 @@ def app_touch(b, cons):
         page.keyboard.press('Escape')
         page.wait_for_timeout(150)
     page.evaluate("""() => { const r = PX.core.store.state; r.tour = r.tour || { seen: {} }; r.tour.seen = r.tour.seen || {};
-        PX.ex.list().forEach(d => { r.tour.seen[d.id] = true; });
-        window.__nextClicks = 0; document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-next]')) __nextClicks++; }, true); }""")
+        PX.ex.list().forEach(d => { r.tour.seen[d.id] = true; }); }""")
+
+
+def app_item(page, params, until):
+    """A Free play run of Reckon with these settings, until the player reaches state `until` (an intro or
+    offer card may come first, as in fit.py)."""
+    cfg = {'mode': 'free', 'exId': 'reckon', 'run': '1', 'trials': 2, 'params': params}
+    page.evaluate(f'void PX.core.router.go("play", {json.dumps(cfg)}, {{ force: true }})')
+    for _ in range(900):
+        if page.evaluate('window.__play ? __play.state : null') == until:
+            return
+        for sel in ('[data-card-box] [data-card="skip"]', '[data-card-box] .px-btn--primary'):
+            loc = page.locator(sel)
+            if loc.count() and loc.first.is_visible():
+                loc.first.click()
+                page.wait_for_timeout(200)
+        page.wait_for_timeout(100)
+
+
+def app_pause(b, cons):
+    """The real player's pause mid-walk (RV S4): Esc opens its sheet, the walk freezes and the item is void;
+    Resume goes on with the walk to its end, and the answer is logged as void."""
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    cons.append(Console(page))
+    open_app(page)
+    page.evaluate('PX.debug.fast(false)')
+    app_item(page, {'variant': 'point', 'route': 1, 'flow': 0, 'speed': 0, 'tolerance': 0}, 'present')
+    page.wait_for_function("() => { const p = PX.ex.view('reckon').pose(), it = __play.item; return p && it && Math.hypot(p.x - it.path[0][0], p.y - it.path[0][1]) > 0.5; }", timeout=60000)
+    page.keyboard.press('Escape')
+    page.wait_for_timeout(300)
+    p1 = page.evaluate("() => PX.ex.view('reckon').pose()")
+    page.wait_for_timeout(800)
+    p2 = page.evaluate("() => PX.ex.view('reckon').pose()")
+    sheet = page.evaluate("() => ({ state: __play.state, shown: !document.querySelector('.pl-pause').hidden })")
+    shot(page, 'app_pause_sheet')
+    page.locator('.pl-pause .px-btn--primary').click()
+    page.wait_for_function("() => __play.state === 'respond'", timeout=90000)
+    end = page.evaluate("() => { const p = PX.ex.view('reckon').pose(), E = __play.item.path.at(-1); return Math.hypot(p.x - E[0], p.y - E[1]); }")
+    page.evaluate('__play.answer(true).catch(() => 0)')
+    page.wait_for_function("() => __play.state === 'reveal'", timeout=10000)
+    void = page.evaluate("() => { const l = __play.last || {}; return l.voidReason || l.void || null; }")
+    C.ok(sheet['state'] == 'paused' and sheet['shown'] and p1 == p2 and end < 1e-6 and bool(void),
+         f'the real player: Esc mid-walk opens its pause sheet and freezes the walk ({sheet}, frozen {p1 == p2}); Resume walks on to the end (gap {end:.2g} m); the answer is void ({void})')
+    ctx.close()
+
+
+def app_touch(b, cons):
+    """The real player at 360 × 740 by touch: drag, then Confirm 40 ms later (point); drag, hold Walk, Here
+    (return). The reveal must come and stay, and no click may reach the player's Next (kit.tapAct cancels
+    the tap's touchend, so the answer changing the screen never clicks what is under the finger)."""
+    ctx = b.new_context(viewport={'width': 360, 'height': 740}, **PHONE)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    open_app(page)
+    page.evaluate("() => { window.__nextClicks = 0; document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-next]')) __nextClicks++; }, true); }")
     tt = Touch(ctx, page)
     play = lambda: page.evaluate('window.__play ? __play.state : null')
     out = []
     for v in ('point', 'point', 'return'):
         page.evaluate('PX.debug.fast(true)')
-        cfg = {'mode': 'free', 'exId': 'reckon', 'run': '1', 'trials': 2, 'params': {'variant': v, 'route': 0, 'flow': 0, 'speed': 0, 'tolerance': 0}}
-        page.evaluate(f'void PX.core.router.go("play", {json.dumps(cfg)}, {{ force: true }})')
-        for _ in range(600):  # an intro or offer card may come first (as in fit.py)
-            if play() == 'respond':
-                break
-            for sel in ('[data-card-box] [data-card="skip"]', '[data-card-box] .px-btn--primary'):
-                loc = page.locator(sel)
-                if loc.count() and loc.first.is_visible():
-                    loc.first.click()
-                    page.wait_for_timeout(200)
-            page.wait_for_timeout(100)
+        app_item(page, {'variant': v, 'route': 0, 'flow': 0, 'speed': 0, 'tolerance': 0}, 'respond')
         it = page.evaluate('() => ({ key: __play.item.keyDeg, d: __play.item.distance, v: __play.item.walkSpeed })')
         turn_to(page, it['key'], tt)
         if v == 'return':
@@ -332,7 +371,7 @@ def desktop_keys(b, cons):
         page.keyboard.press('Enter')
         page.wait_for_function(STATE, arg='reveal', timeout=10000)
         last = page.evaluate('() => __harness.last')
-        C.ok(last['result']['correct'] and last['result']['value'] <= 1 and st(page)['input'] == 'key', f'desktop {theme}: ← → (5°) and Shift (1°), Enter: right, logged as keys ({last["result"]}, {st(page)["input"]})')
+        C.ok(last['result']['correct'] and abs(last['result']['value']) <= 1 and st(page)['input'] == 'key', f'desktop {theme}: ← → (5°) and Shift (1°), Enter: right, logged as keys ({last["result"]}, {st(page)["input"]})')
         page.wait_for_timeout(700)
         shot(page, f'd1366_{theme}_reveal')
         if theme == 'light':
@@ -373,20 +412,21 @@ def pauses_and_voids(b, cons):
     page = ctx.new_page()
     cons.append(Console(page))
     P = 'route:1,flow:0,speed:0,tolerance:0'
-    # Esc freezes the walk and voids; Esc again goes on to the end
+    # the player's pause during the walk (Esc or its Pause button) calls view.pause(), later view.resume(): the
+    # walk freezes, then goes on to its end (the view has no pause of its own; app_pause checks the real player)
     page.goto(url('pause_esc', seed=61, p=P, v='point'))
     wait_moving(page, 500)
-    page.keyboard.press('Escape')
+    page.evaluate("() => PX.ex.view('reckon').pause()")
     page.wait_for_timeout(200)
     p1 = page.evaluate("() => PX.ex.view('reckon').pose()")
     page.wait_for_timeout(700)
     p2 = page.evaluate("() => PX.ex.view('reckon').pose()")
     s1 = st(page)
     shot(page, 'pause_esc')
-    page.keyboard.press('Escape')
+    page.evaluate("() => PX.ex.view('reckon').resume()")
     page.wait_for_function(READY, timeout=90000)
     end = page.evaluate("() => { const p = PX.ex.view('reckon').pose(), E = __harness.item.path.at(-1); return Math.hypot(p.x - E[0], p.y - E[1]); }")
-    C.ok(s1['paused'] and s1['voided'] == 'paused' and p1 == p2 and end < 1e-6, f'Esc freezes the walk ({p1 == p2}) and voids it ({s1["voided"]}); Esc again finishes the route (end gap {end:.2g} m)')
+    C.ok(s1['voided'] == 'paused' and p1 == p2 and end < 1e-6, f'pause() freezes the walk ({p1 == p2}) and voids it ({s1["voided"]}); resume() finishes the route (end gap {end:.2g} m)')
     page.keyboard.press('ArrowRight')
     page.keyboard.press('Enter')
     page.wait_for_function(STATE, arg='reveal', timeout=10000)
@@ -444,6 +484,20 @@ def pauses_and_voids(b, cons):
     REPORT['voids']['turned'] = s['voided']
     w1 = page.evaluate("() => document.querySelector('.ex-fp-stage').getBoundingClientRect().width")
     C.ok(s['voided'] == 'turned', f'a change of the view\'s shape mid-walk voids the item ({s["voided"]}; view {w0:.0f} → {w1:.0f} px wide)')
+    page.set_viewport_size({'width': 1366, 'height': 768})
+    # the screen changes shape while answering, here mid-walk back: void at once (R1 §7.4)
+    page.goto(url('turned_answer', seed=65, p=P, v='return', fast=True))
+    page.wait_for_function(READY, timeout=90000)
+    wb = page.locator('.ex-reckon-walk').bounding_box()
+    page.mouse.move(wb['x'] + wb['width'] / 2, wb['y'] + wb['height'] / 2)
+    page.mouse.down()
+    page.wait_for_timeout(500)
+    page.set_viewport_size({'width': 600, 'height': 768})
+    page.wait_for_timeout(300)
+    page.mouse.up()
+    s = st(page)
+    note = page.locator('.ex-fp-void').inner_text()
+    C.ok(s['voided'] == 'turned' and 'while you answered' in note, f'a change of shape while walking back voids the item ({s["voided"]}; note {note!r})')
     page.set_viewport_size({'width': 1366, 'height': 768})
     errs = page.evaluate('() => __harness.errors')
     C.ok(not errs, f'pause and void: no harness errors ({errs})')
@@ -561,6 +615,7 @@ def main():
         b = launch(p)
         phone_play(b, cons)
         app_touch(b, cons)
+        app_pause(b, cons)
         desktop_keys(b, cons)
         pauses_and_voids(b, cons)
         throttled(b, cons)

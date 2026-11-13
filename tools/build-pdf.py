@@ -37,7 +37,7 @@ META = {
     '/Creator': 'tools/build-pdf.py (Chromium via Playwright)',
 }
 
-# Elements that stick out of their sheet (or of a fixed-height exercise card), in print layout.
+# Elements that stick out of their sheet (or of a fixed-height exercise or format card), in print layout.
 OVERFLOW = """() => {
   const out = [], tol = 0.75;
   const boxes = Array.from(document.querySelectorAll('section.page')).map((pg, i) => ({ pg, i }));
@@ -61,7 +61,7 @@ OVERFLOW = """() => {
       if (d > by) { by = d; worst = e; }
     }
     if (worst) out.push({ page: i + 1, what: name(worst), by_mm: Math.round(by * 25.4 / 96 * 10) / 10 });
-    for (const card of pg.querySelectorAll('.ex-card')) {
+    for (const card of pg.querySelectorAll('.ex-card, .fmt-card')) {
       const C = card.getBoundingClientRect();
       let worst = null, by = tol;
       for (const e of card.querySelectorAll('*')) {
