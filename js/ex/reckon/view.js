@@ -484,6 +484,8 @@
     if (ch) el.chart.appendChild(ch);
     el.chart.hidden = !ch;
     el.readout.textContent = dir !== null && item.task !== 'distance' ? cap('readoutYours', { dir: kit.sideText(cap, dir) }) : '';
+    // on a phone the player's result bar would cover the split, the drift and the habit line: bring them up
+    window.setTimeout(function () { if (st && st.item === item) kit.showAboveBar(el.root, el.verdict, el.chart.hidden ? el.notes : el.chart, st.ctx); }, 450);
     // turn to the flag from where you stand (the heading item: to the way you faced at the start). After a
     // walk back, a ring marks where you stopped; if that is within VIEW_MIN of the flag, the view steps
     // back from it along the line through your stop, so the flag and your ring are both in sight.

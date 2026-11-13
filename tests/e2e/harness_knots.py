@@ -211,18 +211,30 @@ def normal_speed(b, cons):
     # item's own solution; afterwards the item is drawn again to be answered.
     page.goto(file_url('tests/dev/harness.html', ex='knots', seed=1, fast=1))
     page.wait_for_function(READY, timeout=30000)
-    page.evaluate("""() => { window.__caps = []; const c = document.querySelector('.hx-caption');
-        new MutationObserver(() => { const t = c.textContent; if (t && __caps[__caps.length - 1] !== t) __caps.push(t); }).observe(c, { childList: true, characterData: true, subtree: true }); }""")
+    page.evaluate("""() => { window.__caps = []; window.__labels = []; const c = document.querySelector('.hx-caption');
+        new MutationObserver(() => { const t = c.textContent, l = document.querySelector('.ex-knots-label'), st = document.querySelector('.ex-knots-stage');
+          if (t && __caps[__caps.length - 1] !== t) { __caps.push(t); __labels.push((l && !l.hidden ? l.textContent : '') + (st && st.classList.contains('is-copy') ? ' [dashed]' : '')); } })
+          .observe(c, { childList: true, characterData: true, subtree: true }); }""")
     before = page.evaluate('() => __harness.played.finished')
     page.evaluate('() => { __harness.demo(); }')
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=60000)
     page.wait_for_timeout(300)
     caps = page.evaluate('() => window.__caps')
+    labels = page.evaluate('() => window.__labels')
     learn = page.evaluate("() => PX.ex.learn('knots').captions")
-    C.ok(caps and caps[0] == learn['gap'] and learn['pair'] in caps and learn['none'] in caps, f'the demo shows the gap, then the minimal pair falling open ({caps[:4]})')
+    order = [learn[k] for k in ('gap', 'pair', 'copyNone', 'backToRope', 'marks', 'moves')]
+    pos = [caps.index(x) if x in caps else -1 for x in order]
+    C.ok(all(p >= 0 for p in pos) and pos == sorted(pos), f'the demo: the gap, the labelled copy falling open, back to your rope, the marked-crossing question, the moves ({pos})')
+    lab = dict(zip(caps, labels))
+    C.ok(lab.get(learn['pair'], '').startswith(learn['labelCopy']) and '[dashed]' in lab.get(learn['pair'], '') and '[dashed]' in lab.get(learn['copyNone'], ''),
+         f'the copy is labelled on a dashed plate ({lab.get(learn["pair"])!r}, {lab.get(learn["copyNone"])!r})')
+    C.ok(lab.get(learn['gap']) == learn['labelYours'] and lab.get(learn['backToRope']) == learn['labelYours'] and lab.get(caps[-1]) == learn['labelYours'],
+         f'your rope is labelled before the copy, after it and at the end ({lab.get(learn["gap"])!r}, {lab.get(learn["backToRope"])!r}, {lab.get(caps[-1])!r})')
     C.ok(caps[-1] in (learn['knot'], learn['knotCore']), f'the demo ends on the knot that remains ({caps[-1]!r})')
     d = page.evaluate(DRAWN_JS)
-    C.ok(d['casings'] == d['crossings'] and page.evaluate('() => __harness.item.key') is True, f'after the demo the knot is drawn again to be answered ({d})')
+    after = page.evaluate("() => { const l = document.querySelector('.ex-knots-label'), st = document.querySelector('.ex-knots-stage'); return { label: l && !l.hidden ? l.textContent : '', dashed: st.classList.contains('is-copy'), demoTags: document.querySelectorAll('.ex-knots-tag[data-demo]').length }; }")
+    C.ok(d['casings'] == d['crossings'] and page.evaluate('() => __harness.item.key') is True and not after['label'] and not after['dashed'] and after['demoTags'] == 0,
+         f'after the demo the knot is drawn again to be answered, with no label or demo tag ({d}, {after})')
     shot(page, 'knots_demo_end.png')
     ctx.close()
     return times

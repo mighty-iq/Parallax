@@ -152,18 +152,21 @@
     var svg = S.svg(P, P, { viewBox: [0, 0, P, P], class: 'ex-knots-svg', width: '100%', 'aria-hidden': 'true' });
     var ropeG = el('g', { class: 'ex-knots-layer' }), markG = el('g', { class: 'ex-knots-marks' }), tagG = el('g', { class: 'ex-knots-tags' });
     svg.appendChild(ropeG); svg.appendChild(markG); svg.appendChild(tagG);
-    var stage = h('div.ex-stage.ex-knots-stage', svg);
+    // a specimen label on the plate: in the tutorial demo it names the rope on show ("Your rope",
+    // or a dashed plate and "Copy · crossing A switched")
+    var label = h('div.ex-label.ex-knots-label', { hidden: true });
+    var stage = h('div.ex-stage.ex-knots-stage', svg, label);
     var verdict = h('div.ex-verdict.ex-knots-verdict', { hidden: true, role: 'status' });
     var caption = h('p.ex-caption', { 'aria-live': 'polite' });
     var desc = h('p.px-sr');
     var root = h('div.ex-knots-stem', stage, h('div.ex-knots-under', caption, verdict), desc);
     ctx.host.appendChild(root);
     st = { ctx: ctx, root: root, stage: stage, svg: svg, ropeG: ropeG, markG: markG, tagG: tagG, verdict: verdict, caption: caption,
-      desc: desc, item: null, optItem: null, opts: [], tags: [], dg: null, replays: {} };
+      label: label, desc: desc, item: null, optItem: null, opts: [], tags: [], dg: null, replays: {} };
     // a tap on a tag answers through the grid (the same respond path as its button)
     tagG.addEventListener('click', function (e) {
       var t = e.target && e.target.closest ? e.target.closest('.ex-knots-tag') : null;
-      if (!t || !st) return;
+      if (!t || !st || t.hasAttribute('data-demo')) return;
       var o = st.opts[+t.getAttribute('data-tag')], btn = o && o.el && o.el.closest ? o.el.closest('button') : null;
       if (btn && !btn.disabled) btn.click();
     });
@@ -195,6 +198,7 @@
     st.verdict.hidden = true;
     st.verdict.textContent = '';
     st.caption.textContent = '';
+    setLabel('', false);
     st.desc.textContent = describe(item);
     drawStill(item);
     return timing.nextPaint();
@@ -405,36 +409,56 @@
 
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
+    setLabel('', false);
     return play(showSteps(item, response), ctx, { name: 'show-me' });
   }
 
-  // Tutorial (R2 §7.5): the gap; for a knot, the minimal pair (the same outline with one crossing
-  // switched falls open); the three moves in words; then the item's own solution.
+  // The plate's label and the copy's dashed plate (demo only).
+  function setLabel(text, copy) {
+    if (!st) return;
+    st.label.textContent = text || '';
+    st.label.hidden = !text;
+    st.stage.classList.toggle('is-copy', !!copy);
+  }
+  // One letter tag (A) at crossing c, for the demo: drawn like an item's tags, never answers.
+  function markTag(dg, c) {
+    clearG(st.tagG);
+    drawTags(st.tagG, { tags: [c] }, dg).forEach(function (t) { t.g.setAttribute('data-demo', '1'); });
+    st.tagG.style.display = '';
+  }
+
+  // Tutorial (R2 §7.5; RV-play-nav-knots): the gap; for a knot, the minimal pair as a labelled copy
+  // on a dashed plate ("Copy · crossing A switched": it falls open), a clear step back to "Your
+  // rope" with every crossing as drawn, the marked-crossing question put in words (switching A is
+  // what "which crossing unties it" items ask for), the three moves, then the item's own solution.
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
-    var curves = curvesOf(item), dg = lib.diagramOf(curves, item.over), steps = [], X0 = dg.X[0];
-    steps.push({ ms: 2200, caption: cap('gap'), enter: function () { drawStill(item); ring(st.markG, X0.x, X0.y); } });
+    var curves = curvesOf(item), dg = lib.diagramOf(curves, item.over), steps = [], X0 = dg.X[0], pair = null;
     if (item.variant === 'pull' && item.key) {
-      for (var c = 0; c < dg.X.length; c++) {
+      for (var c = 0; c < dg.X.length && !pair; c++) {
         var o2 = item.over.slice();
         o2[c] = !o2[c];
         var cl = lib.classify(lib.switched(dg.D, c));
         if (cl.knot) continue;
         var R = replayOf(item, o2, false);
-        if (!R.reached) continue;
-        var Xc = dg.X[c];
-        steps.push({ ms: 2600, caption: cap('pair'), enter: (function (ov, x) { return function () { still(curves, ov, [[x.x, x.y]]); }; })(o2, Xc) });
-        steps = steps.concat(moveSteps(R));
-        steps.push({ ms: 1600, caption: cap('none'), enter: (function (RR) { return function () { frame(RR.polys, []); }; })(R) });
-        break;
+        if (R.reached) pair = { c: c, over: o2, R: R, X: dg.X[c] };
       }
+    }
+    var yours = pair ? cap('labelYours') : '';
+    steps.push({ ms: 2200, caption: cap('gap'), enter: function () { setLabel(yours, false); drawStill(item); ring(st.markG, X0.x, X0.y); } });
+    if (pair) {
+      steps.push({ ms: 2800, caption: cap('pair'), enter: function () { setLabel(cap('labelCopy'), true); still(curves, pair.over, [[pair.X.x, pair.X.y]]); markTag(dg, pair.c); } });
+      steps = steps.concat(moveSteps(pair.R));
+      steps.push({ ms: 2200, caption: cap('copyNone'), enter: function () { setLabel(cap('labelCopy'), true); frame(pair.R.polys, []); } });
+      steps.push({ ms: 2400, caption: cap('backToRope'), enter: function () { setLabel(yours, false); drawStill(item); ring(st.markG, pair.X.x, pair.X.y); markTag(dg, pair.c); } });
+      steps.push({ ms: 3000, caption: cap('marks'), enter: function () { setLabel(yours, false); drawStill(item); ring(st.markG, pair.X.x, pair.X.y); markTag(dg, pair.c); } });
     }
     if (item.variant === 'untie' || item.variant === 'tie') steps.push({ ms: 2000, caption: cap('tagsIntro'), enter: function () { drawStill(item); } });
     if (item.variant === 'link') steps.push({ ms: 2000, caption: cap('loopsIntro'), enter: function () { drawStill(item); } });
-    steps.push({ ms: 2600, caption: cap('moves'), enter: function () { drawStill(item); } });
+    steps.push({ ms: 2600, caption: cap('moves'), enter: function () { setLabel(yours, false); drawStill(item); } });
     // then the item as it was, to answer
     return play(steps.concat(showSteps(item, null)), ctx, { name: 'demo', caption: caption || null })
-      .then(function () { if (st && st.item === item) drawStill(item); });
+      .then(function () { if (st && st.item === item) { setLabel('', false); drawStill(item); } });
   }
 
   function unmount() {

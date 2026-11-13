@@ -30,6 +30,16 @@
   fill: none; stroke: var(--knots-rope); stroke-width: 2.5px; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75;
 }
 
+/* the tutorial demo: the plate's label names the rope on show; the copy (one crossing switched)
+   sits on a dashed plate (a shape cue) with an accent label */
+.ex-knots .ex-knots-label {
+  top: 0.4rem; left: 0.5rem; padding: 0.1rem 0.4rem; font-weight: 600; letter-spacing: 0.05em; color: var(--ink-2, #454B52);
+  background: var(--knots-plate-bg); border: 1px solid var(--rule-strong, #7B838A); border-radius: var(--r-control, 4px);
+}
+.ex-knots .ex-knots-stage.is-copy { outline: 2px dashed var(--signal, #0B6A86); outline-offset: -3px; }
+.ex-knots .ex-knots-stage.is-copy .ex-knots-label { color: var(--signal, #0B6A86); border: 1px dashed var(--signal, #0B6A86); }
+.ex-knots .ex-knots-tag[data-demo] { cursor: default; pointer-events: none; }
+
 /* show me: the crossings a move is about (a ring: a shape, so not colour alone) */
 .ex-knots .ex-knots-ring { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 5 3.5; }
 .ex-knots .ex-knots-ring.is-key { stroke: var(--right, #2A7239); stroke-width: 3px; stroke-dasharray: none; }

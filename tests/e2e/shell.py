@@ -366,6 +366,27 @@ def run_phones_b2(b):
         R.check(f'{tag}: no console errors', not problems(logs), str(problems(logs)))
         ctx.close()
 
+    # RV-play-nav-knots: on a first run the tour offer opens as the welcome closes; a tap on the tab
+    # bar then closes the offer through its backdrop, and it must still reach the tab it was aimed at.
+    tag = 'phone 390, first run'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    logs = attach_console(page)
+    page.goto(INDEX.as_uri()); ready(page)
+    page.wait_for_timeout(300)
+    box = page.locator('.px-modal-close').first.bounding_box()
+    page.touchscreen.tap(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+    page.wait_for_timeout(400)
+    offer = page.evaluate("[...document.querySelectorAll('.px-modal-title')].map(t => t.textContent).join(' | ')")
+    tab = page.locator('.px-tabbar [data-nav="library"]').bounding_box()
+    page.touchscreen.tap(tab['x'] + tab['width'] / 2, tab['y'] + tab['height'] / 2)
+    page.wait_for_timeout(500)
+    st = page.evaluate("({ route: PX.core.router.current().route, modals: PX.ui.modalOpen() })")
+    R.check(f'{tag}: after the welcome (x) and the tour offer ({offer}), one tap on Library closes the offer and opens the Library',
+            st['route'] == 'library' and st['modals'] == 0, str(st))
+    R.check(f'{tag}: no console errors', not problems(logs), str(problems(logs)))
+    ctx.close()
+
     # Held sideways with a notch (47 px insets): nothing of the header, page or tab bar under it.
     tag = 'phone 844 x 390, notch'
     ctx = b.new_context(viewport={'width': 844, 'height': 390}, device_scale_factor=2, is_mobile=True, has_touch=True)

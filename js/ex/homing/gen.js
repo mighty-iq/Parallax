@@ -129,6 +129,7 @@
   var TARGET_WIN = 8;        // the key should land within this of the item's target answer
   var TRIES = 2000;          // candidate routes per attempt
   var LANDMARK_DIST = 400, LANDMARK_SEP = 60;
+  var LANDMARK_VIEW = 26;     // a landmark lies within this of a leg's heading: in view (half the 74° field, less a margin) all that leg
   var LANDMARK_KINDS = [
     { id: 'peak', name: 'mountain' }, { id: 'mast', name: 'radio mast' }, { id: 'mill', name: 'windmill' },
     { id: 'spire', name: 'spire' }, { id: 'dome', name: 'dome' },
@@ -351,16 +352,46 @@
     return assemble(r, p, h0, best.legs, best.turns);
   }
 
+  // Landmarks (far, so only their directions matter) are placed where the walk shows them (RV-play-nav-knots
+  // 2: random bearings left them behind the walker on whole routes): each within LANDMARK_VIEW of a leg's
+  // heading, so it stays in view for that leg; when spacing leaves no room on a leg (two legs, three
+  // landmarks), where a turn sweeps the view past it; a random bearing only as a last resort.
+  function landmarkBearings(r, h0, legs, turns, want) {
+    var heads = [], hh = h0, out = [], i, t;
+    for (i = 0; i < legs.length; i++) { if (i) hh += turns[i - 1]; heads.push(norm360(hh)); }
+    var order = r.shuffle(heads.map(function (_, k) { return k; }));
+    function free(b) { for (var j = 0; j < out.length; j++) if (adiff(b, out[j]) < LANDMARK_SEP) return false; return true; }
+    // every spot along the legs, every 2°; with two or more landmarks the first is taken where a second
+    // still fits along a leg (on a narrow route a first one in the middle would leave no room)
+    var spots = [];
+    heads.forEach(function (hd) { for (var o = -LANDMARK_VIEW; o <= LANDMARK_VIEW; o += 2) spots.push(rnd(norm360(hd + o), 10)); });
+    var roomy = want >= 2 ? spots.filter(function (c) { return spots.some(function (d) { return adiff(c, d) >= LANDMARK_SEP; }); }) : [];
+    for (var k = 0; k < want; k++) {
+      var b = null;
+      if (k === 0 && roomy.length && roomy.length < spots.length) b = roomy[Math.min(roomy.length - 1, Math.floor(r.float(0, roomy.length)))];
+      for (t = 0; t < 60 && b === null; t++) {
+        var c = rnd(norm360(heads[order[(k + Math.floor(t / 15)) % order.length]] + r.float(-LANDMARK_VIEW, LANDMARK_VIEW)), 10);
+        if (free(c)) b = c;
+      }
+      if (b === null) { // every free spot along the legs: one is found whenever one exists
+        var open = spots.filter(free);
+        if (open.length) b = open[Math.min(open.length - 1, Math.floor(r.float(0, open.length)))];
+      }
+      for (t = 0; t < 60 && b === null && turns.length; t++) {
+        var ti = Math.min(turns.length - 1, Math.floor(r.float(0, turns.length))), c2 = rnd(norm360(heads[ti] + turns[ti] * r.float(0.2, 0.8)), 10);
+        if (free(c2)) b = c2;
+      }
+      for (t = 0; t < 200 && b === null; t++) { var c3 = rnd(r.float(0, 360), 10); if (free(c3)) b = c3; }
+      if (b !== null) out.push(b);
+    }
+    return out;
+  }
   function assemble(r, p, h0, legs, turns) {
     var g = route(h0, legs, turns), lm = [], kinds = r.shuffle(LANDMARK_KINDS), want = LANDMARKS[p.landmarks].n;
-    for (var i = 0; i < 200 && lm.length < want; i++) {
-      var b = rnd(r.float(0, 360), 10), ok = true;
-      for (var j = 0; j < lm.length; j++) if (adiff(b, lm[j].bearing) < LANDMARK_SEP) ok = false;
-      if (ok) {
-        var sc = sincos(b);
-        lm.push({ id: kinds[lm.length].id, name: kinds[lm.length].name, bearing: b, dist: LANDMARK_DIST, x: rnd(LANDMARK_DIST * sc[0], 100), y: rnd(LANDMARK_DIST * sc[1], 100) });
-      }
-    }
+    landmarkBearings(r, h0, legs, turns, want).forEach(function (b, i) {
+      var sc = sincos(b);
+      lm.push({ id: kinds[i].id, name: kinds[i].name, bearing: b, dist: LANDMARK_DIST, x: rnd(LANDMARK_DIST * sc[0], 100), y: rnd(LANDMARK_DIST * sc[1], 100) });
+    });
     var item = {
       ex: 'homing', params: { route: p.route, landmarks: p.landmarks, tolerance: p.tolerance },
       key: rnd(g.key, 100) % 360, tolerance: TOLERANCES[p.tolerance], experimental: true,

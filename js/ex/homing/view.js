@@ -422,29 +422,53 @@
     return D;
   }
 
-  // Fine turns: ◀5° ◀1° 1°▶ 5°▶. A press turns once, holding repeats (after 400 ms, every 90 ms); keyboard
-  // activation (a click with detail 0) turns once. opts: { cap, onTurn(deltaDeg, e) }.
+  // Fine turns: ◀5° ◀1° 1°▶ 5°▶. Mouse and pen: a press turns once, holding repeats (after 400 ms, every
+  // 90 ms). Touch (RV-play-nav-knots 1): nothing happens on touch-down, so a swipe that starts on a button
+  // scrolls the page (touch-action: pan-y) and changes nothing; a tap turns once on release, and a still hold
+  // (under TAP_SLOP px for HOLD_MS) starts the repeat. Keyboard activation (a click with detail 0) turns once.
+  // opts: { cap, onTurn(deltaDeg, e) }.
+  var TAP_SLOP = 8, HOLD_MS = 350;
   function fine(opts) {
     var kc = opts.cap, out = {};
     [[-5, 'l5'], [-1, 'l1'], [1, 'r1'], [5, 'r5']].forEach(function (d) {
       var deg = Math.abs(d[0]), left = d[0] < 0;
       var b = h('button.px-btn.px-btn--secondary.ex-fp-fine', { type: 'button', 'data-turn': String(d[0]),
         'aria-label': kc('fineLabel', { deg: deg, side: kc(left ? 'left' : 'right') || (left ? 'left' : 'right') }) || (deg + '° ' + (left ? 'left' : 'right')) },
-      left ? '◀ ' + deg + '°' : deg + '° ▶');
-      var timer = 0;
+      left ? '◀ ' + deg + '°' : deg + '° ▶');
+      var timer = 0, touch = null; // touch: { id, x, y, repeating }
       function stop() { if (timer) { window.clearTimeout(timer); timer = 0; } }
       function rep() { opts.onTurn(d[0], null); timer = window.setTimeout(rep, 90); }
+      function forget() { stop(); touch = null; }
       b.addEventListener('pointerdown', function (e) {
         if (b.disabled || (e.button !== undefined && e.button > 0)) return;
+        stop();
+        if (e.pointerType === 'touch') {
+          // no preventDefault and no capture: the browser may still turn this touch into a scroll
+          touch = { id: e.pointerId, x: e.clientX, y: e.clientY, repeating: false, ev: e };
+          timer = window.setTimeout(function () { if (touch) { touch.repeating = true; opts.onTurn(d[0], touch.ev); timer = window.setTimeout(rep, 400); } }, HOLD_MS);
+          return;
+        }
         e.preventDefault();
         try { b.setPointerCapture(e.pointerId); } catch (err) { /* optional */ }
         opts.onTurn(d[0], e);
-        stop();
         timer = window.setTimeout(rep, 400);
       });
-      ['pointerup', 'pointercancel', 'lostpointercapture', 'pointerleave'].forEach(function (ev) { b.addEventListener(ev, stop); });
+      b.addEventListener('pointermove', function (e) {
+        if (touch && e.pointerId === touch.id && !touch.repeating && Math.hypot(e.clientX - touch.x, e.clientY - touch.y) > TAP_SLOP) forget(); // a scroll or a slide: no turn
+      });
+      b.addEventListener('pointerup', function (e) {
+        if (touch && e.pointerId === touch.id) {
+          var tap = !touch.repeating && Math.hypot(e.clientX - touch.x, e.clientY - touch.y) <= TAP_SLOP;
+          forget();
+          if (tap && !b.disabled) opts.onTurn(d[0], e);
+          return;
+        }
+        stop();
+      });
+      b.addEventListener('pointercancel', forget); // the browser took the touch for a scroll
+      ['lostpointercapture', 'pointerleave'].forEach(function (ev) { b.addEventListener(ev, function (e) { if (!touch || e.pointerType !== 'touch') stop(); }); });
       b.addEventListener('click', function (e) { if (e.detail === 0 && !b.disabled) opts.onTurn(d[0], e); });
-      b.stop = stop;
+      b.stop = forget;
       out[d[1]] = b;
     });
     out.all = [out.l5, out.l1, out.r1, out.r5];
@@ -860,6 +884,20 @@
     if (ctx && typeof ctx.play === 'function') return ctx.play(list, o);
     return runSteps(list, ctx, o);
   }
+  // After a reveal in the player, the explanation must not wait under its sticky result bar on a phone
+  // (RV-play-nav-knots 4): scroll just enough that `last` ends above the bar, never pushing the top of `first`
+  // out of view. Without the player's bar (the dev harness) nothing moves. Called once the bar has appeared.
+  function showAboveBar(root, first, last, ctx) {
+    try {
+      var player = root.closest && root.closest('.pl-player'), bar = player && player.querySelector('.pl-feedback');
+      if (!bar || !last || last.hidden) return 0;
+      var b = bar.getBoundingClientRect(), lr = last.getBoundingClientRect(), fr = (first && !first.hidden ? first : last).getBoundingClientRect();
+      if (!b.height || !lr.height || lr.bottom <= b.top - 4) return 0;
+      var dy = Math.min(lr.bottom - b.top + 8, fr.top - 8);
+      if (dy > 1) window.scrollBy({ top: dy, behavior: ctx && ctx.reducedMotion ? 'auto' : 'smooth' });
+      return dy > 1 ? dy : 0;
+    } catch (e) { return 0; }
+  }
   // The angle error a verdict shows (degrees): whole degrees, except that a wrong answer never shows a
   // number inside the limit (40.3° off, not 40° off: more than 40°).
   function errShown(errAbs, tol, ok) {
@@ -907,7 +945,7 @@
   var kit = {
     hintOn: hintOn, hintOff: hintOff, narrow: narrow,
     stage: stage, dial: dial, fine: fine, drag: drag, tapAct: tapAct, walker: walker, mapper: mapper, layout: layout, turnRow: turnRow,
-    play: play, runSteps: runSteps, inputOf: inputOf, errShown: errShown, hostPaused: hostPaused, watchShape: watchShape, capFor: capFor, sideText: sideText, side: side,
+    play: play, runSteps: runSteps, inputOf: inputOf, errShown: errShown, hostPaused: hostPaused, watchShape: watchShape, showAboveBar: showAboveBar, capFor: capFor, sideText: sideText, side: side,
     norm360: norm360, norm180: norm180, adiff: adiff, ease: ease, sweep: sweep, keyOf: keyOf,
     FREEZE_MS: FREEZE_MS, SLOW_SHARE: SLOW_SHARE, SLOW_GAP: SLOW_GAP, DRAG_DEG: DRAG_DEG, TILE: TILE, MIN_PX: MIN_PX, DOT_R: DOT_R,
   };
@@ -1141,6 +1179,8 @@
     PX.ui.clear(el.notes).appendChild(h('p.ex-fp-note', lines.join(' ')));
     el.notes.hidden = false;
     el.readout.textContent = resp !== null ? cap('readoutYours', { dir: sideText(cap, resp) }) : '';
+    // on a phone the player's result bar would cover the explanation: bring it up above the bar
+    window.setTimeout(function () { if (st && st.item === item) showAboveBar(el.root, el.verdict, el.notes, st.ctx); }, 450);
     return st.S.lookTo(item.heading + item.key, 600);
   }
 
