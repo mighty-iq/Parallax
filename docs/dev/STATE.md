@@ -21,12 +21,11 @@ Updated 2026-11-13 17:45 UTC. All 19 exercises are active in index.html (Knots a
 - Lead: codes EX-14…EX-19 (no "PAT-n", R3 §6); switch label "DAT-style focus"; harness loads def.requires (PRELOAD for Reckon) and answers position items; harness.html has clock.js and section.js; play.js labelLine/tagOf/goalOf; section.js in the node MANIFEST.
 
 ## In progress
-- B2 (phones), B3 (Homing + Reckon), B4 (Knots), B6 (Openings, Missing View, Form). B1 finished (b49f12b): clock.py full 73/73, play.py 103/103, flows 61/61, twotabs 10/10, sim hard checks pass.
-- Lead: preview smoke test of the single file (scratchpad/preview_smoke.py, log preview_smoke.log), then the first playable build to the owner as a private artifact "Parallax v1.1 preview" (not the v1.0 artifact).
-- Lead: harness def.requires smoke (scratchpad/harness_requires_smoke.py, log req_smoke2.log).
+- B2 (phones), B3 (Homing + Reckon), B6 (Openings, Missing View, Form). B4 finished (a7c24a9): Knots pull/untie/tie/link, 364 node checks at 10 000 seeds per variant, harness 340/340, fit passes; mirror variant not built. B1 finished (b49f12b): clock.py full 73/73, play.py 103/103, flows 61/61, twotabs 10/10, sim hard checks pass.
+- First playable build sent 13 Nov ~18:40 UTC: private artifact "Parallax v1.1 preview" https://claude.ai/artifact/XTDjxtPznRk4TCuTrgonov (built from 9e6517c; smoke 22/22 on phone and desktop in a host-like wrapper: pop-up, 9 new or changed exercises, no console errors). Republish the same file path scratchpad/preview/parallax-v11-preview.html for later previews (make it with the snippet in this session's scratchpad notes or tools-release/make_artifact_page.py with the preview title).
 
 ## Next three steps
-1. When the preview smoke passes: publish the private preview artifact, send the owner one line on what to try; update claude/parallax-status.md.
+1. Update claude/parallax-status.md and claude/parallax-brief.md in the project (milestone: first playable build).
 2. Keep committing builders' work; answer REQUESTS; when B1 finishes, do the integration items below.
 3. Integration: full suite (node + e2e incl. clock.py, fit.py, section.py, overlap.py, harness_*), long runs, sims with new exercises; then reviews, guide, docs.
 
@@ -49,11 +48,10 @@ Updated 2026-11-13 17:45 UTC. All 19 exercises are active in index.html (Knots a
 ## Running subagents and the files they write (Phase 2, launched 13 Nov ~15:20 UTC)
 - B2 phones (CSS, screens, existing views, fit test): aed53d9e449759e47 (B2.md)
 - B3 Homing fixes + Reckon (EX-12): a4766dc5c229a6ee1 (B3.md)
-- B4 Knots (EX-13): a0dafe0ed9a9dc012 (B4.md)
 - B6 Openings, Missing View, Form (EX-14/15/19): a0dc048b845b7fc8e (B6.md)
 - Reviewer RV-A (DAT-style A: Angles, Hole Punch, Painted Cubes; items, shortcuts, texts): a882c052e4e6f956f → docs/dev/reviews/RV-dat-style-A.md
 - Reviewer RV-B (Section practice, overlap notes, claims vs code): a3268094abb5c4c1a → docs/dev/reviews/RV-section-overlap.md
-- Finished: B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
+- Finished: B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
 
 ## Dead ends
 - Browser slots are the bottleneck (2 for the machine; waits of 10+ minutes while builders run e2e). Queue long browser runs in the background, never in the foreground.

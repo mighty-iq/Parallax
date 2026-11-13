@@ -31,7 +31,7 @@
    falls with more cubes and more hidden faces, Kurtuluş & Yolcu 2013; hidden supports come with
    size, since a figure whose every top shows hides only cubes under taller back columns, so they
    are not a separate dim: a "no hidden cube" level is out of reach above about ten cubes);
-   tallest column 2, 3, 4 (0.3); asked N 3–5 or 1–2 (0.85: cubes with few painted sides sit inside
+   tallest column 2, 3, 4 (0.3); asked N 3–4 or 1–2 (0.85: cubes with few painted sides sit inside
    the figure or under others, R3 §8.4). Base −2.3: the easiest item is about 90 % right at θ = 0
    with 5 options; the range is 4.0 logits.
 
@@ -352,7 +352,7 @@
     dims: [
       { key: 'cubes', label: 'Cubes', levels: ['6–9', '10–13', '14–17', '18–22'], step: 0.85 },
       { key: 'height', label: 'Tallest column', levels: HEIGHT, step: 0.3 },
-      { key: 'asked', label: 'Painted sides asked', levels: ['3–5', '1–2'], step: 0.85 },
+      { key: 'asked', label: 'Painted sides asked', levels: ['3–4', '1–2'], step: 0.85 },
     ],
     base: -2.3,
     chance: 0.2,
