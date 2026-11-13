@@ -199,9 +199,13 @@ def phone_play(b, cons):
     it = page.evaluate('() => ({ key: __harness.item.keyDeg, d: __harness.item.distance, v: __harness.item.walkSpeed })')
     turn_to(page, it['key'], tt)
     locked0 = page.evaluate("() => document.querySelector('[data-turn=\"5\"]').disabled")
+    WALK_BOX = "() => { const b = document.querySelector('.ex-reckon-walk').getBoundingClientRect(), h = document.querySelector('.ex-reckon-here').getBoundingClientRect(); return [b.top, Math.max(b.bottom, h.bottom), innerHeight]; }"
+    box0 = page.evaluate(WALK_BOX)
     walked = walk_back(page, it['d'], it['v'], tt)
+    box1 = page.evaluate(WALK_BOX)
     locked = page.evaluate("() => ({ fine: document.querySelector('[data-turn=\"5\"]').disabled, walked: document.querySelector('.ex-fp').classList.contains('is-walked') })")
     C.ok(not locked0 and locked['fine'] and locked['walked'], f'phone: turning locks while away from the route\'s end ({locked})')
+    C.ok(abs(box1[0] - box0[0]) < 1 and box1[1] <= box1[2] + 0.5, f'phone: Walk, Back and Here stay put once walking starts and stay on screen (Walk top {box0[0]:.0f} → {box1[0]:.0f}, row bottom {box1[1]:.0f} of {box1[2]})')
     shot(page, 'p360_return_walked')
     tt.tap('.ex-reckon-here')
     page.wait_for_function(STATE, arg='reveal', timeout=10000)
