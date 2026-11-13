@@ -119,7 +119,7 @@ def main_run(b, C, tag, phone):
     txt = page.locator('.sec-setup').inner_text()
     n_items = 5 * len(parts)
     C.ok(f'{n_items} items' in txt, f'{tag}: the setup names the mini size: {n_items} items')
-    C.ok('does not predict your score on the real test' in txt and 'not affiliated with or endorsed by the ADA' in txt, f'{tag}: no score prediction, and the ADA line')
+    C.ok('does not predict a score on the Dental Admission Test' in txt and 'not affiliated with or endorsed by the ADA' in txt, f'{tag}: no score prediction, and the ADA line')
     lead = page.locator('.px-screen-head .px-lead').first.inner_text()
     C.ok(lead.find('Dental Admission Test') >= 0 and lead.find('Dental Admission Test') < lead.find('DAT'), f'{tag}: the test is spelled out before "DAT"')
     C.ok(page.locator('[data-sec-form] option').first.inner_text().startswith('Form 1'), f'{tag}: the first form is Form 1')

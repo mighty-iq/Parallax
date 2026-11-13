@@ -120,7 +120,7 @@
       var sizes = K.segmented({
         key: 'secSize', legend: 'Length', value: size,
         options: ['mini', 'full'].map(function (s) { var x = SE().shape(s, opts()); return { value: s, label: (s === 'mini' ? 'Mini' : 'Full') + ' · ' + x.items + ' items', aria: (s === 'mini' ? 'Mini' : 'Full') + ', ' + x.items + ' items in ' + SE().fmtMinutes(x.budgetMs) }; }),
-        hint: size === 'mini' ? 'Five items a part: a short section that fits a phone and a break.' : 'Fifteen items a part' + (sh.parts.length === sh.of ? ', the length of the real test’s perceptual section.' : '.'),
+        hint: size === 'mini' ? 'Five items a part: a short section that fits a phone and a break.' : 'Fifteen items a part' + (sh.parts.length === sh.of ? ', as in each part of the Perceptual Ability Test.' : '.'),
         onChange: function (v) { size = v; draw(); },
       });
       body.appendChild(sizes);
@@ -143,10 +143,10 @@
           ui.button('Open the Library', { kind: 'ghost', small: true, go: 'library' })) : null,
         sh.missing.length ? h('p.px-field-hint.sec-missing', andList(sh.missing.map(function (m) { return PART_NAMES[m.id] || shortOf(m.id); })) + (sh.missing.length === 1 ? ' is' : ' are') + ' not part of this section here, so it has ' + sh.parts.length + ' of the ' + sh.of + ' parts: ' + sh.items + ' items in ' + SE().fmtMinutes(sh.budgetMs) + ', the same pace.') : null));
       body.appendChild(h('ul.sec-rules',
-        h('li', 'One clock for the whole section: ' + sh.items + ' items in ' + SE().fmtMinutes(sh.budgetMs) + ', about 40 seconds an item, the real test’s average pace.'),
+        h('li', 'One clock for the whole section: ' + sh.items + ' items in ' + SE().fmtMinutes(sh.budgetMs) + ', about 40 seconds an item, the Perceptual Ability Test’s average pace.'),
         h('li', 'No feedback until the end. Skip, flag and go back to any item of the part you are in; once you move on to the next part, you cannot return.'),
         h('li', 'Pause stops the clock, and so does reading a part’s instructions. The review reports your pauses.'),
-        h('li', 'Your levels do not change. The review shows each part’s results and pacing, with a show-me for every item. Parallax does not predict your score on the real test.')));
+        h('li', 'Your levels do not change. The review shows each part’s results and pacing, with a show-me for every item. Parallax does not predict a score on the Dental Admission Test.')));
       var start = ui.button('Start the section', { kind: 'primary', onClick: function () {
         var form = parseInt(formSel.value, 10);
         var run = SE().start(rec(), { size: size, form: isNum(form) ? form : next, now: now(), display: display(), can: can, why: why });
@@ -389,7 +389,7 @@
     if (L.goal) lines.push(L.goal);
     lines.push(n + (n === 1 ? ' item.' : ' items.') + ' The clock is stopped while you read this; ' + clockText(run.budgetMs - used(X)) + ' left in all.');
     if (p === 0) lines.push('Choosing an answer moves on. Back, Flag and Skip are under the item, and Items shows the part’s items. Pause stops the clock.');
-    if (exId === 'angles') lines.push('Judge by eye: in the real test, rulers and other measuring tools are not allowed.');
+    if (exId === 'angles') lines.push('Judge by eye: the Perceptual Ability Test does not allow rulers or other measuring tools.');
     if (def && (def.extraParams || []).indexOf('ask') >= 0) lines.push('Up to three questions in a row ask about the same figure, as in the test, so a figure you have just seen can come back with a new question.');
     Play().showCard(X.wrap, X.P.el.root, {
       id: 'sec-part', title: 'Part ' + (p + 1) + ' of ' + run.parts.length + ': ' + shortOf(exId), def: def, hide: X.P.el.root, lines: lines,
@@ -677,7 +677,7 @@
     p.body.appendChild(h('div.sec-tablewrap', h('table.sec-table', h('caption.px-sr', 'Results by part'),
       h('thead', h('tr', h('th', { scope: 'col' }, 'Part'), h('th', { scope: 'col' }, 'Right'), h('th', { scope: 'col' }, 'Answered'), h('th', { scope: 'col' }, 'Time'), h('th', { scope: 'col' }, 'Per item'))),
       h('tbody', rows))));
-    p.body.appendChild(h('p.px-meta', 'Per item: the part’s time over the items you looked at. The real test averages about ' + Math.round(SE().PACE_MS / 1000) + ' seconds an item over its six parts.'));
+    p.body.appendChild(h('p.px-meta', 'Per item: the part’s time over the items you looked at. The Perceptual Ability Test allows about ' + Math.round(SE().PACE_MS / 1000) + ' seconds an item over its six parts.'));
     p.body.appendChild(h('p.px-meta', 'These counts are for comparing your own sections. Parallax does not turn them into a score or a prediction for the Dental Admission Test.'));
     (res.achievements || []).forEach(function (a) { p.body.appendChild(h('p.sec-award', K.icon('award'), h('span', h('b', a.name), ': ' + a.desc))); });
     if (run.missing && run.missing.length) p.body.appendChild(h('p.px-meta', andList(run.missing.map(function (m) { return PART_NAMES[m.id] || shortOf(m.id); })) + ' could not be part of this section.'));
