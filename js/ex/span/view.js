@@ -159,6 +159,12 @@
       b.tag.classList.remove('is-tapped');
     });
   }
+  // 1 on a board drawn at ≥ 0.44 px per unit; more on smaller boards (at most 1.6), so the 30-unit
+  // text of a wrong-tap tag is drawn at least 13 px tall.
+  function tagScale() {
+    var r = st.svg && st.svg.getBoundingClientRect(), px = r && r.width ? r.width / SIZE : 1;
+    return Math.max(1, Math.min(1.6, 13 / (30 * px)));
+  }
   function mark(id, disc, wrong) {
     var b = st.blocks[id], g = S.el('g', { class: 'ex-span-marks' });
     if (disc) {
@@ -167,10 +173,13 @@
     }
     if (wrong && wrong.length) {
       // At the block's top right corner, or top left for blocks on the right, so it stays on the stage.
-      var txt = '✗' + wrong.join(','), w = 30 + 22 * txt.length, p = st.item.after[id];
+      // k grows the tag on small boards so its numbers stay at least 13 px tall (phones).
+      var k = tagScale(), txt = '✗' + wrong.join(','), w = (30 + 22 * txt.length) * k, p = st.item.after[id];
       var x0 = p && p[0] > MID + 200 ? -HALF + 14 - w : HALF - 14;
-      g.appendChild(S.el('rect', { class: 'ex-span-wrongtag', x: x0, y: -HALF - 26, width: w, height: 46, rx: 8 }));
-      g.appendChild(S.text(x0 + w / 2, -HALF - 2, txt, { class: 'ex-span-wrongtxt' }));
+      g.appendChild(S.el('rect', { class: 'ex-span-wrongtag', x: x0, y: -HALF - 3 - 23 * k, width: w, height: 46 * k, rx: 8 }));
+      var t = S.text(x0 + w / 2, -HALF - 2, txt, { class: 'ex-span-wrongtxt' });
+      if (k > 1) t.style.fontSize = (30 * k).toFixed(1) + 'px';
+      g.appendChild(t);
     }
     if (b.marks) b.tag.removeChild(b.marks);
     b.tag.appendChild(g);

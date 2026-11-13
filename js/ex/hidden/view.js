@@ -54,7 +54,13 @@
   // Missing segments: dashed, with a ✗ at the middle (a shape cue, not only a colour).
   function missing(parent, segs) {
     var g = lines(parent, segs, 'ex-hidden-miss');
-    segs.forEach(function (s) { g.appendChild(S.text(r3((s[0] + s[2]) / 2), r3((s[1] + s[3]) / 2), '✗', { class: 'ex-hidden-x' })); });
+    // At least 13 px tall at any scale (small figures on phones); 0.42 units from 31 px per unit up.
+    var fs = st.u > 0 && 0.42 * st.u < 13 ? r3(13 / st.u) + 'px' : '';
+    segs.forEach(function (s) {
+      var x = S.text(r3((s[0] + s[2]) / 2), r3((s[1] + s[3]) / 2), '✗', { class: 'ex-hidden-x' });
+      if (fs) x.style.fontSize = fs;
+      g.appendChild(x);
+    });
     return g;
   }
 
