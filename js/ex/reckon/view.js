@@ -29,6 +29,7 @@
   var BACK_SHARE = 0.6;    // Back moves at this share of the walk speed
   var MAX_WALK = 40;       // m: the walk back stops here
   var HERE_MIN = 0.5;      // m: Here needs at least this much walking
+  var STEP_M = 0.5;        // m: one keyboard or screen-reader activation of Walk or Back
   var CHART_N = 20;
   var VIEW_MIN = 4;        // m: at reveal the view stands at least this far from the flag
 
@@ -70,6 +71,7 @@
   var st = null;
   function live() { return !!(st && st.live && !st.playing); }
   function isReturn(item) { return item && item.answer === 'position'; }
+  function setText(el, t) { if (el.textContent !== t) el.textContent = t; }
   function canTurn() { return live() && st.item.task !== 'distance' && st.dist < 0.05; }
 
   function mount(ctx) {
@@ -122,6 +124,15 @@
     });
     function up(e) { if (e.pointerId === id) { id = null; setDir(0); } }
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { b.addEventListener(ev, up); });
+    // Enter or Space on the focused button, or a screen reader's activation (a click with detail 0): one
+    // step of STEP_M, eased like a hold
+    b.addEventListener('click', function (e) {
+      if (e.detail !== 0 || b.disabled || !st || !live()) return;
+      st.input = 'key'; st.mode = 'walk';
+      setDir(dir);
+      var v = st.item.walkSpeed * (dir < 0 ? BACK_SHARE : 1);
+      window.setTimeout(function () { if (st && st.dir === dir) setDir(0); }, Math.round(1000 * STEP_M / v));
+    });
     b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     return b;
   }
@@ -224,10 +235,12 @@
   }
   function readout() {
     var t = st.kit.sideText(cap, st.value === null ? 0 : st.value);
-    if (live() && isReturn(st.item) && !st.item.task) st.el.phase.textContent = cap(st.dist >= 0.05 ? 'phaseWalk' : 'phaseReturnTurn');
-    if (st.item.task === 'distance') st.el.readout.textContent = '';
-    else if (st.dist >= 0.05) st.el.readout.textContent = cap('readoutLocked', { dir: t });
-    else st.el.readout.textContent = st.value === null ? cap('readoutNone') : cap('readout', { dir: t }) || t;
+    // written only when the text changes: the walk loop calls this every frame, and the phase line is a
+    // polite live region
+    if (live() && isReturn(st.item) && !st.item.task) setText(st.el.phase, cap(st.dist >= 0.05 ? 'phaseWalk' : 'phaseReturnTurn'));
+    if (st.item.task === 'distance') setText(st.el.readout, '');
+    else if (st.dist >= 0.05) setText(st.el.readout, cap('readoutLocked', { dir: t }));
+    else setText(st.el.readout, st.value === null ? cap('readoutNone') : cap('readout', { dir: t }) || t);
   }
   function controls() {
     if (!st || !st.item) return;
@@ -268,7 +281,11 @@
     if (dir < 0 && st.dist <= 0) dir = 0;
     st.dir = dir;
     if (dir !== 0) st.kit.hintOff(st.S);
-    if (dir !== 0) { if (st.value === null) { st.value = 0; st.raw = 0; st.D.set(0, st.kit.sideText(cap, 0)); } startWalkBack(); }
+    if (dir !== 0) {
+      if (st.value === null) { st.value = 0; st.raw = 0; st.D.set(0, st.kit.sideText(cap, 0)); }
+      st.raw = st.value; // walk along the whole degree that is scored (a drag leaves a fraction)
+      startWalkBack();
+    }
   }
   function startWalkBack() {
     if (st.walkStop) return;
