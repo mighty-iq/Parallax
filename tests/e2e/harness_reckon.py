@@ -524,6 +524,8 @@ def demo_bias_srcdoc(b, cons):
     page.wait_for_timeout(700)
     bias = page.locator('.ex-reckon-bias').inner_text() if page.locator('.ex-reckon-bias').count() else ''
     dots = page.locator('.ex-reckon-chart circle').count()
+    above = page.evaluate("() => [...document.querySelectorAll('.ex-reckon-chart circle')].filter((c) => +c.getAttribute('cy') < 32).length")
+    C.ok(dots >= 5 and above == dots, f'the chart puts every "too far" answer above the line, whichever side the start was on ({above} of {dots})')
     hist = page.evaluate("() => (PX.core.store.state.reckon || {}).hist || []")
     C.ok('15° too far' in bias and dots >= 5 and len(hist) >= 6, f'after 6 answers 15° too far round: the bias line ({bias!r}), {dots} dots in the chart, {len(hist)} entries in the record field')
     shot(page, 'd1366_bias', full=True)
