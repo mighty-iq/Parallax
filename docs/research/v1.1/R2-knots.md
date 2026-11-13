@@ -237,3 +237,177 @@ for, not found. Every source carries its reading level:
 5. **Transfer is measured** on held-out probes, without claims, ads or points.
 6. Both directions, knotting and deknotting, are covered, plus linking and chirality, which no
    consumer app found covers.
+
+## 3. Candidate item types
+
+Ratings are High, Medium or Low. "Shortcut risk" is the risk that a cheap heuristic beats chance by
+more than 10 points (standing rule 5) unless the generator controls it. A **shadow** is the rope's
+outline with its over/under information removed.
+
+| # | Item (question) | Spatial validity | Generation | Verification | Shortcut risk | Phone fit | Verdict |
+|---|---|---|---|---|---|---|---|
+| A | **Pull**: "Pull both ends: does a knot remain?" | High: simulating the whole rope; KRT pulling items load on MRT and PFT | High: one shadow yields both classes | High: certificate or det/Jones, exact up to 24 crossings | High if uncontrolled: alternation 79–92 %, writhe 72 %, visible slides 90 % [proto]; matched ≤ 61 % | High up to ~12 crossings | Build first |
+| B | **Untie / Tie**: "Which marked crossing, switched, unties (ties) it?" | High: one crossing's effect on the whole rope | Medium: 41 % of random knotted diagrams allow 1-of-4 [proto] | High: switch each option and classify | Medium-high: "creates a removable loop" scores ~55 % vs 25 % [proto] | High (letter tags + buttons) | Build second |
+| C | **Link**: "Are these two loops linked?" (+ rope through a ring) | Medium-high | High | Linked: lk ≠ 0 or Jones; unlinked: split certificate | High: the parity of A-over-B crossings is a sound rule | High | Build third |
+| D | **Mirror**: "Same knot or its mirror?" (3D tubes, turned and deformed) | High (Vz + chirality); overlaps Rotate | Medium: 3D embeddings and checked deformations | High: discrete isotopy check for the key; V(t) vs V(1/t) for mirrors | Medium: writhe sign; silhouettes must match by construction | Medium (4 tube thumbnails) | Experimental, later |
+| E | **Tuck**: "Which way through the loop ties a knot?" | High: one tying step | Medium | High | Medium | Low-medium: routes overlap | Later |
+| F | **Steps**: "Which moves tie this knot?" / "the step before?" | High (the KRT's hardest type, .59) | Medium-low | Medium: diagram-level identity per step | Medium | Low: 4 complex thumbnails | No: too close to the KRT |
+| G | **Name**: "Pull tight: which knot is it?" | Medium: catalogue recall, verbal labels | High | High within a small catalogue | High: crossings left after visible simplification | Medium | No |
+| H | **Hang**: "Remove this nail: does the picture fall?" | Medium-high: rope around pegs | High: free-group words | High: free reduction | Medium: exponent sums | High | Separate exercise idea, later |
+| I | **Trace**: "Which end does this rope lead to?" | Low-medium: spatial scanning (SS) | High | High | Low | High | Tutorial step only |
+| J | **Turn over**: "Which picture shows this flat knot turned over?" | Medium-high | High | High | High: stem-blind "most like the others" finds the key | High | Only inside D |
+
+### 3.1 A. Pull ("Knot or not?"): deknotting
+
+- **Stimulus:** an open rope with both ends on the outer face, running off the plate edges, with
+  pull arrows. Topologically this is the closure through the outer face, which is unique on the
+  sphere, so the knot type is well defined (DJ). The KRT's "pull this end" wording asks the same
+  question if the other end is held far away (DJ).
+- **Answer:** yes/no, chance .5, keys balanced 50/50.
+- **Prototype, crossing count:** pairing a knot and an unknot drawn from the same shadow makes
+  crossing count useless (50.0 %) [proto].
+- **Prototype, the other tells with same-shadow pairs** (1178 items, 4–9 crossings, best single
+  threshold per feature): alternation fraction 90.1 %, |writhe| 72.7 %, visible R1 + R2 81.7 %,
+  visible R2 89.8 %, "monotone from the start ⇒ unknot" 56.0 % [proto].
+- **Prototype, matched pairs:** matching each pair on alternation count and |writhe| (400 items) gave
+  alternation 50.0 %, |writhe| 50.0 %, visible R1 + R2 54.5 %, visible R2 61.0 %, monotone 50.0 %.
+  The visible-R2 count is one point over the bound, so it must be matched too. On braid-closure
+  shadows of 6–12 crossings, the alternation tell scored 75–92 % on class-balanced pools [proto].
+- **Sound rules a learner may use.** These are strategies, not shortcuts, but they shape the mix:
+  1. A **descending** rope (followed from one end, every crossing is first met on top) is unknotted.
+     Only 7–8 % of the prototype's unknots were descending from the start [proto], so the rule
+     helps but rarely decides an item.
+  2. A **reduced alternating** diagram (nothing removable, over-under all the way) with at least one
+     crossing is knotted (Kauffman 1987; Murasugi 1987; Thistlethwaite 1987 [unverified, textbook
+     result]). So pools need knotted non-alternating ropes and unknots with long alternating
+     stretches.
+  3. **Two or fewer crossings** is always an unknot, so the lowest crossing level is 3.
+- **Show me:** for an unknot, replay the certificate's moves until a plain arc remains. For a knot,
+  simplify to its reduced core, then pull tight, with the caption "over, under, over all the way
+  round: nothing can slide off".
+
+### 3.2 B. Untie / Tie: knotting and deknotting by one crossing
+
+- **Stimulus:** a knotted rope, closed or with ends off the plate, with four crossings marked A–D:
+  "Which one crossing, switched, lets the rope fall open?" The **tie** direction uses an unknotted
+  rope: "Which crossing, switched, ties a knot?" This is the literal knotting counterpart and doubles
+  the item supply.
+- **Exactly one answer:** random knotted 4–9-crossing diagrams usually have 3–4 crossings that
+  unknot when switched. Of 400: 0 such crossings in 14, 1 in 7, 2 in 20, 3 in 209, 4 in 111, 5 in
+  25, 6 in 12, 7 in 2 [proto]. Most are trefoils with extra crossings, where every core crossing
+  unknots. A 1-of-4 item (one unknotting crossing, three that leave a knot) was possible for 165 of
+  400 (41 %).
+- **Distractor sources:** crossings outside the core, and twist crossings of twist knots. Switching
+  a clasp crossing unknots a twist knot, while switching a twist crossing removes two half-twists
+  (5_2 becomes a trefoil, 6_1 a figure-eight) [standard result, unverified here]. These make
+  plausible wrong options.
+- **Local tell:** "the switch that creates the most visible R1/R2 moves" finds the key about 55 % of
+  the time (chance 25 %) [proto]. Mitigation (DJ): choose distractors whose switches also create a
+  removable loop that then still leaves a knot, and include keys whose switch shows no visible move
+  until an R3 slide.
+- **Related formats:** the tie direction is a solo version of Henrich et al.'s knotting game. Region
+  crossing changes (Shimizu 2014) are a different unknotting operation.
+
+### 3.3 C. Link: "Are these loops linked?"
+
+- **Stimulus:** two closed loops, each unknotted on its own: can they be pulled apart? A
+  sub-variant shows an open rope through a fixed ring or handle: "Pull the ends: does the rope come
+  free of the ring?"
+- **Parity tell (sound):** the linking number lk ≡ (number of crossings where A passes over B)
+  mod 2, so "odd ⇒ linked" is always right. If a fraction f of the linked items have an odd count,
+  the parity solver scores 50 + 50f %. Staying within chance + 10 needs f ≤ 0.2 (DJ arithmetic).
+  Most linked items then need lk = ±2 (double clasps) or lk = 0 (Whitehead-type links). The variant
+  gets hard quickly, so it suits higher levels (DJ).
+- **Other tells:** "one loop wholly on top ⇒ unlinked" is sound, so unlinked items must not be
+  layered. The number of crossings between the loops must be matched between classes.
+- **Three-ring version** ("Which ring holds the others together?"): cutting the middle ring of a
+  chain A–B–C frees the rest, which is exactly one answer. In the Borromean rings any ring works, so
+  they only fit mixed configurations. Verification uses sublink split certificates plus lk or Jones
+  (§4.7). Later.
+
+### 3.4 D. Mirror: "Same knot or its mirror?" (3D)
+
+- **Stimulus:** a chiral knot (3_1, 5_1, 5_2, 6_1, 6_2, 7_x) drawn as a 3D tube. Options: the same
+  knot turned and gently deformed, two or three mirror images, and possibly another knot of equal
+  crossing number.
+- **Design borrowed from Rotate:** a mirror option is the reflection of a correctly turned copy, so
+  silhouettes have the same distribution and only the handedness of crossings differs.
+- **Shortcuts:** a minimal trefoil has writhe ±3, so "majority crossing handedness" predicts
+  chirality. Balance it with opposite-sign curls (R1) and deformations (DJ).
+- **Excluded targets:** amphichiral knots (4_1, 6_3, 8_3, 8_9, 8_12, 8_17, 8_18 among ≤ 8 crossings
+  [unverified list]). Chiral knots whose Jones polynomial cannot see the mirror (9_42, 10_71;
+  Ramadevi 2011) fail the V(t) ≠ V(1/t) check automatically.
+- **Overlap:** Rotate (EX-02) already trains rotation with mirror foils. Mirror adds deformation,
+  topological rather than rigid sameness. Keep it experimental until data show it is more than a
+  harder Rotate.
+
+### 3.5 Why not E–J now
+
+- **E Tuck:** four overlapping routes on one rope are hard to read at 320 px, and four thumbnails
+  make the rope tiny. Revisit with a step-through UI.
+- **F Steps:** the KRT's backwards-reasoning format, including its "one crossing switched" foils, is
+  too close to a published test, and the thumbnails are complex.
+- **G Name:** memorising a catalogue (trefoil, figure-eight, 5_1, …) is partly verbal, and the
+  crossings left after simplification give the answer away.
+- **H Hang** (Demaine et al., 2014 [abstract]): picture-hanging puzzles. In my reading of the model
+  (DJ), the picture falls exactly when the rope's free-group word becomes trivial once the removed
+  nail's generator is deleted. Verification (free reduction) and phone fit are excellent, but it is
+  rope-around-pegs reasoning, not knots: a separate later exercise.
+- **I Trace:** spatial scanning (SS), not Vz. Use it as the first tutorial step.
+- **J Turn over:** as a stand-alone 2D item, the key shares the reflected drawing with one foil and
+  the switched crossings with another, so it is the option "most like the others" (DJ) and
+  stem-blind solvers win. Fold it into D, with 3D tubes.
+
+## 4. The mathematics of generation and verification
+
+### 4.1 Diagram encodings
+
+- **PD code** (planar diagram): one tuple per crossing, X[a,b,c,d], listing edge labels
+  counterclockwise from the incoming under-strand. This is the convention of KnotTheory`, the Knot
+  Atlas and KnotInfo; the Knot Atlas gives 10_132 as "X4251 X8493 X5,12,6,13 …" [record]. A PD code
+  fixes the oriented diagram on the sphere, chirality included.
+  - The prototype computes the bracket with the A-smoothing of X[a,b,c,d] joining (a,b) and (c,d),
+    and the B-smoothing joining (a,d) and (b,c). It reproduced the left-handed trefoil
+    (V = −t⁻⁴ + t⁻³ + t⁻¹), the figure-eight (V = t⁻² − t⁻¹ + 1 − t + t²) and 7_4 (det 15)
+    [proto].
+- **Gauss code:** the crossing labels in traversal order with over/under marks (trefoil:
+  O1 U2 O3 U1 O2 U3). A signed (extended) code adds each crossing's handedness. Without signs a
+  Gauss code does not fix the knot (KnotGym calls Gauss codes "necessary but not sufficient"), and
+  not every Gauss code can be drawn in the plane (virtual knots).
+- **DT code** (Dowker–Thistlethwaite): number the 2n passages 1…2n along the knot. Each crossing
+  pairs an odd and an even number; list the even partners of 1, 3, …, 2n−1, signed for over/under
+  (10_132: "4 8 −12 2 −16 −6 −20 −18 −10 −14" [record]). It is compact and fixes prime diagrams up
+  to reflection, but composite diagrams are ambiguous and the mirror depends on convention
+  (Dowker & Thistlethwaite 1983 [unverified details]).
+- **Recommendation (DJ):**
+  - The item's truth is its **geometry**: the curve as integer control points of a closed (or open)
+    spline, plus one over flag per crossing in parameter order.
+  - The validator re-derives the crossings from the geometry and builds the PD code. PD is the
+    working form for invariants and moves; DT and Gauss codes serve logs and tests.
+  - A spline through integer control points evaluated with + − × ÷ keeps items bit-identical across
+    engines (EXERCISE-GUIDE §4). Fourier curves need sin/cos at runtime: use literal tables, as
+    Rotate does with `TRIG10`.
+
+### 4.2 Random generation
+
+| Method | How | For Parallax | Against |
+|---|---|---|---|
+| Random smooth shadow + crossing choice | Random closed planar curve (spline or short Fourier series); self-intersections are crossings; choose over/under per crossing | One shadow gives both a knot and an unknot, so crossing count tells nothing; the geometry is the display | Few crossings: 1200 accepted Fourier shadows (2.7 % acceptance) had 3 crossings: 0, 4: 780, 5: 280, 6: 104, 7: 29, 8: 4, 9: 3 [proto]; needs a better source for 8–12 |
+| Braid closures | Random word in B_3 or B_4, closure drawn in lanes | Regular, legible, any crossing count; balanced classes: unknots 52 % at 6 crossings, 30 % at 12 [proto] | Schematic look; alternation still tells (75–92 %); 4–15 % need R3 or Jones [proto] |
+| Uniform random diagrams (Cantarella, Chapman & Mastin 2016) | All diagrams with n crossings | Exact knot probabilities for n ≤ 10 | 78 % of 10-crossing diagrams are unknots, mostly tree-like (all crossings nugatory) [abstract]; nugatory crossings are trivial to see, so filter them |
+| Grid diagrams (arc presentations; Cromwell 1995 [unverified]) | Two random permutations of size n; vertical over horizontal | Every knot has one; orthogonal and very legible; unknots recognisable by Dynnikov's monotone simplification (2006 [abstract]) | The fixed over/under rule removes the over/under reading; small n gives mostly unknots |
+| Random 3D polygons or Fourier knots | Random walk or Fourier coefficients in 3D, then project | Natural tube shapes | Short polygons are rarely knotted (unknot decay length N₀ ≈ 259 edges, Xiong et al. 2021 [full]); cluttered projections; uncontrolled knot types |
+| Petal diagrams (Adams et al. [unverified]; Petaluma, Even-Zohar et al. 2016) | Permutation of 2n+1 petal heights at one multi-crossing | Elegant uniform model (Even-Zohar survey [full]) | Unreadable: all strands cross at one point; not for display |
+| Chebyshev or billiard diagrams (Koseleff & Pecker; Cohen & Krishnan 2015 [unverified]) | Lissajous-type shadow with random crossings | Regular lattice of crossings | Narrow shadow family; the (a,1) Lissajous shadows gave only unknots [proto] |
+| Known knot + random Reidemeister moves (Browne 2025; KnotGym) | Scramble a catalogue diagram | Knot type and simplification depth known by construction | Each new diagram needs a layout, unless the moves are done on the geometry (preferred, DJ) |
+
+**Recommended generation (DJ):**
+
+- **A and B:** smooth spline shadows for 3–8 crossings, and "rope drop" or braid-closure-like
+  shadows for 8–12. Choose crossing assignments by rejection, with class and feature matching.
+  Geometric scrambles set the simplification depth: add a curl (R1), push a loop over or under a
+  strand (R2), slide a strand over a crossing (R3).
+- **C:** two unknotted loops built as clasps, double clasps or Whitehead-type patterns, then
+  scrambled geometrically.
+- **D:** catalogue knots lifted to 3D from their minimal diagrams (z = ±h at crossings, smoothed),
+  then turned and deformed.
