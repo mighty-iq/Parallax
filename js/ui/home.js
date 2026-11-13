@@ -108,6 +108,7 @@
     return { sessions: n, goal: goal, left: Math.max(0, goal - n), days: Array.isArray(w.days) ? w.days : [] };
   }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
   /* ---------- slots ---------- */
 
   function sessionSlot(rec, now) {

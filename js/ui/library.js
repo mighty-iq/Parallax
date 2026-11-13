@@ -92,6 +92,8 @@
     'span.len': function (v) { return v + ' blocks'; },
     'span.turn': function (v) { return v ? 'board turned ' + v + '°' : 'no board turn'; },
     'slice.curved': function (v) { return v === 'yes' ? 'curved solid' : 'flat-sided solid'; },
+    'fold.folds': function (v) { return v === 1 ? 'one fold' : v + ' folds'; },
+    'fold.punches': function (v) { return v === 1 ? 'one punch' : v + ' punches'; },
     'fold.idle': function (v) { return v === 0 ? 'every fold matters' : v + (v === 1 ? ' fold that does not matter' : ' folds that do not matter'); },
     // Fold's and Hole Punch's fold types (all straight; a corner among straight ones; 45° only; both)
     'fold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
@@ -127,9 +129,9 @@
     'form.view': function (v) { return 'solids pictured ' + v; },
     'form.foil': function (v) { return v === 'marks only' ? 'wrong solids differ only in their marks' : 'wrong solids differ in size or in marks'; },
     'views.view': function (v) { return v + ' view'; },
-    'homing.route': function (v) { return String(v); },
+    'homing.route': function (v) { return String(v).replace(', ', ' with '); }, // '3 legs with small turns (30–60°)': no comma inside a list
     'homing.landmarks': function (v) { return v === 'none' ? 'no landmarks' : v === 'one' ? 'one landmark' : v + ' landmarks'; },
-    'reckon.route': function (v) { return String(v); },
+    'reckon.route': function (v) { return String(v).replace(', ', ' with '); },
     'reckon.flow': function (v) { return v === 'textured' || v === 'sparse' ? v + ' ground' : v + ' on the ground'; },
     'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + v; },
     'reckon.tolerance': function (v) { return 'right within ' + v; },

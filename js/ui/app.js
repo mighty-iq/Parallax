@@ -100,23 +100,19 @@
     return el;
   }
 
-  function sampleTag() {
-    return h('span.px-tag.px-tag--sample', { title: 'Placeholder values that show the layout until there is real data' }, 'Sample data');
-  }
-
-  // A panel: { title, aside (text or node), sample, className, tag, level } → { el, head, body }
+  // A panel: { title, aside (text or node), className, tag, level } → { el, head, body }. No panel
+  // shows sample data (v1.1, RV-play-dat): an empty record gets empty states, never placeholders.
   function panel(o) {
     o = o || {};
     var headId = o.title ? 'px-panel-' + (++seq) : null;
     var asideKids = [];
-    if (o.sample) asideKids.push(sampleTag());
     if (o.aside) asideKids.push(o.aside);
     var head = o.title || asideKids.length ? h('div.px-panel-head',
       o.title ? h(o.level || 'h2', { class: 'px-panel-title', id: headId }, o.title) : null,
       asideKids.length ? h('span.px-panel-aside', asideKids) : null) : null;
     var body = h('div.px-panel-body');
     var el = h(o.tag || 'section', {
-      class: ['px-panel', o.className], 'aria-labelledby': headId, 'data-sample': o.sample ? '' : null,
+      class: ['px-panel', o.className], 'aria-labelledby': headId,
     }, head, body);
     return { el: el, head: head, body: body };
   }
@@ -259,7 +255,7 @@
   })();
 
   var kit = {
-    icon: icon, mark: mark, spec: spec, sampleTag: sampleTag, panel: panel,
+    icon: icon, mark: mark, spec: spec, panel: panel,
     segmented: segmented, toggle: toggle, copyField: copyField, download: download,
     fmtWhen: fmtWhen, lastBackupText: lastBackupText, backupLine: backupLine, live: live,
     storageText: storageText,
