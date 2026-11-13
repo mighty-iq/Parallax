@@ -1,5 +1,11 @@
 /* EX-11 Homing (experimental): generator, validator, scorer and shortcut solvers (ARCHITECTURE.md §5, §12).
-   Route geometry here is written independently of gen.js (Math.sin/cos/atan2 on the stored legs and turns). */
+   Route geometry here is written independently of gen.js (Math.sin/cos/atan2 on the stored legs and turns).
+   Shortcut bounds (RV-reckon-homing B1, the lead's decision (a), 13 Nov 2026): the answers that need no
+   integration (a fixed angle or place, turn around, the mirror, the turns reversed, heading not updated)
+   stay within chance + 10 points in every route/tolerance cell; a fixed answer is exempt only where R1's
+   item rules leave no room (EXEMPT_FIXED). Turn-only answers (the legs taken as equal, the net-turn prior)
+   are printed per cell as information, not bounded: they integrate every turn, which is partial path
+   integration, and on 2-leg and small-turn routes the start always lies on the side of the net turn. */
 import { deepDiff } from './run.mjs';
 import { performance } from 'node:perf_hooks';
 import { readFileSync } from 'node:fs';
@@ -293,11 +299,17 @@ export async function run(t) {
     return pct(l.filter((x) => def.score(x.it, walk(x.it.startHeading, x.it.legs.map(() => 1), x.it.turns).key).correct).length / l.length);
   });
   report.push(`[info] turns only, legs taken as equal: ${eqHit.join(' ')} for small/medium/large turns`);
-  // Turn-only shortcuts per cell (RV B1). Most cells cannot meet chance + 10 under the current route levels
-  // (2 legs or small turns put the start on the side of the net turn every time; at 40° the axis gap alone
-  // lets a fixed angle hit 29 %): reported here, pending the lead's decision (docs/dev/progress/B3.md).
-  const scRows = shortcutReport(def, items, 'Homing');
-  t.ok(scRows.every((r) => r.S.mirror <= r.chance + 0.10), 'the mirror answer stays within chance + 10 in every route/tolerance cell');
+  // Shortcuts per cell (RV B1, decision (a)): the no-integration answers are bounded at chance + 10 in every
+  // cell (a fixed angle except in EXEMPT_FIXED); the turn-only family is printed as information.
+  // the spread cells (3–4 legs, medium or large turns) sit a few points under the bound for a fixed angle (29 %
+  // floor at 40°): 2 000 more items each, as a CV estimate from ~420 items moves by about 2 points
+  const extra = [];
+  for (const route of [3, 5, 6, 7]) for (let tol = 0; tol < 3; tol++) for (let k = 0; k < 2000; k++) {
+    const p = { route, landmarks: k % 3, tolerance: tol };
+    extra.push({ p, it: def.generate(PX.rng(PX.rng.hash('homing-shortcuts', route, tol, k)), p) });
+  }
+  const scRows = shortcutReport(def, items.concat(extra), 'Homing');
+  boundShortcuts(t, scRows);
   // estMs: within 10 % of the mean trial time of the generated routes (lead-in + route + response).
   const estOk = L.ROUTES.map((_, ri) => {
     const l = items.filter((x) => x.p.route === ri), mean = L.LEAD_MS + L.RESPONSE_MS + 1000 * l.reduce((s2, x) => s2 + x.it.duration, 0) / l.length;
@@ -320,10 +332,18 @@ export async function run(t) {
 
 // Caption keys the view asks for: string literals that start the first argument of cap(…) or follow
 // a ? or : inside it (cap(ok ? 'a' : 'b', …)).
-// Turn-only shortcuts per route × tolerance cell (RV-reckon-homing B1, the reviewer's definitions; constants
-// cross-validated in two folds). items: [{ p: { route, tolerance, variant? }, it }]. Returns the rows and
-// prints a report; the caller decides what to assert. Point answers are angles (deg clockwise from the final
-// heading); return answers are positions { x right, z ahead } in metres.
+// Shortcuts per route × tolerance cell (RV-reckon-homing B1; the lead's decision (a), 13 Nov). Bounded at
+// chance + 10 points: the answers that need no integration at all (a fixed angle or place, turn around, the
+// mirror, the turns reversed, heading not updated). Reported as information: the turn-only family (equal
+// legs, the net-turn prior, the last turn): it integrates every turn, which is partial path integration, and on
+// 2-leg and small-turn routes the start always lies on the side of the net turn, so no generator can hold it
+// down there. Return items also report "true direction + average distance" (it needs the direction solved).
+// Reviewer's definitions; fitted constants cross-validated in two folds. items: [{ p: { route, tolerance,
+// variant? }, it }]. Returns { rows, bounded, exemptFixed } and prints the tables.
+// exemptFixed: the cells where R1's item rules (reversed, heading not updated and mirror always miss, keys
+// 20° off the axis) leave no room to spread the answer past chance + 10 for one fixed angle: minimax over
+// route pools (B3's progress notes): routes 0, 1, 4 at every tolerance, route 2 at 40° and 30°.
+export const EXEMPT_FIXED = ['0/0', '0/1', '0/2', '1/0', '1/1', '1/2', '4/0', '4/1', '4/2', '2/0', '2/1'];
 export function shortcutReport(def, items, label) {
   const sgn = (x) => (x >= 0 ? 1 : -1), sum = (a) => a.reduce((x, y) => x + y, 0);
   const at = (a, r) => ({ x: r * Math.sin(rad(a)), z: r * Math.cos(rad(a)) });
@@ -345,49 +365,60 @@ export function shortcutReport(def, items, label) {
     const keyOf = (it) => (ret ? it.keyDeg : it.key), T = (it) => sum(it.turns), Tl = (it) => it.turns.at(-1);
     const rate = (f) => list.filter(f).length / list.length;
     const meanD = sum(list.map((x) => x.it.distance)) / list.length;
-    const S = {};
-    // the listed turn-only strategies (bounded)
+    const B = {}, I = {};
     if (!ret) {
-      S['equal legs'] = rate((x) => hitA(x, eqKey(x.it).key));
-      S['180 − ΣT/2'] = rate((x) => hitA(x, 180 - T(x.it) / 2));
-      S['180 − c·ΣT'] = cvBest(list, Array.from({ length: 41 }, (_, i) => i * 0.025), (x, c) => hitA(x, 180 - c * T(x.it)));
-      S['the 130° prior'] = cvBest(list, Array.from({ length: 37 }, (_, i) => i * 5), (x, A) => hitA(x, 180 - sgn(T(x.it)) * A));
-      S['reverse the last turn'] = rate((x) => hitA(x, 180 - Tl(x.it)));
-      S['undo the last turn'] = rate((x) => hitA(x, -Tl(x.it)));
-      S['always the same angle'] = cvBest(list, Array.from({ length: 72 }, (_, i) => i * 5), (x, a) => hitA(x, a));
-      S['mirror'] = rate((x) => hitA(x, 360 - keyOf(x.it)));
+      B['fixed angle'] = cvBest(list, Array.from({ length: 72 }, (_, i) => i * 5), (x, a) => hitA(x, a));
+      B['turn around'] = rate((x) => hitA(x, 180));
+      B['mirror'] = rate((x) => hitA(x, 360 - keyOf(x.it)));
+      B['turns reversed'] = rate((x) => hitA(x, 180 - T(x.it)));
+      B['heading not updated'] = rate((x) => hitA(x, keyOf(x.it) + T(x.it)));
+      I['equal legs'] = rate((x) => hitA(x, eqKey(x.it).key));
+      I['180 − ΣT/2'] = rate((x) => hitA(x, 180 - T(x.it) / 2));
+      I['net-turn prior'] = cvBest(list, Array.from({ length: 37 }, (_, i) => i * 5), (x, A) => hitA(x, 180 - sgn(T(x.it)) * A));
+      I['back along the leg before the last turn'] = rate((x) => hitA(x, 180 - Tl(x.it)));
     } else {
       const grid = [], sgrid = [];
       for (let a = 0; a < 360; a += 10) for (let r = 3; r <= 20; r += 1) grid.push([a, r]);
       for (let A = 0; A <= 180; A += 10) for (let r = 3; r <= 20; r += 1) sgrid.push([A, r]);
-      S['equal legs'] = rate((x) => { const n = x.it.legs.length, e = eqKey(x.it, x.it.pathLength / n); return hitP(x, at(e.key, e.distance)); });
-      S['equal legs, average distance'] = rate((x) => hitP(x, at(eqKey(x.it).key, meanD)));
-      S['the 130° prior'] = cvBest(list, sgrid, (x, g) => hitP(x, at(180 - sgn(T(x.it)) * g[0], g[1])));
-      S['reverse the last turn, average distance'] = rate((x) => hitP(x, at(180 - Tl(x.it), meanD)));
-      S['always the same place'] = cvBest(list, grid, (x, g) => hitP(x, at(g[0], g[1])));
-      S['last leg only'] = rate((x) => hitP(x, at(180, x.it.legs.at(-1))));
-      S['average distance'] = rate((x) => hitP(x, at(180, meanD)));
-      S['mirror'] = rate((x) => hitP(x, at(360 - keyOf(x.it), x.it.distance)));
-      // diagnostics with the true direction (they need the direction solved): reported, not bounded
-      S['(true direction, average distance)'] = rate((x) => hitP(x, at(keyOf(x.it), meanD)));
-      S['(true direction, last leg)'] = rate((x) => hitP(x, at(keyOf(x.it), x.it.legs.at(-1))));
+      B['fixed place'] = cvBest(list, grid, (x, g) => hitP(x, at(g[0], g[1])));
+      B['turn around, average distance'] = rate((x) => hitP(x, at(180, meanD)));
+      B['turn around, last leg'] = rate((x) => hitP(x, at(180, x.it.legs.at(-1))));
+      B['mirror'] = rate((x) => hitP(x, at(360 - keyOf(x.it), x.it.distance)));
+      B['turns reversed'] = rate((x) => hitP(x, at(180 - T(x.it), x.it.distance)));
+      B['heading not updated'] = rate((x) => hitP(x, at(keyOf(x.it) + T(x.it), x.it.distance)));
+      I['equal legs'] = rate((x) => { const n = x.it.legs.length, e = eqKey(x.it, x.it.pathLength / n); return hitP(x, at(e.key, e.distance)); });
+      I['net-turn prior'] = cvBest(list, sgrid, (x, g) => hitP(x, at(180 - sgn(T(x.it)) * g[0], g[1])));
+      I['true direction + average distance'] = rate((x) => hitP(x, at(keyOf(x.it), meanD)));
     }
-    const bounded = Object.entries(S).filter(([n]) => !n.startsWith('('));
-    const worst = bounded.reduce((w, e) => (e[1] > w[1] ? e : w), ['', -1]);
-    rows.push({ cell: k, n: list.length, chance: ch, S, worst: worst[0], worstRate: worst[1], over: worst[1] > ch + 0.10 });
+    rows.push({ cell: k, rt: k.split('/').slice(1).join('/'), n: list.length, chance: ch, B, I });
   }
   rows.sort((a, b) => a.cell.localeCompare(b.cell, 'en', { numeric: true }));
-  const lines = [`       ${label}: turn-only shortcuts per route/tolerance cell (bound chance + 10 points; n per cell ${Math.min(...rows.map((r) => r.n))}–${Math.max(...rows.map((r) => r.n))})`];
+  const lines = [`       ${label}: shortcuts per route/tolerance cell (bounded at chance + 10 points; n per cell ${Math.min(...rows.map((r) => r.n))}–${Math.max(...rows.map((r) => r.n))})`];
+  const mat = (rv, f) => [0, 1, 2].map((ti) => rv.filter((r) => r.cell.endsWith('/' + ti)).map((r) => String(Math.round(100 * f(r))).padStart(3)).join('')).join(' |');
   for (const v of [...new Set(rows.map((r) => r.cell.split('/')[0]))]) {
     const rv = rows.filter((r) => r.cell.startsWith(v + '/'));
-    for (const nm of Object.keys(rv[0].S)) {
-      const over = rv.filter((r) => r.S[nm] > r.chance + 0.10), w = rv.reduce((m, r) => (r.S[nm] - r.chance > m.d ? { d: r.S[nm] - r.chance, r } : m), { d: -1, r: null });
-      lines.push(`         ${v} · ${nm}: over in ${over.length} of ${rv.length} cells; worst ${w.r.cell} ${pct(w.r.S[nm])} vs chance ${pct(w.r.chance)}`);
+    for (const [kind, key] of [['bounded', 'B'], ['info', 'I']]) {
+      for (const nm of Object.keys(rv[0][key])) {
+        const over = rv.filter((r) => r[key][nm] > r.chance + 0.10), w = rv.reduce((m, r) => (r[key][nm] - r.chance > m.d ? { d: r[key][nm] - r.chance, r } : m), { d: -1, r: null });
+        lines.push(`         ${v} · ${kind} · ${nm}: over in ${over.length} of ${rv.length}; worst ${w.r.rt} ${pct(w.r[key][nm])} vs chance ${pct(w.r.chance)}`);
+      }
     }
-    lines.push(`         ${v} · cells within the bound for every listed strategy: ${rv.filter((r) => !r.over).map((r) => r.cell).join(', ') || 'none'}`);
+    const fixedName = v === 'return' ? 'fixed place' : 'fixed angle';
+    lines.push(`         ${v} · ${fixedName} by route 0–7 (rows: tolerance level 0 | 1 | 2), %: ${mat(rv, (r) => r.B[fixedName])}`);
+    lines.push(`         ${v} · equal legs by route 0–7, %: ${mat(rv, (r) => r.I['equal legs'])}`);
+    lines.push(`         ${v} · chance + 10 by tolerance level, %: ${[0, 1, 2].map((ti) => pct(rv.find((r) => r.cell.endsWith('/' + ti)).chance + 0.1)).join(' / ')}`);
   }
   console.log(lines.join('\n'));
   return rows;
+}
+
+export function boundShortcuts(t, rows) {
+  for (const nm of [...new Set(rows.flatMap((r) => Object.keys(r.B)))]) {
+    const fixed = nm.startsWith('fixed'), mine = rows.filter((r) => nm in r.B);
+    const over = mine.filter((r) => r.B[nm] > r.chance + 0.10 && !(fixed && EXEMPT_FIXED.includes(r.rt)));
+    const ex = fixed ? mine.filter((r) => EXEMPT_FIXED.includes(r.rt)).map((r) => `${r.cell} ${pct(r.B[nm])}`).join(', ') : '';
+    t.ok(over.length === 0, `${nm}: within chance + 10 in every cell${fixed ? ' (structural exceptions, reported: ' + ex + ')' : ''}` + (over.length ? ` — over: ${over.map((r) => r.cell + ' ' + pct(r.B[nm])).join(', ')}` : ''));
+  }
 }
 
 export function viewCaptionKeys(id) {

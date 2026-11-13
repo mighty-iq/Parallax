@@ -25,10 +25,10 @@
       { id: 'walk', label: 'Walk back', text: 'On return items: turn first, then hold Walk (key ↑) and let go to stop; Back (↓) steps back. Tap Here (Enter) where you think the start is.', variant: 'return' },
       { id: 'comfort', label: 'Comfort', text: 'The view moves on its own during the walk. Pause, or stop the session, if it makes you feel unwell.' },
     ],
-    // 2 legs, medium turn, textured ground, steady speed, 40°: seed 10 walks 8.3 m, turns 88.5° right,
-    // walks 8.7 m; the start is 137° to the right, 12 m away.
+    // 2 legs, medium turn, textured ground, steady speed, 40°: seed 34 walks 8.0 m, turns 100.6° right,
+    // walks 10.2 m; the start is 138° to the right, 11.7 m away.
     demo: [
-      { params: { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 }, seed: 10, kind: 'right' },
+      { params: { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 }, seed: 34, kind: 'right' },
     ],
     practice: [
       { variant: 'point', task: 'heading', route: 0, flow: 2, speed: 0, tolerance: 0 }, // short-lived dots: no ground pattern to match

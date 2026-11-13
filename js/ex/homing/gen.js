@@ -19,15 +19,21 @@
    turns, + 0.55 per extra leg, + 0.4 per turn size, + 0.4 per landmark level, + 0.9 per tolerance level).
    estMs(params): expected time from the first frame to the answer, for session timing.
 
-   Answer and shortcut control (see build). Each item draws a target answer uniformly over the allowed
-   directions; candidate routes steer their last leg onto it when a leg of allowed length can (a 2 × 2
-   solve), so answers spread evenly wherever the geometry lets them. Two answers that ignore the path's
-   shape must miss by more than the tolerance (+ 2°): "turn around" (180°; it may be right only when the
-   target itself lies within the tolerance of 180°) and "the sum of the turns reversed" (180° − Σ turns,
-   as if the whole walk had been along the first leg). Lower priority: turning alone, with the legs taken
-   as equal, misses too. With 2 legs the start always lies between the two shortcut answers, which are
-   the single turn t apart, so one of them is within the tolerance whenever t ≤ 2 × tol + 4: that is why
-   the route dim has no "2 legs, small turns" level; DEGENERATE lists any remaining such cell (none).
+   Answer and shortcut control (see build). Each item draws one target answer, uniformly over the allowed
+   directions, and keeps it across its attempts (a failed attempt does not trade a hard-to-reach answer for
+   an easy one); candidate routes steer their last leg onto it when a leg of allowed length can (a 2 × 2
+   solve), so answers spread evenly wherever the geometry lets them. The answers that need no integration
+   must miss by more than the tolerance (+ 2°): "turn around" (180°; it may be right only when the target
+   itself lies within the tolerance of 180°), "the sum of the turns reversed" (180° − Σ turns, as if the
+   whole walk had been along the first leg) and "heading not updated" (key + Σ turns); a fixed angle stays
+   within chance + 10 points where the routes allow (tests/node/homing.test.mjs, EXEMPT_FIXED).
+   Turn-only answers (the legs taken as equal, "the start is on the side I turned") are not held down:
+   they integrate every turn, which is partial path integration, and on 2-leg and small-turn routes the
+   start always lies on the side of the net turn, so no route choice could hide it (RV-reckon-homing B1,
+   the lead's decision (a)); the generator only prefers routes where equal legs miss, as a tie-break.
+   With 2 legs the start always lies between "turn around" and "reversed", which are the single turn t
+   apart, so one of them is within the tolerance whenever t ≤ 2 × tol + 4: that is why the route dim has no
+   "2 legs, small turns" level; DEGENERATE lists any remaining such cell (none).
 
    Shared model (lib, also used by Reckon, EX-12, and both views): deterministic trigonometry, route(),
    steer(), drawTarget(), search() (the candidate loop), routeOk(), and the motion model: every leg and
@@ -319,15 +325,19 @@
   // strict: null unless the best candidate is on target (generate's first STRICT attempts: a target the
   // geometry cannot reach is redrawn instead of leaving an off-target key, which would bunch answers
   // where routes naturally end, mostly behind).
-  function build(r, p, strict) {
+  function build(r, p, strict, target) {
     var rt = ROUTES[p.route], tol = TOLERANCES[p.tolerance], degen = degenerate(p);
-    var h0 = rnd(r.float(0, 360), 100), target = drawTarget(r), prefer = r.chance(0.5) ? 'around' : 'reversed';
+    var h0 = rnd(r.float(0, 360), 100), prefer = r.chance(0.5) ? 'around' : 'reversed';
+    if (!isNum(target)) target = drawTarget(r);
     var aroundFree = adiff(target, 180) <= tol + MARGIN;
     var best = search(r, {
       n: rt.legs, band: TURNS[rt.turns], h0: h0, target: target, good: 12, full: 14, patience: EQUAL_TRIES,
       score: function (g, legs, turns) {
         var sh = shortcuts(turns), missA = adiff(g.key, sh.around) > tol + MARGIN, missR = adiff(g.key, sh.reversed) > tol + MARGIN;
-        var need = degen ? (prefer === 'around' ? missA : missR) : missR && (missA || aroundFree);
+        // "heading not updated" (key + Σ turns, as if you still faced the way you started) misses too, as in
+        // Reckon: a net turn within tol + 2° of a whole circle would let it pass (RV B1, route 5)
+        var missH = adiff(sumTurns(turns), 0) > tol + MARGIN;
+        var need = missH && (degen ? (prefer === 'around' ? missA : missR) : missR && (missA || aroundFree));
         var sc = (need ? 8 : 0) + (adiff(g.key, target) <= TARGET_WIN ? 4 : 0);
         if (sc >= 12) {
           var eq = route(h0, legs.map(function () { return 1; }), turns);
@@ -370,9 +380,11 @@
   var STRICT = 8;
   function spreads(p) { var rt = ROUTES[p.route]; return rt.legs >= 3 && rt.turns >= 1; }
   function generate(rng, params) {
-    var p = normParams(params), item = null, strict = spreads(p) ? STRICT : 0;
+    // one target answer per item, kept across attempts: a failed attempt must not trade a hard-to-reach answer
+    // for an easy one, or answers pile up where routes end easily (RV B1: a fixed angle then beats chance + 10)
+    var p = normParams(params), item = null, strict = spreads(p) ? STRICT : 0, target = drawTarget(rng.fork('target'));
     for (var i = 0; i < 50 && !item; i++) {
-      var it = build(i === 0 ? rng : rng.fork('retry' + i), p, i < strict);
+      var it = build(i === 0 ? rng : rng.fork('retry' + i), p, i < strict, target);
       if (it && validate(it) === true) item = it;
     }
     if (!item) { item = fallback(rng, p); item.fallback = true; } // ARCHITECTURE §5: the engine voids fallback trials
