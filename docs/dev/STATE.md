@@ -44,6 +44,7 @@ Updated 2026-11-13 19:10 UTC. All 19 exercises are active in index.html (Knots a
 - None blocking. (D1–D3 answered; the analogical test is for v1.2.)
 
 ## Last verified
+- 2fe5c77+: node suite without angles/patfold/cubes/fold: 3,149 checks in 27 files pass (1,003 s); B5's four pass separately (625eb27).
 - 110eab5: node angles/patfold/cubes/fold 391 checks pass; section/overlap 373 checks pass.
 - v1.0.0 (f10f7db): tests/run_all.sh 25 files, 5,117 checks, 0 failed (6 Nov); GitHub Actions green.
 

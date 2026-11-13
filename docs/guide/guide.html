@@ -71,6 +71,59 @@
   </div>
 </section>
 
+<!-- ======================================================= 2b · what's new in 1.1 -->
+<section class="page" id="new" data-chapter="What's new in 1.1">
+  <div class="content">
+    <div class="chapter"><span class="no">Version 1.1.0 · 13 November 2026</span><h1>What's new in 1.1</h1></div>
+    <p class="lead">Version 1.1 brings one honest clock, phones as first-class devices, path integration without landmarks, knots, practice in the question formats of an admissions test, and a careful look at which exercises overlap with published tests. A record from 1.0 carries over unchanged.</p>
+    <div class="new-grid">
+      <div class="panel">
+        <h3>One clock that counts honestly</h3>
+        <p>Version 1.0 measured a session with four clocks that disagreed: a countdown that stood still while you answered quickly, a pause that did not stop the session, and practice minutes that dropped any gap of more than 90 seconds whole. Now one active-time clock runs during items, feedback, show-me and tutorials, and stops for the pause sheet, any open sheet or dialog, a hidden tab, and after 60 seconds without input. Its minutes end Train, Path and Speed sessions, and the HUD, the summary, the Log, the share card and the weekly goal all show the same number.</p>
+        <p>Fixed along the way: a reload no longer starts a session by itself or spends the Daily Challenge, unanswered Daily items no longer count as wrong, a Spatial Check no longer counts as a practice session, Progress counts only answered items, and the Sounds setting now plays short tones. <span class="see">Chapter 4, page <span class="pgref" data-for="clock"></span></span></p>
+      </div>
+      <div class="panel">
+        <h3>Phones, first-class</h3>
+        <p>Every scored item of all nineteen exercises and six probes now fits a 360 × 640 screen without scrolling, stimulus and answers together; held sideways, items switch to two columns. During an item the header steps aside and the goal and tips wait behind Help. Turning the phone while an item plays voids that trial, because the item no longer looks as it did.</p>
+        <p>Homing was rebuilt for touch: drag the view to turn, buttons for 1° and 5° steps, and slower, smoother motion (1.8 m/s, 45°/s). On iPhones and in apps' built-in browsers, Parallax says where your progress is stored and offers a backup. <span class="see">Chapter 2, page <span class="pgref" data-for="phone"></span></span></p>
+      </div>
+      <div class="panel">
+        <h3>Reckon <span class="spec">EX-12</span></h3>
+        <p>Dead reckoning with nothing to steer by: a walk across an empty plain, then point home or walk home. Feedback gives the angle error, the distance error and the drift per metre walked, and names your own habit over the last 20 routes.</p>
+        <p>Reckon exists because a community member pointed out that Homing's landmarks correct the very errors that path-integration training should work on. Homing stays as the landmark-aided stage before it. Experimental. <span class="see">Page <span class="pgref" data-for="ex-reckon"></span></span></p>
+      </div>
+      <div class="panel">
+        <h3>Knots <span class="spec">EX-13</span></h3>
+        <p>Pull both ends: does a knot remain? Which marked crossing, switched, would untie the rope, or tie it? Are two loops linked? Every item is proved before you see it, by the moves that take a rope apart, by a determinant or by the Jones polynomial, and Show me replays the proof on the rope you saw. <span class="see">Page <span class="pgref" data-for="ex-knots"></span></span></p>
+      </div>
+      <div class="panel">
+        <h3>Six DAT-style formats <span class="spec">EX-14 to EX-19</span></h3>
+        <p>Openings, Missing View, Angles, Hole Punch, Painted Cubes and Form practise the six question formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). They join Train only when you switch on the DAT-style focus. Section practice rehearses them in the test's order against one clock, with a review at the end and no score prediction. <span class="see">Page <span class="pgref" data-for="dat"></span></span></p>
+      </div>
+      <div class="panel">
+        <h3>Test hygiene</h3>
+        <p>Practising a kind of puzzle raises scores on tests that use it. Exercises whose formats published tests share now carry an "Also in tests" note; About has a Test hygiene section; later Spatial Checks ask one question about outside practice; and an optional "Taking a test soon?" helper leaves the matching exercises out of Train until the day of your test. <span class="see">Chapter 8, page <span class="pgref" data-for="hygiene"></span></span></p>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <span class="label">Your record</span>
+        <p>Version 1.1 stores the record in format 2. A 1.0 record upgrades when 1.1 first opens it, with nothing lost; a 1.0 tab still open elsewhere then runs from memory instead of overwriting the newer record. Every trial gains two columns, the screen class (small or large) and the input (mouse, touch, pen or keys), so that results can be compared like with like. Homing's items changed, so its new trials are logged as version 2, apart from the old ones.</p>
+      </div>
+      <div class="panel">
+        <span class="label">Smaller changes</span>
+        <ul class="dash">
+          <li>The Daily Challenge follows your local date. It leaves out Track, Homing, Reckon and the DAT-style formats, so it is the same on every device, and an attempt left part-way goes on where it stopped.</li>
+          <li>21 achievements: one more, for a full Section practice.</li>
+          <li>The Spatial Check states its real length: 15 to 25 minutes.</li>
+          <li>One CSV format for both trial exports; Path asks once before its first item; Pause reads Resume while paused; Threshold results carry units.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
+  </div>
+</section>
+
 <!-- ======================================================= 3 · chapter 1 -->
 <section class="page" id="ch-what" data-chapter="01 · What Parallax is">
   <div class="content">
@@ -90,9 +143,9 @@
       <div>
         <h2>What you get</h2>
         <ul class="dash">
-          <li><b>Eleven exercises:</b> mental rotation in 3D and 2D, paper folding, cube nets, cross-sections, orthographic views, perspective taking, spatial span, hidden figures, experimental navigation, and 3D object tracking as attention practice.</li>
+          <li><b>Nineteen exercises:</b> mental rotation in 3D and 2D, paper folding, cube nets, cross-sections, orthographic views, perspective taking, spatial span, hidden figures, knots, experimental navigation with and without landmarks, and 3D object tracking as attention practice; plus six in the question formats of the Dental Admission Test's Perceptual Ability Test, which join Train only when you ask for them.</li>
           <li><b>A new seed every time,</b> so each item is generated fresh and checked by a solver: exactly one right answer, wrong options that differ visibly, nothing decisive hidden.</li>
-          <li><b>Five ways to practise and one to measure, on one record:</b> Train, Path, Threshold, Speed and Free play, and the Spatial Check; plus a Daily Challenge shared by the community.</li>
+          <li><b>Five ways to practise and one to measure, on one record:</b> Train, Path, Threshold, Speed and Free play, and the Spatial Check; plus a Daily Challenge shared by the community, and Section practice, a timed rehearsal of the six test formats.</li>
           <li><b>Feedback that explains.</b> After a miss, a slow "show me" replays the solution, drawn from the same model that graded your answer.</li>
           <li><b>Honest progress:</b> levels from 1 to 100 with a likely range and the real settings you handle, a weekly goal with grace, achievements for skills.</li>
           <li><b>Short tutorials</b> (Watch, Try, Go) and two strategy cards per exercise, with advice on when to switch.</li>
@@ -106,13 +159,15 @@
           <li><b>Not a test of intelligence, and not a medical or diagnostic tool.</b> It shows no IQ, no index, no percentile and no "brain age".</li>
           <li><b>Not a copy of a published test.</b> No exercise clones Wechsler Block Design or Visual Puzzles, and no item comes from a published test.</li>
           <li><b>Not a ranking.</b> Levels compare you with your own past on one exercise. There are no leaderboards and no points for time spent.</li>
-          <li><b>Not all one thing.</b> Track (EX-01) is labelled attention practice: following moving objects is linked to attention and working memory rather than to visuospatial ability. Homing (EX-11) is experimental.</li>
+          <li><b>Not all one thing.</b> Track (EX-01) is labelled attention practice: following moving objects is linked to attention and working memory rather than to visuospatial ability. Angles (EX-16) is labelled perceptual-judgement practice. Homing (EX-11) and Reckon (EX-12) are experimental.</li>
+          <li><b>Not a test-preparation promise.</b> Practising a test's formats raises scores on those formats; Parallax has not measured any effect on the tests themselves and predicts no score.</li>
           <li><b>Not online:</b> no account, ads or analytics.</li>
         </ul>
         <h2>Why the careful wording</h2>
         <p>Reviews of cognitive training find extensive evidence that trained tasks improve, less for closely related tasks, and little for distant tasks or everyday life <span class="cite">(Simons et al., 2016)</span>. US consumer-protection guidance judges claims by their overall impression, implied claims included; "may" or "helps" does not rescue an unsupported claim <span class="cite">(FTC, 2022)</span>. Parallax tries to meet that standard.</p>
       </div>
     </div>
+    <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
   </div>
 </section>
 
@@ -130,7 +185,7 @@
             <li><b>The repository.</b> Download or clone it and open <code>index.html</code>.</li>
             <li><b>A web address.</b> Anyone can host a copy on GitHub Pages (chapter 11 shows how).</li>
           </ul>
-          <p>Phones work. A larger screen helps Track and Homing. The 3D exercises need WebGL; where it is missing they say so, and the other exercises still work.</p></li>
+          <p>Phones work, upright or sideways (page <span class="pgref" data-for="phone"></span>). The 3D exercises need WebGL; where it is missing they say so, and the other exercises still work.</p></li>
         <li><h3>Meet the Chimera pop-up</h3>
           <p>Every time Parallax opens, it says that it was built by the Chimera community on Discord, with a button to join and the address, <a href="https://discord.gg/chmr">discord.gg/chmr</a>, ready to copy (some previews block new tabs, so the address is always there as text). Come and say hi, share results, suggest exercises. <b>Start training</b> closes it.</p></li>
         <li><h3>Watch, Try, Go</h3>
@@ -157,7 +212,7 @@
   <div class="content">
     <ol class="steps steps-2" start="4">
       <li><h3>Take two baseline Spatial Checks</h3>
-        <p>The Spatial Check measures where you start, on tasks you never practise: about 15 minutes, no feedback. Take the first after the tour and the second at your next visit, at least about 12 hours later.</p>
+        <p>The Spatial Check measures where you start, on tasks you never practise: 15 to 25 minutes, no feedback. Take the first after the tour and the second at your next visit, at least about 12 hours later.</p>
         <p>Why two? Retaking any test raises scores on its own, most of all at the second sitting <span class="cite">(Scharfen et al., 2018)</span>. A second baseline takes up much of that familiarity gain, so later changes mean more. If the two differ a lot, Parallax asks for a third. Skipping only means your transfer report starts later.</p></li>
       <li><h3>Train about 20 minutes, three times a week</h3>
         <p><b>Today</b> proposes three exercises: a <i>focus</i> (one you pin, one not tried yet, or the one where you improve fastest), a <i>review</i> (one due for another look) and a <i>variety</i> pick (the one practised least).</p>
@@ -188,6 +243,7 @@
         <ul class="dash">
           <li><b>Answer</b> by tap, click or the keys 1–9; Enter confirms a choice of two; Space goes on; <b>?</b> lists the keys.</li>
           <li><b>Esc pauses:</b> the clock stops and the item hides. Pausing while a moving display plays voids that item; it is replaced and never counts.</li>
+          <li><b>The HUD</b> shows the time left, "about 12 min left", counted only while you are active, and the session ends near its length (chapter 4).</li>
           <li><b>After an answer:</b> a tick or a cross with a word and a colour (never colour alone), and the right answer. After a miss, <b>Show me</b> (S) plays a slow solution you can pause, step and replay; after three automatic replays it waits for you to ask (<b>Why?</b>). A right but slow answer offers <b>See solution</b>.</li>
           <li><b>Skip this item</b> counts nowhere. Trials where the screen stuttered are void and never count against you.</li>
         </ul>
@@ -213,19 +269,35 @@
 </section>
 
 <!-- ======================================================= 5c · on a phone, and sharing -->
-<section class="page" data-chapter="02 · Quick start">
+<section class="page" id="phone" data-chapter="02 · Quick start">
   <div class="content">
     <h2>On a phone, and sharing</h2>
     <div class="phone-row">
-      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-today-phone.png" alt="Today on a phone"></div>
-        <figcaption><span class="label">Fig. 2.7</span>Today on a phone, 412 pixels wide.</figcaption></figure>
-      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-player-phone.png" alt="An item of Fold on a phone"></div>
-        <figcaption><span class="label">Fig. 2.8</span>An item on a phone.</figcaption></figure>
+      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-phone-item.png" alt="An item of Rotate on a 360-pixel phone: the status strip with Help and Pause, the reference figure, four options and Confirm"></div>
+        <figcaption><span class="label">Fig. 2.7</span>A Rotate item on a phone 360 pixels wide: the stimulus, the options and Confirm on one screen.</figcaption></figure>
+      <figure class="app-fig phone"><div class="shot"><img src="../shots/app-phone-help.png" alt="The same item with Help open: the goal and a tip over the item"></div>
+        <figcaption><span class="label">Fig. 2.8</span>Help shows the goal and the current tip over the item.</figcaption></figure>
       <div>
-        <p>Every screen works from 360 pixels wide up, with no sideways scrolling and touch targets of at least 44 pixels; on phones the main screens move to a tab bar at the bottom. Track and Homing are easier to judge on a larger screen, and their ratings are kept apart by screen size.</p>
-        <figure class="app-fig"><div class="shot"><img src="../shots/app-share.png" alt="A share card for a session, carrying the Discord link"></div>
-          <figcaption><span class="label">Fig. 2.9</span>A share card: results and the Chimera link, no ranking. Copy text is offered too.</figcaption></figure>
+        <p>Every screen works from 360 pixels wide up, with no sideways scrolling and touch targets of at least 44 pixels; on phones the main screens move to a tab bar at the bottom.</p>
+        <h3>During an item</h3>
+        <ul class="dash">
+          <li>The header steps aside. One strip remains: the exercise, the count or the time left, Help and Pause.</li>
+          <li>Every scored item fits a 360 × 640 screen without scrolling, the stimulus and every answer control together. Held sideways, items switch to two columns, the item on the left and the answers on the right.</li>
+          <li>Help shows the goal and the tip; the next item closes it. On a larger screen both sit above the item.</li>
+          <li>Turning the phone, or a window changing shape, while an item plays voids that trial: it is replaced and never counts.</li>
+          <li>Track, Homing, Reckon and Angles keep separate ratings for small screens (a short side under 600 pixels) and larger ones.</li>
+        </ul>
       </div>
+    </div>
+    <div class="cols">
+      <div>
+        <h3>Where your progress lives on a phone</h3>
+        <p>On iPhone and iPad, Safari can clear a site's storage after seven days of use without a visit, and an app's built-in browser, Discord's included, keeps a copy of its own. On these devices the welcome says so before you start, and later offers a backup whenever none was made for 14 days. Adding Parallax to the home screen (Share, then Add to Home Screen) gives it a lasting home; served from GitHub Pages, it then has its own icon. Parallax also asks the browser to keep its storage, which the browser may decline. A backup is the safe choice on every device (chapter 9).</p>
+        <h3>Sharing</h3>
+        <p>A share card carries your results and the Chimera link, and no ranking. Where the device allows it, Share… hands the card to another app; Copy text is always there.</p>
+      </div>
+      <figure class="app-fig"><div class="shot"><img src="../shots/app-share.png" alt="A share card for a session, carrying the Discord link"></div>
+        <figcaption><span class="label">Fig. 2.9</span>A share card: results and the Chimera link, no ranking.</figcaption></figure>
     </div>
     <div class="cols push">
       <div class="panel">
@@ -233,8 +305,9 @@
         <ul class="dash">
           <li><b>Theme:</b> auto, light or dark. <b>Text size:</b> 90 to 150 %.</li>
           <li><b>Motion:</b> follow the device, reduce, or full. Reduce shortens animations around the exercises; moving stimuli, such as the spheres in Track, still move.</li>
-          <li><b>Sounds</b> (off by default) and <b>key hints</b> on buttons.</li>
+          <li><b>Sounds</b> (off by default): a short tone after each answer, high when right and low when not, never while an item plays. <b>Key hints</b> on buttons.</li>
           <li><b>Session length</b> and <b>weekly goal</b>, as above.</li>
+          <li><b>Test practice and test hygiene:</b> the focus on six test formats (page <span class="pgref" data-for="dat"></span>) and "Taking a test soon?" (page <span class="pgref" data-for="hygiene"></span>).</li>
           <li><b>Your data:</b> back up, export, import and undo (chapter 9).</li>
         </ul>
         <p class="note">Everything is playable by keyboard, touch targets are at least 44 pixels, nothing flashes faster than three times a second, and the device's reduced-motion setting is respected outside the stimulus itself.</p>
@@ -243,11 +316,11 @@
         <span class="label">Where things are</span>
         <ul class="dash">
           <li><b>Today:</b> the session plan, the weekly goal, the Daily Challenge, the Spatial Check.</li>
-          <li><b>Library:</b> every exercise, with How to play, strategies and ways to practise.</li>
+          <li><b>Library:</b> every exercise, with How to play, strategies and ways to practise; Section practice.</li>
           <li><b>Progress:</b> levels, curves, personal bests, the Spatial Check report, achievements.</li>
           <li><b>Log:</b> every session and trial; export and import.</li>
           <li><b>Lab:</b> protocols, the research export, the self-experiment.</li>
-          <li><b>Settings</b> and <b>About</b>; the Chimera Discord link sits in the header and footer.</li>
+          <li><b>Settings</b> and <b>About</b>, with its Test hygiene section; the Chimera Discord link sits in the header and footer.</li>
         </ul>
       </div>
     </div>
@@ -266,6 +339,7 @@
         <tr><td class="mono">SR</td><td>Speeded rotation</td><td>Turning simple shapes in your head quickly; the fast cousin of Vz.</td></tr>
         <tr><td class="mono">CF</td><td>Flexibility of closure</td><td>Finding a known shape hidden in a busy, distracting pattern.</td></tr>
         <tr><td class="mono">MV</td><td>Visual memory</td><td>Holding a picture or a pattern in mind over a short time (under about 30 seconds).</td></tr>
+        <tr><td class="mono">LE</td><td>Length estimation</td><td>Judging lengths and sizes by eye, without tools; here, how wide angles open (Angles only).</td></tr>
         <tr><td class="mono">PT</td><td>Perspective taking</td><td>Imagining what you would see, or where things would be, from another place.</td></tr>
         <tr><td class="mono">WM</td><td>Working memory</td><td>Holding and updating information while you use it; here, a sequence of places.</td></tr>
         <tr><td class="mono">AT</td><td>Attentional tracking</td><td>Following several moving objects at once.</td></tr>
@@ -274,7 +348,7 @@
         <tr><td class="mono">VB</td><td>Verbal reasoning</td><td>Word analogies, used as the Spatial Check's non-spatial control.</td></tr>
       </tbody>
     </table>
-    <p class="note">Vz, SR, CF and MV are narrow abilities of visual processing in the Cattell–Horn–Carroll model <span class="cite">(Schneider &amp; McGrew, 2018; McGrew, 2017)</span>; the others are Parallax's own labels. Multiple-object tracking relates to attention and working memory instead <span class="cite">(Meyerhoff et al., 2017; Treviño et al., 2021)</span>.</p>
+    <p class="note">Vz, SR, CF, MV and LE are narrow abilities of visual processing in the Cattell–Horn–Carroll model <span class="cite">(Schneider &amp; McGrew, 2018; McGrew, 2017)</span>; LE is the nearest of them for judging angles by eye. The others are Parallax's own labels. Multiple-object tracking relates to attention and working memory instead <span class="cite">(Meyerhoff et al., 2017; Treviño et al., 2021)</span>.</p>
 
     <h2>Four kinds of spatial task</h2>
     <p>Researchers sort spatial tasks along two lines <span class="cite">(Uttal et al., 2013; Newcombe &amp; Shipley, 2015)</span>: <b>intrinsic</b> tasks concern one object's shape, <b>extrinsic</b> tasks the relations between objects; <b>static</b> tasks transform nothing, <b>dynamic</b> tasks move or change something. Parallax uses this 2 × 2 as a checklist: the exercises cover three cells, and two Spatial Check probes the fourth (extrinsic-static), which is never trained. It is not a measuring model: in children, a four-factor version did not fit <span class="cite">(Mix et al., 2018)</span>.</p>
@@ -291,10 +365,47 @@
         <tr><td><span class="spec">EX-08</span> Orient</td><td class="mono">PT</td><td>extrinsic-dynamic</td><td>point on an arrow circle</td></tr>
         <tr><td><span class="spec">EX-09</span> Span</td><td class="mono">MV WM</td><td>outside the 2 × 2</td><td>forward; backward; a board that turns</td></tr>
         <tr><td><span class="spec">EX-10</span> Hidden</td><td class="mono">CF</td><td>intrinsic-static</td><td>which of five shapes is hidden</td></tr>
-        <tr><td><span class="spec">EX-11</span> Homing</td><td class="mono">NAV</td><td>extrinsic-dynamic</td><td>face the start after a walk</td></tr>
+        <tr><td><span class="spec">EX-11</span> Homing</td><td class="mono">NAV</td><td>extrinsic-dynamic</td><td>face the start after a walk, with landmarks on easier levels</td></tr>
       </tbody>
     </table>
     <p class="note push">Training items are untimed; Speed mode adds deadlines later. Fold, Nets and Views offer off-screen challenges with paper or blocks, for variety. In studies of children, hands-on training went with larger maths gains <span class="cite">(Hawes et al., 2022; Gilligan-Lee et al., 2023)</span>; these challenges are untested, and Parallax makes no maths claim.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 6b · chapter 3 intro, page 2: new in 1.1, the Library -->
+<section class="page" data-chapter="03 · The exercises">
+  <div class="content">
+    <h2>Eight more in version 1.1</h2>
+    <table class="small">
+      <thead><tr><th style="width:30mm">Exercise</th><th style="width:15mm">Codes</th><th style="width:30mm">Kind of task</th><th>Formats</th></tr></thead>
+      <tbody>
+        <tr><td><span class="spec">EX-12</span> Reckon</td><td class="mono">NAV</td><td>extrinsic-dynamic</td><td>point home; walk home; nothing to steer by</td></tr>
+        <tr><td><span class="spec">EX-13</span> Knots</td><td class="mono">Vz</td><td>intrinsic-dynamic</td><td>does a knot remain; which crossing unties or ties it; are two loops linked</td></tr>
+        <tr><td><span class="spec">EX-14</span> Openings</td><td class="mono">Vz</td><td>intrinsic-dynamic</td><td>which opening a solid passes through</td></tr>
+        <tr><td><span class="spec">EX-15</span> Missing View</td><td class="mono">Vz</td><td>intrinsic-static</td><td>two views given: pick the third</td></tr>
+        <tr><td><span class="spec">EX-16</span> Angles</td><td class="mono">LE</td><td>outside the 2 × 2</td><td>rank four angles by size</td></tr>
+        <tr><td><span class="spec">EX-17</span> Hole Punch</td><td class="mono">Vz</td><td>intrinsic-dynamic</td><td>fold a small sheet, punch once, unfold</td></tr>
+        <tr><td><span class="spec">EX-18</span> Painted Cubes</td><td class="mono">Vz</td><td>intrinsic-static</td><td>how many cubes have so many painted sides</td></tr>
+        <tr><td><span class="spec">EX-19</span> Form</td><td class="mono">Vz</td><td>intrinsic-dynamic</td><td>which solid a flat pattern folds into</td></tr>
+      </tbody>
+    </table>
+    <p class="note">EX-14 to EX-19 follow the question formats of an admissions test. They are always in the Library, Free play and Section practice, and join Train only when you switch on their focus (page <span class="pgref" data-for="dat"></span>). Together the exercises still cover three cells of the 2 × 2; extrinsic-static tasks remain untrained, for the Spatial Check.</p>
+    <div class="ex-card ex-extra">
+      <div class="cols">
+        <div>
+          <h2>The Library</h2>
+          <p>Every exercise has a Library card: its level with the likely range and the real settings you handle, its Path stage, How to play, the strategy cards, a "where it is used" note, any off-screen challenge, and buttons to practise it in each mode.</p>
+          <h3>Where spatial thinking is used</h3>
+          <p>Each card says honestly where its skill shows up, with the limitation next to it. Rotate's reads: <i>"Chemists ask the same question about molecules (is this drawing the same molecule or its mirror image?). Engineers turn objects in their heads too. Practice here improves this kind of task and often similar ones; it has not been shown to improve grades or job performance."</i></p>
+          <h3>Also in tests</h3>
+          <p>Exercises whose format parts of published tests share, such as Fold, Hidden, Views (counting), Nets, Span and the six test formats, carry an "Also in tests" note on their page and in How to play (page <span class="pgref" data-for="hygiene"></span>).</p>
+          <h3>Same model, same answer</h3>
+          <p>A solver checks every item before you see it; cheap shortcuts (counting cubes or holes, the odd one out, the shape as seen from here) must score near chance; show-me is drawn from the model that grades your answer. Chapter 8 gives the limits.</p>
+        </div>
+        <figure class="app-fig phone lib"><div class="shot"><img src="../shots/app-library-phone.png" alt="The Library on a phone: the Track card, with no level yet on a small screen"></div>
+          <figcaption><span class="label">Fig. 3.1</span>The Library on a phone. Track is rated per screen size, so it has no level here yet.</figcaption></figure>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1438,7 +1549,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
     if (pg.classList.contains('bare')) return;
     var head = document.createElement('header');
     head.className = 'run-head';
-    head.innerHTML = '<span><b>Parallax</b> · User guide 1.0.0</span><span>' + (pg.getAttribute('data-chapter') || '') + '</span>';
+    head.innerHTML = '<span><b>Parallax</b> · User guide 1.1.0</span><span>' + (pg.getAttribute('data-chapter') || '') + '</span>';
     var foot = document.createElement('footer');
     foot.className = 'folio';
     foot.innerHTML = '<a href="https://discord.gg/chmr">discord.gg/chmr</a><span>Built by the Chimera community</span><span>Page <span class="n"></span></span>';
@@ -1448,7 +1559,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
   Array.prototype.forEach.call(document.querySelectorAll('.shot'), function (s) {
     ['tl', 'tr', 'bl', 'br'].forEach(function (c) { var t = document.createElement('i'); t.className = 'tk ' + c; s.appendChild(t); });
   });
-  Array.prototype.forEach.call(document.querySelectorAll('.toc .pg[data-for]'), function (cell) {
+  Array.prototype.forEach.call(document.querySelectorAll('.toc .pg[data-for], .pgref[data-for]'), function (cell) {
     var target = document.getElementById(cell.getAttribute('data-for'));
     var pg = target && (target.classList.contains('page') ? target : target.closest('section.page'));
     var n = pages.indexOf(pg);

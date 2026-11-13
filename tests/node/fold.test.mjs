@@ -92,6 +92,28 @@ export async function run(t) {
   for (const x of items.slice(0, 250)) if (deepDiff(other.generate(PX.rng(x.seed), x.params), x.item)) diff2++;
   t.eq(diff2, 0, 'the same items in a freshly loaded context');
 
+  t.section('fold: the validator checks the drawn panels');
+  // RV-dat-style-A §4: the stem and show-me are drawn from item.steps, which the checks above
+  // compared by area and hole positions only; each of these passed the validator before.
+  const pb = def.generate(PX.rng(99), { folds: 2, type: 3, punches: 1, idle: 0 }), last = pb.folds.length;
+  const panels = [
+    ['step 1: a face shifted one cell', (it) => { it.steps[1].faces[0].poly = it.steps[1].faces[0].poly.map(([x, y]) => [x + 1, y]); }],
+    ['step 2: the flap flags cleared (no shading, no arrow)', (it) => { it.steps[2].faces.forEach((f) => { f.moved = false; }); }],
+    ['step 2: the outline mirrored left to right', (it) => { it.steps[2].outline = it.steps[2].outline.map(([x, y]) => [8 - x, y]); }],
+    [`step ${last}: the faces mirrored top to bottom`, (it) => { it.steps[last].faces.forEach((f) => { f.poly = f.poly.map(([x, y]) => [x, 8 - y]); }); }],
+    ['step 1: the arrow starts at the wrong place', (it) => { it.steps[1].faces.forEach((f) => { if (f.from) f.from = f.from.map(([x, y]) => [y, x]); }); }],
+    [`step ${last}: two faces swap layers`, (it) => { const F = it.steps[last].faces, a = F.reduce((b, f, i) => (f.layer > F[b].layer ? i : b), 0), b = F.reduce((c, f, i) => (f.layer < F[c].layer ? i : c), 0); [F[a].layer, F[b].layer] = [F[b].layer, F[a].layer]; }],
+    [`step ${last}: a hole on the wrong face`, (it) => { const F = it.steps[last].faces, a = F.findIndex((f) => f.holes.length), b = F.findIndex((f, i) => i !== a); F[b].holes.push(F[a].holes.pop()); }],
+    [`step ${last}: a back-up flag flipped`, (it) => { it.steps[last].faces[0].back = !it.steps[last].faces[0].back; }],
+  ];
+  t.eq([def.validate(pb), last], [true, 3], 'the base item is valid as generated (three mixed folds)');
+  for (const [name, edit] of panels) {
+    const it = JSON.parse(JSON.stringify(pb));
+    edit(it);
+    const v = deepDiff(it, pb) !== null ? def.validate(it) : 'no change';
+    t.ok(v !== true && v !== 'no change', `rejects: ${name} (${v})`);
+  }
+
   t.section('fold: malformed responses and fallback');
   const sample = items.slice(0, 200).map((x) => x.item);
   let malformedRight = 0;
