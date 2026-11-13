@@ -8,7 +8,8 @@
 .ex-form .fm-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 
 .ex-form .fm-face { fill: var(--stim-face, #ECEEF0); }
-.ex-form .fm-hatch-bg { fill: var(--stim-face-3, #A4ABB2); }
+/* The mark's own tone, darker than every face tone (also the far-lit one), in both themes. */
+.ex-form .fm-hatch-bg { fill: #6A7075; fill: color-mix(in srgb, var(--stim-face-3, #A4ABB2) 55%, var(--stim-edge, #22262A)); }
 .ex-form .fm-hatch-line { stroke: var(--stim-edge, #22262A); stroke-opacity: 0.55; }
 .ex-form .fm-cut { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .ex-form .fm-fold { fill: none; stroke: var(--ink-2, #454B52); stroke-width: 1.5px; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }

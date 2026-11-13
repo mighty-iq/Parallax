@@ -1645,9 +1645,9 @@
     return arc.forward ? runEdit(polys, X.a[0], arc.idx, pts) : runEdit(polys, X.a[0], arc.idx.slice().reverse(), pts);
   }
   // R2: the arc on top lifts across the bigon past the other strand (or the bottom arc drops
-  // under it): whichever new route is shorter.
-  function editR2(polys, pc, c1, c2, zr) {
-    var X1 = pc.list[c1], X2 = pc.list[c2], best = null;
+  // under it): the shorter new route first (all: both routes, shortest first).
+  function editR2(polys, pc, c1, c2, zr, all) {
+    var X1 = pc.list[c1], X2 = pc.list[c2], found = [];
     [[overPassage, underPassage, zr[1] + 1], [underPassage, overPassage, zr[0] - 1]].forEach(function (role) {
       var m1 = role[0](X1), m2 = role[0](X2), s1 = role[1](X1), s2 = role[1](X2);
       if (m1.k !== m2.k || s1.k !== s2.k) return;
@@ -1658,10 +1658,10 @@
       // the moving strand's last point before it enters the bigon at X1 lies on the far side
       var h = before(P, m1.t, mov.forward), path = offsetSide(polys, s1.k, stay.idx, [P.x[h], P.y[h]], [[X1.x, X1.y], [X2.x, X2.y]], role[2], { poly: m1.k, lo: Math.min(run[0], run[run.length - 1]), hi: Math.max(run[0], run[run.length - 1]) });
       if (!mov.forward) { run = run.slice().reverse(); path = path.slice().reverse(); }
-      var len = pathLength(path);
-      if (!best || len < best.len) best = { len: len, e: runEdit(polys, m1.k, run, path) };
+      found.push({ len: pathLength(path), e: runEdit(polys, m1.k, run, path) });
     });
-    return best ? best.e : null;
+    found.sort(function (a, b) { return a.len - b.len; });
+    return all ? found.map(function (x) { return x.e; }) : found.length ? found[0].e : null;
   }
   // R3: the strand on top (or the one underneath) re-routes around the opposite crossing, along
   // the far sides of the other two strands; whichever new route is shorter.
@@ -1728,29 +1728,41 @@
     return tris.length ? { t: 'R3', x: [tris[0][0] >> 2, tris[0][1] >> 2, tris[0][2] >> 2], f: tris[0], all: tris } : null;
   }
   // The simplifier replayed on the drawn curves. opts.split: stop when no crossing joins two loops.
-  // → { steps: [{ t, at: [[x, y]…], edit, before, after }], polys, end, broken: null | reason }
+  // → { steps: [{ t, at: [[x, y]…], edit, before, after, under }], polys, end, broken: null | reason }
+  // A route is taken only when (1) the frame it leads to is exactly the diagram the validator's own
+  // move gives (same signed Gauss code: the same knot or link, by construction) and (2) every frame
+  // of its morph is a legal motion (legalMotion). When no route passes, the replay stops before
+  // that move (broken) and the view says how the rope ends.
   function replay(curves, over, opts) {
     opts = opts || {};
     var dg = diagramOf(curves, over);
     if (typeof dg === 'string') return null;
     var polys = curves.map(function (cv, i) { return polyOf(cv, over, dg.X, i); }), steps = [], broken = null;
+    if (!sameDiagram(polyCrossings(polys).D, dg.D)) return { steps: [], polys: polys, end: polyCrossings(polys), broken: 'the first frame is not the item', reached: false };
     for (var guard = 0; guard < 40; guard++) {
       var pc = polyCrossings(polys), D = pc.D;
       if (D.live === 0 || (opts.split && interCount(D) === 0)) break;
       var mv = nextMove(D), zr = zRange(polys), cands = [];
       if (!mv) break;
-      if (mv.t === 'R1') cands = [[mv.x, editR1(polys, pc, mv.x[0])]];
-      else if (mv.t === 'R2') cands = [[mv.x, editR2(polys, pc, mv.x[0], mv.x[1], zr)]];
-      else mv.all.forEach(function (f) { editR3(polys, pc, f, zr, true).forEach(function (e) { cands.push([[f[0] >> 2, f[1] >> 2, f[2] >> 2], e]); }); });
-      var want = D.live - (mv.t === 'R1' ? 1 : mv.t === 'R2' ? 2 : 0), ok = null;
+      if (mv.t === 'R1') cands = [[mv.x, editR1(polys, pc, mv.x[0]), null]];
+      else if (mv.t === 'R2') cands = editR2(polys, pc, mv.x[0], mv.x[1], zr, true).map(function (e) { return [mv.x, e, null]; });
+      else mv.all.forEach(function (f) { editR3(polys, pc, f, zr, true).forEach(function (e) { cands.push([[f[0] >> 2, f[1] >> 2, f[2] >> 2], e, f]); }); });
+      var ok = null, expect = {};
       for (var ci = 0; ci < cands.length && !ok; ci++) {
         if (!cands[ci][1]) continue;
         var after = applyEdit(polys, cands[ci][1]), pa = null;
         try { pa = polyCrossings(after); } catch (err) { pa = null; }
-        if (pa && pa.D.live === want) ok = { x: cands[ci][0], e: cands[ci][1], after: after };
+        if (!pa || !levelFree(pa)) continue;
+        var fk = cands[ci][2] ? cands[ci][2].join(',') : '-';
+        if (!expect[fk]) expect[fk] = moveResult(D, mv.t, mv.x, cands[ci][2]);
+        if (!sameDiagram(pa.D, expect[fk])) continue;
+        var step = { t: mv.t, at: cands[ci][0].map(function (c) { return [pc.list[c].x, pc.list[c].y]; }), edit: cands[ci][1], before: polys, after: after };
+        if (!legalMotion(step)) continue;
+        ok = step;
       }
-      if (!ok) { broken = mv.t + ': no route keeps the crossings right'; break; }
-      steps.push({ t: mv.t, at: ok.x.map(function (c) { return [pc.list[c].x, pc.list[c].y]; }), edit: ok.e, before: polys, after: ok.after });
+      if (!ok) { broken = mv.t + ': no drawn route is a legal move'; break; }
+      ok.under = ok.edit.path.length > 0 && ok.edit.path[ok.edit.path.length >> 1][2] < -1;
+      steps.push(ok);
       polys = ok.after;
     }
     var end = polyCrossings(polys);
@@ -1765,7 +1777,9 @@
     return [lo, hi];
   }
   // The polylines part-way through step s (k ∈ [0, 1]): the replaced run morphs into the new path.
-  function morph(step, k) {
+  function morph(step, k) { return morphParts(step, k).polys; }
+  // … and where the moving run lies in them: points lo … hi of poly edit.poly (after its rotation).
+  function morphParts(step, k) {
     var e = step.edit, P = step.before[e.poly], Q = e.rot ? rotateTo(P, e.rot) : P;
     var oldPts = [];
     for (var i = Math.max(0, e.from - 1); i <= Math.min(Q.x.length - 1, e.to + 1); i++) oldPts.push([Q.x[i], Q.y[i], Q.z[i]]);
@@ -1773,9 +1787,91 @@
     var newPts = head.concat(e.path, tail), n = Math.max(oldPts.length, newPts.length, 2);
     var A = resample(oldPts, n), B = resample(newPts, n), mid = [];
     var zMove = e.path.length ? e.path[e.path.length >> 1][2] : 0;
-    for (var j = 1; j < n - 1; j++) mid.push([A[j][0] + (B[j][0] - A[j][0]) * k, A[j][1] + (B[j][1] - A[j][1]) * k, k > 0 && Math.abs(zMove) > 1 ? zMove : A[j][2]]);
-    return applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid });
+    // a curl (R1, heights kept) climbs steadily from one passage of its crossing to the other, so
+    // that crossing never turns level while the curl shrinks
+    var zh = A[0][2], zt = A[n - 1][2];
+    for (var j = 1; j < n - 1; j++) {
+      var z = k > 0 ? (Math.abs(zMove) > 1 ? zMove : zh + (zt - zh) * j / (n - 1)) : A[j][2];
+      mid.push([A[j][0] + (B[j][0] - A[j][0]) * k, A[j][1] + (B[j][1] - A[j][1]) * k, z]);
+    }
+    return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from, hi: e.from + mid.length - 1, zMove: zMove };
   }
+
+  /* ---------- checks: each replayed step is the validator's own move, by a legal motion ---------- */
+
+  // No two strands level at a crossing (the drawing would have to guess which is on top).
+  function levelFree(pc) {
+    for (var i = 0; i < pc.list.length; i++) if (Math.abs(pc.list[i].za - pc.list[i].zb) < 1e-6) return false;
+    return true;
+  }
+  // Every frame of a step's morph (16 frames, k = 1/16 … 1) is a legal motion: a lifted (or
+  // dropped) run passes over (under) everything it crosses, ramps included; a shrinking curl
+  // crosses nothing but itself (its own crossing may slide a few points along the rope); no
+  // crossing is ever level.
+  function legalMotion(step) {
+    var e = step.edit;
+    for (var q = 1; q <= 16; q++) {
+      var M = morphParts(step, q / 16), pc;
+      try { pc = polyCrossings(M.polys); } catch (err) { return false; }
+      var P = M.polys[e.poly], m = P.x.length, lift = M.zMove > 1, drop = M.zMove < -1;
+      var near = function (seg, lo, hi) { return seg >= lo && seg <= hi || (P.closed && (seg + m >= lo && seg + m <= hi || seg - m >= lo && seg - m <= hi)); };
+      var inRun = function (k, seg) { return k === e.poly && near(seg, M.lo - 1, M.hi); };
+      var byCurl = function (k, seg) { return k === e.poly && near(seg, M.lo - 4, M.hi + 3); };
+      for (var i = 0; i < pc.list.length; i++) {
+        var x = pc.list[i];
+        if (Math.abs(x.za - x.zb) < 1e-6) return false;
+        var ra = inRun(x.a[0], x.sa), rb = inRun(x.b[0], x.sb);
+        if (ra === rb) continue;
+        if (!lift && !drop) { if (byCurl(x.a[0], x.sa) && byCurl(x.b[0], x.sb)) continue; return false; }
+        var zr = ra ? x.za : x.zb, zo = ra ? x.zb : x.za;
+        if (lift ? zr <= zo : zr >= zo) return false;
+      }
+    }
+    return true;
+  }
+  // The validator's own move on diagram D (R1, R2: remove the crossings; R3: rewire triangle f).
+  function moveResult(D, t, xs, f) {
+    var E = cloneD(D);
+    if (t === 'R3') applyR3(E, f); else removeX(E, xs);
+    return E;
+  }
+  // A diagram's signed Gauss code: per component in travel order, each passage as the crossing's
+  // label (by first visit), over or under, and the crossing's sign. An open rope starts just after
+  // its outside arc (its ends stay put); a loop takes the smallest code over all its starts. Equal
+  // codes (and plain loops) mean the same diagram on the sphere, so the same knot or link: the
+  // code fixes every crossing's slots, so the faces follow.
+  function isInSlot(D, s) { var q = s & 3; return q === 0 || q === D.oin[s >> 2]; }
+  function slotComp(D, s) { return (s & 1) ? D.co[s >> 2] : D.cu[s >> 2]; }
+  function codeFrom(D, starts) {
+    var lab = {}, nl = 0, out = '';
+    for (var i = 0; i < starts.length; i++) {
+      var s = starts[i], guard = 0;
+      do {
+        var x = s >> 2;
+        if (lab[x] === undefined) lab[x] = nl++;
+        out += (lab[x] < 10 ? '0' : '') + lab[x] + ((s & 3) === 0 ? 'u' : 'o') + (D.oin[x] === 3 ? '+' : '-');
+        s = D.link[opp(s)];
+      } while (s !== starts[i] && ++guard <= 4 * D.n);
+      out += '|';
+    }
+    return out;
+  }
+  function diagramCode(D) {
+    var ins = {}, x;
+    for (x = 0; x < D.n; x++) {
+      if (!D.alive[x]) continue;
+      [4 * x, 4 * x + D.oin[x]].forEach(function (s) { var c = slotComp(D, s); (ins[c] = ins[c] || []).push(s); });
+    }
+    var comps = Object.keys(ins).map(Number).sort(function (a, b) { return a - b; }), fixed = {};
+    if (D.cl >= 0 && D.alive[D.cl >> 2]) { var s0 = isInSlot(D, D.cl) ? D.cl : D.link[D.cl]; fixed[slotComp(D, s0)] = s0; }
+    var choices = comps.map(function (c) { return fixed[c] !== undefined ? [fixed[c]] : ins[c]; }), best = null;
+    (function rec(i, starts) {
+      if (i === comps.length) { var code = codeFrom(D, starts); if (best === null || code < best) best = code; return; }
+      for (var j = 0; j < choices[i].length; j++) rec(i + 1, starts.concat([choices[i][j]]));
+    })(0, []);
+    return D.free + '/' + comps.join(',') + ':' + (best || '');
+  }
+  function sameDiagram(A, B) { return A.live === B.live && diagramCode(A) === diagramCode(B); }
   function resample(pts, n) {
     var L = [0], i;
     for (i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0]) * (pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1]) * (pts[i][1] - pts[i - 1][1])));
@@ -1839,7 +1935,8 @@
     // links
     LINK_RUNGS: LINK_RUNGS, linkShadow: linkShadow, linkKind: linkKind, linkFacts: linkFacts, linkSig: linkSig, linkPair: linkPair, checkLink: checkLink,
     // show me
-    LIFT: LIFT, polyOf: polyOf, polyCrossings: polyCrossings, replay: replay, morph: morph, nextMove: nextMove, zRange: zRange,
+    LIFT: LIFT, polyOf: polyOf, polyCrossings: polyCrossings, replay: replay, morph: morph, morphParts: morphParts, nextMove: nextMove, zRange: zRange,
+    levelFree: levelFree, legalMotion: legalMotion, moveResult: moveResult, diagramCode: diagramCode, sameDiagram: sameDiagram,
     curvesOf: curvesOf,
   };
   // The item's curves as the validator reads them.
