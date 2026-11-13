@@ -1160,15 +1160,17 @@
         var g = withOver(dg, over), base = knotKind(g.D);
         if (tie ? base !== 'U' : base !== 'K') continue;
         if (++tries > 140) want.side = -1;           // a long search: take either half
-        // the key's rank among the four by distance from the centre and by the length of the strand
-        // that passes over it is drawn from the seed (each rank 1 in 4). Options nearest those ranks
-        // are tried first; a rope whose best option misses them is kept only by a draw that gets
-        // less likely the further it misses (always, after a long search), so "the most central"
-        // and "the shortest over-strand" score near chance (tested per rung)
+        // Where the key stands among the four by distance from the centre and by the length of the
+        // strand that passes over it is drawn from the seed: the nearest (shortest) 1 in 4, the
+        // farthest (longest) 1 in 4, in between 2 in 4. Options are tried in that order of fit, and a
+        // rope whose best option misses is passed over (by a draw, after a while; always kept after a
+        // long search), so "the most central", "the shortest over-strand" and their opposites score
+        // near chance (tested per rung).
         var opts = tagOptions(dg, g.D, fc, over, free, want);
         if (!opts.length) continue;
         opts = rng.shuffle(opts);
-        var cost = function (o) { return (o.rd < 0 ? 4 : Math.abs(o.rd - want.wd)) + (o.ro < 0 ? 4 : Math.abs(o.ro - want.wo)); };
+        var fit = function (r, w) { return r < 0 ? 1 : w === 0 ? (r === 0 ? 0 : 1) : w === 3 ? (r === 3 ? 0 : 1) : (r === 0 || r === 3 ? 1 : 0); };
+        var cost = function (o) { return fit(o.rd, want.wd) + fit(o.ro, want.wo); };
         opts.forEach(function (o) { o.cost = cost(o); });
         opts.sort(function (u, v) { return u.cost - v.cost; });
         var memo = {};
@@ -1177,7 +1179,7 @@
           var t = opts[k].t, ok = tie ? kindOf(t[0]) === 'K' : kindOf(t[0]) === 'U';
           for (var j = 1; j < 4 && ok; j++) ok = kindOf(t[j]) === (tie ? 'U' : 'K');
           if (!ok) continue;
-          if (opts[k].cost > 0 && tries <= 60 && rng.next() >= Math.pow(0.3, opts[k].cost)) break;
+          if (opts[k].cost > 0 && (tries <= 40 || (tries <= 120 && rng.next() >= Math.pow(0.5, opts[k].cost)))) break;
           var it = itemBase(p);
           it.n = N; it.depth = RUNGS[p.rope].depth; it.pts = dg.pts; it.over = over;
           // letters A–D in an order drawn from the seed, so the key's letter tells nothing
