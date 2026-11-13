@@ -66,7 +66,7 @@ def notes(b, C):
     n_ada = page.locator('main').inner_text().count('not affiliated with or endorsed by the ADA')
     C.ok(n_ada == 1, f'{tag}: {pat[0]}: the page shows the ADA line once (in the note, or in the bridge beside it): {n_ada}')
     # How to play (B2's sheet) shows the note and the bridge: the ADA line once there too
-    page.evaluate(f'PX.ui.library.howTo(PX.ex.get({json.dumps(pat[0])}))')
+    page.evaluate(f'void PX.ui.library.howTo(PX.ex.get({json.dumps(pat[0])}))')  # void: the close function must not be called
     page.wait_for_timeout(300)
     n_ada = page.locator('.px-modal').inner_text().count('not affiliated with or endorsed by the ADA') if page.locator('.px-modal').count() else -1
     C.ok(n_ada == 1, f'{tag}: {pat[0]}: How to play shows the ADA line once ({n_ada})')
