@@ -364,7 +364,13 @@ def run_today(b, C):
         to_today(page)
         names, line = today_names(page), page.locator('[data-patfocus="on"]')
         C.ok(names == on and line.count() == 1 and 'DAT-style focus is on' in line.inner_text(), f'{tag}: focus on, {when}: {names} (expected {on}) with the focus line')
-    shot(page, 'flows_today_focus.png', full=True)
+    # the line is on the first screen and nothing covers it (on phones Start sticks above the tab bar)
+    seen = page.evaluate('''() => { const el = document.querySelector('[data-patfocus="on"]'); if (!el) return 'missing';
+      const r = el.getBoundingClientRect(), x = r.left + r.width / 2, ys = [r.top + 2, r.bottom - 2];
+      if (r.bottom > innerHeight) return 'below the fold (' + Math.round(r.bottom) + ' > ' + innerHeight + ')';
+      return ys.every((y) => el.contains(document.elementFromPoint(x, y))) ? 'ok' : 'covered'; }''')
+    C.ok(seen == 'ok', f'{tag}: the focus line is visible on the first screen ({seen})')
+    shot(page, 'flows_today_focus.png')
     lib_switch(page)
     to_today(page)
     names = today_names(page)
