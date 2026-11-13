@@ -39,7 +39,7 @@ Updated 2026-11-13 12:10 UTC.
 - R1 path integration: a5466bc6d9b282c45, docs/research/v1.1/R1-path-integration.md
 - R2 knots: a075373df78a5034c, docs/research/v1.1/R2-knots.md
 - R3 DAT PAT: a5755f23e92ae406f, docs/research/v1.1/R3-dat-pat.md
-- R4 test overlap: ae90e4ec9093266e3, docs/research/v1.1/R4-test-overlap.md
+- R4 test overlap: ae90e4ec9093266e3, docs/research/v1.1/R4-test-overlap.md — DONE: test not identified (likeliest CORE/VISA verbal Analogies or a figural-analogies test; lead: CognitiveMetrics 'ATAT'); no exercise uses analogy format; near overlap with published spatial subtests (Fold, Hidden, Views count, Nets, Span); recommends About + per-exercise notes + one-tap check-in + optional 'Taking a test soon?' helper. Web-search budget ran out near its end.
 - I1 timing and bugs: a1e82da82a641e395, docs/research/v1.1/I1-timing-bugs.md (scratch: scratchpad/v11-audit/timing/)
 - I2 mobile audit: aa400bfb901d22ad1, docs/research/v1.1/I2-mobile-audit.md (scratch: scratchpad/v11-audit/mobile/)
 - The frozen v1.0 copy for browser audits: scratchpad/frozen-v1.0/ (scratchpad = /tmp/claude-0/-home-claude/145ff06a-4b5d-5025-8cb7-e87b9d56923b/scratchpad)
