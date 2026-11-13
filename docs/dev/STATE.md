@@ -50,6 +50,7 @@ Updated 2026-11-13 17:45 UTC. All 19 exercises are active in index.html (Knots a
 - B3 Homing fixes + Reckon (EX-12): a4766dc5c229a6ee1 (B3.md)
 - Reviews done: RV-A docs/dev/reviews/RV-dat-style-A.md (no wrong items; 2 rule-5 issues in Angles; Hole Punch symmetry = method); RV-B docs/dev/reviews/RV-section-overlap.md (no blockers; 8 should-fix).
 - B5 fix round (resumed abccc8030cd5dc4ce), B7 fix round (resumed a0a560fe48fdb31c0).
+- Reviewer RV-D (Openings, Missing View, Form: items, shortcuts incl. Openings' most-featured-profile 75.7 %, texts): ae56c9d3bf7bb7e4a → docs/dev/reviews/RV-dat-style-B.md
 - Reviewer RV-C (Knots item validity, independent invariants, shortcuts, texts, timing): af47f967c9625baf4 → docs/dev/reviews/RV-knots.md
 - Finished: B6 (a0dc048b845b7fc8e), B4 (a0dafe0ed9a9dc012), B1 (a34b20ea2c882325b), B5 (abccc8030cd5dc4ce), B7 (a0a560fe48fdb31c0).
 
