@@ -584,6 +584,12 @@
 
   // Tutorial: the parts one by one, the same solution, then how to answer. Keys and the pointer
   // rest while it plays; afterwards the item can be answered as usual.
+  // Phones: the demo's answer is drawn on the circle, which a short screen can have under the
+  // pinned caption bar; bring it into view (css/ex/orient.css keeps room for the bar). Layout only.
+  function dialIntoView() {
+    try { if (st && st.dialbox && st.dialbox.scrollIntoView) st.dialbox.scrollIntoView({ block: 'nearest' }); } catch (e) { /* cosmetic */ }
+  }
+
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     var A = item.objects[item.at], B = item.objects[item.facing], C = item.objects[item.target];
@@ -595,7 +601,7 @@
       { ms: 1800, caption: cap('demoTarget', { target: C.name }), enter: function () { scene(item, { k: 0, parts: true, ab: true, mine: null }); } },
     ];
     var outro = [
-      { ms: 2600, caption: cap('demoAnswer'), enter: function () { scene(item, { k: 0, mine: 0 }); },
+      { ms: 2600, caption: cap('demoAnswer'), enter: function () { scene(item, { k: 0, mine: 0 }); dialIntoView(); },
         update: function (k) { setArrow(st.dial.arrow, item.key <= 180 ? item.key * ease(k) : 360 - (360 - item.key) * ease(k)); } },
     ];
     return play(intro.concat(solution(item).slice(1), outro), ctx, { name: 'demo', caption: caption || null }).then(function () {

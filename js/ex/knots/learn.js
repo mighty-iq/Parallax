@@ -23,10 +23,11 @@
       { id: 'answer', label: 'Answer', text: 'Tap Knot or No knot (Linked or Apart), or press 1 or 2. For the marks, tap a letter (on the rope or below it) or press 1–4.' },
     ],
     // Easiest level; each seed's kind is tested (tests/node/knots.test.mjs), and each one's show me
-    // plays to the end.
+    // plays to the end. The player's Watch takes the first one of the item's variant: for pull a
+    // knot, so the demo can show the minimal pair (one crossing switched, the rope falls open).
     demo: [
-      { params: { rope: 0, spacing: 0, variant: 'pull' }, seed: 1, kind: 'no-knot' },
       { params: { rope: 0, spacing: 0, variant: 'pull' }, seed: 2, kind: 'knot' },
+      { params: { rope: 0, spacing: 0, variant: 'pull' }, seed: 1, kind: 'no-knot' },
       { params: { rope: 0, spacing: 0, variant: 'untie' }, seed: 2, kind: 'untie' },
       { params: { rope: 0, spacing: 0, variant: 'tie' }, seed: 1, kind: 'tie' },
       { params: { rope: 0, spacing: 0, variant: 'link' }, seed: 2, kind: 'linked' },

@@ -1,4 +1,4 @@
-/* PAT-6 Form: view (DOM and SVG; ARCHITECTURE.md §6). layout 'stem+options'.
+/* EX-19 Form (DAT-style format): view (DOM and SVG; ARCHITECTURE.md §6). layout 'stem+options'.
    The stem is the flat pattern (fold lines dashed, cut edges solid); options are SVG pictures of
    convex solids (orthographic, flat tones by face direction, outlines). The pattern and the solids
    share one scale (px per unit), so sizes compare directly. Marks: a darker tone plus a hatch;

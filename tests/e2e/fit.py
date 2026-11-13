@@ -15,6 +15,9 @@ At each item's answer state the test checks that
   3. the page itself cannot scroll (document height <= viewport height + 1 px).
 360 x 640 is the strict size (CONTRACT B2); 390 x 844, 412 x 915 and 844 x 390 (landscape) run
 fewer settings. A control case must fail: one item with a stage forced taller than the screen.
+At 360 x 640 each training exercise's Watch, Try, Go is checked too: the demo's caption on the
+screen above the pinned controls with the stage in view, and the first Try item's stage in view
+as it plays. During items: no app header, overscroll none, body.px-item, touch-action manipulation.
 
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/fit.py [--sizes 360x640,844x390] [--ex rotate,fold]
       [--quick] [--root DIR] [--no-check] [--shots] [--scale 1.5]
@@ -31,17 +34,20 @@ from common import ROOT, OUT, launch, Checks
 
 READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 SIZES = {'360x640': (360, 640), '390x844': (390, 844), '412x915': (412, 915), '844x390': (844, 390)}
+EXTRA = {'375x548': (375, 548)}  # an iPhone SE in Safari with its toolbars shown (on request: --sizes 375x548)
 STRICT = '360x640'
 PROBES = ['wordlinks', 'cubematch', 'viewmatch', 'mechanisms', 'patterns', 'level']
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--sizes', default=','.join(SIZES))
+SIZES.update(EXTRA)
 ap.add_argument('--ex', default='')
 ap.add_argument('--quick', action='store_true', help='fewer settings per exercise (development runs)')
 ap.add_argument('--root', default=str(ROOT))
 ap.add_argument('--shim', action='store_true', help='add body.px-item from the test (for copies without the hook)')
 ap.add_argument('--no-check', action='store_true', help='skip the Spatial Check probes')
 ap.add_argument('--shots', action='store_true', help='a screenshot of every item, not only the first of each exercise')
+ap.add_argument('--no-wtg', action='store_true', help='skip the Watch, Try, Go checks (360 x 640 only)')
 ap.add_argument('--scale', type=float, default=1.0, help='text size (Settings): at 1.5 only horizontal overflow is checked')
 ap.add_argument('--tag', default='fit')
 args = ap.parse_args()
@@ -114,6 +120,8 @@ FIT_JS = r'''() => {
   const scrollW = Math.max(de.scrollWidth, document.body.scrollWidth);
   return { H, W, scrollY: Math.round(scrollY), scrollH, scrolls: scrollH > H + 1, scrollW, stim: stim.length, ctl: ctl.length, bad, lowest, small,
     header: !!(document.querySelector('.px-header') && shown(document.querySelector('.px-header'))),
+    overscroll: getComputedStyle(de).overscrollBehaviorY, pxItem: document.body.classList.contains('px-item'),
+    touchAction: getComputedStyle(de).touchAction,
     state: window.__play ? __play.state : null, ex: window.__play ? __play.exId : null,
     params: window.__play && __play.item ? __play.item.params : null };
 }'''
@@ -193,7 +201,7 @@ def judge(size, ex, label, m, rows):
         why = m.get('error') or '; '.join(m['bad'][:4]) or ('page scrolls: ' + str(m['scrollH']) + ' > ' + str(m['H']) if m['scrolls'] else '') \
             or ('no stimulus found' if not m['stim'] else 'no answer control found' if not m['ctl'] else '')
     rows.append({'ex': ex, 'item': label, 'ok': ok, 'why': why, 'lowest': m.get('lowest'), 'H': m.get('H'), 'params': m.get('params'), 'shot': m.get('shot'),
-                 'small': m.get('small') or {}})
+                 'small': m.get('small') or {}, 'chrome': [m.get('header'), m.get('overscroll'), m.get('pxItem'), m.get('touchAction')]})
     if size == STRICT or not ok:
         print(f'  {"ok  " if ok else "FAIL"} {size} {ex} {label} lowest {m.get("lowest")}/{m.get("H")} {why}', flush=True)
     return ok
@@ -266,6 +274,56 @@ def run_check(page, size, rows, right):
     return n
 
 
+WTG_JS = r"""() => {
+  const H = innerHeight;
+  const box = e => { if (!e) return null; const r = e.getBoundingClientRect(); return r.height ? { top: Math.round(r.top), bottom: Math.round(r.bottom) } : null; };
+  const cap = [...document.querySelectorAll('.pl-trial .ex-caption, .pl-showme .pl-caption')].find(e => e.textContent.trim() && getComputedStyle(e).display !== 'none');
+  return { H, state: window.__play && __play.state, stage: box(document.querySelector('.pl-host .ex-stage')),
+    caption: box(cap), bar: box(document.querySelector('.pl-showme-buttons')) };
+}"""
+
+
+def run_wtg(page, size, ex, rows):
+    """Watch, Try, Go on a phone (PLAN M2): while the demo plays its caption is on the screen and
+    above the pinned controls, and the stage is in view; the first Try item's stage is fully in
+    view when it plays."""
+    page.evaluate('void __play.end()')
+    page.evaluate('PX.debug.fast(true)')
+    page.evaluate(f"PX.core.store.state.tour.seen['{ex}'] = false")
+    page.evaluate(f'void PX.core.router.go("play", {{ mode: "watch", exId: "{ex}" }}, {{ force: true }})')
+    demo, t0 = None, time.time()
+    while time.time() - t0 < 20:
+        if state(page) == 'showme':
+            m = page.evaluate(WTG_JS)
+            if m['caption']:
+                demo = m
+                break
+        page.wait_for_timeout(30)
+    tried = None
+    if demo is not None:
+        t0 = time.time()
+        while time.time() - t0 < 30 and state(page) != 'reveal':
+            if state(page) == 'respond' and page.evaluate('(document.querySelector(".pl-wtg-text") || {}).textContent || ""').startswith('Now answer'):
+                page.evaluate('__play.answer(true).catch(() => 0)')
+            page.wait_for_timeout(60)
+        page.evaluate('__play.next()')
+        t0 = time.time()
+        while time.time() - t0 < 30:
+            if state(page) in ('present', 'respond'):
+                tried = page.evaluate(WTG_JS)
+                break
+            page.wait_for_timeout(20)
+    ok_demo = bool(demo) and 0 <= demo['caption']['top'] and demo['caption']['bottom'] <= (demo['bar']['top'] + 1 if demo['bar'] else demo['H']) \
+        and bool(demo['stage']) and 0 <= demo['stage']['top'] < demo['H'] - 40
+    ok_try = bool(tried) and bool(tried['stage']) and tried['stage']['top'] >= 0 and tried['stage']['bottom'] <= tried['H'] + 0.5
+    rows.append({'ex': ex, 'item': 'watch', 'ok': ok_demo, 'why': '' if ok_demo else f'demo: {demo}'})
+    rows.append({'ex': ex, 'item': 'try', 'ok': ok_try, 'why': '' if ok_try else f'try: {tried}'})
+    for label, ok, m in (('watch', ok_demo, demo), ('try', ok_try, tried)):
+        print(f'  {"ok  " if ok else "FAIL"} {size} {ex} {label} {m}', flush=True)
+    page.evaluate('void __play.end()')
+    page.evaluate(f"PX.core.store.state.tour.seen['{ex}'] = true")
+
+
 def control_case(b):
     """A stage forced taller than the screen must fail the same checks."""
     ctx, page, errs = phone(b, STRICT)
@@ -294,6 +352,8 @@ with sync_playwright() as p:
             exs = [e for e in exs if e in args.ex.split(',')]
         for ex in exs:
             try:
+                if size == STRICT and not args.no_wtg and args.scale == 1:
+                    run_wtg(page, size, ex, rows)
                 run_train(page, size, ex, rows)
             except Exception as e:  # one exercise's failure must not hide the others
                 rows.append({'ex': ex, 'item': 'run', 'ok': False, 'why': 'error: ' + str(e)[:200]})
@@ -329,7 +389,11 @@ with sync_playwright() as p:
             # PLAN M2: no text under 13 px on a phone (SVG labels scaled with their drawing)
             C.ok(not e['small'], f'{size} {ex}: text under 13 px: {json.dumps(e["small"])[:300]}')
         C.ok(not errs, f'{size}: page errors {errs[:3]}')
-    if not args.ex:
+        # During items: the app header steps aside, no pull-to-refresh, double-tap zoom off (CONTRACT B2 §1, §5).
+        chrome = [r['chrome'] for r in rows if r.get('chrome')]
+        bad_chrome = [c for c in chrome if c[0] or c[1] != 'none' or not c[2] or c[3] != 'manipulation']
+        C.ok(chrome and not bad_chrome, f'{size}: during items the header is hidden, overscroll is none, body.px-item is set and touch-action is manipulation ({bad_chrome[:2]})')
+    if not args.ex and args.scale == 1:
         failed_as_expected, row = control_case(b)
         report['control'] = row
         C.ok(failed_as_expected, f'control case: a stage taller than the screen must fail the fit check ({row})')

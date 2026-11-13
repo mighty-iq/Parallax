@@ -1,4 +1,4 @@
-/* PAT-2 Missing View (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-patviews; tokens from
+/* EX-15 Missing View, a DAT-style format (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-patviews; tokens from
    css/base.css with fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict,
    .ex-tag, .ex-opt, .ex-focus) come from css/ex.css. The stem is one SVG in px (third-angle layout),
    the options are SVGs in units with non-scaling strokes. Solid = seen edge, dotted = hidden edge:

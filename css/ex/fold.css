@@ -79,8 +79,15 @@
   .ex-fold .ex-fold-opt .ex-fold-svg { max-width: 8.5rem; }
 }
 
-/* Phones in the player (css/play.css sets --pl-avail and --pl-w). Sideways: the fold panels in
-   rows of three on the left, as large as the height allows; the sheets on the right. */
+/* Phones in the player (css/play.css sets --pl-avail and --pl-w). Upright: up to two rows of fold
+   panels and two rows of sheets share the height (--fold-u, about a quarter each), so a short
+   screen shrinks them instead of scrolling. Sideways: the fold panels in rows of three on the
+   left, as large as the height allows; the sheets on the right. */
+@media (max-width: 719px) {
+  .pl-trial.ex-fold { --fold-u: calc((var(--pl-avail) - 4.5rem) / 4.2); }
+  .pl-trial.ex-fold .ex-fold-strip { max-width: calc(var(--fold-cols) * min(12rem, var(--fold-u)) + (var(--fold-cols) - 1) * var(--s3)); }
+  .pl-trial.ex-fold .ex-fold-opt .ex-fold-svg { max-width: min(8.5rem, calc(var(--fold-u) - 2rem)); }
+}
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   .pl-trial.ex-fold .ex-fold-strip,
   .pl-trial.ex-fold .ex-fold-strip[data-n="4"], .pl-trial.ex-fold .ex-fold-strip[data-n="5"], .pl-trial.ex-fold .ex-fold-strip[data-n="6"] {

@@ -59,14 +59,18 @@
       upTrials: 40, upSd: 0.45, upSessionTrials: 10,
       switchWindow: 20, switchDrop: 0.10, stretchStart: 3,
       // similar-looking exercises (S4 alternates within a group); groups may overlap (v1.1: Knots
-      // looks like Nets and Fold; Reckon is Homing without landmarks)
-      groups: [['fold', 'nets', 'slice', 'views', 'hidden'], ['rotate', 'spin', 'orient'], ['knots', 'nets', 'fold'], ['homing', 'reckon']],
+      // looks like Nets and Fold; Reckon is Homing without landmarks; the PAT formats sit with the
+      // exercises whose models they share, R3 §9; Angles is in no group)
+      groups: [['fold', 'nets', 'slice', 'views', 'hidden'], ['rotate', 'spin', 'orient'], ['knots', 'nets', 'fold'], ['homing', 'reckon'],
+        ['patfold', 'fold'], ['cubes', 'views'], ['openings', 'views', 'slice'], ['form', 'nets', 'fold'], ['patviews', 'views']],
     },
     session: {
       minutes: 20, exercises: 3, warmup: 2, explore: 0.15, minShare: 0.20, maxShare: 0.50, minTrials: 10,
       extraShare: 0.25, checkinEvery: 14, checkinAfter: 10,
-      // untried exercises come in this order (visuospatial first; Track, Homing and Reckon last)
-      beginner: ['rotate', 'fold', 'spin', 'nets', 'knots', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing', 'reckon'],
+      // untried exercises come in this order (visuospatial first; Track, Homing and Reckon last; the
+      // PAT formats after them, which join automatic choices only under the PAT focus)
+      beginner: ['rotate', 'fold', 'spin', 'nets', 'knots', 'views', 'slice', 'orient', 'hidden', 'span', 'track', 'homing', 'reckon',
+        'patfold', 'cubes', 'angles', 'patviews', 'openings', 'form'],
       review: [3, 7, 14, 30], maxGapMs: 90000, maxFactor: 1.6, blockEvery: 10,
       minItemMs: 500, // a time-boxed session's item cap: one item per 0.5 s of its budget (a safety net)
       trialMs: { choice: 9000, multi: 11000, yesno: 6000, angle: 10000, targets: 16000, sequence: 12000 }, overheadMs: 2500,

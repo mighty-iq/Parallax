@@ -1,4 +1,4 @@
-/* PAT-3 Angles: generator, validator, scorer, difficulty, shortcut solvers, timing and learn data
+/* EX-16 Angles: generator, validator, scorer, difficulty, shortcut solvers, timing and learn data
    (ARCHITECTURE §12; R3 §8.3). Run through tests/node/run.mjs. PX_REPORT=1 prints the numbers;
    PX_TEST_ITEMS=<n> shortens the seed loop. */
 import { MANIFEST, deepDiff } from './run.mjs';
@@ -16,7 +16,7 @@ export async function run(t) {
   if (!def) return;
   const L = def.lib;
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat, def.perDisplay, def.practice],
-    ['angles', 1, 'PAT-3', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version, code, LE, no cell, choice of 4, pat, per display, perceptual practice');
+    ['angles', 1, 'EX-16', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version, code, LE, no cell, choice of 4, pat, per display, perceptual practice');
   t.eq(def.dims.map((d) => d.key), ['gap', 'size', 'resolve', 'pose'], 'dims');
   t.ok(def.dims[0].levels.every((g) => g >= 2), 'no gap below 2° (the phone floor holds on every screen)');
   const all = PX.ex.enumerate(def);

@@ -1,4 +1,4 @@
-/* PAT-2 Missing View: drawings (two methods), the class-free proofs, the exhaustive search against
+/* EX-15 Missing View (DAT-style format): drawings (two methods), the class-free proofs, the exhaustive search against
    brute force, generator, validator, scorer, shortcut solvers, timing, learn data.
    Run through tests/node/run.mjs (filter: patviews). */
 import { performance } from 'node:perf_hooks';
@@ -32,7 +32,7 @@ const pk = (p) => `${p.cubes}${p.grid}${p.missing}${p.foil}`;
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat],
-    ['patviews', 1, 'PAT-2', ['Vz'], 'intrinsic-static', 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise)');
+    ['patviews', 1, 'EX-15', ['Vz'], 'intrinsic-static', 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise)');
   t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 4], ['grid', 2], ['missing', 3], ['foil', 3]], 'dims');
   t.eq(def.requires, ['views'], 'declares that it reads Views\' block model');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);

@@ -3,7 +3,7 @@
    spline as exact Bézier pieces; at every crossing the strand on top is drawn again over a casing
    in the plate's colour, which opens the gap in the strand underneath (the knot-diagram
    convention: shape, never colour alone). Open ropes run off the plate with a pull arrow at each
-   end; link items show loop B in a second tone with a light centre line. Untie/tie items carry
+   end; link items show loop B in a second tone and a thicker stroke. Untie/tie items carry
    letter tags A–D beside four crossings; tapping a tag answers through the choice grid.
    - Show me replays the validator's simplifier on the drawn rope (def.lib.replay): each move is
      a local morph (a curl shrinks into its crossing; a loop slides off past the other strand; a
@@ -62,12 +62,10 @@
     if (typeof dg === 'string') return null;
     curves.forEach(function (cv, k) {
       g.appendChild(el('path', { d: bezierPath(cv), class: 'ex-knots-rope ' + ropeClass(k, curves.length) }));
-      if (curves.length > 1 && k === 1) g.appendChild(el('path', { d: bezierPath(cv), class: 'ex-knots-stripe' }));
     });
     dg.X.forEach(function (x, c) {
       var top = over[c] ? { k: x.a[0], seg: x.sa } : { k: x.b[0], seg: x.sb }, s = dg.S[top.k];
       overPiece(g, s.x, s.y, s.closed, top.seg, ropeClass(top.k, curves.length));
-      if (curves.length > 1 && top.k === 1) g.appendChild(el('path', { d: polyPath(s.x, s.y, s.closed, top.seg - 4, top.seg + 5), class: 'ex-knots-stripe' }));
     });
     if (!opts || opts.arrows !== false) curves.forEach(function (cv, k) { if (!cv.closed) arrows(g, dg.S[k]); });
     return dg;
@@ -79,12 +77,10 @@
     try { pc = lib.polyCrossings(polys); } catch (e) { pc = { list: [] }; }
     polys.forEach(function (Q, k) {
       g.appendChild(el('path', { d: polyPath(Q.x, Q.y, Q.closed), class: 'ex-knots-rope ' + (isB(k) ? 'ex-knots-rope--b' : '') }));
-      if (isB(k)) g.appendChild(el('path', { d: polyPath(Q.x, Q.y, Q.closed), class: 'ex-knots-stripe' }));
     });
     pc.list.map(function (x) { return x; }).sort(function (a, b) { return Math.max(a.za, a.zb) - Math.max(b.za, b.zb); }).forEach(function (x) {
       var top = x.za > x.zb ? { k: x.a[0], seg: x.sa } : { k: x.b[0], seg: x.sb }, Q = polys[top.k];
       overPiece(g, Q.x, Q.y, Q.closed, top.seg, isB(top.k) ? 'ex-knots-rope--b' : '');
-      if (isB(top.k)) g.appendChild(el('path', { d: polyPath(Q.x, Q.y, Q.closed, top.seg - 4, top.seg + 5), class: 'ex-knots-stripe' }));
     });
     polys.forEach(function (Q) { if (!Q.closed) arrows(g, { x: Q.x, y: Q.y, m: Q.x.length }); });
     return pc;
@@ -102,7 +98,7 @@
       g.appendChild(el('path', { d: 'M' + f1(a1[0]) + ' ' + f1(a1[1]) + 'L' + f1(tip[0]) + ' ' + f1(tip[1]) + 'L' + f1(a2[0]) + ' ' + f1(a2[1]), class: 'ex-knots-arrow' }));
     });
   }
-  function ring(g, x, y, cls) { g.appendChild(el('circle', { cx: f1(x), cy: f1(y), r: 13, class: 'ex-knots-ring ' + (cls || '') })); }
+  function ring(g, x, y, cls) { g.appendChild(el('circle', { cx: f1(x), cy: f1(y), r: 17, class: 'ex-knots-ring ' + (cls || '') })); }
 
   // Tag positions: 24–30 px from the crossing in the free direction farthest from every strand.
   function tagSpots(dg, tags) {
@@ -257,12 +253,6 @@
     st.verdict.textContent = text;
     st.verdict.setAttribute('data-kind', 'key');
     st.verdict.hidden = false;
-    st.opts.forEach(function (o, i) {
-      if (!o || item.answer === 'yesno') return;
-      o.tag.textContent = i === item.key ? '✓' : '';
-      o.tag.hidden = i !== item.key;
-      o.tag.setAttribute('data-kind', 'key');
-    });
     return timing.wait(ctx && ctx.fast ? 0 : 250);
   }
 
@@ -291,9 +281,10 @@
     st.ropeG.appendChild(gA);
     st.ropeG.appendChild(gB);
   }
-  function still(curves, over, rings) {
+  // tags: keep the letters A–D in view (the same outline, so their places still fit)
+  function still(curves, over, rings, tags) {
     clearG(st.ropeG); clearG(st.markG);
-    st.tagG.style.display = 'none';
+    st.tagG.style.display = tags ? '' : 'none';
     drawItem(st.ropeG, curves, over);
     (rings || []).forEach(function (r) { ring(st.markG, r[0], r[1]); });
   }
@@ -354,8 +345,8 @@
     var R2 = replayOf(item, o2, false), untie = item.variant === 'untie', shown = false;
     out.push({
       ms: 1600, caption: cap('switchKey', { tag: LETTERS[item.key] }),
-      enter: function () { shown = false; still(curves, item.over, [[X.x, X.y]]); },
-      update: function (k) { if (k >= 0.55 && !shown) { shown = true; still(curves, o2, [[X.x, X.y]]); } },
+      enter: function () { shown = false; still(curves, item.over, [[X.x, X.y]], true); },
+      update: function (k) { if (k >= 0.55 && !shown) { shown = true; still(curves, o2, [[X.x, X.y]], true); } },
     });
     out = out.concat(moveSteps(R2));
     out.push({
@@ -368,7 +359,7 @@
       o3[c2] = !o3[c2];
       out.push({
         ms: 2400, caption: cap('stays', { tag: LETTERS[response], what: untie ? 'still holds a knot' : 'still falls open' }),
-        enter: function () { still(curves, o3, [[X2.x, X2.y]]); },
+        enter: function () { still(curves, o3, [[X2.x, X2.y]], true); },
       });
     }
     return out;

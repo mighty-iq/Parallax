@@ -183,6 +183,7 @@ def play_session(page, mode, P):
                     page.wait_for_timeout(200)
                 hud_checks.append(hud_ok(page, budget))
             elif name == 'idle':
+                wiggle(page)  # the last input: from here on nobody touches anything for P['idle'] s
                 s0 = page.evaluate('({ a: __play.session.activeMs, st: __play.state, r: __play.session.clock, t: performance.now() })')
                 trace = []
                 for _ in range(P['idle'] // 5):  # look, never touch: no input reaches the page

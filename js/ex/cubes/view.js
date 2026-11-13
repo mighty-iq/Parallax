@@ -1,4 +1,4 @@
-/* PAT-5 Painted Cubes: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
+/* EX-18 Painted Cubes: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
    layout 'stem+options': the stem is the figure, drawn from the item's height map with the
    generator's own camera (lib.proj, lib.facesOf: a parallel projection from the front right),
    faces in three tones with outlines (colour never the only cue), and the question with N in

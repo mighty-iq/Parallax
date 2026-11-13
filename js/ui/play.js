@@ -141,10 +141,12 @@
   // "1 item", "2 items": counts in sentences.
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many || one + 's'); }
   function specOf(def) { return PX.ui.kit ? PX.ui.kit.spec([def.code, def.short || def.name, (def.abilities || []).join(' ')]) : h('span', def.code); }
+  // The goal line: an item's own task (Reckon's tutorial items), then its variant, then the exercise's goal.
   function goalOf(learn, item) {
     if (!learn) return '';
+    var g = learn.goals || {}, t = item && typeof item.task === 'string' ? item.task : null;
     var v = item && item.params ? item.params.variant : null;
-    return (learn.goals && v && learn.goals[v]) || learn.goal || '';
+    return (t && g[t]) || (v && g[v]) || learn.goal || '';
   }
   // The first tip (learn.tips) that matches the item and was never shown to this person.
   function tipFor(exId, learn, item, always) {
@@ -163,14 +165,20 @@
     }
     return null;
   }
+  // What kind of practice an exercise is, in one line: its learn data's own labelLine first (Angles),
+  // then attention practice (Track), perceptual-judgement practice, experimental (Homing, Reckon).
   function labelLine(def) {
+    var learn = PX.ex.learn(def.id), name = def.short || def.name;
+    if (learn && typeof learn.labelLine === 'string' && learn.labelLine) return learn.labelLine;
     if (def.practice === 'attention') return 'Track is attention practice: it trains keeping track of moving objects, not visuospatial ability itself.';
-    if (def.id === 'homing') return 'Homing is experimental and works best on a larger screen.';
+    if (def.practice === 'perception') return name + ' is perceptual-judgement practice: it trains judging by eye, and the gains tend to stay with this kind of figure.';
+    if (def.experimental) return name + ' is experimental: its item model is new and untested.';
     return '';
   }
   function tagOf(def) {
     if (def.practice === 'attention') return 'attention practice';
-    if (def.id === 'homing') return 'experimental';
+    if (def.practice === 'perception') return 'perceptual-judgement practice';
+    if (def.experimental) return 'experimental';
     return null;
   }
 
@@ -520,6 +528,7 @@
         P.nextWaiter = null; P.nextRequested = false;
         stopLimit();
         resetTrialUi();
+        toggleGuide(false); // Help opens the guide for the item at hand; it never covers the next one
         setTip(cfg.tip || null);
         if (cfg.goal !== undefined) setGoal(cfg.goal);
         if (!def || !view) { setState('unavailable'); finishTrial({ item: item, outcome: 'skipped', result: { correct: false }, exId: P.exId }); return; }
@@ -1523,7 +1532,7 @@
 
     function afterTrial(step, def, item, tr) {
       if (S.done || tr.outcome === 'aborted') return null;
-      if (S.clock && tr.outcome !== 'skipped') S.clock.touch(); // an answer is activity, however it came
+      if (S.clock && tr.outcome !== 'skipped' && !tr.timeout) S.clock.touch(); // an answer is activity, however it came; a time-out is not
       var result = { correct: !!(tr.result && tr.result.correct), rt: tr.rtMs, value: tr.result ? tr.result.value : undefined, timeout: !!tr.timeout,
         input: tr.input || null, display: tr.display || undefined };
       if (tr.outcome === 'stutter') { result.outcome = 'stutter'; result.voided = true; }

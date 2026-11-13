@@ -61,8 +61,18 @@ html[data-hx-state="paused"] .ex-level .pr-timer-fill,
 .ex-level[data-paused] .pr-timer-fill { animation-play-state: paused; }
 @keyframes lv-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
-/* Phones held sideways: the stem on the left as tall as the screen allows, the four pictures right. */
+/* Phones in the player (css/play.css: --pl-avail, --pl-w, --pl-col): the stem and the four pictures
+   share one screen, and on a short screen both shrink (--lv-cell, the height of one picture's cell).
+   Sideways: the stem on the left as tall as the screen allows, the four pictures right. */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-level { --lv-cell: min(calc((var(--pl-w) - var(--s2)) / 2), calc((var(--pl-avail) - 8rem - 1.75rem) / 2)); }
+  .pl-trial.ex-level .lv-stem-svg { max-height: min(14rem, calc(var(--pl-avail) - 2 * var(--lv-cell) - 2.75rem)); }
+  .pl-trial.ex-level .px-choices[style*="--px-cols:4"] .px-choice { height: var(--lv-cell); }
+  /* !important: PX.core.svg sets height:auto inline */
+  .pl-trial.ex-level .px-choices[style*="--px-cols:4"] .lv-svg { width: auto; height: calc(var(--lv-cell) - 6px) !important; max-width: 100%; }
+}
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-level { --lv-cell: min(calc((var(--pl-col) - var(--s2)) / 2), calc((var(--pl-avail) - var(--s2)) / 2)); }
   .pl-trial.ex-level .lv-stem-svg { max-height: calc(var(--pl-avail) - 2rem); }
-  .pl-trial.ex-level .lv-svg { max-width: calc((var(--pl-avail) - 1.5rem) / 2); }
+  .pl-trial.ex-level .px-choice { padding: 2px; }
 }

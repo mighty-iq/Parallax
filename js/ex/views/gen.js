@@ -875,7 +875,7 @@
     },
   });
 
-  /* ===== v1.1 export block (owner: B6, for PAT-2 Missing View, js/ex/patviews/gen.js) =====
+  /* ===== v1.1 export block (owner: B6, for EX-15 Missing View, js/ex/patviews/gen.js) =====
      Non-breaking: it only adds the block-model helpers that were private to Views' lib. Views' own
      definition, ids, ratings, generator and items do not change. Missing View reads them lazily
      through PX.ex.get('views').lib (its gen.js may load before this file in a node load check). */

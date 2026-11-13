@@ -1,4 +1,4 @@
-/* PAT-3 Angles: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
+/* EX-16 Angles: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
    layout 'stem+options': the stem is four numbered cells (2 × 2 on phones, a row on wide screens),
    each with one angle drawn from the item's own endpoints (cell units, 1 × 1); the options are
    orderings of the numbers, smallest angle first.

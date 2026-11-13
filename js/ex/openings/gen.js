@@ -1,4 +1,4 @@
-/* PAT-1 Openings: a pictured solid and five openings. The solid may be turned before it goes in
+/* EX-14 Openings (DAT-style format): a pictured solid and five openings. The solid may be turned before it goes in
    and then passes straight through; which opening fits it exactly (same outline, same scale)?
    (pure; ARCHITECTURE.md §5; design: docs/research/v1.1/R3-dat-pat.md §8.5.)
 
@@ -523,12 +523,31 @@
       var v = (b + 0.5) / RES + DY;
       rowI.push(axis === 'z' ? intervalsAt(prof.S, false, v, 0, D) : axis === 'x' ? intervalsAt(prof.F, false, v, 0, W) : intervalsAt(prof.S, true, v, 0, H));
     }
-    var P = axis === 'z' ? prof.F : axis === 'x' ? prof.S : prof.T;
+    var P = axis === 'z' ? prof.F : axis === 'x' ? prof.S : prof.T, inP = scanFill(P, nA, nB);
     for (b = 0; b < nB; b++) for (a = 0; a < nA; a++) {
-      if (!pip(P, (a + 0.5) / RES + DX, (b + 0.5) / RES + DY)) continue;
+      if (!inP[b * nA + a]) continue;
       if (meet(colI[a], rowI[b]).length) r[b * nA + a] = 1;
     }
     return cropRaster({ w: nA, h: nB, r: r });
+  }
+  // Samples of an nA × nB raster inside polygon q (origin at the raster's corner), filled row by row
+  // between sorted edge crossings: the same rule as pip() (half-open in y), much faster.
+  function scanFill(q, nA, nB) {
+    var r = new Uint8Array(nA * nB), xs = [], n = q.length, b, i, a;
+    for (b = 0; b < nB; b++) {
+      var y = (b + 0.5) / RES + DY;
+      xs.length = 0;
+      for (i = 0; i < n; i++) {
+        var u = q[i], v = q[(i + 1) % n];
+        if ((u[1] > y) !== (v[1] > y)) xs.push(u[0] + (y - u[1]) * (v[0] - u[0]) / (v[1] - u[1]));
+      }
+      xs.sort(function (x1, x2) { return x1 - x2; });
+      for (i = 0; i + 1 < xs.length; i += 2) {
+        var a0 = Mth.max(0, Mth.ceil((xs[i] - DX) * RES - 0.5)), a1 = Mth.min(nA - 1, Mth.ceil((xs[i + 1] - DX) * RES - 0.5) - 1);
+        for (a = a0; a <= a1; a++) r[b * nA + a] = 1;
+      }
+    }
+    return r;
   }
   // A polygon rasterised over its own box, after turn or flip k (0–7).
   function polyRaster(p, k) {
@@ -536,9 +555,8 @@
     p.forEach(function (v) { x0 = Mth.min(x0, v[0]); y0 = Mth.min(y0, v[1]); x1 = Mth.max(x1, v[0]); y1 = Mth.max(y1, v[1]); });
     var q = p.map(function (v) { return [v[0] - x0, v[1] - y0]; });
     if (k) q = tfPoly(q, k, x1 - x0, y1 - y0);
-    var sz = tfSize(k || 0, x1 - x0, y1 - y0), nA = Mth.round(sz[0] * RES), nB = Mth.round(sz[1] * RES), r = new Uint8Array(nA * nB);
-    for (var b = 0; b < nB; b++) for (var a = 0; a < nA; a++) if (pip(q, (a + 0.5) / RES + DX, (b + 0.5) / RES + DY)) r[b * nA + a] = 1;
-    return cropRaster({ w: nA, h: nB, r: r });
+    var sz = tfSize(k || 0, x1 - x0, y1 - y0), nA = Mth.round(sz[0] * RES), nB = Mth.round(sz[1] * RES);
+    return cropRaster({ w: nA, h: nB, r: scanFill(q, nA, nB) });
   }
   function cropRaster(R) {
     var a0 = R.w, a1 = -1, b0 = R.h, b1 = -1, a, b;
@@ -839,7 +857,7 @@
   // +0.5, key on the side face +0.4 and on the top face +0.8 (less of the face shows), lying +0.6,
   // a proportion foil +0.3 (same features, wrong size: a scale judgement). Range 4.0 logits.
   PX.ex.define({
-    id: 'openings', version: 1, code: 'PAT-1', name: 'Openings', short: 'Openings',
+    id: 'openings', version: 1, code: 'EX-14', name: 'Openings', short: 'Openings',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 5, pat: true,
     dims: [
       { key: 'features', label: 'Features', levels: FEATURES.slice(), step: 0.6 },
@@ -856,7 +874,7 @@
       silZ: silZ, silX: silX, silY: silY, sils: sils, outline: outline, polyArea: polyArea, area4: area4, crop: crop,
       tfPoint: tfPoint, tfSize: tfSize, tfGrid: tfGrid, tfPoly: tfPoly, compare: compare, dist: dist, stretch: stretch, mutate: mutate,
       pip: pip, rayIntervals: rayIntervals, rayHits: rayHits, inSolid: inSolid, featureRuns: featureRuns, featuresSeen: featuresSeen, tmul: tmul, axisFacing: axisFacing,
-      surface: surface, edges: edges, raySil: raySil, polyRaster: polyRaster, tfRaster: tfRaster, rcompare: rcompare, shares: shares, fitsBox: fitsBox,
+      surface: surface, edges: edges, raySil: raySil, polyRaster: polyRaster, scanFill: scanFill, tfRaster: tfRaster, rcompare: rcompare, shares: shares, fitsBox: fitsBox,
       build: build, fallback: fallback, cleanParams: cleanParams,
       // the profiles of an item as quarter grids, from its stored polygons (centroid tests)
       gridsOf: function (item) {

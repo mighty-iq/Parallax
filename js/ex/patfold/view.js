@@ -1,4 +1,4 @@
-/* PAT-4 Hole Punch: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
+/* EX-17 Hole Punch: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
    layout 'stem+options': the stem is a strip of panels in the format's look, one per fold (the
    paper's position before the fold dashed, the folded paper solid, the flap that just moved
    shaded, an arrow from where it was) and a last panel with the folded paper and the punch; the

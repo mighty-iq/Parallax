@@ -442,6 +442,20 @@ function testLearn(t, PX, def, H) {
     t.ok(R && !R.broken && (!apart || R.reached), `demo seed ${d.seed}: show me plays to the end`);
   }
   t.ok(def.variants.every((v) => L.demo.some((d) => d.params.variant === v)), 'a demo for every variant');
+  // The Watch demo of pull (the first pull demo) is a knot with a minimal pair: one crossing,
+  // switched, lets the same outline fall open, and that show me reaches the end (view.js demo).
+  {
+    const d = L.demo.find((x) => x.params.variant === 'pull'), it = def.generate(PX.rng(d.seed), d.params);
+    const dg = H.diagramOf(H.curvesOf(it), it.over);
+    let pair = -1;
+    for (let c = 0; c < dg.X.length && pair < 0; c++) {
+      const o2 = it.over.slice();
+      o2[c] = !o2[c];
+      const cl = H.classify(H.switched(dg.D, c)), R = H.replay(H.curvesOf(it), o2, {});
+      if (cl && !cl.knot && R && R.reached) pair = c;
+    }
+    t.ok(d.kind === 'knot' && pair >= 0, `the pull Watch demo is a knot with a minimal pair (crossing ${pair})`);
+  }
   t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
   t.ok(L.practice.every((p, i) => i === 0 || def.difficulty(p) >= def.difficulty(L.practice[i - 1]) - 1e-9), 'practice items easiest first');
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');

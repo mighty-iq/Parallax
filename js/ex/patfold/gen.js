@@ -1,4 +1,4 @@
-/* PAT-4 Hole Punch: the hole-punching format on Fold's exact paper model (pure; ARCHITECTURE.md §5,
+/* EX-17 Hole Punch: the hole-punching format on Fold's exact paper model (pure; ARCHITECTURE.md §5,
    docs/research/v1.1/R3-dat-pat.md §2.2, §3.4, §8.1).
 
    The task. A square sheet of 4 × 4 cells is folded two or three times, then punched once
@@ -291,7 +291,7 @@
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
 
   PX.ex.define({
-    id: 'patfold', version: 1, code: 'PAT-4', name: 'Hole punch', short: 'Hole Punch',
+    id: 'patfold', version: 1, code: 'EX-17', name: 'Hole punch', short: 'Hole Punch',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', pat: true,
     requires: ['fold'], // Fold's paper model (lib.sheet), read at generate time
     answer: 'choice', nOptions: NOPT,

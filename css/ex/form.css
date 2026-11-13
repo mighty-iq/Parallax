@@ -1,4 +1,4 @@
-/* PAT-6 Form (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-form; tokens from css/base.css with
+/* EX-19 Form, a DAT-style format (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-form; tokens from css/base.css with
    fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag, .ex-opt, .ex-focus,
    .px-fig-*) come from css/ex.css and css/base.css. Pattern and solids are SVG in units at one scale.
    A mark is a darker tone plus a hatch (a pattern of lines), never colour alone; fold lines are

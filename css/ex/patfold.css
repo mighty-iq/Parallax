@@ -1,4 +1,4 @@
-/* PAT-4 Hole Punch (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-patfold; tokens from
+/* EX-17 Hole Punch (docs/dev/EXERCISE-GUIDE.md): every rule under .ex-patfold; tokens from
    css/base.css with fallbacks; shared pieces from css/ex.css. The format's look: the paper's
    position before a fold dashed, the folded paper solid; options show all 16 positions, holes
    filled and empty positions as open rings. The paper stays light in both themes, so marks on it

@@ -1,4 +1,4 @@
-/* PAT-5 Painted Cubes: generator, validator (independent recount and z-buffer), scorer, difficulty,
+/* EX-18 Painted Cubes: generator, validator (independent recount and z-buffer), scorer, difficulty,
    camera, shortcut solvers, Section-mode asks, timing and learn data (ARCHITECTURE §12; R3 §8.4).
    Run through tests/node/run.mjs. PX_REPORT=1 prints the numbers; PX_TEST_ITEMS=<n> shortens it. */
 import { MANIFEST, deepDiff } from './run.mjs';
@@ -15,7 +15,7 @@ export async function run(t) {
   if (!def) return;
   const L = def.lib;
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat, def.extraParams],
-    ['cubes', 1, 'PAT-5', ['Vz'], 'train', 'choice', 5, true, ['ask']], 'id, version, code, Vz, choice of 5, pat, extra param ask');
+    ['cubes', 1, 'EX-18', ['Vz'], 'train', 'choice', 5, true, ['ask']], 'id, version, code, Vz, choice of 5, pat, extra param ask');
   const all = PX.ex.enumerate(def);
   t.eq(all.length, 24, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);

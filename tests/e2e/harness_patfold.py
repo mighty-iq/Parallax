@@ -1,4 +1,4 @@
-"""E2E: the dev harness with Hole Punch (PAT-4, SVG). Shared flow in tests/e2e/pat_harness.py.
+"""E2E: the dev harness with Hole Punch (EX-17, SVG). Shared flow in tests/e2e/pat_harness.py.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_patfold.py
 Hole Punch runs Fold's model (js/ex/fold/gen.js), so the harness is inlined with it (until the
 harness loads `def.requires`). Own checks: one panel per fold plus the punch panel, each fold panel
