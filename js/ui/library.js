@@ -45,8 +45,10 @@
   var NAME_TAIL = { homing: 'with landmarks', reckon: 'no landmarks' };
   // Notes under an experimental exercise's lead (B3's wording for Homing and Reckon).
   var EXPERIMENTAL = {
-    homing: 'Homing is experimental: its item model is new and untested. It is the landmark-aided stage before Reckon: far landmarks correct dead-reckoning errors.',
-    reckon: 'Reckon is experimental: dead reckoning with no landmarks or fixes of any kind. Hard at first? Practise Homing, where landmarks help, then come back.',
+    // the middle sentence follows the per-cell tables in tests/node/{homing,reckon}.test.mjs: turns alone are right
+    // less often with bigger turns, at tighter tolerances and on walks back (not simply on longer routes)
+    homing: 'Homing is experimental: its item model is new and untested. It is the landmark-aided stage before Reckon: far landmarks correct dead-reckoning errors. On the easier routes the turns alone tell you much of the way home; distances matter more with bigger turns and at tighter tolerances. Each answer\'s angle error is logged.',
+    reckon: 'Reckon is experimental: dead reckoning with no landmarks or fixes of any kind. On the easier routes the turns alone tell you much of the way home; distances matter more with bigger turns, at tighter tolerances and when you walk back. Angle and distance errors are logged separately. Hard at first? Practise Homing, where landmarks help, then come back.',
   };
   var CARD_NOTE = { reckon: 'Hard at first? Practise Homing, where landmarks help, then come back.' };
   var MODES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', section: 'Section practice' };
