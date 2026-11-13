@@ -766,13 +766,16 @@
     bus.on('store:volatile', renderBanner);
     bus.on('store:reload', onReload);
     router.on(onRoute);
-    // A #/play hash (a reload, a restored tab, a home-screen icon) never starts a session by itself
-    // (I1 T4): it shows that session's kept summary when it is recent, else Today.
+    // A #/play hash (a reload, a restored tab, a home-screen icon, back or forward) never starts a
+    // session by itself (I1 T4): it shows that session's kept summary when it is recent, else Today.
+    function playGuard(rt) {
+      if (!rt || rt.name !== 'play') return rt;
+      try { return PX.ui.play && typeof PX.ui.play.bootRoute === 'function' ? PX.ui.play.bootRoute(rt) : null; } catch (e) { return null; }
+    }
+    router.guard = playGuard;
     var r = router.fromHash();
     if (r && r.name === 'play') {
-      var b = null;
-      try { b = PX.ui.play && typeof PX.ui.play.bootRoute === 'function' ? PX.ui.play.bootRoute(r) : null; } catch (e) { b = null; }
-      r = b;
+      r = playGuard(r);
       if (!r) { router.go('home', null, { force: true }); r = false; }
     }
     if (r !== false) router.go(r ? r.route : 'home', r ? r.params : null, { force: true, mirror: false });

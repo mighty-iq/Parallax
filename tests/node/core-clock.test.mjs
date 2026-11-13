@@ -12,6 +12,7 @@ export async function run(t) {
   idle(t);
   hidden(t);
   ticks(t);
+  lateTimers(t);
 }
 
 function env(t) {
@@ -28,7 +29,9 @@ function formatter(t) {
   t.eq([F(60000), F(89999), F(90000), F(7 * 60000), F(59 * 60000 + 29000)], ['1 min', '1 min', '2 min', '7 min', '59 min'], 'whole minutes, rounded');
   t.eq([F(59 * 60000 + 31000), F(65 * 60000), F(200 * 60000)], ['1 h 00 min', '1 h 05 min', '3 h 20 min'], 'hours and two-digit minutes');
   t.eq([K.fmtLeft(5 * 60000), K.fmtLeft(61000), K.fmtLeft(59000), K.fmtLeft(0), K.fmtLeft(-3)],
-    ['about 5 min left', 'about 1 min left', 'less than 1 min left', 'less than 1 min left', 'less than 1 min left'], 'the countdown uses the same minutes');
+    ['about 5 min left', 'about 1 min left', 'less than 1 min left', 'less than 1 min left', 'less than 1 min left'], 'the countdown in minutes');
+  t.eq([K.fmtLeft(150000), K.fmtLeft(119000), K.fmtLeft(299999), K.fmtLeft(3659000)],
+    ['about 2 min left', 'about 1 min left', 'about 4 min left', 'about 1 h 00 min left'], 'the countdown rounds down: it never claims time that is gone');
 }
 
 function basics(t) {
@@ -163,4 +166,29 @@ function ticks(t) {
   t.eq(seen.slice(3), [21000], 'ticks resume with the clock');
   C.destroy();
   void T0;
+}
+
+// The idle cap holds on the reading itself, also when the clock's own timer never comes (a laptop
+// waking from sleep, a throttled tab): a scripted time source and timers that never fire.
+function lateTimers(t) {
+  t.section('clock late timers');
+  const { K } = env(t);
+  let T = 1000;
+  const C = K.create({ idleMs: 60000, tickMs: 5000, now: () => T, win: { setTimeout: () => 1, clearTimeout: () => {} }, doc: null });
+  C.start();
+  T += 3600000; // an hour of quiet, and no timer ran
+  t.eq([C.activeMs(), C.running()], [60000, true], 'activeMs() never counts more than 60 s past the last input');
+  C.touch(); // an input before the late timer
+  t.eq([C.activeMs(), C.running(), C.reasons()], [60000, true, []], 'an input then resumes from the cap: the hour is not practice');
+  T += 10000;
+  t.eq(C.activeMs(), 70000, 'and counts on from the input');
+  T += 3600000;
+  C.stop(); // the page closes before any timer
+  t.eq(C.activeMs(), 120000, 'stop() after another quiet hour stores the cap too (60 s past the input)');
+  C.start();
+  t.eq([C.running(), C.reasons()], [true, []], 'start() after stop() runs again, even after the idle cap (no idle reason left)');
+  T += 120000;
+  C.pause('sheet');
+  t.eq([C.activeMs(), C.reasons()], [180000, ['sheet', 'idle']], 'pause() applies the cap first');
+  C.destroy();
 }

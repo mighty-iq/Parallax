@@ -5,7 +5,8 @@
    Solid: the intersection of three straight extrusions, so every feature runs right through
    (the rule that hidden parts hold no surprises holds by construction):
      F (x, y) extruded along z (front profile), T (x, z) along y (top), S (z, y) along x (side).
-   Units: a lattice step is half a unit; the box is W × H × D steps (6–10, pairwise different).
+   Units: a lattice step is half a unit; the box is W × H × D steps (5–8, pairwise different: at most
+   8 steps, so on a 360 px phone an opening drawn at the solid's scale gets at least 11 px a step).
    Profiles start as full rectangles and get features: notches (rectangular bites in a side), steps
    (bites at a corner) and 45° chamfers (dim 'edges'). No through-holes: an outline is always an
    outer outline. Each profile cell is empty, full or a half (cut on a diagonal); a cell is split
@@ -14,10 +15,16 @@
    corners at cell corners and the cell centre (silZ / silX / silY, exact).
    The outline of a quarter grid is its boundary (outline()), in steps (halves possible).
 
-   Key: the silhouette along one axis (dim 'keyview': the axis of the face the picture shows most,
-   then the side face, then the top face; dim 'pose': upright or lying). Foils: silhouettes of
-   neighbouring solids (one feature moved, removed, resized or added, on any of the three
-   profiles) and, at foil level 1, one proportion foil (the outline stretched by at least 25 %).
+   Features sit on all three profiles at every level (dim 'features': 1 + 1 + 1, 2 + 1 + 1,
+   2 + 2 + 1, 2 + 2 + 2), the counts dealt to the profiles at random without regard to the key, so
+   the key's face is the most featured one no more often than any other face.
+   Key: the silhouette along one axis (dim 'keyview': mostly the picture's front face, then any face,
+   then mostly the top; each face is the key in a third of items over the levels; dim 'pose':
+   upright or lying). Foils: silhouettes of neighbouring solids (one
+   feature moved, resized or turned to another corner, sometimes removed or added, on any of the
+   three profiles: mostly changes that keep the outline's corner count, so counting corners does
+   not find the key) and, at foil level 1, one proportion foil (an outline of the key's family,
+   usually a sibling's, stretched or squeezed by at least 25 %).
    Every option is shown under its own random turn or flip (the D4 group), as the solid may be
    turned before it enters, so orientation is never a cue.
 
@@ -110,8 +117,9 @@
     var r = rng.next();
     if (cham && r < 0.4) return { t: 'cham', c: rint(rng, 0, 3), L: rint(rng, 2, 3) };
     if (r < 0.7) {
-      var side = rint(rng, 0, 3), len = side % 2 ? B : A, dep = side % 2 ? A : B, w = rint(rng, 2, Mth.min(4, len - 4));
-      if (w < 2 || dep < 4) return null;
+      var side = rint(rng, 0, 3), len = side % 2 ? B : A, dep = side % 2 ? A : B, wMax = Mth.min(4, len - 4);
+      if (wMax < 2 || dep < 4) return null; // a notch keeps two steps of side on each hand
+      var w = rint(rng, 2, wMax);
       return { t: 'notch', side: side, w: w, d: rint(rng, 1, Mth.min(3, dep - 3)), p: rint(rng, 2, len - w - 2) };
     }
     var a = rint(rng, 2, Mth.min(4, A - 3)), b = rint(rng, 2, Mth.min(4, B - 3));
@@ -295,7 +303,7 @@
     for (var a = 0; a < 3; a++) { var e = [0, 0, 0]; e[a] = 1; var w = [R[0] * e[0] + R[1] * e[1] + R[2] * e[2], R[3] * e[0] + R[4] * e[1] + R[5] * e[2], R[6] * e[0] + R[7] * e[1] + R[8] * e[2]]; if (w[world] !== 0) return AXES[a]; }
     return 'z';
   }
-  var KEYVIEW_WORLD = [2, 0, 1]; // front (world z), side (world x), top (world y)
+  // The world axes of the picture: front (z), side (x), top (y); KEYVIEW_SETS (below) picks among them.
   var PROF_OF = { z: 'F', y: 'T', x: 'S' }, AXIS_OF = { F: 'z', T: 'y', S: 'x' };
 
   /* ------------------------------------------------------------ polygons: inside tests and rays */
@@ -612,7 +620,7 @@
   }
 
   /* ------------------------------------------------------------ solids */
-  var DIMS = [6, 7, 8, 9, 10];
+  var DIMS = [5, 6, 7, 8], MAXEXT = 8; // no option is longer than MAXEXT steps either
   function profDims(W, H, D) { return { F: [W, H], T: [W, D], S: [D, H] }; }
   function buildProfiles(W, H, D, feats) {
     var dm = profDims(W, H, D), P = {};
@@ -625,12 +633,14 @@
     return out;
   }
   // One random change to one profile's features: removed, moved, resized, added, or a corner swapped.
-  function mutate(rng, feats, name, dm, cham) {
+  // keep: only changes that keep the outline's corner count (move, resize, other side, other corner).
+  function mutate(rng, feats, name, dm, cham, keep) {
     var list = feats[name].map(function (f) { return Object.assign({}, f); }), r = rng.next(), A = dm[0], B = dm[1];
-    if (!list.length || r < 0.18) { var f0 = randomFeature(rng, A, B, cham); if (!f0) return null; list.push(f0); }
+    if (keep && !list.length) return null;
+    if (!keep && (!list.length || r < 0.18)) { var f0 = randomFeature(rng, A, B, cham); if (!f0) return null; list.push(f0); }
     else {
       var i = rint(rng, 0, list.length - 1), f = list[i];
-      if (r < 0.36 && list.length > 1) list.splice(i, 1);
+      if (!keep && r < 0.36 && list.length > 1) list.splice(i, 1);
       else if (f.t === 'notch') {
         var r2 = rng.next();
         if (r2 < 0.35) f.p += rpick(rng, [-2, -1, 1, 2]);
@@ -646,7 +656,8 @@
     var out = {}; for (var n in feats) out[n] = n === name ? list : feats[n];
     return out;
   }
-  // The outline stretched by at least 25 % along one of its axes: a column or row band repeated.
+  // The outline stretched or squeezed by at least 25 % along one of its axes: a band of identical full
+  // or empty columns (rows) repeated or taken out, the corner count kept; never past MAXEXT steps.
   function stretch(rng, g) {
     var horiz = rng.chance(0.5), A = g.A, B = g.B, n = horiz ? A : B, add = Mth.max(2, Mth.ceil(0.25 * n)), same = [], i, j;
     for (i = 1; i < n; i++) {
@@ -655,9 +666,17 @@
       if (eq) same.push(i);
     }
     if (!same.length) return null;
-    var at = rpick(rng, same), out = horiz ? qgrid(A + add, B) : qgrid(A, B + add);
+    var grow = n + add <= MAXEXT && (n - add < 3 || rng.chance(0.5)), at, out, len2 = grow ? n + add : n - add;
+    if (!grow) { // squeeze: take out `add` columns, each a copy of the one before it
+      if (len2 < 3) return null;
+      var runs = same.filter(function (x) { for (var k = 0; k < add; k++) if (same.indexOf(x + k) < 0) return false; return true; });
+      if (!runs.length) return null;
+      at = rpick(rng, runs);
+    } else at = rpick(rng, same);
+    out = horiz ? qgrid(len2, B) : qgrid(A, len2);
     for (j = 0; j < out.B; j++) for (i = 0; i < out.A; i++) {
-      var si = horiz ? (i < at ? i : i < at + add ? at : i - add) : i, sj = horiz ? j : (j < at ? j : j < at + add ? at : j - add);
+      var u = horiz ? i : j, su = grow ? (u < at ? u : u < at + add ? at : u - add) : (u < at ? u : u + add);
+      var si = horiz ? su : i, sj = horiz ? j : su;
       out.m[j * out.A + i] = g.m[sj * A + si];
     }
     return out;
@@ -670,19 +689,30 @@
     for (i = 0; i < scores.length; i++) if (scores[i] === best) ties++;
     return scores[0] === best ? 1 / ties : 0;
   }
-  var SOLVERS = ['largest area', 'smallest area', 'most corners', 'fewest corners', 'like the others', 'odd one out', 'box fits the solid'];
+  // The stem-based counting solvers look at the solid: the corner counts of its three outlines, and of
+  // its most featured faces (ties: each as likely).
+  var SOLVERS = ['largest area', 'smallest area', 'most corners', 'fewest corners', 'like the others', 'odd one out', 'box fits the solid',
+    'corners = a face outline\'s', 'corners = the most featured face\'s', 'box and corners = a face outline\'s'];
   function fitsBox(g, W, H, D) {
     var pairs = [[W, H], [W, D], [D, H]];
     return pairs.some(function (p) { return (g.A === p[0] && g.B === p[1]) || (g.A === p[1] && g.B === p[0]); }) ? 1 : 0;
   }
-  function shares(set, W, H, D, M) { // set[0] is the key; entries { g, corners, id }; M: distances by id
+  function boxIs(g, A, B) { return (g.A === A && g.B === B) || (g.A === B && g.B === A); }
+  // set[0] is the key; entries { g, corners, id }; M: distances by id; S: the solid ({ W, H, D, outs:
+  // [{ A, B, corners }] per profile, top: indices of the most featured profiles }).
+  function shares(set, S, M) {
     var ar = set.map(function (o) { return area4(o.g); }), co = set.map(function (o) { return o.corners; });
     var sum = set.map(function (a, i) { var s = 0; set.forEach(function (b, j) { if (i !== j) s += M ? M[a.id][b.id] : dist(a.g, b.g); }); return s; });
-    var fit = set.map(function (o) { return fitsBox(o.g, W, H, D); });
-    return [pickShare(ar, true), pickShare(ar, false), pickShare(co, true), pickShare(co, false), pickShare(sum, false), pickShare(sum, true), pickShare(fit, true)];
+    var fit = set.map(function (o) { return fitsBox(o.g, S.W, S.H, S.D); });
+    var anyC = set.map(function (o) { return S.outs.some(function (q) { return q.corners === o.corners; }) ? 1 : 0; });
+    var topC = 0;
+    S.top.forEach(function (t) { topC += pickShare(set.map(function (o) { return o.corners === S.outs[t].corners ? 1 : 0; }), true) / S.top.length; });
+    var boxC = set.map(function (o) { return S.outs.some(function (q) { return q.corners === o.corners && boxIs(o.g, q.A, q.B); }) ? 1 : 0; });
+    return [pickShare(ar, true), pickShare(ar, false), pickShare(co, true), pickShare(co, false), pickShare(sum, false), pickShare(sum, true), pickShare(fit, true),
+      pickShare(anyC, true), topC, pickShare(boxC, true)];
   }
-  var WEIGHTS = [1, 1, 1, 1, 3, 1.5, 1.5];
-  function chooseFoils(rng, key, pool, W, H, D, needProp) {
+  var WEIGHTS = [1, 1, 1, 1, 3, 1.5, 1.5, 2.5, 2, 1];
+  function chooseFoils(rng, key, pool, S, needProp) {
     var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 12), best = null, bestScore = INF;
     var all = [key].concat(idx.map(function (i) { return pool[i]; })), M = [];
     all.forEach(function (o, i) { o.id = i; M.push([]); });
@@ -692,7 +722,7 @@
       var set = [pool[idx[a]], pool[idx[b]], pool[idx[c]], pool[idx[d]]];
       var np = set.filter(function (o) { return o.kind === 'proportion'; }).length;
       if (np !== (needProp ? 1 : 0)) continue;
-      var sh = shares([key].concat(set), W, H, D, M), score = 0;
+      var sh = shares([key].concat(set), S, M), score = 0;
       for (var k = 0; k < sh.length; k++) score += WEIGHTS[k] * Mth.abs(sh[k] - want[k]);
       if (score < bestScore - 1e-9) { bestScore = score; best = set; }
     }
@@ -700,29 +730,37 @@
   }
 
   /* ------------------------------------------------------------ generate */
-  var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, unseen: 0, interact: 0, lastInvalid: null, lastError: null };
+  var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, unseen: 0, interact: 0, place: 0, lastInvalid: null, lastError: null };
   function sameGrid(a, b) { if (a.A !== b.A || a.B !== b.B) return false; for (var k = 0; k < a.m.length; k++) if (a.m[k] !== b.m[k]) return false; return true; }
-  var FEATURES = [1, 2, 3, 4], EDGES = ['straight', 'chamfers'], KEYVIEW = ['front', 'side', 'top'], POSE = ['upright', 'lying'], FOILS = ['features', 'proportion'];
+  // dim 'features': features per profile, dealt to the three profiles in a random order.
+  var FEATURES = [[1, 1, 1], [2, 1, 1], [2, 2, 1], [2, 2, 2]], EDGES = ['straight', 'chamfers'], POSE = ['upright', 'lying'], FOILS = ['features', 'proportion'];
+  // dim 'keyview': the face the key comes from, as world axes of the picture: front (z), side (x), top
+  // (y). Every level mixes faces, and over the three levels each face is the key in a third of items,
+  // so no single face is the place to look (the front is seen most, the top least).
+  var KEYVIEW = ['front, sometimes side', 'front, side or top', 'top, sometimes side'], KEYVIEW_SETS = [[2, 2, 0], [2, 0, 1], [0, 1, 1]];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) {
     return { features: lvl(params, 'features', 4), edges: lvl(params, 'edges', 2), keyview: lvl(params, 'keyview', 3), pose: lvl(params, 'pose', 2), foils: lvl(params, 'foils', 2) };
   }
   function build(rng, p) {
     var dims = rshuffle(rng, DIMS).slice(0, 3), W = dims[0], H = dims[1], D = dims[2];
-    var pose = rpick(rng, POSE_SETS[p.pose]), keyAxis = axisFacing(POSES[pose], KEYVIEW_WORLD[p.keyview]), keyProf = PROF_OF[keyAxis];
-    var n = FEATURES[p.features], cham = p.edges === 1, dm = profDims(W, H, D), feats = { F: [], T: [], S: [] }, names = ['F', 'T', 'S'];
-    for (var f = 0; f < n; f++) {
-      // The first feature goes on the key's profile, later ones mostly on the other two, so the key
-      // is not simply the profile with the most features.
-      var others = names.filter(function (x) { return x !== keyProf; }), name = f === 0 ? keyProf : rng.chance(0.7) ? rpick(rng, others) : keyProf, placed = false;
-      for (var t = 0; t < 12 && !placed; t++) {
-        var nf = randomFeature(rng, dm[name][0], dm[name][1], cham);
-        if (cham && f === 0 && nf && nf.t !== 'cham' && rng.chance(0.6)) nf = { t: 'cham', c: rint(rng, 0, 3), L: rint(rng, 2, 3) };
-        if (!nf) continue;
-        var trial = feats[name].concat([nf]);
-        if (profile(dm[name][0], dm[name][1], trial)) { feats[name] = trial; placed = true; }
+    var pose = rpick(rng, POSE_SETS[p.pose]), keyAxis = axisFacing(POSES[pose], rpick(rng, KEYVIEW_SETS[p.keyview])), keyProf = PROF_OF[keyAxis];
+    var cham = p.edges === 1, dm = profDims(W, H, D), feats = { F: [], T: [], S: [] }, names = ['F', 'T', 'S'];
+    // The level's counts dealt to the profiles at random, without regard to the key.
+    var counts = rshuffle(rng, FEATURES[p.features]), order = rshuffle(rng, [0, 1, 2]), first = true;
+    for (var q = 0; q < 3; q++) {
+      var name = names[order[q]], cnt = counts[order[q]];
+      for (var f = 0; f < cnt; f++) {
+        var placed = false;
+        for (var t = 0; t < 12 && !placed; t++) {
+          var nf = randomFeature(rng, dm[name][0], dm[name][1], cham);
+          if (cham && first && nf && nf.t !== 'cham' && rng.chance(0.6)) nf = { t: 'cham', c: rint(rng, 0, 3), L: rint(rng, 2, 3) };
+          if (!nf) continue;
+          var trial = feats[name].concat([nf]);
+          if (profile(dm[name][0], dm[name][1], trial)) { feats[name] = trial; placed = true; first = false; }
+        }
+        if (!placed) { stats.place++; return null; }
       }
-      if (!placed) return null;
     }
     if (cham && !names.some(function (nm) { return feats[nm].some(function (x) { return x.t === 'cham'; }); })) return null;
     var P = buildProfiles(W, H, D, feats), polys = P && polysOf(P);
@@ -734,9 +772,10 @@
     var S3 = sils(P);
     if (!sameGrid(S3.z, P.F) || !sameGrid(S3.y, P.T) || !sameGrid(S3.x, P.S)) { stats.interact++; return null; }
     var crops = { z: P.F, y: P.T, x: P.S }, key = crops[keyAxis], keyL = [polys[keyProf]];
-    // Foil candidates: neighbouring solids' outlines (every axis), and stretched key outlines.
+    // Foil candidates: neighbouring solids' outlines (every axis), and resized outlines of the key's family.
     var pool = [];
     function admit(g, kind, axis) {
+      if (Mth.max(g.A, g.B) > MAXEXT) return;
       if (AXES.some(function (a) { return compare(g, crops[a]) !== 'differ'; })) return;
       if (pool.some(function (o) { return compare(g, o.g) !== 'differ'; })) return;
       var L = outline(g);
@@ -746,23 +785,31 @@
     // A hidden parent one change away from the key's profile: its other children are foils too, so
     // the key is not the centre of the family (the "most like the others" solver).
     // The key's own profile foils are its siblings (other children of the parent), never its children.
+    // Most changes keep the corner count (corner counting is not a way to the key).
     var parent = null;
-    for (var pt = 0; pt < 8 && !parent; pt++) { var fp = mutate(rng, feats, keyProf, dm[keyProf], cham); if (fp && profile(dm[keyProf][0], dm[keyProf][1], fp[keyProf])) parent = fp; }
+    for (var pt = 0; pt < 24 && !parent; pt++) { var fp = mutate(rng, feats, keyProf, dm[keyProf], cham, rng.chance(0.85)); if (fp && profile(dm[keyProf][0], dm[keyProf][1], fp[keyProf])) parent = fp; }
     if (!parent) return null;
     var gp = profile(dm[keyProf][0], dm[keyProf][1], parent[keyProf]);
     if (gp) admit(gp, 'feature', keyAxis); // the parent itself: the centre of the key's family
-    for (var m = 0; m < 44 && pool.length < 20; m++) {
+    for (var m = 0; m < 90 && pool.length < 20; m++) {
       var r0 = rng.next(), nm = r0 < 0.88 ? keyProf : rpick(rng, names.filter(function (x) { return x !== keyProf; }));
-      var fe = mutate(rng, nm === keyProf ? parent : feats, nm, dm[nm], cham);
-      if (fe && nm === keyProf && rng.chance(0.4)) fe = mutate(rng, fe, nm, dm[nm], cham) || fe; // farther siblings too
+      var fe = mutate(rng, nm === keyProf ? parent : feats, nm, dm[nm], cham, rng.chance(0.85));
+      if (fe && nm === keyProf && rng.chance(0.4)) fe = mutate(rng, fe, nm, dm[nm], cham, true) || fe; // farther siblings too
       if (!fe) continue;
       var g2 = profile(dm[nm][0], dm[nm][1], fe[nm]);
       if (g2) admit(g2, 'feature', AXIS_OF[nm]);
     }
-    if (p.foils === 1) for (var s = 0; s < 6; s++) { var st = stretch(rng, key); if (st) admit(st, 'proportion', keyAxis); }
+    // The proportion foil: an outline of the key's family resized, usually a sibling's, so the key and
+    // the proportion foil are not a matched pair among the options.
+    if (p.foils === 1) {
+      var sibs = pool.filter(function (o) { return o.axis === keyAxis && o.kind === 'feature'; });
+      for (var s = 0; s < 8; s++) { var st = stretch(rng, sibs.length && rng.chance(0.75) ? rpick(rng, sibs).g : key); if (st) admit(st, 'proportion', keyAxis); }
+    }
     var keyO = { g: key, kind: 'key', axis: keyAxis, corners: keyL[0].length, poly: keyL[0] };
     if (pool.length < 4) return null;
-    var set = chooseFoils(rng, keyO, pool, W, H, D, p.foils === 1);
+    var nF = names.map(function (nm2) { return feats[nm2].length; }), mx = Mth.max.apply(null, nF);
+    var solid = { W: W, H: H, D: D, outs: names.map(function (nm2) { return { A: dm[nm2][0], B: dm[nm2][1], corners: polys[nm2].length }; }), top: [0, 1, 2].filter(function (i) { return nF[i] === mx; }) };
+    var set = chooseFoils(rng, keyO, pool, solid, p.foils === 1);
     if (!set) return null;
     var perm = rshuffle(rng, [0, 1, 2, 3, 4]), all = [keyO].concat(set);
     var options = perm.map(function (i) {
@@ -796,7 +843,7 @@
     try {
       if (!item || !item.prof) return 'no profiles';
       var W = item.W, H = item.H, D = item.D;
-      if (![W, H, D].every(function (v) { return DIMS.indexOf(v) >= 0; }) || W === H || W === D || H === D) return 'the box must be 6–10 steps on each side, all different';
+      if (![W, H, D].every(function (v) { return DIMS.indexOf(v) >= 0; }) || W === H || W === D || H === D) return 'the box must be 5–8 steps on each side, all different';
       var dm = profDims(W, H, D), prof = item.prof;
       for (var n in dm) if (!okPoly(prof[n], dm[n][0], dm[n][1], 1) || !spans(prof[n], dm[n][0], dm[n][1])) return 'profile ' + n + ' is not a lattice polygon filling its rectangle';
       if (!POSES[item.pose] || AXES.indexOf(item.keyAxis) < 0) return 'bad pose or key axis';
@@ -807,7 +854,7 @@
       var rs = [], caches = [], i, j;
       for (i = 0; i < 5; i++) {
         var o = item.options[i], cache = {};
-        if (!o || !okPoly(o.poly, 16, 16, 2)) return 'option ' + i + ' is not a lattice polygon';
+        if (!o || !okPoly(o.poly, MAXEXT, MAXEXT, 2)) return 'option ' + i + ' is not a lattice polygon of at most ' + MAXEXT + ' steps';
         caches.push(cache);
         rs.push(cache[0] = polyRaster(o.poly));
         var m = AXES.map(function (a) { return rcompare(o.poly, sil[a], cache); });
@@ -842,7 +889,7 @@
   }
   function fallback(p) {
     stats.fallbacks++;
-    var tries = [p, { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }];
+    var tries = [p, { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }];
     for (var t = 0; t < tries.length; t++) for (var k = 0; k < 400; k++) {
       var q = tries[t], item = attempt(PX.rng(PX.rng.hash('openings-fallback', q.features, q.edges, q.keyview, q.pose, q.foils, k)), q);
       if (item && validate(item) === true) { item.fallback = true; return item; }
@@ -851,16 +898,17 @@
   }
 
   /* ------------------------------------------------------------ definition */
-  // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .2. base −2.3: one feature, straight edges,
-  // the key on the face the picture shows most, upright, feature foils: ≈ .90 right at θ = 0. Steps
-  // hand-set (DJ, R3 §8.5 dims; to be refitted from pooled exports): features +0.6 each, chamfers
-  // +0.5, key on the side face +0.4 and on the top face +0.8 (less of the face shows), lying +0.6,
-  // a proportion foil +0.3 (same features, wrong size: a scale judgement). Range 4.0 logits.
+  // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .2. base −2.3: one feature on each face,
+  // straight edges, the key on the face the picture shows most, upright, feature foils: ≈ .90 right at
+  // θ = 0. Steps hand-set (DJ, R3 §8.5 dims; to be refitted from pooled exports): features +0.6 per
+  // level (one more feature), chamfers +0.5, keyview +0.4 per level (the key moves from the front
+  // toward the side and top faces, of which less shows), lying +0.6, a proportion foil +0.3.
+  // Range 4.0 logits.
   PX.ex.define({
     id: 'openings', version: 1, code: 'EX-14', name: 'Openings', short: 'Openings',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 5, pat: true,
     dims: [
-      { key: 'features', label: 'Features', levels: FEATURES.slice(), step: 0.6 },
+      { key: 'features', label: 'Features', levels: FEATURES.map(function (c) { return c.join(' + '); }), step: 0.6 },
       { key: 'edges', label: 'Edges', levels: EDGES.slice(), step: 0.5 },
       { key: 'keyview', label: 'Fitting face', levels: KEYVIEW.slice(), step: 0.4 },
       { key: 'pose', label: 'Pose', levels: POSE.slice(), step: 0.6 },
@@ -872,7 +920,7 @@
       DIMS: DIMS, POSES: POSES, POSE_SETS: POSE_SETS, VIEW: VIEW, AXES: AXES, PROF_OF: PROF_OF, AXIS_OF: AXIS_OF, RES: RES, SOLVERS: SOLVERS, stats: stats,
       qgrid: qgrid, qcopy: qcopy, profile: profile, featCells: featCells, randomFeature: randomFeature, buildProfiles: buildProfiles, polysOf: polysOf,
       silZ: silZ, silX: silX, silY: silY, sils: sils, outline: outline, polyArea: polyArea, area4: area4, crop: crop,
-      tfPoint: tfPoint, tfSize: tfSize, tfGrid: tfGrid, tfPoly: tfPoly, compare: compare, dist: dist, stretch: stretch, mutate: mutate,
+      tfPoint: tfPoint, tfSize: tfSize, tfGrid: tfGrid, tfPoly: tfPoly, compare: compare, dist: dist, stretch: stretch, mutate: mutate, MAXEXT: MAXEXT, KEYVIEW_SETS: KEYVIEW_SETS, FEATURES: FEATURES,
       pip: pip, rayIntervals: rayIntervals, rayHits: rayHits, inSolid: inSolid, featureRuns: featureRuns, featuresSeen: featuresSeen, tmul: tmul, axisFacing: axisFacing,
       surface: surface, edges: edges, raySil: raySil, polyRaster: polyRaster, scanFill: scanFill, tfRaster: tfRaster, rcompare: rcompare, shares: shares, fitsBox: fitsBox,
       build: build, fallback: fallback, cleanParams: cleanParams,

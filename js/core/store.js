@@ -676,8 +676,11 @@
   // A stored record with a higher rev exists and we have changes.
   function conflict(theirs) {
     if (typeof api.merge === 'function') {
-      var merged = null;
-      try { merged = guard(api.merge(theirs, U.deepCopy(state))); } catch (e) { merged = null; }
+      var merged = null, mine = U.deepCopy(state);
+      // The side with unsaved changes is the newer one: its settings and other last-writer fields
+      // win (updated is otherwise set only at a write, so mine would always count as older).
+      mine.updated = Math.max(Date.now(), isNum(theirs.updated) ? theirs.updated + 1 : 0);
+      try { merged = guard(api.merge(theirs, mine)); } catch (e) { merged = null; }
       if (merged) {
         merged.rev = theirs.rev;
         replaceState(merged);
