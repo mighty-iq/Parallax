@@ -1196,7 +1196,7 @@
   // How likely a tag set is passed over: the share of each cheap cue (nearest the centre, farthest,
   // shortest strand on top, longest) that the key wins, times that cue's weight (TELL_ODDS, set
   // from each cue's measured excess over chance; B4 notes).
-  var TELL_ODDS = { untie: [0.25, 0.1, 0.6, 0], tie: [0, 0.3, 0.15, 0.1] };
+  var TELL_ODDS = { untie: [0.3, 0.15, 0.6, 0.15], tie: [0.05, 0.3, 0.15, 0.15] };
   function pickShare(v, i) {
     var best = Math.min.apply(null, v), n = 0;
     for (var j = 0; j < v.length; j++) if (Math.abs(v[j] - best) < 1e-6) n++;
@@ -1212,8 +1212,10 @@
   // The length of the strand that passes over each crossing (the stretch of rope between the
   // passages underneath before and after it; the rope's ends where there is none).
   function overLengths(dg, over) {
-    var ar = dg.arc || (dg.arc = arcLengths(dg.S[0])), cp = dg.comps[0], out = {}, i, j;
-    var isOver = function (p) { return p.first ? !!over[p.c] : !over[p.c]; }, at = function (p) { return ar.a[Math.floor(p.t)]; };
+    var S = dg.S[0], ar = dg.arc || (dg.arc = arcLengths(S)), cp = dg.comps[0], out = {}, i, j, first = S.closed ? 0 : 1;
+    var isOver = function (p) { return p.first ? !!over[p.c] : !over[p.c]; };
+    // a passage's curve parameter t → its sample (samples sit at i + (k + 0.5) / SUB)
+    var at = function (p) { return ar.a[Math.max(0, Math.min(S.m - 1, Math.floor((p.t - first) * SUB)))]; };
     for (i = 0; i < cp.length; i++) {
       if (!isOver(cp[i])) continue;
       var lo = 0, hi = ar.total;
