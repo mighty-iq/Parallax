@@ -161,7 +161,7 @@
 
 /* ---------- Progress ---------- */
 .px-prog-nav { display: flex; flex-wrap: wrap; gap: 0 var(--s1); margin: calc(-1 * var(--s2)) 0 var(--s5) -0.75rem; }
-.px-prog { display: grid; gap: var(--s4); }
+.px-prog { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); } /* one column, never wider than the page */
 .px-prog-start { margin-bottom: var(--s4); border-color: var(--signal); }
 .px-prog-start > * + * { margin-top: var(--s3); }
 .px-prog-start p { max-width: var(--measure); color: var(--ink-2); }
