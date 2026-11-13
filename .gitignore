@@ -2,3 +2,6 @@ node_modules/
 tests/e2e/out/
 .DS_Store
 __pycache__/
+
+# The owner's instructions, kept word for word (never committed)
+BRIEF.md
