@@ -112,6 +112,20 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .sec-table th, .sec-table td { padding: var(--s2) var(--s2); border-top: 1px solid var(--rule); text-align: right; white-space: nowrap; }
 .sec-table th[scope="row"], .sec-table thead th:first-child { text-align: left; white-space: normal; }
 .sec-table thead th { color: var(--ink-3); font-weight: 400; border-top: 0; }
+.sec-table td.sec-unreached { text-align: left; color: var(--ink-3); }
+/* a narrow screen: each part's name on its own line, its numbers labelled under it (data-label),
+   so neighbouring columns never run together (RV-play-dat: "3 1:01" read as "31:01") */
+@media (max-width: 520px) {
+  .sec-table, .sec-table tbody { display: block; }
+  .sec-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .sec-table tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1) var(--s2); padding: var(--s2) 0; border-top: 1px solid var(--rule); }
+  .sec-table tr > th[scope="row"], .sec-table tr > td { padding: 0; border: 0; }
+  .sec-table th[scope="row"] { grid-column: 1 / -1; }
+  .sec-table td { display: flex; flex-direction: column; gap: 0.125rem; text-align: left; white-space: normal; }
+  .sec-table td::before { content: attr(data-label); font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--ink-3); }
+  .sec-table td.sec-unreached { grid-column: 1 / -1; }
+  .sec-table td.sec-unreached::before { content: none; }
+}
 .sec-results .px-meta { margin-top: var(--s3); max-width: var(--measure); }
 .sec-award { display: flex; align-items: flex-start; gap: var(--s2); margin-top: var(--s3); font-size: var(--fs-sm); color: var(--ink-2); }
 .sec-award .px-icon { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; color: var(--signal); }

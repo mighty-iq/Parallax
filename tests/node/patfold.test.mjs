@@ -241,6 +241,12 @@ function testLearn(t, PX, def) {
   t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
   const diffs = L.practice.map((p) => def.difficulty(p));
   t.ok(diffs[0] === Math.min(...diffs), 'practice starts at the easiest of its levels');
+  // RV-play-dat: the Watch has straight folds only, so the first slanted Try is the easiest kind
+  // (one fold matters) and Try shows it the slanted-crease tip (the first tip that fits the item).
+  const tipOf = (p) => (L.tips || []).find((tp) => tp.when && Array.isArray(tp.when.levels) && tp.when.levels.includes(p[tp.when.dim]));
+  const firstSlant = L.practice.findIndex((p) => p.type > 0), corner = L.practice.findIndex((p) => p.type === 1);
+  t.ok(firstSlant > 0 && L.practice[firstSlant].idle >= 1 && (tipOf(L.practice[firstSlant]) || {}).id === 'diagonal' && corner > firstSlant && (tipOf(L.practice[corner]) || {}).id === 'corner',
+    'the first slanted fold in Try is an easy one with the slanted-crease tip, before the corner fold');
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};

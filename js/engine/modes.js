@@ -314,6 +314,7 @@
       plan.exs = b.exs;
       plan.roles = b.roles;
       plan.roleOf = b.roleOf || {}; // id → 'focus' | 'review' | 'variety' | 'extra' | 'new' (untried)
+      plan.patPick = b.patPick || null; // the DAT-style format the PAT focus put in (schedule.choose)
       plan.quota = b.quota;
       plan.total = b.total;
       plan.stage = b.stage;

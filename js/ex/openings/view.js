@@ -131,7 +131,12 @@
     st.cur.fr = frameFor(b, W, H); // from the current size: a turn or resize never crops the solid
     placeCam(st.cam, b, st.cur.fr, W, H);
     v.render(st.scene, st.cam);
-    if (st.cur.az === VIEW0.az && st.cur.el === VIEW0.el) st.root.setAttribute('data-k-solid', (H / (2 * st.cur.fr.half)).toFixed(2)); // px per step (tests)
+    if (st.cur.az === VIEW0.az && st.cur.el === VIEW0.el) { // for the tests: px per step, and how much of the stage's height the solid fills
+      var k0 = H / (2 * st.cur.fr.half), y0 = Infinity, y1 = -Infinity;
+      boxPts(st.item).forEach(function (p) { var y = dot(p, b.up); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+      st.root.setAttribute('data-k-solid', k0.toFixed(2));
+      st.root.setAttribute('data-fill', ((y1 - y0) * k0 / H).toFixed(3));
+    }
   }
   function camAt(az, el) {
     var W = st.v3.width || 1, H = st.v3.height || 1, b = basis(az, el);

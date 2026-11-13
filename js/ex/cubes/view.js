@@ -9,7 +9,9 @@
    - Reveal and show me: the cubes with exactly N painted sides get numbered badges; hidden ones
      are drawn as dashed ghost cubes on top of the figure. Show me tallies them one by one, column
      by column from the back, with each cube's painted sides named (lib.cubesOf: the same neighbour
-     tests the validator recounts). */
+     tests the validator recounts).
+   - Demo (Watch): the figure, then its hidden cubes as dashed ghosts when it has any, the answers,
+     then the tally as in show me. */
 (function (PX) {
   'use strict';
 
@@ -257,12 +259,27 @@
     if (!st || st.item !== item) return Promise.resolve();
     return play(steps(item, response), ctx, { name: 'show-me' }).then(function () { if (st) focusOption(-1); });
   }
+  // The cubes nothing of which shows (supports under taller columns), as dashed ghosts.
+  function ghostHidden(item) {
+    var m = marks(), rr = lib.render(item.heights), n = 0;
+    rr.cubes.forEach(function (q, i) { if (rr.perCube[i].any === 0) { m.appendChild(ghost(q)); n++; } });
+    return n;
+  }
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
+    var hid = lib.render(item.heights).perCube.filter(function (pc) { return pc.any === 0; }).length;
     var intro = [
       { ms: 2200, caption: cap('figure'), enter: function () { marks(); focusOption(-1); st.figure.classList.add('is-pointed'); }, exit: function () { st.figure.classList.remove('is-pointed'); } },
-      { ms: 1800, caption: cap('options'), enter: function () { marks(); } },
     ];
+    // The Watch item hides a cube (learn.js demo), and the tips are about hidden cubes, so the demo
+    // shows it first, dashed (RV-play-dat).
+    if (hid) {
+      intro.push({
+        ms: 2600, caption: cap('hidden', { what: hid === 1 ? 'The dashed cube is' : 'The dashed cubes are', where: hid === 1 ? 'under the cube above it' : 'under the cubes above them' }),
+        enter: function () { ghostHidden(item); focusOption(-1); }, exit: function () { marks(); },
+      });
+    }
+    intro.push({ ms: 1800, caption: cap('options'), enter: function () { marks(); } });
     return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null })
       .then(function () { if (st) focusOption(-1); });
   }

@@ -46,6 +46,7 @@
   var VOID_NOTICE = 3;      // voided trials in a row before the calm device notice
   var DYNAMIC_MS = 400;     // a present() longer than this held a moving or timed stimulus
   var DEMO_MS = 5000;       // a Watch demo lasts at least this long (slow, with captions)
+  var DEMO_CAPTION_MS = 3000; // and each of its captions stays on the screen at least this long
   var MODE_NAMES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', watch: 'Watch, Try, Go', tour: 'Watch, Try, Go' };
 
   function E() { return PX.engine; }
@@ -200,6 +201,18 @@
         // A Watch demo plays slowly: at least DEMO_MS in all (PLAN §8), unless motion is reduced.
         var total = steps.reduce(function (a, st) { return a + Math.max(0, (st && st.ms) || 0); }, 0);
         if (P.demoing && !FAST && !rm && total > 0 && total < DEMO_MS) scale = DEMO_MS / total;
+        // ...and every caption of a Watch demo stays up at least DEMO_CAPTION_MS (RV-play-dat: about
+        // 1.7 s a caption was too fast to read): a hold at the end of the caption's last step, after
+        // its motion, also with reduced motion (reading is not motion). Show-me keeps its pace.
+        var holds = steps.map(function () { return 0; });
+        if (P.demoing && !FAST) {
+          for (var a = 0; a < steps.length; a++) {
+            if (!steps[a] || !steps[a].caption) continue;
+            var b = a, sum = 0;
+            do { sum += Math.max(1, ((steps[b] && steps[b].ms) || 0) * scale); b++; } while (b < steps.length && !(steps[b] && steps[b].caption));
+            if (sum < DEMO_CAPTION_MS) holds[b - 1] += DEMO_CAPTION_MS - sum;
+          }
+        }
         // A demo plays before any answer, when the feedback area is hidden: its controls show anyway.
         var fbHidden = P.el.feedback.hidden;
         if (fbHidden) { P.el.feedback.hidden = false; P.el.actions.hidden = true; }
@@ -236,7 +249,7 @@
           if (rm && k < 1) { var nk = Math.max(1, Math.round(d / 400)); k = Math.floor(k * nk) / nk; }
           if (steps[i].update && k !== lastK) safe(steps[i].update, k);
           lastK = k;
-          if (t >= d) {
+          if (t >= d + holds[i]) {
             finish();
             if (i + 1 < steps.length) enter(i + 1); else { end(); return false; }
           }
@@ -249,7 +262,7 @@
           close: function () { while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
         };
         P.played.started++;
-        P.played.plannedMs = Math.round(steps.reduce(function (a, st) { return a + Math.max(1, (st.ms || 0) * scale); }, 0));
+        P.played.plannedMs = Math.round(steps.reduce(function (a, st, k) { return a + Math.max(1, (st.ms || 0) * scale) + holds[k]; }, 0));
         if (!steps.length) { end(); return; }
         if (prev !== 'showme') P.setState('showme');
         P.el.player.hidden = false;
@@ -738,7 +751,8 @@
       el.verdict.setAttribute('data-kind', kind);
       el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, ok ? '✓' : '✗'));
       el.verdict.appendChild(h('strong.pl-verdict-word', ok ? 'Correct' : tr.timeout ? 'Time is up' : 'Incorrect'));
-      if (!tr.timeout && isNum(tr.rtMs)) el.verdict.appendChild(h('span.pl-verdict-rt.px-num', fmtRt(tr.rtMs)));
+      // No time on the Watch item: the demo has just solved it, so a time says nothing (RV-play-dat).
+      if (!tr.timeout && isNum(tr.rtMs) && !cfg.demo) el.verdict.appendChild(h('span.pl-verdict-rt.px-num', fmtRt(tr.rtMs)));
       if (!ok) el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'The right answer is marked ✓.' : 'The right answer is shown.'));
       if (tr.outcome === 'stutter') el.verdict.appendChild(h('span.pl-verdict-void', voidText(tr.voidReason)));
       else sound.play(ok ? 'right' : 'wrong'); // a short tone when the setting is on (never during a stimulus)
@@ -824,8 +838,11 @@
 
     // Watch: the item is presented, view.demo plays its solution with captions, then the
     // player is back in 'respond' and the item can be answered (practice, never logged).
+    // cfg.turn: { skip } shows "Your turn" in the reading strip when the demo ends, with a
+    // button (label skip) that leaves the item unanswered and goes on.
     function demo(item, cfg) {
-      var p = run(item, Object.assign({ practice: true, demo: true }, cfg || {}));
+      cfg = cfg || {};
+      var p = run(item, Object.assign({ practice: true, demo: true }, cfg));
       var tok = P.token;
       when('respond').then(function () {
         if (tok !== P.token || !P.view || !P.view.demo) return;
@@ -842,12 +859,32 @@
           // The answer clock starts again now: the demo's time is never answer time.
           P.paintTs = timing.now(); P.pausedMs = 0; P.pauseStart = 0;
           if (P.grid) P.grid.lock(false);
-          if (cfg && typeof cfg.onDemoEnd === 'function') cfg.onDemoEnd();
+          if (typeof cfg.onDemoEnd === 'function') cfg.onDemoEnd();
+          if (cfg.turn) yourTurn(cfg.turn);
         });
       });
       return p;
     }
     P.demo = demo;
+
+    // After a Watch demo the next step is said where the demo's controls were (the reading strip),
+    // so the screen is never a dead end: answer the marked item, or go on (RV-play-dat).
+    function yourTurn(o) {
+      if (P.state !== 'respond') return;
+      ui.clear(el.verdict);
+      el.verdict.setAttribute('data-kind', 'turn');
+      el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, '→'));
+      el.verdict.appendChild(h('strong.pl-verdict-word', 'Your turn'));
+      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'Pick the marked answer to try it yourself.' : 'Answer it yourself, the way the demo did.'));
+      if (o.skip) {
+        var b = ui.button(o.skip, { kind: 'ghost', small: true, onClick: function () { skipItem(false); } });
+        b.setAttribute('data-turn-skip', '');
+        el.verdict.appendChild(b);
+      }
+      el.actions.hidden = true;
+      el.feedback.hidden = false;
+      marksIntoView();
+    }
 
     /* ---------- pause, emergency skip, abort ---------- */
     // quiet: a pause under a modal, which keeps its own key layer and focus on top.
@@ -1267,22 +1304,39 @@
   function isPhone() {
     try { return !!(win.matchMedia && win.matchMedia('(max-width: 719px), (max-height: 500px)').matches); } catch (e) { return false; }
   }
-  // Scrolls the item's stage fully into the window when it is not (phones: the Watch, Try, Go
-  // header sits above the player); never past its top edge.
-  // demo: a Watch demo pins its caption and the show-me bar to the bottom (css/play.css), so keep
-  // the stage above them (at least 7.5rem, more under a taller caption).
-  function stageIntoView(P, demo) {
-    if (!isPhone()) return;
+  // Keeps the item on the screen once it plays: its stimulus and every answer control above what is
+  // pinned to the bottom (a show-me's caption and bar on phones, the reading strip on wider screens),
+  // with the status strip (HUD) at or below the top (under the sticky header on wide screens). When
+  // both cannot hold, the top wins. pinned: a demo or show-me runs, or is about to (before its bar
+  // is up, phones keep 7.5rem for it). Watch, Try, Go's own header may scroll away above.
+  function stageIntoView(P, pinned) {
     try {
-      var st = P.el.host.querySelector('.ex-stage') || P.el.host, r = st.getBoundingClientRect(), vh = win.innerHeight || 640;
-      if (!r.height) return;
-      var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
-      var by = 0, bottom = vh - (demo ? 7.5 * rem : 8);
-      var cap = demo ? P.el.host.querySelector('.ex-caption') : null, cr = cap && cap.textContent ? cap.getBoundingClientRect() : null;
-      if (cr && cr.height && win.getComputedStyle(cap).position === 'fixed') bottom = Math.min(bottom, cr.top - 4);
-      if (r.bottom > bottom) by = Math.min(r.bottom - bottom, r.top - 8);
-      else if (r.top < 0) by = r.top - 8;
-      if (by) win.scrollBy(0, by);
+      var vh = win.innerHeight || 640, top = 0, rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
+      var head = doc.querySelector('.px-header');
+      if (head && win.getComputedStyle(head).display !== 'none') { var hr = head.getBoundingClientRect(); if (hr.bottom > 0 && hr.top <= 0) top = hr.bottom; }
+      var hud = P.el.hud.getBoundingClientRect(), bottom = 0;
+      [P.el.host, P.el.grid, P.el.confirmRow].forEach(function (e) {
+        if (!e || e.hidden) return;
+        var r = e.getBoundingClientRect();
+        if (r.height) bottom = Math.max(bottom, r.bottom);
+      });
+      if (!bottom || !hud.height) return;
+      var limit = vh - 8;
+      if (pinned) {
+        var found = false;
+        [P.el.feedback, P.el.root.querySelector('.pl-showme-buttons'), P.el.host.querySelector('.ex-caption'), P.el.caption].forEach(function (e) {
+          if (!e || e.closest('[hidden]')) return;
+          var cs = win.getComputedStyle(e);
+          if (cs.display === 'none' || (cs.position !== 'fixed' && cs.position !== 'sticky')) return;
+          var r = e.getBoundingClientRect();
+          if (r.height && r.top > top && r.top < vh) { limit = Math.min(limit, r.top - 4); found = true; }
+        });
+        if (!found && isPhone()) limit = Math.min(limit, vh - 7.5 * rem);
+      }
+      var by = 0;
+      if (bottom > limit) by = Math.min(bottom - limit, hud.top - top);
+      else if (hud.top < top) by = Math.max(hud.top - top, bottom - limit);
+      if (Math.abs(by) >= 1) win.scrollBy(0, by);
     } catch (e) { /* cosmetic */ }
   }
 
@@ -1333,12 +1387,39 @@
       });
       partsOn(!!parts.firstChild);
     }
-    // On a phone the header above the item can push the stimulus down: just before an item
-    // plays (its first frame comes after this), its stage is brought fully onto the screen.
+    // The header above the item can push it down: just before an item plays (its first frame comes
+    // after this), the item is brought onto the screen (the header may scroll away). A demo is
+    // fitted again when it starts, under its pinned caption and bar (makeRunner).
     function stageSoon(item, demo) {
       P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
-      // Again when the demo starts: its caption and bar are pinned then, and the page has room to scroll.
-      if (demo) P.when('showme').then(function () { if (P.item === item) stageIntoView(P, true); });
+    }
+    // Phones size the item from --pl-avail (css/play.css). Here the goal and tip shown above it, and
+    // in Watch the show-me caption and bar pinned under it, take their share first (--pl-extra on
+    // the host, read by .is-wtg), so a Try item fits like a scored one (RV-play-dat).
+    function makeRoom(goal, tip, demo) {
+      if (!isPhone()) { host.style.removeProperty('--pl-extra'); return; }
+      try {
+        P.setGoal(goal); P.setTip(tip); // run() sets the same again
+        var g = P.el.guide, gh = g ? g.getBoundingClientRect().height : 0;
+        var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
+        var land = !!(win.matchMedia && win.matchMedia('(max-height: 500px)').matches);
+        var extra = (gh > 0 ? gh + 0.5 * rem : 0) + (demo && !land ? 7.5 * rem : 0);
+        host.style.setProperty('--pl-extra', Math.round(extra) + 'px');
+      } catch (e) { /* the item keeps its usual size */ }
+    }
+    // The answers so far (the demo's, then each Try item's): a Try item's answer differs from the one
+    // before, and yes/no never comes three times the same in a row (RV-play-dat: Hole Punch's Try
+    // answers were 2, 2, 2, 2, 2). Deterministic: the first of a few seeded candidates that passes.
+    var answers = [];
+    function keyOf(it) {
+      var k = it ? it.key : null;
+      return typeof k === 'number' || typeof k === 'boolean' ? k : Array.isArray(k) ? k.join(',') : null;
+    }
+    function varied(k) {
+      if (k === null || !answers.length) return true;
+      var prev = answers[answers.length - 1];
+      if (typeof k === 'boolean') return !(answers.length >= 2 && prev === k && answers[answers.length - 2] === k);
+      return k !== prev;
     }
     function watchStep() {
       if (!demoSpec || skipped) return Promise.resolve();
@@ -1348,10 +1429,13 @@
       showParts(item);
       P.setMeta('Watch');
       P.setProgress(0, practice.length + 1);
+      answers.push(keyOf(item));
+      makeRoom(goalOf(learn, item), null, true);
       stageSoon(item, true);
       return P.demo(item, {
         goal: goalOf(learn, item),
-        onDemoEnd: function () { text.textContent = 'Now answer it yourself. It is practice and never counts.'; partsOn(false); }, // the item and its options fit again
+        turn: { skip: practice.length ? 'Skip to Try' : 'Skip to Go' },
+        onDemoEnd: function () { text.textContent = 'Your turn: answer the demo item yourself. Practice never counts.'; partsOn(false); }, // the item and its options fit again
       }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; } // End session (or the tour) from the pause sheet
@@ -1360,13 +1444,22 @@
     }
     function tryStep(i) {
       if (skipped || i >= practice.length) return Promise.resolve();
-      var params = fillParams(def, practice[i]), item;
-      try { item = def.generate(PX.rng(seedOf(['px-try', exId, i, counter('tries', exId)])), params); } catch (e) { log('practice item failed', e); return tryStep(i + 1); }
+      var params = fillParams(def, practice[i]), item = null, seed0 = ['px-try', exId, i, counter('tries', exId)];
+      for (var c = 0; c < 6; c++) {
+        var cand = null;
+        try { cand = def.generate(PX.rng(seedOf(c ? seed0.concat([c]) : seed0)), params); } catch (e) { log('practice item failed', e); }
+        if (!cand) continue;
+        if (!item) item = cand;
+        if (varied(keyOf(cand))) { item = cand; break; }
+      }
+      if (!item) return tryStep(i + 1);
+      answers.push(keyOf(item));
       stage(1, 'Try: practice item ' + (i + 1) + ' of ' + practice.length + '. Practice items never count.');
       partsOn(false); // the labelled parts belong to Watch; Try keeps the item in view
       P.setMeta('Try ' + (i + 1) + ' of ' + practice.length);
       P.setProgress(i + 1, practice.length + 1);
       var tip = tipFor(exId, learn, item, true);
+      makeRoom(goalOf(learn, item), tip ? tip.text : null, false);
       stageSoon(item);
       return P.run(item, { practice: true, goal: goalOf(learn, item), tip: tip ? tip.text : null }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
@@ -1385,6 +1478,7 @@
       stage(2, 'Go: the next items count.');
       if (head.parentNode) head.parentNode.removeChild(head);
       host.classList.remove('is-wtg');
+      host.style.removeProperty('--pl-extra');
       P.setTip(null);
       return ended ? 'end' : skipped ? 'skipped' : 'done';
     });
@@ -2317,7 +2411,8 @@
   function homePlan(r, t) {
     r = r || rec();
     t = isNum(t) ? t : now();
-    var key = [r.rev, (r.trials || []).length, (r.sessions || []).length, U.dayKey(t), r.settings.sessionMin, Math.floor(t / 3600000), Object.keys(r.tour && r.tour.seen || {}).length].join(':');
+    var key = [r.rev, (r.trials || []).length, (r.sessions || []).length, U.dayKey(t), r.settings.sessionMin, Math.floor(t / 3600000), Object.keys(r.tour && r.tour.seen || {}).length,
+      r.settings.patFocus === true, JSON.stringify(r.settings.testPause || null)].join(':');
     if (planCache.key === key) return planCache.val;
     var val = null;
     try {
@@ -2332,12 +2427,14 @@
             var d = E().schedule.due(copy, def, t), days = tt.last ? Math.max(1, Math.round((t - tt.last) / 86400000)) : null;
             why = !tt.n ? 'New: not tried yet' : d.due ? 'Due for review' + (days ? ': last practised ' + days + (days === 1 ? ' day' : ' days') + ' ago' : '') : 'Rested longest';
           } else why = !tt.n ? 'New: not tried yet' : 'Practised least so far';
+          // the DAT-style format the PAT focus put in (schedule.choose): say why it is there
+          if (id === plan.patPick && tt.n) why = 'DAT-style focus: ' + (E().schedule.due(copy, def, t).due ? 'due for review' : 'practised least of the formats');
           var ms = (plan.quota[id] || 0) * (plan.msPer[id] || 0);
-          return { role: role.charAt(0).toUpperCase() + role.slice(1), ex: id, min: Math.max(1, Math.round(ms / 60000)), why: why };
+          return { role: role.charAt(0).toUpperCase() + role.slice(1), ex: id, min: Math.max(1, Math.round(ms / 60000)), why: why, pat: !!def && def.pat === true };
         });
         var used = blocks.reduce(function (a, b) { return a + b.min; }, 0);
         blocks[0].min = Math.max(1, blocks[0].min + minutes - used);
-        val = { minutes: minutes, mode: 'Train', style: styleName(plan.style), blocks: blocks };
+        val = { minutes: minutes, mode: 'Train', style: styleName(plan.style), blocks: blocks, patFocus: E().schedule.patFocus(r) };
       }
     } catch (e) { log('Today’s plan failed', e); val = null; }
     planCache = { key: key, val: val };

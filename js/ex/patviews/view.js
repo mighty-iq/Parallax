@@ -165,6 +165,7 @@
       o.tag.textContent = i === item.key ? '✓ ' + NAMES[item.missing] + ' view' : WHY[op.why] || 'Does not fit';
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
+      if (i !== item.key) markDiff(item, i, 'pv-diff'); // where this drawing differs from the right one
     });
     st.verdict.textContent = '✓ Drawing ' + (item.key + 1) + ' is the ' + item.missing + ' view';
     st.verdict.setAttribute('data-kind', 'key');
@@ -238,14 +239,20 @@
       var pr = projectors(item), n = Math.ceil(U.clamp(s.proj, 0, 1) * pr.length);
       if (n) ov.appendChild(SV.el('path', { d: pr.slice(0, n).join(''), class: 'pv-proj' }));
     }
+    if (s.object) {
+      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
+      ov.appendChild(isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
+    }
     if (s.built) {
       var segs = keySegs(item).slice(0, s.built);
       ov.appendChild(SV.el('path', { d: segPath(segs, at.x, at.y, c, 2), class: 'pv-line pv-dot pv-trace' + (s.dotted ? ' pv-hl' : '') }));
       ov.appendChild(SV.el('path', { d: segPath(segs, at.x, at.y, c, 1), class: 'pv-line pv-solid pv-trace' }));
     }
-    if (s.object) {
-      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
-      ov.appendChild(isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
+    if (s.dotted) { // every dotted line on the stem stands out: the given views' and the missing view's
+      Object.keys(item.given).forEach(function (v) {
+        var gd = item.given[v], ga = Lo[v];
+        ov.appendChild(SV.el('path', { d: segPath(gd.segs, ga.x, ga.y, c, 2), class: 'pv-line pv-dot pv-trace pv-hl' }));
+      });
     }
     if (s.picked >= 0) {
       var pd = item.options[s.picked].drawing, kd = item.options[item.key].drawing;
@@ -254,6 +261,7 @@
       if (diff.length) ov.appendChild(SV.el('path', { d: segPath(diff, at.x, at.y, c), class: 'pv-diff' }));
     }
     focusOption(s.focus === undefined ? -1 : s.focus);
+    if (s.mark >= 0 && s.mark !== undefined) markDiff(item, s.mark, 'pv-diff pv-diff--show');
     if (s.ghostKey) {
       var o = st.opts[item.key], d = item.options[item.key].drawing;
       o.ghost = SV.el('path', { d: segPath(d.segs, 0, d.h, 1), class: 'pv-ghost' });
@@ -276,6 +284,37 @@
     return out;
   }
 
+  // Marks, on option i, the unit lines where it differs from the right drawing (thick dots: a shape
+  // as well as a colour). One mark group per option; drawn again replaces it.
+  function markDiff(item, i, cls) {
+    var o = st.opts[i];
+    if (!o || i === item.key) return;
+    if (o.diff && o.diff.parentNode) o.diff.parentNode.removeChild(o.diff);
+    var d = item.options[i].drawing, diff = unitDiff(d, item.options[item.key].drawing);
+    o.diff = diff.length ? SV.el('path', { d: segPath(diff, 0, d.h, 1), class: cls }) : null;
+    if (o.diff) o.svg.appendChild(o.diff);
+  }
+  // What the marked lines of a wrong drawing get wrong: drawn the wrong way (solid or dotted), a line
+  // too many, or one missing.
+  function diffCaption(item, i) {
+    function units(d) {
+      var m = {};
+      d.segs.forEach(function (q) {
+        if (q[1] === q[3]) for (var u = q[0]; u < q[2]; u++) m['h' + u + ',' + q[1]] = q[4];
+        else for (var v = q[1]; v < q[3]; v++) m['v' + q[0] + ',' + v] = q[4];
+      });
+      return m;
+    }
+    var A = units(item.options[i].drawing), B = units(item.options[item.key].drawing), extra = 0, missing = 0, toDot = 0, toSolid = 0, k;
+    for (k in A) { if (!B[k]) extra++; else if (A[k] !== B[k]) { if (B[k] === 2) toDot++; else toSolid++; } }
+    for (k in B) if (!A[k]) missing++;
+    if (!extra && !missing && toDot && !toSolid) return cap('diffDotted');
+    if (!extra && !missing && toSolid && !toDot) return cap('diffSolid');
+    if (!toDot && !toSolid && extra && !missing) return cap('diffExtra');
+    if (!toDot && !toSolid && missing && !extra) return cap('diffMissing');
+    return cap('diffMixed');
+  }
+
   function steps(item, response) {
     var miss = item.missing, key = item.key, segs = keySegs(item), nd = segs.filter(function (q) { return q[4] === 2; }).length;
     var picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
@@ -287,12 +326,14 @@
       { ms: 1400 + 110 * projectors(item).length, caption: cap('project'), enter: function () { draw(item, S({ proj: 0.001 })); }, update: function (k) { draw(item, S({ proj: Math.max(0.001, k) })); } },
       { ms: 900 + 140 * all, caption: cap('build', { view: miss }), enter: function () { draw(item, S({ proj: 1, built: 0 })); }, update: function (k) { draw(item, S({ proj: 1, built: Math.ceil(Math.min(1, k * 1.15) * all) })); } },
     ];
-    if (nd) list.push({ ms: 1700, caption: cap('dotted'), enter: function () { draw(item, S({ proj: 1, built: all, dotted: true })); } });
     list.push({ ms: 2000, caption: cap('object'), enter: function () { draw(item, S({ built: all, object: true })); } });
+    // Dotted lines often decide the item: a long step, the structure in view, every dotted line marked.
+    var ndAll = nd + Object.keys(item.given).reduce(function (a, v) { return a + item.given[v].segs.filter(function (q) { return q[4] === 2; }).length; }, 0);
+    if (ndAll) list.push({ ms: 4200, caption: cap('dotted'), enter: function () { draw(item, S({ built: all, object: true, dotted: true })); } });
     list.push({ ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
     if (picked >= 0) {
       var why = item.options[picked].why;
-      list.push({ ms: 2600, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: picked + 1 }), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true })); } });
+      list.push({ ms: 3200, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: picked + 1 }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
     }
     return list;
   }

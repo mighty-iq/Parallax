@@ -28,18 +28,24 @@
       { params: { folds: 0, type: 0, idle: 1 }, seed: 3, kind: 'straight' },
       { params: { folds: 0, type: 0, idle: 1 }, seed: 8, kind: 'straight' },
     ],
+    // Try: the Watch's level, then two straight folds that both matter, then the first slanted
+    // crease in its easiest form (two 45° folds, the punch through one flap: just the punch and its
+    // twin across the slant), then a corner fold with a straight one, then three folds. The Watch
+    // stays at the easiest level, which has straight folds only, so the slanted crease gets its own
+    // gentle step and tip before the corner fold (fresh-player test, RV-play-dat).
     practice: [
       { folds: 0, type: 0, idle: 1 },
       { folds: 0, type: 0, idle: 0 },
+      { folds: 0, type: 2, idle: 1 },
       { folds: 0, type: 1, idle: 0 },
-      { folds: 0, type: 2, idle: 0 },
       { folds: 1, type: 0, idle: 0 },
     ],
+    // In Try the first tip that fits the item is shown, so the slanted-crease tips come first.
     tips: [
-      { id: 'idle', when: { dim: 'idle', levels: [1, 2] }, text: 'Not every fold adds holes: when the punch misses a flap, unfolding that flap changes nothing.' },
-      { id: 'corner', when: { dim: 'type', levels: [1] }, text: 'A corner fold covers only part of the paper: only a hole punched through the corner flap gets a twin.' },
       { id: 'diagonal', when: { dim: 'type', levels: [2, 3] }, text: 'A slanted crease mirrors on the slant: a hole crosses straight over the crease to the same distance on the other side.' },
+      { id: 'corner', when: { dim: 'type', levels: [1] }, text: 'A corner fold has a slanted crease and covers only part of the paper: only a hole punched through the corner flap gets a twin, straight across the slant.' },
       { id: 'three', when: { dim: 'folds', levels: [1] }, text: 'Three folds: unfold the last fold first. Each unfolding copies the holes on its flap across its crease.' },
+      { id: 'idle', when: { dim: 'idle', levels: [1, 2] }, text: 'Not every fold adds holes: when the punch misses a flap, unfolding that flap changes nothing.' },
     ],
     // Burte et al. 2018: a "two holes per fold" rule fits many solvers, and the folds relevant to
     // the answer predict accuracy better than the total. Prep courses teach unfolding backwards on

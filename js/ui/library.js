@@ -92,7 +92,40 @@
     'span.len': function (v) { return v + ' blocks'; },
     'span.turn': function (v) { return v ? 'board turned ' + v + '°' : 'no board turn'; },
     'slice.curved': function (v) { return v === 'yes' ? 'curved solid' : 'flat-sided solid'; },
-    'fold.idle': function (v) { return v === 0 ? 'no idle folds' : v + (v === 1 ? ' fold that does not matter' : ' folds that do not matter'); },
+    'fold.idle': function (v) { return v === 0 ? 'every fold matters' : v + (v === 1 ? ' fold that does not matter' : ' folds that do not matter'); },
+    // Fold's and Hole Punch's fold types (all straight; a corner among straight ones; 45° only; both)
+    'fold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
+    'patfold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
+    // Hole Punch: folds whose flap the punch misses (at most folds − 1 of them)
+    'patfold.idle': function (v) { return v === 0 ? 'every fold matters' : v === 1 ? 'one fold the punch misses' : 'up to ' + v + ' folds the punch misses'; },
+    // Openings: the cuts dealt over the three faces, the outline that fits, the wrong openings
+    'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },
+    'openings.edges': function (v) { return v === 'chamfers' ? 'slanted cuts too' : 'right-angled cuts only'; },
+    'openings.keyview': function (v) { return v === 'front, side or top' ? 'any of the three outlines fits' : 'mostly the ' + String(v).split(',')[0] + ' outline fits (sometimes the side)'; },
+    'openings.pose': function (v) { return v === 'lying' ? 'solid shown lying on its side' : 'solid shown upright'; },
+    'openings.foils': function (v) { return v === 'proportion' ? 'one wrong opening with the wrong proportions' : 'wrong openings differ in a cut'; },
+    // Missing View
+    'patviews.cubes': function (v) { return v + ' cubes'; },
+    'patviews.grid': function (v) { return 'on a ' + v + ' grid'; },
+    'patviews.missing': function (v) { return 'the ' + v + ' view to find'; },
+    'patviews.foil': function (v) { return v === 'same outline' ? 'wrong drawings with the same outline' : v === 'solid or dotted' ? 'wrong drawings that differ in one line (solid or dotted)' : 'wrong drawings with another outline'; },
+    // Angles (size ranges from the generator)
+    'angles.gap': function (v) { return 'closest two angles ' + v + '° apart'; },
+    'angles.size': function (v) {
+      var d = PX.ex.get('angles'), r = d && d.lib && d.lib.RANGE ? d.lib.RANGE[v] : null, span = r ? ' (' + r[0] + '–' + r[1] + '°)' : '';
+      return (v === 'right' ? 'angles near a right angle' : v + ' angles') + span;
+    },
+    'angles.resolve': function (v) { return v === 'extremes' ? 'the smallest and largest settle it' : 'the ' + (v === 'middle' ? 'middle' : 'closest') + ' two settle it'; },
+    'angles.pose': function (v) { return v === 'aligned' ? 'one arm of each angle horizontal' : 'angles turned any way'; },
+    // Painted Cubes
+    'cubes.cubes': function (v) { return v + ' cubes'; },
+    'cubes.height': function (v) { return 'columns up to ' + v + ' cubes high'; },
+    'cubes.asked': function (v) { return 'asked for cubes with ' + v + ' painted sides'; },
+    // Form
+    'form.solid': function (v) { return v === 'frusta and five-sided' ? 'cut-off pyramids and five-sided prisms' : String(v); },
+    'form.marks': function (v) { return FORM_MARKS[v] || 'marks: ' + v; },
+    'form.view': function (v) { return 'solids pictured ' + v; },
+    'form.foil': function (v) { return v === 'marks only' ? 'wrong solids differ only in their marks' : 'wrong solids differ in size or in marks'; },
     'views.view': function (v) { return v + ' view'; },
     'homing.route': function (v) { return String(v); },
     'homing.landmarks': function (v) { return v === 'none' ? 'no landmarks' : v === 'one' ? 'one landmark' : v + ' landmarks'; },
@@ -101,8 +134,13 @@
     'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + v; },
     'reckon.tolerance': function (v) { return 'right within ' + v; },
     'track.time': function (v) { return v + ' s of tracking'; },
-    'knots.rope': function (v) { var m = /^(\d+)( slide-over)?$/.exec(String(v)); return m ? m[1] + ' crossings' + (m[2] ? ', a slide-over move' : '') : String(v); },
-    'knots.spacing': function (v) { return v + ' spacing'; },
+    'knots.rope': function (v) { var m = /^(\d+)( slide-over)?$/.exec(String(v)); return m ? m[1] + ' crossings' + (m[2] ? ' with a slide-over move' : '') : String(v); },
+    'knots.spacing': function (v) { return v === 'open' ? 'strands far apart' : v === 'close' ? 'strands close together' : v === 'tight' ? 'strands tightly packed' : v + ' spacing'; },
+  };
+  var FOLD_TYPE = { half: 'straight folds only', corner: 'a corner folded in among straight folds', diagonal: 'diagonal folds only', mixed: 'diagonal and straight folds' };
+  var FORM_MARKS = {
+    'shaded and half': 'one shaded face and one half-shaded', 'two shaded and half': 'two shaded faces and one half-shaded',
+    'shaded and two halves': 'one shaded face and two half-shaded',
   };
   function dimText(def, dim, v) {
     var f = def && PHRASE[def.id + '.' + dim.key];

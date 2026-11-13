@@ -298,7 +298,7 @@
     el.items = ui.button('Items', { kind: 'ghost', small: true, onClick: function () { setStrip(X, !X.stripOpen); } });
     el.items.setAttribute('data-sec-items', '');
     el.items.setAttribute('aria-expanded', 'false');
-    el.next = ui.button('Skip', { kind: 'primary', small: true, key: '→', onClick: function () { next(X); } });
+    el.next = ui.button('Skip', { kind: 'secondary', small: true, key: '→', onClick: function () { next(X); } }); // answers are the main action: Skip must not look like Next
     el.next.setAttribute('data-sec-next', '');
     el.strip = h('div.sec-strip', { hidden: true, role: 'group', 'aria-label': 'Items of this part' });
     el.endPart = ui.button('End this part', { kind: 'ghost', small: true, onClick: function () { leave(X); partEnd(X); } });
@@ -643,7 +643,8 @@
   /* ---------- the review ---------- */
 
   function statusText(e) {
-    var s = e.status === 'answered' ? (e.correct ? 'right' : 'wrong') : 'skipped'; // the list holds shown items only
+    // the list holds shown items only; one without an answer was skipped or left when the section ended
+    var s = e.status === 'answered' ? (e.correct ? 'right' : 'wrong') : 'not answered';
     return s + (e.flag ? ', flagged' : '');
   }
   function mark(e) { return e.status === 'answered' ? (e.correct ? '✓' : '✗') : '–'; }
@@ -663,12 +664,15 @@
     var p = K.panel({ title: 'Results', className: 'pl-panel sec-results', aside: K.fmtWhen(s.end) });
     p.body.appendChild(h('dl.px-facts.sec-totals', fact('Right', s.right + ' of ' + s.n), fact('Answered', s.answered + ' of ' + s.n),
       fact('Time used', clockText(s.usedMs) + ' of ' + clockText(s.budgetMs)), fact('Paused', s.pausedMs >= 1000 ? minutesText(s.pausedMs) : 'no pauses')));
+    // Each cell carries its column's name (data-label): on a phone a part's numbers stack under its
+    // name, labelled, instead of running together (RV-play-dat: "3 1:01" read as "31:01").
     var rows = res.parts.map(function (x, i) {
       var per = x.seen ? Math.round(x.timeMs / x.seen / 1000) + ' s' : '–';
-      return h('tr', { 'data-part': x.exId },
-        h('th', { scope: 'row' }, (i + 1) + '. ' + shortOf(x.exId)),
-        h('td.px-num', x.reached ? x.right + '/' + x.n : '–'), h('td.px-num', x.broken && !x.reached ? 'not shown here' : x.reached ? String(x.answered) + (x.broken ? ' (ended early)' : '') : 'not reached'),
-        h('td.px-num', x.reached ? clockText(x.timeMs) : '–'), h('td.px-num', x.reached ? per : '–'));
+      var name = h('th', { scope: 'row' }, (i + 1) + '. ' + shortOf(x.exId));
+      if (!x.reached) return h('tr', { 'data-part': x.exId, class: 'is-unreached' }, name, h('td.sec-unreached', { colSpan: 4 }, x.broken ? 'not shown here' : 'not reached'));
+      return h('tr', { 'data-part': x.exId }, name,
+        h('td.px-num', { 'data-label': 'Right' }, x.right + '/' + x.n), h('td.px-num', { 'data-label': 'Answered' }, String(x.answered) + (x.broken ? ' (ended early)' : '')),
+        h('td.px-num', { 'data-label': 'Time' }, clockText(x.timeMs)), h('td.px-num', { 'data-label': 'Per item' }, per));
     });
     p.body.appendChild(h('div.sec-tablewrap', h('table.sec-table', h('caption.px-sr', 'Results by part'),
       h('thead', h('tr', h('th', { scope: 'col' }, 'Part'), h('th', { scope: 'col' }, 'Right'), h('th', { scope: 'col' }, 'Answered'), h('th', { scope: 'col' }, 'Time'), h('th', { scope: 'col' }, 'Per item'))),

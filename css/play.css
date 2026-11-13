@@ -91,6 +91,12 @@
 .pl-verdict[data-kind="right"] .pl-verdict-icon { background: var(--right-wash); }
 .pl-verdict[data-kind="wrong"] .pl-verdict-icon { background: var(--wrong-wash); }
 .pl-verdict[data-kind="timeout"] .pl-verdict-icon { background: var(--warn-wash); }
+/* after a Watch demo: what to do next (play.js yourTurn), with a way on */
+.pl-verdict[data-kind="turn"] { align-items: center; }
+.pl-verdict[data-kind="turn"] .pl-verdict-icon, .pl-verdict[data-kind="turn"] .pl-verdict-word { color: var(--signal-strong); }
+.pl-verdict[data-kind="turn"] .pl-verdict-icon { background: var(--signal-wash); }
+.pl-verdict[data-kind="turn"] .pl-verdict-text { flex: 1 1 12rem; flex-basis: auto; }
+.pl-verdict[data-kind="turn"] [data-turn-skip] { margin-left: auto; }
 .pl-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-left: auto; }
 .pl-showme { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); }
 .pl-caption { flex: 1 1 14rem; font-size: var(--fs-sm); color: var(--ink-2); }
@@ -245,7 +251,6 @@
 /* touch screens: key hints and the Keys button give way (a keyboard, when there is one, still
    works); by pointer, not by width, so a phone held sideways loses them too */
 @media (hover: none) and (pointer: coarse) {
-  .pl-screen .px-kbd { display: none; }
   .pl-hud-tools [data-help], .pl-hud-keys { display: none; }
   .pl-howto-keys { display: none; }
 }
@@ -281,6 +286,12 @@
   }
   body.px-item .pl-player { gap: var(--s2); }
   body.px-item .pl-session-line { display: none; } /* Today showed the plan; the item needs the room */
+  /* Watch, Try, Go: the goal and tip above the item, and in Watch the pinned caption and bar, take
+     their share first (--pl-extra, set by play.js on the host); its own header scrolls away above */
+  .is-wtg { --pl-avail: calc(var(--pl-vh) - var(--tap) - 0.25rem - 3 * var(--s2) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pl-extra, 0px)); }
+  .is-wtg .pl-guide { gap: var(--s1); }
+  .is-wtg .pl-goal { font-size: 0.8125rem; line-height: 1.4; }
+  .is-wtg .pl-tip { padding: var(--s1) var(--s2); font-size: 0.8125rem; line-height: 1.4; }
 
   /* the status strip: name over count on the left, Help and Pause on the right, the ruler under them */
   .pl-hud { padding-bottom: 0; border-bottom: 0; }
@@ -379,6 +390,16 @@
   .pl-wtg.is-parts-open .pl-parts { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
 }
 @media (min-width: 720px) and (min-height: 501px) { .pl-parts-btn { display: none; } }
+/* A player outside a session (the Section review) keeps the phone tab bar: its reading strip and a
+   show-me's caption and bar sit above the tab bar, never under it (RV-play-dat, Section 1). */
+@media (max-width: 719px) {
+  :root:not([data-chrome="focus"]) .pl-feedback { bottom: calc(3.5rem + 1px + env(safe-area-inset-bottom, 0px)); }
+  :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-showme-buttons { bottom: calc(3.5rem + 1px + env(safe-area-inset-bottom, 0px)); padding-bottom: var(--s2); }
+  :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-trial .ex-caption:not(:empty),
+  :root:not([data-chrome="focus"]) .pl-player[data-state="showme"] .pl-showme .pl-caption:not(:empty) {
+    bottom: calc(3.5rem + 1px + var(--tap) + 2 * var(--s2) + 1px + env(safe-area-inset-bottom, 0px));
+  }
+}
 /* Phones held sideways: the stimulus on the left at full height, the answers on the right
    (I2 §8). --pl-col is the width of one column. Views with their own controls (Orient, Span,
    Track, Patterns…) lay out their two columns in css/ex/<id>.css. */

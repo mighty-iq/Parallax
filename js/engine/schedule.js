@@ -10,7 +10,9 @@
      config.session.beginner, else the highest learning progress), review (most overdue, else an
      untried one), variety (least practised; a similar-looking partner when the focus is at S4+
      and every exercise has been tried). roleOf maps each exercise to its role, 'new' for an
-     untried one that is not pinned. Shares follow a softmax of
+     untried one that is not pinned. Under the PAT focus (settings.patFocus) the DAT-style
+     formats lead the beginner order (config.session.patOrder), and every session holds at least
+     one of them when one can run (in the last unpinned slot). Shares follow a softmax of
      the bandit scores, clipped to 20–50 % of trials; the time budget becomes a trial count with
      per-exercise median trial times (defaults by answer type until 10 measured trials exist).
 
@@ -19,7 +21,9 @@
      stage(rec, exId, style) / stageUp(rec, def, style, opts) / switchNote(rec, exId, x, p, style)
      group(exId) / similar(a, b)
      trialTimes(rec) → { exId: { med, extra, n } }  / trialMs(rec, def, times, params) / typical(...)
-     choose(rec, opts, now) → { exs, roles (role → id), roleOf (id → role or 'new'), info }
+     beginOrder(rec) → the beginner order in force (the PAT focus puts patOrder first)
+     choose(rec, opts, now) → { exs, roles (role → id), roleOf (id → role or 'new'), info, patPick
+                               (the DAT-style format the PAT focus put in, or null) }
      build(rec, opts, now) → the Train part of a plan: exs, roles, quota, total, stage, ...
      nextRun(plan) → sets plan.run { exId, left, len, variant, stage, banner } */
 (function (PX) {
@@ -226,15 +230,26 @@
   }
 
   function codeCmp(a, b) { return a.def.code < b.def.code ? -1 : a.def.code > b.def.code ? 1 : 0; }
-  // Untried exercises in the beginner order (config.session.beginner), others after it by code.
-  function beginRank(x) { var i = (C.session.beginner || []).indexOf(x.def.id); return i < 0 ? 1e3 : i; }
-  function newCmp(a, b) { return beginRank(a) - beginRank(b) || codeCmp(a, b); }
-  // Least practised first; ties among untried exercises in the beginner order.
-  function leastCmp(a, b) { return a.n - b.n || (a.n === 0 && b.n === 0 ? newCmp(a, b) : (a.last - b.last) || codeCmp(a, b)); }
+  // The beginner order (config.session.beginner). Under the PAT focus the DAT-style formats lead
+  // it in the test's order (config.session.patOrder); turned off, the usual order is back.
+  function beginOrder(rec) {
+    var b = C.session.beginner || [], p = C.session.patOrder || [];
+    if (!patFocus(rec)) return b.slice();
+    return p.concat(b.filter(function (id) { return p.indexOf(id) < 0; }));
+  }
+  // Comparators over one beginner order: untried exercises in that order, others after it by
+  // code (newCmp); least practised first, ties among untried ones in that order (leastCmp).
+  function orderCmps(order) {
+    function rank(x) { var i = order.indexOf(x.def.id); return i < 0 ? 1e3 : i; }
+    function newCmp(a, b) { return rank(a) - rank(b) || codeCmp(a, b); }
+    function leastCmp(a, b) { return a.n - b.n || (a.n === 0 && b.n === 0 ? newCmp(a, b) : (a.last - b.last) || codeCmp(a, b)); }
+    return { newCmp: newCmp, leastCmp: leastCmp };
+  }
 
   function choose(rec, opts, now) {
     opts = opts || {};
     var t = train(rec), style = opts.style || t.style;
+    var cmp = orderCmps(beginOrder(rec)), newCmp = cmp.newCmp, leastCmp = cmp.leastCmp;
     var defs = trainable(rec, opts, now);
     var info = defs.map(function (d) {
       var tt = totals(rec, d);
@@ -284,8 +299,29 @@
       take(pool.sort(leastCmp)[0], 'variety');
     }
     while (exs.length < want) take(rest().sort(leastCmp)[0], 'extra');
-    return { exs: exs, roles: roles, roleOf: roleOf, info: info };
+    // Under the PAT focus a session holds at least one DAT-style format whenever one can run: if
+    // none was chosen, the last slot that is not pinned goes to the format most overdue for
+    // review, else the least practised one (untried ones in the test's order). Pins stay.
+    var patPick = null;
+    if (patFocus(rec) && !exs.some(function (id) { return isPat(id); })) {
+      var pats = rest().filter(function (x) { return x.def.pat === true; });
+      var j = exs.length - 1;
+      while (j >= 0 && pinned[exs[j]]) j--;
+      if (pats.length && j >= 0) {
+        var px = pats.filter(function (x) { return x.due.due; }).sort(function (a, b) { return b.due.overdue - a.due.overdue || codeCmp(a, b); })[0] ||
+          pats.sort(leastCmp)[0];
+        var old = exs[j], role = roleOf[old] === 'new' ? null : roleOf[old];
+        for (var rk in roles) if (hasOwn.call(roles, rk) && roles[rk] === old) role = rk;
+        delete used[old]; delete roleOf[old];
+        exs[j] = px.def.id; used[px.def.id] = true;
+        if (role) roles[role] = px.def.id;
+        roleOf[px.def.id] = px.n === 0 && !pinned[px.def.id] ? 'new' : role || 'extra';
+        patPick = px.def.id;
+      }
+    }
+    return { exs: exs, roles: roles, roleOf: roleOf, info: info, patPick: patPick };
   }
+  function isPat(id) { var d = PX.ex.get(id); return !!d && d.pat === true; }
 
   // Largest-remainder rounding of shares × total.
   function quotas(ids, sh, total) {
@@ -303,7 +339,7 @@
     var t = train(rec), style = opts.style || t.style;
     var ch = choose(rec, opts, now);
     var budgetMs = Math.max(60000, (isNum(opts.minutes) ? opts.minutes : C.session.minutes) * 60000);
-    var out = { exs: ch.exs, roles: ch.roles, roleOf: ch.roleOf, quota: {}, total: 0, stage: {}, budgetMs: budgetMs, msPer: {} };
+    var out = { exs: ch.exs, roles: ch.roles, roleOf: ch.roleOf, patPick: ch.patPick || null, quota: {}, total: 0, stage: {}, budgetMs: budgetMs, msPer: {} };
     if (!ch.exs.length) return out;
     var byId = {};
     ch.info.forEach(function (x) { byId[x.def.id] = x; });
@@ -372,7 +408,7 @@
   E.schedule = {
     train: train, totals: totals, due: due, practised: practised, stage: stage, stageUp: stageUp,
     switchNote: switchNote, group: group, similar: similar, trialTimes: trialTimes, trialMs: trialMs, typical: typical, estOf: estOf,
-    auto: auto, patFocus: patFocus, testPaused: testPaused,
+    auto: auto, patFocus: patFocus, testPaused: testPaused, beginOrder: beginOrder,
     trainable: trainable, choose: choose, build: build, nextRun: nextRun, runLength: runLength, quotas: quotas,
   };
 
