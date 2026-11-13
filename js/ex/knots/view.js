@@ -19,6 +19,7 @@
   var st = null;                                  // the mounted view's state
   var LETTERS = ['A', 'B', 'C', 'D'];
   var TAG_R = 14;                                 // tag circles: 28 px across on a 320 px plate
+  var HIT_R = 22;                                 // their tap discs: 44 px across
 
   function learn() { return PX.ex.learn('knots') || {}; }
   function cap(key, vars) {
@@ -100,7 +101,10 @@
   }
   function ring(g, x, y, cls) { g.appendChild(el('circle', { cx: f1(x), cy: f1(y), r: 17, class: 'ex-knots-ring ' + (cls || '') })); }
 
-  // Tag positions: 24–30 px from the crossing in the free direction farthest from every strand.
+  // Tag positions: 24–38 px from the crossing, in the free direction farthest from every strand.
+  // A spot must be nearer its own crossing than any other crossing by 12 px, its disc must clear
+  // the rope, and its 44 px tap disc must not overlap another tag's; spots that break a rule only
+  // win when no spot keeps them all.
   function tagSpots(dg, tags) {
     var pts = [];
     dg.S.forEach(function (s) { for (var i = 0; i < s.m; i += 2) pts.push([s.x[i], s.y[i]]); });
@@ -108,13 +112,18 @@
     return tags.map(function (c) {
       var X = dg.X[c], best = null;
       for (var a = 0; a < 16; a++) {
-        for (var rr = 26; rr <= 34; rr += 4) {
+        for (var rr = 24; rr <= 38; rr += 2) {
           var ang = Math.PI * 2 * a / 16, cx = X.x + rr * Math.cos(ang), cy = X.y + rr * Math.sin(ang);
           if (cx < TAG_R + 2 || cy < TAG_R + 2 || cx > P - TAG_R - 2 || cy > P - TAG_R - 2) continue;
-          var clear = Infinity;
-          for (var i = 0; i < pts.length; i++) { var dx = pts[i][0] - cx, dy = pts[i][1] - cy; clear = Math.min(clear, dx * dx + dy * dy); }
-          for (var j = 0; j < placed.length; j++) { var ex = placed[j][0] - cx, ey = placed[j][1] - cy; clear = Math.min(clear, (ex * ex + ey * ey) / 4); }
-          var score = Math.sqrt(clear) - 0.15 * rr;
+          var clear = Infinity, other = Infinity, near = Infinity, i;
+          for (i = 0; i < pts.length; i++) { var dx = pts[i][0] - cx, dy = pts[i][1] - cy; clear = Math.min(clear, dx * dx + dy * dy); }
+          for (i = 0; i < dg.X.length; i++) if (i !== c) { var ox = dg.X[i].x - cx, oy = dg.X[i].y - cy; other = Math.min(other, Math.sqrt(ox * ox + oy * oy)); }
+          for (i = 0; i < placed.length; i++) { var ex = placed[i][0] - cx, ey = placed[i][1] - cy; near = Math.min(near, Math.sqrt(ex * ex + ey * ey)); }
+          clear = Math.sqrt(clear);
+          var score = Math.min(clear, near / 2) - 0.15 * rr;
+          if (other < rr + 12) score -= 100;               // nearer another crossing than its own
+          if (clear < TAG_R + 4) score -= 100;             // the disc touches the rope
+          if (near < 2 * HIT_R) score -= 100;              // tap discs overlap
           if (!best || score > best.score) best = { score: score, x: cx, y: cy };
         }
       }
@@ -127,7 +136,7 @@
     spots.forEach(function (sp, i) {
       var dx = sp.x - sp.cx, dy = sp.y - sp.cy, l = Math.sqrt(dx * dx + dy * dy) || 1;
       var t = el('g', { class: 'ex-knots-tag', 'data-tag': String(i) });
-      t.appendChild(el('circle', { cx: f1(sp.x), cy: f1(sp.y), r: 21, class: 'ex-knots-taghit' }));
+      t.appendChild(el('circle', { cx: f1(sp.x), cy: f1(sp.y), r: HIT_R, class: 'ex-knots-taghit' }));
       t.appendChild(el('line', { x1: f1(sp.cx + dx / l * 9), y1: f1(sp.cy + dy / l * 9), x2: f1(sp.x - dx / l * TAG_R), y2: f1(sp.y - dy / l * TAG_R), class: 'ex-knots-leader' }));
       t.appendChild(el('circle', { cx: f1(sp.x), cy: f1(sp.y), r: TAG_R, class: 'ex-knots-tagdisc' }));
       var tx = el('text', { x: f1(sp.x), y: f1(sp.y + 5), 'text-anchor': 'middle', class: 'ex-knots-tagtext' });
@@ -294,10 +303,11 @@
     if (!st.replays[key]) st.replays[key] = lib.replay(curvesOf(item), over, { split: split }) || { steps: [], polys: [], end: { list: [], D: { live: 0 } }, broken: 'no replay', reached: false };
     return st.replays[key];
   }
+  // s.under: the moving strand drops beneath (lib.replay); captions say over or under to match.
   function moveCaption(s) {
     if (s.t === 'R1') return cap('curl');
-    if (s.t === 'R2') return cap(s.edit.path.length && s.edit.path[s.edit.path.length >> 1][2] < 0 ? 'slideUnder' : 'slide');
-    return cap('over');
+    if (s.t === 'R2') return cap(s.under ? 'slideUnder' : 'slide');
+    return cap(s.under ? 'under' : 'over');
   }
   function moveSteps(R) {
     return R.steps.map(function (s) {
@@ -331,7 +341,7 @@
       out = out.concat(moveSteps(R));
       out.push({
         ms: 2200,
-        caption: apart ? (R.reached ? cap(link ? 'apart' : 'none') : cap('broken', { end: link ? 'apart' : 'with no knot' }))
+        caption: apart ? (R.reached ? cap(link ? 'apart' : 'none') : cap(link ? 'brokenLoops' : 'brokenRope'))
           : link ? (lib.linking(R.end.D) ? cap('linked', { lk: times(Math.abs(lib.linking(R.end.D))) }) : cap('linkedZero'))
             : cap(alternatingCore(R) ? 'knot' : 'knotCore'),
         enter: function () { frame(R.polys, apart ? [] : endRings(R, link)); },
@@ -351,7 +361,7 @@
     out = out.concat(moveSteps(R2));
     out.push({
       ms: 2200,
-      caption: untie ? (R2.reached ? cap('unties', { tag: LETTERS[item.key] }) : cap('broken', { end: 'falls open' })) : cap('ties', { tag: LETTERS[item.key] }),
+      caption: untie ? (R2.reached ? cap('unties', { tag: LETTERS[item.key] }) : cap('brokenRope')) : cap('ties', { tag: LETTERS[item.key] }),
       enter: function () { frame(R2.polys, untie ? [] : endRings(R2)); },
     });
     if (Number.isInteger(response) && response !== item.key && response >= 0 && response < 4) {

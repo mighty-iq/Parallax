@@ -128,7 +128,7 @@ The control probe is a word task (verbal analogies), which measures familiarity 
 
 ## 11. Lab crossover
 
-An optional self-experiment: cluster A (Rotate, Spin, Fold, Nets, Slice) and cluster B (Views, Orient, Span, Hidden, Track, Homing) in a random order, 3 weeks each, with checks at week 0 (twice), week 3 and week 6. During each phase Train sessions use only that cluster. `PX.engine.lab.changes(rec)` returns each phase's probe changes and, per probe, the difference "change while training A − change while training B" with its standard error. One person's result is noisy; pooled exported files can answer the question for the community.
+An optional self-experiment: cluster A (Rotate, Spin, Fold, Nets, Slice) and cluster B (Views, Orient, Span, Hidden, Track, Homing, Reckon; v1.1 adds Reckon next to Homing, R1 §1.7) in a random order, 3 weeks each, with checks at week 0 (twice), week 3 and week 6. During each phase Train sessions use only that cluster. `PX.engine.lab.changes(rec)` returns each phase's probe changes and, per probe, the difference "change while training A − change while training B" with its standard error. One person's result is noisy; pooled exported files can answer the question for the community.
 
 ## 12. Weekly goal and streak
 

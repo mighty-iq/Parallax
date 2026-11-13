@@ -1146,8 +1146,8 @@
   function switchN(rope) { return Math.max(7, RUNGS[rope].n); }
   function buildSwitch(rng, p) {
     var sp = SPACING[p.spacing], N = switchN(p.rope), tie = p.variant === 'tie';
-    var cue = rng.fork('tags'), want = { side: cue.int(0, 1), fine: cue.int(0, 1), wd: cue.int(0, 3), wo: cue.int(0, 3) }, tries = 0;
-    for (var s = 0; s < 24; s++) {
+    var cue = rng.fork('tags'), want = { side: cue.int(0, 1), fine: cue.int(0, 1), wd: cue.int(0, 3) }, tries = 0;
+    outline: for (var s = 0; s < 24; s++) {
       var dg = ropeShadow(rng, sp, N, false);
       if (!dg) continue;
       var nug = nugatory(dg.D), free = [], x;
@@ -1160,26 +1160,21 @@
         var g = withOver(dg, over), base = knotKind(g.D);
         if (tie ? base !== 'U' : base !== 'K') continue;
         if (++tries > 140) want.side = -1;           // a long search: take either half
-        // Where the key stands among the four by distance from the centre and by the length of the
-        // strand that passes over it is drawn from the seed: the nearest (shortest) 1 in 4, the
-        // farthest (longest) 1 in 4, in between 2 in 4. Options are tried in that order of fit, and a
-        // rope whose best option misses is passed over (by a draw, after a while; always kept after a
-        // long search), so "the most central", "the shortest over-strand" and their opposites score
-        // near chance (tested per rung).
         var opts = tagOptions(dg, g.D, fc, over, free, want);
         if (!opts.length) continue;
         opts = rng.shuffle(opts);
-        var fit = function (r, w) { return r < 0 ? 1 : w === 0 ? (r === 0 ? 0 : 1) : w === 3 ? (r === 3 ? 0 : 1) : (r === 0 || r === 3 ? 1 : 0); };
-        var cost = function (o) { return fit(o.rd, want.wd) + fit(o.ro, want.wo); };
-        opts.forEach(function (o) { o.cost = cost(o); });
-        opts.sort(function (u, v) { return u.cost - v.cost; });
+        opts.sort(function (u, v) { return (u.rd === want.wd ? 0 : 1) - (v.rd === want.wd ? 0 : 1); });
         var memo = {};
         var kindOf = function (c) { if (memo[c] === undefined) memo[c] = knotKind(switched(g.D, c)); return memo[c]; };
-        for (var k = 0; k < opts.length && k < 200; k++) {
+        for (var k = 0; k < opts.length && k < 30; k++) {
           var t = opts[k].t, ok = tie ? kindOf(t[0]) === 'K' : kindOf(t[0]) === 'U';
           for (var j = 1; j < 4 && ok; j++) ok = kindOf(t[j]) === (tie ? 'U' : 'K');
           if (!ok) continue;
-          if (opts[k].cost > 0 && (tries <= 40 || (tries <= 120 && rng.next() >= Math.pow(0.5, opts[k].cost)))) break;
+          // The switch that changes the rope tends to sit in the knot's core: near the middle, on a
+          // short stretch of rope on top. A rope whose key is the most central, the farthest out,
+          // or on the shortest or longest strand on top is passed over by a draw (a new outline is
+          // drawn), so those cheap cues score near chance (tested per rung, ≤ 35 %).
+          if (tries <= 80 && rng.next() < tellOdds(dg, over, t, tie)) continue outline;
           var it = itemBase(p);
           it.n = N; it.depth = RUNGS[p.rope].depth; it.pts = dg.pts; it.over = over;
           // letters A–D in an order drawn from the seed, so the key's letter tells nothing
@@ -1189,6 +1184,36 @@
       }
     }
     return null;
+  }
+  // How likely a tag set is passed over: the share of each cheap cue (nearest the centre, farthest,
+  // shortest strand on top, longest) that the key wins, times that cue's weight (TELL_ODDS, set
+  // from each cue's measured excess over chance; B4 notes).
+  var TELL_ODDS = { untie: [0.25, 0.1, 0.6, 0], tie: [0, 0.3, 0.15, 0.1] };
+  function pickShare(v, i) {
+    var best = Math.min.apply(null, v), n = 0;
+    for (var j = 0; j < v.length; j++) if (Math.abs(v[j] - best) < 1e-6) n++;
+    return Math.abs(v[i] - best) < 1e-6 ? 1 / n : 0;
+  }
+  function tellOdds(dg, over, t, tie) {
+    var w = TELL_ODDS[tie ? 'tie' : 'untie'], OL = overLengths(dg, over);
+    var dc = t.map(function (c) { var X = dg.X[c]; return Math.sqrt((X.x - PLATE / 2) * (X.x - PLATE / 2) + (X.y - PLATE / 2) * (X.y - PLATE / 2)); });
+    var ol = t.map(function (c) { return OL[c]; });
+    var s = [pickShare(dc, 0), pickShare(dc.map(function (x) { return -x; }), 0), pickShare(ol, 0), pickShare(ol.map(function (x) { return -x; }), 0)];
+    return Math.min(0.9, w[0] * s[0] + w[1] * s[1] + w[2] * s[2] + w[3] * s[3]);
+  }
+  // The length of the strand that passes over each crossing (the stretch of rope between the
+  // passages underneath before and after it; the rope's ends where there is none).
+  function overLengths(dg, over) {
+    var ar = dg.arc || (dg.arc = arcLengths(dg.S[0])), cp = dg.comps[0], out = {}, i, j;
+    var isOver = function (p) { return p.first ? !!over[p.c] : !over[p.c]; }, at = function (p) { return ar.a[Math.floor(p.t)]; };
+    for (i = 0; i < cp.length; i++) {
+      if (!isOver(cp[i])) continue;
+      var lo = 0, hi = ar.total;
+      for (j = i - 1; j >= 0; j--) if (!isOver(cp[j])) { lo = at(cp[j]); break; }
+      for (j = i + 1; j < cp.length; j++) if (!isOver(cp[j])) { hi = at(cp[j]); break; }
+      out[cp[i].c] = hi - lo;
+    }
+    return out;
   }
   // Candidate tag sets [key, other, other, other] from cheap features only (no knot is classified
   // here): one (slide-off, twist) group, ≥ 44 px apart, the changes in alternations and the
@@ -1205,25 +1230,11 @@
     if (keys.length === 2 && c[keys[0]] === 2) return 'pairs';
     return null;
   }
-  // The length of the strand that passes over each crossing (the stretch of rope between the
-  // passages underneath before and after it; the rope's ends where there is none).
-  function overLengths(dg, over) {
-    var ar = dg.arc || (dg.arc = arcLengths(dg.S[0])), cp = dg.comps[0], out = {}, i, j;
-    var isOver = function (p) { return p.first ? !!over[p.c] : !over[p.c]; }, at = function (p) { return ar.a[Math.floor(p.t)]; };
-    for (i = 0; i < cp.length; i++) {
-      if (!isOver(cp[i])) continue;
-      var lo = 0, hi = ar.total;
-      for (j = i - 1; j >= 0; j--) if (!isOver(cp[j])) { lo = at(cp[j]); break; }
-      for (j = i + 1; j < cp.length; j++) if (!isOver(cp[j])) { hi = at(cp[j]); break; }
-      out[cp[i].c] = hi - lo;
-    }
-    return out;
-  }
   function tagOptions(dg, D, fc, over, free, want) {
-    var F = {}, out = [], i, a, b, c, d, j, OL = overLengths(dg, over);
+    var F = {}, out = [], i, a, b, c, d, j;
     for (i = 0; i < free.length; i++) {
       var x = free[i], f = switchFeatures(dg, fc, over, x), X = dg.X[x];
-      F[x] = { g: f[0] + '|' + f[1], alt: f[2], r2: f[4], s: sgn(D, x), r: (X.x - PLATE / 2) * (X.x - PLATE / 2) + (X.y - PLATE / 2) * (X.y - PLATE / 2), o: OL[x] };
+      F[x] = { g: f[0] + '|' + f[1], alt: f[2], r2: f[4], s: sgn(D, x), r: (X.x - PLATE / 2) * (X.x - PLATE / 2) + (X.y - PLATE / 2) * (X.y - PLATE / 2) };
     }
     var L = free;
     for (a = 0; a < L.length; a++) for (b = a + 1; b < L.length; b++) {
@@ -1246,16 +1257,9 @@
             var hi2 = 0, lo2 = 0;
             for (j = 0; j < 4; j++) if (j !== i) { if (F[q[j]].r2 < F[q[i]].r2) hi2++; if (F[q[j]].r2 > F[q[i]].r2) lo2++; }
             if (hi2 === 3 || lo2 === 3) continue;
-            // rd, ro: the key's rank by distance from the centre and by over-strand length (−1 when it
-            // ties with another option: then no rank is held)
-            var t = [q[i]].concat(q.filter(function (y, m) { return m !== i; })), rd = 0, ro = 0;
-            for (j = 1; j < 4; j++) {
-              if (F[t[j]].r < F[t[0]].r) rd++;
-              if (F[t[j]].o < F[t[0]].o) ro++;
-              if (F[t[j]].r === F[t[0]].r) rd = -9;
-              if (Math.abs(F[t[j]].o - F[t[0]].o) < 0.5) ro = -9;
-            }
-            out.push({ t: t, rd: rd < 0 ? -1 : rd, ro: ro < 0 ? -1 : ro });
+            var t = [q[i]].concat(q.filter(function (y, m) { return m !== i; })), rd = 0;
+            for (j = 1; j < 4; j++) if (F[t[j]].r < F[t[0]].r) rd++;
+            out.push({ t: t, rd: rd });
           }
         }
       }
