@@ -549,9 +549,18 @@ function testLearn(t, PX, def, H) {
     const varOk = !tr.variant || def.variants.includes(tr.variant);
     t.ok(tip.id && tip.text && (tr.dim || tr.variant) && dimOk && varOk, `tip ${tip.id} has a valid trigger`);
   }
+  // The tip a Try item shows is the first whose trigger fits (js/ui/play.js tipFor): every practice
+  // item gets its own format's tip, so the first marked-crossing item explains the marks.
+  const firstTip = (p) => (L.tips || []).find((tip) => {
+    const w = tip.when || {};
+    const okV = !w.variant || [].concat(w.variant).includes(p.variant), okD = !w.dim || (w.levels || []).includes(p[w.dim]);
+    return (w.variant || w.dim) && okV && okD;
+  });
+  t.ok(L.practice.every((p) => (firstTip(p) || {}).id === (p.variant === 'pull' ? 'slide-off' : p.variant)), `each Try item's tip fits its format (${L.practice.map((p) => (firstTip(p) || {}).id).join(', ')})`);
+  t.ok(/letter/.test((L.tips.find((x) => x.id === 'untie') || {}).text || ''), 'the untie tip says what the letters are');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['gap', 'pair', 'curl', 'slide', 'slideUnder', 'over', 'under', 'none', 'knot', 'knotCore', 'brokenRope', 'brokenLoops', 'switchKey', 'unties', 'ties', 'stays', 'apart', 'linked', 'linkedZero', 'moves'];
+  const caps = ['gap', 'pair', 'copyNone', 'backToRope', 'marks', 'labelYours', 'labelCopy', 'curl', 'slide', 'slideUnder', 'over', 'under', 'none', 'knot', 'knotCore', 'brokenRope', 'brokenLoops', 'switchKey', 'unties', 'ties', 'stays', 'apart', 'linked', 'linkedZero', 'moves'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   t.ok(typeof L.bridge === 'string' && /not been shown/.test(L.bridge), 'a "where it is used" text with its limitation line');
   const allText = JSON.stringify(L).toLowerCase();

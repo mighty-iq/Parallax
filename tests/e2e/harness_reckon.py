@@ -181,6 +181,26 @@ def phone_play(b, cons):
     drawn_ok(page, 'phone point')
     fits(page, 'phone point', '360x740')
     shot(page, 'p360_point_answer')
+    # a vertical swipe that starts on ◀5° scrolls the page and turns nothing; a tap still turns 5°
+    # (RV-play-nav-knots 1: the swipe used to turn the answer and block the scroll)
+    page.evaluate('() => window.scrollTo(0, 0)')
+    v0, can_scroll = st(page)['value'], page.evaluate('() => document.documentElement.scrollHeight > innerHeight + 4')
+    b5 = page.locator('[data-turn="-5"]').bounding_box()
+    sx, sy = b5['x'] + b5['width'] / 2, b5['y'] + b5['height'] / 2
+    tt.ev('touchStart', sx, sy)
+    for i in range(1, 11):
+        page.wait_for_timeout(16)
+        tt.ev('touchMove', sx, sy - 12 * i)
+    tt.ev('touchEnd')
+    page.wait_for_timeout(400)
+    v1, y1 = st(page)['value'], page.evaluate('() => scrollY')
+    page.evaluate('() => window.scrollTo(0, 0)')
+    page.wait_for_timeout(100)
+    tt.tap('[data-turn="-5"]')
+    page.wait_for_timeout(150)
+    v2 = st(page)['value']
+    C.ok(v1 == v0 and (y1 > 0 or not can_scroll) and v2 is not None and norm180(v2 - (v0 or 0)) == -5,
+         f'phone: a swipe from ◀5° scrolls ({y1} px; page scrolls: {can_scroll}) and leaves the answer ({v0} → {v1}); a tap turns 5° ({v2})')
     key = page.evaluate('() => __harness.item.keyDeg')
     v = turn_to(page, key, tt)
     tt.tap('.ex-fp-confirm')
@@ -392,8 +412,14 @@ def app_touch(b, cons):
         tt.tap('.pl-trial ' + ('.ex-reckon-here' if v == 'return' else '.ex-fp-confirm'))
         page.wait_for_timeout(1500)
         out.append([v, play(), page.evaluate("() => __play.last && __play.last.input")])
+        if v == 'return':  # RV-play-nav-knots 4: the explanation ends above the player's result bar
+            vis = page.evaluate("""() => { const bar = document.querySelector('.pl-feedback'), n = document.querySelector('.pl-trial .ex-fp-notes'), c = document.querySelector('.pl-trial .ex-reckon-chart'), v = document.querySelector('.pl-trial .ex-fp-verdict');
+                const last = c && !c.hidden ? c : n, b = bar.getBoundingClientRect(), l = last.getBoundingClientRect(), f = v.getBoundingClientRect();
+                return { barTop: Math.round(b.top), lastBottom: Math.round(l.bottom), verdictTop: Math.round(f.top), scrollY: Math.round(scrollY) }; }""")
+            shot(page, 'app_return_reveal')
         page.evaluate('void __play.end()')
     REPORT['touch']['app'] = {'items': out, 'nextClicks': page.evaluate('window.__nextClicks')}
+    C.ok(vis['lastBottom'] <= vis['barTop'] + 1 and vis['verdictTop'] >= 0, f'the real player at 360 × 740: after a walk back the explanation ends above the result bar, the verdict in view ({vis})')
     C.ok(all(o[1] == 'reveal' for o in out) and page.evaluate('window.__nextClicks') == 0,
          f'the real player by touch: the answer shows its reveal and keeps it, no click reaches Next ({REPORT["touch"]["app"]})')
     shot(page, 'app_touch_end')
