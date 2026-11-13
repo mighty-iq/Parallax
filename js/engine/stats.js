@@ -12,7 +12,8 @@
      profile(rec, now, opts)   mean level by ability code and by Uttal cell (practised exercises)
      calendar(rec)             { dayKey: { sessions, trials, minutes } }
      totals(rec)               { sessions, trials (every row), answers (answered training items: no
-                               skipped, voided or Spatial Check rows), practiceMs, days, practiceDays } */
+                               skipped, voided or Spatial Check rows), practiceMs (every session but
+                               Spatial Checks: they measure, they are not practice), days, practiceDays } */
 (function (PX) {
   'use strict';
 
@@ -183,13 +184,23 @@
       foldedAns += Math.max(0, (x.right || 0) + (x.wrong || 0) - pr);
     });
     E.log.scan(rec, function (r, id, mode) { if ((r[5] === 0 || r[5] === 1) && mode !== 'check' && !probe[id]) answers++; });
-    var pdays = {};
-    (isArray(rec.sessions) ? rec.sessions : []).forEach(function (x) { if (isObj(x) && isNum(x.start) && x.mode !== 'check') pdays[E.day(x.start)] = 1; });
+    var pdays = {}, pms = 0, allMs = 0;
+    (isArray(rec.sessions) ? rec.sessions : []).forEach(function (x) {
+      if (!isObj(x) || !isNum(x.start)) return;
+      var ms = isNum(x.practiceMs) && x.practiceMs > 0 ? x.practiceMs : 0;
+      allMs += ms;
+      if (x.mode === 'check') return;
+      pdays[E.day(x.start)] = 1;
+      pms += ms;
+    });
+    // Practice time: the sessions' own times without the checks. A stored total above the sum of
+    // every kept session (sessions pruned from an old record) adds the difference.
+    var stored = isNum(rec.practiceMs) ? rec.practiceMs : 0;
     return {
       sessions: isArray(rec.sessions) ? rec.sessions.length : 0,
       trials: (isArray(rec.trials) ? rec.trials.length : 0) + folded,
       answers: answers + foldedAns,
-      practiceMs: isNum(rec.practiceMs) ? rec.practiceMs : 0,
+      practiceMs: Math.round(pms + Math.max(0, stored - allMs)),
       days: Object.keys(calendar(rec)).length,
       practiceDays: Object.keys(pdays).length,
     };

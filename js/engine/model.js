@@ -73,6 +73,7 @@
         'patfold', 'cubes', 'angles', 'patviews', 'openings', 'form'],
       review: [3, 7, 14, 30], maxGapMs: 90000, maxFactor: 1.6, blockEvery: 10,
       minItemMs: 500, // a time-boxed session's item cap: one item per 0.5 s of its budget (a safety net)
+      lastRetries: 2, // a voided closing item is replaced at most twice; then a time-boxed session ends
       trialMs: { choice: 9000, multi: 11000, yesno: 6000, angle: 10000, targets: 16000, sequence: 12000 }, overheadMs: 2500,
     },
     bandit: { window: 60, clip: 2, fresh: 1.5, snapEvery: 10, snapKeep: 13, temp: 1 },

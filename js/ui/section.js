@@ -265,11 +265,15 @@
   function tick(X) {
     if (!X.run || X.done || !X.timer) return;
     var left = X.run.budgetMs - used(X);
-    X.timer.textContent = clockText(left);
-    X.timer.setAttribute('aria-label', 'Time left: ' + minutesText(left));
-    X.timer.classList.toggle('is-low', left <= 5 * 60000 && X.run.budgetMs > 10 * 60000 || left <= 60000);
     var stim = false;
     try { stim = doc.body.classList.contains('px-stim'); } catch (e) { stim = false; }
+    // Rule 7: nothing on screen changes while a stimulus plays (body.px-stim), as in the player's
+    // HUD; the next tick after it shows the time. The end of time is still checked.
+    if (!stim) {
+      X.timer.textContent = clockText(left);
+      X.timer.setAttribute('aria-label', 'Time left: ' + minutesText(left));
+      X.timer.classList.toggle('is-low', left <= 5 * 60000 && X.run.budgetMs > 10 * 60000 || left <= 60000);
+    }
     if (!stim) {
       [5, 1].forEach(function (m) {
         if (left <= m * 60000 && left > 0 && !X.warned[m] && X.run.budgetMs > m * 60000 * 2) {
