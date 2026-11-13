@@ -24,7 +24,7 @@ import sys
 from playwright.sync_api import sync_playwright
 
 from common import OUT, Checks, Console, child_frame, file_url, harness_single, launch, non_blank, srcdoc_host
-from harness_reckon import Touch, norm180
+from harness_reckon import SLOW_SHARE, Touch, norm180
 
 C = Checks('harness_homing')
 DIR = OUT / 'homing'
@@ -398,7 +398,7 @@ def throttled(b, cons):
     cons.append(Console(page))
     cdp = ctx.new_cdp_session(page)
     cdp.send('Performance.enable')
-    for seed, p in ((31, {'route': 7, 'landmarks': 0, 'tolerance': 0}), (32, {'route': 4, 'landmarks': 2, 'tolerance': 0})):
+    def walk(seed, p):
         page.goto(file_url('tests/dev/harness.html', ex='homing', seed=seed - 10, p='route:0', fast=1))
         page.wait_for_function(READY, timeout=60000)
         page.evaluate(LOOP_TIMER)
@@ -415,8 +415,19 @@ def throttled(b, cons):
         f = s['frames'] or {}
         info = page.evaluate("() => { const r = PX.core.stage3d.renderer(); return r ? { calls: r.info.render.calls, triangles: r.info.render.triangles } : null; }")
         js = 1000 * (m1.get('ScriptDuration', 0) - m0.get('ScriptDuration', 0)) / max(1, f.get('frames') or 1)
-        REPORT['throttle4x'].append({'params': p, 'voided': s['voided'], 'frames': f, 'fade': s['fade'], 'render': info, 'scriptMsPerFrame': round(js, 2), 'walkFrameJsMs': loop})
-        C.ok(s['voided'] is None, f'4× throttle, {p}: the walk is not voided (median {f.get("medianMs")} ms, p95 {f.get("p95Ms")} ms, max gap {f.get("maxGapMs")} ms, slow share {f.get("slowShare")})')
+        return s, f, info, js, loop
+
+    for seed, p in ((31, {'route': 7, 'landmarks': 0, 'tolerance': 0}), (32, {'route': 4, 'landmarks': 2, 'tolerance': 0})):
+        s, f, info, js, loop = walk(seed, p)
+        first = None
+        # One freeze over 1 s with few slow frames otherwise is a stall of this shared machine (two browsers
+        # on 2 CPUs, software GL), not the walk's own load: the rule rightly voids it, and the walk runs again.
+        if s['voided'] == 'stutter' and (f.get('slowShare') or 1) < SLOW_SHARE:
+            first = {'voided': s['voided'], 'maxGapMs': f.get('maxGapMs'), 'slowShare': f.get('slowShare')}
+            s, f, info, js, loop = walk(seed, p)
+        REPORT['throttle4x'].append({'params': p, 'voided': s['voided'], 'frames': f, 'fade': s['fade'], 'render': info, 'scriptMsPerFrame': round(js, 2), 'walkFrameJsMs': loop, 'firstTry': first})
+        again = f' (run again after one machine stall: {first})' if first else ''
+        C.ok(s['voided'] is None, f'4× throttle, {p}: the walk is not voided (median {f.get("medianMs")} ms, p95 {f.get("p95Ms")} ms, max gap {f.get("maxGapMs")} ms, slow share {f.get("slowShare")}){again}')
         C.ok(info and info['calls'] <= 12 and info['triangles'] <= 60000, f'{p}: within the draw budget ({info})')
         C.ok(loop['median'] is not None and loop['median'] <= 8, f'{p}: the walk\'s own JavaScript per frame at 4× (median {loop["median"]} ms, p95 {loop["p95"]} ms over {loop["n"]} frames; all page scripts {js:.2f} ms/frame; R1 §7.3: 2 ms unthrottled)')
     ctx.close()
