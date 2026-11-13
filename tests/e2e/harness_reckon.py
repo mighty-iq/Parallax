@@ -70,8 +70,12 @@ class Touch:
         self.cdp.send('Input.dispatchTouchEvent', {'type': kind, 'touchPoints': pts})
 
     def drag(self, x0, y0, dx, steps=10):
+        # One move per 16 ms, as a finger on a 60 Hz screen. A burst of moves (100 px in a few ms) reads as a
+        # fling, and Chrome then drops the click of a tap that follows within ~30 ms (seen in testing; a
+        # finger-paced drag followed by a tap 30 ms later clicks normally).
         self.ev('touchStart', x0, y0)
         for i in range(1, steps + 1):
+            self.page.wait_for_timeout(16)
             self.ev('touchMove', x0 + dx * i / steps, y0)
         self.ev('touchEnd')
 

@@ -295,7 +295,7 @@
   .pl-hud-text { font-size: var(--fs-sm); line-height: 1.3; }
   .pl-tag { font-size: 0.8125rem; line-height: 1.3; }
   .pl-hud-id .px-spec { flex: none; }
-  .pl-hud-id .pl-tag { display: inline-block; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* a long tag ends in … (its cards show it whole) */
+  .pl-hud-id .pl-tag { display: inline-block; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* a long tag ends in … (its cards show it whole) */
   .pl-hud-meta { grid-area: meta; font-family: var(--font-sans); font-size: 0.8125rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; }
   .pl-hud-tools { grid-area: tools; gap: var(--s1); }
   .pl-hud-tools .px-btn--small { padding-left: 0.625rem; padding-right: 0.625rem; }

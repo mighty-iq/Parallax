@@ -23,7 +23,7 @@
   var U = PX.util;
   var hasOwn = Object.prototype.hasOwnProperty;
 
-  // The training exercises (PLAN.md §3; v1.1 adds Reckon), used until each registers its definition.
+  // The training exercises (PLAN.md §3; v1.1 adds Reckon, Knots and six DAT-style formats), used until each registers its definition.
   var CATALOG = [
     { id: 'track', code: 'EX-01', name: 'Track', kind: '3D multiple-object tracking', abilities: ['AT'], note: 'attention practice', blurb: 'Follow several moving spheres in 3D and pick out the ones you were shown.' },
     { id: 'rotate', code: 'EX-02', name: 'Rotate', kind: 'Mental rotation', abilities: ['Vz', 'SR'], blurb: 'Decide whether two block figures are one object turned, or mirror images.' },
@@ -37,6 +37,14 @@
     { id: 'hidden', code: 'EX-10', name: 'Hidden', kind: 'Embedded figures', abilities: ['CF'], blurb: 'Find which simple shape is hidden inside a pattern.' },
     { id: 'homing', code: 'EX-11', name: 'Homing', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a route, turn to face the place where you started.' },
     { id: 'reckon', code: 'EX-12', name: 'Reckon', kind: 'Navigation', abilities: ['NAV'], note: 'experimental', blurb: 'After a walk with nothing to steer by, point or walk back to where you started.' },
+    { id: 'knots', code: 'EX-13', name: 'Knots', kind: 'Knots and links', abilities: ['Vz'], blurb: 'Picture a rope pulled tight: does a knot remain, and which crossing would untie it?' },
+    // v1.1 DAT-style formats (opt-in: they join Train only under the DAT-style focus).
+    { id: 'openings', code: 'EX-14', name: 'Openings', kind: 'Openings (apertures)', abilities: ['Vz'], note: 'DAT-style', blurb: 'Find the opening a solid would pass through, turned the right way, with nothing to spare.' },
+    { id: 'patviews', code: 'EX-15', name: 'Missing View', kind: 'Orthographic views', abilities: ['Vz'], note: 'DAT-style', blurb: 'Two drawings of a block structure are given: pick the missing third view.' },
+    { id: 'angles', code: 'EX-16', name: 'Angles', kind: 'Angle ranking', abilities: ['LE'], note: 'perceptual-judgement practice', blurb: 'Rank four angles from smallest to largest, by eye.' },
+    { id: 'patfold', code: 'EX-17', name: 'Hole Punch', kind: 'Hole punching', abilities: ['Vz'], note: 'DAT-style', blurb: 'A folded square is punched once: pick where the holes are when it opens.' },
+    { id: 'cubes', code: 'EX-18', name: 'Painted Cubes', kind: 'Cube counting', abilities: ['Vz'], note: 'DAT-style', blurb: 'Count the cubes in a painted stack that have exactly the number of painted sides asked.' },
+    { id: 'form', code: 'EX-19', name: 'Form', kind: 'Pattern folding', abilities: ['Vz'], note: 'DAT-style', blurb: 'Fold a flat pattern in your mind and pick the solid it makes.' },
   ];
 
   /* ---- SAMPLE DATA (Phase 1b placeholder) -------------------------------------------

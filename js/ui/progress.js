@@ -299,7 +299,7 @@
       c ? h('p.px-check-verdict', 'Spatial probes combined: ', verdict(c.outcome)) : null,
       c ? h('p', wordText(c.outcome) || c.text) : null,
       h('p.px-meta', 'Latest check ' + U.fmtDate(rep.latest.date, 'long') + ', form ' + rep.latest.form + '; compared with the average of your ' + rep.baselines + ' starting checks.'),
-      likeNote(rec)));
+      likeNote(rec), anglesNote(rec, rep)));
     b.appendChild(plot);
     b.appendChild(legend());
     b.appendChild(h('p.px-meta.px-units', 'Changes are in points on each task’s difficulty scale: +1 point is about the step from 50 % to 73 % right on the same item. Probes are short, so one check has a wide range; that is why the words are cautious.'));
@@ -334,11 +334,31 @@
         ' on ' + word(last.display === 'small' ? 'large' : 'small') + '. Compare with care: the screen can change how hard a task is.'));
   }
 
+  // R3 §5.3: judging angles by eye (Angles, a DAT-style format) may carry over a little to the
+  // perceptual part of the Level probe. When Angles was practised after the first starting check,
+  // say so beside the comparison (DECISIONS 13 Nov) instead of dropping either task.
+  function anglesNote(rec, rep) {
+    var lv = rep && rep.probes ? rep.probes.level : null;
+    if (!lv || !lv.ok) return null;
+    var list = E().assess.checks(rec), t0 = list.length ? Date.parse(list[0].date) / 1000 : NaN;
+    if (!isFinite(t0)) return null;
+    var idx = (rec.idx && rec.idx.ex) || [], ids = {}, rows = rec.trials || [], i;
+    for (i = 0; i < idx.length; i++) if (String(idx[i]).split('@')[0] === 'angles') ids[i] = true;
+    for (i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (r && ids[r[1]] && r[0] >= t0 && (r[5] === 0 || r[5] === 1)) {
+        return h('p.px-notice.px-like', { 'data-like': 'angles' }, PX.ui.kit.icon('about'),
+          h('span', 'You have practised Angles since your starting checks. Judging angles by eye may carry over a little to the ' + probeName('level') + ' task, so compare ' + probeName('level') + ' with care.'));
+      }
+    }
+    return null;
+  }
+
   /* ---------- levels: by exercise, by ability, coverage ---------- */
 
   var ABILITY = {
     Vz: 'Visualization', SR: 'Speeded rotation', CS: 'Closure speed', CF: 'Flexibility of closure', MV: 'Visual memory',
-    SS: 'Spatial scanning', AT: 'Attentional tracking', WM: 'Working memory', PT: 'Perspective taking', NAV: 'Navigation',
+    SS: 'Spatial scanning', LE: 'Length estimation', AT: 'Attentional tracking', WM: 'Working memory', PT: 'Perspective taking', NAV: 'Navigation',
   };
   var NOT_GV = { AT: 1, WM: 1, PT: 1, NAV: 1 };
 
