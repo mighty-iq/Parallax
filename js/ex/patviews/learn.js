@@ -76,9 +76,9 @@
       object: 'One structure with these views.',
       land: 'That is drawing {n}.',
       whyHull: 'Drawing {n}: its outline cannot sit with the two given outlines.',
-      whyAlign: 'Drawing {n}: one of its lines has no partner in the given views.',
+      whyAlign: 'Drawing {n}: its lines do not line up with the lines of the given views.',
       whySearch: 'Drawing {n}: no stack of cubes gives the two views and this one.',
     },
-    bridge: 'Drafters and machinists read top, front and end views like these. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
+    bridge: 'Drafters and machinists read top, front and end views like these. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
   });
 })(window.PX);

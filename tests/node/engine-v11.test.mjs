@@ -133,7 +133,10 @@ function timeBox(t) {
   // Rows carry the display class and the input.
   const rr = newRecord(PX, T0);
   drive(PX, rr, 'train', { now: T0, minutes: 1, display: 'small' }, () => ({ wall: 3000, active: 3000 }));
-  t.ok(rr.trials.length > 3 && rr.trials.every((row) => row[10] === 1 && row[11] === 2), 'trial rows: display class 1 (small, from the plan) and input 2 (touch)');
+  t.ok(rr.trials.length > 3 && rr.trials.every((row) => row[10] === 1 && row[11] === 2 && row.length === 12), 'trial rows: display class 1 (small, from the plan) and input 2 (touch); no value2 unless given');
+  const fold = PX.ex.get('fold'), rv2 = newRecord(PX, T0);
+  t.eq(E.log.row(rv2, fold, 'free', { code: 0, seed: 1 }, 0, { rt: 900, value: -14.2, value2: 1.35 }, T0).slice(7), [-14.2, null, null, 0, 0, 1.35], 'column 13: result.value2 (Reckon: the distance ratio beside the angle error in value)');
+  t.eq([E.log.row(rv2, fold, 'free', { code: 0, seed: 1 }, 0, { value2: Infinity }, T0).length, E.log.COL.value2], [12, 12], 'value2 only when finite (E.log.COL.value2 = 12)');
 
   // Without a clock (the simulations): v1.0 gap accounting, gaps over 90 s dropped.
   const rg = newRecord(PX, T0), pg = E.modes.start(rg, 'train', { now: T0, minutes: 20 });

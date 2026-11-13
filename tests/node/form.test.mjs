@@ -234,7 +234,7 @@ function testShortcuts(t, PX, def, L, pool) {
   console.log('       form shortcuts: ' + line.join(', '));
   // The face-shape solvers also per foil level (the proportion foil is the only foil they can rule out).
   const over = Object.entries(byFoil).filter(([, v]) => v[0] / v[1] > LIMIT).map(([k, v]) => `${k} ${(v[0] / v[1] * 100).toFixed(1)}%`);
-  t.eq(over, [], 'face-shape solvers stay within chance + 10 at each foil level');
+  t.ok(!over.length, 'face-shape solvers stay within chance + 10 at each foil level' + (over.length ? ': ' + over.join('; ') : ''));
 }
 
 /* ------------------------------------------------------------------ tampering, fallback, timing */

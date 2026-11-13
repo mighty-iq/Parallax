@@ -2,10 +2,10 @@
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_openings.py
 
 1. desktop 1366 x 768 and phone 390 x 844 (DPR 2, touch), light and dark: the solid is drawn
-   (non-blank stage); five openings at one scale; a right answer by keyboard, a wrong one by pointer
+   (non-blank stage); five openings at the solid's scale; a right answer by keyboard, a wrong one by pointer
    or tap; show me turns to the fitting face and ends with the outline on the right opening (after a
    wrong pick: the nearest true outline laid over the chosen one); no horizontal scroll
-2. 360 x 640: the stem and all five openings within one screen, targets >= 44 px
+2. 360 x 640: the stem and all five openings within one screen, targets >= 44 px, a step >= 11 px
 3. show me at normal speed, the tutorial demo with captions, a lost WebGL context voids the trial
 4. the harness inlined into a sandboxed srcdoc frame; no console errors
 Screenshots: tests/e2e/out/openings/openings_<case>_<viewport>_<theme>[_reveal|_showme|_wrong_showme].png """
@@ -37,10 +37,16 @@ def go(page, case, theme='light', fast=True, seed_add=0, extra=None):
     page.wait_for_function(READY, timeout=60000)
 
 
-def opts_ok(page, tag):
+def opts_ok(page, tag, min_px=0):
     o = page.evaluate("""() => Array.from(document.querySelectorAll('.hx-grid .op-opt-svg')).map((s) => ({ vb: s.getAttribute('viewBox'),
         w: Math.round(s.getBoundingClientRect().width), d: (s.querySelector('.op-hole') || { getAttribute: () => '' }).getAttribute('d').length }))""")
     C.ok(len(o) == 5 and len({x['vb'] for x in o}) == 1 and all(x['w'] >= 48 and x['d'] > 10 for x in o), f'{tag}: five openings at one scale, each at least 48 px ({o})')
+    # The solid and the openings share one scale (px per step), and a step is big enough to see.
+    k = page.evaluate("""() => { const r = document.querySelector('.op-stem'), s = document.querySelector('.hx-grid .op-opt-svg'), b = s.getBoundingClientRect(), v = s.viewBox.baseVal;
+        return { solid: +r.getAttribute('data-k-solid'), open: +r.getAttribute('data-k-open'), drawn: Math.min(b.width, b.height) / v.width }; }""")
+    C.ok(k['open'] > 0 and abs(k['solid'] - k['open']) <= 0.02 * k['open'] and abs(k['drawn'] - k['open']) <= 0.02 * k['open'], f'{tag}: solid and openings at the same scale ({k})')
+    if min_px:
+        C.ok(k['drawn'] >= min_px, f'{tag}: a step of an opening is at least {min_px} px ({k["drawn"]:.1f})')
 
 
 def desktop_and_phone(b, cons):
@@ -83,6 +89,7 @@ def small_phone(b, cons):
         page.evaluate("() => document.querySelector('.op-stage').scrollIntoView({ block: 'start' })")
         fits(C, page, STEM, name)
         no_hscroll(C, page, name)
+        opts_ok(page, name, min_px=11)
         page.screenshot(path=str(DIR / f'{name}.png'))
     ctx.close()
 

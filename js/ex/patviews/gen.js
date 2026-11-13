@@ -358,9 +358,9 @@
   // Voxels from the rows, every edge of the solid in 3D, each projected into the view and marked
   // visible when the voxels toward the viewer are empty on at least one side of its segment.
   function drawRay(rows, W, H, D, dir) {
-    var vox = {}, x, y, z;
-    for (z = 0; z < D; z++) for (x = 0; x < W; x++) for (y = 0; y < rows[z][x]; y++) vox[x + ',' + y + ',' + z] = 1;
-    function at(xx, yy, zz) { return vox[xx + ',' + yy + ',' + zz] ? 1 : 0; }
+    var vox = new Uint8Array(W * H * D), x, y, z;
+    for (z = 0; z < D; z++) for (x = 0; x < W; x++) for (y = 0; y < rows[z][x]; y++) vox[(z * H + y) * W + x] = 1;
+    function at(xx, yy, zz) { return xx < 0 || yy < 0 || zz < 0 || xx >= W || yy >= H || zz >= D ? 0 : vox[(zz * H + yy) * W + xx]; }
     var dm = dimsOf(dir, W, H, D), wi = dm.wi, hi = dm.hi;
     var g = { w: wi, h: hi, hs: new Uint8Array((hi + 1) * wi), vs: new Uint8Array(hi * (wi + 1)), fill: new Uint8Array(wi * hi) };
     // A world column along the view axis through (p, q), from depth plane dp toward the viewer.
@@ -403,6 +403,105 @@
       g.fill[j * wi + i] = f;
     }
     return g;
+  }
+
+  /* ------------------------------------------------------------ validate: a second search, on drawRay alone */
+  // Shares nothing with search() (no crossStyles, pairV, drawView). A slice of the structure (the
+  // column over z at one x, or the row over x at one z) is drawn alone with drawRay, and the strips of
+  // the given drawings that depend on that slice alone must match it:
+  //   front: column x's horizontal lines and fill (one slice); its vertical lines at x = 0 and x = W
+  //          (one slice) and between two slices (the pair drawn together);
+  //   top:   column x's horizontal lines and fill (slice x); row z's vertical lines and fill (row z);
+  //   end:   row z's horizontal lines and fill, and its vertical lines at the back and front (row z).
+  // Every edge or line-of-sight of a stack of cubes along a view lies in such a slice or pair, so the
+  // strips only prune; every leaf is then drawn in full and compared with the given views.
+  var rayMemo = {};
+  function memo(key, make) { var v = rayMemo[key]; if (v === undefined) { v = make(); rayMemo[key] = v; } return v; }
+  function colOf(g, up, n) { var out = ''; for (var iv = 0; iv < n; iv++) out += g.vs[iv * (g.w + 1) + up]; return out; }
+  // A lone slice (vec over z, D = vec.length), seen from the front or the top.
+  function sliceSig(vec, H, view) {
+    return memo('s' + view + H + ':' + vec.join(''), function () {
+      var D = vec.length, g = drawRay(vec.map(function (h) { return [h]; }), 1, H, D, view), n = view === 'front' ? H : D;
+      return { hs: Array.prototype.join.call(g.hs, ''), fill: Array.prototype.join.call(g.fill, ''), v0: colOf(g, 0, n), v1: colOf(g, 1, n) };
+    });
+  }
+  // A lone row (vec over x, W = vec.length), seen from the end or the top.
+  function rowSig(vec, H, view) {
+    return memo('r' + view + H + ':' + vec.join(''), function () {
+      var W = vec.length, g = drawRay([vec], W, H, 1, view);
+      if (view === 'top') return { vs: Array.prototype.join.call(g.vs, ''), fill: Array.prototype.join.call(g.fill, '') };
+      return { hs: Array.prototype.join.call(g.hs, ''), fill: Array.prototype.join.call(g.fill, ''), v0: colOf(g, 0, H), v1: colOf(g, 1, H) };
+    });
+  }
+  // Two neighbouring slices a (left) and b (right) seen from the front: the vertical lines between them.
+  function pairSig(a, b, H) {
+    return memo('p' + H + ':' + a.join('') + ':' + b.join(''), function () {
+      return colOf(drawRay(a.map(function (h, z) { return [h, b[z]]; }), 2, H, a.length, 'front'), 1, H);
+    });
+  }
+  // The given drawings' strips, in the same forms.
+  function strip(g, pick, n) { var out = ''; for (var k = 0; k < n; k++) out += pick(k); return out; }
+  function searchRay(given, W, H, D, budget) {
+    var F = given.front, T = given.top, E = given.end, x, z, k;
+    budget = budget || 400000;
+    function all(n) { var out = [], v = [], d; for (d = 0; d < n; d++) v.push(0); for (;;) { out.push(v.slice()); for (d = 0; d < n; d++) { if (v[d] < H) { v[d]++; break; } v[d] = 0; } if (d === n) return out; } }
+    var slices = all(D), rowsAll = all(W), cand = [];
+    for (x = 0; x < W; x++) {
+      var want = {};
+      if (F) want.F = { hs: strip(F, function (vp) { return F.hs[vp * W + x]; }, H + 1), fill: strip(F, function (iv) { return F.fill[iv * W + x]; }, H), v0: x === 0 ? colOf(F, 0, H) : null, v1: x === W - 1 ? colOf(F, W, H) : null };
+      if (T) want.T = { hs: strip(T, function (vp) { return T.hs[vp * W + x]; }, D + 1), fill: strip(T, function (iv) { return T.fill[iv * W + x]; }, D) };
+      cand.push(slices.filter(function (vec) {
+        var s;
+        if (want.F) { s = sliceSig(vec, H, 'front'); if (s.hs !== want.F.hs || s.fill !== want.F.fill || (want.F.v0 !== null && s.v0 !== want.F.v0) || (want.F.v1 !== null && s.v1 !== want.F.v1)) return false; }
+        if (want.T) { s = sliceSig(vec, H, 'top'); if (s.hs !== want.T.hs || s.fill !== want.T.fill) return false; }
+        return true;
+      }));
+    }
+    // Rows: the codes of every prefix (x = 0 … k) of a row that fits the end and top views at z.
+    var pre = [], pw = [1];
+    for (k = 0; k < W; k++) pw.push(pw[k] * (H + 1));
+    for (z = 0; z < D; z++) {
+      var u = D - 1 - z, wantE = E && { hs: strip(E, function (vp) { return E.hs[vp * D + u]; }, H + 1), fill: strip(E, function (iv) { return E.fill[iv * D + u]; }, H), v0: z === D - 1 ? colOf(E, D - 1 - z, H) : null, v1: z === 0 ? colOf(E, D - z, H) : null };
+      var wantT = T && { vs: strip(T, function (up) { return T.vs[u * (W + 1) + up]; }, W + 1), fill: strip(T, function (i) { return T.fill[u * W + i]; }, W) };
+      var sets = [];
+      for (k = 0; k < W; k++) sets.push({});
+      rowsAll.forEach(function (vec) {
+        var s;
+        if (wantE) { s = rowSig(vec, H, 'end'); if (s.hs !== wantE.hs || s.fill !== wantE.fill || (wantE.v0 !== null && s.v0 !== wantE.v0) || (wantE.v1 !== null && s.v1 !== wantE.v1)) return; }
+        if (wantT) { s = rowSig(vec, H, 'top'); if (s.vs !== wantT.vs || s.fill !== wantT.fill) return; }
+        var code = 0;
+        for (var i = 0; i < W; i++) { code += vec[i] * pw[i]; sets[i][code] = 1; }
+      });
+      pre.push(sets);
+    }
+    var rows = [], sols = [], nodes = 0, over = false, codes = [], chosen = [];
+    for (z = 0; z < D; z++) { rows.push([]); codes.push(0); }
+    function dfs(xx) {
+      if (over) return;
+      if (xx === W) {
+        var r = rows.map(function (row) { return row.slice(); });
+        if (F && !sameGrid(drawRay(r, W, H, D, 'front'), F)) return;
+        if (T && !sameGrid(drawRay(r, W, H, D, 'top'), T)) return;
+        if (E && !sameGrid(drawRay(r, W, H, D, 'end'), E)) return;
+        sols.push(r);
+        return;
+      }
+      var list = cand[xx];
+      for (var i = 0; i < list.length && !over; i++) {
+        if (++nodes > budget) { over = true; return; }
+        var vec = list[i], ok = true, saved = codes.slice(), zz;
+        for (zz = 0; zz < D && ok; zz++) { codes[zz] = saved[zz] + vec[zz] * pw[xx]; if (!pre[zz][xx][codes[zz]]) ok = false; }
+        if (ok && F && xx > 0 && pairSig(chosen[xx - 1], vec, H) !== colOf(F, xx, H)) ok = false;
+        if (ok) {
+          for (zz = 0; zz < D; zz++) rows[zz][xx] = vec[zz];
+          chosen[xx] = vec;
+          dfs(xx + 1);
+        }
+        for (zz = 0; zz < D; zz++) codes[zz] = saved[zz];
+      }
+    }
+    if (cand.every(function (c) { return c.length; })) dfs(0);
+    return { sols: sols, nodes: nodes, over: over };
   }
 
   /* ------------------------------------------------------------ foils */
@@ -458,13 +557,24 @@
     for (i = 0; i < scores.length; i++) if (scores[i] === best) ties++;
     return scores[0] === best ? 1 / ties : 0;
   }
-  var SOLVERS = ['most solid', 'fewest solid', 'most dotted', 'fewest dotted', 'largest area', 'smallest area', 'like the others', 'odd one out'];
-  function shares(gs) { // gs[0] is the key
-    var c = gs.map(counts), sum = gs.map(function (a, i) { var s = 0; gs.forEach(function (b2, j) { if (i !== j) s += gdist(a, b2); }); return s; });
-    var sol = c.map(function (x) { return x.solid; }), dot = c.map(function (x) { return x.dotted; }), ar = c.map(function (x) { return x.area; });
-    return [pickShare(sol, true), pickShare(sol, false), pickShare(dot, true), pickShare(dot, false), pickShare(ar, true), pickShare(ar, false), pickShare(sum, false), pickShare(sum, true)];
+  // "Lines only": the same, solid and dotted taken alike (where lines are, not how they are drawn).
+  var SOLVERS = ['most solid', 'fewest solid', 'most dotted', 'fewest dotted', 'largest area', 'smallest area', 'like the others', 'odd one out',
+    'like the others (lines only)', 'odd one out (lines only)'];
+  function layoutOf(g) { var out = '', k; for (k = 0; k < g.hs.length; k++) out += g.hs[k] ? 1 : 0; for (k = 0; k < g.vs.length; k++) out += g.vs[k] ? 1 : 0; return out; }
+  function gdistLines(a, b) {
+    var n = 0, k;
+    for (k = 0; k < a.hs.length; k++) if (!a.hs[k] !== !b.hs[k]) n++;
+    for (k = 0; k < a.vs.length; k++) if (!a.vs[k] !== !b.vs[k]) n++;
+    return n;
   }
-  var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5];
+  function shares(gs) { // gs[0] is the key
+    function sums(f) { return gs.map(function (a, i) { var s = 0; gs.forEach(function (b2, j) { if (i !== j) s += f(a, b2); }); return s; }); }
+    var c = gs.map(counts), sum = sums(gdist), sumL = sums(gdistLines);
+    var sol = c.map(function (x) { return x.solid; }), dot = c.map(function (x) { return x.dotted; }), ar = c.map(function (x) { return x.area; });
+    return [pickShare(sol, true), pickShare(sol, false), pickShare(dot, true), pickShare(dot, false), pickShare(ar, true), pickShare(ar, false), pickShare(sum, false), pickShare(sum, true),
+      pickShare(sumL, false), pickShare(sumL, true)];
+  }
+  var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5, 2, 1];
   function chooseFoils(rng, keyG, pool, need) {
     var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 13), best = null, bestScore = INF, bestSh = null;
     var want = SOLVERS.map(function () { return rng.chance(0.25) ? 1 : 0; });
@@ -514,11 +624,19 @@
     [b0].concat(fam, neighbours(rng, b)).forEach(function (nb) { if (nb !== b) admit(drawView(nb, miss), 'neighbour'); });
     if (miss !== 'top') flips(keyG).forEach(function (g) { admit(g, 'flip'); });
     var level = FOILS[p.foil], cands, need = null;
+    // At the dashes level a "lines" foil can come with its own flip, so the key's line layout is not
+    // the only one shared by two options (the "lines only" solvers).
+    if (level === 'dashes' && miss !== 'top') rshuffle(rng, pool.filter(function (o) { return o.kind === 'lines'; })).slice(0, 6).forEach(function (o) { flips(o.g).forEach(function (g) { admit(g, 'flip2'); }); });
     if (level === 'outline') cands = pool.filter(function (o) { return o.kind === 'outline'; });
     else {
       cands = pool.filter(function (o) { return o.kind !== 'outline'; });
       if (level === 'lines') need = function (s) { return s.filter(function (o) { return o.kind === 'lines'; }).length >= 2; };
-      else if (miss !== 'top') need = function (s) { return s.some(function (o) { return o.kind === 'dashes'; }); };
+      else if (miss !== 'top') need = function (s) { // a dashes foil, and the key's line layout no more common than another's
+        if (!s.some(function (o) { return o.kind === 'dashes'; })) return false;
+        var groups = {}, kl = layoutOf(keyG);
+        [keyG].concat(s.map(function (o) { return o.g; })).forEach(function (g) { var c = layoutOf(g); groups[c] = (groups[c] || 0) + 1; });
+        return groups[kl] === 4 || Object.keys(groups).some(function (c) { return c !== kl && groups[c] >= groups[kl]; });
+      };
       else cands = cands.filter(function (o) { return o.d <= 3; });
     }
     if (cands.length < 3) return null;
@@ -578,11 +696,18 @@
       if (res.over) return 'the search went over its bound';
       var poss = possibleViews(res, W, H, D, miss);
       if (!poss[codeOf(true3[miss])]) return 'the search missed the key';
+      // The second search (drawRay only) must find the same structures.
+      var res2 = searchRay(given, W, H, D);
+      if (res2.over) return 'the second search went over its bound';
+      if (res2.sols.length !== res.sols.length) return 'the two searches disagree (' + res.sols.length + ' and ' + res2.sols.length + ' structures)';
+      var poss2 = {};
+      res2.sols.forEach(function (r) { poss2[codeOf(drawRay(r, W, H, D, miss))] = 1; });
+      if (!poss2[codeOf(true3[miss])]) return 'the second search missed the key';
       for (i = 0; i < 4; i++) {
         if (i === item.key) continue;
         var o = item.options[i], t = { top: true3.top, front: true3.front, end: true3.end };
         if (og[i].w !== og[item.key].w || og[i].h !== og[item.key].h) return 'option ' + i + ' has another size';
-        if (poss[codeOf(og[i])]) return 'option ' + i + ' is the ' + miss + ' view of another structure with the same two views';
+        if (poss[codeOf(og[i])] || poss2[codeOf(og[i])]) return 'option ' + i + ' is the ' + miss + ' view of another structure with the same two views';
         if (o.kind !== kindOf(true3[miss], og[i])) return 'option ' + i + ' is not of its stated kind';
         t[miss] = og[i];
         var why = hullFails(t.top, t.front, t.end, W, H, D) ? 'hull' : alignFails(t.top, t.front, t.end) ? 'align' : 'search';
@@ -644,8 +769,8 @@
       VIEWS: VIEWS, MISSING: MISSING, CUBES: CUBES, GRIDS: GRIDS, FOILS: FOILS, HMAX: HMAX, SOLVERS: SOLVERS, stats: stats,
       boxOf: boxOf, rowsOf: rowsOf, fills: fills, connectedBox: connectedBox, drawView: drawView, drawRay: drawRay, codeOf: codeOf,
       sameGrid: sameGrid, pub: pub, grid: grid, counts: counts, gdist: gdist, kindOf: kindOf, hullFails: hullFails, alignFails: alignFails,
-      lineSet: lineSet, crossStyles: crossStyles, pairV: pairV, search: search, possibleViews: possibleViews, neighbours: neighbours,
-      flips: flips, shares: shares, pickShare: pickShare, build: build, fallback: fallback, cleanParams: cleanParams,
+      lineSet: lineSet, crossStyles: crossStyles, pairV: pairV, search: search, searchRay: searchRay, possibleViews: possibleViews, neighbours: neighbours,
+      flips: flips, shares: shares, pickShare: pickShare, gdistLines: gdistLines, build: build, fallback: fallback, cleanParams: cleanParams,
     },
   });
 })(window.PX);

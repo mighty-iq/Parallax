@@ -1795,17 +1795,80 @@
       for (j = 1; j < n - 1; j++) mid.push([A[j][0] + (B[j][0] - A[j][0]) * k, A[j][1] + (B[j][1] - A[j][1]) * k, k > 0 ? zMove + dz * j : A[j][2]]);
       return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from, hi: e.from + mid.length - 1, zMove: zMove, curl: false };
     }
-    // A curl (R1): its crossing stays put (two points at each end of the run keep their places and
-    // heights), and the rest of the loop is lifted over everything and drawn in to the short chord
-    // between those points; at the end the loop goes and the rope runs straight (the step's after).
-    var zTop = step.zTop !== undefined ? step.zTop : (step.zTop = zRange(step.before)[1] + 1);
-    var R = Math.min(2, (n - 3) >> 1), T = resample([A[R], A[n - 1 - R]], Math.max(2, n - 2 * R));
-    for (j = 1; j < n - 1; j++) {
-      if (j <= R || j >= n - 1 - R) { mid.push([A[j][0], A[j][1], A[j][2]]); continue; }
-      var g = T[j - R];
-      mid.push([A[j][0] + (g[0] - A[j][0]) * k, A[j][1] + (g[1] - A[j][1]) * k, k > 0 ? zTop + 1 + 1e-3 * j : A[j][2]]);
+    // A curl (R1) shrinks inside its own loop, which encloses nothing: ears of the loop are cut,
+    // the smallest first, each one drawn in to its chord while the clock runs through its share of
+    // the loop's area. The crossing stays put (the first and last two points of the curl are never
+    // cut); at the end the loop goes and the rope runs straight through (the step's after).
+    var C = curlClip(step), run = C.pts, gone = {}, target = k * C.total, cum = 0, mv = null;
+    for (j = 0; j < C.order.length; j++) {
+      var o = C.order[j];
+      if (cum + o.area <= target && o.area > 0) { gone[o.v] = 1; cum += o.area; continue; }
+      if (o.area === 0 && cum <= target && k > 0) { gone[o.v] = 1; continue; }
+      mv = { v: o.v, f: o.area > 0 ? Math.max(0, Math.min(1, (target - cum) / o.area)) : 0, a: o.a, b: o.b };
+      break;
     }
-    return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from + R, hi: e.from + mid.length - 1 - R, zMove: zTop + 1, curl: true };
+    if (k >= 1) { for (j = 0; j < C.order.length; j++) gone[C.order[j].v] = 1; mv = null; }
+    for (j = 0; j < run.length; j++) {
+      if (gone[j]) continue;
+      var pt = run[j];
+      if (mv && mv.v === j && mv.f > 0) {
+        var pa = C.at(mv.a), pb = C.at(mv.b), mx = (pa[0] + pb[0]) / 2, my = (pa[1] + pb[1]) / 2;
+        pt = [pt[0] + (mx - pt[0]) * mv.f, pt[1] + (my - pt[1]) * mv.f, pt[2]];
+      }
+      mid.push([pt[0], pt[1], pt[2]]);
+    }
+    return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from + 2, hi: e.from + mid.length - 3, zMove: 0, curl: true };
+  }
+  // The ear-cutting plan of a curl, cached on its step: the run's points, and in cutting order each
+  // cut point v with its neighbours a, b at that moment (−1 = the crossing point) and the area cut.
+  // The polygon is the crossing point and the run; its first and last two points are never cut.
+  function curlClip(step) {
+    if (step.clip) return step.clip;
+    var e = step.edit, P = step.before[e.poly], Q = e.rot ? rotateTo(P, e.rot) : P, X = e.path[0], i;
+    var pts = [];
+    for (i = e.from; i <= e.to; i++) pts.push([Q.x[i], Q.y[i], Q.z[i]]);
+    var L = pts.length, at = function (v) { return v < 0 ? X : pts[v]; };
+    var prev = [], next = [];
+    for (i = 0; i < L; i++) { prev.push(i - 1); next.push(i + 1 < L ? i + 1 : -1); }
+    var area2 = 0, ring = [-1].concat(pts.map(function (_, q) { return q; }));
+    for (i = 0; i < ring.length; i++) { var p1 = at(ring[i]), p2 = at(ring[(i + 1) % ring.length]); area2 += p1[0] * p2[1] - p2[0] * p1[1]; }
+    var orient = area2 >= 0 ? 1 : -1, alive = new Uint8Array(L), left = L, order = [], total = 0;
+    for (i = 0; i < L; i++) alive[i] = 1;
+    function earArea(v) {
+      if (v < 2 || v > L - 3 || !alive[v]) return -1;
+      var a = at(prev[v]), b = at(v), c = at(next[v]);
+      var cr = ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) * orient;
+      if (cr < 0) return -1;
+      for (var q = -1; q < L; q++) {
+        if (q === prev[v] || q === v || q === next[v] || (q >= 0 && !alive[q])) continue;
+        if (inTri(at(q), a, b, c)) return -1;
+      }
+      return cr / 2;
+    }
+    var ear = new Float64Array(L);
+    for (i = 0; i < L; i++) ear[i] = earArea(i);
+    while (left > 4) {
+      var best = -1;
+      for (i = 2; i < L - 2; i++) if (alive[i] && ear[i] >= 0 && (best < 0 || ear[i] < ear[best])) best = i;
+      if (best < 0) break;
+      order.push({ v: best, a: prev[best], b: next[best], area: ear[best] });
+      total += ear[best];
+      alive[best] = 0; left--;
+      var pv = prev[best], nv = next[best];
+      if (pv >= 0) next[pv] = nv;
+      if (nv >= 0) prev[nv] = pv;
+      if (pv >= 0) ear[pv] = earArea(pv);
+      if (nv >= 0) ear[nv] = earArea(nv);
+    }
+    step.clip = { pts: pts, order: order, total: total, at: at };
+    return step.clip;
+  }
+  function inTri(p, a, b, c) {
+    var d1 = (p[0] - b[0]) * (a[1] - b[1]) - (a[0] - b[0]) * (p[1] - b[1]);
+    var d2 = (p[0] - c[0]) * (b[1] - c[1]) - (b[0] - c[0]) * (p[1] - c[1]);
+    var d3 = (p[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (p[1] - a[1]);
+    var neg = d1 < 0 || d2 < 0 || d3 < 0, pos = d1 > 0 || d2 > 0 || d3 > 0;
+    return !(neg && pos);
   }
 
   /* ---------- checks: each replayed step is the validator's own move, by a legal motion ---------- */
@@ -1817,8 +1880,9 @@
   }
   // Every frame of a step's morph (16 frames, k = 1/16 … 1) is a legal motion: the moving run,
   // lifted (or dropped) at the start, passes over (under) everything else it crosses, ramps
-  // included, and no crossing is ever level. (A run that only moves sideways at heights above or
-  // below everything else meets no strand in space, so the knot or link stays what it was.)
+  // included; a shrinking curl crosses nothing; no crossing is ever level. (A run that moves
+  // sideways at heights above or below everything else meets no strand in space, so the knot or
+  // link stays what it was.)
   function legalMotion(step) {
     var e = step.edit;
     for (var q = 1; q <= 16; q++) {
@@ -1831,6 +1895,7 @@
         if (Math.abs(x.za - x.zb) < 1e-6) return false;
         var ra = inRun(x.a[0], x.sa), rb = inRun(x.b[0], x.sb);
         if (ra === rb) continue;
+        if (M.curl) return false;                  // a shrinking curl crosses nothing
         var zr = ra ? x.za : x.zb, zo = ra ? x.zb : x.za;
         if (lift ? zr <= zo : zr >= zo) return false;
       }
