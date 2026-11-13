@@ -1146,7 +1146,7 @@
   function switchN(rope) { return Math.max(7, RUNGS[rope].n); }
   function buildSwitch(rng, p) {
     var sp = SPACING[p.spacing], N = switchN(p.rope), tie = p.variant === 'tie';
-    var cue = rng.fork('tags'), want = { side: cue.int(0, 1), fine: cue.int(0, 1), wd: cue.int(0, 3) }, tries = 0;
+    var cue = rng.fork('tags'), want = { side: cue.int(0, 1), fine: cue.int(0, 1), wd: cue.int(0, 3), wo: cue.int(0, 3) }, tries = 0;
     for (var s = 0; s < 24; s++) {
       var dg = ropeShadow(rng, sp, N, false);
       if (!dg) continue;
@@ -1160,16 +1160,24 @@
         var g = withOver(dg, over), base = knotKind(g.D);
         if (tie ? base !== 'U' : base !== 'K') continue;
         if (++tries > 140) want.side = -1;           // a long search: take either half
+        // the key's rank among the four by distance from the centre and by the length of the strand
+        // that passes over it is drawn from the seed (each rank 1 in 4). Options nearest those ranks
+        // are tried first; a rope whose best option misses them is kept only by a draw that gets
+        // less likely the further it misses (always, after a long search), so "the most central"
+        // and "the shortest over-strand" score near chance (tested per rung)
         var opts = tagOptions(dg, g.D, fc, over, free, want);
         if (!opts.length) continue;
         opts = rng.shuffle(opts);
-        opts.sort(function (u, v) { return (u.rd === want.wd ? 0 : 1) - (v.rd === want.wd ? 0 : 1); });
+        var cost = function (o) { return (o.rd < 0 ? 4 : Math.abs(o.rd - want.wd)) + (o.ro < 0 ? 4 : Math.abs(o.ro - want.wo)); };
+        opts.forEach(function (o) { o.cost = cost(o); });
+        opts.sort(function (u, v) { return u.cost - v.cost; });
         var memo = {};
         var kindOf = function (c) { if (memo[c] === undefined) memo[c] = knotKind(switched(g.D, c)); return memo[c]; };
-        for (var k = 0; k < opts.length && k < 30; k++) {
+        for (var k = 0; k < opts.length && k < 200; k++) {
           var t = opts[k].t, ok = tie ? kindOf(t[0]) === 'K' : kindOf(t[0]) === 'U';
           for (var j = 1; j < 4 && ok; j++) ok = kindOf(t[j]) === (tie ? 'U' : 'K');
           if (!ok) continue;
+          if (opts[k].cost > 0 && tries <= 60 && rng.next() >= Math.pow(0.3, opts[k].cost)) break;
           var it = itemBase(p);
           it.n = N; it.depth = RUNGS[p.rope].depth; it.pts = dg.pts; it.over = over;
           // letters A–D in an order drawn from the seed, so the key's letter tells nothing
@@ -1195,11 +1203,25 @@
     if (keys.length === 2 && c[keys[0]] === 2) return 'pairs';
     return null;
   }
+  // The length of the strand that passes over each crossing (the stretch of rope between the
+  // passages underneath before and after it; the rope's ends where there is none).
+  function overLengths(dg, over) {
+    var ar = dg.arc || (dg.arc = arcLengths(dg.S[0])), cp = dg.comps[0], out = {}, i, j;
+    var isOver = function (p) { return p.first ? !!over[p.c] : !over[p.c]; }, at = function (p) { return ar.a[Math.floor(p.t)]; };
+    for (i = 0; i < cp.length; i++) {
+      if (!isOver(cp[i])) continue;
+      var lo = 0, hi = ar.total;
+      for (j = i - 1; j >= 0; j--) if (!isOver(cp[j])) { lo = at(cp[j]); break; }
+      for (j = i + 1; j < cp.length; j++) if (!isOver(cp[j])) { hi = at(cp[j]); break; }
+      out[cp[i].c] = hi - lo;
+    }
+    return out;
+  }
   function tagOptions(dg, D, fc, over, free, want) {
-    var F = {}, out = [], i, a, b, c, d, j;
+    var F = {}, out = [], i, a, b, c, d, j, OL = overLengths(dg, over);
     for (i = 0; i < free.length; i++) {
       var x = free[i], f = switchFeatures(dg, fc, over, x), X = dg.X[x];
-      F[x] = { g: f[0] + '|' + f[1], alt: f[2], r2: f[4], s: sgn(D, x), r: (X.x - PLATE / 2) * (X.x - PLATE / 2) + (X.y - PLATE / 2) * (X.y - PLATE / 2) };
+      F[x] = { g: f[0] + '|' + f[1], alt: f[2], r2: f[4], s: sgn(D, x), r: (X.x - PLATE / 2) * (X.x - PLATE / 2) + (X.y - PLATE / 2) * (X.y - PLATE / 2), o: OL[x] };
     }
     var L = free;
     for (a = 0; a < L.length; a++) for (b = a + 1; b < L.length; b++) {
@@ -1222,9 +1244,16 @@
             var hi2 = 0, lo2 = 0;
             for (j = 0; j < 4; j++) if (j !== i) { if (F[q[j]].r2 < F[q[i]].r2) hi2++; if (F[q[j]].r2 > F[q[i]].r2) lo2++; }
             if (hi2 === 3 || lo2 === 3) continue;
-            var t = [q[i]].concat(q.filter(function (y, m) { return m !== i; })), rd = 0;
-            for (j = 1; j < 4; j++) if (F[t[j]].r < F[t[0]].r) rd++;
-            out.push({ t: t, rd: rd });
+            // rd, ro: the key's rank by distance from the centre and by over-strand length (−1 when it
+            // ties with another option: then no rank is held)
+            var t = [q[i]].concat(q.filter(function (y, m) { return m !== i; })), rd = 0, ro = 0;
+            for (j = 1; j < 4; j++) {
+              if (F[t[j]].r < F[t[0]].r) rd++;
+              if (F[t[j]].o < F[t[0]].o) ro++;
+              if (F[t[j]].r === F[t[0]].r) rd = -9;
+              if (Math.abs(F[t[j]].o - F[t[0]].o) < 0.5) ro = -9;
+            }
+            out.push({ t: t, rd: rd < 0 ? -1 : rd, ro: ro < 0 ? -1 : ro });
           }
         }
       }
@@ -1792,6 +1821,7 @@
     // A moving run climbs by a hair along its length, so it never meets itself level.
     var dz = zMove >= 0 ? 1e-3 : -1e-3;
     if (!curl) {
+      if (k >= 1) return { polys: applyEdit(step.before, e), lo: e.from, hi: e.from + e.path.length - 1, zMove: zMove, curl: false };
       for (j = 1; j < n - 1; j++) mid.push([A[j][0] + (B[j][0] - A[j][0]) * k, A[j][1] + (B[j][1] - A[j][1]) * k, k > 0 ? zMove + dz * j : A[j][2]]);
       return { polys: applyEdit(step.before, { poly: e.poly, rot: e.rot, from: e.from, to: e.to, path: mid }), lo: e.from, hi: e.from + mid.length - 1, zMove: zMove, curl: false };
     }
@@ -1878,29 +1908,68 @@
     for (var i = 0; i < pc.list.length; i++) if (Math.abs(pc.list[i].za - pc.list[i].zb) < 1e-6) return false;
     return true;
   }
-  // Every frame of a step's morph (16 frames, k = 1/16 … 1) is a legal motion: the moving run,
-  // lifted (or dropped) at the start, passes over (under) everything else it crosses, ramps
-  // included; a shrinking curl crosses nothing; no crossing is ever level. (A run that moves
-  // sideways at heights above or below everything else meets no strand in space, so the knot or
-  // link stays what it was.)
+  // The motion of a step is legal (no strand ever passes through another):
+  // - a lifted (dropped) run sits above (below) everything else at every frame, and it climbs by a
+  //   hair along its length, so only its two ramps (the segments joining it to the rope that stays)
+  //   can meet a strand on the wrong side or level: at 32 frames (k = 1/32 … 1) each ramp must pass
+  //   over (under) every other strand it crosses, and never level with the moving strand itself;
+  // - a curl shrinks by cutting ears inside its own loop, so it is legal when that loop encloses no
+  //   other point of any strand.
   function legalMotion(step) {
+    var e = step.edit, zMove = e.path.length ? e.path[e.path.length >> 1][2] : 0;
+    return Math.abs(zMove) <= 1 ? curlEmpty(step) : rampsLegal(step, zMove > 0);
+  }
+  function rampsLegal(step, lift) {
     var e = step.edit;
-    for (var q = 1; q <= 16; q++) {
-      var M = morphParts(step, q / 16), pc;
-      try { pc = polyCrossings(M.polys); } catch (err) { return false; }
-      var P = M.polys[e.poly], m = P.x.length, lift = M.zMove > 0;
+    for (var q = 1; q <= 32; q++) {
+      var M = morphParts(step, q / 32), P = M.polys[e.poly], m = P.x.length, ramps = [];
+      if (M.lo >= 1) ramps.push(M.lo - 1); else if (P.closed) ramps.push(m - 1);
+      if (M.hi + 1 < m || P.closed) ramps.push(M.hi);
       var inRun = function (k, seg) { return k === e.poly && ((seg >= M.lo - 1 && seg <= M.hi) || (P.closed && M.lo === 0 && seg === m - 1)); };
-      for (var i = 0; i < pc.list.length; i++) {
-        var x = pc.list[i];
-        if (Math.abs(x.za - x.zb) < 1e-6) return false;
-        var ra = inRun(x.a[0], x.sa), rb = inRun(x.b[0], x.sb);
-        if (ra === rb) continue;
-        if (M.curl) return false;                  // a shrinking curl crosses nothing
-        var zr = ra ? x.za : x.zb, zo = ra ? x.zb : x.za;
-        if (lift ? zr <= zo : zr >= zo) return false;
+      for (var r = 0; r < ramps.length; r++) {
+        var r0 = ramps[r], r1 = (r0 + 1) % m;
+        for (var k = 0; k < M.polys.length; k++) {
+          var Q = M.polys[k], mq = Q.x.length, ns = Q.closed ? mq : mq - 1;
+          for (var s = 0; s < ns; s++) {
+            if (k === e.poly) { var d = Math.abs(s - r0); if (Q.closed) d = Math.min(d, mq - d); if (d <= 1) continue; }
+            var s1 = (s + 1) % mq, hit = segCross(P.x[r0], P.y[r0], P.x[r1], P.y[r1], Q.x[s], Q.y[s], Q.x[s1], Q.y[s1]);
+            if (!hit) continue;
+            var zr = P.z[r0] + (P.z[r1] - P.z[r0]) * hit[0], zo = Q.z[s] + (Q.z[s1] - Q.z[s]) * hit[1];
+            if (Math.abs(zr - zo) < 1e-6) return false;
+            if (inRun(k, s)) continue;
+            if (lift ? zr <= zo : zr >= zo) return false;
+          }
+        }
       }
     }
     return true;
+  }
+  function segCross(ax, ay, bx, by, cx, cy, dx, dy) {
+    var rx = bx - ax, ry = by - ay, sx = dx - cx, sy = dy - cy, den = rx * sy - ry * sx;
+    if (den === 0) return null;
+    var qx = cx - ax, qy = cy - ay, u = (qx * sy - qy * sx) / den, w = (qx * ry - qy * rx) / den;
+    return u >= 0 && u <= 1 && w >= 0 && w <= 1 ? [u, w] : null;
+  }
+  function curlEmpty(step) {
+    var C = curlClip(step), e = step.edit, ring = [C.at(-1)].concat(C.pts), x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, i;
+    for (i = 0; i < ring.length; i++) { x0 = Math.min(x0, ring[i][0]); x1 = Math.max(x1, ring[i][0]); y0 = Math.min(y0, ring[i][1]); y1 = Math.max(y1, ring[i][1]); }
+    for (var k = 0; k < step.before.length; k++) {
+      var P = step.before[k], m = P.x.length;
+      for (i = 0; i < m; i++) {
+        if (P.x[i] < x0 || P.x[i] > x1 || P.y[i] < y0 || P.y[i] > y1) continue;
+        if (k === e.poly) { var ri = e.rot ? (i - e.rot + m) % m : i; if (ri >= e.from - 3 && ri <= e.to + 3) continue; }
+        if (insidePoly(P.x[i], P.y[i], ring)) return false;
+      }
+    }
+    return true;
+  }
+  function insidePoly(x, y, ring) {
+    var inside = false;
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      var a = ring[i], b = ring[j];
+      if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+    }
+    return inside;
   }
   // The validator's own move on diagram D (R1, R2: remove the crossings; R3: rewire triangle f).
   function moveResult(D, t, xs, f) {
@@ -2004,7 +2073,7 @@
     // items
     ropeFeatures: ropeFeatures, withOver: withOver, shadowFacts: shadowFacts, fastSig: fastSig, matchedPair: matchedPair,
     switchFeatures: switchFeatures, ropeOf: ropeOf, norm: norm, buildItem: buildItem, fallback: fallback, check: check,
-    switchN: switchN, tagOrder: tagOrder, farApart: farApart, pattern: pattern, RUNG_LABELS: RUNG_LABELS,
+    switchN: switchN, tagOrder: tagOrder, farApart: farApart, pattern: pattern, RUNG_LABELS: RUNG_LABELS, overLengths: overLengths,
     // links
     LINK_RUNGS: LINK_RUNGS, linkShadow: linkShadow, linkKind: linkKind, linkFacts: linkFacts, linkSig: linkSig, linkPair: linkPair, checkLink: checkLink,
     // show me

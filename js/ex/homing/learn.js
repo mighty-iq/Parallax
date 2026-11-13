@@ -54,7 +54,7 @@
         text: 'Keep one direction in mind: where the start is from you. Update it after every leg and every turn.',
         steps: [
           'After the first leg, the start is straight behind you.',
-          'A turn of 90° to the right puts it 90° further round to your left.',
+          'A turn of 90° to the right swings it 90° round the other way: from straight behind you to your right.',
           'Walking on pulls the start further behind you; a short leg leaves it more to the side.',
         ],
         when: 'Steady when there are no landmarks and the route has many turns.',
@@ -92,10 +92,11 @@
       withLandmarks: ', with far-off landmarks on the horizon',
       experimental: 'Experimental',
       hideMap: 'Hide the map',
-      paused: 'Paused. This route will not count. Press Esc or Space to go on.',
       voidPaused: 'The route was paused, so this answer will not count.',
       voidStutter: 'The view froze during the route, so this answer will not count.',
       voidTurned: 'The screen changed shape during the route, so this answer will not count.',
+      voidTurnedAnswer: 'The screen changed shape while you answered, so this answer will not count.',
+      voidLost: 'The 3D view was interrupted, so this answer will not count.',
       phaseWatch: 'You start in the ring. Watch the route and keep track of the start.',
       phaseTurn: 'Turn to face the start, then confirm.',
       phaseReveal: 'The flag marks the start.',
@@ -128,6 +129,6 @@
       demoTurn: 'Turn {deg}° to the {side}: now you face the start.',
       demoAnswer: 'To answer, drag the view or the circle, or use ◀ ▶ (keys ← →, Shift for 1°). Then Confirm (Enter).',
     },
-    bridge: 'Finding the way back to a car or a trailhead without a map uses the same kind of tracking. Practising here improves this task; whether it helps real wayfinding has not been studied.',
+    bridge: 'Finding the way back to a car or a trailhead without a map uses the same kind of tracking. Practising here improves this task; whether it helps real wayfinding has not been tested in any study we found.',
   });
 })(window.PX);

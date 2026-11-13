@@ -506,7 +506,7 @@
   function walker(S, plan, opts) {
     var L = genLib(), ctx = opts.ctx, scale = opts.fast ? 0.02 : 1, t = 0, last = -1, done = false;
     var st = { frames: 0, moving: 0, motionMs: 0, slowMs: 0, maxFreezeMs: 0, hidden: false, lost: false, turned: false, paused: false, gaps: [] };
-    var size0 = S.size(), doc = window.document, reason = null;
+    var size0 = shapeOf(S), doc = window.document, reason = null;
     var offLost = PX.bus && PX.bus.on ? PX.bus.on('stage3d:lost', function () { st.lost = true; judge(); }) : null;
     function onVis() { if (doc.hidden) { st.hidden = true; judge(); } last = -1; }
     doc.addEventListener('visibilitychange', onVis);
@@ -550,8 +550,7 @@
           if (gap > st.maxFreezeMs) st.maxFreezeMs = gap;
           if (st.gaps.length < 4000) st.gaps.push(gap);
         }
-        var sz = S.size();
-        if (Math.abs(sz.w - size0.w) >= 2 || Math.abs(sz.h - size0.h) > 0.15 * Math.max(1, size0.h)) { st.turned = true; judge(); }
+        if (!st.turned && shapeChanged(size0, shapeOf(S))) { st.turned = true; judge(); }
         t += dt / 1000 / scale;
         S.tick(dt / 1000);
         pose = L.poseAt(plan, Math.min(t, plan.total));
@@ -775,7 +774,8 @@
       out.push({ ms: 1500, caption: kc('mapBack', { dist: Math.round(item.distance) }), enter: frame(plus(done, { back: true })) });
       if (x.yours && isNum(x.yours.deg)) {
         var ys = side(x.yours.deg), yo = { deg: x.yours.deg, r: x.yours.r };
-        out.push({ ms: 2200, caption: kc('mapYours', { deg: ys.deg, side: kc(ys.side) || ys.side }), enter: frame(plus(done, { back: true, yours: plus(yo, { k: 0 }) })),
+        // a walked answer is drawn as a line to the stop ring, a turn alone as an open arrow
+        out.push({ ms: 2200, caption: kc(x.yours.r > 0.3 ? 'mapYoursLine' : 'mapYours', { deg: ys.deg, side: kc(ys.side) || ys.side }) || kc('mapYours', { deg: ys.deg, side: kc(ys.side) || ys.side }), enter: frame(plus(done, { back: true, yours: plus(yo, { k: 0 }) })),
           update: function (k) { mapScene(M.m, plus(done, { back: true, yours: plus(yo, { k: ease(k) }) })); } });
         if (x.yours.r > 0.3) out.push({ ms: 2000, caption: kc('mapYoursWalk', { r: Math.round(x.yours.r * 10) / 10, ep: Math.round(x.yours.ep * 10) / 10 }), enter: frame(plus(done, { back: true, yours: yo })) });
       }
@@ -857,6 +857,14 @@
     if (ctx && typeof ctx.play === 'function') return ctx.play(list, o);
     return runSteps(list, ctx, o);
   }
+  // The angle error a verdict shows (degrees): whole degrees, except that a wrong answer never shows a
+  // number inside the limit (40.3° off, not 40° off: more than 40°).
+  function errShown(errAbs, tol, ok) {
+    if (!isNum(errAbs)) return null;
+    var e = Math.round(errAbs);
+    if (!ok && e <= tol) e = Math.max(tol + 0.1, Math.ceil(errAbs * 10) / 10);
+    return e;
+  }
   // 'touch' | 'mouse' | 'pen' from a pointer event, 'key' from a key event (the trial log's input column).
   function inputOf(e) {
     if (!e) return null;
@@ -872,10 +880,31 @@
   function hintOn(S, text) { if (narrow() && text) { S.sub.textContent = text; S.subHint = true; } }
   function hintOff(S) { if (S.subHint) { S.sub.textContent = ''; S.subHint = false; } }
 
+  // The view's shape (R1 §7.4: the phone turned or the screen class changed during the route or the answer
+  // voids the trial): a width change over 20 px (a scrollbar coming or going is not one), a height change
+  // over 15 %, or the layout switching between phone and wide. shapeOf(S) → { w, h, narrow }.
+  function shapeOf(S) { var z = S.size(); return { w: z.w, h: z.h, narrow: narrow() }; }
+  function shapeChanged(a, b) { return Math.abs(b.w - a.w) > 20 || Math.abs(b.h - a.h) > 0.15 * Math.max(1, a.h) || b.narrow !== a.narrow; }
+  // During the answer: watchShape(S, onChange) → { check() (call it from frame loops), stop() }; resize and
+  // orientation events check too. onChange runs once.
+  function watchShape(S, onChange) {
+    var s0 = shapeOf(S), done = false;
+    function off() { window.removeEventListener('resize', check); window.removeEventListener('orientationchange', check); }
+    function check() {
+      if (done) return false;
+      if (!shapeChanged(s0, shapeOf(S))) return false;
+      done = true; off(); onChange();
+      return true;
+    }
+    window.addEventListener('resize', check);
+    window.addEventListener('orientationchange', check);
+    return { check: check, stop: function () { done = true; off(); } };
+  }
+
   var kit = {
     hintOn: hintOn, hintOff: hintOff, narrow: narrow,
     stage: stage, dial: dial, fine: fine, drag: drag, tapAct: tapAct, walker: walker, mapper: mapper, layout: layout, turnRow: turnRow,
-    play: play, runSteps: runSteps, inputOf: inputOf, hostPaused: hostPaused, capFor: capFor, sideText: sideText, side: side,
+    play: play, runSteps: runSteps, inputOf: inputOf, errShown: errShown, hostPaused: hostPaused, watchShape: watchShape, capFor: capFor, sideText: sideText, side: side,
     norm360: norm360, norm180: norm180, adiff: adiff, ease: ease, sweep: sweep, keyOf: keyOf,
     FREEZE_MS: FREEZE_MS, SLOW_SHARE: SLOW_SHARE, SLOW_GAP: SLOW_GAP, DRAG_DEG: DRAG_DEG, TILE: TILE, MIN_PX: MIN_PX, DOT_R: DOT_R,
   };
@@ -942,7 +971,7 @@
     return cap('describe', { legs: item.legs.length, landmarks: item.landmarks && item.landmarks.length ? cap('withLandmarks') : '' });
   }
 
-  function voidTrial(reason, stats) {
+  function voidTrial(reason, stats, phase) {
     if (!st || st.voided) return;
     st.voided = reason;
     st.voidStats = stats || null;
@@ -950,17 +979,9 @@
     if (st.ctx && typeof st.ctx.voidTrial === 'function') {
       try { st.ctx.voidTrial(reason, stats || null); } catch (e) { if (window.console) console.error('homing: ctx.voidTrial failed', e); }
     }
-    st.el.voidNote.textContent = cap(reason === 'paused' ? 'voidPaused' : reason === 'turned' ? 'voidTurned' : 'voidStutter');
+    st.el.voidNote.textContent = cap(reason === 'turned' && phase === 'answer' ? 'voidTurnedAnswer' : reason === 'paused' ? 'voidPaused' : reason === 'turned' ? 'voidTurned' : reason === 'lost' ? 'voidLost' : 'voidStutter');
     st.el.voidNote.hidden = false;
   }
-  function togglePause() {
-    if (!st || !st.walking) return false;
-    st.paused = !st.paused;
-    st.S.pauseNote.textContent = cap('paused');
-    st.S.pauseNote.hidden = !st.paused;
-    return undefined;
-  }
-
   // Draws the start, plays the route and resolves with the paint timestamp of the first answer frame.
   function present(item, ctx) {
     if (!st) mount(ctx);
@@ -987,14 +1008,12 @@
     el.desc.textContent = describe(item);
     S.showRing(true);
     S.render();
-    var popWalkKeys = ctx.keys.push({
-      Escape: function () { return togglePause(); },
-      Space: function () { return st && st.paused ? togglePause() : false; },
-    }, { through: true });
+    // Esc during the walk is the player's: its pause sheet covers the item, voids it (it was paused while it
+    // played) and freezes the walk through pause()/resume() below, so every way back resumes the walk.
     st.walking = true;
     var ringOn = true, S0 = item.path[0];
     return timing.nextPaint().then(function () {
-      if (!st || st.item !== item) { popWalkKeys(); return timing.now(); }
+      if (!st || st.item !== item) return timing.now();
       st.W = walker(S, planOf(item), {
         ctx: ctx, fast: ctx.fast,
         paused: function () { return !!(st && (st.paused || st.hostPause || hostPaused(ctx))); },
@@ -1002,7 +1021,6 @@
         onVoid: function (reason, stats) { voidTrial(reason, stats); },
       });
       return st.W.done.then(function (stats) {
-        popWalkKeys();
         if (!st || st.item !== item) return timing.now();
         st.frames = stats;
         st.walking = false; st.paused = false;
@@ -1057,12 +1075,15 @@
     hintOff(st.S);
     st.el.root.classList.remove('is-answering');
     if (st.popKeys) { st.popKeys(); st.popKeys = null; }
+    if (st.shape) { st.shape.stop(); st.shape = null; }
   }
 
   function collect(item, ctx, respond) {
     if (!st || st.item !== item) return;
     st.respond = respond;
     st.live = true;
+    if (st.shape) st.shape.stop();
+    st.shape = watchShape(st.S, function () { voidTrial('turned', { phase: 'answer' }, 'answer'); });
     st.D.live = true;
     st.F.disable(false);
     st.el.root.classList.add('is-answering');
@@ -1097,7 +1118,7 @@
     stopInput();
     st.done = true;
     var resp = isNum(response) ? norm360(response) : null, res = result || { correct: false };
-    var ok = !!res.correct, err = isNum(res.value) ? Math.round(res.value) : null, s = side(item.key), el = st.el;
+    var ok = !!res.correct, err = errShown(isNum(res.value) ? Math.abs(res.value) : null, item.tolerance, ok), s = side(item.key), el = st.el;
     el.root.classList.add('is-revealed');
     st.D.mark(ok ? 'is-right' : 'is-wrong');
     st.D.set(resp, resp === null ? '' : sideText(cap, resp));
@@ -1183,7 +1204,7 @@
     unmount: unmount,
     // the player's pause sheet during the walk (also detected through the inert host)
     pause: function () { if (st && st.walking) st.hostPause = true; },
-    resume: function () { if (st) st.hostPause = false; },
+    resume: function () { if (st) { st.hostPause = false; st.paused = false; st.S.pauseNote.hidden = true; } },
     // for tests: the dial geometry, the walk model and the camera pose
     dial: { radius: DIAL_R, box: DIAL_BOX, hub: HUB },
     timeline: planOf,
