@@ -39,6 +39,7 @@
     cube: 'does it fold into a cube', toview: 'object to view', toobject: 'views to object', count: 'count blocks',
     forward: 'forward', backward: 'backward', still: 'still camera', orbit: 'orbiting camera',
     point: 'point home', 'return': 'walk back home',
+    pull: 'pull the ends', untie: 'which crossing unties it', tie: 'which crossing ties it', link: 'linked or apart',
   };
   // A few words after the name on cards and pages (R1 §8.1 d: Homing is the stage with landmarks).
   var NAME_TAIL = { homing: 'with landmarks', reckon: 'no landmarks' };
@@ -98,6 +99,8 @@
     'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + v; },
     'reckon.tolerance': function (v) { return 'right within ' + v; },
     'track.time': function (v) { return v + ' s of tracking'; },
+    'knots.rope': function (v) { var m = /^(\d+)( slide-over)?$/.exec(String(v)); return m ? m[1] + ' crossings' + (m[2] ? ', a slide-over move' : '') : String(v); },
+    'knots.spacing': function (v) { return v + ' spacing'; },
   };
   function dimText(def, dim, v) {
     var f = def && PHRASE[def.id + '.' + dim.key];
