@@ -32,7 +32,6 @@ Owner decisions: D1 keep Parallax's own rules (game layer = v1.2); D2 opt-in DAT
 
 ## In progress
 - longrun --only desktop,phone --modes check --per 150 (bt0atfz7i, scratchpad/longrun_check.log)
-- longrun --only srcdoc --per 100 (bcq55vxkr, scratchpad/longrun_srcdoc.log)
 
 ## Next three steps
 1. When both long runs pass: update VERIFY (longrun rows), claude/build-log-parallax-v1.1.md and claude/parallax-status.md.
@@ -45,6 +44,7 @@ Owner decisions: D1 keep Parallax's own rules (game layer = v1.2); D2 opt-in DAT
 - Knots mirror variant; refit hand-set difficulties from pooled exports; Pause/End during feedback; partial Daily resume by seed.
 
 ## Last verified
+- longrun srcdoc (all modes in a sandboxed frame, export/import round trip): 12/0 (14 Nov 00:41 UTC).
 - Final suite as above (14 Nov); preview smoke 22/22 on the release candidate.
 
 ## Dead ends
