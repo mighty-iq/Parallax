@@ -1,6 +1,6 @@
 # I1: Time counting and other bugs in Parallax v1.0.0
 
-Audit of the released v1.0.0 (main f10f7db), for the v1.1 update. Brief item 1: "Figure out whats up with the time counting, looks bugged; and other bug fixes."
+Audit of the released v1.0.0 (main f10f7db), for the v1.1 update. Brief item 1: find out why the time counting looks wrong, and fix it and other bugs.
 
 - **Tested copy:** the frozen v1.0.0 tree at `scratchpad/frozen-v1.0/` (its `js/` and `tests/` are byte-identical to `/home/claude/parallax`, so every line number below is valid in the live repository).
 - **How:** code reading of every clock, then real sessions in headless Chromium (Python Playwright, `file://`, SwiftShader WebGL) through `tests/e2e/pwslot.sh`, at 1366 × 768 (mouse) and 390 × 844 (touch, DPR 3). Waiting was real (no fake clock; only `exp_tz.py` pins `Date.now` to an evening in Los Angeles). `PX.debug.fast` was used only to shorten show-me animations, never during a stimulus. Hidden tabs were simulated by overriding `document.hidden` and firing `visibilitychange` (headless Chromium never hides its only page), so the app's own listeners ran exactly as in a real browser; real browsers also stop `requestAnimationFrame` while hidden, which the code already treats as a stutter.

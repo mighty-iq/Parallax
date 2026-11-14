@@ -1,6 +1,6 @@
 # R3. DAT Perceptual Ability Test (PAT) formats as training in Parallax
 
-Research note for Parallax v1.1, brief item 4 ("implement dat pat questions as training"). Compiled 2026-11-13.
+Research note for Parallax v1.1, brief item 4 (DAT Perceptual Ability Test question types as training). Compiled 2026-11-13.
 Question: what exactly are the PAT's six question types, and how should Parallax generate original items in
 those formats, given the exercises it already has?
 

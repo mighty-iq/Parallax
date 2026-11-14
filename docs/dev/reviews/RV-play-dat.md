@@ -40,7 +40,7 @@ Both are described below.
      - There is no button.
    - You have to work out that you should tap the outlined answer yourself. Only then does "Try it" appear.
    - The time shown for that tap includes the demo's playback: Openings reported "Correct 69.7 s" (`p11-op-after-watch.png`, `p13-op-tap2-after-watch.png`). Missing View showed 17.6 s, Angles 14.3 s and Painted Cubes 20.4 s, each for a single tap made a few seconds after its demo ended.
-   - This may be the "time counting looks bugged" report. It is practice only, but the number is misleading.
+   - This may be the timing problem the owner reported. It is practice only, but the number is misleading.
 2. **The Watch is fast, although the line above it says "one item solved slowly, with captions".**
    - Run times:
      - Missing View: 12.7 s for 7 captions.
