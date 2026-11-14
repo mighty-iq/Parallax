@@ -1,53 +1,44 @@
-# STATE: Parallax v1.1 update (rewritten at every milestone; under 100 lines)
+# STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-14 00:40 UTC.
+Updated 2026-11-14 10:20 UTC.
 
 ## Phase
-3. Review, fix and release: at the release gate. Everything is built, reviewed, fixed and verified. The owner has the release message and checklist; waiting for the yes to merge `build` into `main`.
+v1.1 is RELEASED: the owner said "Publish v1.1" (14 Nov 09:59 UTC). `main` = `build` = 224228f on GitHub; Pages ("pages build and deployment") succeeded and https://mighty-iq.github.io/Parallax/js/core/px.js reads `PX.version = '1.1.0'`.
+Now: collecting every v1.2 item into docs/dev/PLAN-v1.2.md (the owner asked whether everything for v1.2 is in the v1.2 plan; it was spread over STATE, DECISIONS and the reviews).
 
-Owner decisions: D1 keep Parallax's own rules (game layer = v1.2); D2 opt-in DAT-style focus; D3 the analogical test is named in v1.2.
+Owner decisions: D1 keep Parallax's own rules in v1.1 (the standing-rules switch and game layer = v1.2); D2 opt-in DAT-style focus; D3 the owner names the "analogical assessment test" for v1.2.
 
-## The brief in one line each (BRIEF.md is the word-for-word source)
-1. Time counting looks bugged; fix it and other bugs.
-2. Path integration without landmarks (dead reckoning).
-3. Knotting and deknotting.
-4. DAT PAT question types as training.
-5. A better phone experience; Homing usable on phones.
-6. Check whether Parallax practises the "analogical assessment test"; if so, warn.
+## v1.1 in one line each (BRIEF.md is the word-for-word source)
+1. One active-time clock and bug fixes. 2. Reckon (dead reckoning, no landmarks). 3. Knots. 4. DAT-style exercises and Section practice (opt-in focus). 5. Phones (every scored item fits 360×640; Homing playable). 6. Test-overlap notes and the "Taking a test soon?" helper.
+Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.md.
 
-## Done (details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/)
-- 19 exercises (new: Reckon EX-12, Knots EX-13, DAT-style EX-14…19), one active-time clock, phones (every scored item fits 360×640), Section practice, DAT-style focus, test-overlap notes, record format v2, version 1.1.0.
-- Reviews: RV-A, RV-B, RV-C, RV-D, RV-E, RV-H, RV-G (guide), fresh-player RV-F (DAT-style) and RV-F2 (Homing, Reckon, Knots); every finding fixed or decided in DECISIONS.
-- Guide docs/Parallax-Guide.pdf 50 pages (clean build, links clickable); README; CHANGELOG 1.1.0; dist/Parallax.html (14 Nov build).
-- Preview for the owner: private artifact "Parallax v1.1 preview" https://claude.ai/artifact/XTDjxtPznRk4TCuTrgonov, version 2 = release candidate (smoke 22/22). Republish from scratchpad/preview/parallax-v11-preview.html (built from dist by stripping doctype/html/head/body and the viewport meta, title "Parallax v1.1 preview").
-- Project docs: claude/playbook.md (lessons merged), claude/build-log-parallax-v1.1.md, claude/parallax-status.md, claude/parallax-brief.md.
-- Owner material: docs/dev/RELEASE-v1.1.md (five-minute checklist), docs/dev/DISCORD-v1.1.md (1,987 characters).
+## Release facts
+- Tag: no v1.1.0 tag on GitHub. The proxy refuses tag pushes (git push of a tag: "unexpected disconnect", twice) and the refs API (403). The owner can add one from GitHub → Releases → "Draft a new release" → tag v1.1.0 on main. The local tag was deleted so it cannot drift.
+- CI: the tests workflow ran on 224228f for main and build (check its result; build's previous run 8d940a5 passed).
+- Preview artifact "Parallax v1.1 preview" https://claude.ai/artifact/XTDjxtPznRk4TCuTrgonov (release candidate). The old v1.0 artifact https://claude.ai/artifact/NtKy37QREYLgRFFDJ6ma86 still shows 1.0: offer to update it, do not do it unasked.
+- Owner material: docs/dev/RELEASE-v1.1.md (checklist), docs/dev/DISCORD-v1.1.md (1,987 characters).
 
-## Final suite (bcf1b83 and later; no app code changed since)
-- Node: 3,768 checks in 31 files pass.
-- Chunk A: clock.py full 74/0; longrun desktop train, path, speed, threshold, free, daily clean (stopped at the 2-hour limit during desktop check).
-- Chunk B: 1,004 passed, 1 failed (fit: Hole Punch Watch measured before its scroll under load; rerun alone 17/17).
-- Chunk C: 3,669/0 (every harness, section, overlap, perf_track).
-- longrun phone train, path, speed, threshold, free, daily clean (--per 150); the container restarted before phone check and srcdoc.
-
-## In progress
-- Nothing. Verification complete; waiting for the owner's yes.
+## In progress (intent)
+- Two background subagents write the inputs for the v1.2 plan:
+  - docs/dev/v1.2/deferred-sweep.md: every item deferred, left open or recommended and not built (v1.0 and v1.1 notes, reviews, progress, research, code TODOs), checked against the code.
+  - docs/dev/v1.2/standing-rules-gap.md: Parallax against RULES.md (the switch decided in D1), rated MEETS/PARTLY/MISSING/CONFLICTS, with the CLAUDE.md rules to reword.
+- Then I write docs/dev/PLAN-v1.2.md (backlog with priorities; v1.2 itself starts with research and a plan message, and the owner's go).
 
 ## Next three steps
-1. When both long runs pass: update VERIFY (longrun rows), claude/build-log-parallax-v1.1.md and claude/parallax-status.md.
-2. Send the owner the release message: what was built, how verified, what is open, the checklist (RELEASE-v1.1.md) and the Discord draft.
-3. On the owner's yes: merge `build` into `main` (fast-forward or merge commit), push, confirm Pages serves 1.1.0, tag v1.1.0 if the owner wants a release.
+1. Merge both notes into docs/dev/PLAN-v1.2.md; commit and push to `build`.
+2. Update claude/parallax-status.md, claude/build-log-parallax-v1.1.md (released), claude/parallax-brief.md (BRIEF copy).
+3. Reply to the owner: live link, tag taps, the v1.2 plan in short, D3 still needs the test's name; offer the v1.0 artifact update in one line.
 
-## Open for v1.2 (not blocking)
-- Standing-rules game layer and lighter repeat pop-up (D1); name the analogical test (D3).
+## Open for v1.2 (seed list; PLAN-v1.2.md will be the full one)
+- Standing-rules switch and game layer, lighter repeat pop-up (D1); name and check the analogical test (D3).
 - Reckon study: rated levels with 3–4 legs, final rotations, or graded continuous error (turn-only exception).
 - Knots mirror variant; refit hand-set difficulties from pooled exports; Pause/End during feedback; partial Daily resume by seed.
 
 ## Last verified
-- longrun Spatial Check desktop 11/0 and phone 11/0 (two complete checks each, 160 answers; the bot now answers the one-tap question), 14 Nov 01:50 UTC.
-- longrun srcdoc (all modes in a sandboxed frame, export/import round trip): 12/0 (14 Nov 00:41 UTC).
-- Final suite as above (14 Nov); preview smoke 22/22 on the release candidate.
+- Live site serves 1.1.0 (px.js fetched 14 Nov 10:10 UTC); Pages build for 224228f: success.
+- Before release: node 3,768 checks; clock.py 74/0; chunk B 1,004/1 (a load flake, 17/17 alone); chunk C 3,669/0; longrun desktop and phone, six modes clean; Spatial Check 11/0 desktop and phone; srcdoc 12/0; preview smoke 22/22.
 
 ## Dead ends
 - Browser slots are the bottleneck (2 for the machine). Queue long browser runs in the background; split the suite into tagged chunks under the 2-hour background limit (RUN_ALL_TAG).
 - A container restart stops background runs; their logs in the scratchpad survive, the processes do not.
+- Tags and the GitHub refs/Pages write APIs are blocked through the proxy; branch pushes work.
