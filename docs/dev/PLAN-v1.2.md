@@ -22,7 +22,10 @@ It also:
 - fixes what players hit in 1.1, deepens the 1.1 exercises and clears the polish list.
 
 ## Waiting on the owner
-1. **The analogical test (D3, O23).** I need the test's name, or a link. Nothing else in v1.2 waits on it.
+1. **The analogical test (D3, O23).** Update of 14 Nov: a Discord thread suggests the point came from a community member speaking generally, not about one named test. His caution: if you measure yourself with an analogy test, a task in the app that looks like it can lend you a practice effect and bias the result. He suggested analogies built from abstract symbols that follow a rule, rather than words.
+   - Parallax's only analogy-format task is Word Links (PR-0), the Spatial Check's control probe: "A is to B as C is to ?" with words and no feedback. v1.1 already says so in About and in the "Taking a test soon?" helper.
+   - I advise against abstract symbols for the control. Figure analogies sit next to matrices, which the overlap table relates to Rotate, Spin and Hidden, so spatial practice could move them and the control would stop working.
+   - Proposed: close D3 once the owner confirms this was the source. Optionally, the helper's analogies entry can advise taking such a test before the first Spatial Check.
 2. **Three forks for the v1.2 plan message.** The recommendations come from the audit (§7), and Phase 1 research will check them.
    - **How much game.** Recommended:
      - points for skill only;
