@@ -31,7 +31,7 @@ Owner decisions: D1 keep Parallax's own rules (game layer = v1.2); D2 opt-in DAT
 - longrun phone train, path, speed, threshold, free, daily clean (--per 150); the container restarted before phone check and srcdoc.
 
 ## In progress
-- longrun --only desktop,phone --modes check --per 150 (bt0atfz7i, scratchpad/longrun_check.log)
+- longrun check, desktop (bfz8s8fgb, scratchpad/longrun_check_desktop.log) and phone (b57vhoeyg, scratchpad/longrun_check_phone.log), after fixing the bot: it waited on the Check's one-tap question (a test-bot gap, not an app bug; the first check completed).
 
 ## Next three steps
 1. When both long runs pass: update VERIFY (longrun rows), claude/build-log-parallax-v1.1.md and claude/parallax-status.md.
