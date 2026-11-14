@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-14 12:45 UTC.
+Updated 2026-11-14 10:50 UTC.
 
 ## Phase
 - **v1.1 is RELEASED.** The owner said "Publish v1.1" (14 Nov 09:59 UTC).
@@ -17,6 +17,8 @@ Owner decisions:
 - D1: Parallax keeps its own rules in v1.1; the switch to the standing rules and the game layer come in v1.2.
 - D2: the DAT-style focus is opt-in.
 - D3: the owner names the "analogical assessment test" for v1.2.
+- 14 Nov: no Duolingo-style streaks. This is now a standing rule for every tool, and the daily chain is out of the v1.2 plan. Parallax's weekly goal keeps its forgiving weeks-in-a-row count.
+- RULES.md was refreshed from the project doc on 14 Nov. It now includes the interactive check-ins: a decision board with the plan message, playtest mode in test builds, and the release checklist as a page. PLAN-v1.2 covers them.
 
 ## v1.1 in one line each (BRIEF.md is the word-for-word source)
 1. One active-time clock, and bug fixes.
