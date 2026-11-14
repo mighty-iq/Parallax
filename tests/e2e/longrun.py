@@ -326,6 +326,14 @@ class Bot:
             choice = 'example' if ('example' in opts and R < 0.6) else ('skip' if 'skip' in opts else 'start')
         elif cid == 'baseline':
             choice = 'later'
+        elif cid == 'overlap':
+            # v1.1: later Spatial Checks ask one question first (check.js askOverlap); its answers are
+            # buttons in the card's body, Skip is the card's only action
+            ans = ['no', 'little', 'lot'][int(R * 3) % 3]
+            self.st('card:overlap:' + ans)
+            if R < 0.8 and self.try_click(f'[data-card-box] [data-overlap-answer="{ans}"]'):
+                return
+            choice = 'skip'
         if choice not in opts:
             choice = None
         demo = choice in ('go', 'watch', 'example')
