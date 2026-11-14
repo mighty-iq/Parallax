@@ -3,7 +3,7 @@
 Updated 2026-11-14 00:40 UTC.
 
 ## Phase
-3. Review, fix and release: at the release gate. Every builder, review and fix round is done; the final suite has passed except the last long play-throughs (running). Then: send the owner the release checklist and wait for the yes to merge `build` into `main`.
+3. Review, fix and release: at the release gate. Everything is built, reviewed, fixed and verified. The owner has the release message and checklist; waiting for the yes to merge `build` into `main`.
 
 Owner decisions: D1 keep Parallax's own rules (game layer = v1.2); D2 opt-in DAT-style focus; D3 the analogical test is named in v1.2.
 
@@ -31,7 +31,7 @@ Owner decisions: D1 keep Parallax's own rules (game layer = v1.2); D2 opt-in DAT
 - longrun phone train, path, speed, threshold, free, daily clean (--per 150); the container restarted before phone check and srcdoc.
 
 ## In progress
-- longrun check, desktop (bfz8s8fgb, scratchpad/longrun_check_desktop.log) and phone (b57vhoeyg, scratchpad/longrun_check_phone.log), after fixing the bot: it waited on the Check's one-tap question (a test-bot gap, not an app bug; the first check completed).
+- Nothing. Verification complete; waiting for the owner's yes.
 
 ## Next three steps
 1. When both long runs pass: update VERIFY (longrun rows), claude/build-log-parallax-v1.1.md and claude/parallax-status.md.
@@ -44,6 +44,7 @@ Owner decisions: D1 keep Parallax's own rules (game layer = v1.2); D2 opt-in DAT
 - Knots mirror variant; refit hand-set difficulties from pooled exports; Pause/End during feedback; partial Daily resume by seed.
 
 ## Last verified
+- longrun Spatial Check desktop 11/0 and phone 11/0 (two complete checks each, 160 answers; the bot now answers the one-tap question), 14 Nov 01:50 UTC.
 - longrun srcdoc (all modes in a sandboxed frame, export/import round trip): 12/0 (14 Nov 00:41 UTC).
 - Final suite as above (14 Nov); preview smoke 22/22 on the release candidate.
 
