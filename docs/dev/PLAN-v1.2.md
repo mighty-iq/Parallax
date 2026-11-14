@@ -27,10 +27,11 @@ It also:
    - **How much game.** Recommended:
      - points for skill only;
      - ranks on top of the honest levels;
-     - a gain-framed daily chain with automatic freezes;
      - a seeded weekly challenge with a result card.
      
      Comparison happens through cards and codes in the Discord. There is no in-app leaderboard.
+
+     There are no Duolingo-style streaks. The owner ruled them out on 14 Nov because they make practice anxious and take the fun out, so the daily chain with freezes that the audit recommended is dropped. The rule is now in the standing rules for every tool. Parallax's weekly goal keeps its forgiving weeks-in-a-row count as it is; the owner chose to keep it.
    - **How much time measurement may take.** Recommended: a trend model over all checks, a short embedded probe block of about 3 minutes every third session, and the full check once a month.
    - **Baseline first, or play first.** Recommended: a 5–6-minute baseline inside the first session, after a two-minute tutorial. The second baseline comes before the next session's rated items.
 3. **Three small items for the owner.** The standing rules reserve the first two for him; the third is a tap only he can make.
@@ -57,7 +58,17 @@ Notes go in docs/research/v1.2/ and record how much of every source was read. On
 - **Reckon:** one more search for a randomised path-integration training study with a transfer test, and full texts of the seven core papers that were not read in full (O45).
 - **The analogical test, once named:** its formats checked for overlap against all 19 exercises and the probes.
 
-Acceptance: the plan message (concept; what was kept, changed and dropped; gaps; decisions; papers that could not be opened) and the owner's go.
+Acceptance:
+- The plan message (concept; what was kept, changed and dropped; gaps; decisions; papers that could not be opened).
+- The decision board the standing rules now ask for, as a private artifact page:
+  - exercise cards with a keep/drop switch and each card's transfer bet;
+  - every decision as tappable options, with the recommendation selected;
+  - look and feel shown rather than described, including 20–30-second playable sketches of the two or three mechanics least sure to be fun;
+  - a ranking list and a text box;
+  - the papers that could not be opened;
+  - a phone device probe;
+  - "Accept all recommendations" and "Copy my answers".
+- The owner's go.
 
 ### 1. Fix first: what players hit in 1.1 (S–M each)
 - **Pause and End during feedback (O4).** Both are disabled there today, so ending a session early takes Next, Pause, End.
@@ -101,6 +112,10 @@ Acceptance:
   - invites beside personal bests, achievements, Path passes and check results (C8, O3), and in the export and backup dialogs (C10);
   - the C13 lines and the prose licence (L1), as the owner decides.
 - **Modes:** a "Right when" line for each mode, in the practise sheet and the Lab, and a mode suggestion on Today when the log points to one (M3).
+- **Playtest mode** (standing rules, interactive check-ins). It is on in the first playable build of v1.2 and in every later test build, and sits behind a setting that is off by default at release.
+  - After each exercise, three taps: fun, clarity and difficulty.
+  - A note button on every screen.
+  - "Copy playtest report": the ratings and notes, with the device, frame timings, errors, performance, play time and where the player quit.
 
 Acceptance:
 - The shell, section and longrun tests handle the new pop-up.
@@ -141,7 +156,12 @@ Acceptance:
 Built from the Phase 1 design and the answer to fork 1:
 - points for skill, as difficulty-weighted right answers, never for time or logins;
 - ranks or tiers on top of the honest levels;
-- a gain-framed daily chain, with freezes and repair;
+- reasons to come back that never punish a missed day:
+  - the Daily Challenge;
+  - the weekly challenge below;
+  - a "next time" line on the summary (the next Path stage, a review that is due);
+  - new variants to try;
+- no Duolingo-style streaks: no daily chain, no freezes, and no "don't lose your streak" (the owner's rule of 14 Nov). The weekly goal and its forgiving weeks-in-a-row count stay as they are, by the owner's choice;
 - a seeded weekly community challenge with its own card;
 - Share at personal bests and milestones (F4–F6, O1);
 - "firsts", and a start-versus-now card in the first week (F2, P2);
@@ -236,6 +256,7 @@ Rewrite About, the README, the Library notes and guide chapters 1, 5 and 8 in a 
   - independent reviews of code, items, claims against code, the guide and a play-through;
   - long runs;
   - the real-phone checklist for the owner.
+- **Release checklist:** the owner's five-minute checklist is a page of pass/fail taps, each with a note field (standing rules, interactive check-ins).
 - **Release material:** the guide, the single file, the Discord post, the build log and the playbook.
 
 ## If v1.2 has to be smaller
