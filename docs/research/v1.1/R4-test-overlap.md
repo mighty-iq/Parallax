@@ -1,6 +1,7 @@
 # R4: Does Parallax "praff" the "analogical assessment test"? Test overlap, practice effects and a warning
 
-Research notes for the Parallax v1.1 update, brief item 6 : whether Parallax's exercises give practice for an analogy test, with a warning if they do. Written 2026-11-13 by subagent R4. No app file was changed.
+Research notes for the Parallax v1.1 update, brief item 6: check whether Parallax's exercises give practice
+("praff") for an analogical assessment test, and warn if so. Written 2026-11-13 by subagent R4. No app file was changed.
 
 ## Summary (short answer)
 
