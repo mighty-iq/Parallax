@@ -12,6 +12,8 @@ Usage
   python3 tools/privacy_check.py --tree REF          every file at REF (a full pass; no commit data)
   python3 tools/privacy_check.py --zip FILE          every member of a zip (build zips with `git archive`)
   python3 tools/privacy_check.py --self-test         known-bad samples must fail, clean ones pass
+  python3 tools/privacy_check.py --history [REF…]    every commit reachable from REF (default: all refs), as if pushed
+  Any form may start with --repo PATH to check another clone (private values still come from this one).
 
 It fails (exit 1) on any of these:
   - an author or committer email that is not a noreply address;
@@ -21,6 +23,7 @@ It fails (exit 1) on any of these:
   - an email address outside the allowlist;
   - the timezone name in the TZ variable (also its city part);
   - a home-folder path (a user folder under /home or /Users, the root user's home, a Windows user folder);
+  - a session folder or session id (the harness's /tmp scratchpad path carries the chat session's id);
   - camera or location metadata in an image (EXIF make, model or GPS; XMP GPS);
   - a file identical (SHA-256) to one the owner sent;
   - a file named like a private one (BRIEF.md, RULES.md, .privacy.local);
@@ -58,6 +61,7 @@ LINKS = re.compile(
     r'|\bdiscord(?:app)?\.com/channels/\d+[^\s)>\]"\']*'  # links to Discord messages (invites are fine)
     , re.I)
 HOME = re.compile(r'(?<![\w.~-])(?:/home/[A-Za-z0-9._-]+/|/root(?=/)|/Users/[A-Za-z0-9._ -]+/|[A-Za-z]:\\{1,2}Users\\{1,2}[^\\\s"\']+)')
+SESSION = re.compile(r'/tmp/claude-\d+/[^\s`)\]"\']*|\bsession_[A-Za-z0-9]{16,}\b')
 PRIVATE_NAMES = {'BRIEF.md', 'RULES.md', '.privacy.local'}
 IMAGE_EXT = re.compile(r'\.(png|jpe?g|webp|gif|tiff?|heic|avif)$', re.I)
 
@@ -70,6 +74,15 @@ def git(*args, binary=False, check=True):
 
 
 # ---------- private values (never stored in this file) ----------
+
+def load_config_from(root):
+    global ROOT
+    keep, ROOT = ROOT, root
+    try:
+        return load_config()
+    finally:
+        ROOT = keep
+
 
 def load_config():
     cfg = {'strings': [], 'sent_dirs': [], 'sha256': set(), 'allow_email': set()}
@@ -137,6 +150,8 @@ def check_text(text, where, cfg, rep):
         rep.add(where, 'email address outside the allowlist', m.group(0))
     for m in HOME.finditer(text):
         rep.add(where, 'home-folder path', excerpt(text, m))
+    for m in SESSION.finditer(text):
+        rep.add(where, 'session folder or session id', excerpt(text, m))
     low = text.lower()
     for s in cfg['tz']:
         i = low.find(s.lower())
@@ -260,7 +275,7 @@ def self_test():
     bad = ['https://claude' + '.ai/chat/abc', 'Claude' + '-Session: x', 'mail someone' + '@' + 'example.org',
            '/ho' + 'me/alice/notes', '/ro' + 'ot/.config', 'C:' + '\\Users\\Bob\\x', '/Us' + 'ers/Carol/x',
            'zone Mars/' + 'Olympus', 'a privatevalue'.replace('privatevalue', 'priv' + 'atevalue'),
-           'https://discord' + '.com/channels/1/2/3']
+           'https://discord' + '.com/channels/1/2/3', '/tmp/claude-' + '0/-x/abc/scratchpad/f', 'session' + '_01ABCDEFGHIJKLMNOPQRS']
     good = ['https://discord.gg/chmr', 'Co-Authored-By: Claude <noreply' + '@anthropic.com>',
             'https://docs.claude.com/en/docs', 'home/away', 'tests/e2e/out/x.png', '12345+someone' + '@users.noreply.github.com']
     ok = True
@@ -277,11 +292,24 @@ def self_test():
 
 
 def main(argv):
+    global ROOT
+    if argv[:1] == ['--repo'] and len(argv) >= 2:
+        cfg_root = ROOT
+        ROOT = pathlib.Path(argv[1]).resolve()
+        argv = argv[2:]
+        cfg = load_config_from(cfg_root)
+    else:
+        cfg = None
     if argv[:1] == ['--self-test']:
         return self_test()
-    cfg = load_config()
+    cfg = cfg or load_config()
     rep = Report()
-    if argv[:1] == ['--tree'] and len(argv) == 2:
+    if argv[:1] == ['--history']:
+        refs = argv[1:] or ['--all']
+        commits = git('rev-list', '--reverse', *refs).split()
+        check_commits(commits, cfg, rep)
+        scope = f'{len(commits)} commit(s) reachable from {" ".join(refs)}'
+    elif argv[:1] == ['--tree'] and len(argv) == 2:
         check_tree(argv[1], cfg, rep)
         scope = f'every file at {argv[1]}'
     elif argv[:1] == ['--zip'] and len(argv) == 2:
