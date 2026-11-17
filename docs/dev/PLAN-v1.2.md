@@ -8,7 +8,7 @@ v1.2 runs under the owner's standing rules (decision D1). It starts with Phase 1
 Each source has full detail and file references.
 - **docs/dev/v1.2/standing-rules-gap.md:** Parallax checked against the standing rules. Of 67 requirements, 35 are met, 21 partly, 8 are missing and 3 conflict. IDs such as PB1, ME5 and C2.
 - **docs/dev/v1.2/deferred-sweep.md:** 61 items that 1.0 and 1.1 deferred, left open, or recommended without building, each checked against the code. IDs O1 to O61. The same file lists 24 items that were done after all and 25 that were dropped by decision, so nobody re-opens them.
-- **DECISIONS.md, 13 Nov:** D1 (the standing rules and the game layer come in v1.2) and D3 (the analogical test is named for v1.2).
+- **DECISIONS.md, 13 Nov:** D1 (the standing rules and the game layer come in v1.2) and D3 (the analogical test is named for v1.2; closed on 17 Nov, see "Settled since the draft").
 
 ## The aim
 v1.2 makes Parallax a trainer people want to open every day, without bending the science:
@@ -18,15 +18,18 @@ v1.2 makes Parallax a trainer people want to open every day, without bending the
 
 It also:
 - redesigns the Spatial Check so that one person's real gain can show within weeks. In the engine's own simulation (ENGINE.md §16), 96.5 % of learners still read "unclear yet" after 60 days, even when their probe ability rises by half their training gain;
-- settles the analogical-test question from 1.1 once the owner names the test;
+- adds one line on analogy tests to the "Taking a test soon?" helper (the analogical-test question from 1.1 is settled);
 - fixes what players hit in 1.1, deepens the 1.1 exercises and clears the polish list.
 
+## Settled since the draft
+- **No Duolingo-style streaks** (the owner, 14 Nov). The weekly goal keeps its forgiving count; details are under fork 1 below. This is now a standing rule for every tool.
+- **The analogical test (D3, O23), closed 17 Nov.** The point came from a community member speaking generally: if you measure yourself with an analogy test, a task in the app that looks like it can lend you a practice effect and bias the result. He suggested analogies built from abstract symbols that follow a rule, rather than words. The owner confirmed he was the source and left the call to me.
+  - Nothing in Parallax trains analogies. The only analogy-format task is Word Links (PR-0), the Spatial Check's control: "A is to B as C is to ?" with words, no feedback, a few minutes per check. v1.1 already says so in About and in the "Taking a test soon?" helper.
+  - Word Links stays verbal. Abstract-symbol analogies are figure analogies, close to matrices, which the overlap table relates to Rotate, Spin and Hidden. Spatial practice could move them, so the control would stop working, and they would overlap matrix tests instead.
+  - v1.2 adds one line to the helper's analogies entry and to About: if an analogy test is your yardstick, take it before your first Spatial Check (milestone 1).
+
 ## Waiting on the owner
-1. **The analogical test (D3, O23).** Update of 14 Nov: a Discord thread suggests the point came from a community member speaking generally, not about one named test. His caution: if you measure yourself with an analogy test, a task in the app that looks like it can lend you a practice effect and bias the result. He suggested analogies built from abstract symbols that follow a rule, rather than words.
-   - Parallax's only analogy-format task is Word Links (PR-0), the Spatial Check's control probe: "A is to B as C is to ?" with words and no feedback. v1.1 already says so in About and in the "Taking a test soon?" helper.
-   - I advise against abstract symbols for the control. Figure analogies sit next to matrices, which the overlap table relates to Rotate, Spin and Hidden, so spatial practice could move them and the control would stop working.
-   - Proposed: close D3 once the owner confirms this was the source. Optionally, the helper's analogies entry can advise taking such a test before the first Spatial Check.
-2. **Three forks for the v1.2 plan message.** The recommendations come from the audit (§7), and Phase 1 research will check them.
+1. **Three forks for the v1.2 plan message.** The recommendations come from the audit (§7), and Phase 1 research will check them.
    - **How much game.** Recommended:
      - points for skill only;
      - ranks on top of the honest levels;
@@ -37,7 +40,7 @@ It also:
      There are no Duolingo-style streaks. The owner ruled them out on 14 Nov because they make practice anxious and take the fun out, so the daily chain with freezes that the audit recommended is dropped. The rule is now in the standing rules for every tool. Parallax's weekly goal keeps its forgiving weeks-in-a-row count as it is; the owner chose to keep it.
    - **How much time measurement may take.** Recommended: a trend model over all checks, a short embedded probe block of about 3 minutes every third session, and the full check once a month.
    - **Baseline first, or play first.** Recommended: a 5–6-minute baseline inside the first session, after a two-minute tutorial. The second baseline comes before the next session's rated items.
-3. **Three small items for the owner.** The standing rules reserve the first two for him; the third is a tap only he can make.
+2. **Three small items for the owner.** The standing rules reserve the first two for him; the third is a tap only he can make.
    - CC BY-SA 4.0 for the README and the docs prose (L1). This is a licence change. The code stays MIT.
    - Three v1.0 lines that say more about Chimera than the fixed text (C13). Keep them, or cut each back to "built by the Chimera community on Discord":
      - LICENSE gives the copyright to "the Parallax contributors (the Chimera community, …)";
@@ -59,7 +62,6 @@ Notes go in docs/research/v1.2/ and record how much of every source was read. On
   - at least one new or under-tested bet;
   - near and far probe designs.
 - **Reckon:** one more search for a randomised path-integration training study with a transfer test, and full texts of the seven core papers that were not read in full (O45).
-- **The analogical test, once named:** its formats checked for overlap against all 19 exercises and the probes.
 
 Acceptance:
 - The plan message (concept; what was kept, changed and dropped; gaps; decisions; papers that could not be opened).
@@ -95,7 +97,8 @@ Acceptance:
   - Homing's exercise page opens with a long research note right under the goal (O43);
   - the summary's median is of right answers only and does not say so (O7);
   - answer times are shown in two formats (O5);
-  - decide on "DAT scores" in negations (O25).
+  - decide on "DAT scores" in negations (O25);
+  - the "Taking a test soon?" helper's analogies entry and About: if an analogy test is your yardstick, take it before your first Spatial Check (D3).
 - **Engine:** folded-day totals subtract voided and skipped probe rows too (O15).
 
 Acceptance:
