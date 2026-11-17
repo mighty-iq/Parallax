@@ -117,6 +117,10 @@ Acceptance:
   - an invite with Copy on both tutorial end screens (C6);
   - invites beside personal bests, achievements, Path passes and check results (C8, O3), and in the export and backup dialogs (C10);
   - the C13 lines and the prose licence (L1), as the owner decides.
+- **Privacy** (standing rules; the repository part is done on `build` since 17 Nov):
+  - Exports: result cards, backups, the trial CSV and the research export carry no name except a nickname the player typed, and no user-agent, locale or timezone unless the player turns that on. In 1.1 the user-agent is read only for in-app hints and never stored, and times are UTC; but the backup's local day keys (the Daily and the weekly goal), next to UTC times, can hint at the player's timezone offset. The pooled research export drops them or shifts them to UTC, with a test (S–M).
+  - `main` receives the 17 Nov cleanup with the v1.2 release: no private-page links, no home-folder paths, the owner paraphrased.
+  - The pre-push privacy check (tools/privacy_check.py) and `TZ=UTC` commits stay in force for every v1.2 push; the release zip, if one is made, is a `git archive` checked with `--zip`.
 - **Modes:** a "Right when" line for each mode, in the practise sheet and the Lab, and a mode suggestion on Today when the log points to one (M3).
 - **Playtest mode** (standing rules, interactive check-ins). It is on in the first playable build of v1.2 and in every later test build, and sits behind a setting that is off by default at release.
   - After each exercise, three taps: fun, clarity and difficulty.
