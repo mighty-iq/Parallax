@@ -1,9 +1,9 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-17 19:35 UTC.
+Updated 2026-11-17 21:20 UTC.
 
 ## Phase
-- **v1.1 is RELEASED.** The owner said "Publish v1.1" (14 Nov 09:59 UTC).
+- **v1.1 is RELEASED** on the owner's go (14 Nov).
   - `main` = `build` = 224228f on GitHub.
   - Pages deploy succeeded, and https://mighty-iq.github.io/Parallax/js/core/px.js reads `PX.version = '1.1.0'`.
   - CI tests passed on main 224228f.
@@ -20,6 +20,10 @@ Owner decisions:
 - 14 Nov: no Duolingo-style streaks. This is now a standing rule for every tool, and the daily chain is out of the v1.2 plan. Parallax's weekly goal keeps its forgiving weeks-in-a-row count.
 - RULES.md was refreshed from the project doc on 14 Nov. It now includes the interactive check-ins: a decision board with the plan message, playtest mode in test builds, and the release checklist as a page. PLAN-v1.2 covers them.
 
+## Privacy (standing rules, binding since 17 Nov)
+- Every push runs tools/privacy_check.py through the pre-push hook (`git config core.hooksPath tools/githooks`; private values in the git-ignored `.privacy.local`, recreate it in a new container from the script's header). Commit with `TZ=UTC`, no session-link line, keep `Co-Authored-By`.
+- The 17 Nov pass and its fixes are in DECISIONS. `main` gets the cleaned files with v1.2. Old commits stay as published (owner's call).
+
 ## v1.1 in one line each (BRIEF.md is the word-for-word source)
 1. One active-time clock, and bug fixes.
 2. Reckon: dead reckoning, no landmarks.
@@ -32,9 +36,7 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
 
 ## Release facts
 - **Tag:** there is no v1.1.0 tag on GitHub. The proxy refuses tag pushes and the refs API, so the owner can add one under Releases. The local tag was deleted.
-- **Preview artifacts:**
-  - "Parallax v1.1 preview" ([private link removed]) is the release candidate.
-  - The old v1.0 artifact ([private link removed]) still shows 1.0. Update it only if the owner asks.
+- **Preview pages:** the v1.1 release-candidate preview and the old v1.0 preview are private pages. Their links are in the project status note, never in the repository. The v1.0 preview still shows 1.0; update it only if the owner asks.
 - **Owner material:**
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.

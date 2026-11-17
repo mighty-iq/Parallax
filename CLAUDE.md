@@ -27,12 +27,14 @@ Read before changing anything: docs/dev/ARCHITECTURE.md (contracts), docs/dev/EX
 10. **Measurement**: probes are never trained and give no feedback; two baselines; change is judged against the familiarity estimate and the word-task control, never against zero. No IQ, VSI index, percentile or brain age anywhere.
 11. **Gamification**: no points, no leaderboards, no daily loss-framed streaks; honest levels, a weekly goal with grace, skill and good-practice achievements that never say "mastered".
 12. **Licences**: code MIT; guide CC BY-SA 4.0; three.js MIT; IBM Plex OFL.
+13. **Privacy** (the owner's standing rules; it overrides everything above): nothing published may lead back to the owner. No owner name, email, timezone, city, country, device or home-folder path in any committed file, commit, page or file metadata; credits name the Chimera community; other people appear only by public handle, as a credit the owner asked for; the owner's words are paraphrased, never quoted; files the owner sends never enter the repository; commits are by `Claude <noreply@anthropic.com>`, made with `TZ=UTC`, and times in files are UTC; never a link to a chat, a session or a private page, so commit messages carry no session-link line (keep `Co-Authored-By`); exports carry no name except a nickname the player typed, and no user-agent, locale or timezone unless the player turns that on.
 
 ## Working on the code
 - `npm install` once (three.js and esbuild, pinned), then `npm test` (= `node tests/node/run.mjs`; filter with names, e.g. `node tests/node/run.mjs rotate engine`).
 - Browser tests are Python Playwright: `tests/e2e/pwslot.sh python3 tests/e2e/<file>.py` (pwslot limits concurrent browsers); `tests/run_all.sh` runs everything. The dev harness `tests/dev/harness.html?ex=<id>&seed=<n>&p=<dim:level,…>&v=<variant>` mounts one exercise.
 - New script or stylesheet: add it to index.html (PENDING blocks + `python3 tools/sync-index.py`).
 - `node tools/build-single.mjs` writes dist/Parallax.html (everything inlined); `python3 tools/shots.py` and `python3 tools/build-pdf.py` rebuild the guide's figures and PDF; `node tools/vendor-three.mjs` rebuilds the three.js subset.
+- Privacy check before every push: once per clone run `git config core.hooksPath tools/githooks`, and the pre-push hook runs `python3 tools/privacy_check.py` on exactly what the push publishes (commit data included). Private values live in the git-ignored `.privacy.local` (see the script's header); a full pass is `python3 tools/privacy_check.py --tree <ref>`. Commit with `TZ=UTC git commit …`. A zip, if one is ever needed, comes from tracked files only: `git archive --format=zip --prefix=parallax/ -o parallax.zip HEAD`, then `--zip parallax.zip`.
 - Changing an exercise's dims or levels incompatibly: bump its `version` (trial logs index exercises as "id@version").
 
 ## Lessons from building it

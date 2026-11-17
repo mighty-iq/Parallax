@@ -5,3 +5,7 @@ __pycache__/
 
 # The owner's instructions, kept word for word (never committed)
 BRIEF.md
+
+# Private values for tools/privacy_check.py, and the owner's standing rules (never committed)
+.privacy.local
+RULES.md

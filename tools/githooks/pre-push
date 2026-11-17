@@ -1,0 +1,5 @@
+#!/bin/sh
+# Privacy check before every push (owner's standing rules, Privacy). Enable once per clone:
+#   git config core.hooksPath tools/githooks
+# Git passes the remote's name and URL as arguments and the refs to push on stdin.
+exec python3 "$(git rev-parse --show-toplevel)/tools/privacy_check.py" --hook "$1" "$2"
