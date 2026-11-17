@@ -1,12 +1,12 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-17 21:40 UTC.
+Updated 2026-11-17 22:15 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
-  - `main` = `build` = 224228f on GitHub.
+  - `main` = b5ead08 on GitHub: the v1.1.0 release commit, with a new ID since the history rewrite of 17 Nov.
   - Pages deploy succeeded, and https://mighty-iq.github.io/Parallax/js/core/px.js reads `PX.version = '1.1.0'`.
-  - CI tests passed on main 224228f.
+  - CI tests passed on the release commit; after the rewrite, Pages and CI run again on b5ead08.
 - **v1.2: backlog written, not started.** docs/dev/PLAN-v1.2.md holds every known item, built from two sweeps:
   - docs/dev/v1.2/deferred-sweep.md: 61 open items;
   - docs/dev/v1.2/standing-rules-gap.md: 32 gaps against the standing rules.
@@ -42,12 +42,19 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
 ## In progress
-- History rewrite, on the owner's yes (17 Nov 21:29 UTC; scope "everything private", 21:35 UTC). Work happens in a mirror clone in the scratchpad (rewrite/Parallax.git), with a backup bundle of the old history beside it. Steps:
-  1. git-filter-repo: give the 6 Nov initial commit's author the owner's GitHub noreply address; put every commit time in UTC; drop session-link lines from messages; in every old file version, remove private-page links, container paths and owner or community wording (the same fixes as on 17 Nov).
-  2. Run the privacy check over the whole history and the quote scan, and diff the new tips against the old ones (the app must be unchanged).
-  3. Force-push `main` and `build`, check Pages and CI, then reset this clone to the new history and purge the old objects.
-  4. Tell the owner what GitHub still keeps (Actions runs, cached views of old commit IDs) and the two ways to finish: Support, or delete and recreate the repository.
-- No subagents are running.
+Nothing. No subagents are running.
+
+## History rewrite (17 Nov, done; owner's yes, scope "everything private")
+- git-filter-repo over all 134 commits:
+  - the 6 Nov initial commit now carries the owner's GitHub noreply address;
+  - every commit time is in UTC;
+  - no message carries a session-link line;
+  - every file version is free of private-page links, home-folder and session paths, and owner or community wording.
+- The whole new history passes `tools/privacy_check.py --history` (also a six-word quote scan). The new tips differ from the old ones in docs only; no app file changed.
+- Force-pushed: `main` b5ead08, `build` e5bed2a. This clone was reset and the old objects were pruned.
+- Commit IDs in notes written before the rewrite (for example 224228f, bcf1b83, f10f7db) name the old history.
+- GitHub still serves old commits by their IDs (cached views), and the Actions run list shows the old IDs. Only GitHub Support (first changed commit 4753b4b7c95713c5cd0219eb5c7aa693dac192a6) or deleting and recreating the repository removes them; that is the owner's call.
+- Other clones made before 17 Nov 22:00 UTC must be deleted and cloned again. A push from an old clone brings the old history back.
 
 ## Next three steps
 1. Wait for the owner's go for v1.2, and his answers:
@@ -61,7 +68,7 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
    - CLAUDE.md is rewritten for the standing rules.
 
 ## Last verified
-- **Live site** serves 1.1.0: px.js fetched on 14 Nov, and the Pages build for 224228f succeeded. CI passed on main 224228f.
+- **Live site** serves 1.1.0: px.js fetched on 14 Nov. The Pages build and CI passed on the release commit, and they rerun on b5ead08 after the rewrite.
 - **Before release:**
 
   | Check | Result |
