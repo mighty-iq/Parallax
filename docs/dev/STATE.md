@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-17 21:20 UTC.
+Updated 2026-11-17 21:40 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -42,7 +42,12 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
 ## In progress
-Nothing. No subagents are running.
+- History rewrite, on the owner's yes (17 Nov 21:29 UTC; scope "everything private", 21:35 UTC). Work happens in a mirror clone in the scratchpad (rewrite/Parallax.git), with a backup bundle of the old history beside it. Steps:
+  1. git-filter-repo: give the 6 Nov initial commit's author the owner's GitHub noreply address; put every commit time in UTC; drop session-link lines from messages; in every old file version, remove private-page links, container paths and owner or community wording (the same fixes as on 17 Nov).
+  2. Run the privacy check over the whole history and the quote scan, and diff the new tips against the old ones (the app must be unchanged).
+  3. Force-push `main` and `build`, check Pages and CI, then reset this clone to the new history and purge the old objects.
+  4. Tell the owner what GitHub still keeps (Actions runs, cached views of old commit IDs) and the two ways to finish: Support, or delete and recreate the repository.
+- No subagents are running.
 
 ## Next three steps
 1. Wait for the owner's go for v1.2, and his answers:
