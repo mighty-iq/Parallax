@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-14 10:50 UTC.
+Updated 2026-11-17 19:35 UTC.
 
 ## Phase
 - **v1.1 is RELEASED.** The owner said "Publish v1.1" (14 Nov 09:59 UTC).
@@ -16,7 +16,7 @@ Updated 2026-11-14 10:50 UTC.
 Owner decisions:
 - D1: Parallax keeps its own rules in v1.1; the switch to the standing rules and the game layer come in v1.2.
 - D2: the DAT-style focus is opt-in.
-- D3: the owner names the "analogical assessment test" for v1.2.
+- D3: closed on 17 Nov. It was a community member's general point about analogy tests, and the decision is in DECISIONS. v1.2 adds one line to the overlap helper.
 - 14 Nov: no Duolingo-style streaks. This is now a standing rule for every tool, and the daily chain is out of the v1.2 plan. Parallax's weekly goal keeps its forgiving weeks-in-a-row count.
 - RULES.md was refreshed from the project doc on 14 Nov. It now includes the interactive check-ins: a decision board with the plan message, playtest mode in test builds, and the release checklist as a page. PLAN-v1.2 covers them.
 
@@ -44,11 +44,10 @@ Nothing. No subagents are running.
 
 ## Next three steps
 1. Wait for the owner's go for v1.2, and his answers:
-   - D3, the test's name;
    - three forks: how much game, how much time measurement takes, and baseline first or play first;
    - the prose licence (CC BY-SA) and the C13 Chimera lines.
 2. On the go, start Phase 1:
-   - parallel research notes in docs/research/v1.2/: the game layer, measurement, plateaus, the transfer portfolio, the Reckon papers (O45), and the analogical test once named;
+   - parallel research notes in docs/research/v1.2/: the game layer, measurement, plateaus, the transfer portfolio, and the Reckon papers (O45);
    - then the plan message.
 3. After approval:
    - PLAN-v1.2.md becomes PLAN.md, and the current PLAN.md moves to PLAN-v1.1.md;
