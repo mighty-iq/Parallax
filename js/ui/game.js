@@ -6,6 +6,7 @@
                            reach" and, after a gap of 7 days or more, a fresh-start note
      progress:panels (40)  grades, Reach and records, the Daily's calm history and archive, start versus now
      settings:sections     celebrations (quiet, medium, strong), Climb sounds, rank titles
+     exercise:lines (70)   the exercise page: its records (best block, grade), the Atlas count, within reach
      item:reveal           reserved for the plotter tick and the stretch ring (once the player calls it)
    Everything runs between items. The guard is body.px-stim: css/game.css hides every game element under
    it, fx.run refuses to start while it is set, and a running effect is cut the moment it appears. Effects
@@ -244,7 +245,7 @@
   function reachWords() { return 'the sum of your best levels in Parallax ' + version(); }
   function gradeCard(def, g, best) {
     var b = G().band(def, g);
-    return { kind: 'level', label: 'Grade ' + g + ' · ' + nameOf(def), title: 'Grade ' + g + ' on ' + nameOf(def), lines: ['Best block ' + best + ' (grade ' + g + ' is levels ' + b.lo + '–' + b.hi + ')'], ruler: { value: best, lo: b.lo, hi: b.hi }, footer: 'Parallax ' + version(),
+    return { kind: 'level', label: 'Grade ' + g + ' · ' + nameOf(def), title: 'Grade ' + g + ' on ' + nameOf(def), lines: ['Best whole block of 10: level ' + best, 'Grade ' + g + ' is levels ' + b.lo + '–' + b.hi + ' of 1–100'], footer: 'Parallax ' + version(),
       text: 'Parallax · grade ' + g + ' on ' + nameOf(def) + ' (best block ' + best + ', levels ' + b.lo + '–' + b.hi + ') · ' + LINK };
   }
 
@@ -458,6 +459,22 @@
     return { el: p.el, after: 'levels', order: 40 };
   }
 
+  /* ---------- the exercise page: records and the Atlas (exercise:lines) ---------- */
+
+  function exerciseLines(ctx) {
+    if (!ctx || !ctx.def || ctx.where !== 'page' || ctx.def.role !== 'train') return null;
+    var def = ctx.def, r = ctx.rec, now = isNum(ctx.now) ? ctx.now : Date.now(), b = G().bestOf(r, def.id), at = G().atlas(r, def), wr = null;
+    if (!b && !(at && at.tried)) return null;
+    try { wr = G().withinReach(r, now, def.id); } catch (e) { wr = null; }
+    var parts = [];
+    if (b) parts.push('best whole block ' + b.level + (b.at ? ' (' + PX.util.fmtDate(b.at, 'short') + ')' : '') + ', grade ' + G().gradeOf(b.level));
+    if (at) parts.push('Atlas ' + at.handled + ' of ' + at.total + ' cells handled');
+    var el = h('div.gm-ex-lines', { 'data-gm': 'exercise' }, h('p', h('span.gm-k', 'Records '), parts.join('; ') + '.'));
+    if (wr) el.appendChild(h('p', h('span.gm-k', 'Within reach '), cellText(def, wr.i, wr.j) + '.'));
+    el.appendChild(h('p', ui.button('Atlas of ' + nameOf(def), { kind: 'ghost', small: true, go: 'atlas?ex=' + def.id })));
+    return { el: el, order: 70 };
+  }
+
   /* ---------- Settings ---------- */
 
   function settingsSection(ctx) {
@@ -501,10 +518,11 @@
     Hk.on('today:slots', function (ctx) { return notesSlot(ctx); }, { id: 'game.notes', order: 41 });
     Hk.on('progress:panels', function (ctx) { return progressPanel(ctx); }, { id: 'game.progress', order: 40 });
     Hk.on('settings:sections', function (ctx) { return settingsSection(ctx); }, { id: 'game.settings', order: 40 });
+    Hk.on('exercise:lines', function (ctx) { return exerciseLines(ctx); }, { id: 'game.exercise', order: 70 });
     Hk.on('item:reveal', function (ctx) { return reveal(ctx); }, { id: 'game.reveal', order: 40 });
   }
 
   PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, sweep: sweep, firstTime: firstTime, cellText: cellText, share: share, shareButton: shareButton,
     celebrate: celebrate, reduced: reduced, moving: moving, noteText: noteText, gradeCard: gradeCard, reachWords: reachWords, LINK: LINK,
-    _: { summaryPanel: summaryPanel, climbSlot: climbSlot, notesSlot: notesSlot, progressPanel: progressPanel, startNow: startNow } };
+    _: { summaryPanel: summaryPanel, climbSlot: climbSlot, notesSlot: notesSlot, progressPanel: progressPanel, startNow: startNow, exerciseLines: exerciseLines } };
 })(window.PX);
