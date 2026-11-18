@@ -23,6 +23,7 @@ It fails (exit 1) on any of these:
   - an email address outside the allowlist;
   - the timezone name in the TZ variable (also its city part);
   - a home-folder path (a user folder under /home or /Users, the root user's home, a Windows user folder);
+  - a time labelled UTC that lies after its commit's own time (a local clock written as UTC);
   - a session folder or session id (the harness's /tmp scratchpad path carries the chat session's id);
   - camera or location metadata in an image (EXIF make, model or GPS; XMP GPS);
   - a file identical (SHA-256) to one the owner sent;
@@ -75,6 +76,28 @@ def home_user(path):
 SESSION = re.compile(r'/tmp/claude-\d+/[^\s`)\]"\']*|\bsession_[A-Za-z0-9]{16,}\b')
 PRIVATE_NAMES = {'BRIEF.md', 'RULES.md', '.privacy.local'}
 IMAGE_EXT = re.compile(r'\.(png|jpe?g|webp|gif|tiff?|heic|avif)$', re.I)
+
+
+UTC_STAMP = re.compile(r'\b(20\d\d-\d\d-\d\d)[ T](\d\d):(\d\d)(?::\d\d)?\s*(?:UTC|Z)\b')
+
+
+def future_utc_stamps(text, commit_iso, slack_min=20):
+    """Times labelled UTC that lie after the commit's own time: usually a local clock written as UTC,
+    which leaks the writer's offset. Returns the offending stamps."""
+    import datetime as _dt
+    try:
+        ct = _dt.datetime.strptime(commit_iso.strip()[:19], '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        return []
+    out = []
+    for m in UTC_STAMP.finditer(text):
+        try:
+            t = _dt.datetime.strptime(f'{m.group(1)} {m.group(2)}:{m.group(3)}', '%Y-%m-%d %H:%M')
+        except ValueError:
+            continue
+        if (t - ct).total_seconds() > slack_min * 60:
+            out.append(m.group(0))
+    return out
 
 
 def git(*args, binary=False, check=True):
@@ -270,7 +293,11 @@ def check_commits(commits, cfg, rep):
             if sha in seen:
                 continue
             seen.add(sha)
-            check_blob(git('cat-file', 'blob', sha, binary=True), path, f'commit {short}: {path}', cfg, rep)
+            data = git('cat-file', 'blob', sha, binary=True)
+            check_blob(data, path, f'commit {short}: {path}', cfg, rep)
+            if b'\x00' not in data[:4096]:
+                for st in future_utc_stamps(data.decode('utf-8', 'ignore'), cd):
+                    rep.add(f'commit {short}: {path}', 'a time labelled UTC lies after the commit (a local clock written as UTC?)', st)
 
 
 def check_tree(ref, cfg, rep):
@@ -302,6 +329,10 @@ def self_test():
         rep = Report(); check_text(s, 'sample', cfg, rep)
         if rep.items:
             ok = False; print('self-test: false alarm:', s, rep.items)
+    if not future_utc_stamps('- [2026-11-18 17:55 ' + 'UTC, from A to B]', '2026-11-18 15:55:00 +0000'):
+        ok = False; print('self-test: not caught: a UTC stamp two hours after its commit')
+    if future_utc_stamps('- [2026-11-18 15:40 ' + 'UTC, from A to B]', '2026-11-18 15:55:00 +0000'):
+        ok = False; print('self-test: false alarm: a UTC stamp before its commit')
     print('privacy check self-test:', 'ok' if ok else 'FAILED')
     return 0 if ok else 1
 
