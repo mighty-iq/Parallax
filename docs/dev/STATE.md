@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 21:32 UTC.
+Updated 2026-11-18 23:22 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -39,16 +39,16 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
 ## In progress (Phase 2)
-- **Wave 1: DONE**; test build 1.2.0-test.1 (playtest mode on) with the owner since 20:00 UTC; the preview saves playtest reports to its database.
-- **Fresh-player round 1 (20:35 UTC)** and fixes: Views 4/4 Try and 5/5 scored; Central Point 3/4 and 4/5 (two time-outs); Openings, Missing View and Hole Punch met the two-minute start; Form did not (its Watch had about 14 captions). Fixed: the player (d1a5579: the answer bar hides under a pause, a short session's weekly-goal reason, "Skip ahead" and "Your turn" on the Watch button, the labelled time bar and the timed-Try line, the strip stays on Try, Next in a solution player means next caption, a top-corner Pause after an answer scroll), Central Point (56fd419: pulls end to end, the best answer point, labels that never collide, the tips, Why? from the first guess, Try 3 at 30 s), band-B (Form's Watch in 3 captions, any face may lead in Openings, no tutorial item repeats as a scored one, reveals reserve their room). Band-A's round (Views, Cubes, Angles) is running.
-- **Reruns** of Form and Central Point run on a committed snapshot (a git worktree outside the repository), so builders' uncommitted edits cannot touch them; Views reruns after band-A commits.
-- **Wave 2:** W2-core's hooks are in (a84cc94 engine hooks, 7ab13ab PX.ui.hooks, 4dd8b51 record format 4, events, trial columns); it is wiring the call sites in play.js and home.js. Running on them: W2-progress (milestone 7), W2-plateau (3), W2-measure (6, build phase; its simulation passed, docs/dev/v1.2/measure-sim.md), W2-bets (4).
-- **The owed history rewrite: DONE** at 19:58 UTC.
+- **Wave 1: DONE.** Fresh-player rounds 1–3 fixed (player, Central Point, band-A, band-B); reruns pass: Views 4/4 and 5/5, Central Point 3/3 and 4/5 (one time-out), Form's first right Try at 117.8 s after its cut. Tutorial times and decisions in DECISIONS.
+- **Test build 2 (1.2.0-test.2)** replaced test build 1 on the same private preview at 23:17 UTC, built from a committed snapshot (9c49888): single 17/0, preview adapter 10/0, a phone long run 21/0. The Library has a "Jump to" select; Central Point is tagged new.
+- **Wave 2:** W2-core's hooks, record format 4, events, trial columns, player call sites and the per-item custom input are in; W2-core has stopped (resume it when a request needs its files). Milestone 4 (W2-bets) and milestone 3 (W2-plateau) are built; plateau detection within 800 answers is 87–88 % against the plan's 90 %, kept as a known miss (DECISIONS). Running: W2-progress (milestone 7), W2-measure (milestone 6 build), W2-bets (draw-the-answer variants, kept in v1.2 because the owner kept that layer).
+- **Wave 3 started:** W3-game (milestone 5, the game layer; owns daily.js and the new achievements; requests to W2-core batched).
+- **Tonight:** the owner asked for a stop within 6–7 hours of 22:29 UTC to protect his usage: the wind-down starts 04:15 UTC (builders commit and stop, state and notes updated, the best verified test build published). At most four builders run at once.
 
 ## Next three steps
-1. Band-A's report → a Views rerun; then test build 2 from a committed snapshot (republish the same private preview).
-2. Settle the four DAT-style tutorials' "about N minutes" from the reruns (DECISIONS: the Form line).
-3. Wave 2 builders' reports → integration, longruns, a review by agents that did not build; then wave 3 (game layer 5, exercise depth 8, 9, 10).
+1. Builders' reports → push; a test build 3 from a committed snapshot at the wind-down if it verifies (single, preview adapter, phone long run).
+2. After the owner's "resume": the review of wave 2 by agents that did not build it (wording of the bet lines included), reruns of the plateau acceptance on the integrated engine, fit.py's open failures (Hole Punch at 844 × 390, Cube Match with the measurement timer at 360 × 640), screens.py and a full node run.
+3. Then milestones 8 (DAT-style rebuild, Reckon), 9, 10 and 11 (verification, release checklist page, the owner's yes).
 
 Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from.
 
