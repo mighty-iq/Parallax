@@ -935,12 +935,166 @@ def run_captions(b, C):
     ctx.close()
 
 
+HOOKS_JS = """() => {
+  if (window.__hk) return true;
+  const H = PX.ui.hooks, base = { abilities: ['Vz'], role: 'train', answer: 'choice', nOptions: 4, dims: [{ key: 'a', levels: [0, 1], step: 0.5 }], base: -1,
+    validate: () => true, score: (item, r) => ({ correct: r === item.key }) };
+  PX.ex.define(Object.assign({ id: 'htest', code: 'EX-94', name: 'Hook stub', generate: (rng, params) => ({ ex: 'htest', seed: rng.seed, params, key: rng.seed % 4 }) }, base));
+  PX.ex.view('htest', { layout: 'stem+options', present: (item, ctx) => { ctx.host.textContent = 'htest item ' + item.seed; return PX.core.timing.nextPaint(); },
+    drawOption: (el, item, i) => { el.textContent = 'ABCD'[i]; } });
+  PX.core.store.state.tour.seen.htest = true;
+  const el = (tag, attr, text) => { const x = document.createElement(tag); x.setAttribute(attr, '1'); x.textContent = text; return x; };
+  window.__hk = { start: [], before: [], notes: 0 };
+  H.on('session:start', (ctx) => {
+    if (ctx.plan.exs[0] !== 'htest') return null;
+    __hk.start.push({ mode: ctx.mode, active: __play.session.activeMs, running: __play.session.running });
+    return ctx.card({ id: 'hk-start', title: 'A test card', lines: ['Before the first item.'], actions: [{ label: 'Go on', value: 'go', primary: true }] }).then(() => null);
+  }, { id: 'test.start' });
+  H.on('item:before', (ctx) => {
+    if (ctx.def.id !== 'htest') return null;
+    __hk.before.push({ first: ctx.first, seed: ctx.step.seed, last: !!ctx.last, running: __play.session.running });
+    if (__hk.before.length === 2) { ctx.step.seed = 4242; ctx.step.layer = 'calib-detail'; }
+    return null;
+  }, { id: 'test.before' });
+  H.on('item:notes', (ctx) => (ctx.def.id === 'htest' ? (__hk.notes++, el('p', 'data-hk-note', 'A test note')) : null), { id: 'test.notes' });
+  H.on('summary:panels', (ctx) => (ctx.plan && ctx.plan.exs && ctx.plan.exs[0] === 'htest' ? { el: el('section', 'data-hk-panel', 'A test panel'), order: 20, invite: 'plateau' } : null), { id: 'test.panel' });
+  H.on('today:slots', () => [{ el: el('section', 'data-hk-after', 'After the session'), after: 'session' }, { el: el('section', 'data-hk-check', 'In place of the check'), replace: 'check' }], { id: 'test.slots' });
+  H.on('today:session', () => 'A test line under the plan.', { id: 'test.line' });
+  H.on('exercise:lines', (ctx) => ({ el: el('p', 'data-hk-line', 'A test line (' + ctx.where + ')') }), { id: 'test.lines' });
+  H.on('settings:sections', () => ({ el: el('section', 'data-hk-set', 'A test section'), after: 'Training' }), { id: 'test.settings' });
+  H.on('lab:panels', () => ({ el: el('section', 'data-hk-lab', 'A test panel'), after: 'Research export' }), { id: 'test.lab' });
+  H.on('progress:panels', () => ({ el: el('section', 'data-hk-prog', 'A test meter'), replace: 'check' }), { id: 'test.progress' });
+  H.on('about:sections', () => ({ el: el('section', 'data-hk-about', 'A test section'), after: 'hygiene' }), { id: 'test.about' });
+  return true;
+}"""
+
+
+def prev_title(page, sel):
+    return page.evaluate(f"""(() => {{ const x = document.querySelector({json.dumps(sel)}); const p = x && x.previousElementSibling;
+      const t = p && p.querySelector('.px-panel-title, h2'); return p ? (p.getAttribute('data-slot') || p.getAttribute('data-section') || (t ? t.textContent.trim() : p.tagName)) : null; }})()""")
+
+
+def run_hooks(b, C):
+    """CONTRACT-v1.2 R (W2-core): the player and screen hooks in the app, and the phone check of the
+    copy of Pause that stays at the top corner when an answer's scroll hides the title row."""
+    tag = 'hooks'
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate(HOOKS_JS)
+    go(page, {'mode': 'free', 'exId': 'htest', 'params': {'a': 0}, 'trials': 3})
+    page.wait_for_selector('[data-card-box="hk-start"]', timeout=8000)
+    st = page.evaluate('__hk.start[0]')
+    C.ok(st == {'mode': 'free', 'active': 0, 'running': False} and state(page) not in ('present', 'respond'), f'{tag} session:start: its card shows before the first item, the clock not started ({st})')
+    click_card(page, 'go')
+    wait_state(page, 'respond')
+    bf = page.evaluate('__hk.before')
+    C.ok(len(bf) == 1 and bf[0]['first'] is True and bf[0]['last'] is False and bf[0]['running'] is True, f'{tag} item:before: before the first item, first true, the clock running ({bf})')
+    page.evaluate('__play.answer(true)')
+    wait_state(page, 'reveal')
+    C.ok(page.locator('.pl-notes [data-hk-note]').count() == 1, f'{tag} item:notes: the note shows under the verdict')
+    page.evaluate('__play.next()')
+    wait_state(page, 'respond')
+    it = page.evaluate('({ seed: __play.item.seed, layer: PX.ui.play.current().ctx.layer, before: __hk.before[1] })')
+    C.ok(it['seed'] == 4242 and it['layer'] == 'calib-detail' and it['before']['first'] is False and it['before']['last'] is True,
+         f'{tag} item:before: a new seed regenerates the item, the layer reaches the view ({it})')
+    page.evaluate('__play.answer(false)')
+    wait_state(page, 'reveal')
+    row = last_row(page)
+    C.ok(len(row) >= 18 and row[4] == 4242 and row[14] == 3 and row[15] == 1 and row[16] == 2,
+         f'{tag} the row logs the seed, the layer (calib-detail 3), the answer mode (option 1) and the orientation (landscape 2): {row}')
+    page.evaluate('__play.end()')
+    page.wait_for_function('!!document.querySelector(".pl-summary")', timeout=8000)
+    order = page.evaluate("""[...document.querySelectorAll('.pl-summary > *')].map((x) => x.hasAttribute('data-hk-panel') ? 'panel'
+      : x.hasAttribute('data-invite') ? 'invite:' + x.getAttribute('data-invite') : (x.querySelector('.px-panel-title') || {}).textContent || x.className)""")
+    C.ok('panel' in order and order[order.index('panel') + 1] == 'invite:plateau' and len([x for x in order if str(x).startswith('invite:')]) == 1,
+         f'{tag} summary:panels: the panel is placed with the one invite of the screen ({order})')
+    page.screenshot(path=str(OUT / 'hooks_summary_1366.png'))
+    # Today: a slot after the session, one in place of the Spatial Check, a line under the plan
+    page.evaluate('void PX.core.router.go("home")')
+    page.wait_for_selector('.px-today', timeout=8000)
+    t_after = prev_title(page, '[data-hk-after]')
+    t_check = page.evaluate("""(() => { const x = document.querySelector('[data-hk-check]'); return x ? [x.getAttribute('data-slot'), x.classList.contains('px-slot--check'),
+      document.querySelectorAll('.px-today > .px-slot--check').length] : null; })()""")
+    C.ok(t_after == 'session' and t_check == ['check', True, 1], f'{tag} today:slots: after the session slot ({t_after}); in place of the check slot ({t_check})')
+    C.ok(page.locator('.px-slot--session .px-session-note', has_text='A test line under the plan.').count() == 1, f'{tag} today:session: the line under the plan')
+    page.screenshot(path=str(OUT / 'hooks_today_1366.png'))
+    # the screens
+    page.evaluate('void PX.core.router.go("exercise/rotate")')
+    page.wait_for_selector('[data-section="level"]', timeout=8000)
+    C.ok(page.locator('[data-section="level"] [data-hk-line]', has_text='(page)').count() == 1, f'{tag} exercise:lines: in the page\'s first section')
+    page.evaluate('void PX.ui.play.howTo("rotate")')  # (without void, Playwright would call the close function it returns)
+    page.wait_for_selector('.px-modal.pl-howto', timeout=8000)
+    C.ok(page.locator('.pl-howto [data-hk-line]', has_text='(howto)').count() == 1, f'{tag} exercise:lines: in How to play')
+    page.keyboard.press('Escape')
+    page.wait_for_timeout(150)
+    page.evaluate('void PX.core.router.go("settings")')
+    page.wait_for_selector('[data-hk-set]', timeout=8000)
+    C.ok(prev_title(page, '[data-hk-set]') in ('training', 'Training'), f'{tag} settings:sections: after Training ({prev_title(page, "[data-hk-set]")})')
+    page.evaluate('void PX.core.router.go("lab")')
+    page.wait_for_selector('[data-hk-lab]', timeout=8000)
+    C.ok(prev_title(page, '[data-hk-lab]') in ('export', 'Research export'), f'{tag} lab:panels: after Research export ({prev_title(page, "[data-hk-lab]")})')
+    page.evaluate('void PX.core.router.go("progress")')
+    page.wait_for_selector('[data-hk-prog]', timeout=8000)
+    pg = page.evaluate("""(() => { const x = document.querySelector('[data-hk-prog]'); return [x.id, x.getAttribute('data-section'), document.querySelectorAll('[data-section="check"]').length]; })()""")
+    C.ok(pg == ['px-prog-check', 'check', 1], f'{tag} progress:panels: in place of the check section, keeping its id ({pg})')
+    page.evaluate('void PX.core.router.go("about")')
+    page.wait_for_selector('[data-hk-about]', timeout=8000)
+    C.ok(prev_title(page, '[data-hk-about]') == 'hygiene', f'{tag} about:sections: after Test hygiene ({prev_title(page, "[data-hk-about]")})')
+    # events: Watch, Try, Go ends (wtg), with its Try item
+    page.evaluate(STUBS_JS)
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "dtest" }, { force: true })')
+    wait_state(page, 'respond')
+    page.evaluate('__play.answer(true)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    page.evaluate('PX.ui.play.current().goNext()')
+    page.wait_for_function("PX.engine.events.list(PX.core.store.state, { kind: 'wtg', exId: 'dtest' }).length === 1", timeout=8000)
+    ev = page.evaluate("PX.engine.events.list(PX.core.store.state, { kind: 'wtg', exId: 'dtest' })[0].data")
+    C.ok(ev.get('result') == 'done' and ev.get('tries') == 1 and ev.get('right') == 1 and isinstance(ev.get('ms'), int), f'{tag} events: wtg when Watch, Try, Go ends ({ev})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+    # Phone (360 x 640, touch): the copy of Pause at the top corner once the title row has scrolled away
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    prm = page.evaluate("(() => { const d = PX.ex.get('openings'), p = {}; d.dims.forEach((x) => { p[x.key] = Math.floor((x.levels.length - 1) / 2); }); if (d.variants) p.variant = d.variants[0]; return p; })()")
+    go(page, {'mode': 'free', 'exId': 'openings', 'params': prm, 'trials': 4})
+    drive(page, '__play.state === "respond"', limit=60)  # through the intro card
+    page.evaluate('__play.answer(false)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    page.wait_for_timeout(400)
+    # the answer's own scroll, then (if the page is short) a scroll by hand until the title row is gone
+    page.evaluate("""(() => { const hud = document.querySelector('.pl-player .pl-hud') || document.querySelector('.pl-hud');
+      const r = hud.getBoundingClientRect(); if (r.bottom > 0) { document.body.style.paddingBottom = '1200px'; window.scrollBy(0, r.bottom + 40); } })()""")
+    page.wait_for_timeout(400)
+    fp = page.evaluate("""(() => { const b = document.querySelector('[data-float-pause]'); const r = b.getBoundingClientRect(), st = getComputedStyle(b);
+      return { off: document.querySelector('.pl-player').hasAttribute('data-hud-off'), display: st.display, top: Math.round(r.top), right: Math.round(r.right), w: Math.round(r.width), h: Math.round(r.height) }; })()""")
+    C.ok(fp['off'] and fp['display'] != 'none' and 0 <= fp['top'] <= 40 and fp['right'] <= 360 and fp['w'] >= 43.5 and fp['h'] >= 43.5,
+         f'{tag} phone: the copy of Pause shows at the top corner, a 44 px target, while the title row is out of view ({fp})')
+    page.screenshot(path=str(OUT / 'hooks_float_pause_360.png'))
+    page.locator('[data-float-pause]').tap()
+    page.wait_for_timeout(200)
+    C.ok(state(page) == 'paused', f'{tag} phone: a tap on it pauses ({state(page)})')
+    page.locator('[data-resume]').first.tap()
+    page.wait_for_timeout(200)
+    page.evaluate("document.body.style.paddingBottom = ''; window.scrollTo(0, 0)")
+    page.wait_for_timeout(300)
+    hid = page.evaluate("getComputedStyle(document.querySelector('[data-float-pause]')).display")
+    C.ok(hid == 'none', f'{tag} phone: hidden again once the title row is back ({hid})')
+    C.ok(not con.errors(), f'{tag} phone: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

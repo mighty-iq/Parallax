@@ -50,6 +50,9 @@
   // Motion comfort (v1.2, O36; note N1 §5.4): a check-in after 3 min of motion in a session, then
   // every 5; a person with under 10 min of motion before is offered to stop after 5 min.
   var MOTION = { first: 180000, every: 300000, newLimit: 300000, newPlayer: 600000 };
+  // v1.2 wave 2 (CONTRACT-v1.2 R): the modes whose sessions run the player hooks (session:start,
+  // item:before, item:notes); the Daily, Threshold and friend challenges keep their fixed items
+  var HOOK_MODES = { train: 1, path: 1, speed: 1, free: 1 };
   var MODE_NAMES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', watch: 'Watch, Try, Go', tour: 'Watch, Try, Go' };
 
   function E() { return PX.engine; }
@@ -227,6 +230,7 @@
       steps = Array.isArray(steps) ? steps : [];
       return new Promise(function (resolve) {
         var i = 0, t = 0, paused = false, done = false, stop = null, prev = P.state, lastK = -1, waiting = false, waited = -1, lastNoted = false;
+        var seen = 0, replays = 0, closed = false; // for the showme event (CONTRACT-v1.2 O)
         var rm = reducedMotion(), scale = FAST ? 0.02 : rm ? 0.75 : 1;
         // A Watch demo plays slowly: at least DEMO_MS in all (PLAN §8), unless motion is reduced.
         var total = steps.reduce(function (a, st) { return a + Math.max(0, (st && st.ms) || 0); }, 0);
@@ -279,6 +283,7 @@
         function enter(k) {
           if (waiting) { waiting = false; label(); }
           i = k; t = 0; lastK = 0; waiting = false;
+          if (k + 1 > seen) seen = k + 1;
           var s = steps[i];
           if (s.caption) caption(s.caption);
           safe(s.enter); safe(s.update, 0);
@@ -312,6 +317,7 @@
           done = true;
           P.played.finished++;
           P.played.ms = Math.round(timing.now() - t0);
+          P.played.last = { steps: seen, of: steps.length, replays: replays, closed: closed, ms: P.played.ms };
           if (stop) stop();
           cur = null;
           P.el.player.hidden = true;
@@ -374,8 +380,8 @@
           next: next,
           // a tap on the figure: Next, while a caption waits
           tap: function () { if (waiting && tapMode() && timing.now() - lastCmd > 250) next(); },
-          replay: function () { paused = false; waited = -1; lastNoted = false; enter(0); label(); },
-          close: function () { while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
+          replay: function () { replays++; paused = false; waited = -1; lastNoted = false; enter(0); label(); },
+          close: function () { if (!done) closed = true; while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
           auto: function () {
             setAutoplay(!autoplay());
             if (!tapMode() && waiting && !steps[i].hold) { waiting = false; paused = false; } // the timed pace goes on from here
@@ -743,6 +749,8 @@
       // Per item, for the view (B3's request): practice items (Watch, Try, and other unrated
       // items) and the item a Watch demo plays. Views read them if present.
       if (P.ctx) { P.ctx.practice = !!cfg.practice; P.ctx.demo = !!cfg.demo; P.ctx.assist = cfg.assist !== undefined ? cfg.assist : null; P.ctx.gentleMotion = gentleMotion(); }
+      // v1.2 wave 2 (CONTRACT-v1.2 R): the step's add-on layer ('' when none), e.g. calib-detail feedback
+      if (P.ctx) P.ctx.layer = typeof cfg.layer === 'string' ? cfg.layer : '';
       return new Promise(function (resolve) {
         var token = ++P.token;
         P.resolve = resolve; P.item = item; P.cfg = cfg; P.last = null;
@@ -917,6 +925,9 @@
         pausedMs: Math.round(P.pausedMs), exId: P.exId,
         // H4: the input of the answering event and the screen class the item was shown on
         input: timeout ? null : inputName(source, t), display: P.shape0 ? P.shape0.c : display(),
+        // v1.2 wave 2 (CONTRACT-v1.2 N): the control the answer came through, and the window's shape
+        // when the stimulus painted
+        amode: timeout ? null : amodeOf(source, meta, !!P.grid), orient: P.shape0 ? P.shape0.o : shape().o,
       };
       P.last = tr;
       if (P.grid) P.grid.lock(true);
@@ -1020,11 +1031,15 @@
     }
     function showMe(auto) {
       if (P.state !== 'reveal' || !P.view || !P.view.showMe || !P.last || P.cfg.feedback === false) return Promise.resolve(false);
-      var tr = P.last, p;
+      var tr = P.last, p, cfg = P.cfg, exId = P.exId, n0 = P.played.finished, t0 = timing.now();
       el.showBtn.hidden = true;
       stemIntoView();
       try { p = Promise.resolve(P.view.showMe(tr.item, revealResponse(P.def, tr.item, tr.response), P.ctx)); } catch (e) { log('show me failed', e); p = Promise.resolve(); }
       return p.then(function () {
+        // the showme event (CONTRACT-v1.2 O): after the answer, in its feedback, never mid-stimulus
+        var pl = P.played.finished > n0 ? P.played.last : null;
+        logEvent('showme', exId, { seed: isNum(cfg.seed) ? cfg.seed >>> 0 : undefined, auto: !!auto, ms: pl ? pl.ms : Math.round(timing.now() - t0),
+          steps: pl ? pl.steps : 0, replays: pl ? pl.replays : 0, closed: !!(pl && pl.closed) });
         if (P.last === tr && P.state === 'reveal') {
           el.showBtn.firstChild.textContent = 'Show me again';
           el.showBtn.hidden = false;
@@ -1555,6 +1570,35 @@
   function invite(kind, opts) {
     try { return PX.ui.chimera && typeof PX.ui.chimera.invite === 'function' ? PX.ui.chimera.invite(kind, opts || {}) || null : null; } catch (e) { log('invite failed', e); return null; }
   }
+  // The one invite of a summary goes to the highest kind (CONTRACT-v1.2 R): lower ranks first.
+  var INVITE_ORDER = ['best', 'path', 'grade', 'plateau', 'achievement', 'check'];
+  function INVITE_RANK(kind) { var r = INVITE_ORDER.indexOf(kind); return r < 0 ? INVITE_ORDER.length : r; }
+  // v1.2 wave 2 (CONTRACT-v1.2 O): an event row (typed fields only), added between items, then saved.
+  function logEvent(kind, exId, data) {
+    try {
+      var Ev = E().events;
+      if (Ev && typeof Ev.add === 'function' && Ev.add(rec(), kind, exId || null, data, now())) save();
+    } catch (e) { log('event failed (' + kind + ')', e); }
+  }
+  // The hook points of CONTRACT-v1.2 R (js/ui/hooks.js): a point's results, never an exception.
+  function hookCollect(point, ctx) {
+    var Hk = PX.ui.hooks;
+    if (!Hk) return [];
+    try { return Hk.collect(point, ctx); } catch (e) { log('hooks at ' + point + ' failed', e); return []; }
+  }
+  function hookRun(point, ctx) {
+    var Hk = PX.ui.hooks;
+    if (!Hk || !Hk.list(point).length) return Promise.resolve(null);
+    try { return Hk.run(point, ctx).then(null, function (e) { log('hooks at ' + point + ' failed', e); return null; }); } catch (e) { log('hooks at ' + point + ' failed', e); return Promise.resolve(null); }
+  }
+  // The answer control of a trial (CONTRACT-v1.2 N, E.log.AMODES): a custom view's respond meta
+  // `amode` (or Homing's and Reckon's `mode`), else 'option' for the answer grid.
+  var AMODE_NAMES = { option: 1, drag: 1, dial: 1, fine: 1, keys: 1, place: 1, draw: 1 };
+  function amodeOf(source, meta, grid) {
+    if (isObj(meta) && typeof meta.amode === 'string' && hasOwn.call(AMODE_NAMES, meta.amode)) return meta.amode;
+    if (isObj(meta) && typeof meta.mode === 'string' && hasOwn.call(AMODE_NAMES, meta.mode)) return meta.mode;
+    return grid && source !== 'view' ? 'option' : null;
+  }
 
   // The gentle motion profile for Homing and Reckon (v1.2, O36; CONTRACT-v1.2 F): the setting, or
   // 'auto' with the app's reduced motion on.
@@ -1575,8 +1619,12 @@
     return [h('p', card.text || ''), Array.isArray(card.steps) && card.steps.length ? h('ol.pl-strategy-steps', card.steps.map(function (x) { return h('li', x); })) : null,
       card.when ? h('p.px-meta', card.when) : null];
   }
-  function strategySheet(def, card) {
-    return ui.modal({ title: card.title || 'How to solve ' + (def.short || def.name), className: 'pl-strategies pl-howto-card', body: [h('section.pl-strategy', strategyBody(card))], actions: [{ label: 'Close', kind: 'secondary' }] });
+  // src: where the card was opened, for the card event (CONTRACT-v1.2 O): 'howto' (the player's
+  // "How to solve" button)
+  function strategySheet(def, card, src) {
+    var t0 = now();
+    return ui.modal({ title: card.title || 'How to solve ' + (def.short || def.name), className: 'pl-strategies pl-howto-card', body: [h('section.pl-strategy', strategyBody(card))], actions: [{ label: 'Close', kind: 'secondary' }],
+      onClose: function () { logEvent('card', def.id, { card: card.id, src: src || 'howto', ms: Math.max(0, now() - t0) }); } });
   }
   function showCard(parent, before, o) {
     return new Promise(function (resolve) {
@@ -1715,6 +1763,7 @@
     var template = rules.length > 0 || typeof learn.strategyFirst === 'string';
     var card = template ? firstStrategy(learn) : null;
     var host = o.host || P.el.root.parentNode, skipped = false, ended = false, partsPaused = false;
+    var t0 = now(), tries = 0, rightN = 0; // the wtg event (CONTRACT-v1.2 O)
     var names = ['Watch', 'Try', 'Go'];
     var marks = names.map(function (n, i) { return h('li.pl-wtg-step', h('span.pl-wtg-n.px-num', String(i + 1)), h('span.pl-wtg-name', n)); });
     var text = h('p.pl-wtg-text', { 'aria-live': 'polite' });
@@ -1831,10 +1880,12 @@
       if (!card || skipped || !practice.length) return Promise.resolve();
       stage(1, 'Try: first a way to solve it, then practice items that never count.');
       emit('play:screen', { screen: 'card:wtg-strategy', mode: P.mode, exId: exId });
+      var c0 = now();
       return showCard(host, P.el.root, {
         id: 'wtg-strategy', title: card.title || 'How to solve it', className: 'pl-strategy-card', hide: P.el.root, lines: strategyBody(card), top: head,
         actions: [{ label: 'Got it: try one', value: 'try', primary: true }],
       }).then(function (v) {
+        if (v !== 'closed') logEvent('card', exId, { card: card.id, src: 'wtg', ms: Math.max(0, now() - c0) });
         if (v !== 'try') { skipped = true; return; }
         P.setHowTo(def, card);
       });
@@ -1922,6 +1973,7 @@
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; }
         if (tr.outcome === 'skipped' || tr.error) return tryStep(i + 1);
+        if (tr.outcome === 'right' || tr.outcome === 'wrong') { tries++; if (tr.outcome === 'right') rightN++; }
         var last = i + 1 >= practice.length;
         // The step strip stays on Try while a Try item is on screen (fresh-player test: "3 Go" showed
         // over "Try 3 of 3"); Go comes when it is done (below, and the tutorial's end screen).
@@ -1941,6 +1993,7 @@
       host.style.removeProperty('--pl-extra');
       P.setTip(null);
       var result = ended ? 'end' : skipped ? 'skipped' : 'done';
+      logEvent('wtg', exId, { result: result, ms: Math.max(0, now() - t0), tries: tries, right: rightN });
       emit('play:wtg', { exId: exId, result: result, slot: o.slot || null }); // playtest hooks (CONTRACT-v1.2 G)
       return result;
     });
@@ -1986,7 +2039,10 @@
       misses: {}, offered: {}, noticed: false, hidden: false, named: false, challenge: typeof p.challenge === 'string' ? p.challenge : null,
       params: routeParams(p), itemNo: 1, inputs: {}, offs: [], clock: null, viewport: viewport(),
       // v1.2: round scores per exercise ([rounds, total]); motion this session (CONTRACT-v1.2 F)
-      rounds: {}, motion: { ms: 0, nextCard: MOTION.first, before: isNum(uiRec().motionMs) ? uiRec().motionMs : 0, newOffered: false }, gentle: false };
+      rounds: {}, motion: { ms: 0, nextCard: MOTION.first, before: isNum(uiRec().motionMs) ? uiRec().motionMs : 0, newOffered: false }, gentle: false,
+      // v1.2 wave 2 (CONTRACT-v1.2 R): the player hooks run in Train, Path, Speed and Free play, never
+      // in the Daily, Threshold or a friend challenge (their items are fixed for everyone)
+      hooks: hasOwn.call(HOOK_MODES, mode) && typeof p.challenge !== 'string', started: false, firstSeen: {}, afterWtg: false, endMsg: null };
     var wrap = h('div.pl-screen', { 'data-mode': mode });
     host.appendChild(wrap);
     var P = null;
@@ -2116,12 +2172,73 @@
     function cfgFor(step, def, item) {
       var learn = PX.ex.learn(def.id), tip = step.feedback !== false && !S.hidden ? tipFor(def.id, learn, item) : null;
       var limit = step.deadlineMs || (def.timeLimit ? def.timeLimit(item.params) : null) || null;
-      return { feedback: step.feedback !== false, limitMs: limit, limitBar: !!limit, tip: tip ? tip.text : null };
+      return { feedback: step.feedback !== false, limitMs: limit, limitBar: !!limit, tip: tip ? tip.text : null,
+        layer: typeof step.layer === 'string' ? step.layer : '', seed: step.seed }; // v1.2 wave 2: the view's layer; the showme event's seed
+    }
+
+    // v1.2 wave 2 (CONTRACT-v1.2 R): what every player hook gets. card(o) shows a card above the
+    // item (o: id, title, def, lines, actions [{ label, value, primary }]) and resolves the value
+    // tapped ('closed' when the session ends under it); clock.pause/resume(reason) hold the session
+    // clock ('measure': a measurement is never practice time); end(msg) ends the session after the
+    // hook, with msg on the summary. The player resumes 'measure' when the point's run ends.
+    function hookCtx(extra) {
+      var c = {
+        mode: mode, plan: S.plan, rec: rec(), now: now(), P: P, wrap: wrap,
+        card: function (o) {
+          o = isObj(o) ? o : {};
+          var id = typeof o.id === 'string' && o.id ? o.id : 'hook';
+          if (S.done || !P) return Promise.resolve('closed');
+          emit('play:screen', { screen: 'card:' + id, mode: mode, exId: o.def && o.def.id ? o.def.id : S.step ? S.step.exId : null });
+          return showCard(wrap, P.el.root, Object.assign({}, o, { id: id, hide: P.el.root }));
+        },
+        clock: {
+          pause: function (reason) { if (S.clock) S.clock.pause(typeof reason === 'string' && reason ? reason : 'measure'); },
+          resume: function (reason) { if (S.clock) S.clock.resume(typeof reason === 'string' && reason ? reason : 'measure'); },
+        },
+        end: function (msg) { S.ended = true; if (typeof msg === 'string' && msg) S.endMsg = msg; },
+      };
+      return Object.assign(c, extra || {});
+    }
+    // item:before may give the step another seed (the item is generated again) and a layer; never
+    // for a step that measures with its own item (a Path recheck, a probe, a Daily or Threshold item)
+    var FIXED_KINDS = { recheck: 1, probe: 1, daily: 1, threshold: 1 };
+    function itemBefore(step, def, item) {
+      if (!S.hooks) return Promise.resolve({ item: item });
+      var seed0 = step.seed, key = def.id + '|' + (item.params && item.params.variant || ''), first = !S.firstSeen[def.id];
+      var lastOut = S.last && S.last.out ? S.last.out : null;
+      var ctx = hookCtx({ step: step, def: def, last: S.last || null, afterTutorial: S.afterWtg, first: first,
+        blockEnd: lastOut && lastOut.blockEnd ? lastOut.blockEnd : null, misses: S.misses[key] || 0 });
+      S.afterWtg = false;
+      return hookRun('item:before', ctx).then(function (r) {
+        if (S.clock) S.clock.resume('measure'); // a hook's measurement pause ends with its run
+        if (r === 'end') return { end: true };
+        if (step.seed === seed0) return { item: item };
+        if (step.recheck || hasOwn.call(FIXED_KINDS, step.kind) || !isNum(step.seed)) { step.seed = seed0; return { item: item }; }
+        step.seed = step.seed >>> 0;
+        var it2 = null;
+        try { it2 = def.generate(PX.rng(step.seed), step.params); } catch (e) { log('generate failed (' + step.exId + ', hook seed)', e); }
+        if (!it2) { step.seed = seed0; return { item: item }; }
+        return { item: it2 };
+      });
     }
 
     function loop() {
       if (S.done) return;
       if (S.ended) { end(); return; }
+      // v1.2 wave 2 (CONTRACT-v1.2 R): session:start, after the intro card, before the first item and
+      // before the clock starts (a baseline block due now, a measurement week); 'end' ends the session
+      if (!S.started) {
+        S.started = true;
+        if (S.hooks && PX.ui.hooks && PX.ui.hooks.list('session:start').length) {
+          hookRun('session:start', hookCtx({})).then(function (r) {
+            if (S.clock) S.clock.resume('measure'); // a hook's measurement pause ends with its run
+            if (S.done) return;
+            if (r === 'end') S.ended = true;
+            loop();
+          });
+          return;
+        }
+      }
       if (!S.clock.started()) {
         S.clock.start();
         // a new session: an earlier kept summary is no longer the last screen (a tab killed without
@@ -2147,7 +2264,7 @@
       var pre = Promise.resolve(null);
       if (!wtgSeen(def.id) && mode !== 'speed' && mode !== 'threshold') { // the intro's choice never reaches a later stage
         S.wtg = true;
-        pre = offerWtg(def).then(function (r) { S.wtg = false; return r; }, function (e) { S.wtg = false; throw e; });
+        pre = offerWtg(def).then(function (r) { S.wtg = false; S.afterWtg = r === 'done'; return r; }, function (e) { S.wtg = false; throw e; });
         S.introDemo = undefined;
       }
       else if (step.watch && S.introDemo !== undefined) { pre = S.introDemo ? stageDemo(step, def) : Promise.resolve(null); S.introDemo = undefined; } // asked on the intro card
@@ -2158,6 +2275,12 @@
         return motionGate(def).then(function (m) {
           if (S.done) return null;
           if (m === 'end') { S.ended = true; end(); return null; }
+          return itemBefore(step, def, item);
+        }).then(function (b) {
+          if (!b || S.done) return null;
+          if (b.end || S.ended) { S.ended = true; end(); return null; }
+          item = b.item;
+          S.firstSeen[def.id] = true;
           if (!P.use(step.exId)) { skipStep(step); return null; }
           hud(step, def, item);
           return P.run(item, cfgFor(step, def, item)).then(function (tr) { return afterTrial(step, def, item, tr); });
@@ -2178,7 +2301,7 @@
       // value2 (trial column 13): the exercise's score() result, else the view's respond meta
       var v2 = tr.result && isNum(tr.result.value2) ? tr.result.value2 : tr.meta && isNum(tr.meta.value2) ? tr.meta.value2 : undefined;
       var result = { correct: !!(tr.result && tr.result.correct), rt: tr.rtMs, value: tr.result ? tr.result.value : undefined, value2: v2, timeout: !!tr.timeout,
-        input: tr.input || null, display: tr.display || undefined };
+        input: tr.input || null, display: tr.display || undefined, amode: tr.amode || null, orient: tr.orient || null }; // v1.2 wave 2: columns 16-17
       if (tr.result && isNum(tr.result.round) && tr.outcome !== 'stutter' && tr.outcome !== 'skipped') { // Quick round scores (v1.2)
         result.round = tr.result.round;
         var rr = S.rounds[def.id] || (S.rounds[def.id] = [0, 0]);
@@ -2234,8 +2357,20 @@
         later.push(function () { return strategyOffer(def, learn); });
       }
       try { if (checkinFits(def) && E().modes.checkinDue(rec(), S.plan, def.id, now())) later.push(function () { return checkinNote(def); }); } catch (e) { /* optional */ }
+      // v1.2 wave 2 (CONTRACT-v1.2 R): notes other modules add (fluency notes, apply-item notes):
+      // an element, or a function that returns one; they wait their turn like the panels above
+      if (S.hooks && step.feedback !== false) {
+        hookCollect('item:notes', { mode: mode, plan: S.plan, rec: rec(), now: now(), step: step, def: def, item: item, tr: tr, out: out }).forEach(function (x) {
+          if (typeof x === 'function') later.push(x);
+          else if (x && x.nodeType === 1) later.push(function () { return x; });
+        });
+      }
       S.queue = (S.queue || []).concat(later);
-      if (!panels && S.queue.length && step.feedback !== false) P.note(S.queue.shift()());
+      while (!panels && S.queue.length && step.feedback !== false) {
+        var node = null;
+        try { node = S.queue.shift()(); } catch (e) { log('a note failed', e); node = null; }
+        if (node) { P.note(node); panels++; }
+      }
     }
 
     function deviceNotice() {
@@ -2310,6 +2445,7 @@
     function end(msg) {
       if (S.done) return;
       S.done = true;
+      msg = msg || S.endMsg || null; // a hook's end(msg) (CONTRACT-v1.2 R)
       if (P) P.abort();
       var res = finishPlan(S.ended ? 'early' : undefined);
       keepSummary(S, res, msg || null);
@@ -2456,12 +2592,15 @@
   }
 
   function strategyCards(def, learn) {
+    var t0 = now();
     var body = (learn.strategies || []).map(function (s) {
       return h('section.pl-strategy', h('h3', s.title), h('p', s.text),
         Array.isArray(s.steps) && s.steps.length ? h('ol', s.steps.map(function (x) { return h('li', x); })) : null,
         s.when ? h('p.px-meta', s.when) : null);
     });
-    ui.modal({ title: 'Ways to solve ' + (def.short || def.name), className: 'pl-strategies', body: body, actions: [{ label: 'Close', kind: 'secondary' }] });
+    // the card event (CONTRACT-v1.2 O): every card at once, opened from the offer after two misses
+    ui.modal({ title: 'Ways to solve ' + (def.short || def.name), className: 'pl-strategies', body: body, actions: [{ label: 'Close', kind: 'secondary' }],
+      onClose: function () { logEvent('card', def.id, { card: 'all', src: 'misses', ms: Math.max(0, now() - t0) }); } });
   }
   function strategyOffer(def, learn) {
     var box = h('div.pl-note.pl-note--offer', { 'data-note': 'strategy' });
@@ -2645,10 +2784,25 @@
     }
     var extra = modeExtras(mode, res);
     if (extra) out.appendChild(extra);
-    // One Chimera invite at the session's highest point (CONTRACT-v1.2 H): a personal best, a
-    // passed Path stage, an achievement; placed under its panel, never between items.
-    var inv = res && res.bests && res.bests.length ? 'best' : res && res.path && res.path.passed && res.path.passed.length ? 'path' : res && res.achievements && res.achievements.length ? 'achievement' : null;
-    if (inv === 'path' && extra) { var ip = invite('path', { host: out, exId: res.path.exId, stage: res.path.passed[res.path.passed.length - 1] }); if (ip) out.appendChild(ip); }
+    // v1.2 wave 2 (CONTRACT-v1.2 R): panels other modules add (the plateau card, the measurement
+    // meter): order below 50 before Personal bests, 50 or more after Achievements.
+    // A summary brought back after a reload asks again, with restored: true.
+    var hooked = hasOwn.call(HOOK_MODES, mode) && !(S.params && typeof S.params.challenge === 'string' && S.params.challenge);
+    var hp = (hooked ? hookCollect('summary:panels', { mode: mode, res: res, plan: pl, rec: rec(), now: now(), restored: !!S.restored }) : []).map(function (x, i) {
+      return isObj(x) && x.el && x.el.nodeType === 1 ? { el: x.el, order: isNum(x.order) ? x.order : 50, invite: typeof x.invite === 'string' && x.invite ? x.invite : null, inviteOpts: isObj(x.inviteOpts) ? x.inviteOpts : {}, i: i } : null;
+    }).filter(Boolean).sort(function (a, b) { return a.order - b.order || a.i - b.i; });
+    // One Chimera invite at the session's highest point (CONTRACT-v1.2 H, R): the summary's own (a
+    // personal best, a passed Path stage, an achievement) or a panel's, whichever ranks highest
+    // (best > path > grade > plateau > achievement > check); placed under its panel, never between items.
+    var inv = res && res.bests && res.bests.length ? 'best' : res && res.path && res.path.passed && res.path.passed.length && extra ? 'path' : res && res.achievements && res.achievements.length ? 'achievement' : null;
+    var invPanel = null;
+    hp.forEach(function (x) { if (x.invite && (inv === null || INVITE_RANK(x.invite) < INVITE_RANK(inv))) { inv = x.invite; invPanel = x; } });
+    function hookPanel(x) {
+      out.appendChild(x.el);
+      if (x === invPanel) { var ix = invite(x.invite, Object.assign({}, x.inviteOpts, { host: out })); if (ix) out.appendChild(ix); }
+    }
+    if (inv === 'path' && !invPanel) { var ip = invite('path', { host: out, exId: res.path.exId, stage: res.path.passed[res.path.passed.length - 1] }); if (ip) out.appendChild(ip); }
+    hp.filter(function (x) { return x.order < 50; }).forEach(hookPanel);
     if (res && res.bests && res.bests.length) {
       var pb = K.panel({ title: 'Personal bests', className: 'pl-panel' });
       pb.body.appendChild(h('ul.pl-list', res.bests.map(function (b) {
@@ -2657,7 +2811,7 @@
         return h('li', h('b', def.short || def.name), ': your highest level after a whole block of 10, ' + b.level + (b.previous ? ' (best before: ' + b.previous + ')' : ' (your first full block)') + '.');
       })));
       out.appendChild(pb.el);
-      if (inv === 'best') { var ib = invite('best', { host: out, exId: res.bests[0].exId, level: res.bests[0].level }); if (ib) out.appendChild(ib); }
+      if (inv === 'best' && !invPanel) { var ib = invite('best', { host: out, exId: res.bests[0].exId, level: res.bests[0].level }); if (ib) out.appendChild(ib); }
     }
     if (res && res.achievements && res.achievements.length) {
       var pa = K.panel({ title: 'Achievements', className: 'pl-panel' });
@@ -2665,8 +2819,9 @@
         return h('li', K.icon('award', 'pl-ach-mark'), h('div', h('b', a.name), h('span', a.desc)));
       })));
       out.appendChild(pa.el);
-      if (inv === 'achievement') { var ia = invite('achievement', { host: out, id: res.achievements[0].id }); if (ia) out.appendChild(ia); }
+      if (inv === 'achievement' && !invPanel) { var ia = invite('achievement', { host: out, id: res.achievements[0].id }); if (ia) out.appendChild(ia); }
     }
+    hp.filter(function (x) { return x.order >= 50; }).forEach(hookPanel);
     if (res && res.streak) {
       var pw = K.panel({ title: 'This week', className: 'pl-panel', aside: 'goal ' + res.streak.goal + ' a week' });
       pw.body.appendChild(h('p', res.streak.text + (res.streak.week && isNum(res.streak.week.ms) ? ' Practice this week: ' + PX.core.clock.fmtMinutes(res.streak.week.ms) + '.' : '')));
@@ -2968,6 +3123,12 @@
       try { node = PX.ui.overlap.noteNode ? PX.ui.overlap.noteNode(exId, 'pl-howto-note') : null; } catch (e) { node = null; }
       body.push(node || h('p.px-meta.px-overlap-note', h('b', (ov.label || 'Also in tests') + ': '), ov.text || String(ov)));
     }
+    // v1.2 wave 2 (CONTRACT-v1.2 R): lines other modules add (the bet, the settings handled per
+    // dimension, the last plateau change), by their order
+    hookCollect('exercise:lines', { def: def, rec: rec(), now: now(), where: 'howto' }).map(function (x, i) {
+      var el0 = x && x.nodeType === 1 ? x : isObj(x) && x.el && x.el.nodeType === 1 ? x.el : null;
+      return el0 ? { el: el0, order: isObj(x) && isNum(x.order) ? x.order : 50, i: i } : null;
+    }).filter(Boolean).sort(function (a, b) { return a.order - b.order || a.i - b.i; }).forEach(function (x) { body.push(x.el); });
     // The key line is for keyboards: touch screens leave it out (css/play.css).
     body.push(h('p.px-meta.pl-howto-keys', 'Keys: 1–9 pick · Enter confirm · Space next · Esc pause · S show me the solution.'));
     if (learn && Array.isArray(learn.strategies) && learn.strategies.length) {

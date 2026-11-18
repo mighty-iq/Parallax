@@ -354,7 +354,10 @@
     var rec = PX.core.store.state, now = Date.now();
     host.appendChild(h('div.px-screen-head', h('h1', 'Lab'),
       h('p.px-lead', 'Research protocols, a self-experiment, your data for pooling, and how the engine chooses what you practise.')));
-    host.appendChild(h('div.px-lab', protocolsSection(rec), crossoverSection(rec, now), exportSection(rec), engineSection()));
+    var box = h('div.px-lab', protocolsSection(rec), crossoverSection(rec, now), exportSection(rec), engineSection());
+    // v1.2 wave 2 (CONTRACT-v1.2 R): panels other modules add, after the panel they name
+    if (PX.ui.hooks && typeof PX.ui.hooks.screen === 'function') PX.ui.hooks.screen('lab:panels', box, { rec: rec, now: now });
+    host.appendChild(box);
   }
 
   PX.ui.lab = { RULES: RULES };
