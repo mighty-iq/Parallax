@@ -363,3 +363,29 @@ function testLearn(t, PX, def) {
   const all = JSON.stringify(L).toLowerCase();
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered/.test(all), 'no IQ, intelligence or "mastered" claims (CLAUDE.md rules 2 and 12)');
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (testSolvers'
+   solvers on one item: pick as the pair each names, samediff as threshold cues fitted per cell there) */
+const SC_RNG = lcg(7);
+export function shortcutScores(PX, def, item, params) {
+  const p = params || item.params || {}, chance = def.chance(p), F = feats(def.lib, item), out = {};
+  if (p.variant === 'pick') {
+    const hit = (pair) => ({ hit: pair[0] === item.key[0] && pair[1] === item.key[1] ? 1 : 0, chance });
+    for (const f of FEATS) out['stem: most like the reference by ' + f] = hit(pickTwo(F.opts.map((o) => dist(f, o, F.ref)), SC_RNG));
+    for (const f of ['area', 'visible']) {
+      const meanTo = (i) => F.opts.reduce((s, o, j) => s + (j === i ? 0 : dist(f, F.opts[i], o)), 0) / 3;
+      out['blind: odd ones out by ' + f] = hit(pickTwo(F.opts.map((o, i) => -meanTo(i)), SC_RNG));
+      out['blind: most like the others by ' + f] = hit(pickTwo(F.opts.map((o, i) => meanTo(i)), SC_RNG));
+      let best = null;
+      for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) { const d = dist(f, F.opts[a], F.opts[b]) + SC_RNG() * 1e-9; if (!best || d < best[0]) best = [d, a, b]; }
+      out['blind: most alike pair by ' + f] = hit([best[1], best[2]]);
+    }
+  } else if (p.variant === 'samediff') {
+    for (const f of FEATS) {
+      out['samediff stem by ' + f] = { score: dist(f, F.opts[0], F.ref), label: item.key === true, chance };
+      out['samediff blind by ' + f] = { score: F.opts[0][f], label: item.key === true, chance };
+    }
+  }
+  return out;
+}
+export const SHORTCUT_EXEMPT = [];

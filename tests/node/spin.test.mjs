@@ -321,3 +321,33 @@ function checkLearn(t, PX, def, id, kindOf) {
     t.ok(keys.length > 5 && missing.length === 0, `every caption the view uses exists (${keys.length} keys${missing.length ? '; missing ' + missing.join(', ') : ''})`);
   }
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (the solvers of
+   'spin: shortcut solvers' above, restated per item: samediff as threshold cues fitted per cell there, pick as
+   the pair each names) */
+const scVec = (f) => [f.asp, Math.log(f.w * f.h), Math.cos(f.axis * Math.PI / 90), Math.sin(f.axis * Math.PI / 90)];
+const scDist = (a, b) => Math.hypot(...a.map((x, i) => x - b[i]));
+export function shortcutScores(PX, def, it, params) {
+  const p = params || it.params || {}, chance = def.chance(p), out = {}, R = feats(it.ref.poly);
+  if (p.variant === 'samediff') {
+    const Q = feats(it.probe.poly), cue = (score) => ({ score, label: it.key === true, chance });
+    // named apart from the pick solvers: a cell holds one kind of entry
+    out['samediff: ' + 'silhouette area'] = cue(-Math.abs(R.area - Q.area));
+    out['samediff: ' + 'box aspect'] = cue(-Math.abs(R.asp - Q.asp));
+    out['samediff: ' + 'box aspect (unsigned)'] = cue(-Math.abs(Math.abs(R.asp) - Math.abs(Q.asp)));
+    out['samediff: ' + 'box size'] = cue(-(Math.abs(R.w - Q.w) + Math.abs(R.h - Q.h)));
+    return out;
+  }
+  if (p.variant !== 'pick') return out;
+  const F = it.options.map((o) => feats(o.poly)), V = F.map(scVec), hit = (pair) => ({ hit: sameKey(pair, it.key) ? 1 : 0, chance });
+  out['pick: silhouette area'] = hit(top2(F.map((f) => -Math.abs(f.area - R.area))));
+  out['pick: box aspect'] = hit(top2(F.map((f) => -Math.abs(f.asp - R.asp))));
+  out['pick: box size'] = hit(top2(F.map((f) => -(Math.abs(f.w - R.w) + Math.abs(f.h - R.h)))));
+  out['pick: odd one out (stem-blind)'] = hit(top2(V.map((a) => V.reduce((s, b) => s + scDist(a, b), 0))));
+  out['pick: most like the others (stem-blind)'] = hit(top2(V.map((a) => -V.reduce((s, b) => s + scDist(a, b), 0))));
+  let best = null, bd = Infinity;
+  for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (scDist(V[i], V[j]) < bd) { bd = scDist(V[i], V[j]); best = [i, j]; }
+  out['pick: closest pair (stem-blind)'] = hit(best);
+  return out;
+}
+export const SHORTCUT_EXEMPT = [];

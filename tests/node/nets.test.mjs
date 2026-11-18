@@ -299,3 +299,19 @@ function edgeGap(it) {
   const a = mid(it.edges[0]), b = mid(it.edges[1]);
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (shortcutReport's
+   solvers on one item; the edges rule as a threshold cue, fitted per cell there) */
+export function shortcutScores(PX, def, item, params) {
+  const p = params || item.params || {}, v = p.variant || item.variant, chance = def.chance(p);
+  if (v === 'opposite') {
+    const R = shortcutReport({ opposite: [item], edges: [], cube: [] }), out = {};
+    for (const k of ['straight2', 'farEu', 'farGraph', 'central', 'marks']) out[k] = { hit: R[k], chance };
+    return out;
+  }
+  if (v === 'edges') return { 'close in the flat net': { score: edgeGap(item), label: item.key === 0, chance } };
+  if (v !== 'cube') return {};
+  const R = shortcutReport({ opposite: [], edges: [], cube: [item] });
+  return { row4: { hit: R.row4, chance }, row4exact: { hit: R.row4exact, chance } };
+}
+export const SHORTCUT_EXEMPT = [];

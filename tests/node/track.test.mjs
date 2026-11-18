@@ -569,3 +569,11 @@ function testTiming(t, PX, def) {
     say(`hardest level (2.0 cw/s, 5 of 10, 12 s, ${variant}): generate p50 ${q(wall, 0.5).toFixed(1)} / p95 ${pw.toFixed(1)} ms wall, p95 ${pc.toFixed(1)} ms CPU; validate p50 ${q(val, 0.5).toFixed(1)} / p95 ${pv.toFixed(1)} ms CPU`);
   }
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (shortcutRow's
+   three solvers; bounded from speed level 15 up as in testShortcuts, the slowest third reported) */
+export function shortcutScores(PX, def, item) {
+  const r = shortcutRow(item), info = r.third === 0;
+  return { near: { hit: r.near ? 1 : 0, chance: r.chance, info }, match: { hit: r.match ? 1 : 0, chance: r.chance, info }, least: { hit: r.least ? 1 : 0, chance: r.chance, info } };
+}
+export const SHORTCUT_EXEMPT = [];

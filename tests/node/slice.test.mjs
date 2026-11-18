@@ -130,7 +130,7 @@ function testMeshes(t, PX, L) {
 
 function testPool(t, PX, def, L) {
   t.section('slice: pool');
-  const combos = PX.ex.enumerate(def);
+  const combos = PX.ex.enumerate(def).filter((p) => p.variant !== 'mark').map(({ variant, ...p }) => p); // v1.2 wave 2 (W2-bets): the choose form as before; 'mark' has its own tests (tests/node/layers-produce.test.mjs)
   t.eq(combos.length, 18, '18 level combinations');
   const per = Math.ceil(N_ITEMS / combos.length);
   const items = [];
@@ -393,7 +393,7 @@ function testTampering(t, PX, def, L, pool) {
 function testFallback(t, PX, def, L) {
   t.section('slice: fallback');
   let ok = 0;
-  const combos = PX.ex.enumerate(def);
+  const combos = PX.ex.enumerate(def).filter((p) => p.variant !== 'mark').map(({ variant, ...p }) => p); // v1.2 wave 2 (W2-bets): the choose form as before; 'mark' has its own tests (tests/node/layers-produce.test.mjs)
   for (const p of combos) {
     let it = null;
     try { it = L.fallback(p); } catch (e) { it = null; }
@@ -471,3 +471,24 @@ function testLearn(t, PX, def) {
   const all = JSON.stringify(L).toLowerCase();
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered/.test(all), 'no IQ, intelligence or "mastered" claims (CLAUDE.md rules 2 and 12)');
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (the bounded
+   solvers of testShortcuts above, restated per item; the diagnostics stay there) */
+export function shortcutScores(PX, def, it, params) {
+  const L = def.lib, M = L.SMALL, key = it.key, chance = def.chance(params || it.params || {});
+  const D = it.options.map((o) => L.describe(o.loops)), G = it.options.map((o) => L.rasterize(o.loops, M)), sil = meshSilhouette(L, it.solid, M);
+  const corners = (d) => d.parts.reduce((s, q) => s + q.corners, 0);
+  const sumBy = (n, f) => Array.from({ length: n }, (_, i) => { let s = 0; for (let j = 0; j < n; j++) if (j !== i) s += f(i, j); return s; });
+  const like = sumBy(4, (i, j) => L.ddist(D[i], D[j])), twin = D.map((d, i) => Math.min(...D.map((e, j) => (i === j ? Infinity : L.ddist(d, e)))));
+  const h = (hit) => ({ hit, chance });
+  return {
+    'most corners': h(share(D.map(corners), key, true)),
+    silhouette: h(share(G.map((g) => iou(g, sil)), key, true, TIE.sil)),
+    'like the others': h(share(like, key, false, 0.03 * Math.max(...like))),
+    'like the others (rasters)': h(share(sumBy(4, (i, j) => L.agreement(G[i], G[j])), key, true, TIE.raster)),
+    'closest twin': h(share(twin, key, false, 0.03 * Math.max(...twin))),
+    roundest: h(share(D.map((d) => d.parts[0].aspect), key, true, TIE.aspect)),
+    fullest: h(share(D.map((d) => d.parts[0].fill), key, true, TIE.fill)),
+  };
+}
+export const SHORTCUT_EXEMPT = [];

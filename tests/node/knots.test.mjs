@@ -566,3 +566,49 @@ function testLearn(t, PX, def, H) {
   const allText = JSON.stringify(L).toLowerCase();
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered/.test(allText), 'no IQ, intelligence or "mastered" claims (CLAUDE.md rules 2 and 12)');
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (the solvers of
+   shortcuts() above, restated per item: pull and link counts as threshold cues fitted per cell there, untie
+   and tie as the option each rule picks, ties shared) */
+export function shortcutScores(PX, def, it, params) {
+  const H = def.lib, p = params || it.params || {}, chance = def.chance(p), out = {};
+  const dg = H.diagramOf(H.curvesOf(it), it.over);
+  if (p.variant === 'pull') {
+    const f = H.ropeFeatures(dg), ps = plateStats(H, it), label = !!it.key;
+    Object.assign(f, { altFrac: f.alt / Math.max(1, 2 * f.n - 1), aw: Math.abs(f.writhe), r12: f.r1 + f.r2, len: ps.len, aspect: ps.aspect });
+    const feats = { crossings: 'n', alternations: 'alt', 'alternations (closed)': 'altClosed', 'alternation share': 'altFrac', '|writhe|': 'aw', writhe: 'writhe', curls: 'r1', 'loops on top': 'r2', 'curls + loops': 'r12', bigons: 'bigons', 'slide-over triangles': 'r3', 'rope length': 'len', aspect: 'aspect' };
+    for (const [name, k] of Object.entries(feats)) out['pull: ' + name] = { score: f[k], label, chance };
+    out['pull: descending from an end ⇒ no knot'] = { hit: f.mono === !it.key ? 1 : 0, chance };
+    out['pull: descending ⇒ no knot, else a guess'] = { hit: f.mono ? (it.key ? 0 : 1) : 0.5, chance };
+    return out;
+  }
+  if (p.variant === 'untie' || p.variant === 'tie') {
+    const fc = H.shadowFacts(dg), fs = it.tags.map((c) => H.switchFeatures(dg, fc, it.over, c));
+    const vis = it.tags.map((c) => { const o = it.over.slice(); o[c] = !o[c]; const f = H.ropeFeatures(H.withOver(dg, o)); return f.r1 + f.r2; });
+    const dc = it.tags.map((c) => Math.hypot(dg.X[c].x - 160, dg.X[c].y - 160)), ol = overStrands(dg), oa = it.tags.map((c) => ol[c]);
+    const feats = {
+      'switch makes a loop slide off': fs.map((f) => f[0]), 'twist region': fs.map((f) => f[1]),
+      'change in alternations': fs.map((f) => f[2]), 'change in alternations (closed)': fs.map((f) => f[3]),
+      'visible moves after the switch': vis, 'distance from the centre': dc,
+      handedness: it.tags.map((c) => (dg.D.oin[c] === 3 ? 1 : -1)), 'crossing angle': it.tags.map((c) => Math.round(dg.X[c].sin * 100)),
+      'strand on top': oa,
+    };
+    for (const [name, v] of Object.entries(feats)) {
+      const n = (x) => v.filter((y) => Math.abs(y - x) < 1e-9).length;
+      out['options: ' + name + ': most'] = { hit: pickBest(v, it.key), chance };
+      out['options: ' + name + ': least'] = { hit: pickBest(v.map((x) => -x), it.key), chance };
+      out['options: ' + name + ': odd one out'] = { hit: pickBest(v.map((x) => -n(x)), it.key), chance };
+      out['options: ' + name + ': most like the others'] = { hit: pickBest(v.map((x) => n(x)), it.key), chance };
+    }
+    return out;
+  }
+  if (p.variant !== 'link') return out;
+  const fc = H.linkFacts(dg), sg = H.linkSig(fc, it.over), parts = sg.key.split('|'), alts = parts[1].split(',').map(Number), label = !!it.key;
+  out['link: odd A-over-B count ⇒ linked'] = { hit: sg.a % 2 ? (it.key ? 1 : 0) : 0.5, chance };
+  out['link: alternations round loop A'] = { score: alts[0], label, chance };
+  out['link: alternations round loop B'] = { score: alts[1], label, chance };
+  out['link: |writhe|'] = { score: Math.abs(+parts[2]), label, chance };
+  out['link: visible slides'] = { score: +parts[3], label, chance };
+  return out;
+}
+export const SHORTCUT_EXEMPT = [];

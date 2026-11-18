@@ -559,3 +559,17 @@ export function checkLearn(t, PX, def, id, kindOf) {
     t.ok(keys.length > 5 && missing.length === 0, `every caption the view uses exists (${keys.length} keys${missing.length ? '; missing ' + missing.join(', ') : ''})`);
   }
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (shortcutReport's
+   per-item answers: the no-integration ones bounded, the turn-only family as information; the fixed angle is
+   fitted per route × tolerance cell there, with its structural exceptions) */
+export function shortcutScores(PX, def, it, params) {
+  const chance = def.chance(params || it.params || {}), T = it.turns.reduce((s, x) => s + x, 0);
+  const hit = (a, info) => ({ hit: def.score(it, norm360(a)).correct ? 1 : 0, chance, info: !!info });
+  return {
+    'turn around': hit(180), mirror: hit(360 - it.key), 'turns reversed': hit(180 - T), 'heading not updated': hit(it.key + T),
+    'equal legs': hit(walk(it.startHeading, it.legs.map(() => 1), it.turns).key, true), '180 − ΣT/2': hit(180 - T / 2, true),
+    'back along the leg before the last turn': hit(180 - it.turns.at(-1), true),
+  };
+}
+export const SHORTCUT_EXEMPT = [];
