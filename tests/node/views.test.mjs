@@ -43,7 +43,7 @@ function testDefinition(t, PX, def) {
   t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 6], ['grid', 2], ['view', 3]], 'dims: cubes × grid × view');
   t.eq(def.dims[0].levels, ['3–4', 4, 6, 8, 10, 12], 'cubes: the starter level, then 4–12 in steps of two');
   t.eq(def.starter, { dim: 'cubes', levels: 1 }, 'starter: the first cubes level');
-  t.eq(def.variants, ['toview', 'toobject', 'count'], 'variants');
+  t.eq(def.variants, ['toview', 'toobject', 'count', 'draw'], 'variants (draw: the produce layer, W2-bets; tests/node/layers-produce.test.mjs)');
   const stepSpan = def.dims.reduce((s, d, i) => s + d.step * (d.levels.length - (i === 0 ? 2 : 1)), 0);
   t.ok(stepSpan >= 4, `the 1.1 dims' steps span at least 4 logits (${stepSpan.toFixed(2)})`);
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
@@ -52,7 +52,7 @@ function testDefinition(t, PX, def) {
   t.near(hi, 1.9, 1e-9, 'the top of the range is the 1.1 top');
   const d = (variant, cubes, grid, view) => def.difficulty({ cubes, grid, view, variant });
   // every 1.1 combination keeps its difficulty, one level up; the band: toview Δ −1.6, others = level 0
-  const all = PX.ex.enumerate(def);
+  const all = PX.ex.enumerate(def).filter((p) => p.variant !== 'draw'); // v1.2 wave 2 (W2-bets): draw = toview + its offset (tests/node/layers-produce.test.mjs)
   let same = 0, n11 = 0;
   const v11 = (p) => -2.2 + 0.65 * oldLevel(p) + 0.6 * p.grid + (p.variant === 'toview' ? [0, 0.45, 0.9][p.view] : 0) + { toview: 0, toobject: 0.9, count: -0.2 }[p.variant];
   for (const p of all) if (p.cubes > 0) { n11++; if (Math.abs(def.difficulty(p) - v11(p)) < 1e-9) same++; }
@@ -100,7 +100,7 @@ function testMethods(t, PX, L) {
 
 function testPool(t, PX, def, L) {
   t.section('views: pool');
-  const combos = PX.ex.enumerate(def);
+  const combos = PX.ex.enumerate(def).filter((p) => p.variant !== 'draw'); // v1.2 wave 2 (W2-bets): the draw variant has its own tests
   t.eq(combos.length, 108, '108 combinations (6 × 2 × 3 levels × 3 variants)');
   const per = Math.ceil(N_ITEMS / combos.length), items = [];
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, json = 0, first = null;
