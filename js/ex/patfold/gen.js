@@ -263,6 +263,19 @@
     });
   }
 
+  // v1.2 (fresh-player test: a scored item was the Watch's own item, answerable from memory): an item of
+  // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
+  // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
+  // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
+  var TUTORIAL = [1013064581, 667686021, 3477199578, 1997380191, 2195573640, 1197173088];
+  function stemSig(item) { return PX.rng.hash('patfold-stem', JSON.stringify([item.folds.map(function (f) { return [f.line, f.seg]; }), item.punches])); }
+  function generateFresh(rng, params) {
+    var item = generate(rng, params);
+    if (params && params.task === 'tutorial') return item;
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    return item;
+  }
+
   // Fallback: a valid item for these params from a fixed search (the same for every seed, so
   // cached), soft limits relaxed after 200 tries; marked fallback: true (the engine voids it).
   // The node test finds one for every params combination within the first 400 tries.
@@ -334,10 +347,11 @@
     base: BASE,
     difficulty: difficulty,
     chance: 1 / NOPT,
-    generate: generate,
+    generate: generateFresh, extraParams: ['task'],
     validate: validate,
     score: score,
     lib: {
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
       SIZE: SIZE, FOLDS: FOLDS, TYPES: TYPES, IDLE: IDLE, AXES: AXES,
       norm: normParams, foldParams: foldParams, idleOf: idleOf, fallback: fallbackFor,
       // Fold's sheet helpers on the 4 × 4 sheet (maskOf, hamming, symScore, reflCell, …): fn(A).

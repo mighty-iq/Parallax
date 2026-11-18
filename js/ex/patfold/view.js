@@ -383,16 +383,19 @@
     if (!st || st.item !== item) return Promise.resolve();
     var F = item.folds.length, folds = [];
     for (var k = 0; k < F; k++) folds.push(k);
+    // v1.2: each Watch caption waits for a tap in the player, so the panels and the sheets are named
+    // under one caption (the folds pointed, then the punch, then none)
     var intro = [
-      { ms: 2200, caption: cap('folds'), enter: function () { setMode('strip'); focusOption(-1); point(folds); }, exit: function () { point([]); } },
-      { ms: 1800, caption: cap('punch'), enter: function () { setMode('strip'); point([F]); }, exit: function () { point([]); } },
-      { ms: 1800, caption: cap('options'), enter: function () { setMode('strip'); point([]); } },
+      { ms: 2000, caption: cap('intro'), enter: function () { setMode('strip'); focusOption(-1); point(folds); }, exit: function () { point([]); } },
+      { ms: 1600, enter: function () { setMode('strip'); point([F]); }, exit: function () { point([]); } },
+      { ms: 900, enter: function () { setMode('strip'); point([]); } },
     ];
-    // then why one wrong sheet of each kind fails (the Watch shows every kind of foil Try uses)
-    var kinds = {}, tour = [];
+    // then why one wrong sheet of each kind fails (the Watch shows every kind of foil Try uses), before
+    // the right one: the Watch ends on the answer, so the player's turn starts with no wrong sheet marked
+    var kinds = {}, tour = [], list = steps(item, null), done = list.pop();
     item.options.forEach(function (o, i) { var w = shortWhy(item.why[i]); if (i !== item.key && !kinds[w]) { kinds[w] = 1; tour.push(chosenStep(item, i)); } });
-    return play(intro.concat(steps(item, null), tour), ctx, { name: 'demo', caption: caption || null })
-      .then(function () { if (st) focusOption(-1); });
+    return play(intro.concat(list, tour, [done]), ctx, { name: 'demo', caption: caption || null })
+      .then(function () { if (st) { focusOption(-1); st.caption.textContent = ''; } });
   }
 
   function unmount() {
