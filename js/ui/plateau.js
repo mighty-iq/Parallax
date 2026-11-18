@@ -77,9 +77,11 @@
       case 'stage-back': return ['Your ' + name + ' answers right after a switch from another exercise have been weaker than your level predicts.',
         'So ' + name + ' comes in longer runs now (mixing stage ' + d.stage + ' of 5).'];
       case 'drill': {
-        var share = isNum(cfg().change.drill) ? cfg().change.drill : C.weak.share;
+        // the drill's share of target items, which are 1 − easy − stretch of a deck; fewer when the deck's room for
+        // changed items is used up (E.dims.room)
+        var share = (isNum(cfg().change.drill) ? cfg().change.drill : C.weak.share) * (1 - C.mix.easy - C.mix.stretch);
         return ['Your answers with ' + dimText(def, d.dim, d.level) + ' fall below what your level predicts, and items there are within your reach.',
-          'So about 1 in ' + Math.round(1 / share) + ' of its items is set at ' + dimText(def, d.dim, d.level) + ', with the other settings fitted to your level: one weak setting can hold the whole level back.'];
+          'So up to about 1 in ' + Math.round(1 / share) + ' of its items is set at ' + dimText(def, d.dim, d.level) + ', with the other settings fitted to your level: one weak setting can hold the whole level back.'];
       }
       case 'speed-in-train': return ['Your ' + name + ' answers are steady and accurate, while your right answers vary a lot in time.',
         'So more of its items come with a deadline set from your own times, as in Speed. They train speed only: your untimed level does not count them.'];

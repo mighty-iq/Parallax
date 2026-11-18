@@ -224,7 +224,7 @@ where b_i is the difficulty the rating used (with a person-specific offset when 
 | Row | Signal | Change |
 |---|---|---|
 | 1 | answers right after a switch below the window's own prediction by ≥ 0.05 (z ≥ 2, ≥ 20 such answers; stage 2 or higher) | interleaving stage back one |
-| 2 | a weak-spot level (§4) with items near the target | drill it: a fifth of target items set at that level |
+| 2 | a weak-spot level (§4) with items near the target | drill it: a fifth of target items set at that level, within the deck's room for changed items (conflict 10: at most 3 of 8) |
 | 3 | Speed open, no speed-up, right answers' median time ≥ 1.3 × their fastest quartile at matched difficulty | Speed inside Train: more items with Speed's deadline |
 | 4 | a late-session decline (−0.05, z ≤ −2), or massed practice with any decline | rest the exercise 3.5 days |
 | 5 | the check-ins in the window name one strategy, or none | the other strategy, its card before the first item of each session |

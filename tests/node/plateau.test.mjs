@@ -471,7 +471,7 @@ export async function run(t) {
     const k0 = E.model.styleK('balanced'), g = E.model.refChance(def);
     const cases = {
       'stage-back': { detail: { stage: 2 }, want: ['mixing stage 2 of 5'] },
-      drill: { detail: { dim: 'folds', level: 3 }, want: ['1 in ' + Math.round(1 / E.config.weak.share)] },
+      drill: { detail: { dim: 'folds', level: 3 }, want: ['up to about 1 in ' + Math.round(1 / (E.config.weak.share * (1 - E.config.mix.easy - E.config.mix.stretch)))] },
       'speed-in-train': { detail: {}, want: ['deadline', 'untimed level does not count them'] },
       rest: { detail: { days: 3.5 }, want: ['rests until'] },
       'other-strategy': { detail: { strategy: 'imagery' }, want: ['the other method', 'does not count against it'] },
