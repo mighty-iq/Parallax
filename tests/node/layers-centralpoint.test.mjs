@@ -88,6 +88,30 @@ export async function run(t) {
   t.eq(found, 40, 'crossing: a four-target item that shows it, every time');
   t.eq(B.applySeed(rec, ID, 'crossing', { variant: 'quick', targets: 2, band: 0 }, 5), null, 'crossing does not apply to six targets');
 
+  t.section('centralpoint layers: the bridge set "Meeting point" (10,000 items, solver-checked)');
+  const BR = C.bridge.sets['cp-meet'];
+  t.ok(B.hosts(def, 'bridge') === (def.layers && def.layers.bridge === 'cp-meet'), 'the definition names the set it hosts');
+  let bn = 0, bnull = 0, bvalid = 0, bdet = 0;
+  const pos = [0, 0, 0, 0], picks = Object.fromEntries(Object.keys(BR.pickers).map((k) => [k, 0]));
+  for (let s = 1; s <= 10000; s++) {
+    const it = BR.item(s);
+    if (!it) { bnull++; continue; }
+    bn++;
+    if (BR.validate(it) === true) bvalid++;
+    if (JSON.stringify(BR.item(s)) === JSON.stringify(it) && JSON.stringify(JSON.parse(JSON.stringify(it))) === JSON.stringify(it)) bdet++;
+    pos[it.key]++;
+    for (const k of Object.keys(BR.pickers)) if (BR.pickers[k](it) === it.key) picks[k]++;
+  }
+  t.ok(bnull <= 10, 'an item for nearly every seed (' + bnull + ' of 10,000 without)');
+  t.eq(bvalid, bn, 'the independent validator accepts every item (one best spot, foils 5–30 % worse, no average marker, spots apart)');
+  t.eq(bdet, bn, 'items are determined by their seed and survive JSON');
+  t.ok(pos.every((x) => Math.abs(x / bn - 0.25) < 0.02), 'the key’s letter is spread evenly (' + pos.join(' / ') + ')');
+  // crowd2 (most homes within two dots) is a coarse total, the partial skill the item asks for: reported, not
+  // bounded (DECISIONS 18 Nov, W2-bets; Central Point's own precedent for "nudge the average towards the group")
+  for (const k of Object.keys(picks)) if (k !== 'crowd2') t.ok(picks[k] / bn <= 0.35, 'bridge shortcut ' + k + ': ' + (100 * picks[k] / bn).toFixed(1) + ' % (chance 25 %)');
+  console.log('      meeting point shortcuts:', Object.entries(picks).map(([k, v]) => k + ' ' + (100 * v / bn).toFixed(1) + ' %').join(', '));
+  t.ok(BR.map.options.filter((o) => o.right).length === 1 && BR.uses.length >= 3, 'one right mapping, a menu of uses');
+
   t.section('centralpoint layers: words');
   const o = C.offscreen;
   t.ok(o.id && o.title && o.text && o.steps.length >= 3 && o.note, 'the off-screen challenge has a title, a text, steps and a note');

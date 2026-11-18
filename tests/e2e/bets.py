@@ -279,6 +279,74 @@ def run_round(b, only=None):
             round_for(b, ex, w, h, calib=(ex == 'centralpoint' and w == 390))
 
 
+PREP_BRIDGE = '''(id) => {
+  const S = PX.core.store, rec = S.state, st = S.exState(id);
+  st.n = 40; st.nRight = 28; st.mu = 0.5; st.sd = 0.45; st.last = Date.now();
+  rec.settings.betTrials = false;
+  S.save();
+  return true;
+}'''
+
+
+def run_bridge(b):
+    for (w, h) in SIZES:
+        tag = f'bridge centralpoint {w}x{h}'
+        ctx = ctx_for(b, w, h)
+        page = ctx.new_page()
+        con = Console(page)
+        boot(page)
+        page.evaluate(PREP_BRIDGE, 'centralpoint')
+        page.evaluate('PX.core.store.state.settings.sessionMin = 2; PX.ui.play.config.budgetMs = 60000;')
+        rows0 = page.evaluate('PX.core.store.state.trials.length')
+        go(page, 'play', {'mode': 'train', 'exId': 'centralpoint'})
+        try:
+            wait_card(page, 'bets-bridge')
+            ok = True
+        except Exception:
+            ok = False
+        C.ok(ok, f'{tag}: a bridge set opens the run once the level has settled')
+        if not ok:
+            page.screenshot(path=str(OUT / f'bridge_missing_{w}.png'))
+            ctx.close()
+            continue
+        card = page.locator('[data-card-box="bets-bridge"]')
+        C.ok(card.locator('.px-bets-fig').count() == 2, f'{tag}: the real setting beside its twin')
+        C.ok(not page.evaluate(SMALL_JS, '[data-card-box="bets-bridge"] .px-btn'), f'{tag}: 44 px targets (pair)')
+        no_scroll(page, tag + ' pair')
+        card.first.screenshot(path=str(OUT / f'bridge_pair_{w}.png'))
+        card.locator('.px-bets-opt').nth(0).click(); page.wait_for_timeout(150)
+        C.ok('targets' in card.first.inner_text() and card.locator('.px-bets-opt.is-right').count() == 1, f'{tag}: the mapping line after the pick')
+        card.locator('[data-bets="bridge-next"]').first.click(); page.wait_for_timeout(200)
+        for n in (1, 2):
+            C.ok(card.locator('.bets-town-letter').count() == 4, f'{tag}: item {n}: a town map with four lettered spots')
+            if n == 1:
+                no_scroll(page, tag + ' item')
+                card.first.screenshot(path=str(OUT / f'bridge_item_{w}.png'))
+            if w >= 700:
+                page.keyboard.press('2')
+            else:
+                card.locator('.px-bets-opt').nth(1).click()
+            page.wait_for_timeout(150)
+            C.ok(card.locator('.bets-town-walk').count() >= 4, f'{tag}: item {n}: the best spot’s walks are drawn')
+            if n == 1:
+                card.first.screenshot(path=str(OUT / f'bridge_item_after_{w}.png'))
+            card.locator('[data-bets="bridge-next"]').first.click(); page.wait_for_timeout(200)
+        C.ok('Where else' in card.first.inner_text(), f'{tag}: the last question')
+        card.locator('.px-bets-opt').nth(3).click(); page.wait_for_timeout(150)
+        inp = card.locator('.px-bets-other input')
+        C.ok(inp.count() == 1 and inp.first.is_visible(), f'{tag}: "somewhere else" opens an optional box')
+        inp.first.fill('my secret workshop')
+        card.first.screenshot(path=str(OUT / f'bridge_uses_{w}.png'))
+        card.locator('[data-bets="bridge-next"]').first.click()
+        page.wait_for_function('__play.state === "respond" || !!document.querySelector("[data-card-box]")', timeout=15000)
+        ev = page.evaluate("PX.engine.events.list(PX.core.store.state, { kind: 'bridge' })")
+        C.ok(len(ev) == 1 and len(ev[0]['data']['items']) == 2 and ev[0]['data']['use'] == 'other' and ev[0]['data']['other'] == 1, f'{tag}: the bridge event: two items, the use, that a text was typed ({ev[:1]})')
+        C.ok('secret' not in json.dumps(page.evaluate('PX.core.store.state')), f'{tag}: the typed text is nowhere in the record')
+        C.ok(page.evaluate('PX.core.store.state.trials.length') == rows0, f'{tag}: bridge items write no trial rows')
+        C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+        ctx.close()
+
+
 DRAW_JS = '''([ex, pid, params, seed]) => {
   const B = PX.engine.bets, r = B.round(ex, pid, params, seed, 1);
   if (!r) return 'no round';
@@ -356,7 +424,7 @@ def run_expect(b):
 
 
 if __name__ == '__main__':
-    which = sys.argv[1:] or ['screens', 'round', 'draw', 'expect']
+    which = sys.argv[1:] or ['screens', 'round', 'draw', 'bridge', 'expect']
     if any(x.startswith('round:') for x in which):
         which.append('round')
     with sync_playwright() as p:
@@ -367,6 +435,8 @@ if __name__ == '__main__':
             run_round(b, [x[6:] for x in which if x.startswith('round:')] or None)
         if 'draw' in which:
             run_draw(b)
+        if 'bridge' in which:
+            run_bridge(b)
         if 'expect' in which:
             run_expect(b)
         b.close()

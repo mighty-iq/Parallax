@@ -354,6 +354,117 @@
     });
   }
 
+  /* ---------- bridge sets between items (note T1 §4.2; CONTRACT R item:before, O 'bridge') ----------
+     One card, four steps: the bridge pair (a real setting beside its idealised twin) with the mapping
+     question and its line; two items in the real setting (solver-checked; outcomes only in the bridge
+     event, never rows); "Where else would this help?" with an optional "somewhere else" box whose text
+     never leaves this screen (only that one was typed is logged). */
+  function runBridge(ctx, d) {
+    var b = B(), def = ctx.def, c = b.content(def.id), set = c && c.bridge && c.bridge.sets ? c.bridge.sets[d.set] : null, V = views()[def.id];
+    if (!set || !V || !V.town) return Promise.resolve(null);
+    var seed0 = ctx.step && isNum(ctx.step.seed) ? ctx.step.seed : Date.now() >>> 0, items = [];
+    for (var k = 0; k < 6 && items.length < 3; k++) {
+      var it = null;
+      try { it = set.item(PX.rng.hash('bets-bridge', seed0, k) >>> 0); } catch (e) { report('bridge item', e); }
+      if (it && set.validate(it) === true) items.push(it);
+    }
+    if (items.length < 3) return Promise.resolve(null);
+    var pair = items[0], out = { map: null, mapOk: false, items: [], use: null, other: false }, t0 = Date.now();
+    var body = h('div.px-bets-bridge', { 'data-set': set.id }), popK = null;
+    return ctx.card({ id: 'bets-bridge', title: 'Same problem, real setting: ' + set.title, def: def, lines: [body], actions: [], className: 'px-bets-card',
+      onShow: function (panel, done) {
+        function clear() { while (body.firstChild) body.removeChild(body.firstChild); }
+        function keysFor(map) { if (popK) popK(); popK = PX.core.keys.push(map, { through: true }); }
+        function nextBtn(label, fn) { var n = ui.button(label, { kind: 'primary', onClick: fn }); n.setAttribute('data-bets', 'bridge-next'); return h('div.px-bets-next', n); }
+        function choices(list, onPick) {
+          var row = h('div.px-bets-opts', { role: 'group' }), picked = false;
+          var btns = list.map(function (o, i) {
+            var bt = ui.button(h('span', h('span.px-bets-key', String(i + 1)), h('span', o.text)), { kind: 'secondary', className: 'px-bets-opt', onClick: function () { pick(i); } });
+            bt.setAttribute('data-opt', String(i));
+            row.appendChild(bt);
+            return bt;
+          });
+          function pick(i) { if (picked) return; picked = true; onPick(i, btns); }
+          var map = {};
+          list.forEach(function (o, i) { map[String(i + 1)] = function () { pick(i); }; });
+          keysFor(map);
+          return row;
+        }
+        // 1. the pair and the mapping question
+        function step1() {
+          clear();
+          var hT = h('div.px-bets-figbox'), hB = h('div.px-bets-figbox'), meet = pair.spots[pair.key];
+          body.appendChild(h('p.px-bets-q', set.pairText));
+          body.appendChild(h('div.px-bets-pair', h('figure.px-bets-item', hT, h('figcaption', 'Real setting')), h('figure.px-bets-item', hB, h('figcaption', 'Central Point'))));
+          try { V.town(hT, pair.homes, null, { meet: meet }); V.board(hB, pair.homes, meet); } catch (e) { report('bridge draw', e); }
+          body.appendChild(h('p.px-bets-q', set.map.q));
+          var after = h('div.px-bets-after', { hidden: true });
+          body.appendChild(choices(set.map.options, function (i, btns) {
+            out.map = set.map.options[i].id; out.mapOk = !!set.map.options[i].right;
+            btns.forEach(function (bt, j) { bt.disabled = true; bt.classList.add(set.map.options[j].right ? 'is-right' : j === i ? 'is-wrong' : 'is-dim'); });
+            after.hidden = false;
+            after.appendChild(h('p.px-bets-principle', set.map.line));
+            after.appendChild(nextBtn('Try it', function () { step2(1); }));
+            keysFor({ Enter: function () { step2(1); } });
+          }));
+          body.appendChild(after);
+        }
+        // 2–3. two items in the real setting
+        function step2(n) {
+          clear();
+          var it = items[n], hT = h('div.px-bets-figbox.px-bets-big'), shownAt = Date.now();
+          body.appendChild(h('p.px-bets-q', 'Item ' + n + ' of 2. ' + set.q));
+          body.appendChild(h('figure.px-bets-item.px-bets-solo', hT));
+          var mk = null;
+          try { mk = V.town(hT, it.homes, it.spots); } catch (e) { report('bridge draw', e); }
+          var after = h('div.px-bets-after', { hidden: true });
+          body.appendChild(choices(it.spots.map(function (p, i) { return { text: 'Spot ' + String.fromCharCode(65 + i) }; }), function (i, btns) {
+            var ok = i === it.key, rt = Date.now() - shownAt;
+            out.items.push([it.seed >>> 0, 0, ok ? 1 : 0, rt]);
+            btns.forEach(function (bt, j) { bt.disabled = true; bt.classList.add(j === it.key ? 'is-right' : j === i ? 'is-wrong' : 'is-dim'); });
+            if (mk) mk.mark(it.key);
+            var tot = it.spots.map(function (p) { return set.total(it.homes, p[0], p[1]) / 2; });
+            after.hidden = false;
+            after.appendChild(h('p.px-bets-verdict', { role: 'status' }, ok ? 'Yes: spot ' + String.fromCharCode(65 + it.key) + '.' : 'Spot ' + String.fromCharCode(65 + it.key) + ' is best.'));
+            after.appendChild(h('p.px-meta', 'Walks in total, in dots: ' + tot.map(function (v, j) { return String.fromCharCode(65 + j) + ' ' + v.toFixed(1); }).join(' · ') + '.'));
+            var go = n === 1 ? function () { step2(2); } : step3;
+            after.appendChild(nextBtn(n === 1 ? 'Next item' : 'Last question', go));
+            keysFor({ Enter: go });
+          }));
+          body.appendChild(after);
+        }
+        // 4. where else
+        function step3() {
+          clear();
+          body.appendChild(h('p.px-bets-q', 'Where else would this help you?'));
+          var box = h('div.px-bets-other', { hidden: true });
+          var inp = h('input.px-input', { type: 'text', maxlength: '60', autocomplete: 'off', 'aria-label': 'Where else (stays on this screen, never saved)' });
+          box.appendChild(h('label.px-meta', 'Where? (optional; stays on this screen, never saved) ', inp));
+          var after = h('div.px-bets-after', { hidden: true });
+          body.appendChild(choices(set.uses, function (i, btns) {
+            out.use = set.uses[i].id;
+            btns.forEach(function (bt, j) { bt.disabled = true; if (j === i) bt.classList.add('is-right'); else bt.classList.add('is-dim'); });
+            if (set.uses[i].id === 'other') { box.hidden = false; try { inp.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+            after.hidden = false;
+            after.appendChild(nextBtn('Back to training', finish));
+            keysFor({ Enter: function () { if (document.activeElement === inp) return false; finish(); } });
+          }));
+          body.appendChild(box);
+          body.appendChild(after);
+          function finish() { out.other = !!String(inp.value || '').trim(); inp.value = ''; if (popK) { popK(); popK = null; } done('next'); }
+        }
+        step1();
+      },
+    }).then(function (v) {
+      if (popK) { popK(); popK = null; }
+      if (v === 'closed' || !out.items.length) return null;
+      var S = store();
+      b.bridged(S.state, ctx.plan, { exId: def.id, set: set.id, map: out.map || 'none', mapOk: out.mapOk, items: out.items, use: out.use || 'none', other: out.other, rt: Date.now() - t0 }, Date.now());
+      S.save();
+      return null;
+    });
+  }
+
   PX.ui.hooks.on('item:before', function (ctx) {
     if (!ctx || (ctx.mode !== 'train' && ctx.mode !== 'path')) return null;
     var step = ctx.step, def = ctx.def;
@@ -362,7 +473,7 @@
     try { d = B().due(ctx.rec, ctx.plan, def.id, ctx.now, { newRun: !!step.newRun, misses: ctx.misses || 0, params: step.params }); } catch (e) { report('due', e); }
     if (!d) return null;
     if (d.kind === 'compare') return runRound(ctx, d);
-    if (d.kind === 'bridge' && PX.ui.bets.runBridge) return PX.ui.bets.runBridge(ctx, d);
+    if (d.kind === 'bridge') return runBridge(ctx, d);
     return null;
   }, { id: 'bets.layers', order: 30 });
 
@@ -420,5 +531,5 @@
     };
   }, { id: 'bets.calib', order: 40 });
 
-  PX.ui.bets = { betLine: betLine, eventsCSV: eventsCSV, doseCSV: doseCSV, LAYER_WORDS: LAYER_WORDS, exNames: exNames, uiBets: uiBets, showRound: showRound, runRound: runRound, report: report, runBridge: null };
+  PX.ui.bets = { betLine: betLine, eventsCSV: eventsCSV, doseCSV: doseCSV, LAYER_WORDS: LAYER_WORDS, exNames: exNames, uiBets: uiBets, showRound: showRound, runRound: runRound, report: report, runBridge: runBridge };
 })(window.PX);
