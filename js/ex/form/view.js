@@ -319,6 +319,11 @@
       },
     };
   }
+  // Step 1 of the card on the item: every wrong-size solid with the edge that differs marked in it and
+  // in the pattern.
+  function markSizes(item) {
+    item.options.forEach(function (o, i) { if (i !== item.key && o.kind === 'shape') { var e = changedEdge(item, i); if (e) markEdge(item, i, e); } });
+  }
   // The Watch also shows why two wrong ones are wrong: the wrong-size solid and the mirror image (or,
   // without a mirror image, marks in the wrong place).
   function foilTour(item) {
@@ -448,9 +453,11 @@
     var list = [
       { ms: 1500, caption: cap('pattern'), enter: function () { clearMarks(); st.label.classList.add('is-pointed'); }, exit: function () { st.label.classList.remove('is-pointed'); } },
       { ms: 1400, caption: cap('solids'), enter: function () { clearMarks(); } },
-      { ms: 1900, caption: cap('landmark', { f: 'A' }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags.slice(0, 1)); } },
-      { ms: 2000, caption: cap('match', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags.slice(0, 1)); } },
-      { ms: 2200, caption: cap('neighbours', { list: tags.slice(1).map(function (x) { return x.t; }).join(', ') || '—' }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
+      // the card's steps in its order and words (note D2 addendum C): each caption marks what it names
+      { ms: 2600, caption: cap('sizes'), enter: function () { clearMarks(); markSizes(item); } },
+      { ms: 2200, caption: cap('landmark', { f: 'A' }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags.slice(0, 1)); } },
+      { ms: 2400, caption: cap('neighbours', { list: tags.slice(1).map(function (x) { return x.t; }).join(', ') || '—' }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags); } },
+      { ms: 2400, caption: cap('match', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
       { ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
     ];
     var landStep = list[list.length - 1];
