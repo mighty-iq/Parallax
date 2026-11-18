@@ -217,9 +217,12 @@ export function simulateLearner(T, spec, seed) {
       for (let k = 0; k < m; k++) {
         const kk = e.seen === 0 && k < 2 && spec.mode !== 'summary' ? 0.85 : 0.6;
         const post = summarize(lw), b = bFor(post.mu, kk, g, a), bT = b + S.itemNoise * r.normal();
-        const th = base + Fx * (1 - Math.exp(-(e.n + k) / lamT)) + Tx * (e.nt + k) / 16;
+        let th = base + Fx * (1 - Math.exp(-(e.n + k) / lamT)) + Tx * (e.nt + k) / 16, strand = -1;
+        // the near probe's strands (tests/node/measure-cross.mjs): item i of the probe reads strand i mod 6,
+        // and spec.shift(strand, day, h) adds that strand's own change (a layer's effect, strand deviations)
+        if (spec.strands && id === spec.strands.probe) { strand = (e.seen + k) % spec.strands.n; th += spec.shift(strand, o.day, hT); }
         const ok = r.u() < pRight(th, bT, g, a) ? 1 : 0;
-        items.push([b, g, ok, a]);
+        items.push(strand >= 0 ? [b, g, ok, a, strand] : [b, g, ok, a]);
         for (let i = 0; i < GRID.length; i++) { const p = pRight(GRID[i], b, g, a), l = Math.log(ok ? p : 1 - p); lw[i] += l; ll[i] += l; }
       }
       e.n += m; e.nt += m; e.seen += m; out.items += m;
