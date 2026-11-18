@@ -1,4 +1,4 @@
-/* PX.engine.achievements: a fixed list of 20 milestones for skill and good practice (PLAN §7;
+/* PX.engine.achievements: a fixed list of 22 milestones (v1.2 adds Summit, the top of a weekly Climb) for skill and good practice (PLAN §7;
    D §b). Each has visible criteria and a check over the learner record. No points, nothing for
    time spent, and no wording that declares a skill finished: names say what was done.
    Answers that stuttered or were skipped never count (only outcome 1 rows are read).
@@ -53,6 +53,8 @@
     { id: 'new-best', kind: 'skill', name: 'New best block', desc: 'Beat your best whole block on an exercise.', check: function (c) { return prog(c.bestBeats, 1); } },
     // v1.1 (B7, R3 §9): good practice in Section mode, never a score
     { id: 'full-section', kind: 'practice', name: 'Full section', desc: 'Finish a full Section practice: reach every part and answer at least half of its items.', check: function (c) { return prog(c.fullSections, 1); } },
+    // v1.2 (PLAN milestone 5, W3-game): the top of a weekly Climb, a skill milestone (js/engine/climb.js)
+    { id: 'summit', kind: 'skill', name: 'Summit', desc: 'Clear all 20 rungs of a weekly Climb.', check: function (c) { return prog(c.summit, 1); } },
   ];
 
   function context(rec, now, need) {
@@ -142,6 +144,14 @@
     });
     // Right answers by setting: the highest value reached per numeric dimension, and whether an
     // item from the hardest tenth of a range was answered right. Only read when needed.
+    // v1.2 (W3-game): the highest Climb run (rec.game.climb; rungs from config.game.climb)
+    c.summit = 0;
+    var gc = isObj(rec.game) && isObj(rec.game.climb) ? rec.game.climb : null, rungs = E.config.game && E.config.game.climb ? E.config.game.climb.rungs : 20;
+    if (gc && isObj(gc.pb) && isNum(gc.pb.h) && gc.pb.h >= rungs) c.summit = 1;
+    if (gc && isObj(gc.w)) Object.keys(gc.w).forEach(function (wk) {
+      var w = gc.w[wk];
+      if (isObj(w)) Object.keys(w).forEach(function (a) { if (isObj(w[a]) && isNum(w[a].h) && w[a].h >= rungs) c.summit = 1; });
+    });
     var sc = scanRows(rec, need);
     c.maxRight = sc.maxRight;
     c.hardest = sc.hardest;

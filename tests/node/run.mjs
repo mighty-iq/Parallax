@@ -63,6 +63,9 @@ const MANIFEST_ALL = [
   'js/engine/dims.js',
   'js/engine/plateau.js',
   'js/engine/bets.js',
+  'js/engine/game.js',       // v1.2 milestone 5 (W3-game): the game layer, the Climb, field notes
+  'js/engine/climb.js',
+  'js/engine/fieldnotes.js',
   // ENGINE end
   'js/ex/registry.js',
 ];
