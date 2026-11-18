@@ -68,7 +68,9 @@
     var n = arc.length, p1 = arc[n - 1], p0 = arc[n - 3], dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.sqrt(dx * dx + dy * dy) || 1;
     var ux = dx / L, uy = dy / L, hs = 0.28;
     s.appendChild(poly([[p1[0] + ux * hs, p1[1] + uy * hs], [p1[0] - uy * hs * 0.8, p1[1] + ux * hs * 0.8], [p1[0] + uy * hs * 0.8, p1[1] - ux * hs * 0.8]], 'ow-arrowhead'));
-    s.appendChild(SV.text(arc[0][0] + (arc[0][0] >= B[0] ? 0.55 : -0.55), arc[0][1] - 0.3, item.q === 2 ? '180°' : '90°', { class: 'ow-angle' }));
+    // the angle beside the arc, clear of it: right of its rightmost point, level with its top
+    var ax = Math.max.apply(null, arc.map(function (p) { return p[0]; })), ay = Math.min.apply(null, arc.map(function (p) { return p[1]; }));
+    s.appendChild(SV.text(ax + 0.62, ay + 0.15, item.q === 2 ? '180°' : '90°', { class: 'ow-angle' }));
     return s;
   }
 

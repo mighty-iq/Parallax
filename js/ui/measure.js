@@ -89,7 +89,7 @@
       }
       for (var k = 0; k < def.dims[i].levels.length; k++) { var q = Object.assign({}, p); q[def.dims[i].key] = k; walk(i + 1, q); }
     }
-    walk(0, def.variants && def.variants.length ? { variant: def.variants[0] } : {});
+    (def.variants && def.variants.length ? def.variants : [null]).forEach(function (v) { walk(0, v ? { variant: v } : {}); });
     return hi > 0 ? { lo: Math.round(lo / 1000), hi: Math.round(hi / 1000) } : null;
   }
   function inputName(src) {
@@ -171,17 +171,21 @@
       right.forEach(function (i) { g.mark(i, 'right'); });
       return right.length > 0;
     }
-    // The probe's instruction card; on first contact (or in a full check) its worked example, never scored.
-    function instruct(step, def) {
+    // The probe's instruction card; on first contact (or in a full check) its worked example, never scored. A probe
+    // of several formats (Other Way Round) brings each format's example before that format's first item (again).
+    function instruct(step, def, again) {
       var learn = PX.ex.learn(def.id) || {}, ins = learn.instruction || {};
       var lines = (Array.isArray(ins) ? ins : ins.lines || []).slice();
       if (!lines.length && learn.goal) lines.push(learn.goal);
+      var v = step.params && step.params.variant, expl = v && learn.explain && learn.explain[v];
+      if (again) lines = expl && expl.length ? [expl[0]] : [];
       var ex = step.probe && step.probe.example, canDemo = !!(ex && P.view && P.view.demo);
       var lim = limitRange(def);
+      if (again) { var ms = def.timeLimit ? def.timeLimit(step.params) : null; lim = ms ? { lo: Math.round(ms / 1000), hi: Math.round(ms / 1000) } : null; }
       if (lim) lines.push((lim.lo === lim.hi ? 'Each item has up to ' + lim.lo + ' seconds' : 'Each item has ' + lim.lo + ' to ' + lim.hi + ' seconds (harder items get more)') + ', shown as a slow bar under it.');
       if (block && !canDemo) lines = lines.slice(0, 1).concat(lim ? [lines[lines.length - 1]] : []); // a known task: its goal and its time
       return o.card({
-        id: 'probe-intro', title: 'Task ' + (probes.indexOf(def.id) + 1) + ' of ' + probes.length + ': ' + (ins.title || nameOf(def)), def: def,
+        id: again ? 'probe-format' : 'probe-intro', title: again ? 'Next in ' + (ins.title || nameOf(def)) + ': a new kind of question' : 'Task ' + (probes.indexOf(def.id) + 1) + ' of ' + probes.length + ': ' + (ins.title || nameOf(def)), def: again ? null : def,
         lines: lines.concat(canDemo ? ['First, one worked example. It is never scored.'] : []),
         actions: canDemo ? [{ label: 'Skip the example', value: 'skip' }, { label: 'Show the example', value: 'example', primary: true }] : [{ label: 'Start', value: 'start', primary: true }],
       }).then(function (v) {
@@ -262,7 +266,8 @@
         progress(step);
         var first = step.probe && step.probe.index === 0 && !S.instructed[def.id];
         if (first) S.instructed[def.id] = true;
-        (first ? instruct(step, def) : Promise.resolve(null)).then(function (r) {
+        var again = !first && step.probe && step.probe.example;
+        (first || again ? instruct(step, def, !first) : Promise.resolve(null)).then(function (r) {
           if (S.done) return null;
           if (r === 'stop') { stop(true); return null; }
           var item;
