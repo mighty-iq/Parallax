@@ -11,7 +11,7 @@
    dipN: [lo, hi], kind: 'jump' | 'resume', gain, over, rise }, starts when the engine fires a plateau event
    on the focus (onEvent): −dip for dipN answers, then a jump of `gain` reached over `over` answers ('jump')
    or the rise resumed at `rise` per 100 answers ('resume'). opts.forget: idle days shrink k as the shared
-   model shrinks practice (k · exp(−days / ρ)). opts.rtDrop: the focus's response times fall by that share
+   model shrinks practice (k · exp(−days / ρ)); `given` counts the answers given. opts.rtDrop: the focus's response times fall by that share
    per 100 answers (a 'faster' learner). All randomness comes from PX.rng (seeded). */
 import { Learner } from './learner.mjs';
 
@@ -24,7 +24,8 @@ export class PlateauLearner extends Learner {
     this.respondTo = opts.respond || null;
     this.forget = !!opts.forget;
     this.rtDrop = opts.rtDrop || 0;
-    this.k = 0;
+    this.k = 0;          // effective practice on the focus (shrinks over idle days with forgetting)
+    this.given = 0;      // answers given on the focus
     this.kDay = null;
     this.resp = null;
     this.start = (opts.start ?? 1.0) + r.normal(0, opts.spread ?? 0.4);
@@ -87,7 +88,7 @@ export class PlateauLearner extends Learner {
   respond(def, step, day, opts = {}) {
     if (def.id === this.focus) { this.k = this.kAt(day); this.kDay = day; }
     const res = super.respond(def, step, day, opts);
-    if (def.id === this.focus && res.outcome !== 'stutter') this.k += 1;
+    if (def.id === this.focus && res.outcome !== 'stutter') { this.k += 1; this.given += 1; }
     return res;
   }
 

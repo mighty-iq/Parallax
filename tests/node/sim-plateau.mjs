@@ -142,7 +142,7 @@ function simLearner(PX, cond, i, S) {
         const start = ev.trial.restUntil && ev.trial.restUntil > ev.at ? ev.trial.restUntil : ev.at;
         const rows = focusRows(rec, focus, Math.floor(ev.verdict.at / 1000), Math.floor(start / 1000));
         const sess = new Set(rows.map((r) => r.s)).size;
-        lg.verdicts.push({ id: ev.id, change: ev.change, words: ev.verdict.words, diff: ev.verdict.diff, se: ev.verdict.se, k: L.k, answers: rows.length, sessions: sess, resp: !!L.resp });
+        lg.verdicts.push({ id: ev.id, change: ev.change, words: ev.verdict.words, diff: ev.verdict.diff, se: ev.verdict.se, k: L.k, given: L.given, answers: rows.length, sessions: sess, resp: !!L.resp });
         if (ev.verdict.diff !== null && (rows.length < 120 || sess < 3)) lg.bad.push(`verdict after ${rows.length} answers in ${sess} sessions`);
       }
       for (const ev of pl.fired) {
@@ -157,7 +157,7 @@ function simLearner(PX, cond, i, S) {
         for (let j = 1; j < rows.length; j++) gap = Math.max(gap, rows[j].t - rows[j - 1].t);
         const sess = new Set(rows.map((r) => r.s)), days = new Set(rows.map((r) => localDay(r.t * 1000)));
         const x = {
-          id: ev.id, kind: ev.kind, change: ev.change, row: ev.row, drawn: ev.drawn, eligible: ev.eligible, k: L.k,
+          id: ev.id, kind: ev.kind, change: ev.change, row: ev.row, drawn: ev.drawn, eligible: ev.eligible, k: L.k, given: L.given,
           slope: L.slopeAt(L.k), ceiling: L.trulyAtCeiling(d, L.k, target), resp: !!L.resp, beta: ev.beta, se: ev.se, rt: ev.rt,
           windowRows: rows.length, maxGapDays: gap / 86400, windowSessions: sess.size, windowDays: days.size,
         };
@@ -174,6 +174,7 @@ function simLearner(PX, cond, i, S) {
     }
   }
   lg.k = L.k;
+  lg.given = L.given;
   lg.resp = L.resp;
   return lg;
 }
@@ -185,7 +186,7 @@ const quart = (a) => { const s = a.slice().sort((x, y) => x - y); return s.lengt
 
 function report(cond, logs, S, secs) {
   const out = [], flags = (lg) => lg.events.filter((e) => e.kind === 'plateau' || e.kind === 'faster');
-  const ks = logs.map((l) => l.k);
+  const ks = logs.map((l) => l.given);
   out.push(`== ${COND} · ${MODE} · ${logs.length} learners × ${DAYS} days · calendar ${CAL}${MISSPEC ? ' · misspecified items' : ''}${SET ? ' · config ' + SET : ''} · seed ${SEED} (${secs.toFixed(0)} s)`);
   out.push(`  focus answers per learner: quartiles ${quart(ks).join(' / ')}; sessions per learner median ${quart(logs.map((l) => l.sessions))[1]}`);
   const kinds = {};
@@ -193,12 +194,12 @@ function report(cond, logs, S, secs) {
   out.push(`  events: ${JSON.stringify(kinds)}; plateau events at the truth's ceiling: ${S.plateauAtTrueCeiling}`);
   const bad = logs.filter((l) => l.bad.length);
   out.push(`  structural checks failed: ${bad.length}${bad.length ? ' (' + bad.slice(0, 3).map((l) => l.i + ': ' + l.bad[0]).join('; ') + ')' : ''}`);
-  const minK = Math.min(Infinity, ...logs.flatMap((l) => flags(l).map((e) => e.k)));
+  const minK = Math.min(Infinity, ...logs.flatMap((l) => flags(l).map((e) => e.given))); // answers given
   out.push(`  earliest flag at answer ${minK === Infinity ? '–' : minK} (none before ${WIN} allowed)`);
   const R = { cond: COND, mode: MODE, n: logs.length, kinds, bad: bad.length, minK, plateauAtTrueCeiling: S.plateauAtTrueCeiling };
   if (cond.shape.type === 'linear' || COND === 'break-linear' || COND === 'faster') {
-    const by1000 = logs.filter((l) => flags(l).some((e) => e.k <= 1000)).length, any = logs.filter((l) => flags(l).length).length;
-    const reach = logs.filter((l) => l.k >= 1000).length;
+    const by1000 = logs.filter((l) => flags(l).some((e) => e.given <= 1000)).length, any = logs.filter((l) => flags(l).length).length;
+    const reach = logs.filter((l) => l.given >= 1000).length;
     out.push(`  false alarms: flagged by answer 1,000: ${by1000}/${logs.length} = ${pct(by1000, logs.length)} % (${reach} learners reached 1,000 answers); flagged at any time: ${pct(any, logs.length)} %`);
     Object.assign(R, { fa1000: by1000 / logs.length, faAny: any / logs.length, reached1000: reach });
     if (COND === 'faster') {
