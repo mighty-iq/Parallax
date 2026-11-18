@@ -41,9 +41,16 @@ HIDE_JS = '''(on) => {
 }'''
 
 
+def ready(page):
+    """The app has booted. v1.2 wave 2: the builders' cards and panels (measurement, plateau, bets) have
+    their own browser tests; the clock's checks run without them (PX.ui.hooks.mute)."""
+    page.wait_for_function(READY, timeout=20000)
+    page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')
+
+
 def boot(page, fresh=True):
     page.goto(INDEX.as_uri())
-    page.wait_for_function(READY, timeout=20000)
+    ready(page)
     for _ in range(4):  # the Chimera pop-up, then the first-run tour offer
         if not page.evaluate('PX.ui.modalOpen()'):
             break
@@ -345,7 +352,8 @@ def repro(b):
     page.wait_for_function('__play.state === "reveal" || __play.state === "showme"')
     C.ok('item 1 of 4' in hud(page), f'B2: the HUD counter stays on the answered item during its feedback ({hud(page)!r})')
     row = page.evaluate('PX.core.store.state.trials.slice(-1)[0]')
-    C.ok(len(row) == 12 and row[10] == 2 and row[11] == 1, f'H4: the row has the display class (2 large) and the input (1 mouse): {row[8:]}')
+    # v1.2 wave 2 (CONTRACT-v1.2 N): rows carry value2 (null) and the five codes after the input; amode 1 is the answer grid
+    C.ok(len(row) in (18, 19) and row[10] == 2 and row[11] == 1 and row[12] is None and row[15] == 1, f'H4: the row has the display class (2 large), the input (1 mouse) and the answer mode (option): {row[8:]}')
     answer_n(page, 3)
     page.wait_for_selector('.pl-summary', timeout=10000)
     C.ok(not page.evaluate('document.body.classList.contains("px-item")'), 'H1: px-item off on the summary')
@@ -418,7 +426,7 @@ def repro(b):
     # B4: one CSV
     a = page.evaluate('PX.core.store.exportCSV().split("\\r\\n")[0]')
     b2 = page.evaluate('PX.ui.log.csv(PX.ui.log.rows(PX.core.store.state)).split("\\r\\n")[0]')
-    C.ok(a == b2 and a.endswith('display,input,value2') and 'session' in a, f'B4: Settings and the Log write one CSV format ({a})')
+    C.ok(a == b2 and a.endswith('display,input,value2,kind,layer,answer_mode,orientation,deadline,b_offset,bet,format') and 'session' in a, f'B4: Settings and the Log write one CSV format ({a})')
 
     # B1: Progress counts answered training items only
     n_ans = page.evaluate('''(() => { const r = PX.core.store.state; return r.trials.filter(t => (t[5] === 0 || t[5] === 1) && r.idx.mode[t[2]] !== 'check').length; })()''')
@@ -462,7 +470,7 @@ def repro(b):
     wait_respond(page)
     n0 = page.evaluate('PX.core.store.state.sessions.length')
     page.reload()
-    page.wait_for_function(READY, timeout=20000)
+    ready(page)
     for _ in range(4):
         if not page.evaluate('PX.ui.modalOpen()'):
             break
@@ -472,7 +480,7 @@ def repro(b):
     C.ok(len(s) == n0 + 1 and s[-1]['ended'] == 'closed' and s[-1]['trials'] >= 3, f'T4: the cut session is saved once, as closed ({len(s) - n0}, {s[-1].get("ended")})')
     C.ok(page.locator('[data-restored] .pl-summary').count() == 1 and page.evaluate('__play.state') == 'idle', 'T4: the reopened page shows its summary and starts nothing')
     page.reload()
-    page.wait_for_function(READY, timeout=20000)
+    ready(page)
     C.ok(page.evaluate('PX.core.store.state.sessions.length') == n0 + 1, 'T4: reopening on the summary adds no session')
     # review N4: back (or forward) to a #/play hash never starts a session either
     for _ in range(4):
@@ -492,7 +500,7 @@ def repro(b):
     page.evaluate('PX.core.store.state.ui.lastSummary.at = Date.now() - 13 * 3600e3; PX.core.store.flush && PX.core.store.save();')
     page.wait_for_timeout(1300)
     page.reload()
-    page.wait_for_function(READY, timeout=20000)
+    ready(page)
     C.ok(page.evaluate('PX.core.router.current().name') == 'home', 'T4: an old #/play hash opens Today')
     C.ok(not con.errors(), f'repro: no console errors {con.errors()[:3]}')
     ctx.close()

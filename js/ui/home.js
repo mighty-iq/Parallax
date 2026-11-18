@@ -265,6 +265,13 @@
   // a regular check after 14 days and 8 practice sessions (10 answers or 5 minutes each).
   // → { kind, ready, status, text, label (null: nothing to start yet), dueAt }
   function checkStatus(rec, now) {
+    // v1.2 wave 2 (Design A, W2-measure's request): the words come from js/ui/measure.js when it is
+    // loaded, one source for Today, Progress and the check's end screen; the rest is the fallback
+    var Mx = PX.ui.measure, ms = null;
+    if (Mx && typeof Mx.status === 'function') {
+      try { ms = Mx.status(rec, now); } catch (e) { ms = null; }
+      if (ms && ms.kind) return { kind: ms.kind, ready: !!ms.due, dueAt: ms.when, status: ms.title, text: ms.text, label: ms.label || null, route: ms.route || null };
+    }
     var A = PX.engine.assess, C = PX.engine.config.assess, K = PX.ui.kit, nc = null;
     try { nc = A.nextCheck(rec, now); } catch (e) { nc = null; }
     if (!nc) nc = { ready: true, kind: 'B1', dueAt: now, daysLeft: 0, sessionsLeft: 0, why: '' };
@@ -289,7 +296,8 @@
       if (d > 0) parts.push('in ' + plural(d, 'day', 'days'));
       if (s > 0) parts.push((d > 0 ? '' : 'after ') + plural(s, 'more session', 'more sessions'));
       out.status = nc.ready || !parts.length ? 'A Spatial Check is due' : 'Next check ' + parts.join(' and ');
-      out.text = 'A check comes ' + C.everyDays + ' days and ' + C.everySessions + ' practice sessions (each with 10 answers or 5 minutes) after the last one. It compares your change with a control task and with what familiarity alone would give.';
+      var CM = PX.engine.config.measure, every = CM && CM.everyDays > 0 ? CM.everyDays : C.everyDays;
+      out.text = 'A check comes every ' + every + ' days, at the start of a session. It compares your change with a control task and with what familiarity alone would give.';
       out.label = nc.ready ? 'Take the Spatial Check' : 'Take a check now';
     }
     return out;
@@ -300,7 +308,7 @@
     var p = K.panel({ title: 'Spatial Check', className: 'px-slot px-slot--check', aside: h('span.px-num', n + (n === 1 ? ' check' : ' checks')) });
     p.body.appendChild(h('p.px-status', cs.status));
     p.body.appendChild(h('p.px-slot-text', cs.text));
-    if (cs.label) p.body.appendChild(h('div.px-slot-foot', ui.button(cs.label, { kind: cs.ready ? 'secondary' : 'ghost', go: 'play?mode=check' })));
+    if (cs.label) p.body.appendChild(h('div.px-slot-foot', ui.button(cs.label, { kind: cs.ready ? 'secondary' : 'ghost', go: cs.route || 'play?mode=check' })));
     return p.el;
   }
 

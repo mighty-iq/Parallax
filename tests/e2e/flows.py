@@ -24,6 +24,7 @@ from playwright.sync_api import sync_playwright
 from common import launch, Console, Checks
 from play import (OUT, INDEX, READY, boot, go, state, wait_state, card, click_card, drive, last_row,
                   row_count, seen_all, last_outcome)
+MUTE = 'window.PX_HOOKS_MUTE = true'  # PX.ui.hooks runs no builder's hook, reloads included (js/ui/hooks.js)
 
 
 def shot(page, name, full=False):
@@ -37,6 +38,7 @@ def shot(page, name, full=False):
 def run_tour(b, C):
     tag = 'tour'
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    ctx.add_init_script(MUTE)  # v1.2 wave 2: the builders' cards and panels have their own tests
     page = ctx.new_page()
     con = Console(page)
     page.goto(INDEX.as_uri())
@@ -86,6 +88,7 @@ def run_tour(b, C):
 def run_check(b, C):
     tag = 'check'
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    ctx.add_init_script(MUTE)  # v1.2 wave 2: the builders' cards and panels have their own tests
     page = ctx.new_page()
     con = Console(page)
     boot(page)
@@ -133,7 +136,8 @@ def run_check(b, C):
     a = page.evaluate('PX.core.store.state.assess')
     C.ok(len(a) == 1 and a[0]['kind'] == 'B1' and len(a[0]['results']) >= 5, f'{tag}: saved with every probe ({len(a)} checks, {len(a[0]["results"]) if a else 0} probes)')
     txt = page.locator('.pl-summary').inner_text()
-    C.ok('What the numbers mean' in txt and 'Baseline 2 is next' in txt and 'IQ' in txt, f'{tag}: the end note says what the numbers mean and what comes next')
+    # v1.2 wave 2: the end screen is W2-measure's (js/ui/check.js, Design A; tests/e2e/check.py checks it in full)
+    C.ok('adapted to your answers' in txt and 'not an IQ' in txt and 'Next' in txt, f'{tag}: the end note says what the numbers mean and what comes next')
     shot(page, 'flows_check_end.png', True)
     # a second check stopped part-way is not used for results
     go(page, {'mode': 'check'})
@@ -168,6 +172,7 @@ def run_check(b, C):
 def run_daily(b, C):
     tag = 'daily'
     ctx = b.new_context(viewport={'width': 412, 'height': 880}, device_scale_factor=2, is_mobile=True, has_touch=True, color_scheme='dark', permissions=['clipboard-read', 'clipboard-write'])
+    ctx.add_init_script(MUTE)  # v1.2 wave 2: the builders' cards and panels have their own tests
     page = ctx.new_page()
     con = Console(page)
     boot(page)
@@ -201,6 +206,7 @@ def run_daily(b, C):
 def run_modes(b, C):
     tag = 'modes'
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    ctx.add_init_script(MUTE)  # v1.2 wave 2: the builders' cards and panels have their own tests
     page = ctx.new_page()
     con = Console(page)
     boot(page)
@@ -334,6 +340,7 @@ def lib_switch(page):
 def run_today(b, C):
     tag = 'today'
     ctx = b.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
+    ctx.add_init_script(MUTE)  # v1.2 wave 2: the builders' cards and panels have their own tests
     page = ctx.new_page()
     con = Console(page)
     boot(page, knobs=False)
