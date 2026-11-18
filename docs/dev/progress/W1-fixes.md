@@ -25,12 +25,16 @@ O11; Reckon texts O39, O40. Not in wave 1: Reckon's rated-level changes (final r
   harness_reckon 89/0 (both full runs, through pwslot), including the new `gentle` and `v12` cases.
 - Node: homing 105, reckon 126, section 186 checks pass.
 
+- 16:27–16:55: section.py 116/0 (stand-ins; the new pop-up, O9, O10, O11); answered W1-band-A's and W1-rules' lines;
+  the new node checks fail on v1.1 (every new check) and pass now (homing 106, reckon 127, section 186).
+- 16:14–16:24 the fresh-player retest (lead-run tester, my brief); fixes after it (a6f88f1, d7a7b7d): Watch captions
+  ≥ 3 s and a demo phase line (Homing, Reckon), slower tutorial rungs, "face the same way as at the start", a shorter
+  walk-back tip; requests to W1-rules (Practise sheet → Watch, Try, Go) and W1-core (Your turn strip, Replay, Show me
+  after right answers). Record: docs/dev/reviews/RV-reckon-retest-v1.2.md.
+
 ## In progress
-- tests/e2e/section.py with the new pop-up (W1-rules' one-tap card), O9/O10/O11 checks; part 2's first item (Views,
-  3D) is voided as a frame stutter on this loaded machine, so the test now counts part 2 from the run state.
-- Fresh-player retest of Reckon's tutorial (390 × 844): I cannot spawn agents; the lead runs a tester with my brief
-  and a screenshot-only driver (both in a scratch folder outside the repository; the driver keeps one page open and
-  holds a browser slot only per command). Fix what it finds once.
+- Nothing. Scored items of the retest were not played (the driver, not the app, stalled); the flow did not change,
+  so a rerun is the lead's call. The driver stays running (bounded slot wait).
 
 ## Open problems
 - Section's kept review is dropped when an exercise's version changes between the run and the reload (by design);
