@@ -28,3 +28,41 @@
 .px-bets-scale { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s2) 0; }
 .px-bets-scale .px-btn { min-width: var(--tap); min-height: var(--tap); }
 .px-bets-ends { margin: var(--s2) 0 0; }
+
+/* off-screen challenges on the exercise page */
+.px-bets-off { margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); max-width: var(--measure); }
+.px-bets-off summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+.px-bets-off-row { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin: var(--s2) 0 0; }
+
+/* comparison rounds: two solved items side by side, "What is the same?", the rule (note T1 §4.1) */
+.px-bets-round { display: grid; gap: var(--s3); }
+.px-bets-q { font-weight: 600; margin: 0; }
+.px-bets-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); max-width: 36rem; }
+.px-bets-item { margin: 0; display: grid; gap: var(--s1); justify-items: center; min-width: 0; }
+.px-bets-item figcaption { font-size: var(--fs-xs); color: var(--ink-3); font-family: var(--font-mono); }
+.px-bets-figbox { width: 100%; aspect-ratio: 1 / 1; background: var(--stim-ground); border: 1px solid var(--rule); border-radius: var(--r-plate); overflow: hidden; }
+.px-bets-figbox.is-wide { aspect-ratio: 4 / 3; }
+.px-bets-fig { display: block; width: 100%; height: 100%; }
+.px-bets-opts { display: grid; gap: var(--s2); max-width: 36rem; }
+.px-bets-opt { justify-content: flex-start; text-align: left; min-height: var(--tap); white-space: normal; height: auto; padding-top: var(--s2); padding-bottom: var(--s2); }
+.px-bets-opt:disabled { opacity: 1; cursor: default; }
+.px-bets-key { font-family: var(--font-mono); margin-right: var(--s2); color: var(--ink-3); }
+.px-bets-opt.is-right { border-color: var(--right); color: var(--right); background: var(--right-wash); }
+.px-bets-opt.is-wrong { border-color: var(--wrong); color: var(--wrong); }
+.px-bets-opt.is-dim { opacity: 0.55; }
+.px-bets-after { display: grid; gap: var(--s2); max-width: 36rem; }
+.px-bets-after p { margin: 0; }
+.px-bets-verdict { font-weight: 600; }
+.px-bets-next { display: flex; justify-content: flex-end; }
+.px-bets-applynote { margin: 0; max-width: var(--measure); }
+
+/* Central Point's boards (half-step units) */
+.bets-cp-dot { fill: var(--stim-edge); fill-opacity: 0.5; }
+.bets-cp-line { stroke: var(--ink-2); stroke-width: 0.06; }
+.bets-cp-ring { fill: var(--stim-ground); stroke: var(--ink); stroke-width: 0.12; }
+.bets-cp-pip { fill: var(--ink); }
+.bets-cp-best { fill: none; stroke: var(--right); stroke-width: 0.16; }
+.bets-cp-bestpip { fill: var(--right); }
+.bets-cp-pull line { stroke: var(--ink); stroke-width: 0.11; stroke-linecap: round; }
+.bets-cp-pull path { fill: var(--ink); }
+.bets-cp-diag { stroke: var(--right); stroke-width: 0.1; stroke-dasharray: 0.32 0.22; }

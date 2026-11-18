@@ -236,5 +236,143 @@
     return { el: p.el, order: 70 };
   }, { id: 'bets.expect', order: 70 });
 
-  PX.ui.bets = { betLine: betLine, eventsCSV: eventsCSV, doseCSV: doseCSV, LAYER_WORDS: LAYER_WORDS, exNames: exNames, uiBets: uiBets };
+  /* ---------- off-screen challenges (note T1 §4.2): viewed and "I did it" (offscreen events) ---------- */
+
+  function offscreenBlock(def, rec) {
+    var c = B().content(def.id), o = c && c.offscreen, L = PX.ex.learn(def.id), own = !!o;
+    if (!o && L && L.offscreen) o = { id: def.id + '-learn', title: L.offscreen.title };
+    if (!o) return null;
+    var st = rec.bets && isObj(rec.bets.off) && isObj(rec.bets.off[def.id]) ? rec.bets.off[def.id] : null;
+    var count = h('span.px-meta.px-bets-did', st && st.did ? 'Done ' + st.did + (st.did === 1 ? ' time.' : ' times.') : '');
+    var did = ui.button('I did it', { kind: 'secondary', small: true, onClick: function () {
+      var S = store(), n = 0;
+      B().offscreen(S.state, def.id, o.id, true, Date.now());
+      n = S.state.bets.off[def.id].did;
+      S.save();
+      count.textContent = 'Noted. Done ' + n + (n === 1 ? ' time.' : ' times.');
+    } });
+    did.setAttribute('data-bets', 'offscreen-did');
+    if (!own) return h('div.px-bets-off.px-bets-off--short', { 'data-offscreen': o.id }, h('p', 'Tried the off-screen challenge below (' + o.title + ')? '), h('p.px-bets-off-row', did, count));
+    var d = h('details.px-bets-off', { 'data-offscreen': o.id },
+      h('summary', 'Off-screen challenge: ' + o.title),
+      h('p', o.text),
+      o.steps && o.steps.length ? h('ol.px-off-steps', o.steps.map(function (x) { return h('li', x); })) : null,
+      o.note ? h('p.px-meta', o.note) : null,
+      h('p.px-bets-off-row', did, count));
+    var seen = false;
+    d.addEventListener('toggle', function () {
+      if (!d.open || seen) return;
+      seen = true;
+      var S = store();
+      B().offscreen(S.state, def.id, o.id, false, Date.now());
+      S.save();
+    });
+    return d;
+  }
+  PX.ui.hooks.on('exercise:lines', function (ctx) {
+    if (!ctx || !ctx.def || ctx.where !== 'page') return null;
+    var el = offscreenBlock(ctx.def, ctx.rec);
+    return el ? { el: el, order: 60 } : null;
+  }, { id: 'bets.offscreen', order: 60 });
+
+  /* ---------- comparison rounds between items (note T1 §4.1; CONTRACT R item:before) ---------- */
+
+  function views() { return PX.ui.betsViews || {}; }
+  var NO_LAYER = { recheck: 1, probe: 1, daily: 1, threshold: 1, fluency: 1, timed: 1, climb: 1 };
+  function statementText(c, id) { var x = c.compare.statements.filter(function (s) { return s.id === id; })[0]; return x ? x.text : id; }
+
+  // Shows the round in the player's card; resolves { chosen, rt } or null when the session ends under it.
+  function showRound(ctx, def, r, c) {
+    var V = views()[def.id], hA = h('div.px-bets-figbox'), hB = h('div.px-bets-figbox'), marks = [];
+    var opts = h('div.px-bets-opts', { role: 'group', 'aria-label': 'What is the same in both?' });
+    var after = h('div.px-bets-after', { hidden: true });
+    var el = h('div.px-bets-round', { 'data-principle': r.principle },
+      h('p.px-bets-q', 'Two solved ' + (def.short || def.name) + ' items. What is the same in both?'),
+      h('div.px-bets-pair', h('figure.px-bets-item', hA, h('figcaption', 'First')), h('figure.px-bets-item', hB, h('figcaption', 'Second'))),
+      opts, after);
+    var chosen = null, t0 = 0, popK = null;
+    return ctx.card({ id: 'bets-compare', title: 'Same rule?', def: def, lines: [el], actions: [], className: 'px-bets-card',
+      onShow: function (panel, done) {
+        try {
+          marks.push(V.solved(hA, r.a.item, { principle: r.principle }));
+          marks.push(V.solved(hB, r.b.item, { principle: r.principle }));
+        } catch (e) { report('draw', e); }
+        t0 = Date.now();
+        var btns = r.opts.map(function (id, i) {
+          var b = ui.button(h('span', h('span.px-bets-key', String(i + 1)), h('span', statementText(c, id))), { kind: 'secondary', className: 'px-bets-opt', onClick: function () { pick(i); } });
+          b.setAttribute('data-opt', String(i));
+          opts.appendChild(b);
+          return b;
+        });
+        var next = ui.button('Next item', { kind: 'primary', onClick: function () { finish(); } });
+        next.setAttribute('data-bets', 'round-next');
+        function pick(i) {
+          if (chosen !== null) return;
+          chosen = { i: i, rt: Date.now() - t0 };
+          btns.forEach(function (b, j) {
+            b.disabled = true;
+            b.classList.add(j === r.correct ? 'is-right' : j === i ? 'is-wrong' : 'is-dim');
+            if (j === r.correct || j === i) b.appendChild(h('span.px-bets-tick', { 'aria-hidden': 'true' }, j === r.correct ? ' ✓' : ' ✗'));
+          });
+          marks.forEach(function (m) { try { if (m && m.mark) m.mark(true); } catch (e) { report('mark', e); } });
+          after.hidden = false;
+          after.appendChild(h('p.px-bets-verdict', { role: 'status' }, i === r.correct ? 'Yes: that holds in both.' : 'Not this one: the highlighted rule holds in both.'));
+          after.appendChild(h('p.px-bets-principle', h('b', 'The rule: '), r.text));
+          after.appendChild(h('p.px-meta', 'The next item is one where it decides the answer.'));
+          after.appendChild(h('div.px-bets-next', next));
+          try { next.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+        }
+        function finish() { if (popK) { popK(); popK = null; } done('next'); }
+        var map = { Enter: function () { if (chosen !== null) { finish(); return; } return false; } };
+        r.opts.forEach(function (x, i) { map[String(i + 1)] = function () { pick(i); }; });
+        popK = PX.core.keys.push(map, { through: true });
+      },
+    }).then(function (v) {
+      if (popK) { popK(); popK = null; }
+      return v === 'closed' || chosen === null ? null : chosen;
+    });
+  }
+  function report(where, e) {
+    try { if (window.console) console.error('PX.ui.bets: ' + where, e); } catch (x) { /* none */ }
+    try { PX.bus.emit('play:error', { where: 'bets:' + where, message: String(e && e.message || e) }); } catch (x) { /* none */ }
+  }
+  function runRound(ctx, d) {
+    var b = B(), def = ctx.def, step = ctx.step, c = b.content(def.id);
+    if (!c || !views()[def.id]) return Promise.resolve(null);
+    var r = null;
+    try { r = b.round(def.id, d.principle, step.params, step.seed, d.stage); } catch (e) { report('round', e); }
+    if (!r) return Promise.resolve(null);
+    return showRound(ctx, def, r, c).then(function (got) {
+      if (!got) return null;
+      var S = store(), rec = S.state, now = Date.now(), key = def.id + '@' + (def.version || 1), aSeed = null;
+      try { aSeed = b.applySeed(rec, def.id, d.principle, step.params, step.seed); } catch (e) { report('apply', e); }
+      if (aSeed !== null) { step.seed = aSeed; step.layer = b.ROW_LAYER.compare; step.betPrinciple = d.principle; }
+      b.compared(rec, ctx.plan, { exId: def.id, principle: d.principle, stage: r.stage, a: key, aSeed: r.a.seed, b: key, bSeed: r.b.seed,
+        choice: r.opts[got.i], correct: got.i === r.correct, rt: got.rt, apply: aSeed === null ? 0 : aSeed, opts: r.opts, pos: r.correct }, now);
+      S.save();
+      return null;
+    });
+  }
+
+  PX.ui.hooks.on('item:before', function (ctx) {
+    if (!ctx || (ctx.mode !== 'train' && ctx.mode !== 'path')) return null;
+    var step = ctx.step, def = ctx.def;
+    if (!step || !def || step.recheck || NO_LAYER[step.kind] || step.layer === 'produce') return null;
+    var d = null;
+    try { d = B().due(ctx.rec, ctx.plan, def.id, ctx.now, { newRun: !!step.newRun, misses: ctx.misses || 0, params: step.params }); } catch (e) { report('due', e); }
+    if (!d) return null;
+    if (d.kind === 'compare') return runRound(ctx, d);
+    if (d.kind === 'bridge' && PX.ui.bets.runBridge) return PX.ui.bets.runBridge(ctx, d);
+    return null;
+  }, { id: 'bets.layers', order: 30 });
+
+  // After the apply item: the rule it used, once (CONTRACT R item:notes).
+  PX.ui.hooks.on('item:notes', function (ctx) {
+    var step = ctx && ctx.step;
+    if (!step || step.layer !== 'compare-apply' || typeof step.betPrinciple !== 'string') return null;
+    var c = B().content(ctx.def.id), p = c && c.compare ? c.compare.principles.filter(function (x) { return x.id === step.betPrinciple; })[0] : null;
+    return p ? h('p.px-bets-applynote', { 'data-bets': 'apply-note' }, h('b', 'Same rule as the pair: '), p.text) : null;
+  }, { id: 'bets.apply-note', order: 30 });
+
+  PX.ui.bets = { betLine: betLine, eventsCSV: eventsCSV, doseCSV: doseCSV, LAYER_WORDS: LAYER_WORDS, exNames: exNames, uiBets: uiBets, showRound: showRound, runRound: runRound, report: report, runBridge: null };
 })(window.PX);
