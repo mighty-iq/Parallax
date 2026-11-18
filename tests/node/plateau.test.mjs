@@ -422,6 +422,32 @@ export async function run(t) {
     t.eq(P.card(b.rec, ev.at + 2 * DAY), null, 'a hidden card stays hidden');
   }
 
+  t.section('the events table and the record repair (CONTRACT-v1.2 M, O)');
+  {
+    const PX = ctx(t), E = PX.engine, P = E.plateau;
+    if (E.events && E.record) {
+      const b = build(PX, { sessions: 16, per: 42, theta: flat, seed: 81 });
+      let ev = null;
+      for (let g = 0; g < 30 && !ev; g++) {
+        const r = { session: { id: 'e' + g }, stageUps: [] };
+        P.finish(planFor('fold', 42), b.rec, b.now + g * 1000, r);
+        ev = r.plateau.fired[0] || null;
+        if (!ev) b.w.session(flat);
+      }
+      t.ok(!!ev, 'an event');
+      if (ev) {
+        t.eq(E.events.kinds().plateau, { owner: 'W2-plateau', fields: { id: 'token', phase: 'token', change: 'token', words: 'token' } }, "the 'plateau' kind");
+        const rows = E.events.table(b.rec).filter((x) => x.kind === 'plateau');
+        t.eq(rows.map((x) => [x.exId, x.data.phase, x.data.change]), [['fold', 'fire', ev.change]], 'the events table holds its fire row');
+        const raw = JSON.parse(JSON.stringify(b.rec.plateau));
+        raw.list.push({ id: 'x', exId: 'Bad', at: 'now' });
+        raw.list[0].note = 'free text';
+        const fixed = E.record.repair('plateau')(raw);
+        t.ok(fixed.list.length === 1 && !('note' in fixed.list[0]), 'the record repair runs the plateau check (bad entries and unknown keys dropped)');
+      }
+    } else t.ok(true, 'events.js or record.js not loaded');
+  }
+
   t.section('the words on the cards (js/ui/plateau.js)');
   {
     const e = t.env({ files: [...MANIFEST, 'js/core/keys.js', 'js/core/svg.js', 'js/core/ui.js', 'js/ui/plateau.js'], exercises: false, storage: new SharedStorage() });
