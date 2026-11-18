@@ -250,6 +250,8 @@ export async function run(t) {
     t.ok(longest <= 30, `the longest route moves for at most 30 s (${longest.toFixed(1)} s)`);
   }
 
+  checkGentle(t, L, items.map((x) => x.it), 'homing');
+
   t.section('homing: shortcut solvers');
   const cellKey = (p) => `${p.route}/${p.tolerance}`, cellName = (k) => { const [r, o] = k.split('/').map(Number); return `${L.ROUTES[r].legs}${'sml'[L.ROUTES[r].turns]}@${[40, 30, 20][o]}°`; };
   const solvers = {
@@ -447,6 +449,67 @@ export function boundShortcuts(t, rows) {
   }
 }
 
+// v1.2 O36, the gentle motion profile (docs/research/v1.2/N1-reckon.md §5.4 #3, §6 #3; PLAN milestone 1),
+// checked on every generated item: the same route (legs, turns, path, key), rates × 2/3 (1.8 → 1.2 m/s,
+// 45 → 30°/s; Reckon's per-leg speeds and turn rates likewise), ramps of 0.6 s, one speed per leg, the walk
+// back × 2/3, and at most 40 s of motion: a route that would take longer has all its rates raised by the one
+// factor `fit` (≤ 1.5) that brings it to 40 s (so it ends within 1 s of the cap). Normal routes stay ≤ 30 s.
+// The motion is integrated independently (Simpson over the rate) and must cover every leg and turn.
+export function checkGentle(t, L, list, id) {
+  t.section(id + ': gentle motion profile (v1.2, O36)');
+  t.eq([L.GENTLE.SCALE, L.GENTLE.RAMP, L.GENTLE.MAX, L.GENTLE.FIT_MAX], [2 / 3, 0.6, 40, 1.5], 'gentle: rates × 2/3, 0.6 s ramps, at most 40 s of motion per route, fit at most × 1.5');
+  let same = true, ramp = true, oneSpeed = true, capped = true, normalCap = true, rates = true, covered = true, limits = true, idem = true, walk = true, tight = true, legTimes = true;
+  let fitted = 0, fitSum = 0, fitMax = 1, worst = 0, worstNormal = 0, firstBad = null;
+  const keys = ['legs', 'turns', 'path', 'key', 'keyDeg', 'heading', 'distance', 'startHeading', 'params', 'seed', 'tolerance'];
+  list.forEach((it) => {
+    const g = L.gentle(it), motion = L.motionSeconds(g), normal = L.motionSeconds(it);
+    worst = Math.max(worst, motion); worstNormal = Math.max(worstNormal, normal);
+    if (g === it || g.gentle !== true || keys.some((k) => it[k] !== undefined && g[k] !== it[k])) { same = false; firstBad = firstBad || `${it.seed}: route changed`; }
+    if (g.ramp !== 0.6) ramp = false;
+    if (motion > 40 + 1e-9 || Math.abs(g.duration - motion) > 0.006) { capped = false; firstBad = firstBad || `${it.seed}: ${motion.toFixed(2)} s`; }
+    if (normal > 30 + 1e-9) normalCap = false;
+    if (L.gentle(g) !== g) idem = false;
+    if (L.checkMotion(g) !== true) { covered = false; firstBad = firstBad || `${it.seed}: ${L.checkMotion(g)}`; }
+    const f = g.fit;
+    if (!(f >= 1 && f <= 1.5)) tight = false;
+    if (f > 1) { fitted++; fitSum += f; fitMax = Math.max(fitMax, f); if (motion < 39 || motion > 40 + 1e-9) { tight = false; firstBad = firstBad || `${it.seed}: fitted to ${motion.toFixed(2)} s`; } }
+    const want = (x, kf, dec) => Math.round(x * (2 / 3) * kf * dec) / dec;
+    if (Array.isArray(it.speeds)) {
+      if (!g.speeds.every((v) => v.length === 1) || !g.splits.every((x) => x === null)) oneSpeed = false;
+      // a leg that changed speed keeps its share of the time: its single speed is the one that gives it the same
+      // cruise time (length over the leg's time less one ramp); a steady leg is just scaled
+      it.legs.forEach((Lg, i) => {
+        const v = it.speeds[i], d = L.plan(Object.assign({}, it, { legs: [Lg], turns: [], speeds: [v], splits: [it.splits[i]], path: [[0, 0]] }), 0).motion;
+        const base = v.length === 1 ? v[0] : Lg / (d - it.ramp);
+        if (Math.abs(g.speeds[i][0] - Math.min(2, want(base, f, 100))) > (f > 1 ? 0.0101 : 0.0051)) legTimes = false;
+      });
+      if (!it.turnRates.every((w, i) => Math.abs(g.turnRates[i] - Math.min(45, want(w, f, 10))) < (f > 1 ? 0.101 : 0.051))) rates = false;
+      if (f === 1 && it.speeds.every((v) => v.length === 1) && !it.speeds.every((v, i) => g.speeds[i][0] === want(v[0], 1, 100))) rates = false;
+    } else {
+      if (Math.abs(g.speed - want(it.speed, f, 100)) > 0.0101 || Math.abs(g.turnRate - want(it.turnRate, f, 10)) > 0.101) rates = false;
+      if (f === 1 && (g.speed !== 1.2 || g.turnRate !== 30)) rates = false;
+    }
+    if (it.walkSpeed !== undefined && g.walkSpeed !== Math.round(it.walkSpeed * 2 / 3 * 100) / 100) walk = false;
+    // rates within the comfort limits, every start and stop from rest (Simpson as in the motion section)
+    L.plan(g, 0).segs.forEach((s) => {
+      if (s.kind === 'stand') return;
+      const lim = s.kind === 'walk' ? 2 : 45;
+      s.pieces.forEach((p) => { if (Math.max(p.v0, p.v1) > lim + 1e-9) limits = false; });
+      if (s.pieces[0].v0 !== 0 || s.pieces[s.pieces.length - 1].v1 !== 0 || s.pieces.length !== 3) oneSpeed = false;
+    });
+  });
+  t.ok(same && idem, 'gentle keeps the route (legs, turns, path, key, heading, distance, params); applying it twice changes nothing' + (firstBad && !same ? ` (${firstBad})` : ''));
+  t.ok(ramp, 'gentle: every start and stop ramps over 0.6 s');
+  t.ok(oneSpeed, 'gentle: one speed per leg (no speed change within a leg), each leg and turn a ramp, a cruise and a ramp');
+  t.ok(rates && legTimes, 'gentle: speeds and turn rates × 2/3 (× fit), e.g. 1.8 → 1.2 m/s and 45 → 30°/s; a two-speed leg takes the speed that keeps its time');
+  t.ok(walk, 'gentle: the walk back × 2/3');
+  t.ok(covered && limits, 'gentle motion covers every leg and turn exactly and stays within 2 m/s and 45°/s' + (firstBad && !covered ? ` (${firstBad})` : ''));
+  t.ok(capped, `gentle routes move for at most 40 s (longest ${worst.toFixed(1)} s over ${list.length} items)` + (firstBad && !capped ? ` (${firstBad})` : ''));
+  t.ok(normalCap, `normal routes move for at most 30 s (longest ${worstNormal.toFixed(1)} s)`);
+  t.ok(tight, `a route sped up to fit ends between 39 and 40 s, with fit ≤ 1.5 (${fitted} of ${list.length} needed it, ${(100 * fitted / list.length).toFixed(1)} %)`);
+  console.log(`       ${id} gentle: longest ${worst.toFixed(1)} s (normal ${worstNormal.toFixed(1)} s); ${(100 * fitted / list.length).toFixed(1)} % sped up to fit 40 s (mean fit ${fitted ? (fitSum / fitted).toFixed(2) : '–'}, max ${fitMax.toFixed(2)})`);
+}
+
 export function viewCaptionKeys(id) {
   let src = '';
   try { src = readFileSync(new URL('../../js/ex/' + id + '/view.js', import.meta.url), 'utf8'); } catch (e) { return null; }
@@ -478,7 +541,9 @@ export function checkLearn(t, PX, def, id, kindOf) {
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
-    const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).every((l) => l >= 0 && l < d.levels.length));
+    // a dim, or an extra param with named levels (Reckon's tutorial tasks: when: { dim: 'task', levels: ['heading'] })
+    const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).every((l) => l >= 0 && l < d.levels.length))
+      || ((def.extraParams || []).indexOf(tr.dim) >= 0 && Array.isArray(tr.levels) && tr.levels.length > 0 && tr.levels.every((l) => typeof l === 'string' && l));
     const varOk = !tr.variant || (def.variants || []).indexOf(tr.variant) >= 0;
     t.ok(tip.id && tip.text && dimOk && varOk && (tr.dim || tr.variant), `tip ${tip.id} has a valid trigger`);
   }

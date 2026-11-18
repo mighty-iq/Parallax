@@ -8,7 +8,7 @@
    are printed per cell as information, not bounded: they integrate every turn, which is partial path
    integration, and on 2-leg and small-turn routes the start always lies on the side of the net turn. Return items also print "true direction + average distance" (it needs the direction solved). */
 import { deepDiff } from './run.mjs';
-import { checkLearn, shortcutReport, boundShortcuts } from './homing.test.mjs';
+import { checkLearn, shortcutReport, boundShortcuts, checkGentle } from './homing.test.mjs';
 import { performance } from 'node:perf_hooks';
 import { readFileSync } from 'node:fs';
 
@@ -371,10 +371,13 @@ export async function run(t) {
 
   t.section('reckon: tutorial items (heading, distance)');
   let tOk = true, tFirst = null;
+  const taskItems = [];
   for (let s = 0; s < 1000; s++) {
     const p = { variant: s % 2 ? 'return' : 'point', task: s % 2 ? 'distance' : 'heading', route: 0, flow: s % 3, speed: (s >> 1) % 3, tolerance: (s >> 2) % 3 };
     const it = def.generate(PX.rng(PX.rng.hash('task', s)), p), v = def.validate(it);
+    taskItems.push(it);
     let bad = v !== true ? v : null;
+    if (!bad && it.params.task !== p.task) bad = 'params.task missing (v1.2 O39: tips are aimed by it)';
     if (!bad && it.task === 'heading') {
       if (!def.score(it, norm360(-it.turns[0])).correct || def.score(it, 0).correct || def.score(it, it.turns[0]).correct) bad = 'heading key';
     } else if (!bad) {
@@ -385,6 +388,73 @@ export async function run(t) {
   }
   t.ok(tOk, '1 000 tutorial items: valid; heading → turning back by the turn is right, not turning or turning on is wrong; distance → L ahead right, 0 and 2L wrong, the second walk at another speed' + (tFirst ? ` (${tFirst})` : ''));
   t.ok(def.difficulty({ variant: 'point', task: 'heading' }) === lo, 'a task does not change difficulty (tutorial items are never rated)');
+
+  checkGentle(t, H, items.map((x) => x.it).concat(taskItems), 'reckon');
+
+  t.section('reckon: Try tips fit their items (v1.2 O39)');
+  {
+    // The player's rule (js/ui/play.js tipFor, as Try calls it): the first tip whose `when` holds, the variant
+    // (a name or a list) and the levels of the dim (a dim, or an extra param such as task). Items are made as
+    // Try makes them (play.js fillParams). In 1.1, Try 2 (a straight walk) showed "After each turn…".
+    const learn = X.learn('reckon');
+    const firstTip = (item) => (learn.tips || []).find((tp) => {
+      const w = tp.when || {};
+      const okV = !w.variant || (Array.isArray(w.variant) ? w.variant : [w.variant]).indexOf(item.params.variant) >= 0;
+      const okD = !w.dim || (Array.isArray(w.levels) ? w.levels.indexOf(item.params[w.dim]) >= 0 : item.params[w.dim] !== undefined);
+      return (w.variant || w.dim) && okV && okD;
+    }) || null;
+    const fill = (pp) => {
+      const out = {};
+      def.dims.forEach((d) => { out[d.key] = Number.isInteger(pp[d.key]) && pp[d.key] >= 0 && pp[d.key] < d.levels.length ? pp[d.key] : 0; });
+      out.variant = def.variants.indexOf(pp.variant) >= 0 ? pp.variant : def.variants[0];
+      (def.extraParams || []).forEach((k) => { if (pp[k] !== undefined) out[k] = pp[k]; });
+      return out;
+    };
+    const rows = learn.practice.map((pp, i) => { const it = def.generate(PX.rng(PX.rng.hash('try-tip', i)), fill(pp)); return { i, it, tp: firstTip(it) }; });
+    const name = (r) => `Try ${r.i + 1}: ${r.tp ? r.tp.id : 'none'}`;
+    const turnless = rows.filter((r) => r.it.turns.length === 0), legless = rows.filter((r) => r.it.legs.length === 0);
+    t.ok(rows.every((r) => r.tp), `every Try item has a tip (${rows.map(name).join(', ')})`);
+    t.ok(turnless.length >= 1 && turnless.every((r) => r.tp && !/\bturn/i.test(r.tp.text)), `a Try item without a turn gets no tip about turns (${turnless.map(name).join(', ')})`);
+    t.ok(legless.length >= 1 && legless.every((r) => r.tp && !/\bwalk|\bstart is\b|\blegs?\b/i.test(r.tp.text)), `a turn on the spot gets no tip about walking or where the start is (${legless.map(name).join(', ')})`);
+    t.ok(rows.filter((r) => r.it.variant === 'return' || r.it.answer === 'position').filter((r) => !r.it.task).every((r) => r.tp && /Walk/.test(r.tp.text)), 'the first return route of Try explains Walk');
+  }
+
+  t.section('reckon: feedback numbers and words (v1.2 O40)');
+  {
+    // An exact walk never reads "0 % too far"; the drift counts the route plus the walk back (and says so) and
+    // comes with this item's own limit in the same unit, which is the scoring rule restated.
+    let exact = true, sides = true, drift = true, rule = true, firstBad = null;
+    const ret = items.filter((x) => x.p.variant === 'return').slice(0, 3000);
+    for (const x of ret) {
+      const it = x.it, d = it.distance, K = at(it.keyDeg, d);
+      const f0 = L.feedback(it, def.score(it, K));
+      if (!f0.dist || f0.dist.word !== 'even' || f0.dist.pct !== 0) exact = false;
+      const r1 = def.score(it, at(it.keyDeg + 10, d * 0.8)), f1 = L.feedback(it, r1), f2 = L.feedback(it, def.score(it, at(it.keyDeg, d * 1.07)));
+      if (f1.dist.word !== 'short' || f1.dist.pct !== 20 || f2.dist.word !== 'long' || f2.dist.pct !== 7) sides = false;
+      const walked = it.pathLength + r1.detail.dist;
+      if (!f1.drift || f1.drift.walked !== Math.round(walked) || f1.drift.cm !== Math.round(100 * r1.detail.posErr / walked) || f1.drift.limCm !== Math.round(100 * it.tolerance * d / walked)) {
+        drift = false; firstBad = firstBad || `${x.seed}: ${JSON.stringify(f1.drift)}`;
+      }
+      for (const resp of [K, at(it.keyDeg + 25, d), at(it.keyDeg, d * 0.6), at(it.keyDeg - 8, d * 1.3), at(it.keyDeg + 4, d * 0.9)]) {
+        const r = def.score(it, resp), w = it.pathLength + r.detail.dist;
+        if ((r.detail.posErr / w <= it.tolerance * d / w + 1e-12) !== r.correct) rule = false;
+      }
+    }
+    t.ok(exact, 'walking back exactly the home distance reads "under 1 % off" (word even), never "0 % too far"');
+    t.ok(sides, 'short and too far are named with whole percentages (80 % of the way → 20 % short, 107 % → 7 % too far)');
+    t.ok(drift, 'the drift: metres off after the route plus the walk back, cm per metre, and the item\'s limit τ·d over the same metres' + (firstBad ? ` (${firstBad})` : ''));
+    t.ok(rule, 'the limit restates the scoring rule: right exactly when the drift per metre is within it');
+    const pt = items.find((x) => x.p.variant === 'point').it, fp = L.feedback(pt, def.score(pt, pt.key));
+    const dItem = def.generate(PX.rng(5), { variant: 'return', task: 'distance' }), fd = L.feedback(dItem, def.score(dItem, { x: 0, z: dItem.legs[0] }));
+    t.ok(fp.dist === null && fp.drift === null && fd.dist && fd.dist.word === 'even' && fd.drift === null, 'point items have no distance words; the distance task walked exactly reads "under 1 % off" and has no drift line');
+    const C = (X.learn('reckon') || {}).captions || {};
+    t.ok(C.distEven === 'under 1 % off' && /\{dist\}/.test(C.distanceWas) && /\{dist\}/.test(C.walkedWas) && !/\{dpct\}/.test(C.distanceWas + C.walkedWas) && /\{dpct\} % \{dword\}/.test(C.distOff),
+      'the distance words come from one place: "{dpct} % {dword}" or "under 1 % off"');
+    t.ok(/the route and your walk back/.test(C.drift) && /\{lim\}/.test(C.drift) && /\{per\}/.test(C.drift) && C.perMetreUnder === 'under 1 cm per metre', 'the drift line says it counts the route and the walk back, names the item\'s limit, and never says "about 0 cm"');
+    t.ok(C.mapYou === 'your answer', 'the map labels your answer "your answer", not "you"');
+    t.ok(/solid/i.test(C.chartNote) && /hollow/i.test(C.chartNote) && /oldest/.test(C.chartNote) && !/Filled: right/.test(C.chartNote) && ['chartFar', 'chartShort', 'chartOld', 'chartNew'].every((k) => C[k]),
+      'the habit chart has axis words (too far, too little, older, latest); its note says solid and hollow, not "Filled: right"');
+  }
 
   t.section('reckon: the player\'s own errors (bias over the last 20 routes)');
   {

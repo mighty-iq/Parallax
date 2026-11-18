@@ -148,10 +148,13 @@
     S.scene.add(S.world);
     // the overlay pieces of the stage (classes in css/ex/homing.css, shared by Reckon)
     S.notch = h('span.ex-fp-notch', { 'aria-hidden': 'true' });
+    // v1.2 O36: the gentle profile's fixation dot, fixed at the view's centre (Nooij et al. 2017; N1 §5.4 #3b)
+    S.fix = h('span.ex-fp-fix', { 'aria-hidden': 'true', hidden: true });
     S.overlay = h('div.ex-fp-overlay', { hidden: true });
     S.pauseNote = h('p.ex-fp-pause', { hidden: true, role: 'status' });
     S.sub = h('p.ex-fp-sub', { 'aria-live': 'polite' });
-    [S.notch, S.overlay, S.pauseNote, S.sub].forEach(function (x) { el.appendChild(x); });
+    [S.notch, S.fix, S.overlay, S.pauseNote, S.sub].forEach(function (x) { el.appendChild(x); });
+    S.setFix = function (on) { S.fix.hidden = !on; };
     S.offTheme = PX.bus && PX.bus.on ? PX.bus.on('stage3d:theme', function () { S.recolour(); }) : null;
 
     S.attach = function () {
@@ -854,6 +857,29 @@
   // The four fine buttons round the circle in the turn row.
   function turnRow(el, F) { [F.l5, F.l1, el.dialbox, F.r1, F.r5].forEach(function (x) { el.turnrow.appendChild(x); }); }
 
+  // v1.2 O36, motion comfort (docs/research/v1.2/N1-reckon.md §5.4; CONTRACT-v1.2 F). ctx.gentleMotion (set by
+  // the player per item: the Gentle motion setting, or reduced motion while it is on 'auto') shows the route
+  // with gen's gentle profile (lib.gentle: 2/3 of the speeds, 0.6 s ramps, one speed per leg, ≤ 40 s) and the
+  // stage's fixation dot. ctx.addMotion(ms) hears of each stretch of first-person motion shown (the route, the
+  // walk back, the Watch demo), measured in real time; the player counts it for its check-in cards.
+  function gentleOn(ctx) { return !!(ctx && (typeof ctx.gentleMotion === 'function' ? ctx.gentleMotion() : ctx.gentleMotion)); }
+  function shownItem(item, ctx) { var L = genLib(); return gentleOn(ctx) && typeof L.gentle === 'function' ? L.gentle(item) : item; }
+  function reportMotion(ctx, ms) {
+    ms = Math.round(ms);
+    if (!(ms > 0)) return 0;
+    if (ctx && typeof ctx.addMotion === 'function') { try { ctx.addMotion(ms); } catch (e) { if (window.console) console.error('first-person view: ctx.addMotion failed', e); } }
+    return ms;
+  }
+  // Real time a step-runner animation shows motion: call tick(moving) from its update; dt counts only while
+  // `moving` and the step advances (a paused step shows no motion), at most 250 ms a frame. take() → ms, reset.
+  function motionMeter() {
+    var last = -1, ms = 0;
+    return {
+      tick: function (moving) { var n = timing.now(); if (last >= 0 && moving) ms += Math.min(250, Math.max(0, n - last)); last = n; },
+      take: function () { var m = ms; ms = 0; last = -1; return m; },
+    };
+  }
+
   // Minimal step runner for players without ctx.play (no controls; honours fast).
   function runSteps(list, ctx, opts) {
     var scale = ctx && ctx.fast ? 0.02 : 1;
@@ -943,6 +969,7 @@
   }
 
   var kit = {
+    gentleOn: gentleOn, shownItem: shownItem, reportMotion: reportMotion, motionMeter: motionMeter,
     hintOn: hintOn, hintOff: hintOff, narrow: narrow,
     stage: stage, dial: dial, fine: fine, drag: drag, tapAct: tapAct, walker: walker, mapper: mapper, layout: layout, turnRow: turnRow,
     play: play, runSteps: runSteps, inputOf: inputOf, errShown: errShown, hostPaused: hostPaused, watchShape: watchShape, showAboveBar: showAboveBar, capFor: capFor, sideText: sideText, side: side,
@@ -967,7 +994,8 @@
   function mount(ctx) {
     var el = layout(ctx, { id: 'homing', cap: cap, keysText: cap('hintKeys') });
     st = { ctx: ctx, el: el, item: null, value: null, raw: 0, live: false, playing: false, done: false, walking: false, paused: false, hostPause: false,
-      voided: null, voidStats: null, frames: null, respond: null, popKeys: null, W: null, input: null, mode: null };
+      voided: null, voidStats: null, frames: null, respond: null, popKeys: null, W: null, input: null, mode: null,
+      gentle: false, mv: null, motionMs: 0 }; // mv: the item as it moves (gentle or not); motionMs: motion reported so far
     st.S = stage(ctx, el.stage, { cap: cap, hfov: HFOV, pitch: PITCH, eye: EYE, fog: [18, 190] });
     st.D = dial({ cap: cap, onAngle: function (a, e) { setValue(a, 'dial', e); } });
     el.dialbox.appendChild(st.D.svg);
@@ -1031,9 +1059,11 @@
     st.S.stopLook();
     st.item = item; st.value = null; st.raw = 0; st.done = false; st.playing = false; st.respond = null; st.voided = null; st.voidStats = null;
     st.paused = false; st.hostPause = false; st.frames = null; st.input = null; st.mode = null;
+    st.gentle = gentleOn(ctx); st.mv = shownItem(item, ctx);
     var S = st.S, el = st.el;
     S.attach();
     buildWorld(item);
+    S.setFix(st.gentle);
     st.M.reset();
     st.D.set(null); st.D.key(null); st.D.wedge(null); st.D.mark('');
     el.root.classList.remove('is-revealed', 'is-answering');
@@ -1057,13 +1087,16 @@
       if (!st || st.item !== item) return timing.now();
       // a Watch item (ctx.demo, when the player sets it): the demo replays the walk with captions, so the
       // first, silent walk is skipped and the item starts at the end of the route
-      st.W = ctx.demo ? null : walker(S, planOf(item), {
+      st.W = ctx.demo ? null : walker(S, planOf(st.mv), {
         ctx: ctx, fast: ctx.fast,
         paused: function () { return !!(st && (st.paused || st.hostPause || hostPaused(ctx))); },
         onFrame: function (pose) { if (ringOn && Math.hypot(pose.x - S0[0], pose.y - S0[1]) > START_R + 0.3) { ringOn = false; S.showRing(false); } },
         onVoid: function (reason, stats) { voidTrial(reason, stats); },
       });
       return (st.W ? st.W.done : Promise.resolve(null)).then(function (stats) {
+        // the motion shown counts even when the walk was cut short (a new item, the session ended)
+        var shown = stats ? reportMotion(ctx, stats.motionMs) : 0;
+        if (st) st.motionMs += shown;
         if (!st || st.item !== item) return timing.now();
         st.frames = stats;
         st.walking = false; st.paused = false;
@@ -1109,7 +1142,8 @@
   }
   // What an answer carries (Track's way): the walk's frame statistics and the view's own verdict, so the
   // player keeps this view's rule instead of its generic one; the input and the answer mode.
-  function answerMeta() { return st ? { frames: st.frames || null, void: st.voided || null, input: st.input || null, mode: st.mode || null } : null; }
+  // gentle: the item moved with the gentle profile (v1.2 O36; logged per trial when the player keeps it).
+  function answerMeta() { return st ? { frames: st.frames || null, void: st.voided || null, input: st.input || null, mode: st.mode || null, gentle: !!st.gentle } : null; }
   function stopInput() {
     if (!st) return;
     st.live = false;
@@ -1193,7 +1227,8 @@
   // Keys and the pointer rest while it plays; afterwards the item is back in its answer state.
   function demo(item, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
-    var pl = planOf(item), E = endPose(item), s = side(item.key), S = st.S, L = genLib(), S0 = item.path[0];
+    // the demo walks as the item does (the gentle profile when it is on); its motion is reported at the end
+    var pl = planOf(st.mv || item), E = endPose(item), s = side(item.key), S = st.S, L = genLib(), S0 = item.path[0], meter = motionMeter(), lastK = 0;
     st.playing = true;
     function at(p, flag) {
       st.M.close(); st.D.key(null); st.D.wedge(null); S.showFlag(!!flag);
@@ -1201,20 +1236,23 @@
       S.showRing(Math.hypot(p.x - S0[0], p.y - S0[1]) < START_R + 0.3 && !flag);
       S.render();
     }
+    function moved(k, moving) { meter.tick(moving && k > lastK); lastK = k; }
     var watch = [
       { ms: 2200, caption: cap('demoStart'), enter: function () { st.D.set(null); at(L.poseAt(pl, 0)); } },
-      { ms: Math.round(pl.total * 1000), caption: cap('demoWalk'), enter: function () { at(L.poseAt(pl, 0)); },
-        update: function (k) { var p = L.poseAt(pl, k * pl.total); at(p); } },
+      { ms: Math.round(pl.total * 1000), caption: cap('demoWalk'), enter: function () { lastK = 0; meter.tick(false); at(L.poseAt(pl, 0)); },
+        update: function (k) { var p = L.poseAt(pl, k * pl.total); moved(k, p.kind !== 'stand'); at(p); } },
       { ms: 2000, caption: cap('demoEnd'), enter: function () { at(E); } },
     ];
     var answer = [
-      { ms: 2600, caption: cap('demoTurn', { deg: s.deg, side: s.side }), enter: function () { at(E); st.D.set(0); },
-        update: function (k) { var a = sweep(item.key, ease(k)); st.D.set(a); S.setPose(E.x, E.y, item.heading + a); S.render(); },
+      { ms: 2600, caption: cap('demoTurn', { deg: s.deg, side: s.side }), enter: function () { lastK = 0; meter.tick(false); at(E); st.D.set(0); },
+        update: function (k) { var a = sweep(item.key, ease(k)); moved(k, true); st.D.set(a); S.setPose(E.x, E.y, item.heading + a); S.render(); },
         exit: function () { S.showFlag(true); S.render(); } },
       { ms: 2400, caption: cap('demoAnswer'), enter: function () { at({ x: E.x, y: E.y, h: item.heading + item.key }, true); st.D.set(item.key); } },
     ];
     return play(S, watch.concat(st.M.steps(item, { tol: item.tolerance }), answer), ctx, { name: 'demo' }).then(function () {
+      var shown = reportMotion(ctx, meter.take());
       if (!st) return;
+      st.motionMs += shown;
       st.playing = false;
       S.sub.textContent = '';
       if (st.item === item && !st.done) {
@@ -1239,6 +1277,7 @@
   PX.ex.view('homing', {
     layout: 'custom',
     needs: 'webgl',
+    motion: true, // v1.2 O36 (CONTRACT-v1.2 F): the player's motion notice and check-in cards apply
     css: true,
     mount: mount,
     present: present,
@@ -1252,16 +1291,18 @@
     resume: function () { if (st) { st.hostPause = false; st.paused = false; st.S.pauseNote.hidden = true; } },
     // for tests: the dial geometry, the walk model and the camera pose
     dial: { radius: DIAL_R, box: DIAL_BOX, hub: HUB },
-    timeline: planOf,
+    // the plan the view plays for this item (the gentle profile's while it is on)
+    timeline: function (item) { return planOf(st && st.item === item && st.mv ? st.mv : item); },
     poseAt: function (pl, t) { return genLib().poseAt(pl, t); },
     mapSteps: function (item) { return st && st.item === item ? st.M.steps(item, { tol: item.tolerance }) : []; },
     pose: function () { return st && st.S ? { x: st.S.pose.x, y: st.S.pose.y, h: st.S.pose.h } : null; },
     state: function () {
       return st ? { walking: st.walking, paused: st.paused, hostPause: st.hostPause, voided: st.voided, voidStats: st.voidStats, live: st.live,
         flag: !!(st.S.flag && st.S.flag.visible), ring: !!(st.S.ring && st.S.ring.visible), map: st.M.shown(), frames: st.frames, input: st.input, mode: st.mode,
-        fade: [st.S.fadeU.value.x, st.S.fadeU.value.y], ground: st.S.spec ? st.S.spec.kind : null } : null;
+        fade: [st.S.fadeU.value.x, st.S.fadeU.value.y], ground: st.S.spec ? st.S.spec.kind : null,
+        gentle: st.gentle, fix: !st.S.fix.hidden, motionMs: st.motionMs, fit: st.mv && st.mv.gentle ? st.mv.fit : null } : null;
     },
-    trialInfo: function () { return st ? { input: st.input, mode: st.mode, void: st.voided, frames: st.frames } : null; },
+    trialInfo: function () { return st ? { input: st.input, mode: st.mode, void: st.voided, frames: st.frames, gentle: !!st.gentle } : null; },
     sideText: function (a) { return sideText(cap, a); },
     answerMeta: answerMeta,
     kit: kit,
