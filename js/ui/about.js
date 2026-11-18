@@ -45,7 +45,8 @@
       h('p', 'Some exercises use the same kinds of puzzles as parts of published tests: ' + andList(shared) + '.' +
         (pat.length ? ' The DAT-style formats (' + andList(pat) + ') follow the Perceptual Ability Test of the Dental Admission Test on purpose.' : '')),
       h('p', 'Practising a kind of puzzle raises scores on tests that use it. Taking a test a second time adds about a third of a standard deviation on average (Scharfen and colleagues, 2018), and being taught a puzzle type’s rules has added about one standard deviation in studies (Schneider and colleagues, 2020). These gains stay mostly with that kind of puzzle (te Nijenhuis and colleagues, 2007).'),
-      h('p', 'So if a test result matters to you, take the test before you practise its kind of puzzle here, or say how much you have practised. Analogy tests (“A is to B as C is to …”) are not trained here; the Spatial Check’s word task uses that format for a few minutes per check, without feedback.'),
+      h('p', 'So if a test result matters to you, take the test before you practise its kind of puzzle here, or say how much you have practised.'),
+      h('p', { 'data-about': 'analogy' }, O && O.ANALOGY ? O.ANALOGY : 'Analogy tests (“A is to B as C is to …”) are not trained here; the Spatial Check’s word task uses that format for a few minutes per check, without feedback.'),
       h('div.px-about-helper', h('p', 'Settings can list the exercises that match your test and leave them out of Train until the day of the test.'), helper),
       h('p', 'Parallax is a practice tool. It is not a test of intelligence and not a diagnostic tool.'),
       pat.length && O ? h('p.px-meta.px-overlap-legal', O.ADA) : null,

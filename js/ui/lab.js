@@ -251,11 +251,41 @@
       });
     } });
     csv.setAttribute('data-action', 'lab-research');
+    var pool = ui.button('Community export (JSON)', { kind: 'secondary', onClick: pooledDialog });
+    pool.setAttribute('data-action', 'lab-pooled');
     var json = ui.button('Back up the whole record (JSON)', { kind: 'secondary', onClick: function () { PX.ui.app.backup(); } });
-    p.body.appendChild(h('div.px-data-row', csv, json));
+    p.body.appendChild(h('div.px-data-row', csv, pool, json));
     p.body.appendChild(h('p.px-meta', rows.length ? rows.length + ' trials. Spatial Check results (with the one-tap answer about other tests), Threshold runs, strategy check-ins, the self-experiment, when the focus on formats like those of the Dental Admission Test (DAT®) was switched on or off, the tests you noted and Section runs are in the JSON backup.' : 'No trials yet: the export fills as you practise.'));
     if (rows.length && PX.ui.overlap && PX.ui.overlap.ADA) p.body.appendChild(h('p.px-meta.px-overlap-legal', PX.ui.overlap.ADA));
     return p.el;
+  }
+
+  // The community export (v1.2; CONTRACT-v1.2 I): store.pooled(), with no name unless the player
+  // ticks the nickname, and device details only when ticked (the tick starts at the Settings choice).
+  function pooledDialog() {
+    var store = PX.core.store, s = store.state.settings, nick = typeof s.nickname === 'string' ? s.nickname.trim() : '';
+    var opts = { nickname: false, device: s.exportDevice === true }, field = null;
+    function text() { return JSON.stringify(store.pooled(opts)); }
+    function tick(key, label, checked, fn) {
+      var id = 'px-pool-' + key;
+      var cb = h('input', { type: 'checkbox', id: id, checked: !!checked });
+      cb.setAttribute('data-pool', key);
+      cb.addEventListener('change', function () { fn(cb.checked); if (field) field.textarea.value = text(); });
+      return h('label.px-tick', { for: id }, cb, h('span', label));
+    }
+    var ticks = h('div.px-pool-ticks', { role: 'group', 'aria-label': 'What the export includes' });
+    if (nick) ticks.appendChild(tick('nickname', 'Add my nickname, “' + nick + '”', false, function (v) { opts.nickname = v; }));
+    ticks.appendChild(tick('device', 'Add device details: browser, language, time zone and screen size', opts.device, function (v) { opts.device = v; }));
+    PX.ui.app.exportDialog({
+      title: 'Community export',
+      intro: 'For pooling with other players: your trials, sessions, Spatial Check results and levels, with times in UTC and no calendar days of yours (day-by-day records become totals), no settings and no name. Nothing is sent anywhere: you choose what to share and where.',
+      extra: ticks,
+      text: text(),
+      filename: 'parallax-community-' + U.fmtDate(Date.now()) + '.json',
+      type: 'application/json',
+      invite: 'export',
+      onShow: function (close, f) { field = f; },
+    });
   }
 
   /* ---------- how the engine works ---------- */

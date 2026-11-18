@@ -466,3 +466,13 @@
   .px-fp-tick span, .px-cal-head { font-size: 0.8125rem; }
   .px-lab-step-mark { font-size: var(--fs-xs); }
 }
+
+/* ---------- v1.2: the community export's ticks (Lab), the nickname (Settings), the mode lines ---------- */
+.px-pool-ticks { display: grid; gap: 0; margin: var(--s3) 0 var(--s2); }
+.px-nickname { width: 100%; max-width: 20rem; }
+.px-nickname-msg:empty { display: none; }
+.px-practise-item .px-practise-when { display: block; margin-top: var(--s1); font-size: var(--fs-sm); color: var(--ink-3); }
+.px-mode-when { display: block; margin-top: var(--s1); color: var(--ink-3); }
+/* Today: one mode suggestion at a time (a slot of its own) */
+.px-slot--suggest .px-suggest-why { color: var(--ink-2); max-width: var(--measure); }
+.px-slot--suggest .px-slot-foot { padding-top: var(--s3); }

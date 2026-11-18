@@ -1,0 +1,62 @@
+/* Playtest mode (js/ui/playtest.js): the note button on every screen, the three taps after each
+   exercise, the note sheet. Test builds only by default; nothing here shows while a stimulus plays
+   (body.px-stim) or an item is on screen (body.px-item: the pause sheet carries its own note
+   button). Classes start with .pt-. */
+
+/* the note button: bottom right, above the phone tab bar */
+.pt-fab {
+  position: fixed; z-index: 70;
+  right: max(var(--s3), env(safe-area-inset-right, 0px));
+  bottom: calc(var(--s3) + env(safe-area-inset-bottom, 0px));
+  display: inline-flex; align-items: center; gap: var(--s2);
+  min-height: var(--tap); min-width: var(--tap); padding: 0 0.875rem;
+  border: 1px dashed var(--rule-strong); border-radius: 999px;
+  background: var(--surface); color: var(--ink);
+  font: 600 var(--fs-sm)/1.2 var(--font-sans);
+  box-shadow: var(--lift);
+  cursor: pointer;
+}
+.pt-fab:hover { background: var(--surface-2); }
+.pt-fab .px-icon { width: 1.125rem; height: 1.125rem; color: var(--ink-2); }
+/* never over items: a stimulus, an item on screen, a running session or Section practice (the
+   pause sheet has its own note button), or an open dialog */
+body.px-stim .pt-fab, body.px-item .pt-fab, html.px-modal-open .pt-fab, :root[data-chrome="focus"] .pt-fab { display: none; }
+@media (max-width: 719px) {
+  .pt-fab { bottom: calc(3.5rem + var(--s2) + env(safe-area-inset-bottom, 0px)); }
+  /* Today's Start and Choose exercises stick above the tab bar on phones: the note button sits above them */
+  body:has(.px-main [data-screen="home"] .px-session-actions) .pt-fab { bottom: calc(3.5rem + 8.5rem + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* three taps per exercise (the summary's slot, the end of Watch, Try, Go) */
+.pt-rate-box {
+  margin: 0 0 var(--s4); padding: var(--s3) var(--s4);
+  border: 1px dashed var(--rule-strong); border-radius: var(--r-panel); background: var(--surface);
+}
+.pt-rate-head { margin-bottom: var(--s2); font-size: var(--fs-sm); color: var(--ink-2); }
+.pt-rate-head b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
+.pt-rate { padding: var(--s3) 0; border-top: 1px solid var(--rule); }
+.pt-rate:first-of-type { border-top: 0; padding-top: var(--s1); }
+.pt-rate-name { font-weight: 600; color: var(--ink); margin-bottom: var(--s2); }
+.pt-rate-dims { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); }
+.pt-rate-dim { display: grid; grid-template-columns: auto; gap: var(--s1); }
+.pt-rate-label { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.pt-rate-seg { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.pt-rate-btn {
+  min-width: var(--tap); min-height: var(--tap); padding: 0 0.6rem;
+  border: 1px solid var(--rule-strong); border-radius: var(--r-control);
+  background: var(--surface); color: var(--ink);
+  font: 600 var(--fs-sm)/1 var(--font-sans); font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pt-rate-btn:hover { background: var(--surface-2); }
+.pt-rate-btn[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.pt-rate-ends { font-size: var(--fs-xs); color: var(--ink-3); }
+@media (max-width: 719px), (max-height: 500px) {
+  .pt-rate-label, .pt-rate-ends { font-size: 0.8125rem; } /* no text under 13 px on phones */
+}
+
+/* the note sheet and the fallback report dialog */
+.pt-sheet .pt-note-text { width: 100%; margin-top: var(--s3); }
+.pt-sheet .pt-note-count { margin: var(--s2) 0; }
+.pt-note-where { font-size: var(--fs-sm); color: var(--ink-2); overflow-wrap: anywhere; }
+.pt-report .px-copybox-text { font-size: var(--fs-xs); }
