@@ -31,12 +31,12 @@
     ],
     strategyFirst: 'analytic',
     minutes: 3,
-    demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, seed: 13, kind: 'end' }],
+    demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, seed: 13, kind: 'end' }],
     practice: [
-      { params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, assist: { proj: true }, seed: 100 },
-      { params: { cubes: 0, grid: 0, missing: 1, foil: 0 }, seed: 202 },
-      { params: { cubes: 1, grid: 0, missing: 0, foil: 0 }, tip: 'hidden', seed: 300, example: { seed: 3 } },
-      { params: { cubes: 1, grid: 0, missing: 0, foil: 0 }, tip: 'search', seed: 401 },
+      { params: { cubes: 0, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, assist: { proj: true }, seed: 100 },
+      { params: { cubes: 0, grid: 0, missing: 1, foil: 0, task: 'tutorial' }, seed: 202 },
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'hidden', seed: 300, example: { seed: 3 } },
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'search', seed: 401 },
     ],
     tips: [
       { id: 'shown', when: { dim: 'cubes', levels: [0] }, text: 'Starter items: the structure is drawn beside the views. Look at it from the missing side, then check the lines against the given views.' },
@@ -87,7 +87,7 @@
     captions: {
       views: 'Two views are given; the third slot is empty.',
       slot: 'The missing view goes here, at the same scale.',
-      options: 'Four drawings: exactly one fits both views.',
+      intro: 'Two views are given; the missing one goes in the slot, at the same scale. One of the four drawings fits.',
       project: '1/3 · Outline first: the {view} view takes its width and height from the given views, along these lines.',
       turn: '2/3 · Line it up: turned to its {side} side, every edge of the structure lines up with the given views.',
       fade: '3/3 · Dotted last: edges you can see are solid; edges behind nearer cubes are dotted.',
