@@ -20,18 +20,33 @@
       { id: 'lines', label: 'Lines', text: 'A line marks an edge: where the surface steps nearer or farther. Flat faces at the same depth merge into one region.' },
       { id: 'answer', label: 'Answer', text: 'Tap an option or press its key (1–4).' },
     ],
-    // The easiest level of each variant: 4 cubes on a 3 × 3 grid (toview: the top view).
+    // The teaching template (v1.2, docs/research/v1.2/D2-first-band.md §3.0 C, §3.1): the rules card
+    // first, the Watch at the starter level (3–4 cubes, at most 2 high, top view), the "Outline
+    // first, then inner lines" card before Try 1, Try 1 with the outline already drawn, then the
+    // front view at the starter level, the pre-1.2 floor (top) and its front view. Try stays in
+    // toview, the variant of Train's first run; count and toobject get their own Watch (below) when
+    // their first run starts. Format rules before practice: d ≈ 0.9–1.2 on the format (via R4 §4.2);
+    // showing the informative view (Keehner et al. 2008, via D2 §2.3). Figures: view.drawRule.
+    rules: [
+      { text: 'The thick edge of the base is the front. The arrow marks the side you look from.', fig: 'front' },
+      { text: 'A view is flat: lines only where the surface steps nearer or farther.', fig: 'flat' },
+      { text: 'In a top view the front is at the bottom of the drawing.', fig: 'top' },
+    ],
+    strategyFirst: 'outline',
+    // One Watch per variant (the player plays the item's own); the first is the main variant at the
+    // starter level, with both foil kinds Try uses (another direction, a neighbouring structure).
+    // Seeds are fixed so the answers vary their slot (Watch 3, Try 2, 4, 1, 3) and no Try item has a
+    // mirror foil, which the Watch cannot show at the starter level.
     demo: [
-      { params: { cubes: 0, grid: 0, view: 0, variant: 'toview' }, seed: 1, kind: 'toview' },
+      { params: { cubes: 0, grid: 0, view: 0, variant: 'toview' }, seed: 56, kind: 'toview' },
       { params: { cubes: 0, grid: 0, view: 0, variant: 'toobject' }, seed: 2, kind: 'toobject' },
       { params: { cubes: 0, grid: 0, view: 0, variant: 'count' }, seed: 3, kind: 'count' },
     ],
-    practice: [ // easiest first: counting gets the structures in view, then each kind of view
-      { cubes: 0, grid: 0, view: 0, variant: 'count' },
-      { cubes: 0, grid: 0, view: 0, variant: 'toview' },
-      { cubes: 0, grid: 0, view: 1, variant: 'toview' },
-      { cubes: 0, grid: 0, view: 0, variant: 'toobject' },
-      { cubes: 1, grid: 0, view: 2, variant: 'toview' },
+    practice: [
+      { params: { cubes: 0, grid: 0, view: 0, variant: 'toview' }, seed: 73, assist: { outline: true } },
+      { params: { cubes: 0, grid: 0, view: 1, variant: 'toview' }, seed: 3, tip: 'front' },
+      { params: { cubes: 1, grid: 0, view: 0, variant: 'toview' }, seed: 2, tip: 'stacks' },
+      { params: { cubes: 1, grid: 0, view: 1, variant: 'toview' }, seed: 6 },
     ],
     tips: [
       // The view tips only where a view is asked or drawn: when.variant may list several variants,
@@ -42,11 +57,26 @@
       { id: 'toobject', when: { variant: 'toobject' }, text: 'Check one view at a time: rule out every structure whose top view does not fit, then use the front and the right.' },
       { id: 'count', when: { variant: 'count' }, text: 'Count column by column: the height of each stack, then add them up. No cube is hidden here.' },
       { id: 'grid', when: { dim: 'grid', levels: [1] }, text: 'A bigger grid: the same rules. Find the front edge first, then read the drawing from there.' },
+      { id: 'stacks', when: { dim: 'cubes', levels: [1], variant: 'toview' }, text: 'Bigger structures now, up to four high. One drawing may be the correct one flipped left to right: check which side the front is on.' },
     ],
     // Sorby 2009: sketching views and building block models raised spatial test scores in engineering
     // students. Imagery (moving round the object) and analytic (feature by feature) strategies, and
     // switching between them, as in Hegarty 2010.
     strategies: [
+      {
+        // The card before Try 1 (strategyFirst; D2 §3.1): the outline first, then the inner lines.
+        // Prep courses for view tasks teach elimination on one distinctive feature, then solid
+        // against dotted lines (R3 §3.2); [gap] no controlled study of this order for novices was
+        // found (D2 §2.3): it is drafting practice. Show-me follows the same three steps.
+        id: 'outline', title: 'Outline first, then inner lines',
+        text: 'Read a view in two passes: its outline, then the lines inside it.',
+        steps: [
+          'Find the front, then move in your mind to the side the arrow marks.',
+          'Count the cells of the outline across and up; drop the drawings of another size.',
+          'Then the inner lines: each one is a step between heights (top view) or depths (front and side views).',
+        ],
+        when: 'The way to start, and safe on any structure.',
+      },
       {
         id: 'imagery', title: 'Walk round it',
         text: 'Picture yourself moving to the marked side and looking straight at the structure, so that depth flattens out.',
@@ -90,7 +120,7 @@
       trace: 'Every edge where the surface steps nearer or farther becomes a line.',
       land: 'That is drawing {n}.',
       whyDirection: 'Drawing {n} is the view from the {from}, not from the side the arrow marks.',
-      whyMirror: 'Drawing {n} is the right view flipped left to right: check which side the front is on.',
+      whyMirror: 'Drawing {n} is the correct view flipped left to right: check which side the front is on.',
       whyNeighbour: 'Drawing {n} belongs to a slightly different structure: compare it line by line.',
       objIntro: 'Structure {n} has all three views. Check them one at a time.',
       objMove: 'Look at structure {n} from the {view}.',
@@ -102,6 +132,16 @@
       countCol: 'Column by column: {sum}.',
       countTop: 'Seen from the top, the heights add up to {n} cubes.',
       countKey: '{n} cubes: option {k}.',
+      tint: 'The faces you see from the {view} are shaded: the view is made of those faces.',
+      outline: 'Its outline is {w} × {h} cells: drawings of another size drop out.',
+      outlineAll: 'Its outline is {w} × {h} cells, the same as one other drawing: the inner lines decide.',
+      inner: 'Inner lines: each one is a step between {what}.',
+      innerTop: 'heights',
+      innerSide: 'depths',
+      whyDirectionTurn: 'Drawing {n} is the view from the {from}: from there it looks like this.',
+      whyMirrorFlip: 'Drawing {n} is the correct view flipped left to right.',
+      whyNeighbourLines: 'Drawing {n} belongs to another structure: the marked lines differ.',
+      assist: 'The outline of the view is drawn for you: {w} × {h} cells.',
     },
     bridge: 'Engineers, architects and machinists read three views like these every day. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance.',
     offscreen: {
