@@ -47,6 +47,7 @@ export async function run(t) {
   rows(t);
   storeRows(t);
   logCsv(t);
+  produceScale(t);
 }
 
 function defaults(t) {
@@ -405,4 +406,19 @@ function logCsv(t) {
   const research = e.PX.ui.log.csv(e.PX.ui.log.rows(S.state), { research: true }).split('\r\n').filter(Boolean);
   t.eq(research[0].split(',').slice(-11), ['kind', 'layer', 'answer_mode', 'orientation', 'deadline', 'b_offset', 'bet', 'format', 'b', 'g', 'answer'], 'the research CSV adds b, g and answer after them');
   t.ok(research.slice(1).every((l) => l.split(',').length === 29), 'every research row has 29 cells');
+}
+
+// Conflict 12 (accepted): the produce variant (layers.produce) never moves the level scale: the
+// range (registry, core.test.mjs) and the reference guessing rate leave it out.
+function produceScale(t) {
+  t.section('the produce variant and the level scale (conflict 12)');
+  const PX = mk(t), M = PX.engine.model;
+  const base = () => ({ abilities: ['Vz'], cell: null, role: 'train', answer: 'choice', nOptions: 4, variants: ['pick', 'draw'],
+    dims: [{ key: 'size', levels: [1, 2, 3], step: 0.5 }], base: -1, chance: (p) => (p.variant === 'draw' ? 0.02 : 0.25),
+    generate(rng, params) { return { ex: 'px', seed: rng.seed, params, key: 0 }; }, validate() { return true; }, score(item, r) { return { correct: r === item.key }; } });
+  const plain = PX.ex.define(Object.assign(base(), { id: 'prodoff', code: 'EX-86', name: 'Without a produce layer' }));
+  const prod = PX.ex.define(Object.assign(base(), { id: 'prodon', code: 'EX-87', name: 'With a produce layer', trainVariants: ['pick'], layers: { produce: 'draw' } }));
+  t.near(M.refChance(plain), (0.02 + 0.25) / 2, 1e-12, 'without a produce layer the median runs over every variant');
+  t.eq(M.refChance(prod), 0.25, 'with one, the reference guessing rate leaves the produce variant out');
+  t.eq(M.pool(prod).filter((c) => c.params.variant === 'draw').length, 3, 'its items stay in the pool (explicit picks and the bets pick hook use them)');
 }

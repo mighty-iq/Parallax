@@ -29,6 +29,9 @@
    or null), trainVariants (the variants
    automatic choices use; all by default), pace (a deadline spec or null), roundScore (function or
    null), bet (one of BETS or null); a dim may carry `at` (per-level difficulty contributions).
+   v1.2 wave 2 (CONTRACT-v1.2 S): format (a token, a frozen { variant | '*': token } or null), layers
+   (frozen { compare, produce, bridge, calib } or null; the produce variant stays out of trainVariants
+   and out of the range) and atlas ([dimA, dimB] or null).
    key(def) → 'id@version' (how trial logs index exercises). Definitions are frozen after define. */
 (function (PX) {
   'use strict';
@@ -62,6 +65,7 @@
   function isFn(f) { return typeof f === 'function'; }
   function isNum(x) { return typeof x === 'number' && isFinite(x); }
   function isStr(s) { return typeof s === 'string' && s.trim().length > 0; }
+  function isPlainObj(x) { return !!x && typeof x === 'object' && !Array.isArray(x) && Object.prototype.toString.call(x) === '[object Object]'; }
   function comb(n, k) { var r = 1; for (var i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); }
 
   function check(input) {
@@ -203,6 +207,7 @@
     if (d.roundScore === undefined) d.roundScore = null;
     if (d.bet === undefined) d.bet = null;
     else if (d.bet !== null && BETS.indexOf(d.bet) < 0) fail(id, 'bet must be one of ' + BETS.join(', ') + ' (got ' + JSON.stringify(d.bet) + ')');
+    checkWave2(d, id);
 
     ['generate', 'validate', 'score'].forEach(function (fn) {
       if (!isFn(d[fn])) fail(id, fn + '(…) is missing (generate, validate and score are required)');
@@ -235,6 +240,68 @@
     if (!(total <= MAX_COMBOS)) fail(id, 'too many level combinations (' + total + ') to encode as integers');
     return d;
   }
+
+  // v1.2 wave 2 (docs/dev/CONTRACT-v1.2.md S): format, layers and atlas, all optional until their
+  // owners fill them (W2-bets, W2-measure; milestone 5).
+  //   format: a token, or { <variant | '*'>: token } ('*' for the variants not named)
+  //   layers: { compare: [principle ids], produce: '<variant>', bridge: '<set id>', calib: true }; the
+  //           produce variant is one of the exercise's variants and not one of its trainVariants
+  //   atlas:  [dimA, dimB], two different dim keys (reserved for milestone 5)
+  var TOKEN_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,47}$/;
+  function isToken(x) { return typeof x === 'string' && TOKEN_RE.test(x); }
+  function checkWave2(d, id) {
+    if (d.format === undefined || d.format === null) d.format = null;
+    else if (typeof d.format === 'string') { if (!isToken(d.format)) fail(id, 'format must be a token (letters, digits, _ . : -) or { variant: token }'); }
+    else if (isPlainObj(d.format)) {
+      var fm = {}, fk = Object.keys(d.format);
+      if (!fk.length) fail(id, 'format must name at least one variant (or "*")');
+      fk.forEach(function (k) {
+        if (k !== '*' && !(d.variants && d.variants.indexOf(k) >= 0)) fail(id, 'format names "' + k + '", which is not a variant of the exercise (or "*")');
+        if (!isToken(d.format[k])) fail(id, 'format["' + k + '"] must be a token');
+        fm[k] = d.format[k];
+      });
+      d.format = Object.freeze(fm);
+    } else fail(id, 'format must be a token, { variant: token } or left out');
+
+    if (d.layers === undefined || d.layers === null) d.layers = null;
+    else {
+      var L = d.layers, out = {};
+      if (!isPlainObj(L)) fail(id, 'layers must be an object { compare, produce, bridge, calib }');
+      Object.keys(L).forEach(function (k) {
+        if (['compare', 'produce', 'bridge', 'calib'].indexOf(k) < 0) fail(id, 'layers.' + k + ' is not a layer (compare, produce, bridge, calib)');
+      });
+      if (L.compare !== undefined) {
+        if (!Array.isArray(L.compare) || !L.compare.length || !L.compare.every(isToken)) fail(id, 'layers.compare must be a non-empty list of principle ids (tokens)');
+        out.compare = Object.freeze(L.compare.slice());
+      }
+      if (L.produce !== undefined) {
+        if (!d.variants || d.variants.indexOf(L.produce) < 0) fail(id, 'layers.produce must name one of the exercise\'s variants');
+        if (d.trainVariants && d.trainVariants.indexOf(L.produce) >= 0) fail(id, 'layers.produce ("' + L.produce + '") must be left out of trainVariants (declare trainVariants without it)');
+        out.produce = L.produce;
+      }
+      if (L.bridge !== undefined) {
+        if (!isToken(L.bridge)) fail(id, 'layers.bridge must be a bridge set id (a token)');
+        out.bridge = L.bridge;
+      }
+      if (L.calib !== undefined) {
+        if (typeof L.calib !== 'boolean') fail(id, 'layers.calib must be true or false');
+        out.calib = L.calib;
+      }
+      d.layers = Object.freeze(out);
+    }
+
+    if (d.atlas === undefined || d.atlas === null) d.atlas = null;
+    else {
+      var keys = d.dims.map(function (x) { return x.key; });
+      if (!Array.isArray(d.atlas) || d.atlas.length !== 2 || d.atlas[0] === d.atlas[1] || d.atlas.some(function (k) { return keys.indexOf(k) < 0; })) {
+        fail(id, 'atlas must be [dimA, dimB]: two different dim keys of the exercise');
+      }
+      d.atlas = Object.freeze(d.atlas.slice());
+    }
+  }
+  // The produce variant (layers.produce) never moves the level scale (conflict 12 of CONTRACT-v1.2):
+  // the range and, in js/engine/model.js, the reference guessing rate leave it out.
+  function produceOf(d) { return d.layers && typeof d.layers.produce === 'string' ? d.layers.produce : null; }
 
   function define(input) {
     var d = check(input);
@@ -429,13 +496,27 @@
         hi += Math.max(0, span);
       });
     } else {
-      // Exact for up to 5 000 combinations; over the deterministic sample beyond that.
+      // Exact for up to 5 000 combinations; over the deterministic sample beyond that, with the
+      // corners (every dim at its first, then its last level) of every scale variant.
       lo = Infinity; hi = -Infinity;
-      enumerate(d).forEach(function (p) {
+      var prod = produceOf(d);
+      var seen = function (p) {
+        if (prod !== null && p.variant === prod) return;
         var b = d.difficulty(p);
         if (b < lo) lo = b;
         if (b > hi) hi = b;
-      });
+      };
+      enumerate(d).forEach(seen);
+      if (prod !== null) {
+        d.variants.forEach(function (v) {
+          if (v === prod) return;
+          [false, true].forEach(function (top) {
+            var p = { variant: v };
+            d.dims.forEach(function (dim) { p[dim.key] = top ? dim.levels.length - 1 : 0; });
+            seen(p);
+          });
+        });
+      }
     }
     var r = { min: lo, max: hi };
     if (defs[d.id] === d) ranges[d.id] = r; // cache only registered (frozen) definitions
