@@ -34,6 +34,6 @@ definition; the marked section of docs/guide/guide.html; ENGINE.md §22; its DEC
   W2-core, queued), rounds for Fold, Views, Slice, Rotate and Knots, Slice's bridge set.
 - Texts: About, the Lab, Settings and the guide state the add-ons of this build, checked against the code (48587a4).
 - Checks: node bets 393, layers-* 161, record4, pooled, events, engine-w2, hooks, core green; tests/e2e/bets.py
-  screens 81, rounds (Central Point, Spin) 90, drawings 26, bridge 48, all passing at 360 x 640, 390 x 844 and
-  1366 x 768; sim.mjs train runs as in ENGINE §18 (balanced 77.7 vs 77.0 %); its guard false comes from plateau
-  (FYI to W2-plateau).
+  245 checks in one full run (screens, rounds for Central Point and Spin, drawings, bridge set, expectation
+  rating) at 360 x 640, 390 x 844 and 1366 x 768, 0 failed; sim.mjs train runs as in ENGINE §18 (balanced 77.7 vs
+  77.0 %); its guard false comes from plateau (FYI to W2-plateau).
