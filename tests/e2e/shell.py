@@ -1,12 +1,17 @@
-"""E2E tests of the app shell (Phase 1b).
+"""E2E tests of the app shell (Phase 1b; v1.2 milestone 2).
 
-Checks the Chimera pop-up on every open (text, link href/target/rel, visible address, Copy,
-Esc, focus trap), the first-run tour offer (shown once), navigation by header, phone tab bar
+Checks the full Chimera pop-up on the first open (text, link href/target/rel, visible address, Copy,
+Esc, focus trap) and the one-tap card on later opens (v1.2: under the header, not a modal, ✕ and Esc
+end it, a session ends it, it fits 360 px), the invites at the tour's end and in the backup dialog,
+the Settings controls for the nickname and device details, playtest mode in a sandboxed srcdoc
+(note, report copied through the clipboard fallback), the first-run tour offer (shown once),
+navigation by header, phone tab bar
 and More sheet without the frame navigating away, settings (theme, text size), the backup →
 import → undo round trip, the download on file://, file:// and a sandboxed srcdoc frame
 (storage blocked: the banner shows), no console errors, no horizontal scroll at 360 × 640,
-44 px targets, visible focus, reduced motion, and takes screenshots of Today, the pop-up,
-Settings and About at 1366 × 768 and 412 × 880 in light and dark into tests/e2e/out/shell/.
+44 px targets, visible focus, reduced motion, and takes screenshots of the pop-up, the one-tap card,
+Today, Settings, About and the playtest report at 1366 × 768 and 360 × 640 in light and dark into
+tests/e2e/out/shell/.
 v1.1 phones (run_phones_b2): no horizontal scroll at 150 % text on 360 and 390 px, touch-action,
 a notch held sideways (CDP safe-area insets: nothing in the left and right insets, the welcome
 opens at its first line), the storage hint on an iPhone and not on a desktop, and the web
@@ -65,6 +70,27 @@ def welcome_checks(t, tag):
     R.check(f'{tag}: Start training button', t.locator(f'{w} [data-welcome="start"]').inner_text().strip() == 'Start training')
     R.check(f'{tag}: focus starts inside the pop-up', t.evaluate(f'!!document.activeElement.closest("{w}")'))
     plate_checks(t, tag, f'{w} .px-plate-fig')
+
+
+CARD = '[data-chimera-card]'
+
+
+def card_checks(t, tag):
+    """The one-tap card of a later open (v1.2, gap C2): under the header, the fixed line, Join in a
+    new tab, not a modal, nothing trapped."""
+    R.check(f'{tag}: a later open shows the one-tap card, not the full pop-up',
+            t.locator(CARD).count() == 1 and t.locator('.px-modal[data-welcome]').count() == 0 and modals(t) == 0)
+    if t.locator(CARD).count() != 1:
+        return
+    txt = t.locator(f'{CARD} .px-chimera-card-text').inner_text()
+    R.check(f'{tag}: the card says who built Parallax', txt == 'Parallax was built by the Chimera community on Discord.', txt)
+    a = t.locator(f'{CARD} a[data-chimera="card"]').evaluate('a => ({ href: a.getAttribute("href"), target: a.target, rel: a.rel })')
+    R.check(f'{tag}: the card\'s Join opens the full address in a new tab', a['href'] == DISCORD and a['target'] == '_blank' and 'noopener' in a['rel'], str(a))
+    geo = t.evaluate("""() => { const c = document.querySelector('[data-chimera-card]').getBoundingClientRect(), hd = document.querySelector('.px-header').getBoundingClientRect();
+      return { top: Math.round(c.top), bottom: Math.round(c.bottom), header: Math.round(hd.bottom), vh: innerHeight, sw: document.documentElement.scrollWidth, w: innerWidth }; }""")
+    R.check(f'{tag}: the card sits under the header, on screen', geo['header'] - 1 <= geo['top'] and geo['bottom'] <= geo['vh'], str(geo))
+    R.check(f'{tag}: the card adds no horizontal scroll', geo['sw'] <= geo['w'], str(geo))
+    R.check(f'{tag}: focus is not taken by the card', not t.evaluate('!!document.activeElement.closest("[data-chimera-card]")'))
 
 
 # The specimen plate claims B is A turned 90° about a vertical axis; this community will check.
@@ -207,6 +233,16 @@ def settings_checks(t, tag):
     R.check(f'{tag}: text size 130%', fs == '20.8px' and t.evaluate('PX.core.store.state.settings.textScale') == 1.3, fs)
     t.click('[data-setting="textScale"] label:has-text("100%")')
     R.check(f'{tag}: text size back to 100%', t.evaluate('getComputedStyle(document.documentElement).fontSize') == '16px')
+    # v1.2: what exports carry (the nickname is the only name; device details off by default)
+    R.check(f'{tag}: device details in exports are off by default', t.evaluate('PX.core.store.state.settings.exportDevice') is False
+            and t.locator('[data-setting="exportDevice"] input').is_checked() is False)
+    t.fill('[data-setting-input="nickname"]', '  Kestrel  ')
+    t.press('[data-setting-input="nickname"]', 'Enter')
+    R.check(f'{tag}: the nickname is saved, trimmed', t.evaluate('PX.core.store.state.settings.nickname') == 'Kestrel')
+    R.check(f'{tag}: share texts carry the nickname and the full link', t.evaluate('PX.ui.share.text({ title: "T" })').endswith('Played by Kestrel\nBuilt by the Chimera community on Discord: https://discord.gg/chmr'))
+    t.fill('[data-setting-input="nickname"]', '')
+    t.press('[data-setting-input="nickname"]', 'Enter')
+    R.check(f'{tag}: the nickname can be cleared', t.evaluate('PX.core.store.state.settings.nickname') == '')
 
 
 def roundtrip_checks(page, t, tag, sandboxed):
@@ -216,6 +252,10 @@ def roundtrip_checks(page, t, tag, sandboxed):
     t.click('[data-action="backup"]')
     first = t.evaluate('document.activeElement.hasAttribute("data-download") || document.activeElement.hasAttribute("data-copy")')
     R.check(f'{tag}: backup dialog starts on its action, not on the text', first)
+    inv = t.locator('.px-export [data-invite="backup"]')
+    R.check(f'{tag}: the backup dialog invites the player in (gap C10)', inv.count() == 1
+            and inv.locator('a[data-chimera="invite"]').get_attribute('href') == DISCORD
+            and inv.locator('[data-invite-copy]').count() == 1)
     box = t.locator('.px-export textarea')
     text = box.input_value()
     rec = json.loads(text)
@@ -262,10 +302,24 @@ def run_file(b):
             page.evaluate('document.activeElement.outerHTML.slice(0, 60)'))
     page.reload()
     ready(page)
-    R.check(f'{tag}: pop-up shown again on the next open', page.locator('.px-modal[data-welcome]').count() == 1)
+    card_checks(page, tag)
+    page.click(f'{CARD} [data-chimera-card-close]')
+    page.wait_for_timeout(100)
+    R.check(f'{tag}: one tap on ✕ ends the card', page.locator(CARD).count() == 0)
+    page.reload()
+    ready(page)
     page.keyboard.press('Escape')
     page.wait_for_timeout(150)
+    R.check(f'{tag}: Esc ends the card', page.locator(CARD).count() == 0)
     R.check(f'{tag}: tour offer only on the first run', modals(page) == 0 and page.locator('.px-offer').count() == 0)
+    page.reload()
+    ready(page)
+    page.evaluate('void PX.core.router.go("play", { mode: "train" })')
+    page.wait_for_timeout(400)
+    R.check(f'{tag}: a session ends the card', page.locator(CARD).count() == 0)
+    go(page, 'home')
+    page.wait_for_timeout(200)
+    R.check(f'{tag}: the card does not come back on this open', page.locator(CARD).count() == 0)
     url0 = page.url.split('#')[0]
     nav_checks(page, tag, '.px-header')
     R.check(f'{tag}: navigation never leaves the page', page.url.split('#')[0] == url0, page.url)
@@ -324,6 +378,49 @@ def run_phone(b):
         small = page.evaluate(TARGETS_JS)
         R.check(f'{tag}: {r} has no horizontal scroll', sw <= 360, str(sw))
         R.check(f'{tag}: {r} targets ≥ 44 px', not small, str(small[:6]))
+    R.check(f'{tag}: no console errors', not problems(logs), str(problems(logs)))
+    ctx.close()
+
+
+def run_later(b):
+    """v1.2 (gap C2): a later open at 360 × 640 shows the one-tap card, which fits and keeps every
+    target ≥ 44 px; the tour's end screen carries the tutorial invite (gap C6)."""
+    tag = 'later 360'
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    logs = attach_console(page)
+    page.goto(INDEX.as_uri()); ready(page)
+    page.keyboard.press('Escape'); page.wait_for_timeout(150); page.keyboard.press('Escape'); page.wait_for_timeout(150)
+    R.check(f'{tag}: closing the full welcome stamps the record', page.evaluate('PX.core.store.state.ui.welcomed > 0'))
+    page.evaluate('PX.core.store.flush()')
+    page.reload(); ready(page)
+    card_checks(page, tag)
+    small = page.evaluate(TARGETS_JS)
+    R.check(f'{tag}: card targets ≥ 44 px', not small, str(small[:6]))
+    R.check(f'{tag}: Today\'s Start is still on the first screen', page.evaluate("(() => { const r = document.querySelector('[data-primary]').getBoundingClientRect(); return r.bottom <= innerHeight - 56 && r.top >= 0; })()"))
+    box = page.locator(f'{CARD} [data-chimera-card-close]').bounding_box()
+    page.touchscreen.tap(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+    page.wait_for_timeout(150)
+    R.check(f'{tag}: one tap ends it', page.locator(CARD).count() == 0 and modals(page) == 0)
+    R.check(f'{tag}: playtest mode stays off under browser automation', page.evaluate('PX.ui.playtest.on()') is False and page.locator('[data-playtest="fab"]').count() == 0)
+    R.check(f'{tag}: no console errors', not problems(logs), str(problems(logs)))
+    ctx.close()
+
+    tag = 'tour end'
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    logs = attach_console(page)
+    page.goto(INDEX.as_uri()); ready(page)
+    page.keyboard.press('Escape'); page.wait_for_timeout(200)
+    page.click('.px-offer-go'); page.wait_for_timeout(600)
+    page.get_by_role('button', name='End the tour').first.click()
+    page.wait_for_selector('[data-invite="tutorial"]', timeout=8000)
+    inv = page.locator('[data-invite="tutorial"]')
+    R.check(f'{tag}: the tour ends with the Chimera invite', inv.count() == 1
+            and inv.locator('.px-invite-text').inner_text() == 'Parallax was built by the Chimera community on Discord. Come and say hi.')
+    a = inv.locator('a[data-chimera="invite"]').evaluate('a => ({ href: a.getAttribute("href"), target: a.target, rel: a.rel })')
+    R.check(f'{tag}: its link opens the full address in a new tab', a['href'] == DISCORD and a['target'] == '_blank' and 'noopener' in a['rel'], str(a))
+    R.check(f'{tag}: one invite on the screen', page.locator('[data-invite]').count() == 1)
     R.check(f'{tag}: no console errors', not problems(logs), str(problems(logs)))
     ctx.close()
 
@@ -531,6 +628,24 @@ def run_sandbox(b):
             fr.wait_for_function('[...document.querySelectorAll(".px-toast")].some(t => t.textContent.indexOf("Copied https://discord.gg/chmr") === 0)', timeout=4000)
             R.check(f'{tag}: blocked header link falls back to Copy', same_doc())
             allow = ('Blocked opening',)  # the browser's own note about the blocked tab
+            # v1.2 playtest mode in a sandboxed preview: a note, then the report through the clipboard fallback
+            fr.evaluate('PX.ui.playtest.set(true)')
+            go(fr, 'settings')
+            page.wait_for_timeout(200)
+            R.check(f'{tag}: playtest mode shows its note button', fr.locator('[data-playtest="fab"]').is_visible())
+            fr.click('[data-playtest="fab"]')
+            fr.fill('.pt-note-text', 'A note from the sandboxed preview.')
+            fr.click('[data-playtest-sheet] .px-modal-actions button:has-text("Save note")')
+            page.wait_for_timeout(150)
+            R.check(f'{tag}: the note is saved', fr.evaluate('PX.ui.playtest.counts().notes') == 1)
+            fr.locator('[data-action="playtest-copy"]').scroll_into_view_if_needed()
+            fr.click('[data-action="playtest-copy"]')
+            page.wait_for_timeout(400)
+            rep = read_clip()
+            dialog = fr.locator('[data-playtest-report]').count()
+            R.check(f'{tag}: the playtest report copies in a sandboxed preview', rep.startswith('PARALLAX PLAYTEST REPORT') and 'A note from the sandboxed preview.' in rep
+                    and 'device: ua' in rep and 'framed yes (sandboxed)' in rep, (rep[:120] + f' | fallback dialog: {dialog}'))
+            fr.evaluate('PX.ui.playtest.set(false)')
         else:
             nav_checks(fr, tag, '.px-tabbar', same_doc)
             more_checks(page, fr, tag, '.px-tabbar [data-more]', same_doc)
@@ -543,7 +658,7 @@ def run_sandbox(b):
 
 def run_shots(b):
     shots = []
-    for (w, hgt) in [(1366, 768), (412, 880)]:
+    for (w, hgt) in [(1366, 768), (360, 640)]:
         for theme in ['light', 'dark']:
             ctx = b.new_context(viewport={'width': w, 'height': hgt}, color_scheme=theme)
             page = ctx.new_page()
@@ -553,12 +668,21 @@ def run_shots(b):
             name = f'{w}x{hgt}_{theme}'
             page.screenshot(path=str(OUT / f'popup_{name}.png')); shots.append(f'popup_{name}.png')
             page.keyboard.press('Escape'); page.keyboard.press('Escape')
+            page.evaluate('PX.core.store.flush()')
+            page.reload(); ready(page)
+            page.wait_for_timeout(300)
+            page.screenshot(path=str(OUT / f'card_{name}.png')); shots.append(f'card_{name}.png')
+            page.keyboard.press('Escape')
+            page.evaluate('PX.ui.playtest.set(true)')
             page.add_style_tag(content=FULLPAGE_FIX)
             for r, label in [('home', 'today'), ('settings', 'settings'), ('about', 'about')]:
                 go(page, r)
-                page.wait_for_timeout(120)
+                page.wait_for_timeout(150)
                 page.screenshot(path=str(OUT / f'{label}_{name}.png'), full_page=True)
                 shots.append(f'{label}_{name}.png')
+            page.evaluate('void PX.ui.playtest.showReport()')
+            page.wait_for_timeout(200)
+            page.screenshot(path=str(OUT / f'playtest_report_{name}.png')); shots.append(f'playtest_report_{name}.png')
             R.check(f'shots {name}: no console errors', not problems(logs), str(problems(logs)))
             ctx.close()
     return shots
@@ -574,6 +698,7 @@ def main():
         run_file(b)
         run_phone(b)
         run_phones_b2(b)
+        run_later(b)
         run_sandbox(b)
         shots = run_shots(b)
         b.close()

@@ -502,6 +502,7 @@
   // is blocked: then the text opens selected).
   function showReport(blocked) {
     var text = report(), K = PX.ui.kit, field = K.copyField(text, { rows: 12, ariaLabel: 'Playtest report', label: 'Copy' });
+    if (!blocked) field.button.setAttribute('data-autofocus', ''); // focusing the text would select it all
     var close = ui.modal({ title: 'Playtest report', className: 'pt-report', body: [
       h('p', blocked ? 'Copying is blocked here. The report is selected below: press Ctrl+C (Cmd+C on a Mac), or long-press it and choose Copy.'
         : 'Everything in the playtest log, with this device’s facts. Copy it and send it with your feedback.'), field],
