@@ -18,41 +18,47 @@ Parallax is a static, offline web app that trains visuospatial ability. This fil
 parallax/
   index.html                  links css, then scripts in the order of §3
   css/base.css                design tokens (light + dark), type, layout, components
-  css/app.css                 screens
-  css/ex.css                  exercise styles, each under .ex-<id>
+  css/app.css                 the shell, Today, Settings, About, the welcome, the one-tap card, invites
+  css/screens.css             Library, Progress, Log, Lab and other screens
+  css/play.css                the player, summaries, Watch, Try, Go, the phone-fit variables (§6)
+  css/section.css             Section practice (v1.1)
+  css/playtest.css            playtest mode (v1.2)
+  css/ex.css, css/ex/<id>.css exercise styles, each under .ex-<id>
   fonts/                      IBM Plex Sans 400/600, IBM Plex Mono 400/500 (woff2, OFL.txt)
   vendor/three.min.js         + vendor/LICENSE-three.txt
-  js/core/                    px.js util.js rng.js bus.js timing.js keys.js store.js router.js svg.js ui.js stage3d.js
-  js/engine/                  model.js estimator.js select.js staircase.js bandit.js schedule.js modes.js assess.js achievements.js streak.js daily.js stats.js merge.js (no XP: PLAN §7)
+  js/core/                    px.js util.js rng.js bus.js timing.js clock.js keys.js store.js router.js svg.js ui.js stage3d.js
+  js/engine/                  model.js estimator.js select.js staircase.js bandit.js schedule.js modes.js assess.js achievements.js streak.js daily.js stats.js merge.js section.js rebase.js pace.js (no XP)
   js/ex/registry.js           PX.ex.define / PX.ex.view / PX.ex.list
   js/ex/<id>/gen.js           pure: generator, validator, scorer, difficulty dims
   js/ex/<id>/view.js          DOM / 3D: drawing, input, reveal, show-me, demo
   js/ex/<id>/learn.js         tutorial steps, strategy cards, captions (data only)
-  js/ui/                      app.js welcome.js tour.js home.js play.js library.js progress.js log.js lab.js settings.js about.js share.js
-  tools/                      vendor-three.mjs build-single.mjs build-pdf.py shots.py
+  js/ui/                      welcome.js home.js settings.js overlap.js about.js library.js progress.js log.js lab.js share.js tour.js play.js section.js check.js playtest.js, then app.js
+  tools/                      vendor-three.mjs build-single.mjs build-pdf.py shots.py sync-index.py privacy_check.py githooks/
   tests/node/                 run.mjs (vm loader) + *.test.mjs + sim.mjs
   tests/e2e/                  *.py (Playwright)
   tests/dev/harness.html      loads one exercise without the app shell, for development and tests
   docs/guide/                 guide.html + guide.css -> docs/Parallax-Guide.pdf
-  README.md CHANGELOG.md LICENSE (MIT) LICENSE-GUIDE.md (CC BY-SA 4.0) CLAUDE.md
+  README.md CHANGELOG.md LICENSE (MIT, code) LICENSE-GUIDE.md (CC BY-SA 4.0: the guide and the prose texts) CLAUDE.md
 ```
 
 ## 3. Namespace and load order
 - `js/core/px.js` creates `window.PX = { version, core:{}, engine:{}, ex:{}, ui:{}, debug:{} }`.
 - Every file is `(function (PX) { 'use strict'; /* … */ })(window.PX);` and attaches its API to PX. No other globals.
 - **Pure files** (no DOM, no THREE, no timers): core/util, core/rng, engine/*, ex/registry, ex/*/gen.js, ex/*/learn.js. They must load in Node through `tests/node/run.mjs` (a `vm` context whose `window` is a plain object).
-- Script order: vendor/three → core (px, util, rng, bus, timing, keys, store, router, svg, ui, stage3d) → engine/* → ex/registry → every ex/*/gen.js → every ex/*/learn.js → every ex/*/view.js → ui/* → ui/app.js last (boots on DOMContentLoaded).
+- Script order: vendor/three → core (px, util, rng, bus, timing, clock, keys, store, router, svg, ui, stage3d) → engine/* → ex/registry → every ex/*/gen.js → every ex/*/learn.js → every ex/*/view.js → ui/* (welcome first: PX.ui.chimera; playtest.js just before app.js) → ui/app.js last (boots on DOMContentLoaded). An exercise that `requires` another (Reckon → Homing) loads after it.
 
 ## 4. Core APIs
-- `PX.util`: clamp, lerp, round(n, dp), mean, sd, median, quantile, logit, sigmoid, deg/rad, deepCopy, fmtTime, fmtDate, uid().
+- `PX.util`: clamp, lerp, round(n, dp), mean, sd, median, quantile, logit, sigmoid, deg/rad, deepCopy, fmtTime, fmtDate, uid(), and `fmtSecs(ms)`, the one answer-time format of every screen ('0.8 s', '12.4 s', '135 s'; v1.2, O5).
 - `PX.rng(seed)` → `{ next(), int(a,b) /*inclusive*/, float(a,b), pick(arr), shuffle(arr) /*copy*/, chance(p), normal(), fork(label) }`. Seeds are uint32; `PX.rng.hash(...parts)` makes a seed from strings and numbers (cyrb53 or xmur3 → sfc32). Same seed → same sequence on every platform. Never use Math.random in pure files.
 - `PX.bus`: `on(evt, fn) → off`, `emit(evt, data)`.
 - `PX.core.timing`: `nextPaint() → Promise<DOMHighResTimeStamp>` (resolves in the rAF after the DOM change is committed, i.e. double rAF); `loop(fn(dtMs, now)) → stop` (pauses when the tab is hidden; dt is clamped to 100 ms); `monitor() → { stop() → {frames, medianMs, p95Ms, dropped, maxGapMs, stutter:boolean} }`. A frame is "dropped" when it is longer than 1.5 × the median frame time (do not use a fixed 16.7 ms: a quarter of smooth 60 Hz frames measure 16.8 ms). stutter = maxGap > 150 ms, or dropped > 15 % of frames, or a WebGL context loss during the phase (relaxed on 30 Oct: motion is time-based, so dropped frames never misplace objects, and the stricter rule voided most trials on slow devices). Exercises with fast motion add their own rule (Track: void when speed × maxGap exceeds 1.5 sphere diameters).
 - `PX.core.keys`: layered handlers. `push({ '1': fn, Enter: fn, Escape: fn, … }) → pop`. Only the top layer receives keys. Inputs and textareas are ignored except Escape.
 - `PX.core.store`: see §8.
-- `PX.core.router`: `go(route, params)`, `current()`, `on(fn)`. Routes: home, play, library, exercise/<id>, progress, log, lab, settings, about. One delegated click listener handles `[data-go]` elements.
+- `PX.core.router`: `go(route, params)`, `current()`, `on(fn)`. Routes: home, play, library, exercise/<id>, section, progress, log, lab, settings, about. One delegated click listener handles `[data-go]` elements. Every change emits `route { cur, prev }` on PX.bus.
+- `PX.core.clock` (1.1): the one active-time clock; pauses for the pause sheet, any sheet or dialog, a hidden tab and 60 s without input.
 - `PX.core.svg`: `el(tag, attrs, children?)`, `svg(w, h, attrs)` (viewBox-based, scales to its box), `path(points, closed)`, `text(...)`.
-- `PX.ui`: `h(tag, attrs, ...children)` hyperscript; `modal({title, body, actions, onClose, dismissable}) → close` (focus trap, Esc, returns focus); `toast(msg)`; `confirm(msg) → Promise<boolean>`; `button(label, opts)`; `bar(value, max, opts)` progress bar; `ring(value, max)`; `choiceGrid(n, layout) → {cells, select(i), mark(i, state), onPick(fn)}`; `copyBox(text)` (export fallback).
+- `PX.ui`: `h(tag, attrs, ...children)` hyperscript; `modal({title, body, actions, onClose, dismissable}) → close` (focus trap, Esc, returns focus; emits modal:open and modal:close, and the player pauses a running item under a modal); `toast(msg)`; `confirm(msg) → Promise<boolean>`; `button(label, opts)`; `bar(value, max, opts)` progress bar; `ring(value, max)`; `choiceGrid(n, layout) → {cells, select(i), mark(i, state), onPick(fn)}`; `copyBox(text)` (export fallback); `copyText(text)` (async clipboard, then `execCommand('copy')`).
+- `PX.ui.chimera` (js/ui/welcome.js): `URL`, `LINE` (the line every share text ends with, full https address), `joinLink`, `linkCopy`, `invite(kind, { host })` (one line in the fixed wording, the link in a new tab and Copy link; kinds tutorial, best, achievement, path, check, grade, plateau, export, backup, milestone; null over a stimulus or when `host` already holds one; v1.2, CONTRACT-v1.2 H).
 - `PX.core.stage3d`: `available()`; `renderer()` (lazy, the only WebGLRenderer; DPR capped at 2); `attach(container) → view {scene, camera, resize(), render(), detach()}`; `snapshot(scene, camera, w, h) → HTMLCanvasElement` (copies the rendered image to a 2D canvas synchronously); `loop` from timing; shared materials and builders: `cubeGroup(cells, opts)` (unit cubes with outline edges, Shepard–Metzler look), `sphere(radius, color)`, `wireBox(size)`; theme colours from CSS tokens. If WebGL is unavailable, `available()` is false and 3D exercises are shown as unavailable with a reason, never as a crash.
   - Spike facts (spike/RESULTS.md): three r186 needs WebGL 2. A page gets 16 WebGL contexts and the 17th silently kills the oldest, so there is exactly one renderer. `snapshot` renders offscreen and copies to a 2D canvas (7–21 ms each in software rendering): render option thumbnails during the ready phase, never during a stimulus phase. Cap DPR at 2 and turn antialiasing off when DPR ≥ 2 or the screen is phone-sized. Handle `webglcontextlost` / `restored`: the current trial is voided (stutter) and the scene is rebuilt. Quality steps down automatically (DPR 1, no antialiasing) after two stuttered trials, and the Settings screen shows it. A live WebGL canvas prints blank, so screenshots for the guide are PNG files.
   - Pointer picking of small objects (Track spheres are 26–31 px on phones): choose the nearest object within 36 px of the tap, not only exact hits.
@@ -90,7 +96,9 @@ PX.ex.define({
 - Items may carry extra values the log needs (Track: `item.speedValue`, the exact continuous speed); Threshold runs record them per trial, since paramsCode keeps only the nearest level.
 - While writing a gen.js, write it outside the repository and move it into place once it loads (the runner now tolerates other exercises' broken files, but the app does not). Run your own tests with a filter: `node tests/node/run.mjs <id>`.
 - `validate` re-derives the answer independently of the generator's bookkeeping (brute force where possible): exactly one correct option; options pairwise different in a way a person can see; the distinguishing feature visible from the shown viewpoint; mirror distractors not equal to any rotation of the original.
-- Responses by answer type: choice → option index; multi → sorted array of indices; yesno → true/false; angle → degrees (0–360, clockwise from the reference); targets → sorted array of object ids; sequence → array of cell ids.
+- Responses by answer type: choice → option index; multi → sorted array of indices; yesno → true/false; angle → degrees (0–360, clockwise from the reference); targets → sorted array of object ids; sequence → array of cell ids; position (1.1) → `{ x, z }` in metres on the item's ground plane (Reckon's walk back); point (1.2) → `{ x, y }` in the item's own lattice units (Central Point). `position` and `point` need `chance(params)`; `score` judges the distance.
+- **Fields added in 1.1:** `pat: true` (a DAT-style format: trained only under the player's DAT-style focus, grouped in the Library, part of Section practice), `experimental: true` (labelled experimental), `requires: ['homing']` (on the definition and the view: that exercise's files load first; Reckon reuses Homing's route model and 3D kit), `practice: 'attention' | 'perception'` (Track; Angles' perceptual-judgement label).
+- **Fields added in 1.2** (docs/dev/CONTRACT-v1.2.md A; `PX.ex.check` validates them): `starter: { dim, levels: n }` (the first n levels of that dim are the starter band; the Library and the player say "level 1 · starter items"); a dim's `at: [b0, b1, …]` (per-level difficulty contributions instead of `step × index`, so a band added in front keeps every old difficulty: `at: [Δ, 0, step, 2·step, …]`, `version` + 1, and js/engine/rebase.js converts stored levels once); `trainVariants` (the variants automatic choices use); `pace: { variants, startMs, minMs, maxMs, target, step }` (a deadline per exercise on a weighted staircase, js/engine/pace.js); `roundScore(item, result, info) → 0–100` (a per-item round score, never a lifetime total); `bet` (the transfer bet: attention, load, variety, strategy, compare, bridge, produce, calibrate or format).
 
 ## 6. Exercise view (`js/ex/<id>/view.js`, DOM)
 ```js
@@ -114,6 +122,8 @@ PX.ex.view('rotate', {
 - Views must be keyboard-playable: for custom layouts, register keys through `ctx.keys` (provided by the player) and show the key hints.
 - Animations honour `ctx.fast` (tests) and the reduced-motion setting (shorter, never skipped when the motion *is* the stimulus).
 - No work during stimulus phases beyond drawing the stimulus: no saves, no DOM observers, no layout thrash.
+- **Context added in 1.1 and 1.2:** `ctx.practice` (a Try item: not logged), `ctx.demo` (a Watch demo), `ctx.assist` (1.2: the Try item's first step done by the app, from `learn.practice[i].assist`, else null), `ctx.addMotion(ms)` and `ctx.gentleMotion` (1.2: views with `motion: true` report the motion they show; the player counts it for the comfort cards, and the gentle profile is on when the setting `gentleMotion` is 'on', or 'auto' with reduced motion). Optional view functions in 1.2: `drawRule(el, fig, ctx)` (a small picture on the rules card) and `atDeadline(item, ctx) → response | null` (the Quick deadline takes a placed marker).
+- **Phones (1.1):** while an item is up (`body.px-item`) a phone shows the item alone on one screen that does not scroll. Every exercise sizes its figure and options from `--pl-avail` (the height left for the item), `--pl-w` (its width) and, held sideways, `--pl-col` (one of two columns), in css/ex/<id>.css under `.pl-trial.ex-<id>` (css/play.css explains the arithmetic). tests/e2e/fit.py checks every scored item at 360 × 640 and 844 × 390.
 
 ## 7. Engine (pure; parameters in PLAN.md §Progression)
 - `PX.engine.model.p(theta, b, chance, lapse=0.03, a=1)` = chance + (1 − chance − lapse) · σ(a(θ − b)).
@@ -123,11 +133,11 @@ PX.ex.view('rotate', {
 - Speed mode keeps a separate timed rating per exercise; Free play never updates ratings.
 - `PX.engine.fields()` returns the defaults of every engine-owned record field (path stages, timed ratings, thresholds, style, weekly goal, interleaving stage, pins, baseline expectations, lab arm, strategy check-ins); app.js registers them with `store.field()` so the schema guard keeps them.
 - `PX.engine.bandit`: learning progress per exercise (recent improvement of mu), for choosing exercises.
-- `PX.engine.schedule / modes`: build a session plan from the learner record and the mode. `assess`: the Spatial Check. `xp`, `achievements`, `streak`, `daily`: gamification. `stats`: summaries for the Progress and Log screens.
-- Trials marked `stutter` or `skipped` never update the estimator, staircases, XP for correctness, or achievements based on correctness.
+- `PX.engine.schedule / modes`: build a session plan from the learner record and the mode; `modes.suggest(rec, now)` (1.2) gives one mode suggestion from the log or null (Today shows it; a dismissed one is hidden until `rec.ui.hiddenTips[key]`). `assess`: the Spatial Check. `achievements`, `streak`, `daily`: the game layer. `stats`: summaries for the Progress and Log screens. `section` (1.1): Section practice. `rebase` (1.2): converts stored levels when an exercise's range changes (`rec.scales`). `pace` (1.2): the per-exercise deadline staircase of `def.pace`. `est.starter(def, st)` (1.2): progress to level 2 on the starter band.
+- Trials marked `stutter` or `skipped` never update the estimator, staircases or achievements based on correctness. Engine details: docs/dev/ENGINE.md.
 
 ## 8. Learner record (store)
-- One key `parallax.v1` in localStorage (the key never changes; the record's `v` is the format: 1 in 1.0.x, 2 from 1.1.0). Shape (1.0; the 1.1 additions are listed after the decisions below):
+- One key `parallax.v1` in localStorage (the key never changes; the record's `v` is the format: 1 in 1.0.x, 2 in 1.1.x, 3 from 1.2.0). Shape (1.0; the 1.1 additions are listed after the decisions below):
 ```js
 { v: 1, rev: 0, created, updated,
   settings: { sessionMin: 20, weeklyGoal: 3, theme: 'auto', reducedMotion: 'auto', sound: false, keyHints: true, textScale: 1, lastBackup: 0 },   // lastBackup: ms timestamp, 0 = never
@@ -153,6 +163,10 @@ PX.ex.view('rotate', {
   - Sessions keep `display`, `viewport` ('390x844'), `input`, `ended` and `budgetMs`; `practiceMs` (top level) is active time from `PX.core.clock` (pause, sheets, modals, a hidden tab and 60 s without input stop it).
   - Check records may carry `display`, `viewport`, `input` (js/ui/check.js) and `overlapAnswer` ('no' | 'little' | 'lot', from the one-tap question on later checks), copied from `plan.check.extra` by `assess.finish`.
   - Fields registered by v1.1 modules: `hygiene` ({ tests, focus }, js/ui/overlap.js), `section` ({ runs, next, live }, js/engine/section.js), `reckon` ({ v, hist }, js/ex/reckon/view.js); settings `patFocus` (bool, "DAT-style focus") and `testPause` ({ ids, until, what } or null, the json setting type).
+- **1.2.0, record format v3** (docs/dev/CONTRACT-v1.2.md B and I):
+  - `v: 3`; `scales: { <exId>: [min, max] }`, the range each exercise's stored levels were written on, so js/engine/rebase.js converts levels once when a band is added (upgrade hooks run on load, import and another tab's record). A 1.1 tab that meets a v3 record runs from memory.
+  - Settings `nickname` (≤ 24 characters, the only name a card or an export carries), `exportDevice` (device details in exports, off by default), `gentleMotion` ('auto' | 'on' | 'off'), `playtest` ('auto' | 'on' | 'off', js/ui/playtest.js). `ui.welcomed` (when the full welcome was first closed), `ui.hiddenTips` (mode suggestions hidden until a time).
+  - Exports: `store.exportJSON(opts)` is the backup (fields marked private are left out unless `opts.device` or `exportDevice`); `store.pooled(opts)` is the community export (times in UTC, no local day keys, no settings or `ui`, the nickname only with `opts.nickname`, device facts only with device details on). A field registered outside store.js appears in it only through `store.exportRule(key, { pooled: fn | false, private })`. Rules in 1.2: `playtest` private and never pooled; `hygiene` pooled as kinds, what it paused and `inDays` (days from the note to the test), never a calendar day.
 
 ## 9. Screens (ui/*)
 - **Screen contract (from the shell, 30 Oct):** each screen file does `PX.ui.screens = PX.ui.screens || {}; PX.ui.screens.<name> = { title, render(host, route, ctx) → cleanup }`. app.js loads last and shows a placeholder for screens nobody has registered. Shared pieces live in `PX.ui.kit` (icons, spec labels, panels, segmented controls, switches, copy field, "Last backup" line); kit is defined in app.js, so use it inside render only.
@@ -160,7 +174,9 @@ PX.ex.view('rotate', {
 - Theme: app.js emits `'theme' { dark }` on PX.bus when it changes; stimulus colours are the `--stim-*` CSS tokens (stage3d reads them).
 - index.html: exercise gen/learn/view files sit in commented PENDING blocks; enable each when its node tests pass (tests/e2e/shell.py lists pending files that exist).
 - Playwright tip: `page.evaluate` on an expression that returns a function calls it; prefix with `void`.
-- welcome (every app open: built by the Chimera community, Discord link, start), tour (first run), home (today), play (trial player + session summary), library (all exercises with levels, learn, practise), progress (profile, levels with bands, Spatial Check and transfer, personal bests, achievements), log (sessions, trials, export), lab (protocols, data, how the engine works), settings, about.
+- welcome (1.2: the full pop-up on a record's first launch, built by the Chimera community, Discord link, Copy, start; later launches show a one-tap card in the page's flow under the header that closes when a session starts), tour (first run; its end screen carries the tutorial invite), home (today; one mode suggestion from the log), play (trial player + session summary; invite slots), library (all exercises with levels, learn, practise, and each mode's "right when" line), progress (profile, levels with bands, Spatial Check and transfer, personal bests, achievements), log (sessions, trials, export), lab (protocols, self-experiment, research CSV, community export, how the engine works), settings (also privacy and playtest), about.
+- Share texts end with `PX.ui.chimera.LINE`; `PX.ui.share.text()` adds it to any text that lacks the full address, and puts in the nickname ("Played by …") when there is one.
+- Playtest mode (1.2, js/ui/playtest.js; CONTRACT-v1.2 G): the player emits `play:screen`, `play:trial`, `play:summary` (with an empty `.pl-playtest-slot` for the three taps), `play:wtg`, `play:session` and `play:error` on PX.bus; the module listens, adds window errors and its own frame samples outside stimuli, and shows a note button outside items. `BUILD` at the top of the file decides its default.
 - Phones first: everything works at 360 × 640; no horizontal scroll; touch targets ≥ 44 px.
 
 ## 10. Visual design
@@ -169,7 +185,7 @@ PX.ex.view('rotate', {
 
 ## 11. Codes
 - CHC Gv narrow abilities: Vz visualization, SR speeded rotation, CS closure speed, CF flexibility of closure, MV visual memory, SS spatial scanning, PI serial perceptual integration, LE length estimation, IL perceptual illusions, PN perceptual alternations, IM imagery. LE is used for Angles (EX-16, the nearest narrow ability for judging angles by eye; labelled perceptual-judgement practice).
-- Exercise codes: EX-01…EX-19 (EX-14…EX-19 are the DAT-style formats in PAT order; no code uses the mark, R3 §6); probes PR-0…PR-5.
+- Exercise codes: EX-01…EX-20 (EX-14…EX-19 are the DAT-style formats in PAT order; no code uses the mark, R3 §6; EX-20 is Central Point, 1.2); probes PR-0…PR-5.
 - Other codes used here (not Gv narrow abilities, labelled as such in the UI): AT attentional tracking (Track), WM working memory (Span), PT perspective taking / spatial orientation (Orient, PR-2), NAV navigation and path integration (Homing, Reckon), MA mental animation (PR-3), VB verbal reasoning (the control probe PR-0).
 - Uttal cells: intrinsic-static, intrinsic-dynamic, extrinsic-static, extrinsic-dynamic, or null. Used as a coverage checklist, never as a score (Mix et al. 2018 found the 2×2 does not hold as a factor structure).
 
@@ -179,3 +195,5 @@ PX.ex.view('rotate', {
 - `tests/dev/harness.html?ex=<id>&seed=<n>&p=<dim:level,…>` mounts one exercise view without the app shell and exposes `window.__harness = { item, key, answer(correct), next(params) }` for Playwright.
 - Playwright (Python, headless Chromium with the launch arguments from spike/RESULTS.md): e2e flows, every exercise played by keyboard and by pointer, file://, sandboxed srcdoc, storage blocked, phone viewport, the single-file build.
 - `PX.debug` (always present, harmless): `current()` → `{exId, item, key}`, `answer(correct)` submits through the same path as a click, `fast(true)` shortens animations.
+- UI pieces with no DOM work at load run in Node too: `t.env({ files })` loads them with the store, and tests/node/chimera-dom.mjs adds a small fake DOM for the ones that build elements (chimera.test.mjs: invites, the one-tap card, every share text; playtest.test.mjs; overlap.test.mjs).
+- While several builders work at once, docs/dev/CONTRACT-v1.<n>.md says who owns which file and function, and docs/dev/v1.<n>/requests.md carries requests between them.
