@@ -71,7 +71,7 @@ function testLog(t, storage) {
   e.dispatch('error', { target: e.window, message: 'TypeError: x is undefined', filename: 'file:///home/someone/parallax/js/ui/play.js', lineno: 77 });
   const L = R.playtest;
   t.eq([L.ex.rotate.n, L.ex.rotate.right, L.ex.rotate.timeouts, L.ex.rotate.voids, L.ex.rotate.rts], [2, 1, 1, 1, [2100]], 'answers, right ones, late ones, voided ones and right answer times per exercise');
-  t.eq([L.ex.fold.practice, L.ex.fold.right], [1, 1], 'practice answers count as practice');
+  t.eq([L.ex.fold.practice, L.ex.fold.practiceRight, L.ex.fold.n, L.ex.fold.right], [1, 1, 0, 0], 'practice answers count apart from rated ones');
   t.eq([L.stim.rotate.trials, L.stim.rotate.dropped, L.stim.rotate.stutter, L.stim.rotate.gapMax], [2, 2, 1, 120], 'frame timings of items');
   t.eq(L.sessions.length, 1, 'the session');
   t.eq(L.errors.map((x) => [x.message, x.n]), [['boom', 2], ['TypeError: x is undefined', 1]], 'errors, a repeat counted once');
@@ -100,7 +100,7 @@ function testLog(t, storage) {
   e.setHidden(false);
   const rep = T.report();
   for (const part of ['PARALLAX PLAYTEST REPORT', 'device: ua', 'played: 1 visit', 'ratings (fun 1-5, clarity 1-5, difficulty):', 'rotate [train]: fun 3, clarity 5, difficulty hard', 'Daily Challenge [daily]: fun -, clarity -, difficulty right',
-    'notes:', '"The fold demo runs too fast"', 'performance:', 'rotate: 2 answered, 1 right, median right 2.1 s, 1 late, 1 voided', 'sessions:', '2 answered', 'frames in items:', 'rotate: 2 items', 'errors:', '"boom" x2', '"TypeError: x is undefined" at play.js:77', 'where you quit (last visits):', 'last on play:session (train rotate)', 'trail:']) {
+    'notes:', '"The fold demo runs too fast"', 'performance:', 'rotate: 2 answered, 1 right, median right 2.1 s, 1 late, 1 voided', 'fold: 0 answered, 0 right; practice 1 (1 right)', 'sessions:', '2 answered', 'frames in items:', 'rotate: 2 items', 'errors:', '"boom" x2', '"TypeError: x is undefined" at play.js:77', 'where you quit (last visits):', 'last on play:session (train rotate)', 'trail:']) {
     t.ok(rep.includes(part), 'the report has: ' + part);
   }
   t.ok(!/\/home\//.test(rep), 'no folder path in the report');
@@ -163,7 +163,7 @@ function testFix(t) {
   t.eq(f.sessions.map((s) => [s.ex, s.ms]), [[[], 0], [['fold'], 0]], 'sessions: exercise lists and times repaired');
   t.eq(f.visits[0], { start: 1, ms: 0, last: '?', lastAt: 1 }, 'visits: defaults filled');
   t.eq(f.trail, [[1, 'home']], 'trail: malformed entries dropped');
-  t.eq(f.ex, { rotate: { n: 0, right: 2, practice: 0, timeouts: 0, voids: 0, rts: [1] } }, 'performance: repaired, bad ids dropped');
+  t.eq(f.ex, { rotate: { n: 0, right: 2, practice: 0, practiceRight: 0, timeouts: 0, voids: 0, rts: [1] } }, 'performance: repaired, bad ids dropped');
   t.eq(f.stim, { rotate: { trials: 3, medSum: 0, p95Max: 0, gapMax: 0, dropped: 0, stutter: 0 } }, 'frame totals: only known fields');
   const many = fix({ notes: Array.from({ length: 250 }, (_, i) => ({ t: i, text: 'n' + i })) });
   t.eq([many.notes.length, many.notes[0].text], [200, 'n50'], 'notes keep the latest 200');

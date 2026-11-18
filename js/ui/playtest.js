@@ -90,7 +90,7 @@
       return isObj(s) && isNum(s.start) ? { start: s.start, ms: num(s.ms), last: str(s.last, 120) || '?', lastAt: isNum(s.lastAt) ? s.lastAt : s.start } : undefined;
     }, CAP.visits);
     out.trail = list(v.trail, function (s) { return Array.isArray(s) && isNum(s[0]) && typeof s[1] === 'string' ? [s[0], s[1].slice(0, 120)] : undefined; }, CAP.trail);
-    var EXF = ['n', 'right', 'practice', 'timeouts', 'voids'], STF = ['trials', 'medSum', 'p95Max', 'gapMax', 'dropped', 'stutter'];
+    var EXF = ['n', 'right', 'practice', 'practiceRight', 'timeouts', 'voids'], STF = ['trials', 'medSum', 'p95Max', 'gapMax', 'dropped', 'stutter'];
     [['ex', EXF], ['stim', STF]].forEach(function (kf) {
       var k = kf[0];
       if (!isObj(v[k])) return;
@@ -244,9 +244,9 @@
   bus.on('play:trial', function (e) {
     if (!on() || !e || !e.exId) return;
     var L = log(), id = String(e.exId).slice(0, 40);
-    var x = L.ex[id] || (L.ex[id] = { n: 0, right: 0, practice: 0, timeouts: 0, voids: 0, rts: [] });
-    if (e.practice) x.practice++;
+    var x = L.ex[id] || (L.ex[id] = { n: 0, right: 0, practice: 0, practiceRight: 0, timeouts: 0, voids: 0, rts: [] });
     if (e.voidReason) x.voids++;
+    else if (e.practice) { x.practice++; if (right(e.outcome)) x.practiceRight = (x.practiceRight || 0) + 1; }
     else {
       x.n++;
       if (right(e.outcome)) { x.right++; if (isNum(e.rtMs)) { x.rts.push(Math.round(e.rtMs)); if (x.rts.length > CAP.rts) x.rts.splice(0, x.rts.length - CAP.rts); } }
@@ -463,11 +463,12 @@
     ids.forEach(function (id) {
       var x = L.ex[id], m = median(x.rts);
       out.push('  ' + nameOf(id) + ': ' + x.n + ' answered, ' + x.right + ' right' + (m !== null ? ', median right ' + secs(m) : '') +
-        (x.practice ? ', ' + x.practice + ' practice' : '') + (x.timeouts ? ', ' + x.timeouts + ' late' : '') + (x.voids ? ', ' + x.voids + ' voided' : ''));
+        (x.timeouts ? ', ' + x.timeouts + ' late' : '') + (x.voids ? ', ' + x.voids + ' voided' : '') +
+        (x.practice ? '; practice ' + x.practice + ' (' + (x.practiceRight || 0) + ' right)' : ''));
     });
     out.push('sessions:' + (L.sessions.length ? '' : ' none'));
     L.sessions.slice(-20).forEach(function (s) {
-      out.push('  ' + hm(s.t) + ' ' + s.mode + ' ' + mins(s.ms) + ', ' + s.answered + ' answered, ' + s.right + ' right (' + s.ex.map(nameOf).join(', ') + '), ' + (s.ended ? 'ended ' + s.ended : 'finished'));
+      out.push('  ' + hm(s.t) + ' ' + s.mode + ' ' + mins(s.ms) + ', ' + s.answered + ' answered, ' + s.right + ' right (' + s.ex.map(nameOf).join(', ') + '), ' + (!s.ended || s.ended === 'complete' ? 'finished' : 'ended: ' + s.ended));
     });
     var fr = L.frames;
     if (fr.length) {
