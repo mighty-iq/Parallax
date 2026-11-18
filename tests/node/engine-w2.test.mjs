@@ -79,9 +79,11 @@ function registry(t) {
   M.hook('kind', f, { id: 'c' });
   M.hook('kind', f, { id: 'd', order: 20 });
   t.throws(() => M.hook('kind', f, { id: 'a' }), /already registered/, 'a duplicate id at one point is refused');
-  t.eq(M.hooks('kind').map((h) => h.id), ['a', 'b', 'd', 'c'], 'lower order first, ties in registration order, default order 50');
+  // only this test's ids: the wave-2 engine files register their own hooks when they are loaded (plateau.drill, …)
+  const own = () => M.hooks('kind').map((h) => h.id).filter((id) => ['a', 'b', 'c', 'd'].includes(id));
+  t.eq(own(), ['a', 'b', 'd', 'c'], 'lower order first, ties in registration order, default order 50');
   off1();
-  t.eq(M.hooks('kind').map((h) => h.id), ['a', 'd', 'c'], 'off() removes a hook');
+  t.eq(own(), ['a', 'd', 'c'], 'off() removes a hook');
   t.eq(M.hooks('nope'), [], 'an unknown point lists nothing');
   ['start', 'kind', 'pick', 'answer', 'finish'].forEach((p) => t.ok(Array.isArray(M.hooks(p)), 'point ' + p + ' exists'));
 }
