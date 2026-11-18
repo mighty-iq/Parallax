@@ -15,6 +15,16 @@ Owns: see docs/dev/CONTRACT-v1.2.md "File ownership". Requests: docs/dev/v1.2/re
   hold steps, playCmd); fit.py taps the template's cards.
 - Tests: engine-v12, rebase, pooled, firstband (new); core/engine updated; play.py run_v12; flows/play/clock follow
   the one-tap card, the full Discord link and the one time format; clock.py paces quick answers (f2e1435).
+- b78e08b: Watch, Try, Go tools 44 px; Parts reads "Hide parts" and its list ends with Close on phones; clock.py
+  rounds like Math.round.
+- a9ced74 and the next commit (lead's fresh-player findings, 17:20–18:30 UTC): Watch captions wait for Next (Enter,
+  or a tap on the figure) with an Auto-play switch kept in rec.ui.autoplay; captions during motion keep 3 s and the
+  motion ends with a Next; a tap in the gap between answer tiles answers nothing (pointerdown's point checked); the
+  tutorial's Go step shows as a step (stepper kept, screen opens at its top); the title row's meta shortens to fit;
+  on phones the reading strip is pinned to the bottom after an answer and a show-me after an answer has Next as its
+  bar's last button; card screens open at the stepper; Try items keep the strip's room and the stepper scrolls away
+  first; the reveal never scrolls the Pause row off. play.py run_captions (11 checks). Requests to band-A/B: the
+  reveal's verdict line and tags move the tiles 30–47 px; Openings' options end under the strip at 390 × 844.
 - ENGINE.md §18; DECISIONS lines; requests answered (band-A, band-B, W1-rules, W1-central, R-reader).
 
 ## Verified
