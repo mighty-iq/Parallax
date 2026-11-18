@@ -1,6 +1,6 @@
 # P1: Plateaus, stall detection, stall-breaking, multi-dimensional difficulty, progression modes
 
-Phase 1 research notes for Parallax v1.2. Started 2026-11-18 (UTC). Status: in progress.
+Phase 1 research notes for Parallax v1.2, written 2026-11-18 (UTC). Status: complete; a draft for the lead's plan.
 
 Labels used throughout:
 - **[Found]**: what a study or source reported (sample, design, effect size where given).
@@ -58,7 +58,7 @@ The gap audit (`docs/dev/v1.2/standing-rules-gap.md`) rates plateau-breaking MIS
 
 - **[Found] State-space learning curves from binary answers.** Smith et al. (2004; abstract only) model the probability of a right answer as a latent random walk observed through a logistic link, estimate the curve and its confidence band, and call the "learning trial" the first trial after which the animal is better than chance with probability above 0.95 for the rest of the experiment. In simulations their curves had lower error than standard methods; in a rat's 47-day task they detected learning 2–4 days earlier than accepted criteria. Parallax's Gaussian rating is already a filter of this kind (C §2).
 - **[Found] Change points on cumulative records.** Gallistel et al. (2004; full text) find putative change points recursively (the point farthest from the straight line between the start and the latest point), accept the first whose evidence exceeds a log-odds criterion (1.3–2 sensitive; up to 6 very conservative), and restart from it. Donner & Hardy (2015; full text) segmented 25,280 individual curves by dynamic programming and needed a stricter model-selection rule than AIC/AICc, which overfit (added false change points) in their simulations; BIC underfit.
-- **[Found] CUSUM with predicted risk.** Page (1954; metadata only) introduced cumulative-sum charts. Steiner (2000; abstract only) adapted the CUSUM to surgical outcomes by scoring each case against its own predicted risk with a likelihood ratio, so that a change in case mix does not raise false alarms. The analogue in Parallax is the logged predicted success of each item.
+- **[Found] CUSUM with predicted risk.** Page (1954; metadata only) introduced cumulative-sum charts. Steiner et al. (2000; abstract only) adapted the CUSUM to surgical outcomes by scoring each case against its own predicted risk with a likelihood ratio, so that a change in case mix does not raise false alarms. The analogue in Parallax is the logged predicted success of each item.
 - **[Found] Bayesian online change-point detection.** Adams & MacKay (2007; abstract only) compute exactly, online, the posterior over the run length since the last change, by message passing.
 - **[Found] Learning progress as a slope.** Teacher–student curriculum learning (Matiisen et al. 2017; abstract only) picks the task whose learning curve is steepest (and revisits tasks whose performance falls); it learned a Minecraft task about ten times faster than uniform sampling. ZPDES uses a success-rate difference (C §4).
 - **[Found] Trackers trade lag for noise** (Hofman et al. 2020, §1.1): a tracker with known standard errors needed 93 responses to catch a simulated jump.
@@ -74,7 +74,7 @@ The gap audit (`docs/dev/v1.2/standing-rules-gap.md`) rates plateau-breaking MIS
 
 ### 2.3 The simulation behind the numbers
 
-[Method] A scratch Node script (not committed; it only calls the engine) played simulated learners on one real exercise definition at a time, with the real engine's item choice (`select.pick`, decks of 10 with 8 target / 1 easy / 1 stretch, two warm-ups, weak-spot picks on 20 % of target items, Balanced k = 0.70) and the real rating update (`est.rate`, with its process noise). Sessions held 25–55 rated answers on the exercise, about 3.5 sessions a week; true ability had day-to-day noise N(0, 0.15²), lapses U(0.01, 0.06) and the item model's own guessing rates. True ability followed one of: a straight line at a set slope (0 to 0.4 logit per 100 rated answers); a rise of 0.3 per 100 answers followed by a flat plateau from answer 320 or 640 on; the exponential curves of `tests/node/fixtures/learner.mjs`; or a flat line with one jump. 300–400 learners per condition. At each session end the script fitted the trial-level slope over the last W answers (the detector of §2.4). Exercises: Fold (four options), Rotate (yes/no and pick-two), Knots (yes/no and four options), Orient (angle), Span (open), Hidden (four-ish options, g = 0.2). Limits: one exercise at a time (no switch costs, no interleaving stages, no Train rotation, no breaks longer than 3 days); the learner model is the sim's, not data.
+[Method] A scratch Node script (not committed; it only calls the engine) played simulated learners on one real exercise definition at a time, with the real engine's item choice (`select.pick`, decks of 10 with 8 target / 1 easy / 1 stretch, two warm-ups, weak-spot picks on 20 % of target items, Balanced k = 0.70) and the real rating update (`est.rate`, with its process noise). Sessions held 25–55 rated answers on the exercise, about 3.5 sessions a week; true ability had day-to-day noise N(0, 0.15²), lapses U(0.01, 0.06) and the item model's own guessing rates. True ability followed one of: a straight line at a set slope (0 to 0.4 logit per 100 rated answers); a rise of 0.3 per 100 answers followed by a flat plateau from answer 320 or 640 on; the exponential curves of `tests/node/fixtures/learner.mjs`; or a flat line with one jump. 300–400 learners per condition. At each session end the script fitted the trial-level slope over the last W answers (the detector of §2.4). Exercises: Fold (four options), Rotate (yes/no and pick-two), Knots (yes/no and four options), Orient (angle), Span (open), Hidden (g = 0.2). Limits: one exercise at a time (no switch costs, no interleaving stages, no Train rotation, no breaks longer than 3 days); the learner model is the sim's, not data.
 
 ### 2.4 The proposed detector
 
@@ -97,11 +97,11 @@ that is, when the one-sided 95 % upper bound of the slope excludes progress of 0
 - the exercise is not at its ceiling: the rating predicts more than the target success on the hardest settings of the pool (an artefact; the card says "top of the range" and suggests Speed or a new variant instead);
 - for Path, the same statistic on the stage's answers, plus "stage not passed after ≥ 8 sessions at that stage" as a second, descriptive trigger only once the slope test also fires.
 
-**[Proposal] A second channel to classify, not to fire.** Over the same window, regress the log response time of right answers on the answer index, with (b_i − μ_i) as a covariate. If the time falls by more than 10 % per 100 answers with 95 % confidence, the player is still improving in speed: the stall is not shown as a plateau but as "your level is steady while your answers got N % faster", with Speed suggested (§5). A level stall with flat or rising time is a full plateau.
+**[Proposal] A second channel to classify, not to fire.** Over the same window, regress the log response time of right answers on the answer index, with (b_i − μ_i) as a covariate. If the time falls by more than 10 % per 100 answers with 95 % confidence (a placeholder threshold, to calibrate on pooled data), the player is still improving in speed: the stall is not shown as a plateau but as "your level is steady while your answers got N % faster", with Speed suggested (§5). A level stall with flat or rising time is a full plateau.
 
 ### 2.5 Operating characteristics (my simulation)
 
-Rules that keep false alarms at or below 5 % for learners improving at 0.25 logit per 100 answers (the worst of Fold, Rotate and Knots), with the share of plateaued learners caught (the worst of the three; plateau from answer 320 after a rise of 0.3 per 100 answers). "FA" = learners flagged at least once in answers 0–1,000; "caught" = flagged within 400 / 600 / 800 answers after the plateau began.
+Rules that keep false alarms at or below 5 % for learners improving at 0.25 logit per 100 answers (the worst of Fold, Rotate and Knots), with the share of plateaued learners caught (the worst of the three; plateau from answer 320 after a rise of 0.3 per 100 answers). "FA" = learners flagged at least once in answers 0–1,000 (FA at 0.20: the worse of Fold and Rotate; at 0.15 and 0.10: Fold); "caught" = flagged within 400 / 600 / 800 answers after the plateau began.
 
 | Rule (W, z, δ, consecutive) | FA at 0.25 | FA at 0.20 | FA at 0.15 | FA at 0.10 | Caught ≤ 400 / 600 / 800 |
 |---|---|---|---|---|---|
@@ -152,7 +152,7 @@ A general caution first. **[Found]** Almost none of the studies below applied a 
 
 - **[Found]** Stieff, Dixon, Ryu, Kumi & Hegarty (2014; abstract only): in a college chemistry course, training analytic strategies raised their use; combined imagery-plus-analytic training removed the sex difference in achievement, while single-strategy training left a male advantage. Meneghetti et al. (2017; abstract only; 72 women, 24 per group): mental-rotation practice alone and practice with a taught rotation strategy both raised accuracy on two rotation tests, and the gains held; only the strategy group improved further from post-test to follow-up and was more accurate than at pre-test on perspective taking and a fluid-reasoning task at follow-up. Khooshabeh, Hegarty & Shipley (2013; abstract only): good imagers default to whole-object rotation and switch to piece-by-piece when figures are fragmented; poor imagers use piece-by-piece flexibly. Delaney et al. (1998; full text): practice gains are specific to a strategy, and a new strategy starts slower. Fu & Gray (2004) and Yechiam et al. (2003) (abstracts): people stay with a method that pays off step by step even when a better one exists; changing what the old method earns helped the better one stick. Donner & Hardy (2015): transitions start with a drop (78 %) and end higher (> 80 % within 50 plays). No effect sizes were available in the abstracts.
 - **[Inference] When:** a stall plus a strategy check-in that names one strategy (or "unsure") for this exercise; especially when the misses cluster on the complexity dimensions (cubes, folds, cells), where whole-object imagery breaks down (offer "parts"), or on large angles with simple objects (offer "whole"). Expect a dip: the trial period must not be judged on its first session.
-- **[Proposal] Text:** "Fold has been level for 12 sessions (around 41). For your next 3 Fold sessions, try the other method: follow one marked square through every fold instead of picturing the whole sheet. A new method often feels slower at first, so we'll compare after 3 sessions."
+- **[Proposal] Text:** "Fold has been level for 12 sessions (around level 41). For your next 3 Fold sessions, try the other method: follow one marked square through every fold instead of picturing the whole sheet. A new method often feels slower at first, so we'll compare after 3 sessions."
 
 ### 3.2 More variability (a variant swap, a wider mix)
 
@@ -253,11 +253,13 @@ When several rows apply, rows 5–8 can be drawn at random among the eligible on
 | | oracle | 98.8 % | 3.3 | 1.6 | 0.47 vs 0.36 |
 | Fold, 0.3 | current | 94.1 % | 4.3 | 6.1 | 0.38 vs 0.40 |
 | | estimated | 97.3 % | 3.7 | 1.6 | 0.40 vs 0.38 |
+| | oracle | 98.5 % | 3.4 | 3.0 | 0.44 vs 0.37 |
 | Rotate, 0.5 | current | 91.8 % | 4.4 | 6.5 | 0.27 vs 0.28 |
 | | estimated | 94.5 % | 3.8 | 3.3 | 0.32 vs 0.26 |
 | | oracle | 97.0 % | 3.3 | 3.7 | 0.39 vs 0.24 |
 | Rotate, 0.3 | current | 96.8 % | 3.4 | 5.7 | 0.27 vs 0.27 |
 | | estimated | 97.3 % | 3.3 | 3.8 | 0.30 vs 0.25 |
+| | oracle | 98.6 % | 3.0 | 3.2 | 0.33 vs 0.23 |
 
 Overall success on target items stayed on target in every condition (e.g., Fold 77.1 vs 77.4 %). Offsets were estimated with an error of 0.3–0.4 step (RMS).
 
@@ -268,7 +270,7 @@ Overall success on target items stayed on target in every condition (e.g., Fold 
 1. **Per-dimension offsets.** Keep one θ and one level per exercise. Add, per exercise (and display class), an offset o_d per dimension: the player's step on d is step_d + o_d, applied to the level index centred on the dimension's middle level, so θ keeps its meaning at the middle of every dimension and the level scale does not move. Estimate the offsets at every session end by ridge logistic regression on the last 400 rated answers (prior SD 0.5·|step_d|; cap at ±0.75 logit at the top level), as simulated; an online Laplace update after every answer is the alternative. Start using them after 100 answers on the exercise; before that all offsets are 0.
 2. **Selection on the person-specific difficulty.** `select.pick` works on a pool whose b already includes the offsets (a per-record pool, rebuilt at session start). The 8/1/1 deck, warm-ups, tolerance, variety rules and `noRepeat` stay as they are.
 3. **Rotate the leading dimension.** One target item in five is chosen so that a named dimension carries the difficulty (its level at the player's frontier for that dimension, the others easy), cycling through the dimensions; this probes every frontier and feeds the offsets on the levels where they matter. The weak-spot drill stays, at its 20 % share of target items.
-4. **Fluency inside Train.** Once Speed is open for an exercise (a Path stage passed, or ≥ 60 answers with σ ≤ 0.45), the deck's "easy" item (already near the fluent zone: p\* + 0.10) comes with the Speed deadline for that exercise and variant. Its answer updates the timed rating and the deadline only, never the untimed rating, so untimed levels stay comparable; a time-out is wrong for the timed rating only; fast errors cost most in the points shown (S = (2x − 1)(1 − t/deadline), as Speed). One item in ten carries a deadline; the rest stay untimed.
+4. **Fluency inside Train.** Once Speed is open for an exercise (a Path stage passed, or ≥ 60 answers with σ ≤ 0.45), the deck's "easy" item is drawn from Speed's fluent zone (predicted untimed success ≥ g + (1 − g)·0.85; for four options and yes/no that is about p\* + 0.10 already, for open answers it is easier than today's easy item) and comes with the Speed deadline for that exercise and variant. Its answer updates the timed rating and the deadline only, never the untimed rating, so untimed levels stay comparable; a time-out is wrong for the timed rating only; fast errors cost most in the points shown (S = (2x − 1)(1 − t/deadline), as Speed). One item in ten carries a deadline; the rest stay untimed.
 5. **Show the profile.** The exercise page shows the settings handled per dimension ("up to 140° turns; up to 8 cubes") from the person-specific frontier, and the plateau card can name a dimension (§3.7).
 
 ### 4.4 [Proposal] Keeping shortcuts from paying
@@ -358,7 +360,7 @@ Metadata only (pointers, nothing of their content used): Cen, H., Koedinger, K. 
 
 From `docs/research/v1.0/C-progression.md` (secondary: its own read levels and [unverified] marks apply): Brady 2004; Brunmair & Richter 2019; Cepeda et al. 2006, 2008; Clément et al. 2015, 2024; Corbett & Anderson 1995; Czyż et al. 2024; Donovan & Radosevich 1999; Jansen et al. 2013; Kaernbach 1991; Kalyuga et al. 2003; Klinkenberg et al. 2011; Kulik et al. 1990; Legault et al. 2013; Levitt 1971; Molloy et al. 2012; Papoušek & Pelánek 2017; Pelánek 2016; Pelánek et al. 2017; Porter & Magill 2010; Rajeb et al. 2025; Raviv et al. 2022; Voyer 2011 [unverified in C]; Watson 2017; Wilson et al. 2019; Wright et al. 2008.
 
-Process note: the session's web-search quota ran out part-way; later lookups used DOI records (Crossref, OpenAlex) and publisher pages. A further search could still find studies that apply a change *after* a detected plateau, which these notes did not find.
+Process note: the web-search quota for this research ran out part-way; later lookups used DOI records (Crossref, OpenAlex) and publisher pages. A further search could still find studies that apply a change *after* a detected plateau, which these notes did not find.
 
 ## Could not open
 

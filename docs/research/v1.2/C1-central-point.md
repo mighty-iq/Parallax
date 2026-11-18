@@ -26,10 +26,13 @@ Status: complete for Phase 1 (2026-11-18, UTC).
    the **strict policy** (no target and no shortcut pick inside the band) on every rated item; an
    exhaustive solver over 169 points, cross-checked by Weiszfeld (§3).
 4. **Shortcuts (Q4):** without constraints every cheap centre wins (average 31–69 %, coordinate-wise
-   median 52–76 %, medoid 68–80 % at a 2 % band on 7 × 7). **No dim bounds them alone**; excluding their
-   picks from the band does, at every cell with a band of 1 % or less (worst second-order guess 8.5
-   points over chance). **Cannot be bounded:** a 7 × 7 answer grid (the key sits next to the average in
-   85–100 % of items), a 2 % band beyond 4 targets, a trap of 1.5 dots beyond 5 targets (not generable).
+   median 52–76 %, medoid 68–80 % at a 2 % band on 7 × 7). **The trap minimum alone bounds the shape
+   centres** (average, box, circle, hull, grid centre: 0–4 % at a 1-dot trap) **but makes the
+   target-based picks stronger** (medoid 50 → 83 % as the trap grows); the column/row median and the
+   trimmed average yield to no dim. Excluding every shortcut pick and every target from the band (the
+   strict policy) bounds all 15 rated cells (worst measured guess 8.5 points over chance). **Cannot be
+   bounded:** a 7 × 7 answer grid (the key sits next to the average in 85–100 % of items), a 2 % band
+   beyond 4 targets, a trap of 1.5 dots beyond 5 targets (not generable).
    "Nudge the average towards the group" stays at 33–76 %: partial skill, a decision for the lead (§4).
 5. **Teaching (Q5):** reveal with lines and lengths, the best spot, the dragged average and contour lines;
    a "Why?" that lays equal pulls head to tail (they close only at the best spot); two strategy cards
@@ -80,8 +83,8 @@ What I tried (WebSearch, 2026-11-18):
 - `"geometric median" puzzle intelligence test item estimate visually`; `"Fermat point" OR "geometric
   median" "intelligence test" OR "aptitude test" item visual`; `"geometric median" game OR puzzle
   "find the point" minimize sum of distances players estimate by eye`.
-- Other languages and communities: a Russian query (central point, grid, sum of distances), a
-  Serbian/Croatian query with Kvaščev's name (a test author whose tasks the community trains).
+- Other languages: a Russian query (central point, grid, sum of distances) and a Serbian/Croatian query
+  (central point, task).
 - Batteries checked by name and found not to hold such a subtest: the RIOT test's 15 subtests [WP,
   riotiq.com subtest list: names only, none fits]; TOGA (four verbal and numerical subtests) [WP,
   a community post]; the CORE and CAIT lists in R4 §1.4 [SR there]. cognitivemetrics.com itself could
@@ -156,7 +159,7 @@ geometric median.
   middle" studies (Jones & Dekker; Juni et al.), not a finding on this task. The guide should say
   "people tend to aim for the average position when they look for the middle", and cite those studies.
 - **Proposal:** never show target weight by dot size: size inflates a mark's pull on the perceived mean
-  (Hong et al.). Weighted targets, if added, use a numeral or stacked marks (§3.2).
+  (Hong et al.). Weighted targets, if added later, use a numeral or stacked marks (§9).
 
 ### 2.3 Human performance on geometric optimisation (TSP, spanning and Steiner trees, facility location)
 
@@ -238,8 +241,8 @@ No study compared strategies for this task, so every strategy below is **derived
    distance to both (their separation), and every other point more. Pair targets across the middle and
    look where the pair segments cross. For four targets at the corners of a convex quadrilateral the
    best spot is exactly where the diagonals cross.
-5. **Half or more in one place.** If one spot holds at least half of all the targets (or half the total
-   weight), that spot is the best.
+5. **Half or more in one place** (for weighted targets, a later variant). If one target carries at least
+   half of the total weight, it is the best spot.
 6. **Three targets.** The best spot sees each pair of targets at 120°; if the triangle has an angle of
    120° or more, it is that corner.
 7. **A first guess by counting** (a shortcut, not the rule): the middle column of targets and the middle
@@ -261,7 +264,7 @@ teaching text was checked numerically in the spike (§4, stage E).
 - **The rule ("the pulls cancel").** Away from the targets, the downhill direction of S is the sum of the
   unit vectors from p to the targets. So at an interior median the unit vectors sum to zero. The median
   lies on target j exactly when the other targets' unit vectors (times their weights) sum to a vector no
-  longer than w_j. Spike: the largest residual over 3,932 random interior medians was about 1e-9.
+  longer than w_j. Spike: the largest residual over 7,838 random interior medians was 7e-8.
 - **Consequences used in teaching** (each checked in stage E):
   - *Slide the outlier:* moving a target along the ray from the median leaves its unit vector, and so the
     median, unchanged.
@@ -281,8 +284,10 @@ teaching text was checked numerically in the spike (§4, stage E).
   Rousseeuw 1991, via [WP]): far targets cannot drag it arbitrarily far. But it is not "outliers do not
   count": each target still counts fully by its direction.
 - **The landscape is flat near the best spot (spike, stage A).** On a 7 × 7 board, the runner-up grid
-  point is only about 1.6–2.7 % worse than the best one (median over random items with 4–9 targets).
-  Relative bands of a few per cent therefore hold only one to five grid points.
+  point is a median 1.8–2.3 % worse than the best one for 4–9 targets (10th–90th percentiles 0.3–9 %;
+  6.8 % for 3 targets). Relative bands of a few per cent therefore hold only one to five grid points.
+  And the best grid point is itself a target in 54–72 % of random layouts, which is what the medoid and
+  "nearest target" shortcuts exploit.
 
 ### 3.2 Dims and a level ladder
 
@@ -304,8 +309,8 @@ beyond 5 targets (acceptance 0.01–0.12 %, §4 stage C), a trap of 0.5 lets the
 average" exceed the bound at a 1 % band from 6 targets on (§4 stage D), and a finer or larger grid
 changes nothing in relative terms.
 
-**The 15 rated cells (spike stage C, strict policy, 10,000 accepted items per cell except the first row
-of 8 targets, 7,612).** "Next to average" = a random point next to the average's pick; "ring 2" = a
+**The 15 rated cells (spike stage C, strict policy, 10,000 accepted items per cell except 8 targets at
+1 %: 7,612, when the cap of 1.5 million candidates was reached).** "Next to average" = a random point next to the average's pick; "ring 2" = a
 random point two half-steps from it; "fixed" = the single most frequent key point; "observer" = the
 continuous best spot plus Gaussian scatter of 0.3 or 0.5 dots, rounded to the answer lattice; "average
 user" = the average plus 0.3 dots of scatter.
@@ -345,14 +350,14 @@ tighter bands generate more easily). The base cannot be set for "90 % right at �
 ### 3.3 Scoring and partial credit
 
 **Proposal.**
-- **Counted right:** the pick's total distance is within **1 %** of the best total on the answer lattice
-  (the band). On the proposed half-step lattice the band holds about 2–3 answer points on average (§4,
-  stage C), always including the best one.
+- **Counted right:** the pick's total distance is within the level's band, **1 %, 0.5 % or 0.25 %** of
+  the best total on the answer lattice. On the half-step lattice the band holds on average 2.2–3.0
+  answer points at 1 %, 1.5–2.0 at 0.5 % and 1.2–1.5 at 0.25 % (§3.2), always including the best one.
 - **Partial credit:** 1 inside the band, falling linearly to 0 at four times the band (+4 % at a 1 %
   band). At a 1 % band a random tap earns about 0.04 on average, a tap on the average 0.11–0.23 and a
   model observer with a half-dot scatter 0.54–0.61; at 0.25 % the same three earn about 0.01, 0.00–0.04
-  and 0.25–0.29 (§4, stage C). Credit feeds the feedback line and, if
-  the game layer wants it, skill points; the rating uses right or wrong only, as for every exercise.
+  and 0.25–0.29 (§4, stage C). Credit feeds the feedback line and, if the game layer wants it, skill
+  points; the rating uses right or wrong only, as for every exercise.
 - **Shown to the player** after confirming: "Your spot: 3 % farther in total than the best spot", with
   the two totals and, if the player opens it, the average distance per target in dots (the format's
   own phrase "average distance" maps onto this).
@@ -383,8 +388,8 @@ tighter bands generate more easily). The base cannot be set for "90 % right at �
   two good points sees why both were close.
 
 The stricter alternative, "only the single best point counts" with a margin to the runner-up, was tested
-on a 7 × 7 answer grid (§4, stage B) and rejected: the key then sits next to the average's pick in about
-every item, so the task becomes "which neighbour of the average?".
+on a 7 × 7 answer grid (§4, stage B) and rejected: the key then sits next to the average's pick in
+85–100 % of items, so the task becomes "which neighbour of the average?".
 
 ### 3.5 Solver, validator and cross-check
 
@@ -407,7 +412,7 @@ every item, so the task becomes "which neighbour of the average?".
   CPU budget check. This is the main build risk (§9).
 - **Parity (standing rule 5 names it):** 79–95 % of keys lie between dots, against 71 % of answer points
   (stage C). "Never on a dot" shrinks a guess from 169 points to 120, which moves a random guess from
-  about 1.3 % to about 1.7 %: harmless, but the node test should report it.
+  about 1.3 % to about 1.6 % (my calculation): harmless, but the node test should report it.
 
 ## 4. Shortcut heuristics: the numeric spike (Q4)
 
@@ -454,7 +459,7 @@ Random layouts (uniform, one group plus spread, two groups), 7 × 7 grid, 4,000 
 | 9 | 69 | 31 | 76 | 41 | 69 | 63 | 22 | 73 | 25 |
 
 At an 8 % band the average reaches 49–95 % and the coordinate-wise median and medoid 85–99 %. The best
-spot is at a target in 10–56 % of random layouts (exploratory runs), which is what the medoid exploits.
+grid point is a target in 54–72 % of random layouts (stage A), which is what the medoid exploits.
 
 ### 4.3 Stage B: a 7 × 7 answer grid collapses to "which neighbour of the average?"
 
@@ -470,9 +475,9 @@ point); 60,000 candidates per row; chance 2.0 %, so the bound is 12 %:
 
 Every first-order shortcut is excluded, yet the key sits next to the average's pick in 85–100 % of
 items, so "a random neighbour of the average" sits at the bound (11–13 % against 12 %) and "one step from
-the average towards the group" scores 54–80 %. Larger grids (9 × 9, 12 × 12; exploratory runs) raised
-the trap to 1.2–2 grid steps but kept the same picture, because the trap and the band both scale with
-the layout. Hence the half-step answer lattice (§3.2).
+the average towards the group" scores 54–80 %. Larger grids (9 × 9, 12 × 12; exploratory runs, not part
+of spike.mjs) raised the trap to 1.2–2 grid steps but kept the same picture, because the trap and the
+band both scale with the layout. Hence the half-step answer lattice (§3.2).
 
 ### 4.4 Stage C: the proposed format
 
@@ -480,26 +485,26 @@ The 15 rated cells are in §3.2. The cells left out, and the tutorial cells (str
 
 | set | targets | trap ≥ | band | accepted | CPU ms per item, mean / p95 | chance | fixed | next to average | ring 2 | observer 0.3 | average user | reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| excluded | 4 | 0.5 | 1 % | 8.60 % | 0.9 / 2.9 | 1.6 | 5 | 9 | 7 | 56 | 7 | – |
-| excluded | 6 | 0.5 | 1 % | 4.90 % | 0.9 / 2.7 | 1.4 | 4 | 14 | 6 | 53 | 12 | next to average 12.6 points over chance |
-| excluded | 8 | 0.5 | 1 % | 2.77 % | 1.6 / 5.0 | 1.4 | 6 | 14 | 7 | 55 | 11 | next to average 12.6 points over chance |
-| excluded | 4 | 1.5 | 1 % | 1.13 % | 4.1 / 12.1 | 2.1 | 7 | 1 | 6 | 66 | 1 | – |
-| excluded | 6 | 1.5 | 1 % | 0.12 % | 14.0 / 43.9 | 2.0 | 9 | 2 | 8 | 64 | 1 | too slow to generate |
-| excluded | 8 | 1.5 | 1 % | 0.01 % | 185 / 440 | 2.0 | 19 | 1 | 9 | 69 | 0 | not generable (26 items) |
-| excluded | 4 | 1 | 2 % | 1.59 % | 4.0 / 12.3 | 3.1 | 9 | 11 | 13 | 77 | 8 | – |
-| excluded | 6 | 1 | 2 % | 0.18 % | 13.6 / 40.6 | 2.9 | 10 | 14 | 14 | 76 | 12 | next to average 11 over chance; slow |
-| excluded | 8 | 1 | 2 % | 0.04 % | 51 / 157 | 3.0 | 14 | 14 | 15 | 83 | 8 | 12 over chance (ring 2); not generable |
-| practice | 3 | 0.5 | 2 % | 8.25 % | 0.5 / 1.7 | 2.5 | 6 | 20 | 13 | 70 | 15 | unrated: bound not required |
-| practice | 4 | 0.5 | 2 % | 2.37 % | 3.6 / 11.0 | 2.8 | 7 | 12 | 12 | 73 | 10 | unrated |
-| practice | 5 | 0.5 | 2 % | 1.56 % | 2.7 / 8.2 | 2.4 | 7 | 22 | 10 | 69 | 20 | unrated |
+| excluded | 4 | 0.5 | 1 % | 8.60 % | 0.9 / 2.9 | 1.6 | 5 | 9 | 7 | 56 | 7 | within the bound (7.4 over chance); left out so every rated cell has the same trap |
+| excluded | 6 | 0.5 | 1 % | 4.90 % | 1.1 / 3.3 | 1.4 | 4 | 14 | 6 | 53 | 12 | next to average 12.6 points over chance |
+| excluded | 8 | 0.5 | 1 % | 2.77 % | 1.6 / 4.8 | 1.4 | 6 | 14 | 7 | 55 | 11 | next to average 12.6 points over chance |
+| excluded | 4 | 1.5 | 1 % | 1.13 % | 4.4 / 13.4 | 2.1 | 7 | 1 | 6 | 66 | 1 | within the bound, but this trap level cannot extend beyond 5 targets |
+| excluded | 6 | 1.5 | 1 % | 0.12 % | 13.9 / 42.2 | 2.0 | 9 | 2 | 8 | 64 | 1 | too slow to generate |
+| excluded | 8 | 1.5 | 1 % | 0.01 % | 198 / 413 | 2.0 | 19 | 1 | 9 | 69 | 0 | not generable (26 items) |
+| excluded | 4 | 1 | 2 % | 1.59 % | 4.1 / 12.9 | 3.1 | 9 | 11 | 13 | 77 | 8 | ring 2 at 9.9 over chance, at the bound; 2 % cannot extend beyond 4 targets |
+| excluded | 6 | 1 | 2 % | 0.18 % | 14.9 / 45.8 | 2.9 | 10 | 14 | 14 | 76 | 12 | next to average 11 over chance; slow |
+| excluded | 8 | 1 | 2 % | 0.04 % | 51 / 163 | 3.0 | 14 | 14 | 15 | 83 | 8 | 12 over chance (ring 2); not generable |
+| practice | 3 | 0.5 | 2 % | 8.25 % | 0.5 / 1.6 | 2.5 | 6 | 20 | 13 | 70 | 15 | unrated: bound not required |
+| practice | 4 | 0.5 | 2 % | 2.37 % | 3.7 / 11.3 | 2.8 | 7 | 12 | 12 | 73 | 10 | unrated |
+| practice | 5 | 0.5 | 2 % | 1.56 % | 2.8 / 8.3 | 2.4 | 7 | 22 | 10 | 69 | 20 | unrated |
 
 Also measured on the rated cells (stage C):
 - **Partial skill:** "average moved one dot towards the densest group" hits 48–76 % at 1 %, 38–63 % at
   0.5 % and 33–56 % at 0.25 %; one Weiszfeld step hits 12–15 % at 1 % and 1–4 % at tighter bands. The
   hard policy keeps 7–34 % of strict items, and the 0.3-dot observer scores only a few points less on
   them (47–57 % against 52–61 % at 1 %).
-- **CPU per accepted item** in Node on the build machine: mean 0.3–3.5 ms, p95 1.0–10.6 ms (worst: 8
-  targets at 1 %).
+- **CPU per accepted item** in Node on the build machine (final run; it varies between runs and machines):
+  mean 0.4–3.9 ms, p95 1.1–11.8 ms (worst: 8 targets at 1 %).
 - **Checks:** zero failures of "continuous median no worse than the best lattice point"; best lattice
   point within 0.62 dots of the continuous median; no empty band.
 - **Parity:** 79–95 % of keys between dots against a 71 % base rate.
@@ -510,35 +515,68 @@ One pool of 150,000 candidates per level; each policy accepts a subset; the wors
 among the 11 shortcuts, the fixed point and "next to the average". The minimax column picks, per level,
 the policy with the smallest worst case among those accepting at least 0.2 % of candidates.
 
-| targets | trap ≥ | band | trap only | outliers only | strict | hard | minimax policy | worst case (points) |
+| targets | trap ≥ | band | trap only | outliers only | strict (accepted) | hard (accepted) | minimax policy | worst case (points) |
 |---|---|---|---|---|---|---|---|---|
-| 4 | 0.5 | 0.5 % | 56 | 55 | 6 | 5 | hard | 5 |
-| 6 | 0.5 | 0.5 % | 47 | 51 | 9 | 8 | hard | 8 |
-| 8 | 0.5 | 0.5 % | 48 | 56 | 9 | 8 | hard | 8 |
-| 4 | 1 | 0.5 % | 65 | 62 | 2 | 3 | strict | 2 |
-| 6 | 1 | 0.5 % | 59 | 62 | 3 | 3 | strict | 3 |
-| 8 | 1 | 0.5 % | 67 | 68 | 4 | 4 | strict | 4 |
-| 4 | 0.5 | 1 % | 61 | 63 | 8 | 6 | hard | 6 |
-| 6 | 0.5 | 1 % | 55 | 64 | 12 | 9 | hard | 9 |
-| 8 | 0.5 | 1 % | 55 | 70 | 13 | 10 | hard | 10 |
-| 4 | 1 | 1 % | 71 | 70 | 3 | 6 | strict | 3 |
-| 6 | 1 | 1 % | 65 | 72 | 4 | 5 | strict | 4 |
-| 8 | 1 | 1 % | 76 | 79 | 5 | 8 | strict | 5 |
-| 4 | 0.5 | 2 % | 69 | 79 | 10 | 15 | strict | 10 |
-| 6 | 0.5 | 2 % | 66 | 86 | 18 | 49 | strict | 18 |
-| 8 | 0.5 | 2 % | 75 | 90 | 19 (0.17 % accepted) | none | (none feasible) | – |
-| 4 | 1 | 2 % | 78 | 81 | 8 | 30 | strict | 8 |
-| 6 | 1 | 2 % | 77 | 89 | 12 (0.17 %) | 99 (n tiny) | (none feasible) | – |
-| 8 | 1 | 2 % | 86 | 93 | 31 (0.03 %) | none | (none feasible) | – |
+| 4 | 0.5 | 0.5 % | 56 | 55 | 6 (15.6 %) | 5 (4.1 %) | hard | 5 |
+| 6 | 0.5 | 0.5 % | 47 | 51 | 9 (11.2 %) | 8 (2.7 %) | hard | 8 |
+| 8 | 0.5 | 0.5 % | 48 | 56 | 9 (7.6 %) | 8 (1.7 %) | hard | 8 |
+| 4 | 1 | 0.5 % | 65 | 62 | 2 (7.6 %) | 3 (1.6 %) | strict | 2 |
+| 6 | 1 | 0.5 % | 59 | 62 | 3 (3.0 %) | 3 (0.6 %) | strict | 3 |
+| 8 | 1 | 0.5 % | 67 | 68 | 4 (1.3 %) | 4 (0.2 %) | strict | 4 |
+| 4 | 0.5 | 1 % | 61 | 63 | 8 (8.5 %) | 6 (1.3 %) | hard | 6 |
+| 6 | 0.5 | 1 % | 55 | 64 | 12 (4.9 %) | 9 (0.6 %) | hard | 9 |
+| 8 | 0.5 | 1 % | 55 | 70 | 13 (2.8 %) | 10 (0.3 %) | hard | 10 |
+| 4 | 1 | 1 % | 71 | 70 | 3 (4.5 %) | 6 (0.6 %) | strict | 3 |
+| 6 | 1 | 1 % | 65 | 72 | 4 (1.4 %) | 5 (0.2 %) | strict | 4 |
+| 8 | 1 | 1 % | 76 | 79 | 5 (0.5 %) | 8 (0.04 %) | strict | 5 |
+| 4 | 0.5 | 2 % | 69 | 79 | 10 (2.4 %) | 15 (0.02 %) | strict | 10 |
+| 6 | 0.5 | 2 % | 65 | 85 | 18 (0.6 %) | 20 (0.01 %) | strict | 18: not bounded |
+| 8 | 0.5 | 2 % | 75 | 90 | 19 (0.18 %) | 64 (n tiny) | none feasible | – |
+| 4 | 1 | 2 % | 78 | 81 | 8 (1.6 %) | 23 (0.02 %) | strict | 8 |
+| 6 | 1 | 2 % | 77 | 88 | 11 (0.19 %) | 14 (n tiny) | none feasible | – |
+| 8 | 1 | 2 % | 85 | 92 | 21 (0.04 %) | no items | none feasible | – |
 
-Reading: without excluding the shortcut picks no level comes near the bound (the medoid alone scores
-47–86 %); with the strict policy every level at a band of 1 % or less is within it once the trap is at
-least 1 dot; at a 2 % band only 4 targets can be bounded. (The script's own minimax column falls back to
-"trap only" where nothing else reaches 0.2 % acceptance; I report those levels as not feasible.)
+"Trap only" and "outliers only" give the worst first-order shortcut, which is always the medoid; the
+cells give the worst advantage over chance in points and, in brackets, the share of candidates accepted.
+
+Reading: without excluding the shortcut picks no level comes near the bound (the medoid alone is 47–92
+points over chance); with the strict policy every level at a band of 1 % or less is within it once the
+trap is at least 1 dot, and at 0.5 % even with a trap of 0.5; at a 2 % band only 4 targets can be bounded.
+(The script's minimax column falls back to "trap only" where no other policy reaches 0.2 % acceptance; I
+report those levels as not feasible.)
 
 ### 4.6 Stage F: which dim bounds which shortcut on its own
 
-(filled from the final run below)
+No exclusion: only the trap minimum filters items; 30,000 candidates per row; hit rate in %.
+
+| setting | chance | average | box middle | circle centre | hull centroid | grid centre | column/row median | medoid | nearest the average | nearest the centre | densest group | average without farthest | next to average |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 6 targets, 1 %, trap ≥ 0 | 1.5 | 36 | 14 | 12 | 19 | 10 | 50 | 50 | 46 | 29 | 6 | 38 | 18 |
+| trap ≥ 0.5 | 1.5 | 13 | 4 | 4 | 4 | 5 | 44 | 55 | 50 | 31 | 5 | 44 | 15 |
+| trap ≥ 1 | 1.5 | 4 | 1 | 1 | 1 | 1 | 36 | 67 | 58 | 35 | 4 | 33 | 6 |
+| trap ≥ 1.5 (373 items) | 1.4 | 2 | 1 | 1 | 1 | 0 | 16 | 83 | 73 | 47 | 2 | 12 | 2 |
+| 6 targets, trap ≥ 1, band 0.25 % | 0.8 | 0 | 0 | 0 | 0 | 0 | 21 | 56 | 49 | 30 | 3 | 14 | 1 |
+| band 0.5 % | 1.0 | 1 | 0 | 0 | 0 | 0 | 25 | 59 | 52 | 32 | 3 | 20 | 3 |
+| band 2 % | 2.5 | 13 | 4 | 3 | 4 | 4 | 57 | 79 | 68 | 41 | 7 | 54 | 15 |
+| band 4 % | 4.9 | 40 | 13 | 12 | 16 | 11 | 85 | 93 | 80 | 48 | 18 | 81 | 34 |
+| 1 %, trap ≥ 1, 4 targets | 1.6 | 10 | 5 | 4 | 5 | 3 | 22 | 73 | 63 | 43 | 12 | 23 | 8 |
+| 5 targets | 1.3 | 0 | 0 | 0 | 0 | 1 | 62 | 65 | 62 | 38 | 6 | 30 | 4 |
+| 7 targets | 1.3 | 0 | 0 | 0 | 0 | 0 | 70 | 73 | 65 | 35 | 2 | 22 | 4 |
+| 8 targets | 1.4 | 1 | 0 | 0 | 0 | 0 | 57 | 77 | 62 | 29 | 5 | 23 | 6 |
+
+Reading (Found, in the spike):
+- **The trap minimum bounds the shape centres:** the average, the box middle, the circle centre, the hull
+  centroid and the grid centre fall to 0–4 % at a trap of 1 dot (from 10–36 % without it), and "next to
+  the average" to 6 %. That is the plan's intuition, and it holds.
+- **The trap makes the target-based picks stronger:** the medoid rises from 50 % to 67 % at a trap of 1
+  and 83 % at 1.5; "nearest the average" from 46 % to 73 %. Big traps come from layouts with a dense
+  group, and there the best spot is often on a target. Only "no target in the band" removes them.
+- **Nothing but exclusion bounds the column/row median** (16–85 % across every setting; it is strongest
+  with an odd number of targets, 62–70 % at 5 and 7, because the medians then fall on target
+  coordinates) **or the average without the farthest target** (12–81 %).
+- **The band** lowers every rate but bounds none of the target-based picks, the column/row median or the
+  trimmed average, even at 0.25 %.
+- **The number of targets** matters little except through the column/row median's parity effect.
 
 ### 4.7 Stage E: the mathematics used in the teaching texts
 
@@ -557,11 +595,12 @@ least 1 dot; at a 2 % band only 4 targets can be bounded. (The script's own mini
 ### 4.8 Answers to Q4
 
 - **Counted-right and credit per level:** §3.2 (rated), §4.4 (excluded and practice), `results.md`.
-- **No single dim bounds the shortcuts.** The trap minimum, the band and the number of targets change
-  the hit rates (stage F) but no setting of them brings the medoid, the coordinate-wise median or the
-  "nearest target" picks near chance; only excluding every shortcut pick from the band (the strict
-  policy) does. The trap minimum's real job is second order: at ≥ 1 dot it pushes "next to the average"
-  down to 1–6 % (chance 0.7–1.8 %).
+- **Which dim bounds which shortcut (stage F):** the trap minimum (≥ 1 dot) bounds the average, the box
+  middle, the circle centre, the hull centroid, the grid centre and "next to the average"; no dim bounds
+  the medoid, the nearest-target picks, the column/row median or the average without the farthest
+  target, and a larger trap makes the target-based picks stronger. Those need the strict policy: no
+  target in the band, and no shortcut pick in the band. With it, the rated cells keep every measured
+  guess within 8.5 points of chance (§3.2).
 - **Cannot be bounded:** a 2 % band beyond 4 targets; a 1 % band with a trap of only 0.5 dots beyond 4
   targets (strict; the hard policy reaches 9–10 points there at 0.3–0.6 % acceptance); a trap of 1.5
   dots beyond 5 targets (not generable at a usable rate); a 7 × 7 answer grid (at the bound, with the
@@ -710,7 +749,7 @@ In the format of docs/research/v1.1/R4-test-overlap.md §3 (distances as defined
 | Tap to pick, drag to adjust, then confirm | kept, with nudge buttons and keys as the non-drag route (Reckon's pattern); no total shown before Confirm | rule 8 and WCAG 2.5.7; §2.3 (a live readout turns the task into search) |
 | Partial credit from the total distance relative to the best; right inside the credit band | kept: right within 1 / 0.5 / 0.25 % of the best total; credit falls to 0 at four times the band; log the correction ratio | §3.3; stage C credit columns |
 | Dims: targets, grid density, credit band, outlier trap | **dims: targets (4–8) × band (1, 0.5, 0.25 %)**; the trap is a fixed minimum of 1 dot on every rated item, not a dim; grid density is dropped | stage C/D: all 15 cells generate and stay within the bound; a trap of 0.5 lets "next to the average" exceed the bound, a trap of 1.5 is not generable beyond 5 targets, and a 2 % band fails from 6 targets on |
-| Shortcut solvers bounded by the outlier-trap dim: average, bounding box, coordinate-wise median, nearest target | **all 11 shortcuts excluded from the band on every item (the strict policy)**, plus no target inside the band; second-order guesses measured | stage D: no weaker policy bounds any level (the medoid alone scores 55–79 % without the exclusion) |
+| Shortcut solvers bounded by the outlier-trap dim: average, bounding box, coordinate-wise median, nearest target | **all 11 shortcuts excluded from the band on every item (the strict policy)**, plus no target inside the band; second-order guesses measured | stage D: no weaker policy bounds any level (without it the medoid alone is 47–92 points over chance) |
 | Watch-Try-Go with three targets | kept, with three targets in Watch only; Try uses 4–5 targets on unrated tutorial cells (2 % band, trap 0.5) declared like Reckon's `extraParams.task` | §5.4 |
 | Feedback: heat map, lines, best spot, short why | kept, with contours instead of a colour-only heat map, the dragged average, and a "Why?" that lays the equal pulls head to tail | §5.1–5.2 |
 | Tag: spatial estimation and optimisation, new bet | kept: "rule-based estimation with spatial error feedback"; new value `estimation` if T1's list lacks it; near probe and mean-interference control proposed | §6 |
@@ -727,22 +766,22 @@ Other numbers for the build:
 
 ## 9. Open risks
 
-1. **Generation cost.** Acceptance per candidate is 0.5–9.6 % on the rated cells, so the guide's 50
-   forked retries are not enough; in Node on the build machine one item costs about 0.3–3.5 ms CPU on
-   average and up to about 11 ms at p95 (8 targets, 1 % band), and phones are slower. The build needs a
+1. **Generation cost.** Acceptance per candidate is 0.5–9.2 % on the rated cells, so the guide's 50
+   forked retries are not enough; in Node on the build machine one item costs about 0.4–3.9 ms CPU on
+   average and up to about 12 ms at p95 (8 targets, 1 % band), and phones are slower. The build needs a
    smarter proposal (choose the key first and place targets around it; pre-filter the trap with the mean
    and a few Weiszfeld steps) or a raised retry limit with a measured CPU budget, plus a fallback item
    per cell. The node test should assert the p95 CPU time at the hardest cell.
 2. **"Nudge the average towards the group" is not bounded.** It is partial skill (it applies the rule
-   crudely), and it scores about 40–75 % on the rated cells (stage C). A "hard" policy that also excludes
+   crudely), and it scores 33–76 % on the rated cells (stage C). A "hard" policy that also excludes
    it is possible only at a 1 % band with acceptance 0.04–1.3 % (stage D), and the model observer still
    scores 40–60 % there. Decide whether a reviewer would call it a shortcut; if so, the hard policy needs
    the smarter generator of risk 1.
 3. **The floor may be too hard.** Even a model observer that places the median with a scatter of 0.3
-   dots gets only about 55–60 % at the easiest rated cell (stage C), and nothing is known about real
+   dots gets only 61 % at the easiest rated cell, and 34 % with a scatter of 0.5 dots (stage C), and nothing is known about real
    players (§2). The tutorial cells (2 % band) and partial credit soften it; a fresh-player test is
    needed before release (milestone 11), as for the DAT-style exercises (milestone 1).
-4. **The fixed-point guess** sits at about 3–7 % against 0.7–1.8 % chance (stage C): within the bound,
+4. **The fixed-point guess** sits at 2–6 % against 0.7–1.8 % chance (stage C): within the bound,
    but keys cluster near the board's middle. Choosing the key position first (risk 1) would spread them.
 5. **No human data.** Every band and step comes from simulated observers. The correction ratio and the
    excess, logged per item, are what the pooled exports should refit first.
