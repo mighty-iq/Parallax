@@ -29,7 +29,7 @@ export async function run(t) {
   t.eq(def.dims[2].levels, [1, 2, 3], 'punches 1–3');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 4, `difficulty spans at least 4 logits (${lo.toFixed(2)} … ${hi.toFixed(2)})`);
-  const all = PX.ex.enumerate(def);
+  const all = PX.ex.enumerate(def).filter((p) => p.variant !== 'mark').map(({ variant, ...p }) => p); // v1.2 wave 2 (W2-bets): the choose form as before; 'mark' has its own tests (tests/node/layers-produce.test.mjs)
   t.eq(all.length, 180, 'every level combination is enumerated');
   const easiest = all.reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
   const g = def.chance(easiest);

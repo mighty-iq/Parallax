@@ -1304,10 +1304,70 @@
     return -2.2 + 0.6 * p.folds + 0.35 * typeIndexEff(p) + 0.3 * p.punches - 0.35 * idleOf(p);
   }
 
+  /* ===== v1.2 wave 2 (W2-bets): the produce variant 'mark' (PLAN milestone 4; CONTRACT-v1.2 S and
+     conflict 12; note T1 §4.3) =====
+     Mark the holes: the folds and punches of the 'choose' item with the same seed and settings; the
+     player taps the holes on a blank unfolded sheet (js/ex/fold/layers-view.js). The item is that
+     'choose' item with variant 'mark', answer 'targets', key = the hole cells (row · N + column,
+     ascending) and pick = the right option's index, so validate re-runs the triangle re-simulation
+     on the item as generated. Scoring: right only when the marked cells are exactly the holes;
+     detail counts the right, missing and extra marks (the reveal's words). Difficulty: the same
+     settings' plus MARK_D (provisional, refitted from pooled exports); guessing rate 0; the level
+     scale leaves the variant out (the registry, conflict 12). */
+  var MARK = 'mark', MARK_D = 0.6;
+  function isMark(x) { return !!x && x.variant === MARK; }
+  function copyOwn(o, skip) {
+    var out = {};
+    for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k) && !(skip && skip[k])) out[k] = o[k];
+    return out;
+  }
+  function markItem(item) {
+    var out = copyOwn(item);
+    out.params = copyOwn(item.params);
+    out.params.variant = MARK;
+    out.variant = MARK;
+    out.answer = 'targets';
+    out.pick = item.key;
+    out.key = item.options[item.key].map(function (c) { return c[1] * N + c[0]; }).sort(function (a, b) { return a - b; });
+    return out;
+  }
+  function generateAll(rng, params) {
+    var item = generate(rng, params);
+    return isMark(params) ? markItem(item) : item;
+  }
+  function validateAll(item) {
+    if (!isMark(item)) return validate(item);
+    var key = item.key, opt = item.options && item.options[item.pick];
+    if (item.answer !== 'targets' || !Array.isArray(key) || !key.length || !Array.isArray(opt)) return 'mark: answer, key or pick missing';
+    for (var i = 0; i < key.length; i++) {
+      if (!isInt(key[i]) || key[i] < 0 || key[i] >= N * N || (i && key[i] <= key[i - 1])) return 'mark: key cells must be ascending cells of the sheet';
+    }
+    var cells = opt.map(function (c) { return c[1] * N + c[0]; }).sort(function (a, b) { return a - b; });
+    if (cells.join() !== key.join() || key.length !== item.holes) return 'mark: the key is not the right sheet\'s holes';
+    var base = copyOwn(item, { variant: 1, answer: 1, pick: 1 });
+    base.params = copyOwn(item.params, { variant: 1 });
+    base.key = item.pick;
+    return validate(base);
+  }
+  function scoreAll(item, response) {
+    if (!isMark(item)) return score(item, response);
+    var got = {}, n = 0, right = 0;
+    (Array.isArray(response) ? response : []).forEach(function (c) {
+      if (isInt(c) && c >= 0 && c < N * N && !got[c]) { got[c] = true; n++; }
+    });
+    item.key.forEach(function (c) { if (got[c]) right++; });
+    var missing = item.key.length - right, extra = n - right;
+    return { correct: missing === 0 && extra === 0, detail: { right: right, missing: missing, extra: extra } };
+  }
+  function difficultyAll(params) { return difficulty(params) + (isMark(params) ? MARK_D : 0); }
+  function chanceAll(params) { return isMark(params) ? 0 : 1 / nOpt(normParams(params)); }
+  /* ===== end of the 'mark' block (W2-bets) ===== */
+
   PX.ex.define({
     id: 'fold', version: 1, code: 'EX-04', name: 'Paper folding', short: 'Fold',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train',
-    bet: 'variety', format: 'fold:fold-punch-unfold', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    bet: 'variety', format: { '*': 'fold:fold-punch-unfold', mark: 'fold:fold-punch-mark' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    variants: ['choose', MARK], trainVariants: ['choose'], layers: { produce: MARK }, // v1.2 wave 2 (W2-bets): the produce variant (block above)
     answer: 'choice', nOptions: 5, // 4 options below 4 folds, 5 from 4 folds up: use item.options.length
     dims: [
       { key: 'folds', label: 'Folds', levels: FOLDS, step: 0.6 },
@@ -1316,11 +1376,12 @@
       { key: 'idle', label: 'Folds that do not matter', levels: IDLE, step: -0.35 },
     ],
     base: -2.2,
-    difficulty: difficulty,
-    chance: function (params) { return 1 / nOpt(normParams(params)); },
-    generate: generate,
-    validate: validate,
-    score: score,
+    // v1.2 wave 2 (W2-bets): these five also serve the 'mark' variant (the block above)
+    difficulty: difficultyAll,
+    chance: chanceAll,
+    generate: generateAll,
+    validate: validateAll,
+    score: scoreAll,
     lib: {
       N: N, FOLDS: FOLDS, TYPES: TYPES, PUNCHES: PUNCHES, IDLE: IDLE, HMAX: HMAX,
       nOptions: function (params) { return nOpt(normParams(params)); },

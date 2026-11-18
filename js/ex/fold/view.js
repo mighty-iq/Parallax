@@ -447,18 +447,54 @@
     st = null;
   }
 
+  /* ===== v1.2 wave 2 (W2-bets): the produce variant 'mark' (CONTRACT-v1.2 S) =====
+     Its items get their own input (layoutFor → 'custom'): a blank sheet under the strip where the
+     player marks the holes, drawn by js/ex/fold/layers-view.js (PX.ui.betsDraw.fold) with this
+     view's pieces (api). Every other item runs exactly as before. */
+  function produceOf(item) {
+    var D = PX.ui.betsDraw && PX.ui.betsDraw.fold;
+    return item && item.variant === 'mark' && D ? D : null;
+  }
+  var api = {
+    st: function () { return st; }, N: N, S: S, HOLE_R: HOLE_R, cap: cap,
+    sheet: sheet, hole: hole, ring: ring, steps: steps, play: play, setMode: setMode,
+  };
+  function presentAll(item, ctx) {
+    var any = PX.ui.betsDraw && PX.ui.betsDraw.fold;
+    if (any) any.stop(); // a choose item after a mark item keeps no board
+    var p = present(item, ctx), D = produceOf(item);
+    if (D && st) D.prepare(item, ctx, api);
+    return p;
+  }
+  function revealAll(item, response, result, ctx) {
+    var D = produceOf(item);
+    return D && st ? D.reveal(item, response, result, ctx, api) : reveal(item, response, result, ctx);
+  }
+  function showMeAll(item, response, ctx) {
+    var D = produceOf(item);
+    return D && st && st.item === item ? D.showMe(item, response, ctx, api) : showMe(item, response, ctx);
+  }
+  function unmountAll() {
+    var D = PX.ui.betsDraw && PX.ui.betsDraw.fold;
+    if (D) D.stop();
+    unmount();
+  }
+  /* ===== end of the 'mark' block (W2-bets) ===== */
+
   PX.ex.view('fold', {
     layout: 'stem+options',
     css: true,
     mount: mount,
-    present: present,
+    present: presentAll, // v1.2 wave 2 (W2-bets): present, reveal, showMe and unmount also serve 'mark'
     drawOption: drawOption,
     optionLabel: optionLabel,
     gridCols: gridCols,
-    reveal: reveal,
-    showMe: showMe,
+    reveal: revealAll,
+    showMe: showMeAll,
     demo: demo,
-    unmount: unmount,
+    unmount: unmountAll,
+    layoutFor: function (item) { return produceOf(item) ? 'custom' : 'stem+options'; }, // v1.2 wave 2 (W2-bets)
+    collect: function (item, ctx, respond) { var D = produceOf(item); if (D && st && st.item === item) D.collect(item, ctx, respond, api); },
     // for tests: the steps show-me would play (from the item's own fold model)
     steps: function (item, response) { return st ? steps(item, response) : []; },
   });
