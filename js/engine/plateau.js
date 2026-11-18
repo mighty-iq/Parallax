@@ -660,6 +660,7 @@
   // A plateau, ceiling or faster event; a plateau's change is chosen here and starts at once (a stage
   // moves now, rest days start now; the others act through the hooks while the trial runs).
   function fire(rec, def, det, kind, plan, res, now, cx) {
+    now = mround(now); // whole milliseconds: the event's id and times
     var disp = det.disp, st = E.est.get(rec, def, { display: disp || plan.display }), lv = E.est.shown(rec, def, { display: disp || plan.display });
     var seed = PX.rng.hash('plateau', def.id, disp || '-', now) >>> 0, ch = null;
     if (kind === 'plateau') ch = choose(signals(rec, def, det, now), PX.rng(seed));
@@ -715,11 +716,12 @@
     rows.forEach(function (r) { if (!hasOwn.call(seen, r.s)) { seen[r.s] = true; firsts.push(r.t); } });
     var prev = start / 1000, broke = false;
     for (var i = 0; i < firsts.length && !broke; i++) { if (firsts[i] - prev > CFG.verdict.maxGapDays * 86400) broke = true; prev = firsts[i]; }
-    if (broke) { tr.end = now; ev.verdict = { at: now, words: 'unclear', diff: null, se: null }; return true; }
+    var at = mround(now);
+    if (broke) { tr.end = at; ev.verdict = { at: at, words: 'unclear', diff: null, se: null }; return true; }
     if (firsts.length < tr.sessions || rows.length < tr.answers) return false;
     var v = verdictOf(ev, rows);
-    tr.end = now;
-    ev.verdict = { at: now, words: v.words, diff: r3(v.diff), se: r3(v.se) };
+    tr.end = at;
+    ev.verdict = { at: at, words: v.words, diff: r3(v.diff), se: r3(v.se) };
     return true;
   }
 
