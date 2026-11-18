@@ -93,9 +93,9 @@
 
       section('Credits and licences', [
         h('dl.px-credits',
-          h('div', h('dt', 'Parallax'), h('dd', 'Built by the Chimera community. Version ', h('span.px-num', PX.version), '.')),
+          h('div', h('dt', 'Parallax'), h('dd', 'Built by the Chimera community on Discord. Version ', h('span.px-num', PX.version), '.')),
           h('div', h('dt', 'Code'), h('dd', 'MIT licence.')),
-          h('div', h('dt', 'Guide text'), h('dd', 'Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0).')),
+          h('div', h('dt', 'Guide and texts'), h('dd', 'The guide, the README and the notes: Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0).')),
           h('div', h('dt', 'three.js'), h('dd', '3D rendering. MIT licence, © 2010–2026 three.js authors.')),
           h('div', h('dt', 'IBM Plex Sans and Mono'), h('dd', 'Typefaces by IBM. SIL Open Font License 1.1.'))),
       ], { 'data-section': 'credits' }),
