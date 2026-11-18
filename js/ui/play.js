@@ -467,6 +467,9 @@
         // shown (ms), counted per session for the comfort cards; the gentle motion profile
         assist: null,
         addMotion: function (ms) { if (isNum(ms) && ms > 0) { P.motionMs += ms; if (opts.onMotion) { try { opts.onMotion(ms); } catch (e) { log('onMotion failed', e); } } } },
+        // the show-me runner's own commands for a view ('step', 'pause', 'replay', 'close'): a tap on
+        // the board may step a Watch or a show-me (W1-central's request)
+        playCmd: function (name) { if (name === 'step' || name === 'pause' || name === 'replay' || name === 'close') runner.cmd(name); },
         gentleMotion: gentleMotion(),
       };
     }
@@ -1657,8 +1660,31 @@
         return P.waitNext({ label: practice.length ? 'Try it' : 'Go' }).then(function (w) { if (w === 'end') { skipped = true; ended = true; } return w; });
       });
     }
+    // A worked example before a Try item (practice entry `example: { seed, params? }`; note D2
+    // addendum C): the demo solves one more item, then the Try item comes.
+    function exampleStep(entry) {
+      var ex = entry && entry.example;
+      if (!isObj(ex) || !isNum(ex.seed) || skipped || !P.view || !P.view.demo) return Promise.resolve();
+      var item = null;
+      try { item = def.generate(PX.rng(ex.seed >>> 0), fillParams(def, isObj(ex.params) ? ex.params : entry.params)); } catch (e) { log('example item failed', e); }
+      if (!item) return Promise.resolve();
+      stage(1, 'Try: first one more item solved for you, then your turn.');
+      P.setMeta('Example');
+      makeRoom(goalOf(learn, item), null, true);
+      stageSoon(item, true);
+      emit('play:screen', { screen: 'wtg-example', mode: P.mode, exId: exId });
+      return P.demo(item, { goal: goalOf(learn, item), turn: { skip: 'Now your turn' } }).then(function (tr) {
+        if (tr.outcome === 'aborted' || skipped) return null;
+        if (tr.end) { skipped = true; ended = true; return null; }
+        if (tr.outcome === 'skipped') return null;
+        return P.waitNext({ label: 'Now your turn' }).then(function (w) { if (w === 'end') { skipped = true; ended = true; } });
+      });
+    }
     function tryStep(i) {
       if (skipped || i >= practice.length) return Promise.resolve();
+      return exampleStep(practice[i]).then(function () { return skipped ? null : tryItem(i); });
+    }
+    function tryItem(i) {
       var entry = practice[i], params = fillParams(def, entry.params), item = null, seed0 = ['px-try', exId, i, counter('tries', exId)];
       if (isNum(entry.seed)) { // a fixed Try item (learn.js chose it, e.g. for its assist)
         try { item = def.generate(PX.rng(entry.seed >>> 0), params); } catch (e) { log('practice item failed', e); }
@@ -1684,7 +1710,9 @@
       makeRoom(goalOf(learn, item), tip ? tip.text : null, false);
       stageSoon(item);
       if (i === 0) emit('play:screen', { screen: 'wtg-try', mode: P.mode, exId: exId });
-      return P.run(item, { practice: true, goal: goalOf(learn, item), tip: tip ? tip.text : null, assist: entry.assist !== undefined ? entry.assist : null }).then(function (tr) {
+      // a Try item may carry its own deadline (Central Point's Quick form meets the clock once in Try)
+      var dl = isNum(item.deadlineMs) && item.deadlineMs > 0 ? item.deadlineMs : null;
+      return P.run(item, { practice: true, goal: goalOf(learn, item), tip: tip ? tip.text : null, assist: entry.assist !== undefined ? entry.assist : null, limitMs: dl, limitBar: !!dl }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; }
         if (tr.outcome === 'skipped' || tr.error) return tryStep(i + 1);

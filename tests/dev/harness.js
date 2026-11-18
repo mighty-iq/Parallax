@@ -722,6 +722,7 @@
         // v1.2 (CONTRACT-v1.2 D, F)
         assist: cfg.assist === '__first__' ? firstAssist() : cfg.assist === undefined ? null : cfg.assist, gentleMotion: !!cfg.gentle,
         addMotion: function (ms) { if (typeof ms === 'number' && isFinite(ms) && ms > 0) H.played.motionMs = (H.played.motionMs || 0) + ms; },
+        playCmd: function (name) { if (name === 'step' || name === 'pause' || name === 'replay' || name === 'close') playerCmd(name); },
       };
       if (H.view.mount) H.view.mount(H.ctx);
       if (cfg.rules) renderRules(true);

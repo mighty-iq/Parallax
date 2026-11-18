@@ -306,6 +306,12 @@ def run_wtg(page, size, ex, rows):
     page.evaluate(f'void PX.core.router.go("play", {{ mode: "watch", exId: "{ex}" }}, {{ force: true }})')
     demo, dfit, t0 = None, None, time.time()
     while time.time() - t0 < 20:
+        # v1.2 teaching template: the rules card comes first ("Watch it solved")
+        rc = page.locator('[data-card-box="wtg-rules"] [data-card="watch"]')
+        if rc.count():
+            rc.first.click()
+            page.wait_for_timeout(60)
+            continue
         if state(page) == 'showme':
             m = page.evaluate(WTG_JS)
             if m['caption']:
@@ -326,7 +332,16 @@ def run_wtg(page, size, ex, rows):
         for k in range(6):
             t0 = time.time()
             while time.time() - t0 < 30 and state(page) not in ('respond', 'done', 'idle', None):
+                sc = page.locator('[data-card-box="wtg-strategy"] [data-card="try"]')  # v1.2: the strategy card before Try 1
+                if sc.count():
+                    sc.first.click()
                 page.wait_for_timeout(30)
+            sc = page.locator('[data-card-box="wtg-strategy"] [data-card="try"]')
+            if sc.count():
+                sc.first.click()
+                t0 = time.time()
+                while time.time() - t0 < 30 and state(page) != 'respond':
+                    page.wait_for_timeout(30)
             if state(page) != 'respond' or not page.evaluate('(document.querySelector(".pl-wtg-text") || {}).textContent || ""').startswith(('Try', 'Go')):
                 break
             page.wait_for_timeout(200)
