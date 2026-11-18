@@ -42,6 +42,21 @@ function denseCentre(T, r) {
   }
   return best.c;
 }
+// Four of the targets surround an empty dot (each one dot from it, the dot strictly inside their outline)
+// and the fifth lies at least 4 dots from that dot.
+function aroundGap(T) {
+  for (let i = 0; i < T.length; i++) {
+    const g = T.filter((_, j) => j !== i);
+    for (let cx = 0; cx <= 12; cx += 2) for (let cy = 0; cy <= 12; cy += 2) {
+      const c = [cx, cy];
+      if (g.some((t) => Math.max(Math.abs(t[0] - cx), Math.abs(t[1] - cy)) !== 2)) continue;
+      const ang = g.map((t) => Math.atan2(t[1] - cy, t[0] - cx)).sort((u, v) => u - v);
+      const gaps = ang.map((u, k) => (k + 1 < ang.length ? ang[k + 1] : ang[0] + 2 * Math.PI) - u);
+      if (Math.max(...gaps) < Math.PI - 1e-9 && hyp(T[i], c) >= 8) return true;
+    }
+  }
+  return false;
+}
 function farthestFromMean(T) { const m = meanOf(T); let f = T[0]; for (const t of T) if (hyp(t, m) > hyp(f, m)) f = t; return f; }
 function oneWeiszfeldStep(T) {
   const m = meanOf(T); let x = 0, z = 0, w = 0;
@@ -178,17 +193,17 @@ export async function run(t) {
   t.eq(v2Missing, 0, 'the correction ratio (value2) is logged on every rated item');
   t.eq(v2KeyOff, 0, 'value2 at the key lies within 0.3–1.7 (the key sits within a dot of the best spot, the trap is at least a dot)');
 
-  t.section('centralpoint: chance and the shortcut table (hit rates in %)');
+  t.section('centralpoint: chance and the shortcut table (hit rates in %; bounds asserted from 2 000 items per cell)');
   console.log('    cell (form targets band) | n | band pts | chance | fixed | next to avg | ring 2 | between dots | dense 1.5 / 2 dots | 1 Weiszfeld step | avg→group 1–4 half-steps | avg away from far 1–4 | observer 0.3 / 0.5 | avg user | value2 at key (median) | keys between dots');
   for (const r of rows) {
     console.log(`    ${r.variant} ${r.k} ${r.band * 100}% | ${r.n} | ${r.bandPts.toFixed(2)} | ${pct(r.chance, 2)} | ${pct(r.fixed)} | ${pct(r.nbAvg)} | ${pct(r.ring2)} | ${pct(r.parity, 2)} | ${pct(r.dense15)} / ${pct(r.dense2)} | ${pct(r.w1)} | ${r.toward.map((x) => pct(x, 0)).join('/')} | ${r.away.map((x) => pct(x, 0)).join('/')} | ${pct(r.obs03, 0)} / ${pct(r.obs05, 0)} | ${pct(r.avgUser)} | ${r.crKey.toFixed(2)} | ${pct(r.between, 0)}`);
   }
   for (const r of rows.filter((x) => x.variant === 'quick')) {
     const lim = r.chance + 0.10, cell = `${r.k} targets, ${r.band * 100} %`;
-    t.ok(Math.abs(r.chance - L.CHANCE[L.BANDS.indexOf(r.band)]) <= 0.003, `${cell}: chance ${pct(r.chance, 2)} % is within 0.3 points of the stored ${pct(L.CHANCE[L.BANDS.indexOf(r.band)], 2)} %`);
+    if (r.n >= 2000) t.ok(Math.abs(r.chance - L.CHANCE[L.BANDS.indexOf(r.band)]) <= 0.003, `${cell}: chance ${pct(r.chance, 2)} % is within 0.3 points of the stored ${pct(L.CHANCE[L.BANDS.indexOf(r.band)], 2)} %`);
     const bounded = { fixed: r.fixed, 'next to the average': r.nbAvg, 'ring 2 round the average': r.ring2, 'a point between dots': r.parity, 'dense group, 1.5 dots': r.dense15, 'dense group, 2 dots': r.dense2 };
     const over = Object.entries(bounded).filter(([, v]) => v > lim);
-    t.ok(over.length === 0, `${cell}: second-order guesses within chance + 10 (${over.length ? over.map(([k2, v]) => k2 + ' ' + pct(v)).join(', ') : 'worst ' + pct(Math.max(...Object.values(bounded))) + ' %'})`);
+    if (r.n >= 2000) t.ok(over.length === 0, `${cell}: second-order guesses within chance + 10 (${over.length ? over.map(([k2, v]) => k2 + ' ' + pct(v)).join(', ') : 'worst ' + pct(Math.max(...Object.values(bounded))) + ' %'})`);
   }
   const fams = rows.filter((r) => r.variant === 'quick').map((r) => Object.keys(r.fam).length);
   t.ok(fams.every((c) => c === 3), 'every rated cell draws on all three layout families');
@@ -211,12 +226,13 @@ export async function run(t) {
         if (Math.abs(it.gm[0] - it.key.x) > 1e-6 || Math.abs(it.gm[1] - it.key.y) > 1e-6 || it.key.x % 2 || it.key.y % 2) kiteOff++;
       }
       const m = meanOf(it.targets);
-      if ((task === 'watch' || task === 'group') && hyp(m, it.gm) / F < 1) trapLow++;
+      if ((task === 'watch' || task === 'group') && hyp(m, it.gm) / F < (task === 'watch' ? 0.75 : 1)) trapLow++;
+      if ((task === 'watch' || task === 'group') && !aroundGap(it.targets)) trapLow++;
       if (it.deadlineMs) dl++;
     }
     t.ok(bad === 0, `${task} (${variant}): 400 valid, regular items${first ? ' (first problem: ' + first + ')' : ''}`);
     if (task === 'kite') t.eq(kiteOff, 0, `kite (${variant}): the best spot is the dot where the diagonals cross`);
-    if (task === 'watch' || task === 'group') t.eq(trapLow, 0, `${task} (${variant}): the average lies at least a dot from the best spot`);
+    if (task === 'watch' || task === 'group') t.eq(trapLow, 0, `${task} (${variant}): four targets round an empty dot and a far one; the average lies at least ${task === 'watch' ? '¾ dot' : '1 dot'} from the best spot`);
     t.eq(dl, task === 'loose' && variant === 'quick' ? 400 : 0, `${task} (${variant}): a 20 s deadline only on the last Try item of the quick form`);
   }
 

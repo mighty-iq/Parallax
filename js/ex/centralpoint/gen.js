@@ -44,11 +44,11 @@
    than the best answer point and lies within a dot of it.
 
    Tutorial items (extraParams.task, never chosen by the engine; Reckon's pattern): 'watch' (the Watch:
-   four targets close together inside a 3 × 3 block of dots and one far target), 'kite' (Try 1: four
-   targets round a gap, where the diagonals cross), 'group' (Try 2: like the Watch, a new layout) and
-   'loose' (Try 3: five targets under the strict policy). They use a 2 % band (C1 §3.2: practice cells, outside the
-   rated pool); the Watch and Try 2 have a trap of at least 1 dot, Try 3 the strict policy and a trap of
-   half a dot. The last Try item carries a 20 s deadline in the quick form (item.deadlineMs).
+   a group of four round an empty dot and one far target), 'kite' (Try 1: four targets round a gap,
+   where the diagonals cross), 'group' (Try 2: like the Watch, another layout) and 'loose' (Try 3: five
+   targets under the strict policy). They use a 2 % band (C1 §3.2: practice cells, outside the rated
+   pool); the average lies at least ¾ dot (Watch) or 1 dot (Try 2) from the best spot, Try 3 has the
+   strict policy and a trap of half a dot. The last Try item carries a 20 s deadline in the quick form (item.deadlineMs).
 
    Forms (variants; PLAN.md milestone 8, DECISIONS 18 Nov; CONTRACT-v1.2 A and E): 'quick' (the only
    form automatic choices use, trainVariants; a deadline from the engine's pace staircase that tightens
@@ -92,7 +92,7 @@
   var TRAP_EPS = 1e-6;                              // the generator asks for the trap plus this
   // Tutorial tasks (extraParams.task): unrated practice cells with a 2 % band (C1 §3.2, §5.4).
   var TASKS = {
-    watch: { k: 5, band: 0.02, trap: 1, strict: false, deadlineMs: null },
+    watch: { k: 5, band: 0.02, trap: 0.75, strict: false, deadlineMs: null },
     kite: { k: 4, band: 0.02, trap: 0, strict: false, deadlineMs: null },
     group: { k: 5, band: 0.02, trap: 1, strict: false, deadlineMs: null },
     loose: { k: 5, band: 0.02, trap: 0.5, strict: true, deadlineMs: 20000 },
@@ -331,7 +331,10 @@
   }
   // Tutorial layouts. kite: four targets in convex position round a dot, on two crossing diagonals
   // (axis-aligned or at 45°), so the diagonals cross on that dot, the best spot (C1 §2.5 #4).
-  // group: four targets inside a 3 × 3 block of dots and one far target (at least 4 dots from them).
+  // watch, group: four of the eight dots round an empty middle dot, which lies inside their outline
+  // (consecutive picks round the ring turn the same way by less than 180°), and one far target at
+  // least 4 dots from the middle. Integer tests only, so items stay bit-identical everywhere.
+  var RING8 = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
   function tutorialLayout(r, task) {
     var T = [], used = {}, i;
     if (task === 'kite') {
@@ -342,12 +345,14 @@
       return { fam: 'kite', D: T };
     }
     if (task === 'watch' || task === 'group') {
-      var gx = r.int(0, DOTS - 3), gz = r.int(0, DOTS - 3), g = 0;
-      while (T.length < 4 && g++ < 200) addDot(T, used, gx + r.int(0, 2), gz + r.int(0, 2));
-      if (T.length < 4) return null;
-      var mx = (T[0][0] + T[1][0] + T[2][0] + T[3][0]) / 4, mz = (T[0][1] + T[1][1] + T[2][1] + T[3][1]) / 4, fx, fz;
-      g = 0;
-      do { fx = r.int(0, DOTS - 1); fz = r.int(0, DOTS - 1); } while (((fx - mx) * (fx - mx) + (fz - mz) * (fz - mz) < 16 || used[fz * DOTS + fx]) && g++ < 200);
+      var mx = r.int(1, DOTS - 2), mz = r.int(1, DOTS - 2), pick = r.shuffle([0, 1, 2, 3, 4, 5, 6, 7]).slice(0, 4), g = 0, fx, fz;
+      pick.sort(function (a, b) { return a - b; });
+      for (i = 0; i < 4; i++) {
+        var a = RING8[pick[i]], b = RING8[pick[(i + 1) % 4]];
+        if (a[0] * b[1] - a[1] * b[0] <= 0) return null; // a gap of half the ring or more: the middle is not inside
+        addDot(T, used, mx + a[0], mz + a[1]);
+      }
+      do { fx = r.int(0, DOTS - 1); fz = r.int(0, DOTS - 1); } while ((fx - mx) * (fx - mx) + (fz - mz) * (fz - mz) < 16 && g++ < 200);
       if (!addDot(T, used, fx, fz)) return null;
       return { fam: task, D: T };
     }
