@@ -35,6 +35,14 @@ Owns: see docs/dev/CONTRACT-v1.2.md "File ownership". Requests: docs/dev/v1.2/re
   Homing, Reckon, Openings, Cubes, Angles, Views, Form, Missing View, Rotate 21/22 (Hole Punch's worked example
   item is 590 px tall: request to band-B).
 
+- Round 2 (lead's fresh-player items, 20:00–20:30 UTC): the strip hides under a pause between items; a short session's
+  summary says why it does not count (E.config.streak numbers); Next reads "Skip ahead" while a caption's steps play
+  and "Your turn" at a demo's last caption, where Watch, Try, Go's line says what to do; the time bar sits under the
+  item with a "Time left · N s" label and a timed Try item is announced; the strip stays on Try until the last Try
+  item is done; a show-me's Next is "next caption" after an answer too (no Step there); a copy of Pause stays at a
+  phone's top corner when the title row scrolls away; Hole Punch's demo end state filed to band-B. play.py 144/0
+  (run_captions 17/17), fit.py Central Point 12/12 at three sizes, node load/chimera 333/333.
+
 ## Verified (final round, 18:28–19:45 UTC)
 - node: full suite 4760/4760 (38 files, 18:28 code); after c7cff8b pooled, core, store, rebase, engine 1258/1258.
 - browser: play.py 138/0 (incl. run_captions 11/11; rerun 19:38 138/0), flows 73/0, clock.py full 74/0, twotabs
