@@ -810,6 +810,7 @@
     format: FORMAT, // v1.2 (W2-measure): reserved formats, never in training material (tests/node/formats.test.mjs)
     variants: STRANDS.slice(),
     cycle: 'variant', // a probe block reads the strands in turn (js/engine/assess.js)
+    requires: ['nets'], // net back folds with Nets' model (its library, at item time)
     dims: [{ key: 'level', label: 'Level', levels: [0, 1, 2], step: STEP }],
     base: BASE, difficulty: difficulty,
     chance: function () { return 0.25; },
