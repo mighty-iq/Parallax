@@ -512,7 +512,7 @@
       { key: 'asked', label: 'Painted sides asked', levels: ['3–4', '1–2'], step: ASK_STEP },
     ],
     base: BASE,
-    starter: { dim: 'height', levels: 1 },
+    starter: [{ dim: 'height', levels: 1 }, { dim: 'cubes', levels: 1 }],
     difficulty: difficulty,
     chance: 0.2,
     generate: generate,

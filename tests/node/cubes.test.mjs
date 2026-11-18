@@ -21,7 +21,7 @@ export async function run(t) {
     ['cubes', 2, 'EX-18', ['Vz'], 'train', 'choice', 5, true, ['ask']], 'id, version 2 (starter band), code, Vz, choice of 5, pat, extra param ask');
   t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 5], ['height', 4], ['asked', 2]], 'dims: a starter level in front of cubes and of tallest column');
   t.eq([def.dims[0].levels[0], def.dims[1].levels[0]], ['4–6', 1], 'the starter levels: 4–6 cubes, flat (one cube high)');
-  t.eq(def.starter, { dim: 'height', levels: 1 }, 'starter: the flat level');
+  t.eq(def.starters, [{ dim: 'height', levels: 1 }, { dim: 'cubes', levels: 1 }], 'starters: the flat level and the 4–6 cubes level');
   const all = PX.ex.enumerate(def);
   t.eq(all.length, 40, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
