@@ -61,6 +61,17 @@ LINKS = re.compile(
     r'|\bdiscord(?:app)?\.com/channels/\d+[^\s)>\]"\']*'  # links to Discord messages (invites are fine)
     , re.I)
 HOME = re.compile(r'(?<![\w.~-])(?:/home/[A-Za-z0-9._-]+/|/root(?=/)|/Users/[A-Za-z0-9._ -]+/|[A-Za-z]:\\{1,2}Users\\{1,2}[^\\\s"\']+)')
+# Obviously invented user names that test fixtures may use in a sample path; a real user folder is still caught.
+FAKE_USERS = {'someone', 'example', 'username'}
+
+
+def home_user(path):
+    """The user-folder name inside a matched home path ('' for the root user's home)."""
+    parts = [p for p in re.split(r'[\\/]+', path) if p]
+    for i, p in enumerate(parts):
+        if p in ('home', 'Users') and i + 1 < len(parts):
+            return parts[i + 1].lower()
+    return ''
 SESSION = re.compile(r'/tmp/claude-\d+/[^\s`)\]"\']*|\bsession_[A-Za-z0-9]{16,}\b')
 PRIVATE_NAMES = {'BRIEF.md', 'RULES.md', '.privacy.local'}
 IMAGE_EXT = re.compile(r'\.(png|jpe?g|webp|gif|tiff?|heic|avif)$', re.I)
@@ -149,6 +160,8 @@ def check_text(text, where, cfg, rep):
             continue
         rep.add(where, 'email address outside the allowlist', m.group(0))
     for m in HOME.finditer(text):
+        if home_user(m.group(0)) in FAKE_USERS:
+            continue
         rep.add(where, 'home-folder path', excerpt(text, m))
     for m in SESSION.finditer(text):
         rep.add(where, 'session folder or session id', excerpt(text, m))
@@ -275,9 +288,11 @@ def self_test():
     bad = ['https://claude' + '.ai/chat/abc', 'Claude' + '-Session: x', 'mail someone' + '@' + 'example.org',
            '/ho' + 'me/alice/notes', '/ro' + 'ot/.config', 'C:' + '\\Users\\Bob\\x', '/Us' + 'ers/Carol/x',
            'zone Mars/' + 'Olympus', 'a privatevalue'.replace('privatevalue', 'priv' + 'atevalue'),
-           'https://discord' + '.com/channels/1/2/3', '/tmp/claude-' + '0/-x/abc/scratchpad/f', 'session' + '_01ABCDEFGHIJKLMNOPQRS']
+           'https://discord' + '.com/channels/1/2/3', '/tmp/claude-' + '0/-x/abc/scratchpad/f', 'session' + '_01ABCDEFGHIJKLMNOPQRS',
+           'file:///ho' + 'me/someones/x.js', '/Us' + 'ers/Example2/x']
     good = ['https://discord.gg/chmr', 'Co-Authored-By: Claude <noreply' + '@anthropic.com>',
-            'https://docs.claude.com/en/docs', 'home/away', 'tests/e2e/out/x.png', '12345+someone' + '@users.noreply.github.com']
+            'https://docs.claude.com/en/docs', 'home/away', 'tests/e2e/out/x.png', '12345+someone' + '@users.noreply.github.com',
+            'file:///ho' + 'me/someone/parallax/js/ui/play.js', 'C:' + '\\Users\\username\\x']
     ok = True
     for s in bad:
         rep = Report(); check_text(s, 'sample', cfg, rep)
