@@ -2,13 +2,14 @@
 // C1 spike: Central Point (the geometric median restricted to a lattice of answer points).
 // Plain Node (>= 18), no dependencies, deterministic (string-seeded sfc32). Reads and writes no app file.
 //
-//   node docs/research/v1.2/spikes/C1/spike.mjs            full run (about 10-15 minutes on one core)
+//   node docs/research/v1.2/spikes/C1/spike.mjs            full run (about 8-10 minutes on one core)
 //   node docs/research/v1.2/spikes/C1/spike.mjs --quick    smaller samples (about 1-2 minutes)
 //
 // Writes results.md (the tables) and results.json (every number) next to this file; prints the tables too.
 // Stages: A baseline without constraints; B strict policy on a 7x7 answer grid; C the proposed ladder on a
 // half-step answer lattice (targets on 7x7); D minimax over item pools (policies compared per level);
-// E checks of the mathematics and of the solver against Weiszfeld's algorithm.
+// E checks of the mathematics and of the solver against Weiszfeld's algorithm; F what each dim does to each
+// shortcut on its own (no exclusion). Stages run in the order A, B, C, D, F, E.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -273,6 +274,43 @@ for (const k of [4, 6, 8]) LADDER.push({ set: 'excluded', k, trapMin: 1.0, band:
   log('|---|---|---|---|---|');
   for (const r of rowsD) log(`| ${r.k} | ${r.trapMin} | ${r.band * 100} % | ${r.minimax || 'none feasible'} | ${r.minimaxValue == null ? '–' : f0(r.minimaxValue)} |`);
   JSONOUT.D = rowsD.map((r) => ({ k: r.k, trapMin: r.trapMin, band: r.band, minimax: r.minimax, minimaxValue: r.minimaxValue, policies: r.policies }));
+  log('');
+}
+
+/* =================================================================== F. what each dim does to each shortcut (no exclusion) */
+{
+  const N = QUICK ? 6000 : 30000;
+  log('## F. What each dim does to each shortcut on its own (no exclusion, half-step answers)');
+  log('');
+  log(`${N} candidates per row; only the trap minimum filters items. Cells: hit rate in % (chance in the first column). A dim "bounds" a shortcut when its hit rate falls to within 10 points of chance.`);
+  const sweeps = [
+    { name: 'trap minimum (6 targets, band 1 %)', rows: [0, 0.5, 1.0, 1.5, 2.0].map((t) => ({ k: 6, band: 0.01, trapMin: t, label: `trap ≥ ${t}` })) },
+    { name: 'band (6 targets, trap ≥ 1)', rows: [0.0025, 0.005, 0.01, 0.02, 0.04].map((b) => ({ k: 6, band: b, trapMin: 1.0, label: `band ${b * 100} %` })) },
+    { name: 'targets (band 1 %, trap ≥ 1)', rows: [4, 5, 6, 7, 8].map((k) => ({ k, band: 0.01, trapMin: 1.0, label: `${k} targets` })) },
+  ];
+  const rowsF = [];
+  for (const sw of sweeps) {
+    log('');
+    log(`Sweep: ${sw.name}`);
+    log('');
+    log('| level | items | chance | ' + HKEYS.join(' | ') + ' | neighbour of average |');
+    log('|---|---|---|' + HKEYS.map(() => '---').join('|') + '|---|');
+    for (const R of sw.rows) {
+      let n = 0, ch = 0, nb = 0; const hit = Object.fromEntries(HKEYS.map((h) => [h, 0]));
+      for (let i = 0; i < N; i++) {
+        const seed = `F|${R.k}|${R.trapMin}|${R.band}|${i}`;
+        const { it } = candidate(seed, R.k);
+        const ev = evaluate(it, R.band, R.trapMin, seed);
+        if (!ev) continue;
+        n++; ch += ev.nb / (GF * GF); nb += ev.second.nbMean;
+        for (const h of HKEYS) if (ev.hit[h]) hit[h]++;
+      }
+      const row = { sweep: sw.name, ...R, n, chance: pct(ch, n), nbMean: pct(nb, n), hits: Object.fromEntries(HKEYS.map((h) => [h, pct(hit[h], n)])) };
+      rowsF.push(row);
+      log(`| ${R.label} | ${n} | ${f1(row.chance)} | ` + HKEYS.map((h) => f0(row.hits[h])).join(' | ') + ` | ${f0(row.nbMean)} |`);
+    }
+  }
+  JSONOUT.F = rowsF;
   log('');
 }
 

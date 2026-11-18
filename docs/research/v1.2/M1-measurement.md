@@ -18,9 +18,14 @@ Spike: `docs/research/v1.2/spikes/M1/power.mjs` (Node, no dependencies, no app c
 1. **The acceptance as written is out of reach: with today's probe formats at any cost tested (up to about 70 minutes a week), and with upgraded formats below about 40 minutes a week.** A real composite gain of 0.5 SD shown as "likely gain" in at least 60 % of learners at week 4, with at most 5 % false "likely gain", needs the posterior SD of the gain to be at most 0.26 SD (0.5 / 1.9). That is the same as pre and post scores each with a reliability of about 0.965 [Inference, standard reliable-change arithmetic, §2.1]. In the spike, designs costing 45–81 minutes over four weeks reach a minimal detectable gain (60 % power) of 0.93–1.29 SD at week 4 with today's formats, and 0.63–0.85 SD with upgraded items and a higher (0.85) probe reliability; item-level simulation gives 13–18 % (central) and 18–32 % (optimistic) "likely gain" for a 0.5 SD gain [spike, §5].
 2. **The bottleneck is information per minute of probe testing, then occasion noise; the familiarity estimate and the model matter less.** Per item, a yes/no Cube Match item carries 0.074 units of Fisher information, View Match 0.136, Mechanisms about 0.096, Pattern Memory 0.214, and the engine's targeting (k = 0.6) is already within 1 % of the optimum [spike Part 1]. Making familiarity known exactly improves the detectable gain by 1–3 %; doubling item information improves it by about 20 % [spike Part 2].
 3. **What does help, in order of size:** (a) a trend model over all measurement occasions instead of each check against the baselines (same schedule: 0.1 % → 8 % detection; §3.2); (b) many short occasions rather than few long ones, because day-to-day state noise is large (within-person SD across sessions 0.54–0.78 of the between-person SD in Salthouse 2007); (c) better probe formats: fewer guessable options, partial credit for Pattern Memory, response time as collateral information (together about ×1.7 information, my estimate); (d) measurement at both ends of the period (bursts) for a fixed number of minutes; (e) a longer horizon.
-4. **False positives can be held at 5 %, with two guards:** the verdict words change only at milestone reports (days 14 and 28, a stricter bar at day 14), which brings "ever flagged" among learners without a gain from about 14–15 % to 3.9–4.7 % [spike]; and the population familiarity curve must be right. A familiarity plateau 0.3 SD larger than assumed raises false "likely gain" to 7–9 %, and widening its prior does not fix that. The curve must come from pooled community data (O16), with a conservative prior until then.
-5. **Recommended design (Design A, default):** a short baseline in session 1 after the two-minute tutorial, a second one at the start of session 2, then a 3.5–4.5-minute no-feedback probe block in every training session and a 10-minute check every 4 weeks (about 13–17 minutes a week). A linear-Gaussian trend model (generalised least squares, equivalent to a Kalman filter) with a population familiarity curve; a probability meter shown always; verdict words at milestones. Plus an opt-in **measurement week** (Design B: four 9-minute sessions at the start and every 4 weeks), which is the most precise per minute. Design C keeps today's checks with the trend model, as the minimum change.
-6. **Acceptance: proposed restatements for the owner** (§5.5): keep the 0.5 SD target and accept week 8–12, or keep week 4 and use a gain of 0.8 SD, or pay about 40 minutes a week; or define the 0.5 SD per probe rather than on the composite (power ×1.4–1.5). In every case the near rung (§7) is where one person's gain is most likely to show within weeks.
+4. **False positives can be held at 5 %, with two guards:** the verdict words change only at milestone reports (days 14 and 28, a stricter bar at day 14), which brings "ever flagged" among learners without a gain from about 14–15 % to 3.9–4.7 % [spike]; and the population familiarity curve must be right. A familiarity plateau 0.3 SD larger than assumed raises false "likely gain" to 7–9 %, and widening its prior does not fix that. The curve must come from pooled community data (O16); until then a middle plateau prior (0.65 SD) keeps false positives at 2.3–6.0 % across plausible truths, for about 20 % less power.
+5. **Recommended design (Design A, default):** a short baseline in session 1 after the two-minute tutorial, a second one at the start of session 2, then a 3.5–4.5-minute no-feedback probe block in every training session and a 10-minute check every 4 weeks (about 12–15 minutes a week). A linear-Gaussian trend model (generalised least squares, equivalent to a Kalman filter) with a population familiarity curve; a probability meter shown always; verdict words at milestones. Plus an opt-in **measurement week** (Design B: four 9-minute sessions at the start and every 4 weeks), which is the most precise per minute. Design C keeps today's checks with the trend model, as the minimum change.
+6. **Acceptance: proposed restatements for the owner** (§5.5):
+   - keep the 0.5 SD target and accept week 8 (only if the probe upgrades land and real probe reliability is near 0.85);
+   - keep week 4 and use a gain of about 0.8 SD (optimistic) to 1.0–1.2 SD (central);
+   - pay about 40 minutes a week;
+   - or define the 0.5 SD per probe rather than on the composite (power ×1.4–1.5).
+   In every case the near rung (§7) is where one person's gain is most likely to show within weeks.
 
 ## 1. The current check, in numbers
 
@@ -90,7 +95,7 @@ Spike: `docs/research/v1.2/spikes/M1/power.mjs` (Node, no dependencies, no app c
 [Found] The tools in the literature: alternate forms, which help at the 2nd and 3rd test but not by the 4th (Scharfen 2018) and not at all for working memory (Scharfen, Jansen & Holling); a run-in or dual baseline (Bartels 2010: use the 2nd assessment as baseline for many tests; Goldberg 2015: massed pre-baseline practice; Falleti 2006: stable after the 2nd test at short intervals); a modelled practice curve per person (Sliwinski 2006; Oravecz 2022); control groups (Uttal 2013; Scharfen, Jansen & Holling stress inactive controls); a non-trained control task.
 
 [Inference] For one person without a control group:
-1. **The per-person estimate G = B2 − B1 is too noisy to subtract.** It carries the SE of a difference of two checks (≈ 0.48 logits for the composite), larger than the effect it corrects.
+1. **The per-person estimate G = B2 − B1 is too noisy to subtract.** It carries the SE of a difference of two checks (≈ 0.47 logits for the composite), larger than the effect it corrects.
 2. **A population familiarity curve as a prior is the workable route.** The person's own data then refine the amplitude a little. Its mean must be right: in the spike, a true plateau of 0.8 SD against an assumed 0.5 SD gives 7–9 % false "likely gain" at week 4 even with a wider prior (§5.3). The curve should be estimated from pooled exports: the run-in blocks of all players, and ideally a randomised staggered start (§3.4).
 3. **The control task helps less than hoped per person.** Retest gains correlate only weakly across tests (Salthouse & Tucker-Drob: .06–.18 observed, perhaps .2–.5 after correcting for the low reliability of change scores). The control's change says little about one person's spatial familiarity. Its value lies in pooled data (motivation, test-taking) and, if long enough, in absorbing shared day-to-day state.
 4. **A run-in front-loads familiarity before training builds up**, so that most of the steep part is behind the baseline: the two baselines and the first blocks in Design A.
@@ -144,7 +149,7 @@ Spike: `docs/research/v1.2/spikes/M1/power.mjs` (Node, no dependencies, no app c
 
 [Found]
 - **Response times as collateral information.** In the hierarchical model of van der Linden (2007), the information that response times add about ability is bounded (Ranger 2013, *abstract only*). The bound is ρ²/(1 − ρ²), with ρ the correlation of speed and ability (θ in SD units), according to Wang, Weiss & Su 2019 (*secondary*, full text read), whose own example cut SEs by 4–9 %. Reis Costa et al. 2021 (*full text*, PISA 2012 mathematics, 31 countries): EAP reliability rose from .73 (responses only) to .77 (hierarchical model) and .80 (with cross-loadings), and mean SEs fell by 4 % and 12 %. The authors caution that the extra information may not measure the intended construct. In an adaptive test, updating the ability prior with each response time gave a substantial improvement of the ability estimator (van der Linden 2008, *abstract only*). The information speed carries depends on its precision and its correlation with ability (Klein Entink, Fox & van der Linden 2009, *full text*, partial).
-- **Decision models.** In simulations with 40 trials per person, the participants per group needed for 80 % power were about 140 for response time, 115 for accuracy and 55 for the EZ drift rate. Under a speed–accuracy shift, response time alone gave false alarms approaching 100 %, drift rate none (Stafford et al. 2020, *full text*). Drift-rate estimates need many trials: about 26/78 (maximum likelihood), 37/119 (Kolmogorov–Smirnov) and 68/201 (EZ) for low/high precision (Lerche, Voss & Nagler 2017, *full text*, partial). Of the combined speed–accuracy scores, BIS is relatively insensitive to speed–accuracy trade-offs (Liesefeld & Janczyk 2019, *abstract only*). Tasks with robust group effects often have low test–retest reliability, 0 to .82 across seven classic tasks, because people differ little (Hedge, Powell & Sumner 2018, *abstract only*). A time-limit scoring rule (signed residual time) implies an exponential-family model whose accuracy part is a 2PL with the time limit setting discrimination (Maris & van der Maas 2012, *abstract only*).
+- **Decision models.** In simulations with 40 trials per person, the participants per group needed for 80 % power were about 140 for response time, 115 for accuracy and 55 for the EZ drift rate. Under a speed–accuracy shift, response time alone gave false alarms approaching 100 % as samples grew, drift rate none (Stafford et al. 2020, *full text*). Drift-rate estimates need many trials: about 26/78 (maximum likelihood), 37/119 (Kolmogorov–Smirnov) and 68/201 (EZ) for low/high precision (Lerche, Voss & Nagler 2017, *full text*, partial). Of the combined speed–accuracy scores, BIS is relatively insensitive to speed–accuracy trade-offs (Liesefeld & Janczyk 2019, *abstract only*). Tasks with robust group effects often have low test–retest reliability, 0 to .82 across seven classic tasks, because people differ little (Hedge, Powell & Sumner 2018, *abstract only*). A time-limit scoring rule (signed residual time) implies an exponential-family model whose accuracy part is a 2PL with the time limit setting discrimination (Maris & van der Maas 2012, *abstract only*).
 
 [Inference]
 - **Targeting is not a lever.** The engine's k = 0.6 is within 1 % of the information optimum for every format (optimum k = 0.48–0.56; spike Part 1).
@@ -187,9 +192,9 @@ All three designs share one statistical model and one display; they differ in wh
 - **The meter, always shown.** "Chance that your probe composite rose beyond familiarity: 84 %", with the estimated change and a 90 % range, updated after every measurement block. The note under it: it moves as data come in, and the verdict comes at the milestones.
 - **Verdict words, only at milestones** (end of week 2, end of week 4, then every 4 weeks):
   - "Likely gain" when P(D > 0) ≥ 0.975 at week 2, or ≥ 0.95 at week 4 and later;
-  - "Likely no change" when P(D < 0.2 SD_comp) ≥ 0.90 and at least 8 weeks of data exist (the spike gives 2–5 % false "no change" for real 0.5 SD gainers at week 4 if this is allowed earlier);
+  - "Likely no change" when P(D < 0.2 SD_comp) ≥ 0.90 and at least 8 weeks of data exist (the spike gives 2–6 % false "no change" for real 0.5 SD gainers at week 4 if this is allowed earlier);
   - "Unclear yet" otherwise.
-- The SD unit needs a population SD, which only pooled data can give. Until then, show changes on the probe's own scale (the item-model logits, as "probe points") and in words. Never as IQ, an index, a percentile or a norm (CLAUDE.md rule 10; RULES.md).
+- The SD unit needs a population SD, which only pooled data can give. Until then, show changes on the probe's own scale (the item-model logits, as "probe points") and in words. Never as IQ, an index, a percentile or a norm (CLAUDE.md rule 10 and the owner's standing rules).
 
 ### 4.1 Design A (recommended default): embedded probe blocks and a monthly check
 
@@ -201,14 +206,14 @@ All three designs share one statistical model and one display; they differ in wh
 - **Variant A+.** Blocks of 4 items per probe (about 4.5 minutes) and 10-item baselines.
 - **More than four sessions a week.** Cap the blocks at four a week, so that measurement stays under about a fifth of training time and probe familiarity does not race ahead.
 
-**Minutes:** about 23 in week 0, then 10.5 a week, plus 10 every fourth week, so about 13 a week at 3 sessions a week and about 9.5 at 2 a week (A+: about 16.5).
+**Minutes:** about 23 in week 0, then 10.5 a week; the 4-weekly check replaces one block (net +6.5 minutes). That is about 12 a week at 3 sessions a week and about 8.5 at 2 a week (A+: about 15).
 
 **Separating practice from change:**
 1. The run-in: 16 items per probe before session 3, which is about 63 % of the familiarity plateau if λ = 16.
 2. The population familiarity curve as a prior, with the person's amplitude estimated jointly.
 3. The control's rows, which absorb shared state and inform familiarity a little.
 4. Verdicts at milestones.
-5. A conservative plateau prior (0.6–0.8 SD) until pooled data give the curve. In the spike, a prior of 0.8 against a true 0.5 halves the power but holds false positives near 2 %.
+5. A cautious plateau prior until pooled data give the curve: 0.65 SD. In the spike, 0.65 keeps false positives at 2.3–6.0 % whether the true plateau is 0.5 or 0.8, for about 20 % less power than a correct prior; 0.8 holds them near 2 % but halves the power when the truth is 0.5.
 
 **Spike** (0.5 SD_comp composite gain; central / optimistic):
 - Minimal detectable gain at week 4: 1.21 / 0.80 SD_comp.
@@ -299,7 +304,7 @@ Results are deterministic for a given seed (`--seed`, default 1). Commands used 
     node docs/research/v1.2/spikes/M1/power.mjs --n 1000 --scenarios central,optimistic,optimistic42
     node docs/research/v1.2/spikes/M1/power.mjs --n 1000 --designs A,Bplus --scenarios simPop,famBig,famSlow,famTail,famSlowRobust,wrongSlow,stateBig,twoPerWeek,skepticalPrior,optimisticFamSlow
     node docs/research/v1.2/spikes/M1/power.mjs --n 1000 --designs A,Aplus,C --scenarios milestones,milestonesFamBig,famBigWideF,milestonesOptimistic
-    node docs/research/v1.2/spikes/M1/power.mjs --n 1000 --designs A,Aplus --scenarios conservativePrior,conservativePriorFamBig
+    node docs/research/v1.2/spikes/M1/power.mjs --n 1000 --designs A,Aplus --scenarios conservativePrior,conservativePriorFamBig,midPrior,midPriorFamBig
 
 **Designs in the spike:**
 - D0: today's check and rule.
@@ -382,10 +387,12 @@ Milestone guard (verdict words only at days 14 and 28, bar 0.975 then 0.95; desi
 | Same, with a wider plateau prior (SD 0.35) | 21.7 % · 22.5 % · 20.5 % | **7.1 % (8.4) · 7.2 % (8.5) · 8.6 % (10.6)** |
 | Conservative prior (plateau 0.8), truth 0.5 | 7.9 % · 9.8 % (A, A+) | 2.1 % (2.8) · 1.6 % (2.0) |
 | Conservative prior (plateau 0.8), truth 0.8 | 16.6 % · 14.6 % (A, A+) | 3.8 % (4.6) · 3.6 % (4.0) |
+| Middle prior (plateau 0.65), truth 0.5 | 11.0 % · 13.0 % (A, A+) | 2.7 % (3.5) · 2.3 % (2.7) |
+| Middle prior (plateau 0.65), truth 0.8 | 19.6 % · 20.1 % (A, A+) | 6.0 % (7.0) · 4.9 % (5.6) |
 
 Reading [Inference]:
 - **False positives behave once two guards are in place.** With verdicts at milestones and a correct familiarity curve, false "likely gain" stays at 3–5 %, including "ever". Without milestones, embedded designs flag 13–17 % of learners without a gain at some look.
-- **The threat is a familiarity plateau larger than assumed.** It biases the estimate, and a wider prior does not remove a bias. Only a correct mean removes it: from pooled data, with a conservative 0.8 SD in the meantime, which costs about half the power when the truth is 0.5.
+- **The threat is a familiarity plateau larger than assumed.** It biases the estimate, and a wider prior does not remove a bias. Only a correct mean removes it, from pooled data. In the meantime a middle prior of 0.65 SD keeps false positives at 2.3–6.0 % across true plateaus of 0.5–0.8, for about 20 % less power; 0.8 is safer but costs about half the power when the truth is 0.5.
 - **Slower familiarity is not a threat here.** The model then over-corrects.
 
 ### 5.4 Longer horizons, and the baseline as the bottleneck
@@ -401,7 +408,7 @@ Analytic MDG when the gain stops growing at week 4 (0.5 SD_comp from then on) an
 | A+, optimistic | 0.75 | 0.58 | 0.53 | 0.48 |
 | B+, optimistic | 0.63 | 0.63 | 0.54 | 0.51 |
 
-Larger baselines lift this ceiling a little. In A+ with B1 and B2 of 16 items per probe (2 × 20 minutes instead of 2 × 12), the week-8 MDG is 0.71 central and 0.49 optimistic (24 items: 0.67 and 0.47).
+Larger baselines lift this ceiling a little. In A+ with B1 and B2 of 16 items per probe (2 × 18 minutes instead of 2 × 12), the week-8 MDG is 0.71 central and 0.49 optimistic (24 items: 0.67 and 0.47).
 
 [Inference] Precision stops improving after week 8 because everything is compared with the early sessions, where the gain is still near zero. Two ways round this:
 - invest in the baseline (longer B1/B2, or a measurement week before training starts);
@@ -414,7 +421,7 @@ Larger baselines lift this ceiling a little. In A+ with B1 and B2 of 16 items pe
 **Verdict: not met by any design here.**
 - Item-level simulation at week 4 tops out at 17.6 % (B+, central) and 31.7 % (B+, optimistic) with 72 minutes of measurement.
 - The analytic best is 44 % (B+, optimistic).
-- Under the optimistic set, the analytic cost of meeting it is about 150–160 minutes of measurement over four weeks (Part 2b: bursts of 6 sessions × 12 items per probe, MDG 0.50; 8 × 8, 0.52; 4 × 16, 0.53), i.e. 35–40 minutes a week.
+- Under the optimistic set, the analytic cost of meeting it is about 160 minutes of measurement over four weeks (Part 2b: bursts of 6 sessions × 12 items per probe at each end, MDG 0.50; 144 minutes reach only 0.52–0.53), i.e. about 40 minutes a week. Item-level losses (§5.2) would push this higher.
 - Under the central set, even 288 minutes reach only 0.60.
 - The false-positive half of the acceptance is met (3–5 %) with milestone verdicts and a correct familiarity curve.
 
@@ -422,7 +429,7 @@ Larger baselines lift this ceiling a little. In A+ with B1 and B2 of 16 items pe
 1. **Keep 0.5 SD, allow until week 8**, with probe upgrades and 16-item baselines. The analytic MDG at week 8 is 0.49 optimistic, but 0.71 central. This option depends on the real probe reliability, which pooled B1–B2 data can show within weeks of release.
 2. **Keep week 4, a larger gain.** At week 4, "likely gain" for 60 % is reached at about 0.75–0.80 SD_comp with A/A+ (optimistic), 0.63 with B+. Central: 0.93 (B+) to 1.21 (A).
 3. **Define the 0.5 SD per probe** (the usual effect size of a single test) rather than on the composite. With a between-probe correlation of 0.4 that is 0.67 SD_comp, which raises power by ×1.4–1.5: B+ optimistic 65 % analytic (about 50 % item-level), A+ 52 %.
-4. **Keep everything and pay for it:** 35–40 minutes a week of measurement, at the optimistic set only.
+4. **Keep everything and pay for it:** about 40 minutes a week of measurement (more after item-level losses), at the optimistic set only.
 5. **Rung-specific targets.** Near probes (§7) should move most, so "visible within weeks" is most realistic there. A near rung of two 4-option probes with 4 items each per block (about 2.5 minutes, 43 minutes to day 28) has an analytic MDG of 1.23 per-probe SD at week 4 and 0.95 at week 6 (central), or 0.79 and 0.61 (optimistic). One person's near gain therefore shows within 4–6 weeks if near gains reach about 1 SD of the probe, which is plausible if near transfer is a sizeable share of the trained-task gains [Inference; the ladder run of §8 should test it]. Mid and far rungs get their verdicts later, and their real test is pooled data.
 
 **Recommended acceptance for the engine sim:**
@@ -435,14 +442,14 @@ Larger baselines lift this ceiling a little. In A+ with B1 and B2 of 16 items pe
 ### 6.1 How much time measurement may take
 
 **Recommendation** [Proposal]:
-- **The default: about 13 minutes a week**, measured inside training. A 3.5-minute no-feedback block at the start of every training session (at most four a week), a 10-minute check every 4 weeks, and two 10-minute baselines in sessions 1 and 2. At three 20-minute sessions a week this is about a fifth of training time.
+- **The default: about 12 minutes a week**, measured inside training. A 3.5-minute no-feedback block at the start of every training session (at most four a week), a 10-minute check every 4 weeks, and two 10-minute baselines in sessions 1 and 2. At three 20-minute sessions a week this is about a fifth of training time.
 - **The opt-in measurement week:** 36 minutes in that week, every 4 weeks.
 
 **Reasons:**
 - **Many short occasions beat few long ones.** A session's score varies within a person by half or more of the between-person spread (Salthouse 2007), and only averaging over occasions removes the state part. Averages of many brief sessions reach .95–.97 reliability (Sliwinski et al. 2018; Hakun et al. 2023).
 - **Returns per minute fall off.**
   - From 65 to 81 minutes over 4 weeks (A → A+), the MDG improves by 8 %.
-  - Reaching the acceptance at week 4 would take about 150–160 minutes (optimistic), 35–40 a week: more than half the training time.
+  - Reaching the acceptance at week 4 would take about 160 minutes (optimistic), about 40 a week: more than half the training time.
   - Today's 8 minutes a week in two long checks gives the least: the MDG is 1.79, against 1.21 for A.
 - **Brief sessions are kept up.** 97.5 % of short sessions were completed in Brewster et al. 2021, 80 % adherence in Nicosia et al. 2023. A fixed 3.5-minute slot is predictable, and the meter rewards it with a visible update.
 
@@ -459,7 +466,7 @@ Larger baselines lift this ceiling a little. In A+ with B1 and B2 of 16 items pe
 - **The two-minute start rule:** a 10–15-minute test before any play delays the first win. A two-minute tutorial adds a negligible training dose before B1.
 - **First contact with an app inflates the first measurement.** Scharfen et al. 2018 attribute retest gains largely to less unfamiliarity, anxiety and rule incomprehension. The tutorial takes interface learning out of B1, so less of the familiarity curve has to be modelled.
 - **Baselines before rated training** keep training gains out of the baseline window, which the gap audit flags today (ME2).
-- **The baselines limit all later precision** (§5.4). Two 10-minute baselines in the first two sessions are worth their cost at weeks 6–12; 16-item baselines would be better still for long horizons, at 2 × 20 minutes.
+- **The baselines limit all later precision** (§5.4). Two 10-minute baselines in the first two sessions are worth their cost at weeks 6–12; 16-item baselines would be better still for long horizons, at 2 × 18 minutes.
 
 **Trade-offs:**
 - **A baseline before any play:** "purer", but it mixes interface learning into B1, so the B1→B2 step contains more familiarity, and it slows the start.
@@ -535,7 +542,7 @@ Each must avoid the formats it is "near" to: no PAT formats, no Mental Rotations
 - **Embedded blocks.** A `check` plan of kind `block`: 3 items per composite probe and 2 control items, no feedback, at the start of a training session. The engine offers it per Design A's rules: from session 3, at most four a week, replaced by the 4-weekly check.
 - **Targeting:** each block aims its items under a prior centred on the person's running estimate for that probe (SD 1.5). Store the block's likelihood summary (θ̂ and SE with a weak prior, SD 3) beside today's posterior summary.
 - **The shared model of §4:** a pure function over `rec.assess` that returns the posterior of the gain to date (mean, SD, P(D > 0)) for the composite and per rung. It uses generalised least squares with the per-session Sherman–Morrison step and an 11-parameter solve (more with more probes), and needs the items seen per probe for φ̄.
-- **The population familiarity prior** sits in `config.assess`: plateau, SD, λ and correlations, with the conservative plateau 0.8 SD until pooled data replace it.
+- **The population familiarity prior** sits in `config.assess`: plateau, SD, λ and correlations, with a plateau of 0.65 SD until pooled data replace it (§5.3).
 - **Milestone verdicts and the meter:** P ≥ 0.975 at week 2, ≥ 0.95 at week 4 and later; "likely no change" from week 8.
 - **Forms:** randomise the starting form per record.
 - **Sessions:** keep the rule that a check never counts as a training session. Decide whether block time counts toward the weekly goal (recommended: it does not).
@@ -567,12 +574,12 @@ Report at weeks 2, 4, 6 and 8:
 - the share of the gain arm reading "likely gain" at weeks 4 and 8;
 - the MDG at weeks 4 and 8.
 
-**6. Cross-check:** the engine sim's numbers for Design A (central) should land within a few points of this spike's Part 3 (14 % gain arm, 3.6 % no-gain arm at week 4). A large difference means one of the two is wrong.
+**6. Cross-check:** the engine sim's numbers for Design A (central) should land within a few points of this spike's Part 3. At week 4 that is 14 % (gain arm) and 3.6 % (no-gain arm) with the plateau prior equal to the truth, or 11.0 % and 2.7 % with the shipped 0.65 prior against a true 0.5. A large difference means one of the two is wrong.
 
 ## 9. Open risks
 
 1. **The probes' real reliability and population spread are unknown**, and they decide whether the central or the optimistic numbers apply. Measure them from pooled B1–B2 and block data in the first weeks after release (O16), and recompute the MDG.
-2. **The familiarity plateau.** If it is larger than the prior, false "likely gain" rises to 8–9 % at the report (spike). It needs pooled data, ideally from a randomised staggered start; until then the conservative prior, which halves the power.
+2. **The familiarity plateau.** If it is larger than the prior, false "likely gain" rises to 8–9 % at the report (spike). It needs pooled data, ideally from a randomised staggered start; until then the middle prior (0.65 SD), which costs about a fifth of the power.
 3. **The unit of familiarity.** Counting it in items is a modelling choice. Familiarity may also depend on sessions and sleep, and it may dip after breaks. Very frequent players (6 a week) reach the plateau sooner, which the item count handles but a session clock would not.
 4. **Embedded blocks change the session.** 3.5 minutes without feedback at the start of each session may cost fun and retention. Players may also learn from the probes by exposure, and expectation effects may grow once they watch the meter (Foroughi et al. 2016, cited in the guide). Keep the wording neutral, keep Word Links, and log the expectation question as today.
 5. **The shape of the gain.** The model ties the gain to the training curve. If transfer does not follow training (it lags, or appears only after a while), "gain to date" is a model quantity and early milestones under-read it.

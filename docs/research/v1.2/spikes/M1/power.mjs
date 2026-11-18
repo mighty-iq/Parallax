@@ -4,7 +4,12 @@
    read "likely gain"? Standalone: no app code is imported; nothing here touches the engine.
 
      node docs/research/v1.2/spikes/M1/power.mjs [--n 1000] [--seed 1]
-          [--designs D0,D0m,A,B,C] [--scenarios central,famBig,...] [--quick]
+          [--designs D0,D0m,A,Aplus,B,Bplus,C] [--scenarios central,optimistic,famBig,...] [--quick]
+
+   Designs: D0 today's check and rule; D0m today's schedule + trend model (the notes' Design C);
+   A embedded 3.5-min blocks + monthly check (Design A); Aplus 4.5-min blocks; B bursts of 3 x 7.5
+   min; Bplus bursts of 4 x 9 min (Design B); C a 5-min block every session. Scenarios: see
+   SCENARIOS below. The tables in M1-measurement.md §5 come from the commands listed in §5.1.
 
    Part 1 prints the Fisher information per item of each probe format at the engine's target.
    Part 2 prints, per design, the analytic posterior SD of the composite gain at day 28 under the
@@ -106,6 +111,9 @@ const SCENARIOS = {
   // a conservative familiarity prior (plateau 0.8 SD) when the truth is 0.5, and when it is 0.8
   conservativePrior: (p) => ({ ...p, looksAt: [14, 28], pGainAt: { 14: 0.975, 28: 0.95 }, model: { ...p.model, famMu: 0.8 } }),
   conservativePriorFamBig: (p) => ({ ...p, famMu: 0.8, looksAt: [14, 28], pGainAt: { 14: 0.975, 28: 0.95 }, model: { ...p.model, famMu: 0.8 } }),
+  // a middle prior (plateau 0.65) against true plateaus of 0.5 and 0.8
+  midPrior: (p) => ({ ...p, looksAt: [14, 28], pGainAt: { 14: 0.975, 28: 0.95 }, model: { ...p.model, famMu: 0.65 } }),
+  midPriorFamBig: (p) => ({ ...p, famMu: 0.8, looksAt: [14, 28], pGainAt: { 14: 0.975, 28: 0.95 }, model: { ...p.model, famMu: 0.65 } }),
 };
 
 /* ---------- schedules ----------
