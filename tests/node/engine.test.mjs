@@ -80,8 +80,9 @@ function testModel(t) {
   t.near(M.p(50, 0, 0), 0.97, 1e-9, "configure('reset') restores the defaults");
 
   const fields = E.fields();
-  // v1.1: js/engine/section.js (Section mode, B7) adds 'section' when it is loaded
-  t.eq(fields.map((f) => f.key).filter((k) => k !== 'section').sort(), ['eng', 'lab', 'path', 'spatial', 'strategies', 'timed', 'train'], 'engine-owned record fields');
+  // v1.1: js/engine/section.js (Section mode, B7) adds 'section' when it is loaded; v1.2 (record
+  // format 4): js/engine/events.js adds 'events', js/engine/record.js plateau, bets, measure and game
+  t.eq(fields.map((f) => f.key).filter((k) => k !== 'section').sort(), ['bets', 'eng', 'events', 'game', 'lab', 'measure', 'path', 'plateau', 'spatial', 'strategies', 'timed', 'train'], 'engine-owned record fields');
   for (const f of fields) {
     const d = f.def();
     t.eq(f.fix(clone(d)), d, `${f.key}: the default survives its fixer`);
@@ -103,12 +104,12 @@ function testModel(t) {
     [2, 0, 0, 0, 0, 2], 'a timeout is scored wrong, never a skip; a stutter still voids the trial');
   const rec = newRecord(PX, T0);
   const row = E.log.row(rec, fold, 'train', { code: 5, seed: 42, pPred: 0.77549, stage: 3 }, 1, { rt: 1234.6, value: 2 }, T0 + 1500);
-  t.eq(row, [Math.floor((T0 + 1500) / 1000), 0, 0, 5, 42, 1, 1235, 2, 775, 3, 0, 0], 'trial row: 12 columns with pPred × 1000, stage, display and input (unknown: 0)');
+  t.eq(row, [Math.floor((T0 + 1500) / 1000), 0, 0, 5, 42, 1, 1235, 2, 775, 3, 0, 0, null, 0, 0, 0, 0, 0], 'trial row: pPred × 1000, stage, display and input (unknown: 0), then value2 (null) and the v1.2 wave 2 codes (none: 0)');
   t.eq([rec.idx.ex, rec.idx.mode], [['fold@1'], ['train']], "index lists hold 'id@version' and mode names");
-  t.eq(E.log.row(rec, fold, 'free', { code: 0, seed: 1 }, 0, {}, T0).slice(6), [null, null, null, null, 0, 0], 'missing rt, value, pPred and stage are null; display and input 0');
+  t.eq(E.log.row(rec, fold, 'free', { code: 0, seed: 1 }, 0, {}, T0).slice(6, 12), [null, null, null, null, 0, 0], 'missing rt, value, pPred and stage are null; display and input 0');
   t.eq(['small', 'large', 'huge', 2, 7].map((v) => E.log.codeOf(E.log.DISPLAYS, v)), [1, 2, 0, 2, 0], 'display codes: 1 small, 2 large (est.displayClass), else 0');
   t.eq(['mouse', 'touch', 'pen', 'key', 'pointer', 'api', null].map((v) => E.log.codeOf(E.log.INPUTS, v)), [1, 2, 3, 4, 1, 0, 0], 'input codes: 1 mouse, 2 touch, 3 pen, 4 key; a click of unknown type is a mouse');
-  t.eq(E.log.row(rec, fold, 'train', { code: 1, seed: 2 }, 1, { rt: 900, display: 'small', input: 'touch' }, T0).slice(10), [1, 2], 'columns 11-12 from result.display and result.input');
+  t.eq(E.log.row(rec, fold, 'train', { code: 1, seed: 2 }, 1, { rt: 900, display: 'small', input: 'touch' }, T0).slice(10, 12), [1, 2], 'columns 11-12 from result.display and result.input');
   const names = E.log.names({ idx: { ex: ['fold@1', 'nets', null], mode: ['train'] } });
   t.eq([names.ex, names.ver], [['fold', 'nets', null], [1, 1, 1]], "names() reads 'id@version' and plain ids");
 }
@@ -531,7 +532,8 @@ function testTrain(t) {
   t.eq(lastS.kind, 'last', 'the session ends on its closing item');
   t.near(lastS.target, M.kindTarget('last', r.plan.k, lastS.g), 1e-12, 'the closing item aims at p* + 0.10');
   t.eq(rec.trials.length, steps.length, 'one trial row per answer');
-  t.ok(rec.trials.every((row) => row.length === 12), 'rows have 12 columns');
+  t.ok(rec.trials.every((row) => row.length === 18), 'rows have 18 columns (v1.2 wave 2; no offset without milestone 7)');
+  t.ok(steps.every((s) => E.log.read(rec, s.out.row).kind === (s.step.kind === 'target' && s.step.weak ? 'weak' : s.step.kind)), 'rows log the step kind (weak-spot items as weak)');
   t.ok(steps.every((s) => s.out.row[8] === Math.round(s.step.pPred * 1000) && s.out.row[9] === s.step.stage && s.step.stage >= 1 && s.step.stage <= 5), 'rows carry pPred × 1000 and the interleaving stage');
   t.eq(new Set(rec.trials.map((row) => row[4])).size, rec.trials.length, 'every item has its own seed');
   t.eq(rec.idx.mode, ['train'], "trials are logged under the mode 'train'");

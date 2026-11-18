@@ -118,16 +118,21 @@
   // it through store.csv below): the header is PX.core.store.CSV_HEADER, plus b, g and answer for
   // the research export.
   var HEAD = ['time_iso', 't_sec', 'exercise', 'version', 'mode', 'session', 'params_code', 'params', 'seed', 'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage', 'display', 'input', 'value2'];
+  // The columns in words, for the export dialogs (the order of PX.core.store.CSV_HEADER).
+  var COLUMNS_TEXT = 'time, exercise and its item-model version, mode, session, settings, seed, outcome, response time, value, the predicted chance of a right answer, the interleaving stage, the screen class, the input, a second value where an exercise records one (value2), the kind of item, its add-on layer, how the answer was given, the screen’s orientation, the deadline it ran with, a personal difficulty offset, and the exercise’s bet and format.';
   function csv(rs, opts) {
     var research = !!(opts && opts.research), S = PX.core.store;
     var head = (S && Array.isArray(S.CSV_HEADER) ? S.CSV_HEADER : HEAD).slice();
     var DISP = S && S.DISPLAYS ? S.DISPLAYS : ['', 'small', 'large'], INP = S && S.INPUTS ? S.INPUTS : ['', 'mouse', 'touch', 'pen', 'key'];
+    var tags = !!(S && typeof S.tagCells === 'function' && head.length > HEAD.length);
     if (research) head = head.concat(['b', 'g', 'answer']);
     var lines = [head.join(',')];
     rs.forEach(function (r) {
       var def = r.exId ? PX.ex.get(r.exId) : null, p = paramsOf(r), d = new Date(r.t * 1000);
       var row = [isFinite(d.getTime()) ? d.toISOString() : '', r.t, r.exId || '', r.ver, r.mode || '', r.session || '', r.code, paramsCsv(def, p), r.seed,
         r.outcome, OUT[r.outcome], r.rt, r.value, r.p === null ? '' : U.round(r.p, 3), r.stage, DISP[r.display] || '', INP[r.input] || '', r.value2];
+      // v1.2 wave 2 (CONTRACT-v1.2 N, T): kind, layer, answer mode, orientation, deadline, offset, bet, format
+      if (tags) row = row.concat(S.tagCells(r.raw, r.exId ? r.exId + '@' + r.ver : '', r.exId || ''));
       if (research) {
         var b = '', g = '', ans = '';
         if (def && p) {
@@ -145,7 +150,7 @@
     var o = opts || {};
     return PX.ui.app.exportDialog({
       title: o.title || 'Export trials',
-      intro: o.intro || ('One row per trial (' + rs.length + ' rows): time, exercise and its item-model version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer, the interleaving stage, the screen class, the input and, where an exercise records one, a second value (value2). A CSV file cannot be imported; Back up keeps your whole record.'),
+      intro: o.intro || ('One row per trial (' + rs.length + ' rows): ' + COLUMNS_TEXT + ' A CSV file cannot be imported; Back up keeps your whole record.'),
       text: csv(rs, o),
       filename: o.filename || ('parallax-trials-' + U.fmtDate(Date.now()) + '.csv'),
       type: 'text/csv',
@@ -291,7 +296,7 @@
     bk.setAttribute('data-action', 'log-backup');
     var ex = ui.button('Export trials (CSV)', { kind: 'secondary', onClick: function () {
       var rs = filtered();
-      exportCSV(rs, { intro: (st.ex || st.mode ? 'The trials shown with your filters: ' : 'Every trial: ') + rs.length + ' rows with time, exercise and its version, mode, session, settings, seed, outcome, response time, the predicted chance of a right answer and the interleaving stage. A CSV file cannot be imported; the JSON backup keeps your whole record.' });
+      exportCSV(rs, { intro: (st.ex || st.mode ? 'The trials shown with your filters, ' : 'Every trial, ') + rs.length + ' rows: ' + COLUMNS_TEXT + ' A CSV file cannot be imported; the JSON backup keeps your whole record.' });
     } });
     ex.setAttribute('data-action', 'log-csv');
     var dataPanel = K.panel({ title: 'Export and import', className: 'px-log-data' });

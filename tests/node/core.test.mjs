@@ -406,7 +406,7 @@ function shapeProblems(rec, defaults) {
   need(isObj(rec), 'record is an object');
   if (!isObj(rec)) return bad;
   need(deepDiff(Object.keys(rec).sort(), Object.keys(defaults).sort()) === null, 'exactly the known top-level keys');
-  need(rec.v === 3, 'v === 3');
+  need(rec.v === 4, 'v === 4');
   need(isInt(rec.rev) && rec.rev >= 0, 'rev');
   need(isNum(rec.created) && isNum(rec.updated), 'created, updated');
   const s = rec.settings;
@@ -531,7 +531,7 @@ function testStore(t) {
     env.clock.tick(600);
     const saved = JSON.parse(env.storage.get(KEY));
     t.eq([saved.practiceMs, saved.rev], [12, 1], 'the debounced save writes and increments rev');
-    t.ok(env.storage.get(KEY).startsWith('{"v":3,"rev":1,'), 'the saved JSON starts with v and rev');
+    t.ok(env.storage.get(KEY).startsWith('{"v":4,"rev":1,'), 'the saved JSON starts with v and rev');
     t.ok(env.events.some((e) => e.evt === 'store:saved'), 'store:saved is emitted');
 
     // Repeated requests keep pushing the debounce out, but never past 5 s.
@@ -653,7 +653,7 @@ function testStore(t) {
     const xpBefore = SB.state.practiceMs, revBefore = SB.state.rev;
     const rejects = [
       ['', /empty/], ['not json', /not valid JSON/], ['[1,2]', /not a Parallax progress file/],
-      ['{"practiceMs":5}', /not a Parallax progress file/], ['{"v":4,"practiceMs":5}', /newer version/],
+      ['{"practiceMs":5}', /not a Parallax progress file/], ['{"v":5,"practiceMs":5}', /newer version/],
     ];
     for (const [text, pattern] of rejects) {
       const r = SB.importJSON(text);
@@ -681,7 +681,7 @@ function testStore(t) {
     const env = t.env();
     env.PX.ex.define(sampleDef({ id: 'rotate', code: 'EX-02' })); // lets the CSV spell out params
     const S = env.PX.core.store;
-    const HEAD = 'time_iso,t_sec,exercise,version,mode,session,params_code,params,seed,outcome,outcome_label,rt_ms,value,p_pred,stage,display,input,value2';
+    const HEAD = 'time_iso,t_sec,exercise,version,mode,session,params_code,params,seed,outcome,outcome_label,rt_ms,value,p_pred,stage,display,input,value2,kind,layer,answer_mode,orientation,deadline,b_offset,bet,format';
     t.eq(S.exportCSV(), HEAD + '\r\n', 'an empty log exports only the header (the one trial format)');
     const outcomes = [1, 0, 2, 3, 1];
     outcomes.forEach((o, i) => S.addTrial({ t: T0 + i * 1000, ex: i % 2 ? 'rotate' : 'paper-fold', mode: 'free', code: i, seed: 1000 + i, outcome: o, rt: 900 + i, value: i === 4 ? 12.5 : undefined }));
@@ -694,15 +694,16 @@ function testStore(t) {
     const lines = csv.split('\r\n').filter(Boolean);
     t.eq(lines[0], HEAD, 'CSV header row');
     t.eq(lines.length, 4 + outcomes.length, 'one CSV row per trial');
-    t.ok(lines.slice(1).every((l) => l.split(',').length === 18), 'every row has 18 cells');
+    t.ok(lines.slice(1).every((l) => l.split(',').length === 26), 'every row has 26 cells (v1.2 wave 2: kind, layer, answer_mode, orientation, deadline, b_offset, bet, format)');
     t.eq(lines[1].split(',').slice(1, 15), [String(T0 / 1000), 'paper-fold', '1', 'free', '', '0', '', '1000', '1', 'right', '900', '', '', ''], 'row cells (unknown exercise: no params text; no session without the Log)');
     t.eq(lines[2].split(',')[7], 'size=3;axis=x;noise=0;variant=pick1', 'params spelled out through the registry (level values)');
     t.eq(lines.slice(1, 6).map((l) => l.split(',')[10]), ['right', 'wrong', 'stutter', 'skipped', 'right'], 'outcome labels');
     t.eq(lines[5].split(',')[12], '12.5', 'value column');
     t.eq(lines[1].split(',')[0], new Date(T0).toISOString(), 'ISO time column');
-    t.eq(lines[6].split(',').slice(13), ['0.713', '2', 'small', 'touch', ''], 'predicted success, stage, display class and input (v1.1 columns 11-12 as words); value2 empty when absent');
+    t.eq(lines[6].split(',').slice(13, 18), ['0.713', '2', 'small', 'touch', ''], 'predicted success, stage, display class and input (v1.1 columns 11-12 as words); value2 empty when absent');
+    t.eq(lines[6].split(',').slice(18), ['', '', '', '', '', '0', '', ''], 'a row without the v1.2 columns: empty codes, offset 0, no bet or format for an exercise the registry does not know');
     t.eq(S.state.trials[5].slice(8), [713, 2, 1, 2], 'addTrial stores columns 9-12 as codes');
-    t.eq([S.state.trials[6].slice(7), lines[7].split(',').slice(12)], [[-12.5, null, null, 0, 0, 0.83], ['-12.5', '', '', '', '', '0.83']], 'value2 (column 13): stored after the other optional columns and written in the CSV');
+    t.eq([S.state.trials[6].slice(7), lines[7].split(',').slice(12, 18)], [[-12.5, null, null, 0, 0, 0.83], ['-12.5', '', '', '', '', '0.83']], 'value2 (column 13): stored after the other optional columns and written in the CSV');
     t.eq(S.state.trials[7].length, 8, 'a value2 that is not a finite number is dropped (the row keeps its 8 columns)');
     S.csv = (st) => 'hooked ' + st.trials.length;
     t.eq(S.exportCSV(), 'hooked 8', 'the Log\'s exporter (store.csv) writes the CSV when it is registered');
@@ -723,7 +724,7 @@ function testStore(t) {
     };
     const log = [];
     const g = S.guard(v1, log);
-    t.eq(g.v, 3, 'a v1 record is upgraded to the current format (3)');
+    t.eq(g.v, 4, 'a v1 record is upgraded to the current format (4)');
     t.ok(!log.includes('v'), 'the upgrade is silent (not a repair)');
     t.eq([g.trials[0], g.trials[1], g.sessions[0], g.practiceMs, g.settings.theme], [v1.trials[0], v1.trials[1], v1.sessions[0], 600000, 'dark'], 'its rows, sessions and settings load unchanged');
     const row12 = [Math.floor(T0 / 1000), 0, 0, 3, 13, 1, 900, null, 650, 3, 2, 4];
@@ -748,7 +749,7 @@ function testStore(t) {
     // export → import round trip with the new fields
     S.importJSON(JSON.stringify(Object.assign({}, v1, { trials: [row12, row13], sessions: [ses] })));
     const back = JSON.parse(S.exportJSON());
-    t.eq([back.v, back.trials[0], back.trials[1], back.sessions[0]], [3, row12, row13, ses], 'export and import round-trip the new fields (columns 11-13, session fields)');
+    t.eq([back.v, back.trials[0], back.trials[1], back.sessions[0]], [4, row12, row13, ses], 'export and import round-trip the new fields (columns 11-13, session fields)');
   }
 
   t.section('store: two tabs with v1.1 data (the engine merge)');
@@ -895,13 +896,13 @@ function testStore(t) {
     t.eq(SA.state.practiceMs, 45, 'tab A receives the merged record');
 
     // A tab running a newer version: never overwrite it.
-    const st = new SharedStorage({ [KEY]: JSON.stringify({ v: 4, rev: 3, practiceMs: 5 }) });
+    const st = new SharedStorage({ [KEY]: JSON.stringify({ v: 5, rev: 3, practiceMs: 5 }) });
     const C = t.env({ storage: st });
     t.ok(C.PX.core.store.volatile && C.PX.core.store.volatileReason === 'newer-version', 'a record from a newer version puts the store in memory mode');
     C.PX.core.store.state.practiceMs = 1;
     C.PX.core.store.save();
     C.clock.tick(2000);
-    t.eq(JSON.parse(st.get(KEY)).v, 4, "the newer-version record is never overwritten");
+    t.eq(JSON.parse(st.get(KEY)).v, 5, "the newer-version record is never overwritten");
   }
 
   t.section('store: memory fallback');
