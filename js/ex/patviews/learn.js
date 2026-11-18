@@ -21,7 +21,8 @@
     // Watch at the starter band (the structure drawn beside the views, no dotted line in the answer, no
     // foil that only a full search rules out), the card "Line it up" before Try 1, Try 1 with the
     // projection lines already drawn into the slot; Try 3 hides the structure and brings a dotted line
-    // (with its tip), Try 4 a foil that only building the structure rules out.
+    // (with its tip), after a worked example of a dotted line on a sister item (note D2 addendum C
+    // change 4); Try 4 a foil that only building the structure rules out.
     rules: [
       'Top view upper left, front view lower left, end view lower right, all at one scale.',
       'The end view looks at the right side of the structure, so the front is on its left.',
@@ -34,7 +35,7 @@
     practice: [
       { params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, assist: { proj: true }, seed: 100 },
       { params: { cubes: 0, grid: 0, missing: 1, foil: 0 }, seed: 202 },
-      { params: { cubes: 1, grid: 0, missing: 0, foil: 0 }, tip: 'hidden', seed: 300 },
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0 }, tip: 'hidden', seed: 300, example: { seed: 3 } },
       { params: { cubes: 1, grid: 0, missing: 0, foil: 0 }, tip: 'search', seed: 401 },
     ],
     tips: [
