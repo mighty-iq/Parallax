@@ -368,8 +368,9 @@
   // when it has lasted periodDays and held periodSessions sessions, and the next one starts at once.
   function advance(rec, plan, now) {
     var b = slot(rec), c = cfg();
+    now = Math.round(now); // stored times are whole ms (the store's repair rounds them)
     if (!b.periods.length) {
-      var t0 = isNum(plan && plan.start) ? plan.start : now;
+      var t0 = Math.round(isNum(plan && plan.start) ? plan.start : now);
       b.periods.push(t0);
       return { started: 1, events: assignEvents(rec, 1, t0, now) };
     }
@@ -504,6 +505,7 @@
   // apply (the apply item's seed, 0 when none), opts (statement ids in order), pos }.
   function compared(rec, plan, info, now) {
     var use = plan ? planUse(plan) : null, b = slot(rec), id = info.exId;
+    now = Math.round(now);
     if (use) { use.rounds += 1; use.ex[id] = 1; }
     var st = b.cmp[id] || (b.cmp[id] = { n: 0, p: {} });
     st.n = cnt(st.n) + 1;
@@ -539,6 +541,7 @@
   // The apply item of a round was answered (the engine's answer hook; step.betPrinciple names it).
   function applied(rec, step, ok, now) {
     var b = rec.bets, id = step && step.exId;
+    now = Math.round(now);
     var s = b && isObj(b.cmp) && isObj(b.cmp[id]) && isObj(b.cmp[id].p) ? b.cmp[id].p[step.betPrinciple] : null;
     if (!isObj(s) || !isObj(s.pend)) return false;
     settle(s, s.pend.choice === 1 && !!ok, now);
@@ -547,6 +550,7 @@
   // A bridge set ended. info: { exId, set, map, mapOk, items: [[seed, code, outcome, rt]…], use, other, rt }.
   function bridged(rec, plan, info, now) {
     var use = plan ? planUse(plan) : null, b = slot(rec), id = info.exId;
+    now = Math.round(now);
     if (use) { use.sets += 1; use.ex[id] = 1; }
     var st = b.brg[id] || (b.brg[id] = { n: 0 });
     st.n = cnt(st.n) + 1;
@@ -558,6 +562,7 @@
   // An off-screen challenge was viewed (did false) or reported done (did true).
   function offscreen(rec, exId, challenge, did, now) {
     var b = slot(rec), st = b.off[exId] || (b.off[exId] = { did: 0 });
+    now = Math.round(now);
     if (!isNum(st.seen)) st.seen = now;
     st.last = now;
     if (did) st.did = cnt(st.did) + 1;
@@ -568,7 +573,7 @@
     if (!hasOwn.call(INFO, bet) || (when !== 'baseline' && when !== 'w4') || !(rating >= 1 && rating <= 5)) return null;
     var b = slot(rec), x = b.exp[bet] || (b.exp[bet] = {});
     x[when] = Math.round(rating);
-    if (when === 'baseline') x.at = now;
+    if (when === 'baseline') x.at = Math.round(now);
     return E.events ? E.events.add(rec, 'expect', null, { bet: bet, rating: Math.round(rating), when: when }, now) : null;
   }
   // The rating to ask for now among the bets of the session's exercises: a baseline once, then week 4.

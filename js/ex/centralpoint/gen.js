@@ -819,7 +819,7 @@
     abilities: ['LE', 'Vz'], cell: 'extrinsic-static', role: 'train', answer: 'point',
     bet: 'calibrate', // docs/research/v1.2/T1-transfer-portfolio.md §3.3
     format: { quick: 'centralpoint:least-total-quick', exact: 'centralpoint:least-total-exact' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
-    layers: { compare: ['equal-pulls', 'crossing'] }, // v1.2 wave 2 (W2-bets): comparison rounds (js/ex/centralpoint/layers.js)
+    layers: { compare: ['equal-pulls', 'crossing'], calib: true }, // v1.2 wave 2 (W2-bets): comparison rounds (js/ex/centralpoint/layers.js), the calibration note (js/ui/bets.js)
     variants: VARIANTS.slice(), trainVariants: ['quick'], pace: PACE, roundScore: roundScore, extraParams: ['task'],
     dims: [
       // +0.25 logit per extra target: more pulls to balance (no human data; the simulated observers

@@ -37,6 +37,7 @@ export async function run(t) {
   doseSummary(t);
   exportHeader(t);
   guide(t);
+  wholeTimes(t);
 }
 
 function real(t) { return t.context().PX; }
@@ -504,4 +505,17 @@ function guide(t) {
     t.ok(sec.includes(B.INFO[id].line), 'the guide quotes the ' + id + ' line');
     t.ok(sec.includes(B.INFO[id].label), 'and names it ' + B.INFO[id].label);
   }
+}
+
+function wholeTimes(t) {
+  t.section('bets: stored times are whole milliseconds (the store’s repair rounds them; W2-measure’s FYI)');
+  const PX = mkHosts(t), B = PX.engine.bets, rec = newRecord(PX, T0);
+  const plan = { mode: 'train', start: T0 + 0.6426, id: 'x', pos: 0 };
+  B._.advance(rec, plan, T0 + 5000.37);
+  B.offscreen(rec, 'slice', 'slice-cut', true, T0 + 0.5);
+  B.expect(rec, 'variety', 3, 'baseline', T0 + 0.25);
+  B.compared(rec, null, { exId: 'xcmp', principle: 'p1', stage: 1, a: 'xcmp@1', aSeed: 1, b: 'xcmp@1', bSeed: 2, choice: 'p1', correct: true, rt: 1, apply: 0, opts: ['p1'], pos: 0 }, T0 + 0.7);
+  const s = JSON.stringify(rec.bets);
+  t.ok(!/\d\.\d/.test(s.replace(/"v":1/g, '')), 'no fractional time in rec.bets (' + s.slice(0, 80) + '…)');
+  t.eq(B._.check(rec.bets), rec.bets, 'the repair leaves it unchanged');
 }
