@@ -474,7 +474,11 @@
     // The first items of a probe (version) met for the first time are easy (g + (1 − g)·0.85), so a newcomer meets
     // an easy item right after the worked example; then the usual g + (1 − g)·0.6.
     var k = pr.n < pr.easy ? C.measure.easyK : C.measure.k;
-    var r = E.select.pick(def, post, { kind: 'target', k: k, recent: { keys: pr.recent }, rng: plan.rng, policy: 'high' });
+    // A probe of several formats (def.cycle 'variant': Other Way Round's strands) reads them in turn: item i is
+    // variant i mod n, and its items adapt within the variant.
+    var cyc = def.cycle === 'variant' && isArray(def.variants) && def.variants.length ? def.variants[pr.n % def.variants.length] : null;
+    var r = E.select.pick(def, post, { kind: 'target', k: k, recent: { keys: pr.recent }, rng: plan.rng, policy: 'high',
+      filter: cyc ? function (c) { return c.params.variant === cyc; } : null });
     if (!r) return null;
     pr.recent.push(r.key);
     if (pr.recent.length > C.select.avoid) pr.recent.shift();
@@ -484,9 +488,17 @@
     var seed = E.select.sharedSeed(PX.rng.hash.apply(null, parts));
     for (var salt = 1; taken[seed] === true && salt <= 50; salt++) seed = E.select.sharedSeed(PX.rng.hash.apply(null, parts.concat(['not-a-demo', salt])));
     // the worked example once per probe, before its first item: in every full check (1.1), in a block only for a
-    // probe (version) met for the first time
-    var example = !pr.exampled && ex.length && (!pc.block || pr.fresh) ? ex[0] : null;
-    pr.exampled = true;
+    // probe (version) met for the first time; a probe of several formats has one per format (learn.demo with
+    // params.variant), each before that format's first item
+    var example = null;
+    if (cyc) {
+      if (!pr.exampledV) pr.exampledV = {};
+      if (!pr.exampledV[cyc] && (!pc.block || pr.fresh)) example = ex.filter(function (d) { return d.params && d.params.variant === cyc; })[0] || null;
+      pr.exampledV[cyc] = true;
+    } else {
+      example = !pr.exampled && ex.length && (!pc.block || pr.fresh) ? ex[0] : null;
+      pr.exampled = true;
+    }
     return E.modes._.makeStep(plan, rec, def, r, 'probe', {
       seed: seed, noNote: true, feedback: false, banner: pr.n === 0, newRun: pr.n === 0,
       probe: { id: pr.id, index: pr.n, of: pr.items, form: pc.form, control: pr.id === C.assess.control, example: example, kind: pc.kind },
