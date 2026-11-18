@@ -1,0 +1,159 @@
+/* The game layer (v1.2, PLAN milestone 5; js/ui/game.js, climb.js, atlas.js). An instrument's vocabulary:
+   ruled scales, ink stamps, a hairline survey grid, mechanical counters, plotter ticks (note G1 §5.5).
+   Celebrations use ink and the right-answer green, never the accent (--signal is also the stimulus target
+   colour, --stim-target). Motion only on transform, opacity and stroke-dashoffset, ≤ 700 ms, between items. */
+
+/* ---------- the stimulus guard: nothing of the game layer while a stimulus plays (rule 3) ---------- */
+body.px-stim .gm-panel, body.px-stim .gm-slot, body.px-stim .gm-climb-scale, body.px-stim .gm-ring,
+body.px-stim .gm-stamp-wrap, body.px-stim .gm-scale, body.px-stim .gm-stretch-tag { visibility: hidden !important; }
+body.px-stim .gm-fx-stamp, body.px-stim .gm-fx-type, body.px-stim .gm-fx-flip, body.px-stim .gm-fx-step, body.px-stim .gm-fx-ring, body.px-stim .gm-fx-tick { animation: none !important; transition: none !important; }
+/* the Climb's scale stays out of view while an item is on screen (until its verdict) */
+.gm-climb-run[data-pstate="ready"] .gm-climb-scale, .gm-climb-run[data-pstate="present"] .gm-climb-scale,
+.gm-climb-run[data-pstate="respond"] .gm-climb-scale, .gm-climb-run[data-pstate="paused"] .gm-climb-scale { visibility: hidden; }
+
+/* ---------- shared pieces ---------- */
+.gm-k { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.gm-line { margin: var(--s2) 0 0; }
+.gm-h3 { font-size: var(--fs-md); margin: var(--s4) 0 var(--s2); }
+.gm-tick { color: var(--right); }
+
+/* the ruled scale (SVG) */
+.gm-scale { display: block; width: 100%; max-width: 22rem; height: auto; margin: var(--s2) 0; overflow: visible; }
+.gm-scale-rule { stroke: var(--rule-strong); stroke-width: 1; }
+.gm-scale-t { stroke: var(--rule-strong); stroke-width: 1; }
+.gm-scale-t5 { stroke: var(--ink-2); stroke-width: 1.25; }
+.gm-scale-fill { stroke: var(--ink); stroke-width: 3; stroke-linecap: butt; }
+.gm-scale-notch { fill: var(--ink-2); }
+.gm-scale-best { stroke: var(--right); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.gm-scale-mark { fill: var(--ink); }
+.gm-fx-step .gm-scale-mark, .gm-fx-step .gm-scale-fill { animation: gm-step 200ms var(--ease, ease-out) both; }
+@keyframes gm-step { from { transform: translateX(-6px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+
+/* the grade stamp: a rectangular ink stamp, pressed in at a slight angle */
+.gm-stamp-wrap { margin: var(--s2) 0; }
+.gm-stamp { display: inline-flex; align-items: baseline; gap: var(--s2); padding: 0.35rem 0.75rem; border: 2px solid var(--ink); border-radius: 3px; color: var(--ink);
+  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; transform: rotate(-2deg); box-shadow: inset 0 0 0 2px var(--surface), inset 0 0 0 3px var(--ink); }
+.gm-stamp b { font-size: var(--fs-2xl); line-height: 1; }
+.gm-stamp-k, .gm-stamp-x { font-size: var(--fs-sm); }
+.gm-stamp-band { margin: var(--s2) 0 0; }
+.gm-fx-stamp .gm-stamp { animation: gm-stamp 260ms cubic-bezier(.2, .9, .3, 1.2) both; }
+.gm-fx-stamp .gm-stamp-band { animation: gm-fade 300ms 220ms ease-out both; }
+@keyframes gm-stamp { from { transform: rotate(-2deg) scale(1.35); opacity: 0; } to { transform: rotate(-2deg) scale(1); opacity: 1; } }
+@keyframes gm-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* typed lines (firsts, the Climb's height) */
+.gm-fx-type { animation: gm-type 260ms ease-out both; }
+.gm-fx-d1 { animation-delay: 60ms; } .gm-fx-d2 { animation-delay: 120ms; } .gm-fx-d3 { animation-delay: 160ms; } .gm-fx-d4 { animation-delay: 200ms; }
+.gm-fx-d5 { animation-delay: 240ms; } .gm-fx-d6 { animation-delay: 280ms; } .gm-fx-d7 { animation-delay: 320ms; } .gm-fx-d8 { animation-delay: 360ms; }
+.gm-fx-d9 { animation-delay: 400ms; } .gm-fx-d10 { animation-delay: 440ms; } .gm-fx-d11 { animation-delay: 460ms; }
+@keyframes gm-type { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+
+/* the verdict's plotter tick and the stretch ring (item:reveal) */
+.gm-tick.gm-fx-tick { animation: gm-tick 200ms ease-out both; }
+@keyframes gm-tick { from { opacity: 0; transform: scale(0.6) rotate(-12deg); } to { opacity: 1; transform: none; } }
+.pl-verdict-icon.gm-tick { position: relative; }
+.gm-ring { position: absolute; left: 50%; top: 50%; width: 1.6em; height: 1.6em; margin: -0.8em 0 0 -0.8em; border: 1px solid var(--right); border-radius: 50%; opacity: 0; pointer-events: none; }
+.gm-ring.gm-fx-ring { animation: gm-ring 300ms ease-out both; }
+@keyframes gm-ring { from { opacity: 0.9; transform: scale(0.6); } to { opacity: 0; transform: scale(1.8); } }
+.gm-stretch-tag { margin-left: var(--s2); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ---------- the summary panel ---------- */
+.gm-reach { margin: var(--s3) 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--s2); }
+.gm-reach-num { font-size: var(--fs-xl); font-variant-numeric: tabular-nums; }
+.gm-firsts { list-style: none; margin: var(--s2) 0 0; padding: 0; }
+.gm-firsts li { padding: 0.15rem 0; }
+.gm-first-k { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--right); }
+.gm-near { color: var(--ink-2); }
+
+/* ---------- Today ---------- */
+.gm-notes { list-style: none; margin: var(--s2) 0 0; padding: 0; }
+.gm-notes li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto; align-items: center; gap: var(--s2); padding: 0.25rem 0; border-top: 1px solid var(--rule); min-height: 44px; }
+.gm-notes li:first-child { border-top: 0; }
+.gm-notes li[data-done="1"] .gm-note-t { color: var(--ink-2); }
+.gm-note-mark { color: var(--right); font-weight: 700; text-align: center; }
+.gm-fresh { margin: 0 0 var(--s2); padding: var(--s2) var(--s3); border-left: 3px solid var(--right); background: var(--right-wash); }
+.gm-reachable { margin: var(--s3) 0 0; }
+@media (min-width: 1024px) {
+  .px-today > .gm-slot--climb { grid-column: 1 / span 6; grid-row: 5; }
+  .px-today > .gm-slot--notes { grid-column: 7 / span 6; grid-row: 5; }
+  .px-today > .gm-slot ~ .px-slot--data { grid-row: 6; }
+  .px-today.has-suggest > .gm-slot--climb, .px-today.has-suggest > .gm-slot--notes { grid-row: 6; }
+  .px-today.has-suggest > .gm-slot ~ .px-slot--data { grid-row: 7; }
+}
+
+/* ---------- Progress ---------- */
+.gm-reach-big { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+.gm-reach-big b { font-size: var(--fs-3xl); font-variant-numeric: tabular-nums; line-height: 1; }
+.gm-rank { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 0.1rem 0.5rem; border: 1px solid var(--ink-2); border-radius: 3px; }
+.gm-table-wrap { overflow-x: auto; margin: var(--s3) 0; }
+.gm-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.gm-table th, .gm-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--rule); text-align: right; }
+.gm-table th:first-child, .gm-table td:first-child { text-align: left; }
+.gm-table th { font-weight: 600; color: var(--ink-2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; }
+.gm-grade-chip { display: inline-block; min-width: 1.6rem; padding: 0 0.3rem; border: 1.5px solid var(--ink); border-radius: 2px; text-align: center; font-family: var(--font-mono); }
+.gm-records { margin: var(--s3) 0 0; }
+.gm-records > div { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); gap: var(--s2); padding: 0.25rem 0; }
+.gm-records dt { color: var(--ink-2); }
+.gm-records dd { margin: 0; }
+.gm-hist-fig { margin: var(--s3) 0 0; }
+.gm-hist { width: 100%; max-width: 20rem; height: auto; display: block; }
+.gm-hist-bar { fill: var(--ink-2); }
+.gm-hist-t { fill: var(--ink-3); font-size: 7px; font-family: var(--font-mono); text-anchor: middle; }
+.gm-archive { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s2) 0; }
+.gm-startnow { list-style: none; padding: 0; margin: 0; columns: 2 12rem; }
+.gm-startnow li { padding: 0.1rem 0; }
+
+/* ---------- the Atlas ---------- */
+.gm-atlas-chips { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0; }
+.gm-chip { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3); border: 1px solid var(--rule-strong); border-radius: var(--r-control); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.gm-chip[aria-selected="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.gm-chip.is-untried { color: var(--ink-3); }
+.gm-chip-n { font-size: var(--fs-xs); color: var(--ink-2); }
+.gm-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 719px) {
+  .gm-atlas-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: var(--s2); margin-right: calc(-1 * var(--gutter, 1rem)); }
+  .gm-chip { flex: none; }
+}
+.gm-atlas-scroll { overflow-x: auto; padding: var(--s2) 0; }
+.gm-atlas-grid { display: grid; gap: 0; width: max-content; }
+.gm-atlas-row { display: flex; align-items: center; }
+.gm-atlas-ylab, .gm-atlas-xlab { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); }
+.gm-atlas-ylab { width: 6.5rem; flex: none; padding-right: var(--s2); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-atlas-xlabs { display: flex; width: max-content; }
+.gm-atlas-xlab { width: 2.25rem; flex: none; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: clip; }
+.gm-atlas-xtitle { display: flex; width: max-content; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-2); margin-top: 0.15rem; }
+.gm-cell { position: relative; width: 2.25rem; height: 2.25rem; flex: none; border: 1px solid var(--rule); margin: 0 -1px -1px 0; display: inline-flex; align-items: center; justify-content: center; background: var(--surface); }
+.gm-cell-mark { display: block; width: 0.55rem; height: 0.55rem; }
+.gm-cell[data-state="tried"] .gm-cell-mark { border: 1.5px solid var(--ink-2); border-radius: 50%; }
+.gm-cell[data-state="handled"] .gm-cell-mark { width: 1.3rem; height: 1.3rem; background: var(--ink); }
+.gm-cell.is-out { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--rule) 4px 5px); }
+.gm-cell.is-band { box-shadow: inset 0 0 0 2px var(--right); }
+.gm-cell.is-reach { outline: 2px dashed var(--ink); outline-offset: -5px; }
+.gm-cell.gm-fx-flip .gm-cell-mark { animation: gm-flip 200ms ease-out both; }
+@keyframes gm-flip { from { transform: scale(0.2); opacity: 0.2; } to { transform: none; opacity: 1; } }
+.gm-legend { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); padding: 0; margin: var(--s3) 0 0; font-size: var(--fs-sm); }
+.gm-legend li { display: inline-flex; align-items: center; gap: var(--s2); }
+.gm-key { width: 1.5rem; height: 1.5rem; margin: 0; }
+.gm-key[data-state="handled"] .gm-cell-mark { width: 0.9rem; height: 0.9rem; }
+
+/* ---------- the Climb ---------- */
+.gm-attempts { list-style: none; padding: 0; margin: var(--s2) 0 0; }
+.gm-attempts li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: var(--s2); padding: 0.3rem 0; border-top: 1px solid var(--rule); }
+.gm-attempts li:first-child { border-top: 0; }
+.gm-attempts li[data-state="open"] span { color: var(--ink-2); }
+.gm-rules { margin: 0; padding-left: 1.2rem; }
+.gm-rules li { margin: 0.2rem 0; }
+.gm-climb-run { display: block; }
+.gm-climb-scale { padding: 0 0 var(--s2); }
+.gm-climb-scale .gm-scale { margin: 0; }
+.gm-climb-h { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+.gm-climb-note { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.gm-print-head { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: 0.1em; color: var(--ink-2); margin: 0; }
+.gm-print-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--s2); margin: var(--s2) 0 0; }
+.gm-print-big { font-size: var(--fs-4xl); line-height: 1; font-variant-numeric: tabular-nums; }
+.gm-sound-line { margin: var(--s3) 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gm-fx-stamp .gm-stamp, .gm-fx-stamp .gm-stamp-band, .gm-fx-type, .gm-fx-flip .gm-cell-mark, .gm-fx-step .gm-scale-mark, .gm-fx-step .gm-scale-fill, .gm-fx-ring, .gm-fx-tick { animation: none !important; }
+}
+[data-motion="reduce"] .gm-fx-stamp .gm-stamp, [data-motion="reduce"] .gm-fx-type, [data-motion="reduce"] .gm-fx-flip .gm-cell-mark, [data-motion="reduce"] .gm-fx-step .gm-scale-mark, [data-motion="reduce"] .gm-fx-ring { animation: none !important; }
