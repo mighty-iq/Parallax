@@ -3,10 +3,10 @@
 
    The board. Targets sit on a 7 × 7 lattice of dots; answers lie on the 13 × 13 lattice of half-steps
    (every dot, every midpoint between two dots, every cell centre). Coordinates are in half-steps: x 0–12
-   left to right, z 0–12 top to bottom, so a target's coordinates are even. A 7 × 7 answer grid collapses
+   left to right, y 0–12 top to bottom, so a target's coordinates are even. A 7 × 7 answer grid collapses
    to "which neighbour of the average?" (C1 §4.3: the key sat next to the average's pick in 85–100 % of
-   items), hence the half-steps. The response is { x, z } on that lattice (answer type 'position': a
-   point in the item's own frame); the key is the best answer point.
+   items), hence the half-steps. The response is { x, y } on that lattice (answer type 'point',
+   CONTRACT-v1.2 A); the key is the best answer point.
 
    The task. The total distance S(p) = Σ |p − tᵢ| is convex with one minimum, the geometric median
    (Fermat–Weber point), unique because items never have collinear targets. An answer is right when
@@ -50,10 +50,12 @@
    rated pool); the Watch and Try 2 have a trap of at least 1 dot, Try 3 the strict policy and a trap of
    half a dot. The last Try item carries a 20 s deadline in the quick form (item.deadlineMs).
 
-   Forms (variants; PLAN.md milestone 8, DECISIONS 18 Nov): 'quick' (the default in Train: a deadline
-   that tightens as the player gets faster, one tap places the marker and a second tap or Confirm
-   answers, a round score from closeness and speed; right for the rating is the band before the
-   deadline) and 'exact' (no deadline, drag and nudge controls, Confirm). Both use the same items.
+   Forms (variants; PLAN.md milestone 8, DECISIONS 18 Nov; CONTRACT-v1.2 A and E): 'quick' (the only
+   form automatic choices use, trainVariants; a deadline from the engine's pace staircase that tightens
+   as the player gets faster; one tap places the marker and a second tap or Confirm answers; a round
+   score from closeness and pace, roundScore(); right for the rating is the band before the deadline)
+   and 'exact' (an explicit pick in the Library and Free play: no deadline, drag and nudge controls,
+   Confirm). Both use the same items.
    Difficulty (hand-set, provisional; C1 §3.2, logged in docs/dev/progress/W1-central.md): +0.25 logit
    per extra target, +0.6 per band level (the band moves accuracy most in the simulation, 0.3–0.5 per
    level, and human errors are assumed heavier-tailed than a Gaussian), and the exact form 0.6 easier
@@ -62,9 +64,9 @@
    who places the best spot with a 0.3-dot scatter gets about 61 % at the easiest cell (C1 §3.2), so the
    guide's 90 % at θ = 0 cannot be set honestly.
 
-   Item (JSON): { ex: 'centralpoint', seed, params: { variant, targets, band, task? }, answer: 'position',
-     form, targets: [[x, z], …] (half-steps, even), band (share), trapMin (dots), key: { x, z },
-     gm: [x, z] (the continuous best spot, 6 decimals), fam, task?, deadlineMs?, fallback? } */
+   Item (JSON): { ex: 'centralpoint', seed, params: { variant, targets, band, task? }, answer: 'point',
+     form, targets: [[x, y], …] (half-steps, even), band (share), trapMin (dots), key: { x, y },
+     gm: [x, y] (the continuous best spot, 6 decimals), fam, task?, deadlineMs?, fallback? } */
 (function (PX) {
   'use strict';
 
@@ -96,12 +98,12 @@
     loose: { k: 5, band: 0.02, trap: 0.5, strict: true, deadlineMs: 20000 },
   };
   var TASK_NAMES = ['watch', 'kite', 'group', 'loose'];
-  // Quick form: the deadline staircase (pure; the view's adapter or the engine runs it). A weighted
-  // up-down on log10(ms) aiming at 85 % of answers in time, stepping on time alone (an answer
-  // confirmed before the deadline, right or wrong), so the deadline follows the player's pace while
-  // the band ladder follows accuracy. Scaled by the number of targets (more pulls to weigh).
-  var QUICK = { startMs: 15000, minMs: 2500, maxMs: 30000, down: 0.02, aim: 0.85, perTarget: 0.05 };
-  QUICK.up = QUICK.down * QUICK.aim / (1 - QUICK.aim);
+  // Quick form: the deadline (def.pace; the engine's staircase in js/engine/pace.js runs it). It starts
+  // generous for a first gut estimate, moves 0.03 log10 down after any answer before the deadline and
+  // 0.17 up after a time-out, so about 85 % of answers come in time: it follows the player's pace while
+  // the band ladder follows accuracy. 2.5 s is about a confident tap, tap (C1 §5.5); hand-set.
+  var PACE = { variants: ['quick'], startMs: 15000, minMs: 2500, maxMs: 30000, target: 0.85, step: 0.03 };
+  var LATE = 0.25;                                  // the round score's pace factor for a marker left unconfirmed
 
   function clampInt(x, n) { x = isInt(x) ? x : 0; return x < 0 ? 0 : x >= n ? n - 1 : x; }
   function normParams(params) {
@@ -442,8 +444,8 @@
     if (!bandJoined(SB, Sb, band, b)) return bump('split');
     stats.accepted++;
     var item = {
-      ex: 'centralpoint', seed: 0, params: copyParams(p), answer: 'position', form: p.variant,
-      targets: T, band: band, trapMin: cell.trap, key: { x: bx, z: bz },
+      ex: 'centralpoint', seed: 0, params: copyParams(p), answer: 'point', form: p.variant,
+      targets: T, band: band, trapMin: cell.trap, key: { x: bx, y: bz },
       gm: [round(gm[0] * 1e6) / 1e6, round(gm[1] * 1e6) / 1e6], fam: lay.fam,
     };
     if (cell.task) { item.task = cell.task; if (cell.deadlineMs && p.variant === 'quick') item.deadlineMs = cell.deadlineMs; }
@@ -536,24 +538,19 @@
     if (L2 < 0.25) return null;
     return ((x - m[0]) * vx + (z - m[1]) * vz) / L2;
   }
-  // Quick's round score: closeness (the credit) times pace, pace = 1 for an instant answer and ½ at the
-  // deadline, so a near miss still earns and a fast one earns more; a time-out earns nothing.
-  function roundScore(cr, rtMs, deadlineMs) {
-    if (!isNum(cr) || cr <= 0) return 0;
-    if (!(deadlineMs > 0) || !isNum(rtMs)) return round(100 * cr);
-    if (rtMs > deadlineMs) return 0;
-    return round(100 * cr * (0.5 + 0.5 * (1 - rtMs / deadlineMs)));
-  }
-  // The Quick deadline for an item with k targets from the staircase state (ms at 4 targets), and the
-  // next state after an answer: in time (confirmed before the deadline) or not.
-  function quickDeadline(stateMs, k) {
-    var s = isNum(stateMs) && stateMs > 0 ? stateMs : QUICK.startMs, kk = isInt(k) ? k : 4;
-    return Math.max(QUICK.minMs, Math.min(QUICK.maxMs, round(s * (1 + QUICK.perTarget * (kk - 4)))));
-  }
-  function quickNext(stateMs, inTime) {
-    var s = isNum(stateMs) && stateMs > 0 ? stateMs : QUICK.startMs;
-    s = s * Math.pow(10, inTime ? -QUICK.down : QUICK.up);
-    return Math.max(QUICK.minMs, Math.min(QUICK.maxMs, round(s)));
+  // Quick's round score (def.roundScore; CONTRACT-v1.2 E): closeness (the credit) times pace, pace = 1
+  // for an instant answer and ½ at the deadline, so a near miss still earns and a fast one earns more;
+  // a marker left unconfirmed at the deadline earns a quarter of its closeness (confirming always pays);
+  // untimed items (the exact form) earn their closeness. Never a lifetime total.
+  function roundScore(item, result, info) {
+    var cr = result && isNum(result.credit) ? result.credit : result && result.detail && isNum(result.detail.credit) ? result.detail.credit : 0;
+    info = info || {};
+    if (!(cr > 0)) return 0;
+    if (info.timeout) return round(100 * cr * LATE);
+    var dl = info.deadlineMs, rt = info.rtMs;
+    if (!(isNum(dl) && dl > 0) || !isNum(rt)) return round(100 * cr);
+    var pace = 0.5 + 0.5 * Math.max(0, Math.min(1, 1 - rt / dl));
+    return round(100 * cr * pace);
   }
   // A level line of the total, S = level, as a closed polygon round the best spot: S grows along every
   // ray from its minimum (convex), so each ray is cut by bisection. Points may lie off the board (the
@@ -585,7 +582,7 @@
     if (!p || VARIANTS.indexOf(p.variant) < 0 || !isInt(p.targets) || p.targets < 0 || p.targets >= TARGETS.length || !isInt(p.band) || p.band < 0 || p.band >= BANDS.length) return 'bad params';
     if (p.task !== undefined && TASK_NAMES.indexOf(p.task) < 0) return 'unknown task';
     var cell = cellOf(normParams(p));
-    if (item.answer !== 'position' || item.form !== p.variant) return 'the answer type or form does not match';
+    if (item.answer !== 'point' || item.form !== p.variant) return 'the answer type or form does not match';
     if (item.band !== cell.band || item.trapMin !== cell.trap) return 'the band or trap does not match the level';
     if ((item.task || null) !== cell.task) return 'the task does not match';
     var T = item.targets, k = cell.k, i, j, l, q;
@@ -611,8 +608,8 @@
     }
     var band = item.band, kq = item.key;
     function ex(i2) { return S[i2] / best - 1; }
-    if (!kq || !isInt(kq.x) || !isInt(kq.z) || kq.x < 0 || kq.z < 0 || kq.x >= N || kq.z >= N) return 'bad key';
-    var key = kq.z * N + kq.x;
+    if (!kq || !isInt(kq.x) || !isInt(kq.y) || kq.x < 0 || kq.y < 0 || kq.x >= N || kq.y >= N) return 'bad key';
+    var key = kq.y * N + kq.x;
     if (ex(key) > 1e-12) return 'the key is not the best answer point';
     for (q = 0; q < NP; q++) if (abs(ex(q) - band) < MARGIN) return 'answer point ' + q + ' sits on the band edge';
     for (j = 0; j < k; j++) if (ex(T[j][1] * N + T[j][0]) <= band) return 'target ' + j + ' lies inside the band';
@@ -631,13 +628,13 @@
     }
     if (got !== nb) return 'the band falls apart';
     // the continuous best spot (its own Weiszfeld from the key) and the cross-checks
-    var g = vWeiszfeld(T, [kq.x, kq.z]);
+    var g = vWeiszfeld(T, [kq.x, kq.y]);
     if (!g) return 'Weiszfeld did not settle';
     var Sg = 0;
     for (j = 0; j < k; j++) Sg += vDist(g, T[j]);
     if (Sg > best * (1 + 1e-9)) return 'the continuous best spot is worse than the best answer point';
     if (!isArray(item.gm) || !(abs(item.gm[0] - g[0]) <= 1e-5) || !(abs(item.gm[1] - g[1]) <= 1e-5)) return 'the stored best spot is off';
-    if (vDist(g, [kq.x, kq.z]) > F) return 'the best answer point lies more than a dot from the best spot';
+    if (vDist(g, [kq.x, kq.y]) > F) return 'the best answer point lies more than a dot from the best spot';
     var m = [0, 0];
     for (j = 0; j < k; j++) { m[0] += T[j][0] / k; m[1] += T[j][1] / k; }
     if (cell.trap > 0 && vDist(m, g) / F < cell.trap) return 'the trap is ' + (vDist(m, g) / F).toFixed(3) + ' dots, under ' + cell.trap;
@@ -784,20 +781,21 @@
   }
 
   /* ------------------------------------------------------------ scorer */
-  // response: { x, z } on the answer lattice. Right when its total lies within the band of the best;
+  // response: { x, y } on the answer lattice. Right when its total lies within the band of the best;
   // value = the excess in per cent (2 decimals), value2 = the correction ratio (3 decimals, when the
   // item has a trap to correct); detail: excess, credit, the two totals in dots, the band.
   function score(item, response) {
     if (!item || !isArray(item.targets) || !isNum(item.band) || !response || typeof response !== 'object') return { correct: false };
-    var x = response.x, z = response.z;
-    if (!isInt(x) || !isInt(z) || x < 0 || z < 0 || x >= N || z >= N) return { correct: false };
-    var sol = solve(item), e = sol.S[z * N + x] / sol.best - 1;
+    var x = response.x, y = response.y;
+    if (!isInt(x) || !isInt(y) || x < 0 || y < 0 || x >= N || y >= N) return { correct: false };
+    var sol = solve(item), e = sol.S[y * N + x] / sol.best - 1;
     if (e < 0) e = 0;
+    var c = credit(e, item.band);
     var out = {
-      correct: e <= item.band, value: round(e * 1e4) / 100,
-      detail: { excess: e, credit: credit(e, item.band), total: sol.S[z * N + x] / F, best: sol.best / F, band: item.band },
+      correct: e <= item.band, value: round(e * 1e4) / 100, credit: c,
+      detail: { excess: e, credit: c, total: sol.S[y * N + x] / F, best: sol.best / F, band: item.band },
     };
-    var cr = isArray(item.gm) ? correction(item, x, z) : null;
+    var cr = isArray(item.gm) ? correction(item, x, y) : null;
     if (cr !== null && isNum(cr)) out.value2 = round(cr * 1000) / 1000;
     return out;
   }
@@ -807,9 +805,9 @@
     id: 'centralpoint', version: 1, code: 'EX-20', name: 'Central Point', short: 'Central Point',
     // LE: judging distances by eye (the nearest CHC narrow ability), then Vz: weighing a layout's pulls.
     // Extrinsic-static: a place relative to several others, nothing moves.
-    abilities: ['LE', 'Vz'], cell: 'extrinsic-static', role: 'train', answer: 'position',
-    bet: 'calibrate', // docs/research/v1.2/T1-transfer-portfolio.md §3.3 (milestone 4 reads it)
-    variants: VARIANTS.slice(), extraParams: ['task'],
+    abilities: ['LE', 'Vz'], cell: 'extrinsic-static', role: 'train', answer: 'point',
+    bet: 'calibrate', // docs/research/v1.2/T1-transfer-portfolio.md §3.3
+    variants: VARIANTS.slice(), trainVariants: ['quick'], pace: PACE, roundScore: roundScore, extraParams: ['task'],
     dims: [
       // +0.25 logit per extra target: more pulls to balance (no human data; the simulated observers
       // barely felt it, C1 §3.2).
@@ -820,11 +818,11 @@
     base: MODEL.base, difficulty: difficulty, chance: chance, estMs: estMs,
     generate: generate, validate: validate, score: score,
     lib: {
-      DOTS: DOTS, F: F, N: N, NP: NP, MID: MID, TARGETS: TARGETS, BANDS: BANDS, TRAP: TRAP, TASKS: TASKS, QUICK: QUICK,
+      DOTS: DOTS, F: F, N: N, NP: NP, MID: MID, TARGETS: TARGETS, BANDS: BANDS, TRAP: TRAP, TASKS: TASKS, PACE: PACE, LATE: LATE,
       MODEL: MODEL, CHANCE: CHANCE, MAX_TRIES: MAX_TRIES, DENSE_R: DENSE_R, VARIANTS: VARIANTS,
       normParams: normParams, cellOf: cellOf, solve: solve, weiszfeld: weiszfeld, pulls: pulls, total: totalAt,
       mean: meanOf, credit: credit, correction: correction, roundScore: roundScore,
-      quickDeadline: quickDeadline, quickNext: quickNext, contour: contour,
+      contour: contour,
       picks: vPicks, picksFast: picksFast, bestSpot: bestSpot, fallbackFor: fallbackFor, stats: stats,
     },
   });

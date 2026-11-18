@@ -57,7 +57,9 @@ export async function run(t) {
   t.eq(ctx.loadErrors, [], 'gen.js (and learn.js) load without errors');
   if (!t.ok(def, 'centralpoint is defined')) return;
   const L = def.lib;
-  t.eq([def.code, def.version, def.abilities, def.cell, def.role, def.answer, def.perDisplay, def.bet], ['EX-20', 1, ['LE', 'Vz'], 'extrinsic-static', 'train', 'position', false, 'calibrate'], 'code, version, abilities, cell, role, answer, perDisplay, bet');
+  t.eq([def.code, def.version, def.abilities, def.cell, def.role, def.answer, def.perDisplay, def.bet], ['EX-20', 1, ['LE', 'Vz'], 'extrinsic-static', 'train', 'point', false, 'calibrate'], 'code, version, abilities, cell, role, answer (point), perDisplay, bet');
+  t.eq([def.trainVariants, def.pace && def.pace.variants, typeof def.roundScore], [['quick'], ['quick'], 'function'], 'automatic choices use the quick form only; it carries the pace deadline and a round score (CONTRACT-v1.2 A, E)');
+  t.ok(def.pace.minMs <= def.pace.startMs && def.pace.startMs <= def.pace.maxMs && def.pace.target === 0.85, `pace: start ${def.pace.startMs} ms, ${def.pace.minMs}–${def.pace.maxMs} ms, 85 % in time, step ${def.pace.step}`);
   t.eq([def.name, def.short, def.variants, def.extraParams], ['Central Point', 'Central Point', ['quick', 'exact'], ['task']], 'name, variants quick (first: the default) and exact, task as an extra param');
   t.eq(def.dims.map((d) => [d.key, d.levels]), [['targets', [4, 5, 6, 7, 8]], ['band', [1, 0.5, 0.25]]], 'dims: targets 4–8 × band 1 / 0.5 / 0.25 % (15 cells)');
   t.eq([L.DOTS, L.N, L.BANDS, L.TRAP], [7, 13, [0.01, 0.005, 0.0025], 1], 'a 7 × 7 dot board, 13 × 13 answers, the bands as shares, trap 1 dot');
@@ -104,14 +106,14 @@ export async function run(t) {
       const others = [];
       for (let u = 0; u < 3; u++) others.push(obsRng.int(0, NP - 1));
       for (const q of sol.band.concat(others)) {
-        const r = def.score(it, { x: q % N, z: Math.floor(q / N) });
+        const r = def.score(it, { x: q % N, y: Math.floor(q / N) });
         if (r.correct !== inB(q)) scoreDisagree++;
         if (Math.abs(r.detail.credit - L.credit(E[q], band)) > 1e-12) creditBad++;
       }
       // the nearest point outside the band scores wrong but keeps most of its credit
       let out = -1;
       for (let q = 0; q < NP; q++) if (!inB(q) && (out < 0 || E[q] < E[out])) out = q;
-      const ro = def.score(it, { x: out % N, z: Math.floor(out / N) });
+      const ro = def.score(it, { x: out % N, y: Math.floor(out / N) });
       if (ro.correct) outsideRight++;
       // the correction ratio is logged on every rated item; near 1 at the key
       if (!Number.isFinite(sk.value2)) v2Missing++;
@@ -130,7 +132,7 @@ export async function run(t) {
       z.ring2 += r2.filter(inB).length / r2.length;
       const between = sol.band.filter((q) => (q % N) % 2 || Math.floor(q / N) % 2).length;
       z.parity += between / 120;
-      const [kx, kz] = [it.key.x, it.key.z];
+      const [kx, kz] = [it.key.x, it.key.y];
       if (kx % 2 || kz % 2) z.betweenKeys++;
       const d15 = denseCentre(T, 3), d2 = denseCentre(T, 4);
       if (inB(snap1(d15[0], d15[1]))) z.dense15++;
@@ -206,7 +208,7 @@ export async function run(t) {
       if (v !== true || it.fallback || it.task !== task || it.band !== 0.02) { bad++; first = first || String(v); continue; }
       if (task === 'kite') {
         // the diagonals cross on a dot, and that dot is the best spot and the key
-        if (Math.abs(it.gm[0] - it.key.x) > 1e-6 || Math.abs(it.gm[1] - it.key.z) > 1e-6 || it.key.x % 2 || it.key.z % 2) kiteOff++;
+        if (Math.abs(it.gm[0] - it.key.x) > 1e-6 || Math.abs(it.gm[1] - it.key.y) > 1e-6 || it.key.x % 2 || it.key.y % 2) kiteOff++;
       }
       const m = meanOf(it.targets);
       if ((task === 'watch' || task === 'group') && hyp(m, it.gm) / F < 1) trapLow++;
@@ -232,13 +234,13 @@ export async function run(t) {
   let notBest = -1;
   for (let q = 0; q < NP; q++) if (E0[q] > 0.001 && E0[q] <= 0.05) { notBest = q; break; }
   const cases = {
-    'a key that is not the best point': mutate((c) => { c.key = { x: notBest % N, z: Math.floor(notBest / N) }; }),
+    'a key that is not the best point': mutate((c) => { c.key = { x: notBest % N, y: Math.floor(notBest / N) }; }),
     'a target off the dots': mutate((c) => { c.targets[0] = [c.targets[0][0] + 1, c.targets[0][1]]; }),
     'two targets on one dot': mutate((c) => { c.targets[1] = c.targets[0].slice(); }),
     'a missing target': mutate((c) => { c.targets.pop(); }),
     'a band that does not match the level': mutate((c) => { c.band = 0.02; }),
     'a stored best spot that is off': mutate((c) => { c.gm = [c.gm[0] + 0.5, c.gm[1]]; }),
-    'a target moved into the band': mutate((c) => { c.targets[0] = [c.key.x - (c.key.x % 2), c.key.z - (c.key.z % 2)]; }),
+    'a target moved into the band': mutate((c) => { c.targets[0] = [c.key.x - (c.key.x % 2), c.key.y - (c.key.y % 2)]; }),
     'the wrong form': mutate((c) => { c.form = 'exact'; }),
     'a deadline on a rated item': mutate((c) => { c.deadlineMs = 5000; }),
     'collinear targets': mutate((c) => { c.targets = [[0, 0], [2, 2], [4, 4], [6, 6], [8, 8], [10, 10]]; }),
@@ -247,12 +249,12 @@ export async function run(t) {
   for (const [name, c] of Object.entries(cases)) t.ok(typeof def.validate(c) === 'string', `validate rejects ${name}`);
   // the trap rule and the shortcut rule, on layouts built to break them
   const flatTrap = { ...base, targets: [[2, 2], [10, 2], [2, 10], [10, 10], [4, 6], [8, 6]] };
-  { const s2 = L.solve(flatTrap); flatTrap.key = { x: s2.key % N, z: Math.floor(s2.key / N) }; flatTrap.gm = L.weiszfeld(flatTrap.targets, 50000, 1e-13); }
+  { const s2 = L.solve(flatTrap); flatTrap.key = { x: s2.key % N, y: Math.floor(s2.key / N) }; flatTrap.gm = L.weiszfeld(flatTrap.targets, 50000, 1e-13); }
   t.ok(/trap|band|shortcut/.test(String(def.validate(flatTrap))), 'validate rejects a symmetric layout (no trap; the grid centre and the average are the answer)');
 
   /* ---------------------------------------------------------------- scorer */
   t.section('centralpoint: scorer');
-  for (const r of [null, undefined, 3, 'x', [], {}, { x: 1.5, z: 2 }, { x: -1, z: 0 }, { x: 13, z: 0 }, { x: 4 }, { x: '4', z: '4' }, { x: NaN, z: 1 }]) {
+  for (const r of [null, undefined, 3, 'x', [], {}, { x: 1.5, y: 2 }, { x: -1, y: 0 }, { x: 13, y: 0 }, { x: 4 }, { x: '4', y: '4' }, { x: NaN, y: 1 }, { x: 4, z: 4 }]) {
     t.eq(def.score(base, r).correct, false, `malformed response ${JSON.stringify(r)} scores wrong`);
   }
   t.eq(def.score(null, base.key).correct, false, 'a missing item scores wrong');
@@ -274,20 +276,23 @@ export async function run(t) {
   }
   t.eq(pullOff, 0, 'at the best spot the equal pulls cancel (|sum| < 1e-5), each a unit vector');
   t.eq(contourOff, 0, 'contour points lie on their level line');
-  const Q = L.QUICK;
-  t.ok(L.quickDeadline(null, 4) === Q.startMs && L.quickDeadline(10000, 8) === 12000 && L.quickDeadline(1, 4) === Q.minMs && L.quickDeadline(1e9, 4) === Q.maxMs, 'quickDeadline: the start, +5 % per extra target, clamped to its range');
-  t.ok(L.quickNext(10000, true) < 10000 && L.quickNext(10000, false) > 10000, 'quickNext: shorter after an answer in time, longer after a time-out');
-  { // the staircase settles where about 85 % of answers come in time (a player with a lognormal pace)
-    const r = PX.rng(5); let s = Q.startMs, inT = 0, n2 = 0;
+  { // the engine's staircase rule (js/engine/pace.js) with these numbers settles near 85 % in time for a
+    // player with a lognormal pace (median 4 s)
+    const pc = def.pace, r = PX.rng(5); let x = Math.log10(pc.startMs), inT = 0, n2 = 0;
     for (let i = 0; i < 6000; i++) {
-      const rt = 4000 * Math.exp(0.35 * r.normal()), dl = L.quickDeadline(s, 4), ok = rt <= dl;
+      const ms = Math.min(pc.maxMs, Math.max(pc.minMs, Math.round(10 ** x))), ok = 4000 * Math.exp(0.35 * r.normal()) <= ms;
       if (i >= 1000) { n2++; if (ok) inT++; }
-      s = L.quickNext(s, ok);
+      x = Math.log10(ms) + (ok ? -pc.step : pc.step * pc.target / (1 - pc.target));
     }
-    t.ok(Math.abs(inT / n2 - Q.aim) < 0.03, `the deadline staircase settles near ${pct(Q.aim, 0)} % in time (${pct(inT / n2)} %)`);
+    t.ok(Math.abs(inT / n2 - pc.target) < 0.03, `the pace staircase settles near ${pct(pc.target, 0)} % in time (${pct(inT / n2)} %)`);
   }
-  t.ok(L.roundScore(1, 0, 10000) === 100 && L.roundScore(1, 10000, 10000) === 50 && L.roundScore(0.5, 5000, 10000) === 38 && L.roundScore(1, 10001, 10000) === 0 && L.roundScore(0, 100, 10000) === 0 && L.roundScore(0.8, 3000, null) === 80,
-    'round score: closeness × pace (1 at once, ½ at the deadline), 0 after the deadline or with no credit');
+  const res = (cr) => ({ correct: cr === 1, credit: cr, detail: { credit: cr } });
+  const R = def.roundScore;
+  t.ok(R(base, res(1), { rtMs: 0, deadlineMs: 10000 }) === 100 && R(base, res(1), { rtMs: 10000, deadlineMs: 10000 }) === 50 && R(base, res(0.5), { rtMs: 5000, deadlineMs: 10000 }) === 38,
+    'round score: closeness × pace (1 at once, ½ at the deadline)');
+  t.ok(R(base, res(0.8), { timeout: true, deadlineMs: 10000 }) === 20 && R(base, res(0), { rtMs: 100, deadlineMs: 10000 }) === 0 && R(base, res(0.8), { rtMs: 3000 }) === 80 && R(base, {}, {}) === 0 && R(base, { detail: { credit: 1 } }, null) === 100,
+    'a marker left at the deadline earns a quarter of its closeness, no credit earns 0, untimed items earn their closeness');
+  t.ok(R(base, def.score(base, base.key), { rtMs: 2000, deadlineMs: 8000 }) === 88, 'the round score reads the credit of a real score() result');
 
   /* ---------------------------------------------------------------- learn data and the view's rule on the average */
   if (hasLearn) checkLearnCP(t, PX, def);
