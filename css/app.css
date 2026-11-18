@@ -164,12 +164,20 @@
 }
 .px-welcome-text { font-size: var(--fs-md); }
 .px-welcome-actions { display: grid; gap: var(--s3); margin-top: var(--s5); }
+.px-welcome-body { padding-bottom: var(--s4); }
 .px-welcome-join { width: 100%; }
 .px-welcome-addr .px-linkcopy { max-width: none; }
 .px-welcome-hint { margin-top: var(--s1); font-size: var(--fs-sm); color: var(--ink-3); }
-.px-welcome-start { width: 100%; }
+/* Continue: full width, kept on the screen at the dialog's foot (the dialog scrolls on short screens) */
+.px-welcome-foot {
+  position: sticky; bottom: 0; z-index: 1;
+  padding: var(--s3) var(--s5) var(--s4);
+  background: var(--surface); border-top: 1px solid var(--rule);
+}
+.px-welcome-start { width: 100%; border-color: var(--ink-2); font-size: var(--fs-md); }
 @media (max-width: 599px) {
-  .px-welcome-body { padding: 0 var(--s4) var(--s4); }
+  .px-welcome-body { padding: 0 var(--s4) var(--s3); }
+  .px-welcome-foot { padding: var(--s3) var(--s4); }
   .px-welcome-plate { margin-bottom: var(--s4); }
   .px-welcome-title { font-size: var(--fs-xl); }
   .px-welcome-actions { margin-top: var(--s4); }

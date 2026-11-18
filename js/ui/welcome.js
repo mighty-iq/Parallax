@@ -35,7 +35,8 @@
                                            record (rec.ui.welcomed), for a record that has not
                                            practised or been offered the tour (a 1.1 record that
                                            has practised gets the card)
-     show({ onClose(reason) }) → close     the full welcome. reason: 'start' (Start training) or
+     show({ onClose(reason) }) → close     the full welcome. reason: 'start' (Continue to Parallax, a
+                                           full-width button kept at the dialog's foot) or
                                            'dismiss' (✕, Esc, backdrop). Focus is trapped
                                            (PX.ui.modal); app.js decides where focus goes
                                            afterwards. Closing stamps rec.ui.welcomed. On iPhones,
@@ -361,7 +362,9 @@
 
     var copy = linkCopy({ label: 'Chimera Discord address' });
     var join = joinLink({ className: 'px-welcome-join', onClick: function () { nudgeIfBlocked(copy); } });
-    var start = ui.button('Start training', { kind: 'secondary', className: 'px-welcome-start' });
+    // The way on into the app (fresh-player tests: a newcomer missed the ✕): full width and kept on
+    // the screen at the dialog's foot whatever its height; Join stays the Chimera action.
+    var start = ui.button('Continue to Parallax', { kind: 'secondary', className: 'px-welcome-start' });
     start.setAttribute('data-autofocus', '');
     start.setAttribute('data-welcome', 'start');
 
@@ -372,9 +375,9 @@
         h('p.px-welcome-text', { id: textId }, 'Come say hi, share your results and suggest exercises you would like to train.'),
         h('div.px-welcome-actions',
           join,
-          h('div.px-welcome-addr', copy, h('p.px-welcome-hint', 'The button opens a new tab. Some previews block that, so the address is here to copy.')),
-          start),
-        storageHint()));
+          h('div.px-welcome-addr', copy, h('p.px-welcome-hint', 'The button opens a new tab. Some previews block that, so the address is here to copy.'))),
+        storageHint()),
+      h('div.px-welcome-foot', start));
 
     var close = ui.modal({
       body: body,
