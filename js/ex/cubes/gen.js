@@ -39,9 +39,13 @@
 
    The starter band (v1.2, version 2; docs/research/v1.2/D2-first-band.md §3.3): two levels in
    front. Flat figures (every column one cube high: no cube is hidden and no top is covered, so a
-   cube's painted sides are 5 minus the cubes it touches), Δ −1.0; and 4–6 cubes on a 3 × 3 grid,
-   Δ −0.85 (the note's 4–5, widened to 6 so that every question there has four possible counts).
-   Old combinations keep their exact difficulty, so the floor moves from −2.3 to −4.15. Two
+   cube's painted sides are 5 minus the cubes it touches), Δ −0.85; and 4–6 cubes on a 3 × 3 grid,
+   Δ −0.7 (the note's 4–5 cubes at −0.85, widened to 6 so that every question there has four
+   possible counts, and its Δ scaled to the smaller step in cubes: 2.5 cubes below 6–9 against 3).
+   Flat −0.85 (the note: −1.0) prices flat 10–13-cube figures at the pre-1.2 floor, so strong
+   beginners leave the band within about 10 items (PLAN milestone 1 acceptance (c), firstband
+   test); a population at the pre-1.2 floor gets about 77 % of its first 10 items right. Old
+   combinations keep their exact difficulty, so the floor moves from −2.3 to −3.85. Two
    combinations cannot be built at 4–6 cubes, and the generator builds the nearest one that can,
    priced the same (eff(), difficulty()): a question about 1 or 2 painted sides (at most two such
    cubes exist, so the key would be guessable: 4–6 cubes always ask about 3 or 4), and a 4-high
@@ -67,7 +71,7 @@
   var ASK_OF = { many: [3, 4], few: [1, 2] };
   // Difficulty contributions per level (logits): the starter levels in front (Δ, note D2 §3.3),
   // then the 1.1 steps, so every 1.1 combination keeps its difficulty.
-  var BASE = -2.3, CUBES_AT = [-0.85, 0, 0.85, 1.7, 2.55], HEIGHT_AT = [-1.0, 0, 0.3, 0.6], ASK_STEP = 0.85;
+  var BASE = -2.3, CUBES_AT = [-0.7, 0, 0.85, 1.7, 2.55], HEIGHT_AT = [-0.85, 0, 0.3, 0.6], ASK_STEP = 0.85;
   // The counts each question can have at each size (measured over random valid figures: every k in
   // the range turns up in at least 3 % of them). The key is drawn evenly from N's range, so the
   // question alone never points to an answer; N without a range of three or more is not asked.

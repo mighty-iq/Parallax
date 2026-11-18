@@ -7,7 +7,7 @@ const FILES = [...MANIFEST, 'js/ex/cubes/gen.js', 'js/ex/cubes/learn.js'];
 const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 40 level combinations × 252
 // The starter band (v1.2, note D2 §3.3): flat figures (height level 0) and 4–6 cubes (cubes level 0).
 const inBand = (p) => p.cubes === 0 || p.height === 0;
-const OLD_FLOOR = -2.3, NEW_FLOOR = -4.15;
+const OLD_FLOOR = -2.3, NEW_FLOOR = -3.85;
 const procMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
 
 export async function run(t) {
@@ -26,14 +26,15 @@ export async function run(t) {
   t.eq(all.length, 40, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${lo.toFixed(2)} … ${hi.toFixed(2)})`);
-  t.near(lo, NEW_FLOOR, 1e-9, 'the new floor is −4.15 (flat, 4–6 cubes)');
+  t.near(lo, NEW_FLOOR, 1e-9, 'the new floor is −3.85 (flat, 4–6 cubes)');
   t.near(hi, 1.7, 1e-9, 'the top of the range is the 1.1 top');
   // Every 1.1 combination keeps its 1.1 difficulty: −2.3 + 0.85 · size + 0.3 · height + 0.85 · asked.
   let same11 = 0, n11 = 0;
   for (const p of all) if (!inBand(p)) { n11++; if (Math.abs(def.difficulty(p) - (OLD_FLOOR + 0.85 * (p.cubes - 1) + 0.3 * (p.height - 1) + 0.85 * p.asked)) < 1e-9) same11++; }
   t.eq(same11, n11, `every 1.1 combination keeps its 1.1 difficulty (${n11})`);
-  t.near(def.difficulty({ cubes: 1, height: 0, asked: 0 }), OLD_FLOOR - 1.0, 1e-9, 'flat: Δ −1.0');
-  t.near(def.difficulty({ cubes: 0, height: 1, asked: 0 }), OLD_FLOOR - 0.85, 1e-9, '4–6 cubes: Δ −0.85');
+  t.near(def.difficulty({ cubes: 1, height: 0, asked: 0 }), OLD_FLOOR - 0.85, 1e-9, 'flat: Δ −0.85');
+  t.near(def.difficulty({ cubes: 0, height: 1, asked: 0 }), OLD_FLOOR - 0.7, 1e-9, '4–6 cubes: Δ −0.7');
+  t.ok(def.difficulty({ cubes: 2, height: 0, asked: 0 }) >= OLD_FLOOR - 1e-9, 'flat 10–13 cubes sit at the pre-1.2 floor (strong beginners leave the band; firstband (c))');
   // At 4–6 cubes the question is always about 3 or 4 sides and columns stand at most 3 high: those
   // combinations are priced as what is built.
   t.ok([0, 1, 2, 3].every((h) => def.difficulty({ cubes: 0, height: h, asked: 1 }) === def.difficulty({ cubes: 0, height: h, asked: 0 })) &&
