@@ -434,10 +434,12 @@
     var svg = S2.svg(W, H, { viewBox: '0 0 ' + W + ' ' + H, width: '100%', class: 'ex-reckon-chartsvg', role: 'img', 'aria-label': cap('chartLabel') });
     svg.appendChild(S2.el('rect', { x: 0, y: (mid - tol * sc).toFixed(1), width: W, height: (2 * tol * sc).toFixed(1), class: 'ex-reckon-band' }));
     svg.appendChild(S2.el('line', { x1: 0, y1: mid, x2: W, y2: mid, class: 'ex-reckon-zero' }));
-    // how far round, as the bias line counts it: above the line past the start (too far), below short of it
+    // how far round, as the bias line counts it: above the line past the start (too far), below short of it;
+    // the latest route at the right end, under "latest" (v1.2 O40: the dots sat in a clump at the left)
+    var x0 = CHART_N - list.length;
     list.forEach(function (e, i) {
       var k = st.kit.norm180(e[2]), err = Math.max(-90, Math.min(90, st.kit.norm180(e[3] - e[2]) * (k < 0 ? -1 : 1)));
-      svg.appendChild(S2.el('circle', { cx: ((i + 1) * dx).toFixed(1), cy: (mid - err * sc).toFixed(1), r: 3.2, class: e[7] ? 'ex-reckon-dot is-right' : 'ex-reckon-dot is-wrong' }));
+      svg.appendChild(S2.el('circle', { cx: ((x0 + i + 1) * dx).toFixed(1), cy: (mid - err * sc).toFixed(1), r: 3.2, class: e[7] ? 'ex-reckon-dot is-right' : 'ex-reckon-dot is-wrong' }));
     });
     // axis words beside and under the plot (v1.2 O40): which side is too far, which end is the latest route
     return h('div.ex-reckon-chartbox',
