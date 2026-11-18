@@ -23,7 +23,7 @@
       'An exact fit: the opening is the solid\'s outline seen along that direction, at the same size.',
     ],
     strategyFirst: 'analytic',
-    minutes: 2,
+    minutes: 3,
     demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 4, kind: 'front' }],
     // Try 3 brings turned openings, after a worked example of a quarter-turned one on a sister item
     // (note D2 addendum C change 4).

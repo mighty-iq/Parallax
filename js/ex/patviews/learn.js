@@ -30,7 +30,7 @@
       'Every cube stands on the ground or on another cube: nothing hangs in the air.',
     ],
     strategyFirst: 'analytic',
-    minutes: 2,
+    minutes: 3,
     demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, seed: 13, kind: 'end' }],
     practice: [
       { params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, assist: { proj: true }, seed: 100 },
