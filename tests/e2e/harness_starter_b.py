@@ -4,13 +4,16 @@ step; the band's items fit one screen with every answer target at least 44 px an
 scroll; a wrong tap and show me run to the end (Form ends on the folded pattern); the Watch item plays
 to the end; the rules card lists 2-4 rules; no console or harness errors. Mid-animation screenshots
 at normal speed for the new show-me steps (Openings' turn and flip, Form's fold-up, Missing View's
-turn to the missing side). Screenshots: tests/e2e/out/starter_b/.
+turn to the missing side). Then the app's own Watch, Try, Go (index.html, fast) at 360 x 640: the rules
+card, the Watch to its end, the strategy card, Try 1-4 with the worked example right before the Try item
+that brings the first hard feature, and the end screen, with no console errors.
+Screenshots: tests/e2e/out/starter_b/.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_starter_b.py [openings form patfold patviews]"""
 import sys
 
 from playwright.sync_api import sync_playwright
 
-from common import OUT, Checks, Console, launch, non_blank
+from common import OUT, ROOT, Checks, Console, launch, non_blank
 from patb_common import PHONE, READY, STATE, fits, no_hscroll, page_url, report
 
 C = Checks('harness_starter_b')
@@ -99,12 +102,87 @@ def check(b, cons, ex):
     ctx.close()
 
 
+APP_READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
+EXAMPLE_BEFORE = {'openings': 3, 'form': 3, 'patviews': 3, 'patfold': 4}  # the Try item with the worked example
+
+
+def wtg_app(b, cons, ex):
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, **PHONE)
+    page = ctx.new_page()
+    con = Console(page)
+    cons.append(con)
+    page.goto((ROOT / 'index.html').as_uri())
+    page.wait_for_function(APP_READY, timeout=20000)
+    for _ in range(4):  # the Chimera welcome, then the first-run tour offer
+        if not page.evaluate('PX.ui.modalOpen()'):
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(120)
+    page.evaluate('PX.debug.fast(true)')
+    page.evaluate('(id) => { void PX.core.router.go("play", { mode: "watch", exId: id }, { force: true }); }', ex)
+    page.wait_for_selector('[data-card-box="wtg-rules"]', timeout=8000)
+    n = page.locator('[data-card-box="wtg-rules"] .pl-rule').count()
+    C.ok(2 <= n <= 4, f'{ex} app: Watch, Try, Go opens with the rules card ({n} rules)')
+    page.screenshot(path=str(DIR / f'{ex}_app_rules_360.png'))
+    page.locator('[data-card-box="wtg-rules"] [data-card="watch"]').tap()
+    texts, strategy, idle = [], False, 0
+    for _ in range(900):
+        if page.locator('[data-card="session"]').count():
+            break
+        box = page.locator('[data-card-box]')
+        cid = box.first.get_attribute('data-card-box') if box.count() else None
+        t = page.evaluate("() => (document.querySelector('.pl-wtg-text') || {}).textContent || ''")
+        if t and (not texts or texts[-1] != t):
+            texts.append(t)
+        if cid == 'wtg-strategy':
+            if not strategy:
+                page.screenshot(path=str(DIR / f'{ex}_app_strategy_360.png'))
+            strategy = True
+            page.locator('[data-card-box="wtg-strategy"] [data-card="try"]').tap()
+        elif cid:
+            page.locator(f'[data-card-box="{cid}"] [data-card]').first.tap()
+        else:
+            s = page.evaluate('__play.state')
+            if s == 'respond':
+                page.evaluate('() => __play.answer(true).catch(() => 0)')
+                idle = 0
+            elif s in ('reveal', 'showme'):
+                page.evaluate('() => __play.next()')
+                idle = 0
+            else:
+                nx = page.locator('[data-next]:visible')
+                if nx.count():
+                    nx.first.tap()
+                    idle = 0
+                else:
+                    idle += 1
+                    if idle > 150:  # 15 s with nothing to do: skip the running demo
+                        sk = page.locator('[data-turn-skip]:visible')
+                        if sk.count():
+                            sk.first.tap()
+                        idle = 0
+        page.wait_for_timeout(100)
+    end = page.locator('[data-card="session"]').count() == 1
+    body = page.evaluate('() => document.body.innerText')
+    C.ok(end and 'That was the tutorial' in body, f'{ex} app: Watch, Try, Go runs to its end screen, not skipped ({texts[-3:]})')
+    tries = [x for x in texts if x.startswith('Try: practice item')]
+    C.ok(strategy and len({x[:30] for x in tries}) == 4, f'{ex} app: the strategy card, then four Try items ({[x[:30] for x in tries]})')
+    k = EXAMPLE_BEFORE[ex]
+    pos = [i for i, x in enumerate(texts) if x.startswith('Try: first one more item')]
+    C.ok(len(pos) == 1 and any(x.startswith(f'Try: practice item {k} of') for x in texts[pos[0] + 1:pos[0] + 4]) and not any(x.startswith(f'Try: practice item {k} of') for x in texts[:pos[0]]),
+         f'{ex} app: one worked example, right before Try {k} ({[x[:34] for x in texts]})')
+    page.screenshot(path=str(DIR / f'{ex}_app_end_360.png'))
+    C.ok(not con.errors(), f'{ex} app: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main(which):
     cons = []
     with sync_playwright() as p:
         b = launch(p)
         for ex in which:
             check(b, cons, ex)
+            wtg_app(b, cons, ex)
         b.close()
     return report(C, cons, {'screenshots': sorted(x.name for x in DIR.glob('*.png'))})
 
