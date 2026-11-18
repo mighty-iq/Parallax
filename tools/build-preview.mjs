@@ -1,5 +1,5 @@
 // build-preview.mjs: the page for a private test-build preview in the Claude artifact host.
-//   node tools/build-single.mjs && node tools/build-preview.mjs [--out dist/preview/index.html]
+//   node tools/build-single.mjs && node tools/build-preview.mjs [--in dist/Parallax.html] [--out dist/preview/index.html]
 // Copies dist/Parallax.html, adds tools/preview-adapter.js before </body> (it saves the playtest
 // report to the host's database, see its header) and writes the result to dist/preview/, which
 // git ignores. It refuses a build whose playtest mode is not on by default (BUILD 'test').
@@ -10,11 +10,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const argOut = process.argv.indexOf('--out');
 const OUT = path.resolve(ROOT, argOut > 0 ? process.argv[argOut + 1] : 'dist/preview/index.html');
-const SINGLE = path.join(ROOT, 'dist/Parallax.html');
+const argIn = process.argv.indexOf('--in');
+const SINGLE = path.resolve(ROOT, argIn > 0 ? process.argv[argIn + 1] : 'dist/Parallax.html');
 
 const html = readFileSync(SINGLE, 'utf8');
 if (!/var BUILD = 'test';/.test(html)) {
-  console.error('build-preview: dist/Parallax.html is not a test build (js/ui/playtest.js BUILD must be \'test\')');
+  console.error('build-preview: ' + path.relative(ROOT, SINGLE) + ' is not a test build (js/ui/playtest.js BUILD must be \'test\')');
   process.exit(1);
 }
 const adapter = readFileSync(path.join(ROOT, 'tools/preview-adapter.js'), 'utf8')
