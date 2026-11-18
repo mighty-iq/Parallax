@@ -33,6 +33,8 @@
   max-width: calc(var(--pf-cols) * 11rem); margin: 0 auto;
 }
 .ex-patfold .ex-patfold-strip[data-n="3"] { --pf-cols: 3; }
+/* the starter band (one fold): two larger panels (O55) */
+.ex-patfold .ex-patfold-strip[data-n="2"] { --pf-cols: 2; max-width: 26rem; }
 .ex-patfold .ex-patfold-strip[hidden], .ex-patfold .ex-patfold-big[hidden] { display: none; }
 .ex-patfold .ex-patfold-panel { display: flex; flex-direction: column; min-width: 0; border-radius: var(--r-plate, 2px); }
 .ex-patfold .ex-patfold-plabel { position: static; display: block; margin: 0 0 0.125rem 0.125rem; white-space: nowrap; }
@@ -62,6 +64,9 @@
 .ex-patfold .ex-patfold-crease { stroke: var(--pf-mark); stroke-width: 0.08; stroke-dasharray: 0.28 0.18; }
 .ex-patfold .ex-patfold-ring { fill: none; stroke: var(--pf-mark); stroke-width: 0.08; }
 .ex-patfold .ex-patfold-other { fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 0.09; stroke-dasharray: 0.18 0.11; }
+/* the starter band: the 16 positions, faint, on the folded paper; Try 1's twin ring (dashed, so not colour alone) */
+.ex-patfold .ex-patfold-dot { fill: var(--pf-pos); opacity: 0.7; }
+.ex-patfold .ex-patfold-twin { stroke-dasharray: 0.2 0.12; stroke-width: 0.1; }
 
 /* options: the 16 positions */
 .ex-patfold .ex-patfold-sheet { fill: var(--pf-paper); stroke: var(--pf-edge); stroke-width: 0.06; }
@@ -74,6 +79,7 @@
   .ex-patfold .ex-patfold-strip { gap: var(--s1, 0.25rem) var(--s2, 0.5rem); }
   /* four panels (three folds and the punch) in two rows of two, so each is large enough to read */
   .ex-patfold .ex-patfold-strip[data-n="4"] { --pf-cols: 2; max-width: min(100%, 36vh); }
+  .ex-patfold .ex-patfold-strip[data-n="2"] { max-width: min(100%, 52vh); }
   .ex-patfold .px-choices[style*="--px-cols:5"] { --px-cols: 3 !important; gap: var(--s1, 0.25rem); }
   .ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, 16vh); }
   .ex-patfold .px-choice { padding-top: 1.2rem; min-height: 0; }
@@ -84,6 +90,7 @@
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-patfold .ex-patfold-strip[data-n="4"] { max-width: min(100%, calc(var(--pl-avail) - 21rem)); }
   .pl-trial.ex-patfold .ex-patfold-strip[data-n="3"] { max-width: min(100%, calc(1.5 * (var(--pl-avail) - 19rem))); }
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="2"] { max-width: min(100%, calc(var(--pl-avail) - 18rem)); }
   .pl-trial.ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, calc((var(--pl-avail) - 17rem) / 2)); }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {

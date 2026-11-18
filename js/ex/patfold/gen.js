@@ -12,9 +12,12 @@
    always through whole cells) and the same show-me states. Fold's ids, ratings and items do not
    change: Hole Punch is its own exercise with its own rating.
 
-   Two or three folds, never one: the official rules say every item has more than one fold
-   (R3 §2.2), and with one fold the key is {punch, its mirror}, so two cheap rules ("the hole
-   under the punch", "symmetric about the crease") cannot both be matched by any foil.
+   Two or three folds, as the official rules ask (every item has more than one fold; R3 §2.2), and
+   below them the starter band (v1.2; note D2 §3.6): one fold that matters, so two holes, labelled
+   "1 (starter)" because it lies outside the format. With one fold the key is {punch, its twin
+   across the crease}, so "a hole under the punch" and "symmetric about the crease" cannot both be
+   held near chance: crease symmetry is the band's method (taught, reported), at least one foil is
+   symmetric about the crease without the punch hole, and the rest share the punch hole.
 
    Foils. Fold's neighbouring problems (a fold unfolded across a wrong line, two wrong lines, two
    folds in the wrong order, the punch one cell away, mirrors), widened for the small sheet with
@@ -65,11 +68,15 @@
   var floor = Math.floor, abs = Math.abs, isArray = Array.isArray, isInt = Number.isInteger;
   var INF = Infinity, EPS = 1e-9;
   var SIZE = 4;
-  var FOLDS = [2, 3];
+  var FOLDS = [1, 2, 3]; // level 0 (v1.2): the starter band, one fold
   var TYPES = ['half', 'corner', 'diagonal', 'mixed'];
   var IDLE = [0, 1, 2];
   var NOPT = 5;
   var BASE = -1.85, STEP_FOLDS = 0.9, STEP_TYPE = 0.45, STEP_IDLE = -0.45;
+  // The starter band (v1.2; note D2 §3.6, §3.8): one fold that matters, Δ = −1.3 against two folds that
+  // both matter (hand-set, to be refitted from pooled exports), so the floor moves from −2.3 (two folds,
+  // one idle) to −3.15. Older combinations keep their exact difficulty.
+  var BAND_DELTA = -1.3;
   var AXES = [{ k: 'v', c: SIZE / 2 }, { k: 'h', c: SIZE / 2 }, { k: 'd', c: 0 }, { k: 'a', c: SIZE }];
 
   function foldLib() {
@@ -86,12 +93,13 @@
     });
     return p;
   }
-  // Fold's params: its folds levels are [1, 2, 3, 4, 5], so 2 and 3 folds are its indices 1 and 2.
-  function foldParams(p) { return { folds: p.folds + 1, type: p.type, punches: 0, idle: p.idle }; }
+  // Fold's params: its folds levels are [1, 2, 3, 4, 5], so 1, 2 and 3 folds are its indices 0, 1 and 2.
+  function foldParams(p) { return { folds: p.folds, type: p.type, punches: 0, idle: p.idle }; }
   function idleOf(p) { return Math.min(IDLE[p.idle], FOLDS[p.folds] - 1); }
+  // As in Fold: one fold cannot mix, so a one-fold "mixed" item is a diagonal fold and rates as one.
   function difficulty(params) {
-    var p = normParams(params);
-    return BASE + STEP_FOLDS * p.folds + STEP_TYPE * p.type + STEP_IDLE * idleOf(p);
+    var p = normParams(params), type = p.folds === 0 && p.type === 3 ? 2 : p.type;
+    return BASE + (p.folds === 0 ? BAND_DELTA : STEP_FOLDS * (p.folds - 1)) + STEP_TYPE * type + STEP_IDLE * idleOf(p);
   }
   function rint(r, n) { return floor(r.next() * n); }
   function rankCost(t, lo, hi) { return t < lo ? lo - t : t > hi ? t - hi : 0; }
@@ -99,6 +107,7 @@
   /* ---------- the foil hooks (run inside lib.sheet(4, …), so N = 4 there) ---------- */
 
   var api = null; // the sheet API of the current lib.sheet call
+  var bandNow = false; // the attempt in progress is on the starter band (one fold)
 
   // Widens Fold's pool with neighbouring problems that a 4 × 4 sheet needs: "the punch at another
   // place" (the true holes of a punch at any other cell of the folded paper with as many layers;
@@ -204,8 +213,13 @@
       var ups = 0;
       for (q2 = 0; q2 < nf; q2++) ups += opt[q2].up;
       if (!ups || (cap1 && !r1[1]) || (capA && !ra[1])) continue;
+      // The starter band (one fold): the key is the punch and its twin across the crease, so a hole
+      // under the punch and symmetry about the crease cannot both be held near chance (each foil has
+      // one of them at most). Crease symmetry is the format's method there (DECISIONS, PLAN Defaults):
+      // at least one foil is symmetric about the crease without the punch hole, and the rest share
+      // the punch hole (note D2 §3.6), so "a hole under the punch" stays near one in four.
       var cost = rankCost(tc, below, below + tie)
-        + (cap1 ? wS / (1 + r1[1]) : rankCost(ts1, r1[0], r1[1]))
+        + (bandNow ? 0 : cap1 ? wS / (1 + r1[1]) : rankCost(ts1, r1[0], r1[1]))
         + (capA ? wS / (1 + ra[1]) : rankCost(tsa, ra[0], ra[1]))
         + wU / (1 + ups);
       if (cost < bestCost - EPS) { bestCost = cost; best = opt; }
@@ -223,6 +237,7 @@
     };
   }
   function attempt(A, r, p, relaxed) {
+    bandNow = p.folds === 0;
     var raw = A.attempt(r, foldParams(p), relaxed);
     return raw ? convert(raw, p, 0) : null;
   }
@@ -306,12 +321,13 @@
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
 
   PX.ex.define({
-    id: 'patfold', version: 1, code: 'EX-17', name: 'Hole punch', short: 'Hole Punch',
+    id: 'patfold', version: 2, code: 'EX-17', name: 'Hole punch', short: 'Hole Punch',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', pat: true,
+    starter: { dim: 'folds', levels: 1 },
     requires: ['fold'], // Fold's paper model (lib.sheet), read at generate time
     answer: 'choice', nOptions: NOPT,
     dims: [
-      { key: 'folds', label: 'Folds', levels: FOLDS, step: STEP_FOLDS },
+      { key: 'folds', label: 'Folds', levels: ['1 (starter)', 2, 3], step: STEP_FOLDS, at: [BAND_DELTA, 0, STEP_FOLDS] },
       { key: 'type', label: 'Fold type', levels: TYPES, step: STEP_TYPE },
       { key: 'idle', label: 'Folds that do not matter', levels: IDLE, step: STEP_IDLE },
     ],

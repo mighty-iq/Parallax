@@ -23,28 +23,26 @@
       'Every fold lays the flap on top of the paper.',
       'The punch goes through every layer under it, so each layer gets one hole.',
     ],
-    // The easiest level: two straight folds, one of which misses the punch, so two holes.
-    demo: [
-      { params: { folds: 0, type: 0, idle: 1 }, seed: 3, kind: 'straight' },
-      { params: { folds: 0, type: 0, idle: 1 }, seed: 8, kind: 'straight' },
-    ],
-    // Try: the Watch's level, then two straight folds that both matter, then the first slanted
-    // crease in its easiest form (two 45° folds, the punch through one flap: just the punch and its
-    // twin across the slant), then a corner fold with a straight one, then three folds. The Watch
-    // stays at the easiest level, which has straight folds only, so the slanted crease gets its own
-    // gentle step and tip before the corner fold (fresh-player test, RV-play-dat).
+    // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.6): the rules card first, the
+    // Watch at the starter band (one fold, two larger panels), the card "Unfold backwards" before
+    // Try 1, Try 1 with the punch's twin ringed; then the pre-1.2 floor (an idle fold, with its tip)
+    // and two folds that both matter. Corner and slanted folds come later in Go, each with its tip.
+    strategyFirst: 'analytic',
+    minutes: 2,
+    demo: [{ params: { folds: 0, type: 0, idle: 0 }, seed: 14, kind: 'one fold' }],
     practice: [
-      { folds: 0, type: 0, idle: 1 },
-      { folds: 0, type: 0, idle: 0 },
-      { folds: 0, type: 2, idle: 1 },
-      { folds: 0, type: 1, idle: 0 },
-      { folds: 1, type: 0, idle: 0 },
+      { params: { folds: 0, type: 0, idle: 0 }, assist: { twin: true }, seed: 1 },
+      { params: { folds: 0, type: 0, idle: 0 }, seed: 13 },
+      { params: { folds: 1, type: 0, idle: 1 }, tip: 'idle', seed: 303 },
+      { params: { folds: 1, type: 0, idle: 0 }, tip: 'two', seed: 403 },
     ],
-    // In Try the first tip that fits the item is shown, so the slanted-crease tips come first.
+    // In Try and Go the first tip that fits the item is shown, so the slanted-crease tips come first.
     tips: [
       { id: 'diagonal', when: { dim: 'type', levels: [2, 3] }, text: 'A slanted crease mirrors on the slant: a hole crosses straight over the crease to the same distance on the other side.' },
       { id: 'corner', when: { dim: 'type', levels: [1] }, text: 'A corner fold has a slanted crease and covers only part of the paper: only a hole punched through the corner flap gets a twin, straight across the slant.' },
-      { id: 'three', when: { dim: 'folds', levels: [1] }, text: 'Three folds: unfold the last fold first. Each unfolding copies the holes on its flap across its crease.' },
+      { id: 'one', when: { dim: 'folds', levels: [0] }, text: 'Starter items: one fold. The punch goes through two layers, so the sheet gets two holes: the punch and its twin straight across the crease.' },
+      { id: 'two', when: { dim: 'folds', levels: [1] }, text: 'Two folds: undo the last fold first, then the first. Each unfolding gives every hole on its flap a twin across its crease.' },
+      { id: 'three', when: { dim: 'folds', levels: [2] }, text: 'Three folds: unfold the last fold first. Each unfolding copies the holes on its flap across its crease.' },
       { id: 'idle', when: { dim: 'idle', levels: [1, 2] }, text: 'Not every fold adds holes: when the punch misses a flap, unfolding that flap changes nothing.' },
     ],
     // Burte et al. 2018: a "two holes per fold" rule fits many solvers, and the folds relevant to
@@ -63,14 +61,16 @@
         when: 'Quick when the flaps are large and the creases are straight.',
       },
       {
-        id: 'analytic', title: 'Track the hole on a grid',
-        text: 'Work on the 16 positions: mark the punch, then mirror it across each crease that has paper under the punch, last fold first.',
+        // The analytic card in the format's own terms (note D2 §3.6; prep courses teach unfolding
+        // backwards on a sketched 4 × 4 grid, R3 §3.4): shown before Try 1; show-me carries out its steps.
+        id: 'analytic', title: 'Unfold backwards',
+        text: 'Work on the 16 positions, from the punched paper back to the flat sheet.',
         steps: [
-          'Mark the punch position: the sheet always has a hole there.',
-          'For the last fold: if its flap lies under the punch, mirror every marked hole on the flap across its crease (same distance, other side).',
-          'Repeat for each earlier fold, then compare your marks with the sheets hole by hole.',
+          'Mark the punch on the folded paper: the sheet always has a hole there.',
+          'Undo the last fold: a hole on the flap gets a twin straight across the crease, at the same distance.',
+          'Keep undoing, last fold first, then compare your holes with each sheet, position by position.',
         ],
-        when: 'Steady for corner and slanted folds, and when only some folds lie under the punch.',
+        when: 'From the first item on; steady for corner and slanted folds, and when only some folds lie under the punch.',
       },
       {
         id: 'switch', title: 'When to switch',
@@ -87,11 +87,12 @@
       folds: 'These panels show the folds, one at a time: dashed where the paper was, solid where it is now.',
       punch: 'The last panel shows where the folded paper is punched.',
       options: 'Every sheet below has the same number of holes. One of them is right.',
-      punched: 'The punch goes through {n} layers of paper, so the sheet gets {n} holes.',
-      unfold: 'Unfold fold {n}: each hole on the flap gets a twin across the crease.',
-      unfoldIdle: 'Unfold fold {n}: the punch missed this flap, so no new holes.',
-      done: 'Flat again. Sheet {n} has exactly these holes.',
+      punched: 'Mark the punch: it goes through {n} layers of paper, so the sheet gets {n} holes.',
+      unfold: 'Undo fold {n}: each hole on the flap gets a twin straight across the crease.',
+      unfoldIdle: 'Undo fold {n}: the punch missed this flap, so no new holes.',
+      done: 'Flat again: compare the holes with each sheet. Sheet {n} has exactly these.',
       chosen: 'Sheet {n}: the dashed rings are holes these folds do not make ({why}).',
+      assist: 'The punch\'s twin, straight across the crease, is ringed for you. Which sheet has both holes?',
     },
     checkin: { whole: 'I unfolded the paper in my mind', parts: 'I tracked the hole across each crease', unsure: 'Not sure' },
     bridge: 'Hole punching is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). Practice on a format usually raises scores on that format; an effect of Parallax on DAT scores has not been shown or measured, and those scores relate only modestly to dental-school grades. ' + ADA,
