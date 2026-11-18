@@ -8,7 +8,13 @@
    then its neighbours; after a wrong pick, the face that cannot be marked so (or the mirror image)
    is marked in that solid and in the pattern, or, for a wrong size, the edge that differs is marked
    in both. The Watch adds both kinds of wrong solid (foilTour). Every step's enter() sets its full
-   state. */
+   state.
+   Fold-up (O51, v1.2): after the landmark steps the pattern itself folds up about its hinges
+   (lib.fold with a fold fraction, the validator's own folding), seen at a slant, then turns to the
+   right solid's pose and size, so it lands on the picture of that solid. Drawn in its own SVG
+   layer over the pattern (depth-sorted faces; marks only on the outside).
+   Try 1 (ctx.assist = { letters: true }): the faces that share an edge with the shaded face once
+   folded are lettered in the pattern, the second step of the card "Shape, then one landmark" done. */
 (function (PX) {
   'use strict';
 
@@ -156,13 +162,15 @@
     var root = h('div.fm-stem'), stage = h('div.ex-stage.fm-stage');
     var svg = SV.el('svg', { class: 'fm-svg', 'aria-hidden': 'true', focusable: 'false', preserveAspectRatio: 'xMidYMid meet' });
     var label = h('span.ex-label.fm-label', 'Pattern');
-    stage.appendChild(svg); stage.appendChild(label);
+    var foldSvg = SV.el('svg', { class: 'fm-fold', 'aria-hidden': 'true', focusable: 'false' });
+    foldSvg.style.display = 'none';
+    stage.appendChild(svg); stage.appendChild(foldSvg); stage.appendChild(label);
     var caption = h('p.ex-caption', { 'aria-live': 'polite' }), verdict = h('div.ex-verdict.fm-verdict', { hidden: true, role: 'status' }), desc = h('p.px-sr');
     root.appendChild(stage);
     root.appendChild(h('div.fm-under', caption, verdict));
     root.appendChild(desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, stage: stage, svg: svg, label: label, caption: caption, verdict: verdict, desc: desc, item: null, optItem: null, opts: [], k: 30 };
+    st = { ctx: ctx, root: root, stage: stage, svg: svg, foldSvg: foldSvg, label: label, caption: caption, verdict: verdict, desc: desc, item: null, optItem: null, opts: [], k: 30 };
   }
   function present(item, ctx) {
     if (!st) mount(ctx);
@@ -173,8 +181,30 @@
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
     drawNet(item);
+    showFold(false);
+    if (ctx && ctx.assist && ctx.assist.letters) { letterNeighbours(item); st.caption.textContent = cap('assist'); }
+    if (ctx && ctx.assist && ctx.assist.half) { dotHalfCorner(item); st.caption.textContent = cap('assistHalf'); }
     fitHatches();
     return timing.nextPaint();
+  }
+  // Try 3's first look at a half mark: its shaded corner dotted in the pattern (which way it is turned).
+  function dotHalfCorner(item) {
+    item.net.forEach(function (n) {
+      var m = item.marks[n.face], g = st.netG[n.face];
+      if (!m || typeof m !== 'object' || !g) return;
+      var c = g.pts[(m.h + 1) % 4], q = centroid(g.pts), r = 6 / st.k;
+      st.netLabels.appendChild(SV.el('circle', { cx: c[0] + (q[0] - c[0]) * 0.18, cy: c[1] + (q[1] - c[1]) * 0.18, r: r, class: 'fm-corner' }));
+    });
+  }
+  // Try 1's step done: the faces that meet the shaded face once folded, lettered where they lie in the
+  // pattern (they need not touch it there).
+  function letterNeighbours(item) {
+    var f0 = item.marks.indexOf(1), letters = 'ABCDEFG', n = 0, size = 15 / st.k;
+    if (f0 < 0) return;
+    lib.adjacency(item.solid).forEach(function (e) {
+      var o = e.f === f0 ? e.g : e.g === f0 ? e.f : -1, nf = o >= 0 ? st.netG[o] : null;
+      if (nf && n < letters.length) label(st.netLabels, nf.pts, letters[n++], size);
+    });
   }
   var WHY = { shape: 'Wrong size', marks: 'Marks do not fit', mirror: 'Mirror image' };
   function reveal(item, response, result, ctx) {
@@ -220,6 +250,7 @@
   }
   function optUnit(i) { var r = st.opts[i].svg.getBoundingClientRect(); return st.E / Math.max(1, Math.min(r.width, r.height)); }
   function clearMarks() {
+    showFold(false);
     PX.ui.clear(st.netLabels);
     st.opts.forEach(function (o, j) {
       if (!o) return;
@@ -304,11 +335,107 @@
     if (other >= 0) list.push(whyStep(item, other, 3400));
     return list;
   }
-  // The Watch: the landmark method, then both kinds of wrong solid, then back to the right one so the
-  // Watch ends on the answer.
+  // The Watch: the landmark method and the fold-up, then both kinds of wrong solid, then back to the
+  // right one so the Watch ends on the answer.
   function demoList(item) {
     var base = steps(item, null), tour = foilTour(item);
-    return tour.length ? base.concat(tour, [base[base.length - 1]]) : base;
+    return tour.length ? base.concat(tour, [base.landStep]) : base;
+  }
+
+  /* ---------- the fold-up (O51) ---------- */
+  function sub3(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function unit3(a) { var l = Math.sqrt(dot(a, a)) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+  function mat3(rows) { return [rows[0][0], rows[0][1], rows[0][2], rows[1][0], rows[1][1], rows[1][2], rows[2][0], rows[2][1], rows[2][2]]; }
+  function mm3(A, B) { var C = []; for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) C.push(A[r * 3] * B[c] + A[r * 3 + 1] * B[3 + c] + A[r * 3 + 2] * B[6 + c]); return C; }
+  function mv3(M, v) { return [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]]; }
+  // rotation matrix ↔ unit quaternion [w, x, y, z], and slerp between two rotations
+  function quatOf(m) {
+    var t = m[0] + m[4] + m[8], q;
+    if (t > 0) { var s0 = Math.sqrt(t + 1) * 2; q = [s0 / 4, (m[7] - m[5]) / s0, (m[2] - m[6]) / s0, (m[3] - m[1]) / s0]; }
+    else if (m[0] > m[4] && m[0] > m[8]) { var s1 = Math.sqrt(1 + m[0] - m[4] - m[8]) * 2; q = [(m[7] - m[5]) / s1, s1 / 4, (m[1] + m[3]) / s1, (m[2] + m[6]) / s1]; }
+    else if (m[4] > m[8]) { var s2 = Math.sqrt(1 + m[4] - m[0] - m[8]) * 2; q = [(m[2] - m[6]) / s2, (m[1] + m[3]) / s2, s2 / 4, (m[5] + m[7]) / s2]; }
+    else { var s3 = Math.sqrt(1 + m[8] - m[0] - m[4]) * 2; q = [(m[3] - m[1]) / s3, (m[2] + m[6]) / s3, (m[5] + m[7]) / s3, s3 / 4]; }
+    return q;
+  }
+  function matOf(q) {
+    var w = q[0], x = q[1], y = q[2], z = q[3];
+    return [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w), 2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w), 2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)];
+  }
+  function slerpM(A, B, t) {
+    var a = quatOf(A), b = quatOf(B), d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+    if (d < 0) { b = b.map(function (x) { return -x; }); d = -d; }
+    var q;
+    if (d > 0.9995) q = a.map(function (x, i) { return x + (b[i] - x) * t; });
+    else { var th = Math.acos(d), sa = Math.sin((1 - t) * th) / Math.sin(th), sb = Math.sin(t * th) / Math.sin(th); q = a.map(function (x, i) { return x * sa + b[i] * sb; }); }
+    var l = Math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+    return matOf(q.map(function (x) { return x / l; }));
+  }
+  function camRows(v) { var r = unit3([v[2], 0, -v[0]]); return mat3([r, cross(v, r), v]); } // right, up, toward the viewer
+  var SLANT = unit3([0.38, 0.42, 0.82]);
+  // The fold's geometry: the folded corners carried onto the solid by a turn (frames on the three
+  // corners spanning the largest triangle), the cameras before, at a slant and as the right solid's
+  // picture, and the centres to turn about.
+  function foldModel(item) {
+    var S = item.solid, pts = lib.fold(item), where = {}, key = item.options[item.key], V = S.verts, best = -1, a = 0, b = 1, c = 2;
+    if (typeof pts === 'string') return null;
+    S.faces.forEach(function (F, f) { F.forEach(function (v, i) { where[v] = pts[f][i]; }); });
+    for (var i = 0; i < V.length; i++) for (var j = i + 1; j < V.length; j++) for (var k = j + 1; k < V.length; k++) {
+      var ar = Math.sqrt(dot(cross(sub3(V[j], V[i]), sub3(V[k], V[i])), cross(sub3(V[j], V[i]), sub3(V[k], V[i]))));
+      if (ar > best) { best = ar; a = i; b = j; c = k; }
+    }
+    function frame(p, q, r) { var e1 = unit3(sub3(q, p)), e2 = unit3(cross(sub3(q, p), sub3(r, p))); return mat3([e1, e2, cross(e2, e1)]); }
+    var Fw = frame(where[a], where[b], where[c]), Fs = frame(V[a], V[b], V[c]);
+    var R = mm3([Fs[0], Fs[3], Fs[6], Fs[1], Fs[4], Fs[7], Fs[2], Fs[5], Fs[8]], Fw); // Fsᵀ · Fw: folded → solid
+    var dir = lib.VIEWS[key.view.el || 0], up = cross(dir, RIGHT), Mv = lib.viewMatrix(key.view);
+    var C2 = mm3(mm3(mat3([RIGHT, up, dir]), Mv), R);
+    var nb = netBox(item.net), netC = [(nb[0] + nb[2]) / 2, -(nb[1] + nb[3]) / 2, 0], solidC = [0, 0, 0];
+    S.verts.forEach(function (_, v) { solidC = [solidC[0] + where[v][0] / V.length, solidC[1] + where[v][1] / V.length, solidC[2] + where[v][2] / V.length]; });
+    return { C0: [1, 0, 0, 0, 1, 0, 0, 0, 1], C1: camRows(SLANT), C2: C2, netC: netC, solidC: solidC };
+  }
+  function showFold(on) {
+    if (!st || !st.foldSvg) return;
+    st.foldSvg.style.display = on ? '' : 'none';
+    st.svg.style.opacity = on ? '0.12' : '';
+  }
+  // The pattern folded by fraction t, seen through camera rows Q, turned about centre cen; drawn with
+  // the outside faces in their tones and marks, the inside pale, far faces first.
+  function drawFold(item, fm, t, Q, cen) {
+    var svg = st.foldSvg, W = Math.max(1, st.stage.clientWidth), H = Math.max(1, st.stage.clientHeight), top = 22, k = st.k;
+    var pts = lib.fold(item, t), ox = W / 2, oy = top + (H - top) / 2;
+    if (typeof pts === 'string') return;
+    PX.ui.clear(svg);
+    SV.attrs(svg, { viewBox: [0, 0, W, H] });
+    var fill = hatchDefs(svg, 5).url, list = [];
+    item.net.forEach(function (n) {
+      var P = pts[n.face].map(function (p) { return mv3(Q, sub3(p, cen)); }), nz = 0, z = 0;
+      for (var i = 0; i < P.length; i++) { var p = P[i], q = P[(i + 1) % P.length]; nz += (p[0] - q[0]) * (p[1] + q[1]); z += p[2] / P.length; }
+      var nn = unit3(lib.newell(P));
+      list.push({ f: n.face, z: z, front: nn[2] > 0, light: dot(nn, [-0.3, 0.6, 0.75]), scr: P.map(function (p) { return [ox + k * p[0], oy - k * p[1]]; }) });
+    });
+    list.sort(function (x, y) { return x.z - y.z; });
+    list.forEach(function (x) {
+      var g = SV.el('g');
+      g.appendChild(SV.el('path', { d: SV.pathData(x.scr, true), class: x.front ? 'px-fig-face ' + tone(x.light) : 'fm-inside' }));
+      var mp = x.front ? markPoly(x.scr, item.marks[x.f]) : null;
+      if (mp) g.appendChild(SV.el('path', { d: SV.pathData(mp, true), class: 'fm-mark', style: 'fill:' + fill }));
+      g.appendChild(SV.el('path', { d: SV.pathData(x.scr, true), class: 'fm-edge' }));
+      svg.appendChild(g);
+    });
+  }
+  function lerp3(a, b, e) { return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e]; }
+  function foldSteps(item) {
+    var fm = foldModel(item), key = item.key;
+    if (!fm) return [];
+    function ease(x) { return x * x * (3 - 2 * x); }
+    return [
+      { ms: 1000, caption: cap('foldTilt'), enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 0, fm.C0, fm.netC); },
+        update: function (x) { drawFold(item, fm, 0, slerpM(fm.C0, fm.C1, ease(x)), fm.netC); } },
+      { ms: 2600, caption: cap('foldUp'), enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 0, fm.C1, fm.netC); },
+        update: function (x) { drawFold(item, fm, ease(x), fm.C1, fm.netC); } },
+      { ms: 2000, caption: cap('foldTurn', { n: key + 1 }), enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 1, fm.C1, fm.netC); },
+        update: function (x) { var e = ease(x); drawFold(item, fm, 1, slerpM(fm.C1, fm.C2, e), lerp3(fm.netC, fm.solidC, e)); },
+        exit: function () { focusOption(key); } },
+    ];
   }
   function steps(item, response) {
     var key = item.key, picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
@@ -326,7 +453,10 @@
       { ms: 2200, caption: cap('neighbours', { list: tags.slice(1).map(function (x) { return x.t; }).join(', ') || '—' }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
       { ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
     ];
+    var landStep = list[list.length - 1];
+    list = list.concat(foldSteps(item));
     if (picked >= 0) list.push(whyStep(item, picked, 3000));
+    list.landStep = landStep;
     return list;
   }
 

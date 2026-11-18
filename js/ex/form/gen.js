@@ -263,7 +263,9 @@
   // §8.6), and on these symmetric solids shaded faces alone then allow at most two different marked
   // solids (a box with one or two shaded faces has only one); the half mark, which is oriented, is what
   // makes three wrong arrangements possible.
-  var MARKS = [['F', 'H'], ['F', 'F', 'H'], ['F', 'H', 'H']];
+  // Level 0 (v1.2, the starter band; note D2 §3.5): one shaded face and no half mark.
+  var MARKS = [['F'], ['F', 'H'], ['F', 'F', 'H'], ['F', 'H', 'H']];
+  var MARK_LABELS = ['one shaded (starter)', 'shaded and half', 'two shaded and half', 'shaded and two halves'];
   function quads(s) { return s.faces.map(function (F, f) { return F.length === 4 ? f : -1; }).filter(function (f) { return f >= 0; }); }
   // A face's shape whichever way it is turned or flipped: corner count, then its sides and diagonals,
   // sorted. Squared lengths ×16 are whole numbers here (corners on a quarter-unit lattice), so the key
@@ -385,10 +387,90 @@
   var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, nets: 0, noView: 0, noMarks: 0, fewOrbits: 0, fewFoils: 0, noSet: 0, lastInvalid: null, lastError: null };
   var FOILS = ['shape', 'marks'];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
-  function cleanParams(params) { return { solid: lvl(params, 'solid', 3), marks: lvl(params, 'marks', 3), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
+  function cleanParams(params) { return { solid: lvl(params, 'solid', 3), marks: lvl(params, 'marks', 4), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
+  /* ------------------------------------------------------------ the starter band (v1.2) */
+  // One shaded face and no half mark (note D2 §3.5). With one shade a mark foil can only move it to a
+  // face of another shape (on these solids a turn carries every face onto each congruent one), so face
+  // shape decides it: the band's method, taught on the strategy card and reported, not bounded (DECISIONS).
+  // Foil level 0: one mark foil and two wrong-size solids, one size off by at least 40 % (both the same
+  // stretched solid: one with the pattern's shade, one with the mark foil's), so the options form a
+  // 2 × 2 of right or wrong size and right or wrong shaded face, and neither alone finds the key.
+  // Foil level 1 keeps that design with the sizes closer, 25 to 39 % off: "marks only" cannot be built
+  // with one shade, since upright pictures never show the base, so a solid has at most two other face
+  // shapes a picture can carry the shade on (DECISIONS).
+  var BAND_KINDS = [['box', 'tri'], ['wedge', 'pyr'], ['frus', 'house']];
+  var BAND_OFF = [[0.4, 0.6], [0.25, 0.4]]; // per foil level: a size off by [at least, under] this share
+  function classCount(s) { var c = {}; shapeClasses(s).forEach(function (k) { c[k] = 1; }); return Object.keys(c).length; }
+  function stretchedBand(rng, s, foil) {
+    var lo = BAND_OFF[foil][0], hi = BAND_OFF[foil][1];
+    for (var t = 0; t < 8; t++) {
+      var i = rint(rng, 0, s.kind === 'frus' ? 2 : s.dims.length - 1), d0 = s.dims[i], cand = [];
+      for (var k = -5; k <= 5; k++) {
+        var dd = d0 + k / 2, off = Mth.abs(dd - d0) / d0;
+        if (k && dd >= 1 && off >= lo - 1e-9 && off < hi - 1e-9) cand.push(dd);
+      }
+      if (!cand.length) continue;
+      var d = s.dims.slice();
+      d[i] = rpick(rng, cand);
+      if (s.kind === 'trap' && !(d[1] <= d[0] - 1)) continue;
+      if (s.kind === 'box' && (d[0] === d[1] || d[1] === d[2] || d[0] === d[2])) continue;
+      return build(s.kind, d);
+    }
+    return null;
+  }
+  function buildBand(rng, p) {
+    var kind = rpick(rng, BAND_KINDS[p.solid]), S = build(kind, randomDims(rng, kind)), net = null;
+    for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S);
+    if (!net) { stats.nets++; return null; }
+    var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, all1, p.view);
+    if (!kv) { stats.noView++; return null; }
+    var M = randomMarks(rng, S, 0, seenFaces(S, kv));
+    if (!M) { stats.noMarks++; return null; }
+    // per other face shape, the shade on each face of that shape in turn (a view must show it)
+    var cls = shapeClasses(S), maps = autos(S).map(function (a) { return a.v; }), byCls = {}, others = [];
+    rshuffle(rng, S.faces.map(function (_, g) { return g; })).forEach(function (g) {
+      if (cls[g] === cls[M.indexOf(1)]) return;
+      var m = S.faces.map(function () { return 0; });
+      m[g] = 1;
+      if (!byCls[cls[g]]) { byCls[cls[g]] = []; others.push(byCls[cls[g]]); }
+      byCls[cls[g]].push(m);
+    });
+    if (!others.length) { stats.fewOrbits++; return null; }
+    function withView(solid, list, kindName, orbit) {
+      for (var q = 0; q < list.length; q++) for (var r = 0; r < 3; r++) {
+        var v = randomView(rng, solid, list[q], p.view);
+        if (v && !possible(S, M, solid, list[q], v, solid === S ? maps : null)) return { kind: kindName, solid: solid, marks: list[q], view: v, orbit: orbit };
+      }
+      return null;
+    }
+    var mf = others.map(function (list, c) { return withView(S, list, 'marks', 'm' + c); }), sets = [];
+    for (var j = 0; j < 3; j++) {
+      var st = stretchedBand(rng, S, p.foil);
+      if (!st) continue;
+      var sa = withView(st, [M], 'shape', 's' + j + 'k');
+      if (!sa) continue;
+      others.forEach(function (list, c) { var sc = mf[c] && withView(st, [mf[c].marks].concat(list), 'shape', 's' + j + 'm' + c); if (sc) sets.push([mf[c], sa, sc]); });
+    }
+    if (!sets.length) { stats.fewFoils++; return null; }
+    var key = { kind: 'key', solid: S, marks: M, view: kv }, netAdj = netTouch(net, M), kf = optFeats(key, netAdj);
+    var want = SOLVERS.map(function () { return rng.chance(0.25) ? 1 : 0; }), best = null, bestScore = INF;
+    rshuffle(rng, sets).slice(0, 24).forEach(function (set) {
+      var sh = shares([kf].concat(set.map(function (o) { return optFeats(o, netAdj); }))), score = 0;
+      for (var k = 0; k < sh.length; k++) score += WEIGHTS[k] * Mth.abs(sh[k] - want[k]);
+      if (score < bestScore - 1e-9) { bestScore = score; best = set; }
+    });
+    var perm = rshuffle(rng, [0, 1, 2, 3]), all = [key].concat(best);
+    function pubSolid(s0) { return { kind: s0.kind, dims: s0.dims, verts: s0.verts, faces: s0.faces }; }
+    return {
+      solid: pubSolid(S), net: net, marks: M, key: perm.indexOf(0),
+      options: perm.map(function (i) { var o = all[i]; return { kind: o.kind, solid: pubSolid(o.solid), marks: o.marks, view: o.view }; }),
+    };
+  }
+
   function buildItem(rng, p) {
+    if (p.marks === 0) return buildBand(rng, p);
     // a rectangular pyramid has one four-sided face, too few for two half marks
-    var kinds = KINDS[p.solid].filter(function (k) { return p.marks < 2 || k !== 'pyr'; });
+    var kinds = KINDS[p.solid].filter(function (k) { return p.marks < 3 || k !== 'pyr'; });
     var kind = rpick(rng, kinds), S = build(kind, randomDims(rng, kind)), net = null;
     for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S);
     if (!net) { stats.nets++; return null; }
@@ -453,8 +535,10 @@
   }
   // Folds the stored net: the root lies in the plane z = 0 seen from +z (the outside up); every other
   // face turns about its hinge by the angle between its solid face's normal and its parent's, away
-  // from the viewer. Returns per face the folded points, or a reason.
-  function fold(item) {
+  // from the viewer. Returns per face the folded points, or a reason. frac (0–1, default 1): every
+  // hinge turned by that share of its angle (the view's fold-up show-me; the validator uses 1).
+  function fold(item, frac) {
+    var share = frac === undefined ? 1 : frac;
     var S = item.solid, net = item.net, by = {}, pts = {}, i;
     if (!Array.isArray(net) || net.length !== S.faces.length) return 'the net must have one piece per face';
     net.forEach(function (n) { by[n.face] = n; });
@@ -476,7 +560,7 @@
         var A = [P[pa][0], P[pa][1], 0], B = [P[pb][0], P[pb][1], 0], k = unit(sub(B, A)), cen = [0, 0, 0];
         C.forEach(function (q) { cen = add(cen, [q[0] / C.length, q[1] / C.length, 0]); });
         var sgn = turn(cen, A, k, phi)[2] < 0 ? 1 : -1;
-        chain[n.face] = chain[n.parent].concat([{ A: A, k: k, a: sgn * phi }]);
+        chain[n.face] = chain[n.parent].concat([{ A: A, k: k, a: sgn * phi * share }]);
         pts[n.face] = C.map(function (q) {
           var p = [q[0], q[1], 0], L = chain[n.face];
           for (var t = L.length - 1; t >= 0; t--) p = turn(p, L[t].A, L[t].k, L[t].a); // innermost turn first
@@ -627,8 +711,33 @@
         if (i === item.key && !ok) return 'the key is not the folded net';
         if (i !== item.key && ok) return 'option ' + i + ' could also be the folded net';
       }
+      if (cleanParams(item.params).marks === 0) return validBand(item);
       return true;
     } catch (e) { return 'validate threw: ' + (e && e.message); }
+  }
+  // The starter band's promises, checked on what is stored: one shaded face and no half mark, on the
+  // pattern and on every option; every option's corners are its stated sizes (rebuilt here), and a
+  // wrong-size solid differs from the pattern in one size only, by at least 40 % (25 % at foil level
+  // 1); the easiest solids are boxes and triangular prisms.
+  function validBand(item) {
+    function one(m) { return m.filter(function (x) { return x === 1; }).length === 1 && !m.some(function (x) { return x && typeof x === 'object'; }); }
+    if (!one(item.marks)) return 'starter: one shaded face and no half mark';
+    var p = cleanParams(item.params), d0 = item.solid.dims;
+    for (var i = 0; i < 4; i++) {
+      var o = item.options[i];
+      if (!one(o.marks)) return 'starter: option ' + i + ' must show one shaded face and no half mark';
+      if (o.solid.kind !== item.solid.kind || o.solid.dims.length !== d0.length) return 'starter: option ' + i + ' is another kind of solid';
+      var R = BUILD[o.solid.kind](o.solid.dims);
+      if (R.verts.length !== o.solid.verts.length || R.verts.some(function (v, k) { return len(sub(v, o.solid.verts[k])) > 1e-9; })) return 'starter: option ' + i + '\'s corners are not its stated sizes';
+      var off = o.solid.dims.map(function (d, k) { return Mth.abs(d - d0[k]); }), n = off.filter(function (x) { return x > 1e-9; }).length;
+      if (n > 1) return 'starter: option ' + i + ' differs in more than one size';
+      if (n === 1) {
+        var k1 = off.findIndex(function (x) { return x > 1e-9; }), need = p.foil === 0 ? 0.4 : 0.25;
+        if (off[k1] < need * d0[k1] - 1e-9) return 'starter: option ' + i + '\'s size is off by less than ' + Mth.round(need * 100) + ' %';
+      }
+    }
+    if (p.solid === 0 && item.solid.kind !== 'box' && item.solid.kind !== 'tri') return 'starter: a box or a triangular prism';
+    return true;
   }
   function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
 
@@ -653,6 +762,7 @@
     var tries = [p, { solid: 0, marks: p.marks, view: 0, foil: p.foil }, { solid: 0, marks: 0, view: 0, foil: 0 }];
     for (var t = 0; t < tries.length; t++) for (var k = 0; k < 300; k++) {
       var q = tries[t], item = attempt(PX.rng(PX.rng.hash('form-fallback', q.solid, q.marks, q.view, q.foil, k)), q);
+      if (item) item.params = q; // validate reads the level (the starter band's checks)
       if (item && validate(item) === true) { item.fallback = true; return item; }
     }
     throw new Error('form: no valid item could be built'); // unreachable while the fallback test passes
@@ -665,12 +775,16 @@
   // (wedges and pyramids, then frusta and five-sided prisms: slanted faces to fold), marks +0.6 per
   // level (a third mark to place, then a second half mark: two turns to check), view +0.5 per level
   // (on a side, upside down), mark foils only +0.8 (no wrong shape to rule out first). Range 4.0.
+  // v1.2 (version 2; note D2 §3.5, §3.8): a starter level in front of 'marks', one shaded face and no
+  // half mark, Δ = −1.5 against today's level 0 (hand-set, to be refitted from pooled exports): the floor
+  // moves from −2.2 to −3.7 and older combinations keep their exact difficulty. Range 5.5.
   PX.ex.define({
-    id: 'form', version: 1, code: 'EX-19', name: 'Form', short: 'Form',
+    id: 'form', version: 2, code: 'EX-19', name: 'Form', short: 'Form',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 4, pat: true,
+    starter: { dim: 'marks', levels: 1 },
     dims: [
       { key: 'solid', label: 'Solid', levels: ['boxes and prisms', 'wedges and pyramids', 'frusta and five-sided'], step: 0.5 },
-      { key: 'marks', label: 'Marks', levels: ['shaded and half', 'two shaded and half', 'shaded and two halves'], step: 0.6 },
+      { key: 'marks', label: 'Marks', levels: MARK_LABELS.slice(), step: 0.6, at: [-1.5, 0, 0.6, 1.2] },
       { key: 'view', label: 'Pictures', levels: ['upright', 'on a side', 'upside down'], step: 0.5 },
       { key: 'foil', label: 'Foils', levels: ['shape and marks', 'marks only'], step: 0.8 },
     ],
@@ -684,6 +798,7 @@
       randomView: randomView, feats: feats, touchRule: touchRule, netTouch: netTouch, shares: shares, optFeats: optFeats,
       foldLines: foldLines, layings: layings, foldsOnto: foldsOnto, faceCos: faceCos,
       fold: fold, validNet: validNet, okSolid: okSolid, buildItem: buildItem, fallback: fallback, cleanParams: cleanParams, mvec: mvec, newell: newell,
+      buildBand: buildBand, validBand: validBand, classCount: classCount, shapeClasses: shapeClasses, BAND_KINDS: BAND_KINDS,
     },
   });
 })(window.PX);

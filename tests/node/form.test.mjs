@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/form/gen.js', 'js/ex/form/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10044); // 186 per combination
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 140 per combination (72 with the starter band)
 const CHANCE = 0.25, LIMIT = CHANCE + 0.10;
 
 export async function run(t) {
@@ -38,11 +38,15 @@ const pk = (p) => `${p.solid}${p.marks}${p.view}${p.foil}`;
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat],
-    ['form', 1, 'EX-19', ['Vz'], 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise)');
-  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['solid', 3], ['marks', 3], ['view', 3], ['foil', 2]], 'dims');
+    ['form', 2, 'EX-19', ['Vz'], 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise; version 2: the starter band)');
+  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['solid', 3], ['marks', 4], ['view', 3], ['foil', 2]], 'dims');
+  t.eq(def.starter, { dim: 'marks', levels: 1 }, 'the starter band is the first level of marks');
+  t.eq(def.dims[1].at, [-1.5, 0, 0.6, 1.2], 'marks: the band offset in front, older levels at their 1.1 difficulty (step 0.6)');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
+  t.ok(Math.abs(lo + 3.7) < 1e-9, `the floor moves to −3.7 (${lo.toFixed(2)}; note D2 §3.5)`);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${(hi - lo).toFixed(2)})`);
-  t.ok(pRight(0, lo) >= 0.88 && pRight(0, lo) <= 0.93, `a beginner gets the easiest items about 90 % right (${pRight(0, lo).toFixed(3)})`);
+  const old0 = PX.ex.difficulty(def, { solid: 0, marks: 1, view: 0, foil: 0 });
+  t.ok(Math.abs(old0 + 2.2) < 1e-9 && pRight(0, old0) >= 0.88 && pRight(0, old0) <= 0.93, `a beginner at θ = 0 gets the pre-1.2 floor about 90 % right (${pRight(0, old0).toFixed(3)}), the starter band ${pRight(0, lo).toFixed(3)}`);
 }
 
 /* ------------------------------------------------------------------ the model */
@@ -82,7 +86,7 @@ function testModel(t, PX, L) {
 function testPool(t, PX, def, L) {
   t.section('form: pool');
   const combos = PX.ex.enumerate(def);
-  t.eq(combos.length, 54, '54 combinations (3 × 3 × 3 × 2)');
+  t.eq(combos.length, 72, '72 combinations (3 × 4 × 3 × 2)');
   const per = Math.ceil(N_ITEMS / combos.length), items = [];
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, malformed = 0, json = 0, first = null;
   const before = { ...L.stats };
@@ -127,12 +131,30 @@ function testItems(t, PX, def, L, pool) {
   t.section('form: items');
   const ranks = [0, 0, 0, 0], kinds = {}, solids = {};
   let lvl = 0, marksOk = 0, viewOk = 0, shapeOk = 0, nShape = 0, noCube = 0, seen3 = 0, congruentOk = 0, nFoil = 0;
+  let nBand = 0, band2x2 = 0, bandOff = 0, bandKinds = 0;
   for (const { p, it } of pool) {
     ranks[it.key]++;
     solids[it.solid.kind] = (solids[it.solid.kind] || 0) + 1;
     if (L.KINDS[p.solid].includes(it.solid.kind)) lvl++;
     const m = it.marks, ones = m.filter((x) => x === 1).length, halves = m.filter((x) => typeof x === 'object').length;
-    if ((p.marks === 0 && ones === 1 && halves === 1) || (p.marks === 1 && ones === 2 && halves === 1) || (p.marks === 2 && ones === 1 && halves === 2)) marksOk++;
+    if ((p.marks === 0 && ones === 1 && halves === 0) || (p.marks === 1 && ones === 1 && halves === 1) || (p.marks === 2 && ones === 2 && halves === 1) || (p.marks === 3 && ones === 1 && halves === 2)) marksOk++;
+    if (p.marks === 0) { // the starter band (note D2 §3.5)
+      nBand++;
+      if (p.solid > 0 || ['box', 'tri'].includes(it.solid.kind)) bandKinds++;
+      // a 2 × 2 of right or wrong size and right or wrong shaded face shape
+      const sz = it.options.map((o) => o.solid.dims.join() === it.solid.dims.join()), shadeKey = (o) => shapeOf(o.solid, o.marks.indexOf(1));
+      const keyShade = shadeKey(it.options[it.key]), stretched = it.options.filter((o, i) => !sz[i]);
+      const cls = it.options.map((o, i) => (sz[i] ? 'S' : 'W') + (i === it.key || (sz[i] ? false : stretched.length === 2 && JSON.stringify(o.marks) === JSON.stringify(it.marks)) ? 'k' : 'm'));
+      if (JSON.stringify(cls.slice().sort()) === JSON.stringify(['Sk', 'Sm', 'Wk', 'Wm']) && stretched.length === 2 && stretched[0].solid.dims.join() === stretched[1].solid.dims.join()
+        && it.options.filter((o, i) => sz[i] && i !== it.key).every((o) => shadeKey(o) !== keyShade)) band2x2++;
+      const need = p.foil === 0 ? 0.4 : 0.25;
+      if (stretched.every((o) => { const d = o.solid.dims.map((x, j) => Math.abs(x - it.solid.dims[j]) / it.solid.dims[j]).filter((x) => x > 1e-9); return d.length === 1 && d[0] >= need - 1e-9 && d[0] < (p.foil === 0 ? 0.6 : 0.4) + 1e-9; })) bandOff++;
+      it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
+      if (it.options.every((o) => L.TILT_SETS[p.view].includes(o.view.tilt))) viewOk++;
+      if (!(it.solid.kind === 'box' && new Set(it.solid.dims).size < 3)) noCube++;
+      if (it.options.every((o) => L.seenFaces(o.solid, o.view).length >= 2)) seen3++;
+      continue;
+    }
     // Foils move marks only to congruent faces (R3 §8.6): per face shape, as many shaded and half-shaded
     // faces as in the pattern; the proportion foil carries the pattern's own marks.
     const tally = (S, mk) => { const o = {}; mk.forEach((x, f) => { if (x) { const k = shapeOf(S, f) + (typeof x === 'object' ? '#h' : '#f'); o[k] = (o[k] || 0) + 1; } }); return JSON.stringify(Object.entries(o).sort()); };
@@ -151,11 +173,15 @@ function testItems(t, PX, def, L, pool) {
   }
   const N = pool.length;
   t.eq(lvl, N, 'the solid is of the level\'s kinds');
-  t.eq(marksOk, N, 'marks as the level says (shaded + half; two shaded + half; shaded + two halves)');
-  t.eq(congruentOk, nFoil, `mark foils move marks only to congruent faces; proportion foils keep the pattern's marks (${nFoil} foils)`);
+  t.eq(marksOk, N, 'marks as the level says (starter: one shaded; shaded + half; two shaded + half; shaded + two halves)');
+  t.eq(congruentOk, nFoil, `above the band, mark foils move marks only to congruent faces; proportion foils keep the pattern's marks (${nFoil} foils)`);
   t.eq(viewOk, N, 'every picture turns the solid as the level says');
   t.eq(noCube, N, 'no box is a cube (oriented marks on cubes belong to the Cube Match probe)');
-  t.eq(shapeOk, N, 'foil level 0: exactly one proportion foil; level 1: none');
+  t.eq(shapeOk, N - nBand, 'above the band, foil level 0: exactly one proportion foil; level 1: none');
+  t.ok(nBand >= 2000, `starter band items (${nBand})`);
+  t.eq(bandKinds, nBand, 'starter band, easiest solids: boxes and triangular prisms only');
+  t.eq(band2x2, nBand, 'starter band: a 2 × 2 of right or wrong size and right or wrong shaded face (one mark foil with the shade on a face of another shape; one stretched solid twice)');
+  t.eq(bandOff, nBand, 'starter band: a wrong size is one length off by 40–60 % (foil level 0) or 25–39 % (foil level 1)');
   t.eq(seen3, N, 'every picture shows at least two faces clearly (three where the solid allows it)');
   t.ok(ranks.every((r) => r / N > 0.22 && r / N < 0.28), `the key's place is spread (${ranks.map((r) => (r / N * 100).toFixed(0) + '%').join(' ')})`);
   t.ok(kinds.mirror > 0, `mirror foils occur ${JSON.stringify(kinds)}`);
@@ -199,15 +225,32 @@ function shapeSolvers(L, it) {
   return out;
 }
 
+// Two pools: the starter band's own (every band item) and the levels above it. On the band, face shape
+// decides the one mark foil by design (PLAN Defaults: face-shape matching is Form's format method there),
+// so the face-shape solvers are reported on the band and bounded above it.
 function testShortcuts(t, PX, def, L, pool) {
-  t.section('form: shortcut solvers');
+  t.section('form: shortcut solvers, starter band');
+  shortcutPool(t, L, pool.filter((x) => x.p.marks === 0), true);
+  t.section('form: shortcut solvers, levels above the band');
+  shortcutPool(t, L, pool.filter((x) => x.p.marks > 0), false);
+}
+function shortcutPool(t, L, pool, band) {
   const acc = {}, cnt = {}, req = {}, byFoil = {};
   const add = (name, v, required, p) => {
     acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; req[name] = required;
     if (p) { const k = name + ' @ foil ' + p.foil; byFoil[k] = byFoil[k] || [0, 0, name]; byFoil[k][0] += v; byFoil[k][1]++; }
   };
+  t.ok(pool.length >= 2000, `${pool.length} items`);
   for (const { it, p } of pool) {
-    for (const [name, scores] of Object.entries(shapeSolvers(L, it))) add(name, shareOf(scores, it.key, false), true, p);
+    for (const [name, scores] of Object.entries(shapeSolvers(L, it))) add(band ? name + ' (the band\'s method, reported)' : name, shareOf(scores, it.key, false), !band, band ? null : p);
+    if (band) { // the band's own cheap counts: the shaded face's shape most common, the shape most common
+      const sk = it.options.map((o) => shapeOf(o.solid, o.marks.indexOf(1))), c1 = {}, c2 = {};
+      sk.forEach((k) => { c1[k] = (c1[k] || 0) + 1; });
+      it.options.forEach((o) => { const k = o.solid.dims.join(); c2[k] = (c2[k] || 0) + 1; });
+      add('the most common shaded-face shape', shareOf(sk.map((k) => c1[k]), it.key, true), true);
+      add('the least common shaded-face shape', shareOf(sk.map((k) => c1[k]), it.key, false), true);
+      add('the most common solid size', shareOf(it.options.map((o) => c2[o.solid.dims.join()]), it.key, true), true);
+    }
     const F = it.options.map((o) => L.feats(o)), key = it.key;
     add('most marks seen', shareOf(F.map((x) => x.marked), key, true), true);
     add('fewest marks seen', shareOf(F.map((x) => x.marked), key, false), true);
@@ -231,7 +274,7 @@ function testShortcuts(t, PX, def, L, pool) {
     line.push(`${name} ${(a * 100).toFixed(1)}%`);
     if (req[name]) t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
-  console.log('       form shortcuts: ' + line.join(', '));
+  console.log(`       form shortcuts${band ? ' (starter band)' : ''}: ` + line.join(', '));
   // The face-shape solvers also per foil level (the proportion foil is the only foil they can rule out).
   const over = Object.entries(byFoil).filter(([, v]) => v[0] / v[1] > LIMIT).map(([k, v]) => `${k} ${(v[0] / v[1] * 100).toFixed(1)}%`);
   t.ok(!over.length, 'face-shape solvers stay within chance + 10 at each foil level' + (over.length ? ': ' + over.join('; ') : ''));
@@ -276,7 +319,7 @@ const cpuMs = typeof process.threadCpuUsage === 'function'
   : () => performance.now();
 function testTiming(t, PX, def) {
   t.section('form: timing');
-  for (const hard of [{ solid: 2, marks: 2, view: 2, foil: 1 }, { solid: 1, marks: 0, view: 2, foil: 1 }]) {
+  for (const hard of [{ solid: 2, marks: 3, view: 2, foil: 1 }, { solid: 1, marks: 1, view: 2, foil: 1 }, { solid: 2, marks: 0, view: 2, foil: 1 }]) {
     let best = Infinity; const text = [];
     for (let r = 0; r < 3 && best >= 20; r++) {
       const cpu = [], wall = [];
@@ -304,13 +347,36 @@ function testLearn(t, PX, def) {
   if (!L) return;
   t.ok(typeof L.goal === 'string' && L.goal.length > 10 && L.goal.length <= 120, 'a one-line goal');
   t.ok(Array.isArray(L.parts) && L.parts.length >= 3 && L.parts.every((p) => p.id && p.label && p.text), 'labelled parts');
+  // the teaching template (CONTRACT-v1.2 D; note D2 §3.0 C, §3.5, §3.9 item 1)
+  t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => typeof r === 'string' && r.length > 20 && r.length <= 140), 'a rules card of 2–4 short rules');
+  t.ok((L.strategies || []).some((x) => x.id === L.strategyFirst) && L.strategies.find((x) => x.id === L.strategyFirst).steps.length === 3, `the strategy card before Try 1 exists, with three steps (${L.strategyFirst})`);
+  t.eq(L.minutes, 2, 'the offer card says about two minutes');
   const valid = (p) => PX.ex.validParams(def, p) === true;
-  t.ok(Array.isArray(L.demo) && L.demo.length >= 1 && L.demo.every((d) => valid(d.params) && Number.isInteger(d.seed)), 'demo items with valid params');
-  for (const d of L.demo) { const item = def.generate(PX.rng(d.seed), d.params); t.ok(def.validate(item) === true && !item.fallback, `demo seed ${d.seed} gives a valid item`); }
-  t.ok(PX.ex.difficulty(def, L.demo[0].params) === PX.ex.minDifficulty(def), 'the demo is at the easiest level');
-  t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
-  const ds = L.practice.map((p) => PX.ex.difficulty(def, p));
-  t.ok(ds.every((x, i) => i === 0 || x >= ds[i - 1]), `practice goes from easy to harder (${ds.map((x) => x.toFixed(2)).join(', ')})`);
+  t.ok(Array.isArray(L.demo) && L.demo.length === 1 && valid(L.demo[0].params) && Number.isInteger(L.demo[0].seed), 'one demo item with valid params');
+  const demoItem = def.generate(PX.rng(L.demo[0].seed), L.demo[0].params);
+  t.ok(def.validate(demoItem) === true && !demoItem.fallback && demoItem.solid.kind === 'box', `demo seed ${L.demo[0].seed} gives a valid box`);
+  t.ok(PX.ex.difficulty(def, L.demo[0].params) === PX.ex.minDifficulty(def), 'the Watch is at the starter band (the easiest level)');
+  t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
+  if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
+  const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
+  t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
+  t.ok(P[0].marks === 0 && P[1].marks === 0 && items[0].solid.kind === 'box' && items[1].solid.kind !== 'box', 'Try 1 (a box) and Try 2 (a prism) are at the starter band');
+  t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0 }, 'Try 3 is the pre-1.2 floor (a half mark)');
+  t.ok(P[3].marks === 2, 'Try 4: a third mark');
+  t.eq(L.practice[0].assist, { letters: true }, 'Try 1 has its second step done (the shaded face\'s neighbours lettered)');
+  t.ok(L.practice[2].assist && L.practice[2].assist.half && L.practice[2].tip === 'half', 'Try 3 brings the half mark with its tip and its corner dotted');
+  t.ok(items[2].options.some((o) => o.kind === 'mirror'), 'Try 3 has a mirror-image foil (its first appearance, with the tip)');
+  const tipIds = new Set((L.tips || []).map((x) => x.id));
+  t.ok(L.practice.every((e) => e.tip === undefined || tipIds.has(e.tip)), 'forced tips exist');
+  t.eq(new Set(items.map((it) => it.key)).size, 4, `the Try answers sit in four different places (${items.map((it) => it.key + 1).join(', ')})`);
+  // every kind of wrong solid in Try appears in the Watch item, except the mirror image, which the band
+  // cannot have (one shade has no handedness): Try 3 brings it with its tip and its dotted corner
+  const kindsOf = (it) => new Set(it.options.filter((o, i) => i !== it.key).map((o) => o.kind));
+  const dk = kindsOf(demoItem), tk = new Set(items.flatMap((it) => [...kindsOf(it)]));
+  t.ok([...tk].every((k) => dk.has(k) || k === 'mirror'), `every foil kind in Try (${[...tk].join(', ')}) is in the Watch item (${[...dk].join(', ')}), the mirror image apart`);
+  t.ok(items.every((it, i) => !kindsOf(it).has('mirror') || i >= 2), 'mirror images appear only from Try 3 on');
+  const ds = P.map((p) => PX.ex.difficulty(def, p));
+  t.ok(ds.every((x, i) => i === 0 || x >= ds[i - 1] - 1e-9), `practice goes from easy to harder (${ds.map((x) => x.toFixed(2)).join(', ')})`);
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
     t.ok(tip.id && tip.text && tr.dim && def.dims.some((d) => d.key === tr.dim && (tr.levels || []).every((l) => l >= 0 && l < d.levels.length)), `tip ${tip.id} has a valid trigger`);
@@ -318,11 +384,7 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['pattern', 'solids', 'landmark', 'match', 'land', 'foils', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror'];
-  // The Watch shows both kinds of wrong solid the Try items use: its demo item has a wrong-size foil and
-  // a mirror-image foil.
-  const di = def.generate(PX.rng(L.demo[0].seed), L.demo[0].params), dk = di.options.map((o) => o.kind);
-  t.ok(dk.includes('shape') && dk.includes('mirror'), `the demo item has a wrong-size and a mirror-image foil (${dk.join(', ')})`);
+  const caps = ['pattern', 'solids', 'landmark', 'match', 'land', 'foils', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'foldTilt', 'foldUp', 'foldTurn', 'assist', 'assistHalf'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
