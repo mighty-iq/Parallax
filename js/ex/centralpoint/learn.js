@@ -133,7 +133,7 @@
       demoChain: 'Laid head to tail, the pulls leave a gap: the far target is not balanced yet.',
       demoMove: 'Move the spot the way the leftover pull points…',
       demoBalanced: '…until the pulls cancel. This is the best spot.',
-      demoAverage: 'The average position leans towards the far target, a dot away. It is not the answer.',
+      demoAverage: 'The average position leans towards the far target. It is not the answer.',
       demoAnswerQuick: 'Your turn: tap the best spot, then tap the marker again to answer.',
       demoAnswerExact: 'Your turn: tap near the best spot, nudge it if needed, then Confirm.',
       averageLabel: 'average',

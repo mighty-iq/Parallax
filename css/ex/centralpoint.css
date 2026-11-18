@@ -77,7 +77,7 @@
 @media (pointer: coarse) { .ex-centralpoint .ex-cp-hint { display: none; } }
 
 /* the rules card's small pictures (drawRule): a 0–100 plate */
-.ex-centralpoint.ex-cp-rule { display: block; width: 6rem; height: 6rem; }
+.ex-centralpoint.ex-cp-rule { display: block; width: 100%; height: 100%; } /* fills the player's figure box (6rem, 4.5rem on phones) */
 .ex-centralpoint.ex-cp-rule .ex-cp-rulefig { display: block; width: 100%; height: 100%; }
 .ex-centralpoint.ex-cp-rule .ex-cp-ring { stroke-width: 1.8; }
 .ex-centralpoint.ex-cp-rule .ex-cp-line { stroke-width: 1.4; }
@@ -100,7 +100,7 @@
 /* sideways: the plate on the left at full height, the controls beside it */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   .pl-trial.ex-centralpoint .ex-cp {
-    --cp-board: min(calc(var(--pl-avail, 100vh) - 2px), 60vw);
+    --cp-board: min(calc(var(--pl-avail, 100vh) - 1rem - 2px), 60vw); /* room for the player's countdown bar under it */
     display: grid; grid-template-columns: var(--cp-board) minmax(10rem, 1fr); grid-template-rows: auto auto 1fr; align-items: start;
   }
   .pl-trial.ex-centralpoint .ex-cp-stage { grid-row: 1 / span 3; }
