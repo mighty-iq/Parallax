@@ -18,7 +18,10 @@
      flat figure 5 minus the cubes it touches), then the cubes with the number asked, one at a
      time, hidden ones included. Reveal rings the counted cubes with their number.
    - Demo (Watch): the figure, its hidden cubes as dashed ghosts when it has any, the answers,
-     then show me's steps. */
+     then show me's steps, each caption up long enough to read (readable()).
+   - Try 3 (ctx.assist = { hidden: true }): the hidden support drawn dashed, without its number,
+     between the worked example (dashed and numbered) and Try 4 (nothing marked); its reveal
+     numbers it. */
 (function (PX) {
   'use strict';
 
@@ -36,6 +39,25 @@
     return s;
   }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  // The Watch and worked examples (v1.2, fresh-player check: at the 3-s floor a 20-word caption was
+  // gone before it was read): a caption stays up for 1 s plus 0.27 s a word (about 220 words a
+  // minute), at most 8 s; a step that moves keeps its pace and holds its last frame. step.read, when
+  // set, is the part of the caption that is new (the tally's next cube). Show me keeps its pace: it
+  // replays steps already read, with Pause and Step.
+  function readMs(text) {
+    var n = String(text || '').split(/\s+/).filter(function (w) { return /[0-9A-Za-z]/.test(w); }).length;
+    return Math.min(8000, 1000 + 270 * n);
+  }
+  function readable(list) {
+    list.forEach(function (s) {
+      if (!s || !s.caption) return;
+      var m = s.ms || 0, need = readMs(s.read || s.caption), u = s.update;
+      if (m >= need) return;
+      s.ms = need;
+      if (u && m > 0) s.update = function (k) { u(Math.min(1, k * need / m)); };
+    });
+    return list;
+  }
   function tallest(H) { var m = 0; H.forEach(function (r) { r.forEach(function (v) { if (v > m) m = v; }); }); return m; }
 
   /* ---------- geometry ---------- */
@@ -136,6 +158,7 @@
     return out;
   }
   function counted(item) { return cubeList(item).filter(function (c) { return c.counted; }); }
+  function hiddenCubes(item) { return cubeList(item).filter(function (c) { return c.hidden; }); }
   function sidesText(q) {
     var names = [];
     q.sides.forEach(function (on, s) { if (on) names.push(SIDES[s]); });
@@ -144,12 +167,12 @@
   function touching(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) === 1; }
 
   // Numbers on the figure. opts: { counted: how many of the counted cubes (tally order) are ringed,
-  // blank: [cube indices showing '?'], only: counted cubes alone }. Ghosts go first, so no dashed
-  // edge crosses a number.
+  // blank: [cube indices showing '?'], only: counted cubes alone, also: [cube indices shown as well
+  // with only] }. Ghosts go first, so no dashed edge crosses a number.
   function numbers(item, opts) {
-    var m = marks(), all = cubeList(item), k = 0, ring = {};
+    var m = marks(), all = cubeList(item), k = 0, ring = {}, also = opts.also || [];
     counted(item).forEach(function (c) { if (k++ < (opts.counted || 0)) ring[c.i] = true; });
-    var shown = all.filter(function (c) { return opts.only ? ring[c.i] : true; });
+    var shown = all.filter(function (c) { return opts.only ? ring[c.i] || also.indexOf(c.i) >= 0 : true; });
     shown.forEach(function (c) { if (c.hidden) m.appendChild(ghost(c.q)); });
     shown.forEach(function (c) {
       var blank = (opts.blank || []).indexOf(c.i) >= 0;
@@ -191,7 +214,7 @@
     root.appendChild(h('div.ex-cubes-under', caption, verdict));
     root.appendChild(desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, stage: stage, figure: figure, q: q, verdict: verdict, caption: caption, desc: desc, item: null, optItem: null, opts: [], fig: null, pulled: null, assist: null, list: null, listItem: null };
+    st = { ctx: ctx, root: root, stage: stage, figure: figure, q: q, verdict: verdict, caption: caption, desc: desc, item: null, optItem: null, opts: [], fig: null, pulled: null, assist: null, assistHidden: false, list: null, listItem: null };
   }
 
   function question(item) {
@@ -214,13 +237,19 @@
     st.pulled = null;
     st.figure.appendChild(st.fig.svg);
     question(item);
-    var a = ctx && ctx.assist && typeof ctx.assist === 'object' && ctx.assist.numbers > 0 ? ctx.assist : null;
-    st.assist = a ? assistBlanks(item, a.numbers) : null;
+    var a = ctx && ctx.assist && typeof ctx.assist === 'object' ? ctx.assist : null;
+    st.assist = a && a.numbers > 0 ? assistBlanks(item, a.numbers) : null;
+    st.assistHidden = !!(a && a.hidden) && !st.assist && hiddenCubes(item).length > 0;
+    var what = hiddenCubes(item).length === 1 ? 'The hidden cube is' : 'The hidden cubes are';
     if (st.assist) {
       numbers(item, { blank: st.assist });
       st.caption.textContent = cap('assist');
+    } else if (st.assistHidden) {
+      ghostHidden(item);
+      st.caption.textContent = cap('assistHidden', { what: what });
     }
-    st.desc.textContent = describe(item) + (st.assist ? ' Every cube but ' + st.assist.length + ' shows its number of painted sides.' : '');
+    st.desc.textContent = describe(item) + (st.assist ? ' Every cube but ' + st.assist.length + ' shows its number of painted sides.' : '') +
+      (st.assistHidden ? ' ' + cap('assistHidden', { what: what }) : '');
     return timing.nextPaint();
   }
 
@@ -264,8 +293,9 @@
     if (!st) return Promise.resolve();
     st.root.classList.add('is-revealed');
     var list = counted(item), hid = list.filter(function (c) { return c.hidden; }).length;
-    // After Try 1 every number shows (the two left blank filled in); otherwise the counted cubes.
-    numbers(item, { counted: list.length, only: !st.assist });
+    // After Try 1 every number shows (the two left blank filled in); otherwise the counted cubes,
+    // and after Try 3 the hidden cube that was drawn for the player too, with its number.
+    numbers(item, { counted: list.length, only: !st.assist, also: st.assistHidden ? hiddenCubes(item).map(function (c) { return c.i; }) : null });
     st.verdict.textContent = '✓ ' + plural(item.count, 'cube has', 'cubes have') + ' exactly ' + plural(item.ask, 'painted side', 'painted sides') +
       (hid ? ' (' + hid + ' hidden, dashed)' : '') + '.';
     st.verdict.setAttribute('data-kind', 'key');
@@ -298,9 +328,11 @@
     out.push({ ms: 2800, caption: cap('explode'), enter: function () { marks(); focusOption(-1); pulledApart(item); }, exit: normal });
     out.push({ ms: 2600, caption: cap(flat ? 'numbersFlat' : 'numbers'), enter: function () { normal(); numbers(item, {}); focusOption(-1); } });
     list.forEach(function (c, j) {
+      var sides = plural(c.q.painted, 'painted side', 'painted sides') + ' (' + sidesText(c.q) + ')';
       out.push({
         ms: c.hidden ? 2200 : 1600,
-        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: j + 1, k: k, N: N, sides: plural(c.q.painted, 'painted side', 'painted sides') + ' (' + sidesText(c.q) + ')' }),
+        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: j + 1, k: k, N: N, sides: sides }),
+        read: j > 0 && !c.hidden ? 'cube ' + (j + 1) + ' of ' + k + ', ' + sides : null,
         enter: function () { normal(); numbers(item, { counted: j + 1 }); focusOption(-1); },
       });
     });
@@ -370,7 +402,7 @@
       });
     }
     intro.push({ ms: 1800, caption: cap('options'), enter: function () { normal(); marks(); } });
-    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null }).then(done, done);
+    return play(readable(intro.concat(steps(item, null))), ctx, { name: 'demo', caption: caption || null }).then(done, done);
   }
 
   function unmount() {

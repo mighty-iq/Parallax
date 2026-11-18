@@ -30,6 +30,24 @@
     return s;
   }
   function fmtDeg(d) { return (Math.round(d * 10) / 10).toFixed(1).replace(/\.0$/, '') + '°'; }
+  // The Watch and worked examples (v1.2, fresh-player check: at the 3-s floor a 20-word caption was
+  // gone before it was read): a caption stays up for 1 s plus 0.27 s a word (about 220 words a
+  // minute), at most 8 s; a step that moves keeps its pace and holds its last frame. Show me keeps
+  // its pace: it replays steps already read, with Pause and Step.
+  function readMs(text) {
+    var n = String(text || '').split(/\s+/).filter(function (w) { return /[0-9A-Za-z]/.test(w); }).length;
+    return Math.min(8000, 1000 + 270 * n);
+  }
+  function readable(list) {
+    list.forEach(function (s) {
+      if (!s || !s.caption) return;
+      var m = s.ms || 0, need = readMs(s.read || s.caption), u = s.update;
+      if (m >= need) return;
+      s.ms = need;
+      if (u && m > 0) s.update = function (k) { u(Math.min(1, k * need / m)); };
+    });
+    return list;
+  }
   var LETTERS = ['A', 'B', 'C', 'D'];
   function letter(c) { return LETTERS[c]; }
   function listText(order) { return order.map(letter).join(' – '); }
@@ -253,19 +271,21 @@
       },
     };
   }
-  function steps(item, response) {
-    var m = lib.measure(item), out = [], order = item.order, small = order[0], large = order[3];
+  // demo (the Watch): no sizes in degrees on the angles, which are judged by eye as in every item;
+  // after an answer (show me) the sizes confirm the order, as the reveal does.
+  function steps(item, response, demo) {
+    var m = lib.measure(item), out = [], order = item.order, small = order[0], large = order[3], sizes = !demo;
     var keepS = item.options.map(function (o) { return o[0] === small; });
     var keepSL = item.options.map(function (o) { return o[0] === small && o[3] === large; });
     var left = item.options.filter(function (o, i) { return keepSL[i]; });
     var outOf = function (keep) { return keep.map(function (k) { return !k; }); };
     out.push({
       ms: 2400, caption: cap('smallest', { a: letter(small) }),
-      enter: function () { setMode('cells'); focusOption(-1); showSizes(item, true); point([small]); crossOut(outOf(keepS)); },
+      enter: function () { setMode('cells'); focusOption(-1); showSizes(item, sizes); point([small]); crossOut(outOf(keepS)); },
     });
     out.push({
       ms: 2400, caption: cap('largest', { b: letter(large) }),
-      enter: function () { setMode('cells'); focusOption(-1); showSizes(item, true); point([small, large]); crossOut(outOf(keepSL)); },
+      enter: function () { setMode('cells'); focusOption(-1); showSizes(item, sizes); point([small, large]); crossOut(outOf(keepSL)); },
       exit: function () { point([]); },
     });
     if (left.length > 1) {
@@ -274,16 +294,16 @@
       var pair = foil ? widest(foil, m.map(function (x) { return x.deg; })) : deciding(item);
       if (pair) {
         var vars = { a: letter(pair.small), b: letter(pair.large), d: fmtDeg(pair.gap).replace('°', '') };
-        out.push({ ms: 2400, caption: cap('disagree', vars), enter: function () { setMode('cells'); showSizes(item, true); point([pair.small, pair.large]); crossOut(outOf(keepSL)); }, exit: function () { point([]); } });
+        out.push({ ms: 2400, caption: cap('disagree', vars), enter: function () { setMode('cells'); showSizes(item, sizes); point([pair.small, pair.large]); crossOut(outOf(keepSL)); }, exit: function () { point([]); } });
         out.push(overlayStep(item, pair, 1700, 'overlay', vars));
-        out.push(overlayStep(item, pair, 1900, 'pair', vars));
+        out.push(overlayStep(item, pair, 1900, demo ? 'pairEye' : 'pair', vars));
       }
     } else {
-      out.push({ ms: 1800, caption: cap('left', { order: listText(order) }), enter: function () { setMode('cells'); showSizes(item, true); point([]); crossOut(outOf(keepSL)); focusOption(item.key); } });
+      out.push({ ms: 1800, caption: cap('left', { order: listText(order) }), enter: function () { setMode('cells'); showSizes(item, sizes); point([]); crossOut(outOf(keepSL)); focusOption(item.key); } });
     }
     out.push({
       ms: 1800, caption: cap('done', { order: listText(item.order), n: item.key + 1 }),
-      enter: function () { setMode('cells'); showSizes(item, true); point([]); crossOut(null); focusOption(item.key); },
+      enter: function () { setMode('cells'); showSizes(item, sizes); point([]); crossOut(null); focusOption(item.key); },
     });
     var r = response;
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < 4) {
@@ -372,7 +392,7 @@
       { ms: 2200, caption: cap('angles'), enter: function () { setMode('cells'); focusOption(-1); crossOut(null); showSizes(item, false); point([0, 1, 2, 3]); }, exit: function () { point([]); } },
       { ms: 2000, caption: cap('options'), enter: function () { setMode('cells'); crossOut(null); point([]); } },
     ];
-    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null }).then(after, after);
+    return play(readable(intro.concat(steps(item, null, true))), ctx, { name: 'demo', caption: caption || null }).then(after, after);
   }
 
   function unmount() {

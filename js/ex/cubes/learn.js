@@ -41,7 +41,10 @@
       // Before Try 3 one more item solved for you (play.js `example`): its hidden support shown dashed
       // and numbered, so the hidden-cube rule is seen worked once before it is used (note D2 addendum C
       // change 4: a second worked example right before its matched problem; Atkinson et al. 2000).
-      { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden', example: { seed: 5 } },
+      // Try 3 itself draws its hidden support dashed, without its number: worked (the example,
+      // dashed and numbered), faded (Try 3, dashed), alone (Try 4, nothing marked); note D2 §2.2,
+      // where fading itself is a working assumption.
+      { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden', example: { seed: 5 }, assist: { hidden: true } },
       { params: { cubes: 1, height: 1, asked: 0 }, seed: 113 },
     ],
     tips: [
@@ -107,7 +110,8 @@
       skip: 'The other cubes have a different number of painted sides.',
       done: '{k} {cubes} exactly {sides}: answer {k}.',
       chosen: 'Answer {n} is {d} the true count: check the hidden cubes and the faces at the back.',
-      assist: 'Every cube but two has its number. Work out the two blank ones, then count.',
+      assist: 'Step 2 done, except the two cubes marked ?.',
+      assistHidden: '{what} drawn dashed for you.',
     },
     checkin: { whole: 'I recognised the positions at a glance', parts: 'I went through the cubes one by one', unsure: 'Not sure, or both' },
     bridge: 'Cube counting is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). Practice on a format usually raises scores on that format; an effect of Parallax on DAT scores has not been shown or measured, and those scores relate only modestly to dental-school grades. ' + ADA,
