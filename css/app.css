@@ -178,6 +178,34 @@
   .px-welcome-plate .px-plate-fig { max-height: 6.5rem; }
 }
 
+/* ---------- Chimera: the one-tap card (later launches) and the invites (js/ui/welcome.js) ---------- */
+/* The card sits in the page's flow under the header: it covers nothing and traps nothing. */
+.px-chimera-card { border-bottom: 1px solid var(--rule); background: var(--surface); animation: px-rise var(--t-med) var(--ease) both; }
+.px-chimera-card .px-wrap { padding-top: var(--s2); padding-bottom: var(--s2); }
+.px-chimera-card-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s2) var(--s4); }
+.px-chimera-card-text { font-size: var(--fs-sm); font-weight: 600; color: var(--ink); line-height: 1.35; }
+.px-chimera-card-actions { display: flex; align-items: center; gap: var(--s1); }
+.px-chimera-card-close { padding: 0; color: var(--ink-2); }
+.px-chimera-card-close .px-icon { width: 1.125rem; height: 1.125rem; }
+.px-chimera-card-more { padding: var(--s2) 0 var(--s1); }
+.px-chimera-card-more[hidden] { display: none; }
+.px-chimera-card-hint { margin-bottom: var(--s2); font-size: var(--fs-sm); color: var(--ink-3); }
+
+/* An invite: one line, the link and Copy link. Quiet: no accent, no motion. */
+.px-invite {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--s2) var(--s3);
+  margin-top: var(--s4); padding: var(--s3) var(--s4);
+  border: 1px solid var(--rule); border-radius: var(--r-control); background: var(--surface);
+}
+.px-invite-icon { grid-row: 1 / span 3; width: 1.25rem; height: 1.25rem; margin-top: 0.1rem; color: var(--ink-3); }
+.px-invite-text { grid-column: 2; font-size: var(--fs-sm); color: var(--ink-2); }
+.px-invite-actions { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.px-invite-status { grid-column: 2; font-size: var(--fs-sm); color: var(--ink-3); overflow-wrap: anywhere; }
+.px-invite-status:empty { display: none; }
+.px-invite-status.is-ok { color: var(--right); }
+.px-invite-status.is-warn { color: var(--warn); }
+.px-export-invite { margin-top: var(--s4); }
+
 /* specimen plate: two drawings of one figure, a turn between them, registration marks */
 .px-plate {
   position: relative; overflow: hidden;
