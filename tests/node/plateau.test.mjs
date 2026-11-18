@@ -377,6 +377,12 @@ export async function run(t) {
     for (let i = 0; i < 2000; i++) if (H.kindHook(plan, b.rec, b.def, 'target', {}) === 'drill') drills++;
     t.ok(drills > 330 && drills < 470, `a drill takes the weak-spot share of target items (${drills}/2000)`);
     t.eq(H.kindHook(plan, b.rec, b.def, 'easy', {}), null, 'only target items become drill items');
+    const dims0 = E.dims;
+    E.dims = Object.assign({}, dims0 || {}, { room: () => 0 });
+    let full = 0;
+    for (let i = 0; i < 200; i++) if (H.kindHook(plan, b.rec, b.def, 'target', {}) === 'drill') full++;
+    E.dims = dims0;
+    t.eq(full, 0, 'no drill item when the deck has no room for another changed target item (E.dims.room, conflict 10)');
     ev.change = 'speed-in-train';
     H.startHook(plan, b.rec, {}, b.now);
     t.eq(plan.share.fold && plan.share.fold.fluency, E.config.plateau.change.fluency, 'Speed inside Train: the fluency share');

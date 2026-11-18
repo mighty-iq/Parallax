@@ -812,11 +812,13 @@
     });
   }
 
-  // kind: a drill turns target items into drill items at the weak-spot share
+  // kind: a drill turns target items into drill items at the weak-spot share, while the deck has room for
+  // another changed target item (E.dims.room: at most 3 of 8 change kind; CONTRACT-v1.2 conflict 10)
   function kindHook(plan, rec, def, kind) {
     if (kind !== 'target') return null;
     var ev = changeFor(rec, def.id, plan);
     if (!ev || ev.change !== 'drill' || !plan.rng) return null;
+    if (E.dims && typeof E.dims.room === 'function' && !(E.dims.room(plan) > 0)) return null;
     return plan.rng.chance(isNum(CFG.change.drill) ? CFG.change.drill : C.weak.share) ? 'drill' : null;
   }
 
