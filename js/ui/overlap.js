@@ -25,7 +25,8 @@
 
    "Taking a test soon?" helper (Settings):
      KINDS                       what a test can contain: { id, label, same, related, untrained }
-     match(kinds) → { same: [id], related: [id], untrained: [{ kind, text }] }   existing exercises only
+     match(kinds) → { same: [id], related: [id], untrained: [{ kind, text }], notes: [{ kind, label, text }] }
+                                 existing exercises only; notes: a kind's own advice line (Central Point)
      setFocus(rec, on, now)      patFocus with its history entry
      pause(rec, kinds, until, now) / clearPause(rec) / pauseState(rec, now) → { on, ids, until, what, ended }
      noteTest(rec, { date, kinds, paused }, now) / removeTest(rec, at)
@@ -53,6 +54,9 @@
     { id: 'span', format: 'block tapping', note: 'tapping blocks in order is part of some clinical memory tests. Practising it here can raise your score on such a test' + SAY },
     // R2 §1.7: "knot or not" items appear in a design entrance exam, a maths competition and a research test of knot reasoning
     { id: 'knots', format: 'knot or not', note: 'deciding whether a rope forms a knot when both ends are pulled appears in some design entrance tests, maths competitions and a research test of knot reasoning. Practising it here will likely raise your score on such items' + SAY },
+    // v1.2 (docs/research/v1.2/C1-central-point.md §7): a "central point" subtest of a test the owner
+    // has not named; near if its format is as described. No test is named here.
+    { id: 'centralpoint', format: 'picking the central point', note: 'picking the point with the least total distance to a set of marked points on a grid is a part of at least one ability test. Practising the format and its rule here will likely raise your score on such a part' + SAY },
   ];
   var NEAR_BY = {}, NOTES = {};
   NEAR.forEach(function (x) { NEAR_BY[x.id] = x; NOTES[x.id] = x.note; });
@@ -80,6 +84,8 @@
     { id: 'directions', label: 'Directions, maps and finding your way', same: [], related: ['orient', 'homing', 'reckon'] },
     { id: 'tapping', label: 'Remembering positions in order (block tapping)', same: ['span'], related: [] },
     { id: 'knots', label: 'Whether a rope forms a knot when pulled', same: ['knots'], related: [] },
+    { id: 'central', label: 'Picking the point closest overall to marked points', same: ['centralpoint'], related: [],
+      say: 'If your test asks you to pick the point closest overall to a set of marked points, Central Point practises that format. Take the test before you practise it, or pause Central Point in Train.' },
     { id: 'analogies', label: 'Word analogies (“A is to B as C is to …”)', same: [], related: [],
       untrained: 'Not trained here. Only the Spatial Check’s word task uses this format, for a few minutes per check and without feedback. ' + ANALOGY_SAY },
     { id: 'matrices', label: 'Figure analogies or matrices', same: [], related: ['rotate', 'spin', 'hidden'],
@@ -144,17 +150,18 @@
   // DAT-style; anything else a kind lists there counts as related), and an id that is "same" for
   // one ticked kind is never also listed as "related".
   function match(kinds) {
-    var same = [], related = [], untrained = [];
+    var same = [], related = [], untrained = [], notes = [];
     (Array.isArray(kinds) ? kinds : []).forEach(function (k) {
       var K = KIND_BY[k];
       if (!K) return;
       K.same.forEach(function (id) { (near(id) ? same : related).push(id); });
       related = related.concat(K.related);
       if (K.untrained) untrained.push({ kind: K.id, label: K.label, text: K.untrained });
+      if (K.say && K.same.some(function (id) { return !!trainDef(id); })) notes.push({ kind: K.id, label: K.label, text: K.say });
     });
     same = uniq(same).filter(function (id) { return !!trainDef(id); });
     related = uniq(related).filter(function (id) { return !!trainDef(id) && same.indexOf(id) < 0; });
-    return { same: same, related: related, untrained: untrained };
+    return { same: same, related: related, untrained: untrained, notes: notes };
   }
 
   /* ---------- settings and the record field ---------- */
