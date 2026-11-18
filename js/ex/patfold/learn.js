@@ -30,11 +30,13 @@
     strategyFirst: 'analytic',
     minutes: 2,
     demo: [{ params: { folds: 0, type: 0, idle: 0 }, seed: 14, kind: 'one fold' }],
+    // Try 4 brings two folds that both matter, after a worked example on a sister item (note D2 addendum
+    // C change 4; Try has no slanted fold, so the example goes to the first item with two folds).
     practice: [
       { params: { folds: 0, type: 0, idle: 0 }, assist: { twin: true }, seed: 1 },
       { params: { folds: 0, type: 0, idle: 0 }, seed: 13 },
       { params: { folds: 1, type: 0, idle: 1 }, tip: 'idle', seed: 303 },
-      { params: { folds: 1, type: 0, idle: 0 }, tip: 'two', seed: 403 },
+      { params: { folds: 1, type: 0, idle: 0 }, tip: 'two', seed: 403, example: { seed: 1 } },
     ],
     // In Try and Go the first tip that fits the item is shown, so the slanted-crease tips come first.
     tips: [

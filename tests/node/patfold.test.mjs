@@ -270,6 +270,10 @@ function testLearn(t, PX, def) {
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
   if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
   const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
+  // a worked example before the Try item that brings the first hard feature (note D2 addendum C change 4)
+  const exE = L.practice[3].example, xe = exE && def.generate(PX.rng(exE.seed), L.practice[3].params);
+  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[3].seed && def.validate(xe) === true && !xe.fallback && xe.folds.length === 2 && xe.folds.every((f) => f.matters) && xe.key !== items[3].key && L.practice.every((e, i) => i === 3 || e.example === undefined),
+    `Try 4 (two folds that matter) comes after a worked example on a sister item with two folds that matter (seed ${exE && exE.seed})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].folds === 0 && P[1].folds === 0 && P[0].type === 0 && P[1].type === 0, 'Try 1 and Try 2 are at the starter band (one straight fold)');
   t.eq(P[2], { folds: 1, type: 0, idle: 1 }, 'Try 3 is the pre-1.2 floor (an idle fold)');
