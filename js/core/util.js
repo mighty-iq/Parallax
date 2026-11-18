@@ -1,6 +1,7 @@
 /* PX.util: small pure helpers (no DOM, no timers, no Math.random).
    ARCHITECTURE.md §4. Extras beyond the contract: sum, isPlainObject,
-   dayKey/dayNum/addDays (local calendar days as 'YYYY-MM-DD'). */
+   dayKey/dayNum/addDays (local calendar days as 'YYYY-MM-DD'), fmtSecs (the one answer-time
+   format, v1.2 O5). */
 (function (PX) {
   'use strict';
 
@@ -81,6 +82,14 @@
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
   // Duration in ms → 'm:ss', or 'h:mm:ss' from one hour up.
+  // One answer-time format for every screen (v1.2, O5): seconds with one decimal under 100 s
+  // ('0.8 s', '12.4 s'), whole seconds from 100 s on ('135 s'); '–' for a missing time.
+  function fmtSecs(ms) {
+    if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return '–';
+    var s = ms / 1000;
+    return (s < 99.95 ? (Math.round(s * 10) / 10).toFixed(1) : String(Math.round(s))) + ' s';
+  }
+
   function fmtTime(ms) {
     if (typeof ms !== 'number' || !isFinite(ms)) return '–';
     var t = Math.max(0, Math.round(ms / 1000));
@@ -141,7 +150,7 @@
     clamp: clamp, lerp: lerp, round: round, sum: sum, mean: mean, sd: sd,
     median: median, quantile: quantile, logit: logit, sigmoid: sigmoid,
     deg: deg, rad: rad, deepCopy: deepCopy, isPlainObject: isPlainObject,
-    fmtTime: fmtTime, fmtDate: fmtDate, dayKey: dayKey, dayNum: dayNum, addDays: addDays,
+    fmtTime: fmtTime, fmtSecs: fmtSecs, fmtDate: fmtDate, dayKey: dayKey, dayNum: dayNum, addDays: addDays,
     uid: uid,
   };
 })(window.PX);

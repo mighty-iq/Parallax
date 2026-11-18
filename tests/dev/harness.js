@@ -7,6 +7,10 @@
      seed    item seed (default: random); New item adds 1
      p       dim:level pairs (level indices); missing dims are 0
      v       variant;  fast=1 short animations (tests);  rm=1 reduced motion;  theme=light|dark
+     assist  JSON for ctx.assist (a Try item's first step done, v1.2);  gentle=1 ctx.gentleMotion (v1.2)
+   v1.2 (docs/dev/CONTRACT-v1.2.md D–F): steps with hold: true wait for Continue (never in fast
+   mode); ctx.addMotion(ms) adds to __harness.played.motionMs; answer type 'point' gets a wrong
+   response at the lattice corner farthest from the key (or item.wrongResponse).
    In a sandboxed srcdoc frame there is no query string and nothing can be loaded from disk:
    the page is inlined (tests/e2e/common.py) and window.PX_HARNESS_CFG = { ex, seed, p, v, … }
    replaces the query; exercise files already present are not loaded again.
@@ -40,7 +44,7 @@
   }
 
   function readConfig() {
-    var cfg = { ex: 'rotate', seed: null, p: {}, v: null, fast: false, rm: false, theme: null };
+    var cfg = { ex: 'rotate', seed: null, p: {}, v: null, fast: false, rm: false, theme: null, assist: null, gentle: false };
     var q = '';
     try { q = String(win.location.search || ''); } catch (e) { q = ''; }
     q.replace(/^\?/, '').split('&').forEach(function (kv) {
@@ -52,6 +56,8 @@
       else if (k === 'fast') cfg.fast = v !== '0';
       else if (k === 'rm') cfg.rm = v !== '0';
       else if (k === 'theme') cfg.theme = v === 'dark' || v === 'light' ? v : null;
+      else if (k === 'assist') { try { cfg.assist = JSON.parse(v); } catch (e) { cfg.assist = v || null; } }
+      else if (k === 'gentle') cfg.gentle = v !== '0';
     });
     var inj = win.PX_HARNESS_CFG;
     if (inj && typeof inj === 'object') {
@@ -431,14 +437,14 @@
     opts = opts || {};
     if (player) player.close();
     return new Promise(function (resolve) {
-      var i = 0, t = 0, paused = false, done = false, stop = null, prev = H.state;
+      var i = 0, t = 0, paused = false, done = false, stop = null, prev = H.state, waiting = false, waited = -1;
       // reduced motion: 75 % of the time and keyframes instead of smooth motion
       var rm = reducedMotion(), scale = cfg.fast ? 0.02 : rm ? 0.75 : 1;
       var caption = opts.caption || function (text) { el.caption.textContent = text; };
       function dur() { return Math.max(1, (steps[i].ms || 0) * scale); }
       var lastK = -1;
       function enter(k) {
-        i = k; t = 0; lastK = 0;
+        i = k; t = 0; lastK = 0; waiting = false;
         var s = steps[i];
         if (s.caption) caption(s.caption);
         if (s.enter) s.enter();
@@ -468,6 +474,10 @@
         if (steps[i].update && k !== lastK) steps[i].update(k); // keyframes: draw only on change
         lastK = k;
         if (t >= d) {
+          if (steps[i].hold && !cfg.fast && waited !== i) { // v1.2: wait for Continue
+            waited = i; waiting = true; paused = true; el.pPause.firstChild.textContent = 'Continue'; H.played.holds = (H.played.holds || 0) + 1;
+            return true;
+          }
           finish();
           if (i + 1 < steps.length) enter(i + 1); else { end(); return false; }
         }
@@ -475,12 +485,15 @@
       }
       function run() { if (!stop || done) return; }
       player = {
-        pause: function () { paused = !paused; el.pPause.firstChild.textContent = paused ? 'Resume' : 'Pause'; },
+        pause: function () {
+          if (waiting) { waiting = false; paused = false; el.pPause.firstChild.textContent = 'Pause'; return; }
+          paused = !paused; el.pPause.firstChild.textContent = paused ? 'Resume' : 'Pause';
+        },
         step: function () {
           finish();
           if (i + 1 < steps.length) { enter(i + 1); paused = true; el.pPause.firstChild.textContent = 'Resume'; } else end();
         },
-        replay: function () { paused = false; el.pPause.firstChild.textContent = 'Pause'; enter(0); },
+        replay: function () { paused = false; waited = -1; el.pPause.firstChild.textContent = 'Pause'; enter(0); },
         close: function () { while (!done) { finish(); if (i + 1 < steps.length) { i++; var s = steps[i]; if (s.enter) s.enter(); } else end(); } },
       };
       var t0play = timing.now();
@@ -610,6 +623,11 @@
       return Math.round((a < 0 ? a + 360 : a) * 100) / 100;
     }
     if (type === 'position') return key && typeof key.x === 'number' && typeof key.z === 'number' ? { x: -key.x, z: -key.z } : undefined;
+    if (type === 'point') { // v1.2: the item's own wrong response, else the lattice corner farthest from the key
+      if (item.wrongResponse && typeof item.wrongResponse === 'object') return item.wrongResponse;
+      var n = isFinite(item.lattice) ? item.lattice - 1 : 12;
+      return key && typeof key.x === 'number' && typeof key.y === 'number' ? { x: key.x < n / 2 ? n : 0, y: key.y < n / 2 ? n : 0 } : undefined;
+    }
     if (!Array.isArray(key) || !key.length) return undefined;
     if (type === 'sequence') {
       out = key.slice();
@@ -667,6 +685,9 @@
         host: el.host, stage3d: S3, svg: PX.core.svg, ui: PX.ui, keys: keys, timing: timing,
         theme: currentTheme(), settings: { reducedMotion: reducedMotion() ? 'on' : 'off', keyHints: true },
         fast: !!cfg.fast, reducedMotion: reducedMotion(), play: play,
+        // v1.2 (CONTRACT-v1.2 D, F)
+        assist: cfg.assist === undefined ? null : cfg.assist, gentleMotion: !!cfg.gentle,
+        addMotion: function (ms) { if (typeof ms === 'number' && isFinite(ms) && ms > 0) H.played.motionMs = (H.played.motionMs || 0) + ms; },
       };
       if (H.view.mount) H.view.mount(H.ctx);
       setState('mounted');

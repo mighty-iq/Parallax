@@ -883,7 +883,7 @@ function testDaily(t) {
   t.eq([D.number('2026-11-01'), D.number('2026-11-30'), D.number('2027-01-01')], [1, 30, 62], 'Daily #N counts from 1 Nov 2026');
   const tz = [Date.UTC(2026, 10, 1, 23, 30), Date.UTC(2026, 10, 2, 0, 10), Date.UTC(2026, 10, 2, 13, 0)];
   t.eq(tz.map(D.day), tz.map(E.day), 'the day is the local date, the same day boundary as everywhere else (v1.1)');
-  t.eq(D.share(5, 6, 8), 'Parallax Daily #5 · 6/8 · discord.gg/chmr', 'the share line');
+  t.eq(D.share(5, 6, 8), 'Parallax Daily #5 · 6/8 · https://discord.gg/chmr', 'the share line');
   const items = D.items('2026-11-05'), other = t.mk().engine.daily.items('2026-11-05');
   t.eq(items, other, 'the same 8 items for everyone (another context, another record)');
   t.ok(items.length === 8 && items.every((it) => !PX.ex.get(it.exId).perDisplay), '8 items, none from screen-dependent exercises');
@@ -894,7 +894,7 @@ function testDaily(t) {
   const r = playSession(PX, rec, L, 'daily', { now }, 3);
   t.ok(r.steps.length === 8 && r.steps.every((s) => s.step.daily.scored && !s.out.rated), 'one scored attempt; items are not rated');
   t.eq(rec.daily['2026-11-05'].right, r.fin.daily.right, 'the result is kept for the day');
-  t.eq(r.fin.daily.share, 'Parallax Daily #5 · ' + r.fin.daily.right + '/8 · discord.gg/chmr', 'finish() gives the share line');
+  t.eq(r.fin.daily.share, 'Parallax Daily #5 · ' + r.fin.daily.right + '/8 · https://discord.gg/chmr', 'finish() gives the share line');
   t.ok(D.status(rec, now).done, 'status() says it is done');
   const again = playSession(PX, rec, L, 'daily', { now: now + 3600e3 }, 3);
   t.ok(again.steps.every((s) => !s.step.daily.scored) && rec.daily['2026-11-05'].right === r.fin.daily.right, 'a replay the same day is practice and changes nothing');
@@ -925,7 +925,7 @@ function testDaily(t) {
   }
   t.eq(rest, [3, 3, 4, 5, 6, 7], 'only unanswered items come, and a skipped one comes back at once');
   const f2 = E.modes.finish(pq, rp, now + 80000);
-  t.eq([rp.daily[key].partial, rp.daily[key].right, rp.daily[key].answered, D.status(rp, now).done, f2.daily.share], [undefined, 7, 8, true, 'Parallax Daily #5 · 7/8 · discord.gg/chmr'], 'answering the rest spends the attempt and gives the share line');
+  t.eq([rp.daily[key].partial, rp.daily[key].right, rp.daily[key].answered, D.status(rp, now).done, f2.daily.share], [undefined, 7, 8, true, 'Parallax Daily #5 · 7/8 · https://discord.gg/chmr'], 'answering the rest spends the attempt and gives the share line');
   t.ok(E.daily.pool().every((d) => !d.perDisplay && d.pat !== true), 'the pool: no screen-dependent and no PAT-format exercises');
 }
 

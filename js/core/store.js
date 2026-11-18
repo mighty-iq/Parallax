@@ -306,6 +306,14 @@
     if (typeof x.input === 'string' && /^[a-z]{1,12}$/.test(x.input)) out.input = x.input;
     if (x.ended === 'complete' || x.ended === 'early' || x.ended === 'closed') out.ended = x.ended;
     if (isNum(x.budgetMs) && x.budgetMs > 0 && x.budgetMs < 1e9) out.budgetMs = Math.round(x.budgetMs);
+    // Optional (v1.2): Quick round scores per exercise [rounds, total], and the gentle motion profile
+    if (plain(x.rounds)) {
+      var rs = fixMap(x.rounds, ID_RE, function (v) {
+        return Array.isArray(v) && v.length === 2 && isIntIn(v[0], 1, 1e6) && isNum(v[1]) && v[1] >= 0 && v[1] <= 100 * v[0] ? [v[0], Math.round(v[1])] : undefined;
+      });
+      if (rs && Object.keys(rs).length) out.rounds = rs;
+    }
+    if (x.gentle === true) out.gentle = true;
     return out;
   }
 
