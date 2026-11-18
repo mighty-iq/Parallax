@@ -369,6 +369,13 @@
     pn.body.appendChild(h('p', txt));
     pn.body.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' }), ui.button('See Progress', { kind: 'secondary', go: 'progress' })));
     out.appendChild(pn.el);
+    checkInvite(out);
+  }
+
+  // W1-rules (v1.2, gap C8): a finished check is a natural point to invite the player in.
+  function checkInvite(out) {
+    var inv = PX.ui.chimera && PX.ui.chimera.invite ? PX.ui.chimera.invite('check', { host: out }) : null;
+    if (inv) out.appendChild(inv);
   }
 
   PX.ui.check = { run: run, session: null };

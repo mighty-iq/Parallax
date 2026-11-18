@@ -3,7 +3,8 @@
    mode 'tour': Watch, Try, Go for Rotate, Fold and Track (each one a slow demo with captions and
    a few practice items that never count; exercises this device cannot show are left out), then
    "Measure your starting point (15 to 25 min, no feedback)" or Later. Every step can be skipped;
-   skipping the baseline only means transfer reports start later.
+   skipping the baseline only means transfer reports start later. The end screen carries the
+   Chimera invite (v1.2, gap C6).
    Flags: store.state.tour.done (true once the tour ended, finished or left) and
    store.state.ui.tour = { started, finished, done: [ids], skipped: [ids], baseline: 'now' | 'later' }.
    PX.ui.tour = { start(), run(host, route, ctx) → cleanup, LIST } */
@@ -72,6 +73,9 @@
       if (missing && list.length) wrap.appendChild(h('p.px-meta.pl-tour-miss', 'Left out here: ' + LIST.filter(function (id) { return list.indexOf(id) < 0; }).map(function (id) { var d = PX.ex.get(id); return d ? d.short || d.name : id; }).join(', ') + ' (not available on this device yet).'));
       var box = h('div.pl-tour-end');
       wrap.appendChild(box);
+      // gap C6: the tutorial ends with the invite (a screen of its own, no items on it)
+      var inv = PX.ui.chimera && PX.ui.chimera.invite ? PX.ui.chimera.invite('tutorial', { host: wrap, className: 'pl-tour-invite' }) : null;
+      if (inv) wrap.appendChild(inv);
       Play.showCard(box, null, {
         id: 'baseline', title: 'Measure your starting point',
         lines: ['15 to 25 minutes, no feedback: short tasks that Parallax never trains, plus a word task as a control.',
