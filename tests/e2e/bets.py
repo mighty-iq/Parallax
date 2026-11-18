@@ -264,12 +264,59 @@ def round_for(b, ex, w, h, calib=False):
 
 
 ROUND_EX = ['centralpoint', 'spin']
+# drawing checks: (exercise, principle, params) rendered through E.bets.round and the exercise's solved()
+DRAW = [
+    ('centralpoint', 'crossing', {'variant': 'quick', 'targets': 0, 'band': 1}),
+    ('spin', 'mirror-never', {'variant': 'pick', 'angle': 4, 'cells': 2}),
+    ('nets', 'z-ends', {'variant': 'opposite', 'between': 0, 'shape': 1, 'carried': 0}),
+]
 
 
 def run_round(b, only=None):
     for ex in (only or ROUND_EX):
         for (w, h) in SIZES:
             round_for(b, ex, w, h, calib=(ex == 'centralpoint' and w == 390))
+
+
+DRAW_JS = '''([ex, pid, params, seed]) => {
+  const B = PX.engine.bets, r = B.round(ex, pid, params, seed, 1);
+  if (!r) return 'no round';
+  const V = PX.ui.betsViews[ex], C = B.content(ex);
+  const box = document.createElement('div');
+  box.className = 'px-bets-round';
+  box.id = 'bets-draw';
+  box.style.cssText = 'max-width: 40rem; margin: 1rem; background: var(--surface); padding: 0.5rem';
+  const pair = document.createElement('div'); pair.className = 'px-bets-pair';
+  const hosts = [0, 1].map(() => { const f = document.createElement('figure'); f.className = 'px-bets-item'; const d = document.createElement('div'); d.className = 'px-bets-figbox'; f.appendChild(d); pair.appendChild(f); return d; });
+  box.appendChild(pair);
+  const p = document.createElement('p'); p.textContent = r.opts.map((id) => C.compare.statements.find((x) => x.id === id).text).join(' | '); box.appendChild(p);
+  document.querySelector('main').prepend(box);
+  const m = [V.solved(hosts[0], r.a.item, { principle: pid }), V.solved(hosts[1], r.b.item, { principle: pid })];
+  m.forEach((x) => x.mark(true));
+  return 'ok';
+}'''
+
+
+def run_draw(b):
+    for (w, h) in [(360, 640), (1366, 768)]:
+        ctx = ctx_for(b, w, h)
+        page = ctx.new_page()
+        con = Console(page)
+        boot(page)
+        go(page, 'library')
+        for (ex, pid, params) in DRAW:
+            tag = f'draw {ex} {pid} {w}x{h}'
+            page.evaluate("(() => { const x = document.getElementById('bets-draw'); if (x) x.remove(); })()")
+            got = page.evaluate(DRAW_JS, [ex, pid, params, 1234])
+            C.ok(got == 'ok', f'{tag}: a round to draw ({got})')
+            if got != 'ok':
+                continue
+            figs = page.locator('#bets-draw .px-bets-fig')
+            C.ok(figs.count() == 2 and all(non_blank(figs.nth(k).screenshot()) for k in range(2)), f'{tag}: both items drawn, with the rule')
+            no_scroll(page, tag)
+            page.locator('#bets-draw').screenshot(path=str(OUT / f'draw_{ex}_{pid}_{w}.png'))
+        C.ok(not con.errors(), f'draw {w}x{h}: no console errors {con.errors()[:3]}')
+        ctx.close()
 
 
 def run_expect(b):
@@ -308,7 +355,7 @@ def run_expect(b):
 
 
 if __name__ == '__main__':
-    which = sys.argv[1:] or ['screens', 'round', 'expect']
+    which = sys.argv[1:] or ['screens', 'round', 'draw', 'expect']
     if any(x.startswith('round:') for x in which):
         which.append('round')
     with sync_playwright() as p:
@@ -317,6 +364,8 @@ if __name__ == '__main__':
             run_screens(b)
         if 'round' in which:
             run_round(b, [x[6:] for x in which if x.startswith('round:')] or None)
+        if 'draw' in which:
+            run_draw(b)
         if 'expect' in which:
             run_expect(b)
         b.close()
