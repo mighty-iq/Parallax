@@ -25,10 +25,12 @@
     strategyFirst: 'analytic',
     minutes: 2,
     demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 4, kind: 'front' }],
+    // Try 3 brings turned openings, after a worked example of a quarter-turned one on a sister item
+    // (note D2 addendum C change 4).
     practice: [
       { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, assist: { trace: true }, seed: 104 },
       { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 239 },
-      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }, tip: 'turned', seed: 301 },
+      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }, tip: 'turned', seed: 301, example: { seed: 3 } },
       { params: { features: 1, edges: 0, keyview: 1, pose: 0, foils: 0 }, tip: 'side', seed: 400 },
     ],
     tips: [

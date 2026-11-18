@@ -1066,15 +1066,16 @@
   // toward the side and top faces, of which less shows), lying +0.6, a proportion foil +0.3.
   // Range 4.0 logits.
   // v1.2 (version 2; note D2 §3.4, §3.8): a starter level in front of 'features', one feature in all
-  // and the openings drawn unturned, Δ = −1.5 against today's level 0 (hand-set, to be refitted from
-  // pooled exports): the floor moves from −2.3 to −3.8 and every older combination keeps its exact
-  // difficulty (at = [Δ, 0, step, 2·step, 3·step]). Range 5.5 logits.
+  // and the openings drawn unturned, Δ = −1.6 against today's level 0 (hand-set, to be refitted from
+  // pooled exports; note D2 §3.4 proposed −1.5, and the first-band simulation put a new player at its
+  // 74 % edge, so −1.6 centres it): the floor moves from −2.3 to −3.9 and every older combination keeps
+  // its exact difficulty (at = [Δ, 0, step, 2·step, 3·step]). Range 5.6 logits.
   PX.ex.define({
     id: 'openings', version: 2, code: 'EX-14', name: 'Openings', short: 'Openings',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 5, pat: true,
     starter: { dim: 'features', levels: 1 },
     dims: [
-      { key: 'features', label: 'Features', levels: FEATURE_LABELS.slice(), step: 0.6, at: [-1.5, 0, 0.6, 1.2, 1.8] },
+      { key: 'features', label: 'Features', levels: FEATURE_LABELS.slice(), step: 0.6, at: [-1.6, 0, 0.6, 1.2, 1.8] },
       { key: 'edges', label: 'Edges', levels: EDGES.slice(), step: 0.5 },
       { key: 'keyview', label: 'Fitting face', levels: KEYVIEW.slice(), step: 0.4 },
       { key: 'pose', label: 'Pose', levels: POSE.slice(), step: 0.6 },

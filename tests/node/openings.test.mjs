@@ -28,7 +28,7 @@ export async function run(t) {
 const sig = (x) => 1 / (1 + Math.exp(-x));
 const pRight = (theta, b, g = CHANCE) => g + (1 - g - 0.03) * sig(theta - b);
 const pk = (p) => `${p.features}${p.edges}${p.keyview}${p.pose}${p.foils}`;
-const BAND_DELTA = -1.5, OLD_FLOOR = -2.3; // note D2 §3.4, §3.8: the starter level's offset; the pre-1.2 floor
+const BAND_DELTA = -1.6, OLD_FLOOR = -2.3; // note D2 §3.4, §3.8: the starter level's offset; the pre-1.2 floor
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat],
@@ -380,6 +380,10 @@ function testLearn(t, PX, def) {
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
   if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
   const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
+  // a worked example before the Try item that brings the first hard feature (note D2 addendum C change 4)
+  const exE = L.practice[2].example, xe = exE && def.generate(PX.rng(exE.seed), L.practice[2].params);
+  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[2].seed && def.validate(xe) === true && !xe.fallback && xe.options[xe.key].tf !== 0 && xe.key !== items[2].key && L.practice.every((e, i) => i === 2 || e.example === undefined),
+    `Try 3 (turned openings) comes after a worked example on a sister item whose opening is turned (seed ${exE && exE.seed}, turn ${xe && xe.options[xe.key].tf})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].features === 0 && P[1].features === 0, 'Try 1 and Try 2 are at the starter band');
   t.eq(P[2], { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }, 'Try 3 is the pre-1.2 floor (openings turned)');
