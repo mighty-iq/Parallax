@@ -641,9 +641,13 @@
         h('p', h('b', 'Progress fills in as you practise. '), 'Levels show after a few items, learning curves after two practice days, and the Spatial Check report after your two starting checks.'),
         h('div.px-data-row', ui.button('Start today’s session', { kind: 'primary', go: 'play?mode=train' }), startCheckButton('Take baseline 1', 'secondary'))));
     }
-    host.appendChild(h('div.px-prog',
+    var box = h('div.px-prog',
       levelsSection(rec, now, ov, !tot.answers && !checks), checkSection(rec, now), curvesSection(rec, now, focus, ov), bestsSection(rec),
-      goalSection(rec, now, tot), achievementsSection(rec, now), dataSection()));
+      goalSection(rec, now, tot), achievementsSection(rec, now), dataSection());
+    // v1.2 wave 2 (CONTRACT-v1.2 R): panels other modules add, after a section (by id or title) or in
+    // its place (replace: 'check'; the new panel keeps the section's id for the jump links)
+    if (PX.ui.hooks && typeof PX.ui.hooks.screen === 'function') PX.ui.hooks.screen('progress:panels', box, { rec: rec, now: now });
+    host.appendChild(box);
     if (focus) window.setTimeout(function () { jumpTo('curves'); }, 0);
   }
 

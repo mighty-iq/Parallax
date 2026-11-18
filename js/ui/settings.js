@@ -301,13 +301,16 @@
     var s = PX.core.store.state.settings;
     host.appendChild(h('div.px-screen-head', h('h1', 'Settings'),
       h('p.px-lead', 'Changes apply at once and are saved with your progress.')));
-    host.appendChild(h('div.px-settings',
+    var foot = h('p.px-settings-foot', 'Parallax ', h('span.px-num', 'v' + PX.version), '. Your data stays in this browser; nothing is sent anywhere. ',
+      ui.button('About Parallax', { kind: 'ghost', small: true, go: 'about' }));
+    var box = h('div.px-settings',
       appearance(s), training(s),
       typeof patFocusSection === 'function' ? patFocusSection(s) : null, // B7's (v1.1)
       typeof testSoonSection === 'function' ? testSoonSection(s) : null, // B7's (v1.1)
-      soundKeys(s), privacy(s), dataPanel(), playtestPanel(),
-      h('p.px-settings-foot', 'Parallax ', h('span.px-num', 'v' + PX.version), '. Your data stays in this browser; nothing is sent anywhere. ',
-        ui.button('About Parallax', { kind: 'ghost', small: true, go: 'about' }))));
+      soundKeys(s), privacy(s), dataPanel(), playtestPanel(), foot);
+    // v1.2 wave 2 (CONTRACT-v1.2 R): sections other modules add, after the section they name
+    if (PX.ui.hooks && typeof PX.ui.hooks.screen === 'function') PX.ui.hooks.screen('settings:sections', box, { rec: PX.core.store.state }, { before: foot });
+    host.appendChild(box);
   }
 
   /* ---------- B7: PAT focus and "Taking a test soon?" (v1.1 PLAN M5, M6; R4 §6.4) ----------

@@ -11,6 +11,10 @@
                                           undefined, in order (a handler may return a list: its items
                                           are added one by one)
      list(point) → [{ id, order }]        POINTS: the known points and whether each is async
+     place(container, results, opts)      puts screen results ({ el, after, replace, order }) into a
+                                          screen: after or in place of a part named by data-slot,
+                                          data-section or title; the rest at the end (opts.before)
+     screen(point, container, ctx, opts)  collect, then place (the screens' call sites)
    A handler that throws, rejects or (async) returns something that is not a promise or a value is
    skipped and reported as 'play:error' on PX.bus (playtest mode shows it). Points:
      session:start (async), item:before (async), item:notes, summary:panels, today:slots,
@@ -80,5 +84,60 @@
     return next();
   }
 
-  PX.ui.hooks = { on: on, run: run, collect: collect, list: list, POINTS: POINTS };
+  /* ---------- placing a screen point's results (the screens' call sites) ---------- */
+
+  // A part of a screen is named by its data-slot, its data-section or its title (a panel's
+  // .px-panel-title, or a section's first h2).
+  function named(node, name) {
+    if (!node || node.nodeType !== 1 || typeof name !== 'string' || !name) return false;
+    if (node.getAttribute('data-slot') === name || node.getAttribute('data-section') === name) return true;
+    var t = node.querySelector('.px-panel-title, h2');
+    return !!t && String(t.textContent || '').replace(/\s+/g, ' ').trim() === name;
+  }
+  // place(container, results, opts) → the elements placed, in order. A result is { el, after,
+  // replace, order } (a bare element counts as { el }): replace takes the place of the child named
+  // so (which is removed; its data-slot, data-section and id pass to el when el has none, and
+  // opts.onReplace(el, old, name) may copy more); after follows that child (and what was placed
+  // after it before); the rest, and any whose name matches nothing, go before opts.before (a child
+  // of container) or at the end. Results for one place keep their order (order, default 50, then
+  // as given).
+  function place(container, results, opts) {
+    opts = opts || {};
+    var placed = [];
+    if (!container || !Array.isArray(results)) return placed;
+    var list = results.map(function (r, i) {
+      var x = r && r.nodeType === 1 ? { el: r } : r;
+      if (!x || !x.el || x.el.nodeType !== 1) return null;
+      return { el: x.el, after: x.after, replace: x.replace, order: typeof x.order === 'number' && isFinite(x.order) ? x.order : 50, i: i };
+    }).filter(Boolean).sort(function (a, b) { return a.order - b.order || a.i - b.i; });
+    var tail = {};
+    list.forEach(function (x) {
+      var rep = typeof x.replace === 'string' && x.replace ? x.replace : null;
+      var name = rep || (typeof x.after === 'string' && x.after ? x.after : null), ref = null;
+      if (name && tail[name] && tail[name].parentNode === container) ref = tail[name];
+      var kids = Array.prototype.slice.call(container.children || []);
+      if (!ref && name) for (var c = 0; c < kids.length; c++) if (kids[c] !== x.el && named(kids[c], name)) { ref = kids[c]; break; }
+      try {
+        if (ref && rep && ref !== tail[name]) {
+          ['data-slot', 'data-section'].forEach(function (a) { if (ref.hasAttribute(a) && !x.el.hasAttribute(a)) x.el.setAttribute(a, ref.getAttribute(a)); });
+          if (ref.id && !x.el.id) { var id = ref.id; ref.removeAttribute('id'); x.el.id = id; }
+          if (typeof opts.onReplace === 'function') opts.onReplace(x.el, ref, name);
+          container.insertBefore(x.el, ref);
+          container.removeChild(ref);
+        } else if (ref) container.insertBefore(x.el, kids[kids.indexOf(ref) + 1] || null);
+        else container.insertBefore(x.el, opts.before && opts.before.parentNode === container ? opts.before : null);
+      } catch (e) { report('place', { id: name || '(end)' }, e); return; }
+      if (name) tail[name] = x.el;
+      placed.push(x.el);
+    });
+    return placed;
+  }
+  // screen(point, container, ctx, opts): collect(point, ctx), then place the results (above).
+  function screen(name, container, ctx, opts) {
+    var res = [];
+    try { res = collect(name, ctx); } catch (e) { report(name, { id: '(collect)' }, e); res = []; }
+    return place(container, res, opts);
+  }
+
+  PX.ui.hooks = { on: on, run: run, collect: collect, list: list, place: place, screen: screen, POINTS: POINTS };
 })(window.PX);

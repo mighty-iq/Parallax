@@ -117,7 +117,7 @@
     'patfold.folds': function (v) { var n = parseInt(v, 10); return /starter/.test(String(v)) ? 'one fold (starter: outside the test’s format)' : n === 1 ? 'one fold' : n + ' folds'; },
     'patfold.idle': function (v) { return v === 0 ? 'every fold matters' : 'up to ' + (v === 1 ? 'one fold' : v + ' folds') + ' the punch misses'; },
     // Openings: the cuts dealt over the three faces, the outline that fits, the wrong openings
-    'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },
+    'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 1 ? 'one cut, on one face (starter)' : n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },
     'openings.edges': function (v) { return v === 'chamfers' ? 'slanted cuts too' : 'right-angled cuts only'; },
     'openings.keyview': function (v) { return v === 'front, side or top' ? 'any of the three outlines fits' : 'mostly the ' + String(v).split(',')[0] + ' outline fits (sometimes the side)'; },
     'openings.pose': function (v) { return v === 'lying' ? 'solid shown lying on its side' : 'solid shown upright'; },
@@ -549,6 +549,18 @@
     }));
   }
 
+  // v1.2 wave 2 (CONTRACT-v1.2 R): lines other modules add to the page's first section (the bet, the
+  // settings handled per dimension, the last plateau change), by their order.
+  function exerciseLines(def, rec, now) {
+    var Hk = PX.ui.hooks, res = [];
+    if (!Hk) return [];
+    try { res = Hk.collect('exercise:lines', { def: def, rec: rec, now: now, where: 'page' }); } catch (e) { if (window.console) console.error('PX.ui.library: exercise:lines failed', e); return []; }
+    return res.map(function (x, i) {
+      var el = x && x.nodeType === 1 ? x : x && x.el && x.el.nodeType === 1 ? x.el : null;
+      return el ? { el: el, order: x && typeof x.order === 'number' && isFinite(x.order) ? x.order : 50, i: i } : null;
+    }).filter(Boolean).sort(function (a, b) { return a.order - b.order || a.i - b.i; }).map(function (x) { return x.el; });
+  }
+
   function renderExercise(host, route) {
     var def = PX.ex.get(route.arg);
     var rec = PX.core.store.state, now = Date.now();
@@ -583,7 +595,7 @@
         best ? ['Best whole block', levelText(best.level) + ' (' + Math.round(best.acc * 10) + ' of 10 right), ' + U.fmtDate(best.at, 'long')] : null,
       ]),
       lv.n ? h('div.px-data-row', ui.button('Learning curve', { kind: 'ghost', small: true, go: 'progress?ex=' + def.id }), ui.button('Trials in the Log', { kind: 'ghost', small: true, go: 'log?ex=' + def.id })) : null,
-    ], { 'data-section': 'level' });
+    ].concat(exerciseLines(def, rec, now)), { 'data-section': 'level' });
     var prPanel = section('Practise', [optionList(def, rec, now)], { 'data-section': 'practise' });
     top.appendChild(lvPanel);
     top.appendChild(prPanel);

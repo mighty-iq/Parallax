@@ -121,10 +121,8 @@
 
   /* ---------- slots ---------- */
 
-  function sessionSlot(rec, now) {
+  function sessionSlot(rec, now, plan) {
     var K = PX.ui.kit;
-    var plan = null;
-    try { plan = PX.ui.home.plan(rec, now); } catch (e) { plan = null; }
     if (!plan || !plan.blocks || !plan.blocks.length) return noSession();
     var p = K.panel({
       title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session',
@@ -153,6 +151,12 @@
     });
     p.body.appendChild(list);
     p.body.appendChild(ruler(plan));
+    // v1.2 wave 2 (CONTRACT-v1.2 R): lines other modules add under the plan (why a baseline or a
+    // measurement block opens the next session, a plateau change or rest running)
+    hookCollect('today:session', { rec: rec, now: now, plan: plan }).forEach(function (x) {
+      var line = typeof x === 'string' ? h('p.px-meta.px-session-note', x) : x && x.nodeType === 1 ? x : null;
+      if (line) p.body.appendChild(line);
+    });
     var start = ui.button('Start today’s session', { kind: 'primary', go: 'play?mode=train' });
     start.setAttribute('data-primary', '');
     p.body.appendChild(h('div.px-session-actions', start,
@@ -339,6 +343,7 @@
     var when = X && X.MODE_WHEN ? X.MODE_WHEN[sg.mode] : null;
     if (when) p.body.appendChild(h('p.px-meta.px-mode-when', when));
     var go = ui.button('Start ' + mode, { kind: 'secondary', onClick: function () {
+      event('suggest', def.id, { key: sg.key, mode: sg.mode, act: 'go' }); // CONTRACT-v1.2 O
       var route = { mode: sg.mode, exId: def.id };
       if (X && typeof X.start === 'function') X.start(def, route); else PX.core.router.go('play', route);
     } });
@@ -348,6 +353,7 @@
       if (!R.ui || typeof R.ui !== 'object') R.ui = { lastRoute: null };
       if (!R.ui.hiddenTips || typeof R.ui.hiddenTips !== 'object') R.ui.hiddenTips = {};
       R.ui.hiddenTips[sg.key] = Date.now() + HIDE_MS;
+      event('suggest', def.id, { key: sg.key, mode: sg.mode, act: 'hide' }); // CONTRACT-v1.2 O
       PX.core.store.save();
       ui.toast('Hidden for two weeks.', { kind: 'info' });
       PX.ui.app.rerender();
@@ -436,21 +442,48 @@
 
   /* ---------- the screen ---------- */
 
+  // v1.2 wave 2 (CONTRACT-v1.2 R, O): the hook points of Today and its events (js/ui/hooks.js).
+  function hookCollect(point, ctx) {
+    var Hk = PX.ui.hooks;
+    if (!Hk) return [];
+    try { return Hk.collect(point, ctx); } catch (e) { if (window.console) console.error('PX.ui.home: hooks at ' + point + ' failed', e); return []; }
+  }
+  function event(kind, exId, data) {
+    try {
+      var Ev = PX.engine && PX.engine.events;
+      if (Ev && typeof Ev.add === 'function' && Ev.add(PX.core.store.state, kind, exId || null, data, Date.now())) PX.core.store.save();
+    } catch (e) { if (window.console) console.error('PX.ui.home: event failed', e); }
+  }
+
+  // Today's slots, by name (data-slot): session, suggest, goal, daily, levels, check, achievements,
+  // data. today:slots results go after a slot or in its place (CONTRACT-v1.2 R); one that replaces a
+  // slot takes its grid place (its px-slot--<name> class), and one placed after a slot brings its
+  // own placement in its owner's stylesheet (the wide layout places slots by class, css/app.css).
+  var SLOTS = ['session', 'suggest', 'goal', 'daily', 'levels', 'check', 'achievements', 'data'];
   function render(host) {
     var rec = PX.core.store.state, now = Date.now(), d = new Date(now);
     host.appendChild(h('div.px-screen-head',
       h('p.px-screen-meta', DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · week ' + isoWeek(d)),
       h('h1', 'Today')));
+    var plan = null;
+    try { plan = PX.ui.home.plan(rec, now); } catch (e) { plan = null; }
     var sug = suggestSlot(rec, now);
-    host.appendChild(h('div', { class: ['px-today', sug ? 'has-suggest' : null] },
-      sessionSlot(rec, now),
-      sug,
-      goalSlot(rec, now),
-      dailySlot(rec, now),
-      levelsSlot(rec),
-      checkSlot(rec, now),
-      achievementsSlot(rec),
-      dataSlot()));
+    var els = [sessionSlot(rec, now, plan),
+      // no suggestion: an empty hidden slot keeps its place for a hook that replaces it
+      sug || h('div', { 'data-slot': 'suggest', hidden: true }),
+      goalSlot(rec, now), dailySlot(rec, now), levelsSlot(rec), checkSlot(rec, now), achievementsSlot(rec), dataSlot()];
+    els.forEach(function (el, i) { if (el && !el.hasAttribute('data-slot')) el.setAttribute('data-slot', SLOTS[i]); });
+    var grid = h('div', { class: ['px-today', sug ? 'has-suggest' : null] }, els);
+    if (PX.ui.hooks && typeof PX.ui.hooks.place === 'function') {
+      PX.ui.hooks.place(grid, hookCollect('today:slots', { rec: rec, now: now, plan: plan }), {
+        onReplace: function (el, old, name) {
+          el.classList.add('px-slot');
+          if (SLOTS.indexOf(name) >= 0 && !el.classList.contains('px-slot--' + name)) el.classList.add('px-slot--' + name);
+          if (name === 'suggest') grid.classList.add('has-suggest');
+        },
+      });
+    }
+    host.appendChild(grid);
   }
 
   PX.ui.home = {

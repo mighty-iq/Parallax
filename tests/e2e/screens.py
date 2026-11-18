@@ -532,7 +532,8 @@ def lab_checks(page, tag, w):
     page.click('[data-action="lab-research"]')
     page.wait_for_selector('.px-modal.px-export')
     head = re.split(r'\r?\n', page.locator('.px-modal.px-export .px-copybox-text').input_value())[0]
-    C.ok(re.search(r'p_pred,stage,(display,input,)?(value2,)?b,g,answer$', head) is not None and ',version,' in head, f'{tag}: research export columns {head[-40:]}')
+    # v1.2 wave 2 (CONTRACT-v1.2 T): eight columns after value2, then the research export's b, g and answer
+    C.ok(re.search(r'p_pred,stage,(display,input,)?(value2,)?(kind,layer,answer_mode,orientation,deadline,b_offset,bet,format,)?b,g,answer$', head) is not None and ',version,' in head, f'{tag}: research export columns {head[-40:]}')
     page.keyboard.press('Escape')
     # the community export (v1.2; CONTRACT-v1.2 I): no settings, no ui, no name, device details only when ticked
     page.click('[data-action="lab-pooled"]')

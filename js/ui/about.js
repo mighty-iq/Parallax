@@ -57,7 +57,7 @@
     var C = PX.ui.chimera;
     var copy = C.linkCopy({ label: 'Chimera Discord address' });
 
-    host.appendChild(h('div.px-about',
+    var box = h('div.px-about',
       h('div.px-screen-head',
         h('h1', 'About Parallax'),
         h('p.px-lead', 'Parallax is a free, open-source trainer for visuospatial ability: picturing objects as they turn, fold, are cut, or are seen from somewhere else. It works offline in your browser.'),
@@ -105,7 +105,10 @@
           return h('li', r.text + ' ', ext('https://doi.org/' + r.doi, 'doi.org/' + r.doi));
         })),
         h('p.px-meta', 'The guide lists the full research notes behind every exercise.'),
-      ], { 'data-section': 'refs' })));
+      ], { 'data-section': 'refs' }));
+    // v1.2 wave 2 (CONTRACT-v1.2 R): sections other modules add, after the section they name
+    if (PX.ui.hooks && typeof PX.ui.hooks.screen === 'function') PX.ui.hooks.screen('about:sections', box, { rec: PX.core.store.state });
+    host.appendChild(box);
   }
 
   PX.ui.screens = PX.ui.screens || {};
