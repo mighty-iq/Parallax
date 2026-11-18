@@ -256,7 +256,7 @@ def outline_frame(C, page, tag):
                  inside: !!r && r.left >= s.left - 1 && r.right <= s.right + 1 && r.top >= s.top - 1 && r.bottom <= s.bottom + 1,
                  lines: a ? a.querySelectorAll('.ex-views-assist-line').length : 0 };
     }""")
-    C.ok(d['on'] and d['want'] in d['label'] and 'Step 2 done' in d['label'] and d['inside'] and d['lines'] == 1, f'{tag}: the asked view\'s outline is drawn in the stage, {d["want"]} cells as the key ({d})')
+    C.ok(d['on'] and d['want'] in d['label'] and 'Size counted' in d['label'] and d['inside'] and d['lines'] == 1, f'{tag}: the asked view\'s outline is drawn in the stage, {d["want"]} cells as the key ({d})')
     C.ok(d['clear'], f'{tag}: the outline box leaves the view\'s tag ("TOP VIEW") clear ({d})')
 
 

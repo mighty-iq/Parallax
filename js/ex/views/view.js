@@ -150,7 +150,7 @@
   // Tail and tip of the arrow for a view of a structure (grid G, height H).
   function arrowEnds(view, G, H) {
     var y = Math.max(0.8, Math.min(H, 2) / 2 + 0.3), s = G / 2 + PAD;
-    if (view === 'top') return { tail: [0, H + 2.3, 0], tip: [0, H + 0.45, 0] };
+    if (view === 'top') return { tail: [0, H + 2.0, 0], tip: [0, H + 0.75, 0] }; // short, and its head clear of the roofs
     // the tip stops short of the plate's edge, so the head never covers the faces it points at
     if (view === 'front') return { tail: [0, y, s + 2.05], tip: [0, y, s + 0.85] };
     return { tail: [s + 2.05, y, 0], tip: [s + 0.85, y, 0] };
@@ -379,6 +379,8 @@
       [ta[0] + side * (w / 2 - 4), top - up],
       [ta[0] + side * (w / 2 - 4), ta[1] + up],
       [(ta[0] + tp[0]) / 2, top - up - 6],
+      [(ta[0] + tp[0]) / 2 + w / 2 + 10, (ta[1] + tp[1]) / 2],
+      [(ta[0] + tp[0]) / 2 - w / 2 - 10, (ta[1] + tp[1]) / 2],
     ];
     if (soft && soft.length) {
       var p0 = pick(avoid.concat(soft));
@@ -900,7 +902,20 @@
     clearInk();
     var o = stageOrigin(), A = drawingMap(hm, v), cells = viewCells(hm, v, false).cells;
     if (cover > 0) st.ink.appendChild(SV.el('rect', { x: st.d3.offsetLeft, y: st.d3.offsetTop, width: st.v3.width, height: st.v3.height, class: 'ex-views-cover', style: 'opacity:' + cover.toFixed(3) }));
+    // the cells to count, as a light dashed grid (a counting aid, not lines of the drawing)
+    st.ink.appendChild(SV.el('path', { d: mapPath({ lines: innerEdges(cells) }, A, undefined, o[0], o[1]), class: 'ex-views-trace ex-views-trace--cells' }));
     st.ink.appendChild(SV.el('path', { d: mapPath({ lines: outlineEdges(cells) }, A, undefined, o[0], o[1]), class: 'ex-views-trace ex-views-trace--outline' }));
+  }
+  // The unit edges shared by two filled cells (cells, y up), each once.
+  function innerEdges(cells) {
+    var on = {}, out = [];
+    cells.forEach(function (c) { on[c[0] + ',' + c[1]] = true; });
+    cells.forEach(function (c) {
+      var x = c[0], y = c[1];
+      if (on[(x + 1) + ',' + y]) out.push([x + 1, y, x + 1, y + 1]);
+      if (on[x + ',' + (y + 1)]) out.push([x, y + 1, x + 1, y + 1]);
+    });
+    return out;
   }
   // A drawing laid on option i (inside its own picture), as a group that can be flipped about its centre.
   function overlayOption(i, d, cls) {
@@ -930,7 +945,7 @@
       { ms: 2100, caption: cap('move', { view: v }), enter: function () { begin(true); }, update: function (k) { moveCam(hm, v, ease(k)); } },
       {
         ms: 2400, caption: cap(others ? 'outlineAll' : 'outline', { w: kd.w, h: kd.h }),
-        enter: function () { begin(false); moveCam(hm, v, 1); crossOut(drop); },
+        enter: function () { begin(false); plainFaces(); moveCam(hm, v, 1); crossOut(drop); },
         update: function (k) { inkOutline(hm, v, 0.5 * Math.min(1, k * 2)); },
       },
       {
@@ -939,10 +954,10 @@
         update: function (k) { inkDraw(d, drawingMap(hm, v), Math.ceil(Math.min(1, k * 1.15) * n), 0.86 * Math.max(0, (k - 0.55) / 0.45)); },
       },
       {
+        // The traced drawing stays on the stage and appears on its answer at once (Views fresh test:
+        // flying, it crossed the other answers on its way).
         ms: 1400, caption: cap('land', { n: key + 1 }),
-        enter: function () { begin(false); crossOut(drop); traced(); flyBegin(d, drawingMap(hm, v), optionMap(key)); },
-        update: function (k) { flyAt(ease(k)); },
-        exit: function () { landedOption(key, d); focusOption(key); },
+        enter: function () { begin(false); crossOut(drop); traced(); landedOption(key, d); focusOption(key); },
       },
     ];
     if (picked >= 0 && picked !== key) {
