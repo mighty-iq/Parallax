@@ -475,3 +475,12 @@
   .pl-verdict[data-kind="turn"] .pl-verdict-word { font-size: var(--fs-lg); }
   .pl-verdict[data-kind="turn"] .pl-verdict-text { font-size: var(--fs-sm); }
 }
+/* Watch, Try, Go's tools (Parts, Skip, End the tour) are full 44 px targets with room between
+   them (rule 8; fresh-player test); the parts list's own Close button shows only on phones. */
+.pl-wtg-tools .px-btn { min-height: var(--tap); min-width: var(--tap); }
+.pl-parts-close { display: none; }
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-wtg-tools { gap: var(--s2); }
+  .pl-wtg.is-parts-open .pl-parts-close { display: block; padding-left: 0; border-left: 0; }
+  .pl-parts-close .px-btn { min-height: var(--tap); }
+}
