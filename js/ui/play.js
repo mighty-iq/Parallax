@@ -1361,6 +1361,11 @@
     var m = learn && isNum(learn.minutes) && learn.minutes > 0 ? Math.round(learn.minutes) : learn && Array.isArray(learn.rules) && learn.rules.length ? 2 : 1;
     return m === 1 ? 'a minute' : m === 2 ? 'two minutes' : m + ' minutes';
   }
+  // The Chimera line every share text ends with (the full link; PX.ui.chimera.LINE when present).
+  function chimeraLine() {
+    var L = PX.ui.chimera && typeof PX.ui.chimera.LINE === 'string' && PX.ui.chimera.LINE ? PX.ui.chimera.LINE : '';
+    return L || 'Built by the Chimera community on Discord: https://discord.gg/chmr';
+  }
   // A Chimera invite (CONTRACT-v1.2 H): W1-rules' component, or nothing while it is missing.
   function invite(kind, opts) {
     try { return PX.ui.chimera && typeof PX.ui.chimera.invite === 'function' ? PX.ui.chimera.invite(kind, opts || {}) || null : null; } catch (e) { log('invite failed', e); return null; }
@@ -2307,7 +2312,7 @@
     if (PX.ui.share && typeof PX.ui.share.open === 'function') {
       try { return PX.ui.share.open(opts); } catch (e) { log('share failed', e); }
     }
-    var text = opts.text || [opts.title].concat(opts.lines || [], [opts.footer || '', 'Built by the Chimera community on Discord: https://discord.gg/chmr']).filter(Boolean).join('\n');
+    var text = opts.text || [opts.title].concat(opts.lines || [], [opts.footer || '', chimeraLine()]).filter(Boolean).join('\n');
     return ui.modal({ title: 'Share', body: [h('p', 'Copy the text and paste it wherever you like.'), PX.ui.kit.copyField(text, { rows: 5, ariaLabel: 'Text to share' })], actions: [{ label: 'Done', kind: 'secondary' }] });
   }
 
@@ -2392,7 +2397,7 @@
     // One Chimera invite at the session's highest point (CONTRACT-v1.2 H): a personal best, a
     // passed Path stage, an achievement; placed under its panel, never between items.
     var inv = res && res.bests && res.bests.length ? 'best' : res && res.path && res.path.passed && res.path.passed.length ? 'path' : res && res.achievements && res.achievements.length ? 'achievement' : null;
-    if (inv === 'path' && extra) { var ip = invite('path', { exId: res.path.exId, stage: res.path.passed[res.path.passed.length - 1] }); if (ip) out.appendChild(ip); }
+    if (inv === 'path' && extra) { var ip = invite('path', { host: out, exId: res.path.exId, stage: res.path.passed[res.path.passed.length - 1] }); if (ip) out.appendChild(ip); }
     if (res && res.bests && res.bests.length) {
       var pb = K.panel({ title: 'Personal bests', className: 'pl-panel' });
       pb.body.appendChild(h('ul.pl-list', res.bests.map(function (b) {
@@ -2401,7 +2406,7 @@
         return h('li', h('b', def.short || def.name), ': your highest level after a whole block of 10, ' + b.level + (b.previous ? ' (best before: ' + b.previous + ')' : ' (your first full block)') + '.');
       })));
       out.appendChild(pb.el);
-      if (inv === 'best') { var ib = invite('best', { exId: res.bests[0].exId, level: res.bests[0].level }); if (ib) out.appendChild(ib); }
+      if (inv === 'best') { var ib = invite('best', { host: out, exId: res.bests[0].exId, level: res.bests[0].level }); if (ib) out.appendChild(ib); }
     }
     if (res && res.achievements && res.achievements.length) {
       var pa = K.panel({ title: 'Achievements', className: 'pl-panel' });
@@ -2409,7 +2414,7 @@
         return h('li', K.icon('award', 'pl-ach-mark'), h('div', h('b', a.name), h('span', a.desc)));
       })));
       out.appendChild(pa.el);
-      if (inv === 'achievement') { var ia = invite('achievement', { id: res.achievements[0].id }); if (ia) out.appendChild(ia); }
+      if (inv === 'achievement') { var ia = invite('achievement', { host: out, id: res.achievements[0].id }); if (ia) out.appendChild(ia); }
     }
     if (res && res.streak) {
       var pw = K.panel({ title: 'This week', className: 'pl-panel', aside: 'goal ' + res.streak.goal + ' a week' });
@@ -2500,7 +2505,7 @@
     // copied text names it once.
     var title = MODE_NAMES[S.mode] + ' session', foot = U.fmtDate(now(), 'long');
     openShare({ kind: 'session', title: title, lines: lines.slice(0, 5), footer: foot,
-      text: ['Parallax · ' + title].concat(lines.slice(0, 5), [foot, 'Built by the Chimera community on Discord: https://discord.gg/chmr']).join('\n') });
+      text: ['Parallax · ' + title].concat(lines.slice(0, 5), [foot, chimeraLine()]).join('\n') });
   }
 
   /* ---------- the Daily Challenge result ---------- */
@@ -2663,7 +2668,7 @@
       ui.clear(wrap);
       wrap.appendChild(screenHead('Watch, Try, Go', (def.short || def.name) + ': ready', r === 'skipped' || r === 'end' ? 'Skipped. How to play stays in the Library.' : 'That was the tutorial; nothing was logged. The next items in a session count.'));
       wrap.appendChild(slot);
-      var iv = invite('tutorial', { exId: exId }); // the tutorial's end (gap C6)
+      var iv = invite('tutorial', { host: wrap, exId: exId }); // the tutorial's end (gap C6)
       if (iv) wrap.appendChild(iv);
       emit('play:screen', { screen: 'watch-end', mode: 'watch', exId: exId });
       var start = ui.button('Start a session with ' + (def.short || def.name), { kind: 'primary', onClick: function () { router.go('play', { mode: 'train', exId: exId }, { force: true }); } });

@@ -7,7 +7,9 @@
      seed    item seed (default: random); New item adds 1
      p       dim:level pairs (level indices); missing dims are 0
      v       variant;  fast=1 short animations (tests);  rm=1 reduced motion;  theme=light|dark
-     assist  JSON for ctx.assist (a Try item's first step done, v1.2);  gentle=1 ctx.gentleMotion (v1.2)
+     assist  JSON for ctx.assist (a Try item's first step done, v1.2); assist=1: the assist of the
+             first learn.practice entry that has one;  gentle=1 ctx.gentleMotion (v1.2)
+     rules=1 the rules card (learn.rules with view.drawRule figures) above the stage (v1.2)
    v1.2 (docs/dev/CONTRACT-v1.2.md D–F): steps with hold: true wait for Continue (never in fast
    mode); ctx.addMotion(ms) adds to __harness.played.motionMs; answer type 'point' gets a wrong
    response at the lattice corner farthest from the key (or item.wrongResponse).
@@ -56,8 +58,9 @@
       else if (k === 'fast') cfg.fast = v !== '0';
       else if (k === 'rm') cfg.rm = v !== '0';
       else if (k === 'theme') cfg.theme = v === 'dark' || v === 'light' ? v : null;
-      else if (k === 'assist') { try { cfg.assist = JSON.parse(v); } catch (e) { cfg.assist = v || null; } }
+      else if (k === 'assist') { if (v === '1') cfg.assist = '__first__'; else { try { cfg.assist = JSON.parse(v); } catch (e) { cfg.assist = v || null; } } }
       else if (k === 'gentle') cfg.gentle = v !== '0';
+      else if (k === 'rules') cfg.rules = v !== '0';
     });
     var inj = win.PX_HARNESS_CFG;
     if (inj && typeof inj === 'object') {
@@ -230,7 +233,8 @@
     el.status = h('p.hx-status');
     el.json = h('pre.hx-json');
     var dbg = h('details.hx-debug', h('summary', 'Item'), el.json);
-    var main = h('main.hx-main', el.errors, el.trial, el.player, el.feedback, el.status, dbg);
+    el.rules = h('section.hx-rules.pl-card', { hidden: true, 'aria-label': 'Rules' }); // v1.2: the rules card (play.js renders the real one)
+    var main = h('main.hx-main', el.errors, el.rules, el.trial, el.player, el.feedback, el.status, dbg);
     doc.body.appendChild(h('header.hx-bar', title, el.controls));
     doc.body.appendChild(main);
     showErrors();
@@ -509,6 +513,34 @@
   }
   function playerCmd(cmd) { if (player && player[cmd]) player[cmd](); }
 
+  // v1.2 (CONTRACT-v1.2 D): learn.rules as play.js's rules card shows them (texts, and the view's
+  // drawRule(el, fig, ctx) pictures), above the stage; __harness.rules(on).
+  function renderRules(on) {
+    if (!el.rules) return 0;
+    while (el.rules.firstChild) el.rules.removeChild(el.rules.firstChild);
+    var list = H.learn && Array.isArray(H.learn.rules) ? H.learn.rules : [];
+    el.rules.hidden = !on || !list.length;
+    if (el.rules.hidden) return 0;
+    el.rules.appendChild(h('h2.hx-rules-title', 'The rules of ' + (H.def.short || H.def.name)));
+    var ol = h('ol.pl-rules');
+    list.forEach(function (r) {
+      var o = typeof r === 'string' ? { text: r } : r || {}, fig = null;
+      if (o.fig !== undefined && H.view && typeof H.view.drawRule === 'function') {
+        fig = h('div.pl-rule-fig', { 'aria-hidden': 'true' });
+        try { H.view.drawRule(fig, o.fig, H.ctx); } catch (e) { fail('drawRule threw: ' + e.message); fig = null; }
+      }
+      ol.appendChild(h('li.pl-rule', fig, h('span.pl-rule-text', String(o.text || ''))));
+    });
+    el.rules.appendChild(ol);
+    return list.length;
+  }
+  // assist=1: the first learn.practice entry's assist (the Try 1 item's first step done)
+  function firstAssist() {
+    var list = H.learn && Array.isArray(H.learn.practice) ? H.learn.practice : [];
+    for (var i = 0; i < list.length; i++) if (list[i] && typeof list[i] === 'object' && list[i].params && list[i].assist !== undefined) return list[i].assist;
+    return null;
+  }
+
   function runShowMe() {
     if (H.state !== 'reveal' || !H.view.showMe) return Promise.resolve(false);
     var resp = H.last ? H.last.response : null;
@@ -653,6 +685,8 @@
     get played() { return Object.assign({}, H.played); },
     answer: answer,
     next: function (params, seed) { return next(params ? fillParams(params) : null, seed === undefined ? H.seed + 1 : seed); },
+    setAssist: function (v) { if (H.ctx) H.ctx.assist = v === undefined ? null : v; return H.ctx ? H.ctx.assist : null; }, // v1.2: then next() to redraw
+    rules: function (on) { return renderRules(on !== false); }, // v1.2: the rules card
     showMe: runShowMe,
     demo: runDemo,
     setTheme: setTheme,
@@ -686,10 +720,11 @@
         theme: currentTheme(), settings: { reducedMotion: reducedMotion() ? 'on' : 'off', keyHints: true },
         fast: !!cfg.fast, reducedMotion: reducedMotion(), play: play,
         // v1.2 (CONTRACT-v1.2 D, F)
-        assist: cfg.assist === undefined ? null : cfg.assist, gentleMotion: !!cfg.gentle,
+        assist: cfg.assist === '__first__' ? firstAssist() : cfg.assist === undefined ? null : cfg.assist, gentleMotion: !!cfg.gentle,
         addMotion: function (ms) { if (typeof ms === 'number' && isFinite(ms) && ms > 0) H.played.motionMs = (H.played.motionMs || 0) + ms; },
       };
       if (H.view.mount) H.view.mount(H.ctx);
+      if (cfg.rules) renderRules(true);
       setState('mounted');
       return next(p, H.seed);
     }).catch(function (e) {

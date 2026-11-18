@@ -25,7 +25,8 @@
    (default null = untimed), customDifficulty (boolean), version (default 1), nCorrect (1 unless
    answer 'multi'), perDisplay (default false), cell (null = outside the 2×2), pat (default false: a
    PAT-format exercise, trained only under the player's PAT focus; v1.1), experimental (default false).
-   v1.2 (docs/dev/CONTRACT-v1.2.md A): starter ({ dim, levels } or null), trainVariants (the variants
+   v1.2 (docs/dev/CONTRACT-v1.2.md A): starters (a list of { dim, levels }; starter: its first entry
+   or null), trainVariants (the variants
    automatic choices use; all by default), pace (a deadline spec or null), roundScore (function or
    null), bet (one of BETS or null); a dim may carry `at` (per-level difficulty contributions).
    key(def) → 'id@version' (how trial logs index exercises). Definitions are frozen after define. */
@@ -144,16 +145,21 @@
     });
     if (!isNum(d.base)) fail(id, 'base must be a number (difficulty in logits with every dim at level 0)');
     // starter (v1.2, note D2 §3.0 A): the first `levels` levels of dim `dim` are the starter band
-    // below the pre-1.2 floor. Display only: the engine needs nothing else.
-    if (d.starter === undefined || d.starter === null) d.starter = null;
-    else {
-      var sd = d.starter, sdim = sd && typeof sd === 'object' ? d.dims.filter(function (x) { return x.key === sd.dim; })[0] : null;
-      if (!sdim) fail(id, 'starter must be { dim, levels } naming one of the dims');
+    // below the pre-1.2 floor; a list of such entries when the band sits on several dims (Painted
+    // Cubes). Normalised: def.starters (a frozen list, [] when none) and def.starter (its first
+    // entry or null). Display only: the engine needs nothing else.
+    var sIn = d.starter === undefined || d.starter === null ? [] : Array.isArray(d.starter) ? d.starter : [d.starter], sSeen = {};
+    d.starters = Object.freeze(sIn.map(function (sd) {
+      var sdim = sd && typeof sd === 'object' ? d.dims.filter(function (x) { return x.key === sd.dim; })[0] : null;
+      if (!sdim) fail(id, 'starter must be { dim, levels } (or a list of them) naming one of the dims');
+      if (sSeen[sd.dim]) fail(id, 'starter names dim "' + sd.dim + '" twice');
+      sSeen[sd.dim] = true;
       if (!(Number.isInteger(sd.levels) && sd.levels >= 1 && sd.levels < sdim.levels.length)) {
         fail(id, 'starter.levels must be an integer from 1 to ' + (sdim.levels.length - 1));
       }
-      d.starter = Object.freeze({ dim: sd.dim, levels: sd.levels });
-    }
+      return Object.freeze({ dim: sd.dim, levels: sd.levels });
+    }));
+    d.starter = d.starters.length ? d.starters[0] : null;
 
     if (d.variants === undefined || d.variants === null) d.variants = null;
     else {

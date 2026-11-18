@@ -57,6 +57,10 @@ function registry(t, mk) {
   t.near(X.minDifficulty(band), -3.6, 1e-12, 'range min from at');
   t.near(X.maxDifficulty(band), 0.2, 1e-12, 'range max from at');
   t.eq([band.starter.dim, band.starter.levels, Object.isFrozen(band.starter)], ['size', 1, true], 'starter is kept and frozen');
+  t.eq(band.starters, [{ dim: 'size', levels: 1 }], 'starters lists it');
+  t.eq(X.check({ id: 'two', code: 'EX-98', name: 'Two', abilities: ['Vz'], role: 'train', answer: 'choice', nOptions: 4, base: 0, ...stub('two'),
+    dims: [{ key: 'a', levels: [0, 1, 2], step: 0.5 }, { key: 'b', levels: [0, 1], step: 0.5 }], starter: [{ dim: 'a', levels: 1 }, { dim: 'b', levels: 1 }] }).starters.map((x) => x.dim), ['a', 'b'], 'a starter band on two dims');
+  t.eq([X.get('rotate').starter, X.get('rotate').starters], [null, []], 'no starter: null and []');
   t.eq(q.trainVariants, ['quick'], 'trainVariants kept');
   t.eq(X.get('rotate').trainVariants, X.get('rotate').variants, 'trainVariants default to every variant');
   t.eq([q.pace.startMs, q.pace.target, q.pace.step, q.pace.variants], [10000, 0.85, 0.03, ['quick']], 'pace kept');
@@ -66,6 +70,7 @@ function registry(t, mk) {
   const dims = [{ key: 'a', levels: [0, 1, 2], step: 0.5 }];
   t.throws(() => X.check({ ...base, dims, starter: { dim: 'b', levels: 1 } }), /starter/, 'starter must name a dim');
   t.throws(() => X.check({ ...base, dims, starter: { dim: 'a', levels: 3 } }), /starter\.levels/, 'starter cannot take every level');
+  t.throws(() => X.check({ ...base, dims, starter: [{ dim: 'a', levels: 1 }, { dim: 'a', levels: 1 }] }), /twice/, 'a dim only once in starter');
   t.throws(() => X.check({ ...base, dims: [{ key: 'a', levels: [0, 1, 2], step: 0.5, at: [0, 1] }] }), /at must be/, 'at needs one number per level');
   t.throws(() => X.check({ ...base, dims, variants: ['x', 'y'], trainVariants: ['z'] }), /trainVariants/, 'trainVariants must be variants');
   t.throws(() => X.check({ ...base, dims, trainVariants: ['x'] }), /needs variants/, 'trainVariants needs variants');
