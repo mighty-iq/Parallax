@@ -298,6 +298,63 @@ function testNoChains(t) {
   t.ok(!/streak|inARow|consecutive|daysRow/i.test(keys), 'no game-layer output carries such a count');
 }
 
+/* ============================================================ a first week, simulated */
+
+function testFirstWeek(t) {
+  t.section('a first week (simulated days)');
+  const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 21);
+  let high = 0, monotone = true, sessions = 0, games = 0, dailies = 0, climbs = 0, errors = [];
+  for (let d = 0; d < 7; d++) {
+    const t0 = T0 + d * DAY;
+    if (d === 1) { const st = E.notes.state(rec, t0); st.offer.forEach((n, i) => { if (i < 2) E.notes.keep(rec, t0, i, true); }); }
+    const runs = [playSession(PX, rec, L, 'train', { now: t0, minutes: 10 }, d), playSession(PX, rec, L, 'daily', { now: t0 + 3600e3 }, d)];
+    if (d <= 2) runs.push(playSession(PX, rec, L, 'climb', { now: t0 + 7200e3 }, d)); // Thursday to Saturday: one week
+    runs.forEach((r) => {
+      sessions++;
+      if (r.deadEnd) errors.push(r.plan.mode + ': ' + r.deadEnd);
+      if (r.fin.errors && r.fin.errors.length) errors.push(r.plan.mode + ': ' + JSON.stringify(r.fin.errors));
+      if (r.fin.game) games++;
+      if (r.fin.daily && !r.fin.daily.partial) dailies++;
+      if (r.fin.climb) climbs++;
+      const v = G.reach(rec).value;
+      if (v < high) monotone = false;
+      high = Math.max(high, v);
+    });
+  }
+  t.eq(errors, [], 'every session of the week runs to its end without a hook error');
+  t.ok(games === sessions, 'every session gets the game layer’s result (' + games + ' of ' + sessions + ')');
+  t.ok(dailies === 7 && E.daily.history(rec).played === 7, 'seven Dailies played and counted, no calendar');
+  t.ok(climbs === 3 && E.climb.state(rec, T0 + 2 * DAY).left === 0 && E.climb.state(rec, T0 + 4 * DAY).left === 3, 'three Climb attempts this week, then none left; Monday brings three more');
+  t.ok(monotone && high > 0, 'Reach rose and never fell (' + high + ')');
+  t.ok(rec.game.firsts.length > 0 && Object.keys(rec.game.atlas).length > 0, 'the Atlas filled from Train, the Daily and the Climb');
+  const rep = E.record.repair('game');
+  t.eq(JSON.stringify(rep(rec.game)), JSON.stringify(rec.game), 'the week’s container passes its repair unchanged');
+  t.eq(JSON.stringify(G.merge(rec.game, rec.game, { newer: 'mine' }).climb), JSON.stringify(rec.game.climb), 'a merge with itself keeps the Climb');
+  const ach = Object.keys(rec.achievements);
+  t.ok(ach.indexOf('summit') < 0 || Object.values(rec.game.climb.w).some((w) => Object.values(w).some((x) => x.h >= 20)), 'Summit only with a run of 20');
+}
+
+/* ============================================================ rule 3: nothing of the game layer during a stimulus */
+
+function testStimGuard(t) {
+  t.section('the stimulus guard (css/game.css)');
+  const css = fs.readFileSync(path.join(t.root, 'css/game.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].replace(/\s+/g, ' ').trim(), body: m[2] }));
+  const hidden = rules.filter((r) => /visibility:\s*hidden/.test(r.body) && /body\.px-stim/.test(r.sel)).map((r) => r.sel).join(',');
+  ['.gm-panel', '.gm-slot', '.gm-climb-scale', '.gm-ring', '.gm-stamp-wrap', '.gm-scale', '.gm-stretch-tag'].forEach((c) => {
+    t.ok(hidden.indexOf('body.px-stim ' + c) >= 0, c + ' is hidden under body.px-stim');
+  });
+  const still = rules.filter((r) => /animation:\s*none/.test(r.body) && /body\.px-stim/.test(r.sel)).map((r) => r.sel).join(',');
+  const ui = ['js/ui/game.js', 'js/ui/climb.js', 'js/ui/atlas.js'].map((f) => fs.readFileSync(path.join(t.root, f), 'utf8')).join('\n');
+  const fxs = [...new Set([...ui.matchAll(/'(gm-fx-[a-z]+)/g)].map((m) => m[1]))].filter((c) => c !== 'gm-fx-done' && c !== 'gm-fx-d'); // a resting mark and the stagger delays
+  t.ok(fxs.length >= 5, 'the effects in use: ' + fxs.join(', '));
+  fxs.forEach((c) => t.ok(still.indexOf('.' + c) >= 0, c + ' stops under body.px-stim'));
+  const anims = [...css.matchAll(/animation:\s*(gm-[a-z]+)\s+(\d+)ms/g)].map((m) => [m[1], +m[2]]);
+  t.ok(anims.length >= 5 && anims.every(([, ms]) => ms <= 700), 'every effect lasts 700 ms or less (' + anims.map((a) => a.join(' ')).join(', ') + ')');
+  t.ok(!/--signal|--stim-target/.test(css), 'celebrations never use the accent (the stimulus target colour)');
+  t.ok(/body\.px-stim/.test(ui) && /MutationObserver/.test(ui), 'the effect scheduler checks body.px-stim and cuts effects when it appears');
+}
+
 export async function run(t) {
   testGrades(t);
   testGuessing(t);
@@ -308,4 +365,6 @@ export async function run(t) {
   testNotes(t);
   testContainer(t);
   testNoChains(t);
+  testFirstWeek(t);
+  testStimGuard(t);
 }
