@@ -697,6 +697,7 @@
     id: 'nets', version: 1, code: 'EX-05', name: 'Cube nets', short: 'Nets',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train',
     bet: 'compare', format: { opposite: 'nets:opposite-face', edges: 'nets:edges-meet', cube: 'nets:folds-to-cube' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    layers: { compare: ['z-ends'] }, // v1.2 wave 2 (W2-bets): comparison rounds (js/ex/nets/layers.js)
     answer: 'choice', nOptions: 4, // 'opposite' 4 options, 'edges' and 'cube' Yes / No: use item.options.length
     dims: [
       { key: 'carried', label: 'Squares carried', levels: CARRIED_LABELS, step: 0.75 },
