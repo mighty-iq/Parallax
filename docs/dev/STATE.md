@@ -1,15 +1,14 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 13:40 UTC.
+Updated 2026-11-18 15:15 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
   - `main` = b5ead08 on GitHub: the v1.1.0 release commit, with a new ID since the history rewrite of 17 Nov.
   - Pages deploy succeeded, and https://mighty-iq.github.io/Parallax/js/core/px.js reads `PX.version = '1.1.0'`.
   - CI tests passed on the release commit; after the rewrite, Pages and CI run again on b5ead08.
-- **v1.2: Phase 1 (research and plan) STARTED** on the owner's go (18 Nov 11:08 UTC, new chat).
-  - Backlog: docs/dev/PLAN-v1.2.md (61 sweep items O1–O61, 32 standing-rules gaps; inputs in docs/dev/v1.2/).
-  - Research notes go to docs/research/v1.2/; then PLAN-v1.2.md is rewritten from them, the decision board page is published (private), and the plan message goes out. Then the plan gate: wait for the owner's go.
+- **v1.2: Phase 2 (build) STARTED** on the owner's go (18 Nov ~15:05 UTC). The approved plan is docs/dev/PLAN.md (v1.1's is PLAN-v1.1.md); deferrals in PLAN-v1.3.md; research in docs/research/v1.2/.
+  - Owner's answers: every board recommendation; priorities progress > proof > transfer > fun > start > phone > community > PAT; Central Point Quick by default (Exact a variant); Climb sounds, new-best sound, Summit.
 
 Owner decisions:
 - D1: Parallax keeps its own rules in v1.1; the switch to the standing rules and the game layer come in v1.2.
@@ -39,15 +38,19 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
-## In progress
-- **Plan gate.** Phase 1 is done: eight research notes (docs/research/v1.2/), ACCESS.md, PLAN-v1.2.md corrected after an independent review (docs/dev/reviews/RV-plan-v1.2.md), PLAN-v1.3.md. The decision board is published as a private page (link in the project status note only) and declares a db; the owner's answers land in its document answers/owner. Nothing is building; no subagents run. Waiting for the owner's go and answers.
+## In progress (Phase 2, wave 1: milestones 1, 2 and Central Point)
+Intent: a contract and shared hooks first, then parallel builders in their own files; then integration and the first playable build for the owner (playtest mode on).
+- W1-core → docs/dev/CONTRACT-v1.2.md (wave-1 ownership and interfaces), docs/dev/v1.2/requests.md (append-only requests between owners), shared hooks in the player/app/store/engine (σ0 1.5, no early stretch, starter-level display, teaching template, Quick deadline support, playtest and Chimera hooks) with node tests.
+- W1-central → js/ex/centralpoint/, css/ex/centralpoint.css, its node tests (Quick + Exact forms; validator; strict shortcut policy; generator speed); shared needs go to requests.md.
+- Next, once the contract is in: W1-band-A (views, angles, cubes), W1-band-B (openings, form, patfold, patviews), W1-fixes (O4, O8–O11, O15, O52, texts, D3 line, motion comfort O36), W1-rules (milestone 2).
+- Builders commit only their own files with explicit paths (`TZ=UTC`, the Co-Authored-By line, no session line); the lead pushes.
 
 ## Next three steps
-1. Read the owner's answers (board db answers/owner, or his pasted "Copy my answers"); save them to BRIEF.md word for word; log each decision.
-2. On the go: PLAN-v1.2.md becomes PLAN.md (PLAN.md → PLAN-v1.1.md), applied with his answers; write CONTRACT-v1.2.md; rewrite CLAUDE.md for the standing rules (milestone 2).
-3. Start milestone 1, milestone 2 and Central Point with parallel builders; the first playable build goes to the owner with playtest mode on.
+1. Review CONTRACT-v1.2.md when W1-core delivers it; launch the four wave-1 builders against it.
+2. Integrate wave 1, run node and browser tests, build dist/Parallax.html, publish a private test preview with playtest mode on, and send it to the owner with one line on what to try.
+3. Wave 2 (milestones 7, 3, 6, 4): contract additions, then builders.
 
-Open owner items carried over: CC BY-SA for prose (L1), the C13 Chimera lines, the history-cleanup finish (Support / recreate / leave), optionally the name of the test Central Point comes from.
+Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from.
 
 ## Last verified
 - **Live site** serves 1.1.0: px.js fetched on 14 Nov. The Pages build and CI passed on the release commit, and they rerun on b5ead08 after the rewrite.
