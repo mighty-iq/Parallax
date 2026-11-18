@@ -87,3 +87,17 @@
 .bets-nets-opp { fill: none; stroke: var(--right); stroke-width: 0.07; }
 .bets-nets-tick { font-size: 0.3px; fill: var(--right); font-weight: 700; }
 .bets-nets-z { fill: none; stroke: var(--right); stroke-width: 0.09; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 0.2 0.12; }
+
+/* Orient's maps (map units 0–100) */
+.bets-or-map { fill: var(--stim-ground); stroke: var(--rule); stroke-width: 0.6; }
+.bets-or-obj { fill: var(--stim-sphere); stroke: var(--stim-edge); stroke-width: 0.5; }
+.bets-or-face { stroke: var(--ink-2); stroke-width: 0.9; stroke-dasharray: 2.4 1.6; }
+.bets-or-facing { fill: var(--stim-ground); stroke: var(--ink); stroke-width: 1.1; }
+.bets-or-target { fill: var(--right-wash); stroke: var(--right); stroke-width: 1.3; }
+.bets-or-you { fill: var(--ink); }
+.bets-or-ans { stroke: var(--right); stroke-width: 1.4; }
+.bets-or-anshead { fill: var(--right); }
+.bets-or-side { font-family: var(--font-mono); font-size: 7px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--stim-ground); stroke-width: 2px; }
+.bets-or-top { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 2 1.4; }
+.bets-or-tophead { fill: var(--ink-2); }
+.bets-or-toplabel { font-family: var(--font-mono); font-size: 6px; fill: var(--ink-2); paint-order: stroke; stroke: var(--stim-ground); stroke-width: 2px; }

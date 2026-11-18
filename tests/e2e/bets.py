@@ -269,6 +269,7 @@ DRAW = [
     ('centralpoint', 'crossing', {'variant': 'quick', 'targets': 0, 'band': 1}),
     ('spin', 'mirror-never', {'variant': 'pick', 'angle': 4, 'cells': 2}),
     ('nets', 'z-ends', {'variant': 'opposite', 'between': 0, 'shape': 1, 'carried': 0}),
+    ('orient', 'swap', {'shift': 3, 'objects': 1, 'tolerance': 0}),
 ]
 
 

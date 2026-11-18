@@ -274,6 +274,7 @@
     id: 'orient', version: 1, code: 'EX-08', name: 'Perspective taking', short: 'Orient',
     abilities: ['PT'], cell: 'extrinsic-dynamic', role: 'train', answer: 'angle',
     bet: 'strategy', format: 'orient:map-point-from-viewpoint', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    layers: { compare: ['swap'] }, // v1.2 wave 2 (W2-bets): comparison rounds (js/ex/orient/layers.js)
     dims: [
       { key: 'shift', label: 'Perspective shift', levels: SHIFTS, step: 0.8 },
       { key: 'objects', label: 'Objects', levels: OBJECTS, step: 0.3 },
