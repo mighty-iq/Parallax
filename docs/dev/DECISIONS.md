@@ -69,3 +69,7 @@
   The new history passes the privacy check in full, and the app files are unchanged. `main` and `build` were force-pushed.
   The check now also flags session scratchpad paths and session ids, which the first pass had missed in eight review notes.
   GitHub's cached views of old commit IDs and the old Actions runs remain until GitHub Support purges them or the repository is recreated; the owner decides.
+- 2026-11-18 (owner, tappable answers): v1.2 ships as one release with the whole plan, not a quick interim update; the DAT-style exercises stay opt-in (D2 confirmed). Added to PLAN-v1.2:
+  - the Central Point exercise (the owner's request, after a community member's idea; Parallax's own design of the geometric-median task, with an overlap note);
+  - from player feedback: an easier, better-taught first band for the DAT-style exercises and Views, and the real PAT formats (profile solids for Missing View, the missing Openings and Form shapes, several questions per Painted Cubes figure, a test-like line-drawing look).
+  Matching a test's format is allowed; its items, drawings and name are not.
