@@ -1,313 +1,131 @@
-# PLAN v1.2: backlog and proposed order (draft, not approved)
+# PLAN v1.2 (Phase 1 result, waiting for the owner's go)
 
-Status: draft of 14 Nov 2026. I wrote it at the v1.1 release, when the owner asked whether everything for v1.2 was in one plan. It was not: the items were spread over STATE, DECISIONS, the reviews and the research notes. This file collects all of them.
-
-v1.2 runs under the owner's standing rules (decision D1). It starts with Phase 1 (research and a plan message), then waits for the owner's go. On approval, this file becomes docs/dev/PLAN.md, and v1.1's plan moves to PLAN-v1.1.md (gap R2).
+Status: written 2026-11-18 from the eight Phase 1 research notes. It replaces the 14 Nov backlog draft (its items O1–O61 and the 32 standing-rules gaps are all placed below, in v1.3, or dropped with a reason). On the owner's go it becomes docs/dev/PLAN.md, and v1.1's plan moves to PLAN-v1.1.md (gap R2). Sizes: S under an hour, M a few hours, L a day or more.
 
 ## Sources
-Each source has full detail and file references.
-- **docs/dev/v1.2/standing-rules-gap.md:** Parallax checked against the standing rules. Of 67 requirements, 35 are met, 21 partly, 8 are missing and 3 conflict. IDs such as PB1, ME5 and C2.
-- **docs/dev/v1.2/deferred-sweep.md:** 61 items that 1.0 and 1.1 deferred, left open, or recommended without building, each checked against the code. IDs O1 to O61. The same file lists 24 items that were done after all and 25 that were dropped by decision, so nobody re-opens them.
-- **DECISIONS.md, 13 Nov:** D1 (the standing rules and the game layer come in v1.2) and D3 (the analogical test is named for v1.2; closed on 17 Nov, see "Settled since the draft").
+- Research notes, docs/research/v1.2/: G1 game layer, M1 measurement, P1 plateaus and progress, T1 transfer portfolio, C1 Central Point, D1 real PAT formats and legal limits, D2 first band and teaching, N1 Reckon. Spikes in docs/research/v1.2/spikes/.
+- Inputs: docs/dev/v1.2/deferred-sweep.md (O1–O61), docs/dev/v1.2/standing-rules-gap.md (IDs such as PB1, ME5, C2), docs/research/ACCESS.md (sources not opened).
+- Every number below comes from those notes; the section cited holds the detail and the evidence.
 
-## The aim
-v1.2 makes Parallax a trainer people want to open every day, without bending the science:
-- a game layer built from the harm-free versions of points, chains and challenges;
-- plateaus that are detected, acted on and explained;
-- every exercise tagged with the transfer bet it makes, with exposure logged, so the community's pooled exports can test the bets.
+## Concept
+v1.2 turns Parallax into an instrument people want to open every day without bending the science. A game layer of grades, a growing Reach, an Atlas of the settings you have handled, a seeded weekly Climb and a Daily that ramps from easy to hard sits between items, never during them, and nothing pays for time or punishes a missed day. The engine keeps every dimension at the player's edge, notices a stall, changes one thing for a stated reason and says what changed. Every exercise names the transfer bet it makes, nine bets in all and one new (calibration), with comparison rounds, bridge sets and draw-the-answer variants randomised and logged so the community's pooled exports can test them. The Spatial Check becomes a meter that moves every session, with a near rung where one person's gain can show within weeks. New: Central Point. The DAT-style exercises get a taught, easier start and the real PAT formats.
 
-It also:
-- redesigns the Spatial Check so that one person's real gain can show within weeks. In the engine's own simulation (ENGINE.md §16), 96.5 % of learners still read "unclear yet" after 60 days, even when their probe ability rises by half their training gain;
-- adds one line on analogy tests to the "Taking a test soon?" helper (the analogical-test question from 1.1 is settled);
-- fixes what players hit in 1.1, deepens the 1.1 exercises and clears the polish list.
+## What research changed in the draft
+Kept: one release; DAT-style stays opt-in; no Duolingo-style streaks; the weekly goal with its forgiving count; Central Point; the easier start and the real PAT formats; plateau-breaking; tagged bets; a faster-moving check.
 
-## Settled since the draft
-- **No Duolingo-style streaks** (the owner, 14 Nov). The weekly goal keeps its forgiving count; details are under fork 1 below. This is now a standing rule for every tool.
-- **The analogical test (D3, O23), closed 17 Nov.** The point came from a community member speaking generally: if you measure yourself with an analogy test, a task in the app that looks like it can lend you a practice effect and bias the result. He suggested analogies built from abstract symbols that follow a rule, rather than words. The owner confirmed he was the source and left the call to me.
-  - Nothing in Parallax trains analogies. The only analogy-format task is Word Links (PR-0), the Spatial Check's control: "A is to B as C is to ?" with words, no feedback, a few minutes per check. v1.1 already says so in About and in the "Taking a test soon?" helper.
-  - Word Links stays verbal. Abstract-symbol analogies are figure analogies, close to matrices, which the overlap table relates to Rotate, Spin and Hidden. Spatial practice could move them, so the control would stop working, and they would overlap matrix tests instead.
-  - v1.2 adds one line to the helper's analogies entry and to About: if an analogy test is your yardstick, take it before your first Spatial Check (milestone 1).
-- **One release** (the owner, 18 Nov): the whole plan ships as v1.2, in one release, weeks from now. There will be no quick interim update. "If v1.2 has to be smaller" at the end stays only as a fallback.
-- **DAT-style stays opt-in** (the owner, 18 Nov, confirming D2). Train leaves the DAT-style exercises out unless the DAT-style focus is on, and they are always open in the Library.
-- **New, from the owner and from player feedback (18 Nov):**
-  - the Central Point exercise (milestone 8);
-  - an easier and better-taught start for the DAT-style exercises and Views (milestone 1);
-  - the real PAT formats (milestone 8).
+Changed:
+- **Points.** No lifetime points for right answers: Train holds success near a target, so such points add up to skill × minutes, which is pay for time (G1 §2.1). Points exist only in the Daily and the Climb, where items are fixed, identical for everyone and scored once.
+- **Measurement target.** A 0.5 SD composite gain shown to 60 % of players by week 4 with ≤ 5 % false alarms is out of reach for any design tested at a bearable cost (about 40 minutes of measurement a week, under optimistic assumptions only). The meter moves every session instead; the near rung can show one person's gain in about 4–6 weeks; a 0.5 SD composite gain becomes visible around week 8 if the probes are as reliable as hoped (M1 §5.5). Decision 2.
+- **Plateau detector.** The draft's rules flagged almost every simulated learner, improving ones included. It is replaced by a likelihood slope test over the last 640 rated answers (P1 §2).
+- **Central Point.** Targets on a 7 × 7 lattice on every screen; answers on the 13 × 13 half-step lattice; every rated item excludes all eleven cheap shortcut picks from the credit band. The draft's 7 × 7 answer grid collapses to "which neighbour of the average?" (C1 §4.3). Its bet is calibration, not "spatial estimation", which names a skill (T1 §3).
+- **First band acceptance.** The draft's "simulated beginners reach about 80 %" was already true by construction; the test now uses a population centred at today's floor (D2 §3.8).
+- **The PAT statement.** No live patent exists or is plausible for these formats; formats and rules are free to follow. Off-limits: the ADA's questions (recalled ones and old sample tests included), instructions and drawings, prep products' items and drawings, the test centre's screen design, and the test's names used as a product, mode or code name. The names may describe what a format follows, with the ADA line. Options are lettered, as on the test (D1 §4.5). Not legal advice.
 
-## Waiting on the owner
-1. **Three forks for the v1.2 plan message.** The recommendations come from the audit (§7), and Phase 1 research will check them.
-   - **How much game.** Recommended:
-     - points for skill only;
-     - ranks on top of the honest levels;
-     - a seeded weekly challenge with a result card.
-     
-     Comparison happens through cards and codes in the Discord. There is no in-app leaderboard.
+Moved to v1.3 (docs/dev/PLAN-v1.3.md): Reckon's later rungs (point to the start mid-route, curved legs, active steering; N1 says they fit v1.3 better), Knots' 3D mirror variant and later ideas (O46, O47), Orient as a 3D tabletop (O60), new exercises for closure speed, scanning and imagery (O61), Hole Punch half folds and Openings' curved features (D1 §6.6, §6.8), weighted targets in Central Point, game option C pieces. Reasons: no new research this round, L each, and v1.2 is already weeks of work.
 
-     There are no Duolingo-style streaks. The owner ruled them out on 14 Nov because they make practice anxious and take the fun out, so the daily chain with freezes that the audit recommended is dropped. The rule is now in the standing rules for every tool. Parallax's weekly goal keeps its forgiving weeks-in-a-row count as it is; the owner chose to keep it.
-   - **How much time measurement may take.** Recommended: a trend model over all checks, a short embedded probe block of about 3 minutes every third session, and the full check once a month.
-   - **Baseline first, or play first.** Recommended: a 5–6-minute baseline inside the first session, after a two-minute tutorial. The second baseline comes before the next session's rated items.
-2. **Three small items for the owner.** The standing rules reserve the first two for him; the third is a tap only he can make.
-   - CC BY-SA 4.0 for the README and the docs prose (L1). This is a licence change. The code stays MIT.
-   - Three v1.0 lines that say more about Chimera than the fixed text (C13). Keep them, or cut each back to "built by the Chimera community on Discord":
-     - LICENSE gives the copyright to "the Parallax contributors (the Chimera community, …)";
-     - LICENSE-GUIDE.md says "Parallax contributors and the Chimera community";
-     - the guide says "made for and with the Chimera community".
-   - The v1.1.0 tag (O34). The session's proxy refuses tag pushes, so it is the owner's tap if he wants a release entry: GitHub → Releases → "Draft a new release" → tag v1.1.0 on main.
+Dropped: the gyroscope "magic window" variant (O44: the real room gives heading fixes, which defeats dead reckoning; N1 Q5 #16); graded continuous scoring for Reckon (N1 Q3).
+
+## Decisions for the owner (on the decision board; recommendation first)
+1. **How much game.** B, the instrument with a game layer (recommended): grades, Reach, the Atlas, the weekly Climb, weekly field notes, Daily v2, cards at every high point, a game-feel pass. A is the quiet-plus fallback; C adds lifetime points, seasons, cosmetics and duels, which carry the harms the evidence warns about (G1 §4).
+2. **How much time measurement may take.** About 12 minutes a week inside sessions (recommended): a 3.5-minute no-feedback block at the start of up to four sessions a week and a 10-minute check every four weeks, plus an opt-in "measurement week" for players who want a quicker verdict. Alternatives: today's two long checks judged by the new trend model (about 8 minutes a week; the meter barely moves for months); about 15 minutes (8–10 % more precise); about 40 minutes a week (meets the old target, optimistic case only) (M1 §6.1).
+3. **First baseline.** Right after the first two-minute tutorial, before rated training, with the second at the start of session 2 (recommended; about 10 minutes each). Alternatives: before any play (cleaner, slower start), or optional and later as now (fastest start, weaker familiarity estimate) (M1 §6.2).
+4. **Two small yeses the standing rules reserve for the owner.** CC BY-SA 4.0 for the README and docs prose (L1; the code stays MIT): recommended yes. The three v1.0 lines that say more about Chimera than the fixed text (C13): recommended trim to "built by the Chimera community on Discord".
+
+Optional: the name of the test Central Point comes from, so the overlap helper can name it (C1 §1 could not identify it).
+
+## Defaults where the brief is silent (logged in DECISIONS on the go)
+- Rebuilt DAT-style exercises replace their 1.1 versions; `version` bumps; ratings carry over with a widened range so targeting re-converges (D1 §6.0).
+- The 1–100 scale of the seven first-band exercises is re-based, so shown levels rise by about 15–28 once; stored bests are converted once (D2 §3.0 A).
+- The Daily and the Climb keep excluding DAT-style and screen-dependent exercises.
+- Central Point's reveal, "Why?" and bridges never mark the average position; only the one-time tutorial Watch shows it, the same for every player. The strategy card still says in words that the average leans towards far targets. This keeps the mean-estimation control check untrained (T1 §5.2, §5.4) at a small cost to C1's reveal (C1 §5.1).
+- Plateau changes are chosen at random among the eligible ones and logged, so the pooled exports form a micro-randomised trial; the player always sees the reason (P1 §3.9). Add-on layers (comparison rounds, bridge sets) are assigned by a within-player crossover for the same reason (T1 §5.3). About says so in one line.
+- Reckon's gentle motion profile caps routes at three legs, so the 30-second cap holds (N1 Q4).
+- Sound and haptics stay off by default.
+- Playtest mode is on in every test build and behind an off-by-default setting at release.
 
 ## Milestones
-These are proposed; Phase 1 may reorder them. Sizes: S is under an hour, M a few hours, L a day or more.
+Order of work: 1, 2 and Central Point first, then the first playable build goes to the owner; then 3, 4, 6 and 7 (engines); then 5 and 8 (game and content); then 9–11.
 
-### 0. Research and plan (Phase 1)
-Notes go in docs/research/v1.2/ and record how much of every source was read. One docs/research/ACCESS.md merges the v1.0 and v1.1 lists (R5).
-- **Game layer:** which mechanics raise practice without lowering learning or intrinsic motivation, and what current trainers and learning apps do. For each mechanic, a design that names the harm it avoids.
-- **Measurement:** detecting one person's change within weeks. This covers trend and state-space models, information per minute, embedded probes and the practice effect. A design is proved in tests/node/sim.mjs before anything is built.
-- **Plateaus:** how to detect a stall from the log, and which changes have evidence: a strategy switch, variability, spacing and rest, difficulty, speed.
-- **Transfer portfolio:**
-  - the list of mechanisms for `def.bet`;
-  - real implementations of relational comparison and bridging;
-  - at least one new or under-tested bet;
-  - near and far probe designs.
-- **Reckon:** one more search for a randomised path-integration training study with a transfer test, and full texts of the seven core papers that were not read in full (O45).
+### 0. Research and plan (Phase 1) — done on the owner's go
+- [x] Eight research notes with read levels per source; spikes; ACCESS.md merged (R5).
+- [ ] The owner's go and answers (decision board).
 
-Acceptance:
-- The plan message (concept; what was kept, changed and dropped; gaps; decisions; papers that could not be opened).
-- The decision board the standing rules now ask for, as a private artifact page:
-  - exercise cards with a keep/drop switch and each card's transfer bet;
-  - every decision as tappable options, with the recommendation selected;
-  - look and feel shown rather than described, including 20–30-second playable sketches of the two or three mechanics least sure to be fun;
-  - a ranking list and a text box;
-  - the papers that could not be opened;
-  - a phone device probe;
-  - "Accept all recommendations" and "Copy my answers".
-- The owner's go.
+### 1. Fix first, and a taught first band (M–L)
+- **First band** for Views and the six DAT-style exercises (D2 §3): one new lowest level per exercise (two for Painted Cubes), Δ from −0.85 to −1.85 logits (table D2 §3.8); the same teaching template for all seven: a rules card on screen (phones included), the Watch at the band, one strategy card before Try 1, Try 1 with its first step done, "about two minutes" on the offer card (O6); Show-me changes per exercise (D2 §3.1–3.7); engine: prior σ0 1.0 → 1.5, no stretch item among an exercise's first 10 rated answers, "level 1 · starter items" with progress to level 2.
+- **Fixes:** Pause and End during feedback (O4); motion comfort in Homing and Reckon (one-time notice, a check-in card after 3 minutes of motion then every 5, the gentle profile 1.2 m/s, 30°/s, 0.6 s ramps with no speed change within a leg and a fixation dot, a first block that ends after about 5 minutes of motion; N1 Q5 #1–5); Section practice O9–O11; tutorials O8, O52, O53; texts O5, O7, O25, O39, O40, O43, O59; engine O15; the analogy line in the "Taking a test soon?" helper and About (D3).
+- **Acceptance:** a population centred at the pre-1.2 floor averages 76–84 % over its first 10 rated items on Views, Painted Cubes, Openings, Form and Missing View, and at least 68 % on Angles and Hole Punch; a population 1.75 logits above reaches the old floor by its 10th rated item (median) (tests/node/firstband.test.mjs, D2 §3.9); `sim.mjs` coverage stays 93–97 % with σ0 1.5; each fix has a test that fails on 1.1; fresh-player tests pass on all seven (protocol D2 §4) and on Form and Reckon; longruns clean.
 
-### 1. Fix first: what players hit in 1.1 (S–M each)
-- **An easier, better-taught start for the DAT-style exercises and Views (player feedback, 18 Nov).** Players found most DAT-style exercises too hard, and Painted Cubes slow to understand. One player stayed at level 1 of Views. The engine already starts everyone at the easiest items, so the easiest items themselves are too hard to read for some players.
-  - **A lower floor:** a new first band below today's easiest level, in all six DAT-style exercises and in Views. Examples:
-    - 2–3 cubes in a row;
-    - one view to match, with the 3D shape beside it;
-    - angle gaps of 10–15°;
-    - a figure of 4–6 cubes with one kind of question.
-  - **Teaching before the first item:** a worked example and a strategy card in the test's own terms.
-    - Painted Cubes: count by position. A corner cube on top shows 3 painted sides.
-    - The view tasks: match the outline first, then the inner and dotted edges.
-  - **Show me:** it turns the 3D shape to the view being asked.
-  - **Acceptance:** simulated beginners reach about 80 % at the new floor, and a fresh-player test passes on every one of these exercises.
-- **Pause and End during feedback (O4).** Both are disabled there today, so ending a session early takes Next, Pause, End.
-- **Motion comfort in Homing and Reckon (O36):**
-  - a one-time "stop if you feel unwell" notice before the first route;
-  - a pause card after about 3 minutes of motion;
-  - a gentle reduced-motion profile (1.2 m/s, 30°/s, 0.6 s ramps).
-- **Section practice:**
-  - the clock is saved only between items, so a reload gives back the current item's time (O9);
-  - a reload during the review loses it (O10);
-  - flagged item numbers shift when an item is voided (O11).
-- **Tutorials:**
-  - "Parts" opened during a Watch on a phone leaves the demo playing off screen (O8);
-  - the Missing View Watch should hold on the dotted-line step until a tap (O52);
-  - the Openings show-me should turn the outline over the solid as well (O53);
-  - the new-exercise offer says "about a minute", but fresh players took 1.5–2.5 minutes per Form Try item (O6).
-- **Texts:**
-  - Fold's idle-fold phrase should say "up to" (O59);
-  - Reckon's "after each turn" tip shows on a walk with no turns (O39);
-  - Reckon's feedback wording: "0 % too far", the drift line's missing yardstick, an axis-free habit chart, and the "you" label (O40);
-  - Homing's exercise page opens with a long research note right under the goal (O43);
-  - the summary's median is of right answers only and does not say so (O7);
-  - answer times are shown in two formats (O5);
-  - decide on "DAT scores" in negations (O25);
-  - the "Taking a test soon?" helper's analogies entry and About: if an analogy test is your yardstick, take it before your first Spatial Check (D3).
-- **Engine:** folded-day totals subtract voided and skipped probe rows too (O15).
-
-Acceptance:
-- Each fix has a test that fails on 1.1.
-- The longrun suites stay clean.
-- Fresh-player retests of Form and Reckon.
-
-### 2. Standing-rules switch, the quick part (S–M)
-- **CLAUDE.md:** rewritten under 150 lines (R1, S1).
-  - Rules 1, 2, 9, 10, 11 and 12 are reworded, and rules 13–15 are new (audit §6).
-  - The code map is brought up to date: it still says 11 exercises.
-  - The developer docs get the 1.1 contract: `pat`, `experimental`, `requires`, the position answer, `ctx.practice` and `ctx.demo`, and the phone-fit variables (O32).
-- **Chimera:**
-  - the full welcome on first launch, and a one-tap card on later launches that blocks nothing (C2, O2);
-  - the link on the first line of the README (C4);
-  - an invite with Copy on both tutorial end screens (C6);
-  - invites beside personal bests, achievements, Path passes and check results (C8, O3), and in the export and backup dialogs (C10);
-  - the C13 lines and the prose licence (L1), as the owner decides.
-- **Privacy** (standing rules; the repository part is done on `build` since 17 Nov):
-  - Exports: result cards, backups, the trial CSV and the research export carry no name except a nickname the player typed, and no user-agent, locale or timezone unless the player turns that on. In 1.1 the user-agent is read only for in-app hints and never stored, and times are UTC; but the backup's local day keys (the Daily and the weekly goal), next to UTC times, can hint at the player's timezone offset. The pooled research export drops them or shifts them to UTC, with a test (S–M).
-  - `main` receives the 17 Nov cleanup with the v1.2 release: no private-page links, no home-folder paths, the owner paraphrased.
-  - The pre-push privacy check (tools/privacy_check.py) and `TZ=UTC` commits stay in force for every v1.2 push; the release zip, if one is made, is a `git archive` checked with `--zip`.
-- **Modes:** a "Right when" line for each mode, in the practise sheet and the Lab, and a mode suggestion on Today when the log points to one (M3).
-- **Playtest mode** (standing rules, interactive check-ins). It is on in the first playable build of v1.2 and in every later test build, and sits behind a setting that is off by default at release.
-  - After each exercise, three taps: fun, clarity and difficulty.
-  - A note button on every screen.
-  - "Copy playtest report": the ratings and notes, with the device, frame timings, errors, performance, play time and where the player quit.
-
-Acceptance:
-- The shell, section and longrun tests handle the new pop-up.
-- A node test checks that every share text and every tutorial end carries the link.
-- Screenshots at 360×640 and on desktop.
+### 2. Standing-rules switch, the quick part (S–M each)
+- CLAUDE.md rewritten under 150 lines for the standing rules (rules 1, 2, 9, 10, 11, 12 reworded, 13–15 new; code map and the 1.1 contract brought up to date: O32).
+- Chimera: the full welcome on first launch and a one-tap card later (C2, O2); the link on the README's first line (C4); an invite with Copy on tutorial end screens (C6); invites at personal bests, grades, Path passes, check results, plateau cards (C8, C9, O3) and in export and backup dialogs (C10); C13 and L1 as the owner decides.
+- Privacy in exports: no name but a typed nickname; no user-agent, locale or timezone unless switched on; local day keys in the pooled export shifted to UTC or dropped, with a test.
+- Modes: a "right when" line per mode and one log-based suggestion at a time, hidden 14 days if dismissed (P1 §5).
+- Playtest mode: three taps after each exercise, a note button on every screen, "Copy playtest report" with device, frame timings, errors, performance, play time and where the player quit.
+- **Acceptance:** shell, section and longrun tests handle the new pop-up; a node test checks the link in every share text and tutorial end; screenshots at 360 × 640 and desktop.
 
 ### 3. Plateau-breaking (L)
-- **Detector (PB1).** One per exercise, reading the trial log. It fires on any of:
-  - learning progress near zero over at least 60 rated answers in 3 sessions;
-  - a level change that stays inside its noise band for two weeks;
-  - a Path stage still not passed after N sessions.
-- **Change menu (PB2).** Each change states its reason and source:
-  - the other strategy card, with a check-in;
-  - the interleaving stage moved;
-  - a style switch for a week;
-  - the weakest dimension drilled;
-  - a 3–4-day rest;
-  - Speed offered when the player is accurate but slow;
-  - a variant swap.
-- **Plateau card (PB3, C9).** It appears on the summary and on Today, says what changed and why, and follows up on whether it helped. It carries the Chimera invite. Plateau events go into the record and the export.
+- **Detector** (P1 §2): at each session end, a maximum-likelihood logistic slope over the last 640 rated answers on the exercise, using logged item difficulty and guessing rate, a covariate for answers right after a switch and a correction for day-to-day noise; fires when β̂ + 1.645·SE < 0.15 logit per 100 answers. Preconditions: at least 8 sessions on 8 days in the window, no break over 14 days, not at the pool's ceiling, not inside a change's trial. A response-time trend at matched difficulty classifies a stall ("steady level, faster answers" suggests Speed instead of a plateau card).
+- **Changes** (P1 §3.9): a decision table driven by the log (ceiling or long break: not a plateau; weak after switches: interleaving stage back; weak spot at the frontier: drill that dimension; accurate but slow: Speed runs inside Train; massed practice with late-session decline: rest that exercise 3–4 days; otherwise a logged random choice among the other strategy card, a wider mix or variant swap, aiming higher, a new variant). Each runs a trial of 3 sessions and at least 120 answers, warns about the expected dip, and ends "clearly up", "unclear yet" or "no change yet".
+- **Plateau card** on the summary and Today: what changed and why, the follow-up, the Chimera invite; plateau events in the record and the export.
+- **Acceptance** (simulated learners in sim.mjs, Train and Path, 120 days): ≤ 5 % false alarms for learners improving at ≥ 0.25 logit per 100 answers; ≥ 90 % of plateaus caught within 800 answers; no learner flagged while still rising; the card shows in a longrun.
 
-Acceptance:
-- Simulated learners who plateau trigger the detector within the stated window.
-- Learners who improve trigger it at most 5 % of the time.
-- The card shows in a longrun.
+### 4. Transfer bets, tagged, logged and tested (L)
+- **`def.bet`** with nine ids (T1 §3): `attention` (track), `load` (span), `variety` (fold, spin, hidden), `strategy` (rotate, orient), `compare` (nets, knots), `bridge` (slice), `produce` (views), `calibrate` (reckon, homing, centralpoint; new and untested), `format` (the six DAT-style). Shown on the exercise page and How to play; "The bet" line per exercise; a "Test the bets with us" section in About, the Lab and the guide (S3). A node test checks every training exercise has one.
+- **Add-on layers** (T1 §4): comparison rounds (two solved items side by side, "What is the same?" as a one-tap menu, the principle, one apply item; 25–60 s; at most two a session); bridge sets (a concrete item beside its idealised twin, a mapping question, two concrete items, a "where else?" tap; 60–90 s; about every two weeks per exercise); draw-the-answer variants (draw the view on a dot grid, mark the holes, mark the cut). Assigned by a within-player crossover.
+- **Logging** (T3, O17): per trial `bet`, `layer`, `format`, answer mode and orientation; an events table (show-me plays, strategy cards, check-ins, comparison rounds, bridge sets, off-screen challenges, layer assignments, expectation ratings); dose summaries in the research export.
+- **Acceptance:** every training exercise has a bet; the crossover assignment is balanced in simulation; the export carries every field (a node test); the guide and About describe each bet in the same words as the code.
 
-### 4. Transfer bets, tagged and logged (M–L)
-- **The tag (T2).** A `def.bet` field in PX.ex.define, from a fixed list. It shows on the exercise page and in How to play, and goes into the research export and the guide. A node test checks that every training exercise has one.
-- **Exposure logging (T3, O17):**
-  - the record logs show-me plays, strategy cards opened, and bridges and off-screen challenges viewed;
-  - each trial row stores the answer mode (drag, dial, ± buttons or keys) and the phone's orientation.
-- **"The bet" (S3).** A "The bet" line per exercise, and a "Test the bets with us" section in About, the Lab and the guide.
-- **Real implementations of the thin bets (T1):**
-  - relational comparison: paired items that share a principle, with a "what is the same?" step;
-  - bridging as short applied tasks.
+### 5. Game layer (L; contents per decision 1, recommended B; G1 §2)
+- Eight rules for the whole layer (G1 §2.0), enforced by node tests where code can check them: nothing on screen during an item but the task and the item counter; no count of consecutive days anywhere; Reach never falls; firsts follow the guessing rule.
+- Grades 1–10 per exercise (the tenth of the range holding the best block level); Reach (the sum of best block levels over the non-DAT-style training exercises, never falling); records with optional personal-best goals; firsts and the Atlas (`def.atlas`, cells handled only when guessing explains the right answers less than one time in ten); Daily v2 (a ramp from easy to hard, points 1 + 2 + … + 8, a calm history, an archive, a frozen pool per epoch: C11); the weekly Climb (20 rungs, the run ends at the second miss, three seeded attempts a week); weekly field notes (pick two of three, skill or good practice only, gone on Sunday night without a message); a fresh-start note after a gap of 7 days or more; cards at every high point, including start-versus-now (F2, F4–F6, P2, O1).
+- Game feel between items only (G1 §5.2): a plotter-drawn tick, one ring on a right answer to a stretch item, a needle sweep at block end, an ink grade stamp, rolling counters; celebrations in ink and green, never in the accent, which is also the stimulus target colour; every effect ends before the next item paints. The stock patterns the look avoids (LI4) are listed in G1 §5.4.
+- **Acceptance:** every mechanic stays outside `body.px-stim`; shortcut and timing tests unchanged; a first-week play-through over simulated days passes; each mechanic has a DECISIONS line naming the harm it avoids (G1 §2.13).
 
-### 5. Game layer (L)
-Built from the Phase 1 design and the answer to fork 1:
-- points for skill, as difficulty-weighted right answers, never for time or logins;
-- ranks or tiers on top of the honest levels;
-- reasons to come back that never punish a missed day:
-  - the Daily Challenge;
-  - the weekly challenge below;
-  - a "next time" line on the summary (the next Path stage, a review that is due);
-  - new variants to try;
-- no Duolingo-style streaks: no daily chain, no freezes, and no "don't lose your streak" (the owner's rule of 14 Nov). The weekly goal and its forgiving weeks-in-a-row count stay as they are, by the owner's choice;
-- a seeded weekly community challenge with its own card;
-- Share at personal bests and milestones (F4–F6, O1);
-- "firsts", and a start-versus-now card in the first week (F2, P2);
-- a game-feel pass that keeps the instrument look (LI2);
-- the list of stock patterns the visual concept avoids (LI4).
+### 6. Measurement that moves within weeks (L; budget per decisions 2 and 3; M1)
+- **First, the engine simulation gate** (M1 §8): a probe learner model, the trend model (generalised least squares, equal to a Kalman smoother) over all occasions with a population familiarity prior (0.65 SD until pooled data exist), milestone verdicts, hard false-positive checks, the detectable gain reported at weeks 4 and 8.
+- **Then the build:** baselines and embedded blocks per the decisions; a probability meter always shown, verdict words only at milestones (P ≥ 0.975 at week 2, ≥ 0.95 from week 4, "likely no change" from week 8); the opt-in measurement week.
+- **The ladder:** a near probe, Other Way Round (the trained operations in reverse, six strands; T1 §5.1), a far probe, Motion Graphs, joining Mechanisms in a far composite (T1 §5.2); Level optional and reported alone; reserved formats with a node test that fails if training content uses them. Lab checks: mean estimation as a control for Central Point (T1, C1 §6), and learning speed on newly added exercises.
+- **Acceptance** (in the simulation, before the build is merged): false "likely gain" ≤ 5 % (central) and ≤ 10 % (misspecified familiarity) at every milestone; detectable composite gain at week 8 ≤ 0.5 SD under the optimistic set; the near rung's detectable gain reported at weeks 4 and 6; the real probe reliability substituted as soon as pooled baselines give it.
 
-Each mechanic gets a DECISIONS line naming the harm it avoids. Nothing decorative runs during a stimulus (F7).
-
-Acceptance:
-- Every mechanic stays outside `body.px-stim`.
-- The shortcut and timing tests are unchanged.
-- A first-week play-through passes over simulated days.
-
-### 6. Measurement that shows a gain within weeks (L)
-- **Sensitivity (ME5, O13):**
-  - a trend model over all checks, instead of each check against the baselines;
-  - more information per minute, with response time in the estimate;
-  - embedded probe blocks between checks;
-  - the probability of a real gain, shown beside the interval.
-- **Near and far probes (ME1):** original and solver-checked. Mechanisms and Level are placed on the ladder.
-- **Baselines (ME2):** as fork 3 decides.
-- **Alternate forms:** the probes' alternate forms are equated once pilot data exists (O16).
-
-Acceptance, proved in sim.mjs before building: with a real composite gain of 0.5 SD, at least 60 % of simulated learners read a likely gain by week 4, and at most 5 % of learners without a gain do.
-
-This is the largest gap and the riskiest build. If no design meets the acceptance in simulation during Phase 1, it moves to v1.3, and the plan message says so.
-
-### 7. Faster progress (L)
-- Per-dimension offsets, learned from the residuals the engine already keeps, so that strong dimensions are pushed as well as weak ones (P1).
-- A fluency target inside Train once accuracy has settled, using Speed's deadlines on a share of items (P1).
-- Hand-set difficulty steps refitted from the community's pooled exports once enough arrive (O16). The export invite in milestone 2 asks for them.
-
-Acceptance: targeting per dimension in sim.mjs stays inside the stated band, and shortcut accuracy does not rise.
+### 7. Faster progress on every dimension (M–L; P1 §4)
+- Per-dimension step offsets refitted at each session end by ridge regression on the last 400 answers (prior SD 0.5 × step, capped at ±0.75 logit); items chosen on the player's own difficulties; the leading dimension rotates; the deck's easy item takes the Speed deadline once Speed is open, updating only the timed rating.
+- Hand-set steps refitted from pooled exports when they arrive (O16).
+- **Acceptance:** in sim.mjs with uneven learners, target items within ±0.10 of the true edge rise (Fold 87 → 95 %, Rotate 92 → 95 % in the P1 runs); shortcut accuracy does not rise per dimension level (a shortcut-learner simulation).
 
 ### 8. Exercise depth (L each unless marked)
-- **Reckon:**
-  - the study that 1.1 deferred: rated levels with 3–4 legs and tighter tolerances, final in-place rotations, or graded continuous error, so that easy routes stop yielding to turns alone (O35);
-  - a drift trend over weeks on Progress (M, O38);
-  - later rungs: "point to the start now" mid-route, curved legs, active steering (O37).
-- **Homing:** the solution map draws landmarks in the directions seen from the start, as in the 3D view (M, O42).
-- **Reckon and Homing:** a gyroscope "magic window" variant with its own rating (O44).
-- **Knots:**
-  - the mirror variant ("same knot or its mirror?") with 3D tubes, and the 3D "pull tight" demo (O46);
-  - R2's later ideas: a rope through a ring, three rings, Tuck, Hang, a tube look and a colour gradient (O47).
-- **Central Point (new exercise, EX-20; the owner's request, 18 Nov, after a community member's idea).** Find the spot with the smallest total distance to all the targets (the geometric median). Most people aim for the average position, which far-off targets drag too far; the skill is balancing the pulls from every direction.
-  - **Design:** Parallax's own, not a copy of the subtest's screens or items.
-    - A field of dots: 7×7 on phones (every dot ≥ 44 px), up to 12×12 on larger screens, with 3–9 targets.
-    - Tap to pick, drag to adjust, then confirm.
-  - **Scoring:** partial credit from how close the pick's total distance is to the best one. The item counts as right inside the current credit band.
-  - **Feedback:**
-    - a quality heat map;
-    - the lines to each target, with their lengths;
-    - the best spot;
-    - a short why: at the best spot the pulls cancel, and outliers pull less than the average suggests.
-  - **Dims:** number of targets, grid density, credit band, and an outlier trap (how far the average sits from the best spot). A speed variant can follow.
-  - **Checks:**
-    - an independent solver, exhaustive over grid points;
-    - shortcut solvers bounded per level by the outlier-trap dim: average position, middle of the bounding box, coordinate-wise median, and the target nearest the centre.
-  - **Tutorial and tag:** Watch-Try-Go with three targets. The transfer tag is spatial estimation and optimisation, the new or under-tested bet the standing rules ask for.
-  - **Overlap:** the format comes from a test's subtest, so it joins the overlap table and the "Taking a test soon?" helper. The helper names the test if the owner learns its name.
-  - **Size:** L (generator, validator, view, tutorial, tests, guide section).
-- **DAT-style, rebuilt to the real PAT formats (owner and player feedback, 18 Nov; required in v1.2).** Matching a test's format is allowed. Only the ADA's actual questions, instructions and drawings, and its name, are off-limits.
-  - **Look:** a plain line-drawing style close to the test's, for all six (generic drawings, never copies), with numbered options as on the test.
-  - **Painted Cubes:** several questions per figure (2–5, as on the test), each answered "1 cube" to "5 cubes".
-  - **Missing View phase B:** slopes, notches and through-holes (O49), the solids the real test uses instead of cube stacks.
-  - **Openings:** quarter-circle notches, interaction outlines, "face, not outline" and strict-superset foils, and a 15 % proportion level (O50).
-  - **Form:** L-, T- and U-prisms, a net-distance dimension, a net-adjacency foil, and a show-me that animates the fold (O51).
-  - **Angles and Hole Punch** already match; they get the new look only.
-- **DAT-style depth (beyond the rebuild):**
-  - Painted Cubes: decide on the visible-only strategy, which is right on about 61 % of items, and test "column tops only" (M, O57).
-  - Angles: a 1.5° level on large screens, or a DECISIONS line for the 2° floor (S–M, O58).
-  - Section practice: an optional tally pad for Painted Cubes (M, O12).
-- **Older backlog:**
-  - Orient as a 3D tabletop (O60);
-  - new exercises for closure speed, spatial scanning and imagery (O61).
+- **Central Point (EX-20; C1 §3–§8):** targets on a 7 × 7 dot lattice, answers on the 13 × 13 half-step lattice (tap, then drag or nudge with ≥ 44 px buttons or keys, then Confirm; no total shown before Confirm); right within 1 %, 0.5 % or 0.25 % of the best total, partial credit falling to 0 at four times the band; dims targets 4–8 × band (15 cells), a trap of at least one dot on every rated item, all eleven shortcut picks and every target kept out of the band; an exhaustive validator over the 169 answer points with a Weiszfeld cross-check; a smarter generator (acceptance is 0.5–9.2 % per candidate); the correction ratio logged per item; reveal with lines and lengths, the best spot and contour lines, never the average; "Why?" lays equal pulls head to tail and slides the farthest target away to show the best spot stays put; strategy cards "Balance the pulls" and "Count the sides"; a two-minute tutorial (C1 §5.4); the overlap row and helper line (C1 §7). Difficulty steps are provisional (a 2.2-logit span).
+- **DAT-style, the real formats** (D1 §6, in this order): lettered options and a plain line-drawing look in all six, with test-range tags and a "test range only" choice in Free play; Angles' numbering and lettering; Painted Cubes with 2–4 questions per figure (version 2); Form's three kinds of item (plain shapes, full shading, partial shading) and L-, T- and U-prisms; Missing View on profile solids; Openings with a test-range start at two features and a turn dim; Section practice under test conditions (free navigation across parts, strike-out, part instructions before the clock); Hole Punch's new look. New solvers are independent of the generators.
+- **DAT-style depth:** Painted Cubes' visible-only strategy and "column tops only" (O57); Angles' 1.5° level or a DECISIONS line for 2° (O58); the optional tally pad (O12).
+- **Reckon** (N1 Q5): final on-the-spot rotations of ±30–150° and a 2-key construction that caps turns-only answers at 50 % (drop the fixed-angle exemption); a `legs` dim; return distances 3–20 m with a 20 % tolerance level; the walk-back control law stays fixed; card wording matched to the studies; the flow step refitted; a drift trend on Progress (weekly median with range, at least 15 return routes, one route-length band; O38). The O45 search stays owed (search budget).
+- **Homing:** the solution map draws landmarks as seen from the start (O42, M).
 
 ### 9. Phones, data and tooling (S–M each)
-- **Phones:**
-  - Progress in tabs or collapsed panels, with jump-to chips; it is 15–20 screens of scrolling today (O20);
-  - an optional "confirm taps" setting (O22);
-  - Reckon and Homing dial words under 12 px (O41);
-  - the Knots rope plate on a landscape phone (O48);
-  - Form's See-solution badges cover the solid (O54);
-  - Hole Punch's fold panels are 80–100 px (O55);
-  - the Painted Cubes overlay is busy (O56).
-- **Offline:** a service worker for the GitHub Pages copy, so the home-screen icon starts offline. It is https only, never from files (O21). This is my call under rule 6, logged in DECISIONS.
-- **Real phones:**
-  - Homing and Reckon walks measured on mid- and low-end phones (median frame ≤ 17 ms, under 5 % slow frames) (O19);
-  - a phone-against-desktop validity check for Reckon on community data (O18).
-  
-  Both need people with phones: the release checklist and a community call.
-- **Daily:** a partial Daily attempt resumes by seed, not by position. This changes the saved Daily format, so it needs a migration (O14).
-- **Tests:**
-  - fit.py waits for Hole Punch's scroll under load (O27);
-  - Section practice on a sideways phone (O28);
-  - a whole-app accessibility and phone-usability review (O31);
-  - Openings' feature visibility gets a check that is independent of the generator (O29), and Painted Cubes gets the brute-force proof over height maps (O30);
-  - the slow Openings and Knots node tests sped up or split (8–15 minutes for Knots against CI's 30-minute budget) (O33).
-- **Guide:**
-  - the ADA reference links the validity study (O26);
-  - decide whether the guide may express studies' IQ effects in IQ points, where a study measured IQ. The default is no; in-app numbers never are (O24).
-- **Housekeeping (O34):**
-  - CI passed on the released 224228f (checked 14 Nov);
-  - the tag is with the owner (above);
-  - the old v1.0 preview artifact still shows 1.0, and is updated only if the owner asks.
+Progress in tabs with jump-to chips (O20); an optional "confirm taps" setting (O22); dial words ≥ 12 px (O41); the Knots plate on landscape phones (O48); Form's badges (O54); Hole Punch's panels (O55); Painted Cubes' overlay (O56); a service worker on https only (O21); a partial Daily resumes by seed, with a migration (O14); fit.py waits for Hole Punch (O27); Section practice sideways (O28); an accessibility and phone-usability review (O31); Openings' independent feature check (O29) and Painted Cubes' brute-force proof (O30); slow node tests split (O33); the guide links the ADA validity study (O26) and keeps study effects out of IQ points (O24); real-phone frame checks for Homing and Reckon (O19) and the Reckon validity check on community data (O18) go to the release checklist and a community call.
 
 ### 10. Voice (L)
-Rewrite About, the README, the Library notes and guide chapters 1, 5 and 8 in a confident, curious "test the bets with us" voice. Lead with what Parallax trains, bets on and measures, and keep one accurate limit where a claim needs it. The test-hygiene and ADA lines stay (S5).
+About, the README, the Library notes and guide chapters 1, 5 and 8 in a confident, curious "test the bets with us" voice: what Parallax trains, bets on and measures, one accurate limit where a claim needs it (S5). "Real format" never reads as "real difficulty" (D1).
 
 ### 11. Verification and release
-- **Two-minute start (TM2).** The fresh-agent test runs on all 19 exercises and the first Spatial Check, on phone and desktop, with the times recorded in VERIFY. Form goes first.
-- **Reviews and runs:**
-  - independent reviews of code, items, claims against code, the guide and a play-through;
-  - long runs;
-  - the real-phone checklist for the owner.
-- **Release checklist:** the owner's five-minute checklist is a page of pass/fail taps, each with a note field (standing rules, interactive check-ins).
-- **Release material:** the guide, the single file, the Discord post, the build log and the playbook.
+- Two-minute start: the fresh-agent test on all 20 exercises and the first check, phone and desktop, times in VERIFY (TM2).
+- Independent reviews of code, items, claims against code, the guide and a play-through; long runs; the six-word quote scan against BRIEF.md; the privacy check on the release zip.
+- The owner's five-minute release checklist as a page of pass/fail taps; guide, single file, Discord post, build log, playbook.
+
+## Phase 2 organisation
+- A written contract first (docs/dev/CONTRACT-v1.2.md): new fields (`def.bet`, `def.atlas`, the events table, trial-row fields), file ownership down to functions in shared files, hooks delivered first.
+- Builders in parallel by area (engine, game layer, measurement, Central Point, DAT-style rebuild, Reckon, interface), each with its own tests; the original builder fixes its review findings.
+- Two browser slots: browser-heavy work is queued, reviews that need no browser stay off the slots.
+- The first playable build (milestones 1, 2 and Central Point, playtest mode on) goes to the owner as a separate private preview the moment it exists.
+
+## Risks
+- Measurement: real probe reliability decides between the central and optimistic numbers; it comes from pooled baselines after release (M1 §9).
+- Hand-set difficulties (first band, Central Point, PAT rebuild) are provisional until pooled exports refit them.
+- The plateau detector cannot fire before 640 rated answers on an exercise; rarely rotated exercises take weeks.
+- Central Point's generator speed on phones; its floor may be too hard (no human data).
+- The game layer's three new numbers may confuse beginners (one tour line each, on first appearance).
+- The DAT-style look change moves difficulty; versions bump and ranges widen.
+- Several core sources could not be opened (docs/research/ACCESS.md, ranked top 10).
 
 ## If v1.2 has to be smaller
-1. **First:** milestones 0–3 (research, fixes, the quick switch and plateaus), 5 (the game layer), 10 and 11. Together they make the standing-rules switch, and milestone 4's tag (T2) comes with them.
-2. **Next:** milestone 6, the largest gap. It goes in only once the simulation proves a design.
-3. **Any later version:** milestones 7–9. They block nothing in the switch.
+1. Milestones 1–3, 5 (option A if needed), 4's tag and logging, 10, 11, and Central Point.
+2. Then 6 (only once the simulation gate passes), 7, the DAT-style rebuild and Reckon.
+3. Then 9's remaining items.
