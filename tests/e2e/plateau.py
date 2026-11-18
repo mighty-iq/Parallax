@@ -89,6 +89,11 @@ def to_respond(page, ms=30000):
             page.evaluate('__play.resume()')
         if st in ('reveal', 'showme'):
             page.evaluate('PX.debug.fast(false); __play.next()')
+        later = page.locator('[data-card="later"]')  # a measurement offered at the session's start (W2-measure): later
+        if later.count() and later.first.is_visible():
+            later.first.click()
+            page.wait_for_timeout(200)
+            continue
         card = page.locator('[data-card-box] .px-btn--primary')
         if card.count():
             page.evaluate('PX.debug.fast(false)')
@@ -166,11 +171,10 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.evaluate('void PX.core.router.go("progress", {}, { force: true })')
     page.wait_for_timeout(600)
     C.ok(page.locator('[data-plateau-history]').count() == 1, f'{name}: Progress shows the plateau history')
-    route = page.evaluate('''(() => { const L = PX.ui.library; return L && L.routes ? L.routes : null; })()''')
-    page.evaluate('void PX.core.router.go("exercise", { id: "fold" }, { force: true })')
+    page.evaluate('void PX.core.router.go("exercise/fold", {}, { force: true })')
     page.wait_for_timeout(600)
     line = page.locator('[data-plateau-line]')
-    C.ok(line.count() >= 1, f'{name}: the Fold page shows its plateau line ({route})')
+    C.ok(line.count() >= 1 and 'Plateaus:' in line.first.inner_text(), f'{name}: the Fold page shows its plateau line')
     errs = con.errors()
     C.ok(not errs, f'{name}: no page or console errors ({errs[:3]})')
     b.close()
