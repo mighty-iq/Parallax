@@ -268,7 +268,9 @@
     st.opts.forEach(function (o, i) {
       if (!o) return;
       var op = item.options[i];
-      o.tag.textContent = i === item.key ? '✓ Fits, ' + FACE[faceAxis(item)] + ' first' : op.kind === 'proportion' ? 'Wrong size' : op.kind === 'face' ? 'No face is this shape' : 'A feature differs';
+      // short, so a tag fits under its opening on a 360 px phone with three openings a row (v1.2)
+      var fc = FACE[faceAxis(item)];
+      o.tag.textContent = i === item.key ? '✓ ' + fc.charAt(0).toUpperCase() + fc.slice(1) + ' first' : op.kind === 'proportion' ? 'Wrong size' : op.kind === 'face' ? 'No such face' : 'Cut differs';
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
     });
@@ -382,17 +384,18 @@
   // The outline as the key opening is drawn, over the solid: turned and flipped in full.
   function turnedOutline(item, tn) { var A = outlinePage(item); return spun(A, centreOf(A), ANG[tn.n], tn.flip ? -1 : 1); }
 
-  function steps(item, response) {
+  // The card's steps on an item (v1.2: few captions, since each one of the Watch waits for a tap): the
+  // face that goes in first, turned to face the player and traced under one caption; the turn of the
+  // outline; the landing on the answer. The Watch says first that any face may go in first.
+  function steps(item, response, watch) {
     var key = item.key, av = axisView(item), picked = typeof response === 'number' && response >= 0 && response < 5 && response !== key ? response : -1;
     var face = FACE[faceAxis(item)], name = profOf(item, item.keyAxis), dm = profDims(item, name);
     var band = lib.cleanParams(item.params).features === 0, tn = turnOf(item, key), turns = !!(tn.n || tn.flip);
     function at(az, el) { st.cur = camAt(az, el); render(); }
     function straight() { at(av.az, av.el); }
     var list = [
-      { ms: 1300, caption: cap('solid'), enter: function () { reset(); at(VIEW0.az, VIEW0.el); st.label.classList.add('is-pointed'); }, exit: function () { st.label.classList.remove('is-pointed'); } },
-      { ms: 1500, caption: cap('rules'), enter: function () { reset(); at(VIEW0.az, VIEW0.el); } },
-      { ms: 2200, caption: cap('turn', { face: face }), enter: function () { reset(); at(VIEW0.az, VIEW0.el); }, update: function (k) { var e = ease(k); at(VIEW0.az + (av.az - VIEW0.az) * e, VIEW0.el + (av.el - VIEW0.el) * e); } },
-      { ms: 1500, caption: cap('outline'), enter: function () { reset(); straight(); }, update: function (k) { inkOutline(item, Math.min(1, k * 1.6)); } },
+      { ms: 2200, caption: cap(watch ? 'lead' : 'turn', { face: face }), enter: function () { reset(); at(VIEW0.az, VIEW0.el); }, update: function (k) { var e = ease(k); at(VIEW0.az + (av.az - VIEW0.az) * e, VIEW0.el + (av.el - VIEW0.el) * e); } },
+      { ms: 1500, enter: function () { reset(); straight(); }, update: function (k) { inkOutline(item, Math.min(1, k * 1.6)); } },
     ];
     if (turns) {
       // quarter turns first, then the flip, each about 1.3 s, in sight over the solid, then a short hold
@@ -472,12 +475,14 @@
   function demo(item, ctx, caption) {
     if (!st || !st.v3 || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    var list = steps(item, null), intro = { ms: 1700, caption: cap('openings'), enter: function () { reset(); st.cur = camAt(VIEW0.az, VIEW0.el); render(); } };
-    // then why one wrong opening of each kind fails (the Watch shows every kind of foil Try uses)
+    var list = steps(item, null, true);
+    // then why one wrong opening of each kind fails (the Watch shows every kind of foil Try uses), and
+    // back on the answer, so the player's turn starts from it with no wrong opening marked
     var av = axisView(item), name = profOf(item, item.keyAxis), dm = profDims(item, name), seenKinds = {}, tour = [];
     function straight() { st.cur = camAt(av.az, av.el); render(); }
     item.options.forEach(function (o, i) { if (i !== item.key && !seenKinds[o.kind]) { seenKinds[o.kind] = 1; tour.push(whyStep(item, i, straight, name, dm)); } });
-    return play(list.slice(0, 2).concat([intro], list.slice(2), tour), ctx, { name: 'demo', caption: caption || null });
+    var rest = { ms: 700, enter: function () { reset(); straight(); inkOutline(item, 1); focusOption(item.key); overlay(item, item.key, item.prof[name], dm[0], dm[1], item.options[item.key].tf, 'op-ghost'); } };
+    return play(list.concat(tour, tour.length ? [rest] : []), ctx, { name: 'demo', caption: caption || null }).then(function () { if (st) st.caption.textContent = ''; });
   }
   function unmount() {
     if (!st) return;

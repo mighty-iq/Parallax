@@ -1058,6 +1058,19 @@
     throw new Error('openings: no valid item could be built'); // unreachable while the fallback test passes
   }
 
+  // v1.2 (fresh-player test: a scored item was the Watch's own item, answerable from memory): an item of
+  // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
+  // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
+  // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
+  var TUTORIAL = [2764413377, 1146957781, 4014106692, 4256521827, 3913201483, 152884121];
+  function stemSig(item) { return PX.rng.hash('openings-stem', JSON.stringify([item.W, item.H, item.D, item.prof, item.pose])); }
+  function generateFresh(rng, params) {
+    var item = generate(rng, params);
+    if (params && params.task === 'tutorial') return item;
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    return item;
+  }
+
   /* ------------------------------------------------------------ definition */
   // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .2. base −2.3: one feature on each face,
   // straight edges, the key on the face the picture shows most, upright, feature foils: ≈ .90 right at
@@ -1082,8 +1095,9 @@
       { key: 'foils', label: 'Foils', levels: FOILS.slice(), step: 0.3 },
     ],
     base: -2.3,
-    generate: generate, validate: validate, score: score,
+    generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
       DIMS: DIMS, POSES: POSES, POSE_SETS: POSE_SETS, VIEW: VIEW, AXES: AXES, PROF_OF: PROF_OF, AXIS_OF: AXIS_OF, RES: RES, SOLVERS: SOLVERS, stats: stats,
       qgrid: qgrid, qcopy: qcopy, profile: profile, featCells: featCells, randomFeature: randomFeature, buildProfiles: buildProfiles, polysOf: polysOf,
       silZ: silZ, silX: silX, silY: silY, sils: sils, outline: outline, polyArea: polyArea, area4: area4, crop: crop,

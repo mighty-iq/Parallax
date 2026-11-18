@@ -23,6 +23,7 @@ export async function run(t) {
   testFallback(t, PX, def, L);
   testTiming(t, PX, def);
   testLearn(t, PX, def);
+  testTutorialRepeat(t, PX, def, 'openings');
 }
 
 const sig = (x) => 1 / (1 + Math.exp(-x));
@@ -386,14 +387,15 @@ function testLearn(t, PX, def) {
     `Try 3 (turned openings) comes after a worked example on a sister item whose opening is turned (seed ${exE && exE.seed}, turn ${xe && xe.options[xe.key].tf})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].features === 0 && P[1].features === 0, 'Try 1 and Try 2 are at the starter band');
-  t.eq(P[2], { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }, 'Try 3 is the pre-1.2 floor (openings turned)');
+  t.eq(P[2], { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, 'Try 3 is the pre-1.2 floor (openings turned)');
   t.ok(P[3].features === 1 && P[3].keyview === 1, 'Try 4: the first hard feature the early rated items use (any face can fit)');
   t.eq(L.practice[0].assist, { trace: true }, 'Try 1 has its first step done (the key face traced)');
   t.ok(L.practice.slice(1).every((e) => e.assist === undefined), 'only Try 1 is assisted');
   const tips = new Set((L.tips || []).map((x) => x.id));
   t.ok(L.practice.every((e) => e.tip === undefined || tips.has(e.tip)), 'forced tips exist');
   const face = (it) => [2, 0, 1].find((w) => lib.axisFacing(lib.POSES[it.pose], w) === it.keyAxis);
-  t.ok(face(items[0]) === 2 && face(items[1]) === 0, 'Try 1 fits front first, Try 2 side first');
+  t.ok(face(items[0]) === 2 && face(items[1]) === 0 && face(demoItem) === 0, 'the Watch goes in side first, Try 1 front first, Try 2 side first (any face may go in first)');
+  t.ok(L.rules.some((r) => /any face may go in first/i.test(r)) && /front, side or top/.test(L.captions.lead), 'the rules card and the Watch say that any face may go in first');
   t.ok(items[2].options[items[2].key].tf !== lib.seenTf(items[2].pose, items[2].keyAxis), 'Try 3\'s key opening is turned or flipped (the new feature, with its tip)');
   t.eq(new Set(items.map((it) => it.key)).size, 4, `the Try answers sit in four different places (${items.map((it) => it.key + 1).join(', ')})`);
   // every foil kind the Try items use appears in the Watch item
@@ -410,10 +412,36 @@ function testLearn(t, PX, def) {
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
   t.eq(L.strategies.find((x) => x.id === L.strategyFirst).steps.length, 3, 'the first card has three steps');
-  const caps = ['solid', 'openings', 'rules', 'turn', 'outline', 'spin', 'straight', 'land', 'assist', 'whyFeature', 'whyFace', 'whyProportion'];
+  const caps = ['lead', 'turn', 'spin', 'straight', 'land', 'assist', 'whyFeature', 'whyFace', 'whyProportion'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered|boost|raise your|score gain|predict/i.test(all), 'no IQ, "mastered", score-gain or prediction claims');
   t.ok(typeof L.bridge === 'string' && /has not measured/i.test(L.bridge), 'a "where it is used" line with its limitation beside it');
+}
+
+// v1.2 (fresh-player test): no tutorial item comes back as a rated item. Every learn.js item carries
+// params.task 'tutorial'; lib.TUTORIAL holds exactly their stems' hashes; rated items at the tutorial's
+// settings never have one of those stems, and an item whose first draw is not one is unchanged.
+function testTutorialRepeat(t, PX, def, id) {
+  t.section(id + ': tutorial items do not come back');
+  const L = PX.ex.learn(id), lib = def.lib, entries = [];
+  (L.demo || []).forEach((d) => entries.push([d.params, d.seed]));
+  (L.practice || []).forEach((e) => { entries.push([e.params, e.seed]); if (e.example) entries.push([e.example.params || e.params, e.example.seed]); });
+  t.ok(entries.every(([p]) => p && p.task === 'tutorial'), 'every Watch, Try and worked-example item is marked task: tutorial');
+  t.ok(def.extraParams.indexOf('task') >= 0, 'task is an extra parameter of the definition');
+  const sigs = [...new Set(entries.map(([p, s]) => lib.stemSig(def.generate(PX.rng(s), p))))].sort((a, b) => a - b);
+  t.eq([...lib.TUTORIAL].sort((a, b) => a - b), sigs, `lib.TUTORIAL is the tutorial items' stems (${sigs.length})`);
+  let n = 0, repeats = 0, guarded = 0, changed = 0;
+  const sets = entries.map(([p]) => { const q = Object.assign({}, p); delete q.task; return q; });
+  for (const q of sets) for (let s = 1; s <= 300; s++) {
+    n++;
+    const raw = lib.generateRaw(PX.rng(s), q), it = def.generate(PX.rng(s), q);
+    const hit = lib.TUTORIAL.indexOf(lib.stemSig(raw)) >= 0;
+    if (hit) guarded++;
+    if (lib.TUTORIAL.indexOf(lib.stemSig(it)) >= 0) repeats++;
+    if (!hit && (lib.stemSig(it) !== lib.stemSig(raw) || it.key !== raw.key)) changed++;
+  }
+  t.eq(repeats, 0, `no rated item at the tutorial's settings has a tutorial stem (${n} items; ${guarded} first draws were redrawn)`);
+  t.eq(changed, 0, 'an item whose first draw is not a tutorial stem is the same as before');
 }
