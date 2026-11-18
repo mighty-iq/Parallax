@@ -119,18 +119,18 @@
       ]));
     });
   }
-  function markerGroup() {
-    var g = E('g', { class: 'ex-cp-mark' }, [
-      E('line', { x1: -0.62, y1: 0, x2: 0.62, y2: 0, class: 'ex-cp-hair' }), E('line', { x1: 0, y1: -0.62, x2: 0, y2: 0.62, class: 'ex-cp-hair' }),
-      E('circle', { r: R_MARK, class: 'ex-cp-disc' }), E('circle', { r: 0.09, class: 'ex-cp-centre' }),
-    ]);
-    return g;
+  // plain: the disc alone, while equal pulls are drawn (fresh-player test: the cross-hair's arms made the
+  // four pulls along them look longer than the slanted one)
+  function markerGroup(plain) {
+    var kids = plain ? [] : [E('line', { x1: -0.62, y1: 0, x2: 0.62, y2: 0, class: 'ex-cp-hair' }), E('line', { x1: 0, y1: -0.62, x2: 0, y2: 0.62, class: 'ex-cp-hair' })];
+    return E('g', { class: 'ex-cp-mark' }, kids.concat([E('circle', { r: R_MARK, class: 'ex-cp-disc' }), E('circle', { r: 0.09, class: 'ex-cp-centre' })]));
   }
   // The marker at an answer point (or at continuous coordinates in a demo), with faint answer points round
-  // it (round `halfs`, an answer point, when given: the step to the answer point beside the balance point).
-  function drawMarker(p, label, halfs) {
+  // it (round `halfs`, an answer point, when given: the step to the answer point beside the balance point;
+  // none when halfs is false: after the answer they would sit under the labels). plain: no cross-hair.
+  function drawMarker(p, label, halfs, plain) {
     clear(st.L.marker); clear(st.L.halfs);
-    var c = halfs || p;
+    var c = halfs === false ? null : halfs || p;
     if (c && Math.round(c.x) === c.x && Math.round(c.y) === c.y) {
       for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) {
         var x = c.x + dx, y = c.y + dy;
@@ -139,7 +139,7 @@
       }
     }
     if (!p) return;
-    var g = markerGroup();
+    var g = markerGroup(plain);
     g.setAttribute('transform', 'translate(' + p.x + ' ' + p.y + ')');
     st.L.marker.appendChild(g);
     if (label) st.L.marker.appendChild(labelAt(p.x + 0.75, p.y - 0.75, label, 'ex-cp-youlabel'));
@@ -180,13 +180,21 @@
       for (i = 0; i < pts.length; i++) { g = boxGap(c, hw, pts[i][0], pts[i][1], 0, 0) - pts[i][2]; if (g < 0) hard += 1 - g; else m = Math.min(m, g); }
       for (i = 0; i < boxes.length; i++) { g = boxGap(c, hw, boxes[i][0], boxes[i][1], boxes[i][2], HH) - 0.1; if (g < 0) hard += 2 - g; else m = Math.min(m, g); }
       for (i = 0; i < segs.length; i++) if (segs[i] !== own) m = Math.min(m, segDist(c, segs[i][0], segs[i][1]) - reach(segs[i], hw) - 0.08);
-      var v = m - 2 * hard - 0.7 * dotsUnder(c, hw);
-      if (own) { var d = segDist(c, own[0], own[1]) - reach(own, hw); v -= d < 0.06 ? 2 : d > 0.9 ? (d - 0.9) * 2 : 0; }
+      var v = m - 2 * hard - 1.2 * dotsUnder(c, hw);
+      if (own) {
+        var dOwn = segDist(c, own[0], own[1]), d = dOwn - reach(own, hw), dOther = Infinity;
+        v -= d < 0.06 ? 2 : d > 0.9 ? (d - 0.9) * 2 : 0;
+        // a length must be plainly nearer its own line than any other (fresh-player test: two lines
+        // close together left "4.6" and "3.2" ambiguous)
+        for (i = 0; i < segs.length; i++) if (segs[i] !== own) dOther = Math.min(dOther, segDist(c, segs[i][0], segs[i][1]));
+        if (dOther < dOwn + 0.35) v -= 1.2;
+      }
       if (near) v -= Math.max(0, boxGap(c, hw, near[0], near[1], 0, 0) - near[2] - 0.3); // a name stays by its mark
-      // the dot area (with a third of a dot round it) is home; the plate's margin costs a little, past
-      // 0.6 half-steps a lot, so a crowded label leans out before it covers another one
+      // the dot area (with a third of a dot round it) is home; the plate's margin costs a little, so a
+      // crowded label leans out before it covers another one; past the plate's edge it would be cut off
       var ex = Math.max(0, -0.35 - (c[0] - hw), c[0] + hw - LAST - 0.35, -0.35 - (c[1] - HH), c[1] + HH - LAST - 0.35);
-      if (ex > 0) v -= ex > 0.6 ? 3 + ex : 1.5 * ex;
+      var cut = Math.max(0, 0.05 - M - (c[0] - hw), c[0] + hw - LAST - M + 0.05, 0.05 - M - (c[1] - HH), c[1] + HH - LAST - M + 0.05);
+      v -= 1.5 * ex + (cut > 0 ? 8 + 4 * cut : 0);
       return v;
     }
     return {
@@ -433,14 +441,16 @@
     drawBest(item, s);
     clear(st.L.band); // the band's other answer points show with the map, inside its labelled band line
     drawLines(item.targets, spot || item.key);
-    drawMarker(spot, null);
+    drawMarker(spot, null, false); // no faint answer points now: they would sit under the labels
     labelReveal(item, spot || item.key, spot);
     var e = spot ? Math.max(0, s.S[spot.y * N + spot.x] / best - 1) : null;
     if (!spot) st.totals.textContent = cap('totalsNone', { best: oneDec(best / F) });
     else if (e < 1e-12) st.totals.textContent = cap('totalsBest', { best: oneDec(best / F) });
     else st.totals.textContent = cap('totals', { you: oneDec(s.S[spot.y * N + spot.x] / F), best: oneDec(best / F), pct: pctText(e) });
     var late = !!(result && result.late) || st.late;
-    st.verdict.textContent = !spot ? cap('noAnswer') : late ? cap('late') : e <= item.band ? cap('within', { band: bandWord(item.band) }) : cap('outside', { band: bandWord(item.band) });
+    // the best answer point itself, or only close enough (fresh-player test: "you · best" beside
+    // "Within 1 %" left a player unsure which)
+    st.verdict.textContent = !spot ? cap('noAnswer') : late ? cap('late') : e < 1e-12 ? cap('bestSpot') : e <= item.band ? cap('within', { band: bandWord(item.band) }) : cap('outside', { band: bandWord(item.band) });
     st.controls.hidden = true;
     st.result.hidden = false;
     clear(st.L.map);
@@ -493,22 +503,67 @@
     var bx = x2 - ux * hl, by = y2 - uy * hl;
     return E('path', { d: 'M' + x1 + ' ' + y1 + 'L' + bx + ' ' + by + 'M' + x2 + ' ' + y2 + 'L' + (bx - uy * hw) + ' ' + (by + ux * hw) + 'L' + (bx + uy * hw) + ' ' + (by - ux * hw) + 'Z', class: cls });
   }
-  // The fan: equal arrows that start just outside the marker's cross-hair (fresh-player test: they sat
-  // on the marker) and stop short of the nearest target's ring, never shorter than 0.55 half-steps.
-  var R0 = 0.66, GAP_MIN = 0.12;
+  // The fan: equal arrows that start just outside the marker's disc (drawn without its cross-hair) and
+  // stop short of the nearest target's ring, never shorter than 0.55 half-steps (fresh-player tests: they
+  // sat on the marker; the arms of the cross-hair made some look longer).
+  var R0 = R_MARK + 0.12, GAP_MIN = 0.12;
   function fanLen(T, p, A) {
     var m = Infinity;
     T.forEach(function (t) { var d = Math.sqrt(Math.pow(t[0] - p.x, 2) + Math.pow(t[1] - p.y, 2)); if (d > 1e-9) m = Math.min(m, d); });
     return Math.max(0.55, Math.min(A, m - R0 - R_TGT - 0.1));
   }
   function gapOf(T, p, A) { var s = lib().pulls(T, p.x, p.y).sum; return Math.sqrt(s[0] * s[0] + s[1] * s[1]) * A; }
+  // The order in which the pulls are laid end to end: in turn round the compass (so the line bends one
+  // way and never crosses itself), starting with the pull towards target `first`, turning clockwise
+  // (dir 1) or anticlockwise (-1). Every start and turn lays the same pulls; chainPlan picks the one whose
+  // line and gap keep clearest of the rings at every spot the step shows (fresh-player test: the line
+  // covered a ring), and keeps it for the whole step, so the line never jumps.
+  function ordered(sp, plan) {
+    var L = sp.list.slice();
+    if (!plan) return L;
+    if (plan.dir < 0) L.reverse();
+    for (var r = 0; r < L.length && L[0].i !== plan.first; r++) L.push(L.shift());
+    return L;
+  }
+  function segGap(q, a, b) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / L2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.sqrt(Math.pow(a[0] + t * dx - q[0], 2) + Math.pow(a[1] + t * dy - q[1], 2));
+  }
+  function chainClear(T, p, A, plan) {
+    var sp = sortedPulls(T, p), L = ordered(sp, plan), x = p.x, y = p.y, segs = [], m = 9, i;
+    L.forEach(function (o) { var nx = x + o.u[0] * A, ny = y + o.u[1] * A; segs.push([[x, y], [nx, ny]]); x = nx; y = ny; });
+    segs.push([[p.x, p.y], [x, y]]); // the gap
+    segs.forEach(function (sg) { T.forEach(function (t) { if (Math.abs(t[0] - p.x) + Math.abs(t[1] - p.y) > 1e-9) m = Math.min(m, segGap(t, sg[0], sg[1]) - R_TGT); }); });
+    // a corner of the line that comes back past the spot reads as a loop through the marker
+    for (i = 0; i + 1 < segs.length - 1; i++) if (Math.sqrt(Math.pow(segs[i][1][0] - p.x, 2) + Math.pow(segs[i][1][1] - p.y, 2)) < R0) m -= 1;
+    var off = Math.min(x + 0.9, y + 0.9, LAST + 0.9 - x, LAST + 0.9 - y);
+    return Math.min(m, off);
+  }
+  // ...and when no order keeps the line off every ring (many targets), a shorter line: the largest of
+  // A, 0.8 A and 0.65 A that clears the rings by 0.06 half-steps, else the clearest of them.
+  function chainPlan(T, spots, A) {
+    var sp = sortedPulls(T, spots[0]), best = null, bs = -Infinity;
+    [1, 0.8, 0.65].some(function (f) {
+      [1, -1].forEach(function (dir) {
+        sp.list.forEach(function (o) {
+          var plan = { first: o.i, dir: dir, A: A * f }, v = Infinity;
+          spots.forEach(function (q) { v = Math.min(v, chainClear(T, q, plan.A, plan)); });
+          if (v > bs + 1e-6) { bs = v; best = plan; }
+        });
+      });
+      return bs >= 0.06;
+    });
+    return best;
+  }
   // mode 'fan': arrows grow out from round p (k: 0 → 1); 'chain': they slide from the fan into a line
-  // laid end to end from p (k: 0 → 1). gap: once the line is laid, the leftover pull from p to the
-  // line's end (the gap), or a ring round p where the line closes.
-  function drawPulls(T, p, mode, k, A, gap) {
+  // laid end to end from p in the plan's order (k: 0 → 1). gap: once the line is laid, the leftover pull
+  // from p to the line's end (the gap), or a ring round p where the line closes.
+  function drawPulls(T, p, mode, k, A, gap, plan) {
     clear(st.L.over);
     var sp = sortedPulls(T, p), cx = p.x, cy = p.y, af = fanLen(T, p, A);
-    sp.list.forEach(function (o) {
+    if (plan && plan.A) A = plan.A; // the line's own length (the fan keeps the equal pulls' length)
+    (mode === 'chain' ? ordered(sp, plan) : sp.list).forEach(function (o) {
       var fx = p.x + o.u[0] * R0, fy = p.y + o.u[1] * R0, sx = fx, sy = fy, len = af * k;
       if (mode === 'chain') { sx = fx + (cx - fx) * k; sy = fy + (cy - fy) * k; len = af + (A - af) * k; }
       var a = arrow(sx, sy, sx + o.u[0] * len, sy + o.u[1] * len, 'ex-cp-pull');
@@ -559,6 +614,14 @@
     pts.push([g[0], g[1]]);
     return pts;
   }
+  // Spots along a path for chainPlan: every fourth point and the last.
+  function spotsOf(pts) {
+    var out = [];
+    for (var i = 0; i < pts.length; i += 4) out.push({ x: pts[i][0], y: pts[i][1] });
+    var e = pts[pts.length - 1];
+    out.push({ x: e[0], y: e[1] });
+    return out;
+  }
   function along(pts, k) {
     var lens = [0], tot = 0, i;
     for (i = 1; i < pts.length; i++) { tot += Math.sqrt(Math.pow(pts[i][0] - pts[i - 1][0], 2) + Math.pow(pts[i][1] - pts[i - 1][1], 2)); lens.push(tot); }
@@ -600,7 +663,8 @@
     var T = item.targets, g = item.gm, A = Math.min(1.3, 7 / T.length);
     // from the answer, or, with none (a time-out), from the counted first guess the tutorial teaches
     var given = isLatticePt(response), start = given ? { x: response.x, y: response.y } : firstGuess(T);
-    var path = flowPath(T, start, g), plan = slidePlan(T, g), gp = { x: g[0], y: g[1] };
+    var path = flowPath(T, start, g), plan = slidePlan(T, g), gp = { x: g[0], y: g[1] }, cp = chainPlan(T, spotsOf(path), A);
+    function mk(p) { drawMarker(p, null, undefined, true); } // the disc alone while pulls show
     st.root.classList.add('is-why');
     var steps = [];
     if (!given) steps.push({ ms: 2600, caption: cap('whyCount'), enter: function () { drawTargets(T); drawMarker(null); }, update: function (k) {
@@ -608,23 +672,23 @@
       drawMarker(k >= 0.85 ? start : null);
     } });
     steps.push(
-      { ms: 2400, caption: cap('whyPulls'), enter: function () { drawTargets(T); drawMarker(start); }, update: function (k) { drawPulls(T, start, 'fan', k, A); } },
-      { ms: 2400, caption: cap('whyChainMove'), enter: function () { drawTargets(T); drawMarker(start); }, update: function (k) { drawPulls(T, start, 'chain', k, A, false); } });
-    if (gapOf(T, start, A) > GAP_MIN) steps.push(
-      { ms: 2400, caption: cap('whyChain'), enter: function () { drawTargets(T); drawMarker(start); drawPulls(T, start, 'chain', 1, A, true); } },
-      { ms: 3000, caption: cap('whyMove'), enter: function () { drawTargets(T); }, update: function (k) { var p = along(path, k); drawMarker(p); drawPulls(T, p, 'chain', 1, A, true); } },
-      { ms: 1800, caption: cap('whyBalanced'), enter: function () { drawTargets(T); drawMarker(gp); drawPulls(T, gp, 'chain', 1, A, true); } });
-    else steps.push({ ms: 2200, caption: cap('whyClosed'), enter: function () { drawTargets(T); drawMarker(start); drawPulls(T, start, 'chain', 1, A, true); } });
+      { ms: 2400, caption: cap('whyPulls'), enter: function () { drawTargets(T); mk(start); }, update: function (k) { drawPulls(T, start, 'fan', k, A); } },
+      { ms: 2400, caption: cap('whyChainMove'), enter: function () { drawTargets(T); mk(start); }, update: function (k) { drawPulls(T, start, 'chain', k, A, false, cp); } });
+    if (gapOf(T, start, cp.A) > GAP_MIN) steps.push(
+      { ms: 2400, caption: cap('whyChain'), enter: function () { drawTargets(T); mk(start); drawPulls(T, start, 'chain', 1, A, true, cp); } },
+      { ms: 3000, caption: cap('whyMove'), enter: function () { drawTargets(T); }, update: function (k) { var p = along(path, k); mk(p); drawPulls(T, p, 'chain', 1, A, true, cp); } },
+      { ms: 1800, caption: cap('whyBalanced'), enter: function () { drawTargets(T); mk(gp); drawPulls(T, gp, 'chain', 1, A, true, cp); } });
+    else steps.push({ ms: 2200, caption: cap('whyClosed'), enter: function () { drawTargets(T); mk(start); drawPulls(T, start, 'chain', 1, A, true, cp); } });
     steps.push(
-      { ms: 2600, caption: cap('whySlide'), enter: function () { drawMarker(gp); }, update: function (k) { var T2 = slidTargets(T, plan, k); drawTargets(T2); drawPulls(T2, gp, 'chain', 1, A, true); } },
-      { ms: 1600, caption: cap('whyBack'), enter: function () { drawMarker(gp); }, update: function (k) { var T2 = slidTargets(T, plan, 1 - k); drawTargets(T2); drawPulls(T2, gp, 'chain', 1, A, true); } });
+      { ms: 2600, caption: cap('whySlide'), enter: function () { mk(gp); }, update: function (k) { var T2 = slidTargets(T, plan, k); drawTargets(T2); drawPulls(T2, gp, 'chain', 1, A, true, cp); } },
+      { ms: 1600, caption: cap('whyBack'), enter: function () { mk(gp); }, update: function (k) { var T2 = slidTargets(T, plan, 1 - k); drawTargets(T2); drawPulls(T2, gp, 'chain', 1, A, true, cp); } });
     if (between(item)) steps.push(snapStep(item, cap('whySnap'), 2200));
     return play(steps, ctx).then(function () {
       if (!st || st.item !== item) return;
       st.root.classList.remove('is-why');
       clear(st.L.over);
       drawTargets(T);
-      drawMarker(isLatticePt(response) ? response : null, null);
+      drawMarker(isLatticePt(response) ? response : null, null, false);
     });
   }
 
@@ -671,16 +735,17 @@
   function demo(item, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
     var T = item.targets, g = item.gm, A = Math.min(1.3, 7 / T.length), gp = { x: g[0], y: g[1] }, c = firstGuess(T);
-    var avg = lib().mean(T), path = flowPath(T, c, g), exact = item.form === 'exact';
+    var avg = lib().mean(T), path = flowPath(T, c, g), exact = item.form === 'exact', cp = chainPlan(T, spotsOf(path), A);
+    function mk(p) { drawMarker(p, null, undefined, true); } // the disc alone while pulls show
     var steps = [
       { ms: 2200, caption: cap('demoTargets'), enter: function () { resetOverlays(); drawTargets(T); } },
       { ms: 2400, caption: cap('demoCount'), update: function (k) { countLines(c, k, 0); } },
       { ms: 2400, caption: cap('demoCountRow'), update: function (k) { countLines(c, 1, k); drawMarker(k >= 0.7 ? c : null); } },
-      { ms: 2400, caption: cap('demoPulls'), enter: function () { drawMarker(c); }, update: function (k) { drawPulls(T, c, 'fan', k, A); } },
-      { ms: 2600, caption: cap('demoChainMove'), enter: function () { drawMarker(c); }, update: function (k) { drawPulls(T, c, 'chain', k, A, false); } },
-      { ms: 2200, caption: cap('demoChain'), enter: function () { drawMarker(c); drawPulls(T, c, 'chain', 1, A, true); } },
-      { ms: 2800, caption: cap('demoMove'), update: function (k) { var p = along(path, k); drawMarker(p); drawPulls(T, p, 'chain', 1, A, true); } },
-      { ms: 2000, caption: cap('demoBalanced'), enter: function () { drawMarker(gp); drawPulls(T, gp, 'chain', 1, A, true); } },
+      { ms: 2400, caption: cap('demoPulls'), enter: function () { mk(c); }, update: function (k) { drawPulls(T, c, 'fan', k, A); } },
+      { ms: 2600, caption: cap('demoChainMove'), enter: function () { mk(c); }, update: function (k) { drawPulls(T, c, 'chain', k, A, false, cp); } },
+      { ms: 2200, caption: cap('demoChain'), enter: function () { mk(c); drawPulls(T, c, 'chain', 1, A, true, cp); } },
+      { ms: 2800, caption: cap('demoMove'), update: function (k) { var p = along(path, k); mk(p); drawPulls(T, p, 'chain', 1, A, true, cp); } },
+      { ms: 2000, caption: cap('demoBalanced'), enter: function () { mk(gp); drawPulls(T, gp, 'chain', 1, A, true, cp); } },
       snapStep(item, cap('demoSnap'), 2600),
       { ms: 2600, caption: cap('demoAverage'), update: function (k) {
         clear(st.L.over);

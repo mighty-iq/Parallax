@@ -74,3 +74,17 @@ base 0; +0.25 logit per extra target; +0.6 per band level; exact -0.6. Span 2.2 
 - Verified: node centralpoint 10 000 items per cell, 154 checks; harness_centralpoint.py 202/0 (new: Why? step by step with and
   without an answer, the Watch tapped through with pictures of the line, the gap and the step to the answer point, 45 reveals'
   labels).
+
+## Fix round 2 after the second fresh-player run (2026-11-18 21:48 UTC)
+- Equal pulls look equal: while pulls show, the marker is drawn without its cross-hair (its arms lengthened the four pulls
+  along them); the fan's arrows share one length and start outside the disc.
+- The line of pulls is laid in the order (start and turn) that keeps it and its gap clearest of the rings along the step's
+  whole path, shorter (0.8 or 0.65) when no order clears them; Watch: least distance to a ring's centre 0.61 half-steps;
+  Why? over 40 items, from no answer and from an answer: 73 of 80 runs clear the rings (the rest have 7 or 8 targets).
+- Reveal: no faint answer points under the labels; labels avoid dots (heavier), stay plainly nearer their own line than any
+  other, and keep inside the plate's edge (90 reveals: 688 labels, no overlaps, one touching a ring, none cut off).
+- Result: "You found the best spot." / "Your total N: the least there is." on the best answer point; "Not the best spot, but
+  within N % of its total: close enough to count as right." when only close.
+- Quick deadline starts at 20 s (DECISIONS).
+- Verified: harness_centralpoint.py 221/0 (new: equal fan, no cross-hair, the Watch's line clear of rings, no faint points
+  after the answer); node centralpoint with 10 000 items per cell: 154 checks pass (309 with the load checks).

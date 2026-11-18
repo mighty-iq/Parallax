@@ -89,10 +89,11 @@ def reveal_ok(page, tag, k):
         best: document.querySelectorAll('.ex-cp-bestring').length, bestLabel: (document.querySelector('.ex-cp-bestlabel') || {}).textContent || '',
         totals: (document.querySelector('.ex-cp-totals') || {}).textContent || '', note: (document.querySelector('.ex-cp-note') || {}).textContent || '',
         avg: document.querySelectorAll('.ex-cp-avgmark, .ex-cp-avgline, .ex-cp-avglabel').length, result: !document.querySelector('.ex-cp-result').hidden,
-        bandPts: document.querySelectorAll('.ex-cp-band .ex-cp-bandpt').length })""")
+        bandPts: document.querySelectorAll('.ex-cp-band .ex-cp-bandpt').length, halfs: document.querySelectorAll('.ex-cp-halfs circle').length })""")
     C.ok(r['lines'] >= k - 1 and r['lens'] == r['lines'], f"{tag}: a line and a length label per target ({r['lines']} lines, {r['lens']} labels)")
     C.ok(r['best'] == 1 and r['bestLabel'] in ('best', 'you · best'), f"{tag}: the best answer point ringed and labelled ({r['bestLabel']!r}; one label when your spot is the best)")
     C.ok(r['bandPts'] == 0, f"{tag}: the band's other answer points wait for the map ({r['bandPts']})")
+    C.ok(r['halfs'] == 0, f"{tag}: no faint answer points under the labels after the answer ({r['halfs']})")
     C.ok(len(r['totals']) > 8 and r['result'], f"{tag}: totals shown ({r['totals']!r}; {r['note']!r})")
     C.ok(r['avg'] == 0, f'{tag}: nothing marks the average position')
     return r
@@ -102,11 +103,27 @@ WHY_STEPS = """async (resp) => {
     const v = PX.ex.view('centralpoint'), out = [];
     const where = () => { const m = document.querySelector('.ex-cp-marker .ex-cp-mark'); if (!m) return null;
       const t = /translate\\(([-\\d.e]+)[ ,]+([-\\d.e]+)\\)/.exec(m.getAttribute('transform') || ''); return t ? [+t[1], +t[2]] : null; };
-    const fan = () => Array.from(document.querySelectorAll('.ex-cp-over .ex-cp-pull')).map((a) => { const d = /^M([-\\d.e]+) ([-\\d.e]+)/.exec(a.getAttribute('d') || ''); return d ? [+d[1], +d[2]] : null; });
+    const fan = () => pulls().map((x) => [x[0], x[1]]);
     await v.showMe(__harness.item, resp, { play: (steps) => { steps.forEach((s) => {
       if (s.enter) s.enter(); if (s.update) s.update(1);
-      out.push({ cap: s.caption || '', count: document.querySelectorAll('.ex-cp-over .ex-cp-countline').length, at: where(), starts: fan(),
+      out.push({ cap: s.caption || '', count: document.querySelectorAll('.ex-cp-over .ex-cp-countline').length, at: where(), starts: fan(), ...look(),
         leftover: document.querySelectorAll('.ex-cp-over .ex-cp-leftover').length, closed: document.querySelectorAll('.ex-cp-over .ex-cp-closed').length });
+      if (s.exit) s.exit(); }); return Promise.resolve(); } });
+    return out; }"""
+# shared by WHY_STEPS and DEMO_STEPS: each pull arrow as [x1, y1, x2, y2] (tail to tip), and per step the
+# arrows' lengths, the marker's cross-hair arms and the arrows' least distance to a target's centre
+PULLS = """
+    const pulls = () => Array.from(document.querySelectorAll('.ex-cp-over .ex-cp-pull')).map((a) => { const n = ((a.getAttribute('d') || '').match(/-?\\d*\\.?\\d+(?:e-?\\d+)?/g) || []).map(Number); return [n[0], n[1], n[4], n[5]]; });
+    const look = () => { const S = pulls(), mk = document.querySelector('.ex-cp-marker .ex-cp-mark'), at = mk ? (/translate\\(([-\\d.e]+)[ ,]+([-\\d.e]+)\\)/.exec(mk.getAttribute('transform') || '') || []).slice(1).map(Number) : [];
+      const T = __harness.item.targets.filter((t) => !(at.length && Math.hypot(t[0] - at[0], t[1] - at[1]) < 0.3)); let m = 99; // not the target under the spot
+      S.forEach((x) => T.forEach((t) => { const dx = x[2] - x[0], dy = x[3] - x[1], L2 = dx * dx + dy * dy; let u = L2 ? ((t[0] - x[0]) * dx + (t[1] - x[1]) * dy) / L2 : 0; u = Math.max(0, Math.min(1, u)); m = Math.min(m, Math.hypot(x[0] + u * dx - t[0], x[1] + u * dy - t[1])); }));
+      return { lens: S.map((x) => Math.hypot(x[2] - x[0], x[3] - x[1])), hairs: document.querySelectorAll('.ex-cp-marker .ex-cp-hair').length, near: S.length ? m : null }; };"""
+WHY_STEPS = WHY_STEPS.replace("const v = PX.ex.view('centralpoint'), out = [];", "const v = PX.ex.view('centralpoint'), out = [];" + PULLS)
+DEMO_STEPS = """async () => {
+    const v = PX.ex.view('centralpoint'), out = [];""" + PULLS + """
+    await v.demo(__harness.item, { play: (steps) => { steps.forEach((s) => {
+      if (s.enter) s.enter(); if (s.update) s.update(1);
+      out.push({ cap: s.caption || '', ...look(), leftover: document.querySelectorAll('.ex-cp-over .ex-cp-leftover').length });
       if (s.exit) s.exit(); }); return Promise.resolve(); } });
     return out; }"""
 
@@ -131,7 +148,8 @@ def why_steps_ok(page, tag):
             C.ok(first['count'] == 2 and first['at'] == start and 'first guess' in first['cap'], f'{tag}: Why? with no answer starts by counting to the first guess {start} ({first})')
         fan = next((x for x in st if x['starts'] and x['leftover'] == 0 and x['count'] == 0), None)
         d = min(((p[0] - start[0]) ** 2 + (p[1] - start[1]) ** 2) ** 0.5 for p in fan['starts']) if fan else 0
-        C.ok(fan is not None and d >= 0.6, f'{tag}: the fan of pulls starts outside the marker ({d:.2f} half-steps)')
+        C.ok(fan is not None and d >= 0.45, f'{tag}: the fan of pulls starts outside the marker ({d:.2f} half-steps)')
+        C.ok(fan is not None and max(fan['lens']) - min(fan['lens']) < 1e-6 and fan['hairs'] == 0, f"{tag}: equal pulls look equal: one length, the marker without its cross-hair ({fan and [round(x, 3) for x in fan['lens']]}, {fan and fan['hairs']} arms)")
         laid = [i for i, x in enumerate(st) if x['cap'].startswith('Line the pulls')]
         C.ok(len(laid) == 1 and st[laid[0]]['leftover'] == 0 and st[laid[0]]['closed'] == 0, f'{tag}: the pulls are laid end to end before any gap shows')
         gap = [i for i, x in enumerate(st) if x['leftover'] or x['closed']]
@@ -214,6 +232,11 @@ def run_viewport(b, name, vp, touch, themes):
             # the Watch: plays to the end, leaves the item answerable without a marker or an average mark
             page.evaluate("() => __harness.next({ variant: 'quick', targets: 0, band: 0, task: 'watch' }, 261)")
             page.wait_for_function(READY, timeout=20000)
+            ds = page.evaluate(DEMO_STEPS)  # step by step first (a recording runner)
+            fan = [x for x in ds if x['cap'].startswith('Then balance')]
+            C.ok(len(fan) == 1 and max(fan[0]['lens']) - min(fan[0]['lens']) < 1e-6 and fan[0]['hairs'] == 0, f"{tag}: the Watch's equal pulls look equal: one length, no cross-hair ({fan and [round(x, 3) for x in fan[0]['lens']]})")
+            line = [x['near'] for x in ds if x['near'] is not None and not x['cap'].startswith('Then balance')]
+            C.ok(len(line) >= 4 and min(line) >= 0.5, f"{tag}: the Watch lays its line of pulls clear of every ring (least distance to a ring's centre {(min(line) if line else -1):.2f} half-steps)")
             d0 = page.evaluate('() => __harness.played.finished')
             page.evaluate('() => __harness.demo()')
             page.wait_for_function('(n) => __harness.played.finished > n', arg=d0, timeout=30000)
