@@ -83,7 +83,8 @@ function exerciseFiles(name) {
 }
 
 export function pureFiles() {
-  return [...MANIFEST, ...exerciseFiles('gen.js'), ...exerciseFiles('learn.js')];
+  // v1.2 wave 2 (W2-bets, CONTRACT-v1.2 S): an exercise's layers.js (pure) after every gen.js and learn.js
+  return [...MANIFEST, ...exerciseFiles('gen.js'), ...exerciseFiles('learn.js'), ...exerciseFiles('layers.js')];
 }
 
 /* ---------- fakes ---------- */
