@@ -225,7 +225,10 @@
       };
     });
     list.forEach(function (c, i) { c.i = i; }); // position in the pool (select.pick's buffers)
-    var med = U.median(list.map(function (c) { return c.g; }));
+    // the reference guessing rate leaves out the produce variant (layers.produce; conflict 12 of
+    // CONTRACT-v1.2): it never moves the level scale
+    var prod = def.layers && typeof def.layers.produce === 'string' ? def.layers.produce : null;
+    var med = U.median(list.filter(function (c) { return prod === null || c.params.variant !== prod; }).map(function (c) { return c.g; }));
     var entry = { def: def, list: list, byKey: Object.create(null), refChance: isFin(med) ? med : 0, groups: [] };
     list.forEach(function (c) { entry.byKey[c.key] = c; });
     // Groups of equal guessing rate, sorted by difficulty (ties by code): window searches.

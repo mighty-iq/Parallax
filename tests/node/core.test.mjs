@@ -281,6 +281,22 @@ function testRegistry(t) {
     ['nCorrect missing for multi answers', { answer: 'multi' }, /needs nCorrect/],
     ['chance out of range', { chance: 1.5 }, /chance must be in/],
     ['timeLimit not a function', { timeLimit: 5000 }, /timeLimit must be/],
+    // v1.2 wave 2 (CONTRACT-v1.2 S): format, layers, atlas
+    ['format not a token', { format: 'has space' }, /format must be a token/],
+    ['format an empty object', { format: {} }, /at least one variant/],
+    ['format names no variant', { format: { nope: 'x' } }, /not a variant of the exercise/],
+    ['format value not a token', { format: { pick1: 'a b' } }, /format\["pick1"\] must be a token/],
+    ['format a list', { format: ['x'] }, /format must be a token, \{ variant: token \}/],
+    ['layers not an object', { layers: 'produce' }, /layers must be an object/],
+    ['layers with an unknown layer', { layers: { colour: true } }, /layers\.colour is not a layer/],
+    ['layers.compare empty', { layers: { compare: [] } }, /layers\.compare must be/],
+    ['layers.produce not a variant', { layers: { produce: 'draw' } }, /layers\.produce must name one of/],
+    ['layers.produce trained', { layers: { produce: 'samediff' } }, /left out of trainVariants/],
+    ['layers.bridge not a token', { layers: { bridge: 'a b' } }, /layers\.bridge must be/],
+    ['layers.calib not a boolean', { layers: { calib: 'yes' } }, /layers\.calib must be/],
+    ['atlas with one dim', { atlas: ['size'] }, /atlas must be \[dimA, dimB\]/],
+    ['atlas with an unknown dim', { atlas: ['size', 'colour'] }, /atlas must be/],
+    ['atlas with one dim twice', { atlas: ['size', 'size'] }, /atlas must be/],
   ];
   for (const [what, over, pattern] of bad) {
     const def = over === null ? null : sampleDef(over);
@@ -332,6 +348,18 @@ function testRegistry(t) {
   t.eq(X.view('custom'), null, 'view() of an exercise without a view is null');
   const learnData = { steps: [] };
   t.ok(X.learn('sample', learnData) === learnData && X.learn('sample') === learnData, 'learn() registers data');
+
+  // v1.2 wave 2 (CONTRACT-v1.2 S): format, layers and atlas normalised; the produce variant stays
+  // out of the range (conflict 12)
+  t.eq([def.format, def.layers, def.atlas], [null, null, null], 'format, layers and atlas default to null');
+  const w2 = X.define(sampleDef({ id: 'wave2', code: 'EX-92', variants: ['pick1', 'samediff', 'draw'], trainVariants: ['pick1', 'samediff'],
+    format: { '*': 'mr-choice', draw: 'mr-draw' }, layers: { compare: ['axis-first'], produce: 'draw', bridge: 'maps-1', calib: true }, atlas: ['size', 'axis'] }));
+  t.eq([w2.format, w2.layers, w2.atlas], [{ '*': 'mr-choice', draw: 'mr-draw' }, { compare: ['axis-first'], produce: 'draw', bridge: 'maps-1', calib: true }, ['size', 'axis']], 'format, layers and atlas are kept');
+  t.ok(Object.isFrozen(w2.format) && Object.isFrozen(w2.layers) && Object.isFrozen(w2.layers.compare) && Object.isFrozen(w2.atlas), 'and frozen');
+  t.eq(X.define(sampleDef({ id: 'wave2s', code: 'EX-89', format: 'mr-choice' })).format, 'mr-choice', 'a format may be one token for every variant');
+  const w2c = X.define(sampleDef({ id: 'wave2c', code: 'EX-88', variants: ['pick1', 'draw'], trainVariants: ['pick1'], layers: { produce: 'draw' },
+    difficulty(p) { return p.size * 0.2 + (p.variant === 'draw' ? 5 : 0); } }));
+  t.eq([X.minDifficulty(w2c), X.maxDifficulty(w2c)], [0, 1], 'the range leaves the produce variant out (it never moves the level scale)');
 }
 
 function testParamsCodes(t) {
