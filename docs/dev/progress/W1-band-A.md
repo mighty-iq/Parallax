@@ -57,6 +57,12 @@ stays non-breaking for Missing View. Design source: docs/research/v1.2/D2-first-
   Checks: node 910/0; harness_views 180/0, harness_cubes 217/0, harness_angles 219/0 (with reveal_stable).
   The session restarted at about 21:00 UTC mid-round; edits were intact, checks rerun after it.
 
+- 21:57–22:23 UTC: fix round 3 (Views fresh rerun 4/4, 5/5): Try 4 seed 41 and a fitting tip; outline step with
+  dotted cells, no bars; the drawing lands without a flight; shorter top-view arrow; front tip reworded; help
+  named without step numbers in all three. 72fe915, 3595651. Checks: node 893/0 and views 415/0;
+  harness_cubes 217/0, harness_angles 219/0, harness_views 179/1 then its starter-band part 24/0 after
+  the box label fix.
+
 ## Next
 - none of mine; the trial's own shift at the reveal is with W1-core (requests, 21:24 UTC).
 
