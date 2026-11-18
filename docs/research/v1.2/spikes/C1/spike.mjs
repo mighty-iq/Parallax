@@ -62,7 +62,29 @@ log('');
       log(`| ${k} | ${f1(row.bandPts)} | ${f1(row.chance)} | ` + HKEYS.map((h) => f0(row.hits[h])).join(' | ') + ' |');
     }
   }
-  JSONOUT.A = rowsA;
+  // The landscape near the best point (same items): the runner-up's excess, and how often the best grid point is a target.
+  log('');
+  log('Same items: the runner-up grid point\'s excess over the best (median and 10th–90th percentiles), and the share of items whose best grid point is a target.');
+  log('');
+  log('| targets | runner-up excess, median | p10 | p90 | best point on a target |');
+  log('|---|---|---|---|---|');
+  const landA = [];
+  for (const k of [3, 4, 5, 6, 7, 8, 9]) {
+    const e2 = []; let onT = 0;
+    for (let i = 0; i < N; i++) {
+      const rng = makeRng(`A|${k}|${i}`);
+      const it = makeItem(7, genMixture(rng, 7, k).T);
+      const s = solve(it);
+      e2.push(s.e2);
+      if (it.T.some((p) => p[1] * 7 + p[0] === s.best)) onT++;
+    }
+    e2.sort((a, b) => a - b);
+    const q = (x) => e2[Math.min(e2.length - 1, Math.floor(x * e2.length))];
+    const r = { k, e2median: 100 * q(0.5), e2p10: 100 * q(0.1), e2p90: 100 * q(0.9), bestOnTarget: pct(onT, N) };
+    landA.push(r);
+    log(`| ${k} | ${r.e2median.toFixed(2)} % | ${r.e2p10.toFixed(2)} % | ${r.e2p90.toFixed(2)} % | ${f0(r.bestOnTarget)} % |`);
+  }
+  JSONOUT.A = rowsA; JSONOUT.Aland = landA;
   log('');
 }
 
