@@ -1,7 +1,7 @@
 /* EX-07 Views: orthographic projection of block structures (pure; ARCHITECTURE.md §5, PLAN.md §3,
    research/B-tasks.md §6 and §14c). Sorby's orthographic-projection modules; formats our own.
 
-   Structures: 4–12 unit cubes on a 3 × 3 or 4 × 4 grid, every cube on the ground or on another cube,
+   Structures: 4–12 unit cubes (3–4 on the starter level) on a 3 × 3 or 4 × 4 grid, every cube on the ground or on another cube,
    stored as a height map heights[z][x] (x = 0 left … G − 1 right, z = 0 back … G − 1 front, y up;
    at most 4 high) with a 4-connected footprint. The view draws them isometrically from the front-
    right-top corner (camera on +x, +y, +z: the front, +z, faces lower left; the right side, +x,
@@ -38,7 +38,15 @@
    isometric visibility; exactly one option matches; foils differ visibly; for count every cube shows
    a whole face and the key is the voxel count.
 
-   Item: { ex: 'views', seed, params, variant, key, grid, heights (the shown or the key structure),
+   The starter level (v1.2, version 2; docs/research/v1.2/D2-first-band.md §3.1): a level in front
+   of `cubes`. For toview it holds 3–4 cubes at most 2 high, and its foils are other directions and
+   neighbouring structures only: no mirror, and no foil within 3 unit edges of the key's mirror
+   image (the back view of a small structure is often its front view flipped, a mirror in
+   disguise), so the outline and then the inner lines decide (the strategy card). Δ −1.6 (toview
+   floor −2.2 → −3.8). For count and toobject the starter level is today's level 0 (same items, same
+   difficulty), as the note proposes: their Watch comes with their first run.
+
+   Item: { ex: 'views', v: 2, seed, params, variant, key, grid, heights (the shown or the key structure),
            iso: { from: [1, 1, 1] }, view?: 'top'|'front'|'right' (toview), views?: { top, front,
            right } (toobject stem), options: toview [{ kind, drawing }] | toobject [{ kind, heights,
            matches: [view names] }] | count [numbers, ascending] }
@@ -60,7 +68,10 @@
   var HMAX = 4;
   var DIRS = ['top', 'front', 'right', 'back', 'left'];
   var ASKED = ['top', 'front', 'right'];
-  var CUBES = [4, 6, 8, 10, 12];
+  var CUBES = [4, 6, 8, 10, 12];       // the 1.1 levels (cubes dim levels 1–5 since v1.2)
+  var LEVELS = ['3–4'].concat(CUBES);  // the cubes dim: the starter level in front
+  // The starter level (toview): 3–4 cubes, columns at most 2 high, siblings of 3–5 cubes.
+  var BAND = { nMin: 3, nMax: 4, hmax: 2, famMin: 3, famMax: 5, mirrorMin: 3 };
 
   /* ------------------------------------------------------------ height maps */
   function zeros(G) { var h = []; for (var z = 0; z < G; z++) { h.push([]); for (var x = 0; x < G; x++) h[z].push(0); } return h; }
@@ -351,8 +362,15 @@
   // low); the foils are chosen to match, misses weighted by w[k]. toview's area target depends on
   // the asked view: a top view's area always equals the number of top cells, so the best a foil set
   // can do there is a four-way tie.
+  // The starter level balances three more stem-blind solvers: its small drawings made the odd one
+  // out (by unit edges) and the smallest drawing land on the key 36 % and 33 % of the time.
+  function toviewSharesBand(set, pool, D, T) {
+    var size = set.map(function (i) { return pool[i].d.w * pool[i].d.h; });
+    return toviewShares(set, pool, D, T).concat([pickShare(sums(set, D), true), pickShare(size, false), pickShare(size, true)]);
+  }
   var BAL = {
     toview: { t: [0.25, 0.25, 0.25, 0.25], tAreaTop: 0, w: [2, 2, 1, 1.5] },
+    band: { t: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25], tAreaTop: 0, w: [2, 2, 1, 1.5, 2, 1.5, 1] },
     toobject: { t: [0.15, 0.25, 0.25, 0.25, 0, 0, 0], w: [2, 1.5, 1.5, 1.5, 0.3, 0.3, 0.3] },
   };
   function chooseFoils(rng, pool, sharesOf, want, w) {
@@ -380,13 +398,19 @@
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) {
     var v = params && VARIANTS.indexOf(params.variant) >= 0 ? params.variant : 'toview';
-    return { cubes: lvl(params, 'cubes', CUBES.length), grid: lvl(params, 'grid', 2), view: lvl(params, 'view', 3), variant: v };
+    return { cubes: lvl(params, 'cubes', LEVELS.length), grid: lvl(params, 'grid', 2), view: lvl(params, 'view', 3), variant: v };
   }
   var VARIANTS = ['toview', 'toobject', 'count'];
-  // toview and toobject: N within one of the level's count; count: the level's five-number window.
+  // The 1.1 level index of the cubes dim (the starter level counts as level 0 for count and toobject).
+  function oldLevel(p) { return p.cubes > 0 ? p.cubes - 1 : 0; }
+  function isBand(p) { return p.cubes === 0 && p.variant === 'toview'; }
+  // toview and toobject: N within one of the level's count; count: the level's five-number window;
+  // the starter level (toview): 3 or 4.
   function drawN(rng, p) {
-    if (p.variant === 'count') return rint(rng, 4 + p.cubes, 8 + p.cubes);
-    var L = CUBES[p.cubes];
+    if (isBand(p)) return rint(rng, BAND.nMin, BAND.nMax);
+    var ol = oldLevel(p);
+    if (p.variant === 'count') return rint(rng, 4 + ol, 8 + ol);
+    var L = CUBES[ol];
     return rint(rng, Mth.max(4, L - 1), Mth.min(12, L + 1));
   }
 
@@ -394,7 +418,8 @@
   // determines the structure, its views and its count).
   // Built cube by cube: a random footprint of flat cubes (all visible), then each further cube on a
   // random column where every cube stays readable.
-  function visibleStructure(rng, G, N) {
+  function visibleStructure(rng, G, N, hmax) {
+    var HM = hmax || HMAX;
     for (var a = 0; a < 20; a++) {
       var Fmin = Mth.max(2, Mth.ceil(N / 3)), Fmax = Mth.min(N - 1, G * G);
       var fp = randomFootprint(rng, G, rint(rng, Mth.min(Fmin, Fmax), Fmax)), h = fp.h, cells = fp.cells, ok = true;
@@ -402,7 +427,7 @@
         var order = rshuffle(rng, cells), placed = false;
         for (var c = 0; c < order.length && !placed; c++) {
           var q = order[c];
-          if (h[q[0]][q[1]] >= HMAX) continue;
+          if (h[q[0]][q[1]] >= HM) continue;
           h[q[0]][q[1]]++;
           if (allVisible(h)) placed = true; else h[q[0]][q[1]]--;
         }
@@ -551,7 +576,47 @@
     return fam;
   }
 
+  // The starter level's family: a hidden centre of 3–4 cubes at most 2 high and its neighbours of
+  // 3–5 cubes, also at most 2 high (proposals() may stack higher; those are left out).
+  function bandFamily(rng, G, N, max) {
+    var X = visibleStructure(rng, G, N, BAND.hmax);
+    if (!X) return null;
+    var fam = [X], seen = new Set([keyH(X)]);
+    var props = rshuffle(rng, proposals(rng, X));
+    for (var i = 0; i < props.length && fam.length < max; i++) {
+      var g = props[i], kg = keyH(g), n = total(g);
+      if (seen.has(kg) || n < BAND.famMin || n > BAND.famMax || maxHeight(g) > BAND.hmax) continue;
+      seen.add(kg);
+      if (allVisible(g)) fam.push(g);
+    }
+    return fam;
+  }
+  function maxHeight(h) { var m = 0; h.forEach(function (r) { r.forEach(function (v) { if (v > m) m = v; }); }); return m; }
+  function genToviewBand(rng, p) {
+    var G = GRIDS[p.grid], dir = ASKED[p.view], fam = bandFamily(rng, G, drawN(rng, p), 16);
+    if (!fam) return null;
+    var keys = fam.map(function (_, i) { return i; }).filter(function (i) { var n = total(fam[i]); return n >= BAND.nMin && n <= BAND.nMax; });
+    if (!keys.length) return null;
+    var ki = rpick(rng, keys), h = fam[ki];
+    var keyD = view(h, dir), mirD = mirror(keyD), pool = [{ kind: 'key', d: keyD }];
+    function admit(o) {
+      if (ddist(o.d, keyD) < 5) return false;                       // never a single-cell edit of the key's drawing
+      if (ddist(o.d, mirD) < BAND.mirrorMin) return false;          // no mirror, not even in disguise
+      for (var i = 1; i < pool.length; i++) if (ddist(o.d, pool[i].d) < 3) return false;
+      pool.push(o);
+      return true;
+    }
+    DIRS.forEach(function (d2) { if (d2 !== dir) admit({ kind: 'direction', from: d2, d: view(h, d2) }); });
+    rshuffle(rng, fam.map(function (_, i) { return i; })).forEach(function (j) {
+      if (j === ki || pool.length >= 14) return;
+      var e = editSize(h, fam[j]);
+      if (e.cols >= 2 && e.sum >= 2) admit({ kind: 'neighbour', d: view(fam[j], dir), heights: fam[j] });
+    });
+    return finishToview(rng, p, G, dir, h, pool);
+  }
+
   function genToview(rng, p) {
+    if (isBand(p)) return genToviewBand(rng, p);
     var G = GRIDS[p.grid], dir = ASKED[p.view], fam = family(rng, G, drawN(rng, p), 16);
     if (!fam) return null;
     var ki = rint(rng, 0, fam.length - 1), h = fam[ki];
@@ -570,11 +635,15 @@
       var e = editSize(h, fam[j]);
       if (e.cols >= 2 && e.sum >= 2) admit({ kind: 'neighbour', d: view(fam[j], dir), heights: fam[j] }); // never a single-column edit
     });
+    return finishToview(rng, p, G, dir, h, pool);
+  }
+  // Foils chosen from the pool so the shortcut solvers land on the key about one time in four (BAL).
+  function finishToview(rng, p, G, dir, h, pool) {
     if (pool.length < 4) return null;
     pool.forEach(function (o) { o.edges = edgeCount(o.d); });
-    var D = table(pool, function (a, b) { return ddist(a.d, b.d); }), T = footprint(h);
-    var want = BAL.toview.t.map(function (t, k) { return rng.chance(k === 0 && dir === 'top' ? BAL.toview.tAreaTop : t) ? 1 : 0; });
-    var set = chooseFoils(rng, pool, function (s) { return toviewShares(s, pool, D, T); }, want, BAL.toview.w);
+    var D = table(pool, function (a, b) { return ddist(a.d, b.d); }), T = footprint(h), B = isBand(p) ? BAL.band : BAL.toview, shares = isBand(p) ? toviewSharesBand : toviewShares;
+    var want = B.t.map(function (t, k) { return rng.chance(k === 0 && dir === 'top' ? B.tAreaTop : t) ? 1 : 0; });
+    var set = chooseFoils(rng, pool, function (s) { return shares(s, pool, D, T); }, want, B.w);
     var perm = rshuffle(rng, [0, 1, 2, 3]);
     return {
       variant: 'toview', grid: G, heights: h, view: dir, key: perm.indexOf(0),
@@ -625,7 +694,7 @@
   function genCount(rng, p) {
     var G = GRIDS[p.grid], N = drawN(rng, p), h = visibleStructure(rng, G, N);
     if (!h) return null;
-    var lo = 4 + p.cubes, hi = 8 + p.cubes, others = [], v;
+    var lo = 4 + oldLevel(p), hi = 8 + oldLevel(p), others = [], v;
     for (v = lo; v <= hi; v++) if (v !== N) others.push(v);
     var drop = rpick(rng, others), options = [];
     for (v = lo; v <= hi; v++) if (v !== drop) options.push(v);
@@ -734,13 +803,27 @@
     return connected(h);
   }
 
+  // A drawing's edge text mirrored left to right (the validator's own routine).
+  function mirrorEdges(text) {
+    var parts = text.split('|'), w = parseInt(parts[0], 10), out = [];
+    parts[1].split(' ').forEach(function (e) {
+      if (!e) return;
+      var xy = e.slice(1).split(','), x = +xy[0], y = +xy[1];
+      out.push(e.charAt(0) === 'v' ? 'v' + (w - x) + ',' + y : 'h' + (w - 1 - x) + ',' + y);
+    });
+    return parts[0] + '|' + out.sort().join(' ');
+  }
+  function bandItem(item) { var p = item.params; return !!p && p.cubes === 0 && item.variant === 'toview'; }
+
   function validate(item) {
     if (!item || VARIANTS.indexOf(item.variant) < 0) return 'unknown variant';
     var G = item.grid;
     if (GRIDS.indexOf(G) < 0) return 'grid must be 3 or 4';
     if (!okHeights(item.heights, G)) return 'the structure is not a connected height map';
-    var N = voxels(item.heights).n;
-    if (N < 4 || N > 12) return 'cube count out of range (' + N + ')';
+    var N = voxels(item.heights).n, band = bandItem(item);
+    if (band && (N < BAND.nMin || N > BAND.nMax)) return 'starter level: ' + N + ' cubes (3–4)';
+    if (band) { for (var zz = 0; zz < G; zz++) for (var xx = 0; xx < G; xx++) if (item.heights[zz][xx] > BAND.hmax) return 'starter level: a column above ' + BAND.hmax; }
+    if (!band && (N < 4 || N > 12)) return 'cube count out of range (' + N + ')';
     if (!Array.isArray(item.options) || item.options.length !== 4) return 'needs 4 options';
     if (!(Number.isInteger(item.key) && item.key >= 0 && item.key < 4)) return 'key out of range';
     var i, j;
@@ -769,6 +852,14 @@
       for (i = 0; i < 4; i++) {
         if (i !== item.key && edgeDiff(codes[i], want) < 5) return 'option ' + i + ' is within a single-cell edit of the key';
         for (j = i + 1; j < 4; j++) if (edgeDiff(codes[i], codes[j]) < 3) return 'options ' + i + ' and ' + j + ' look alike';
+      }
+      if (band) {
+        var mir = mirrorEdges(want);
+        for (i = 0; i < 4; i++) {
+          if (i === item.key) continue;
+          if (item.options[i].kind === 'mirror') return 'starter level: a mirror foil';
+          if (edgeDiff(codes[i], mir) < BAND.mirrorMin) return 'starter level: option ' + i + ' is the key mirrored, or nearly';
+        }
       }
       return true;
     }
@@ -812,7 +903,9 @@
     } catch (e) { stats.errors++; stats.lastError = String(e && e.stack || e); return null; }
     if (!item) { stats.nulls++; return null; }
     item.ex = 'views';
+    item.v = 2;
     item.iso = { from: [1, 1, 1] };
+    item.params = p;
     var ok = validate(item);
     if (ok !== true) { stats.invalid++; stats.lastInvalid = ok; return null; }
     return item;
@@ -827,11 +920,11 @@
   }
   function fallback(p) {
     stats.fallbacks++;
-    var tries = [p, { cubes: 0, grid: 0, view: 0, variant: p.variant }];
+    var tries = [p, { cubes: isBand(p) ? 0 : 1, grid: 0, view: 0, variant: p.variant }];
     for (var t = 0; t < tries.length; t++) {
       for (var k = 0; k < 300; k++) {
         var item = attempt(PX.rng(PX.rng.hash('views-fallback', tries[t].variant, tries[t].cubes, tries[t].grid, tries[t].view, k)), tries[t]);
-        if (item) return item;
+        if (item) { item.fallback = true; return item; }
       }
     }
     throw new Error('views: no valid item could be built'); // unreachable while the fallback test passes
@@ -839,33 +932,37 @@
 
   /* ------------------------------------------------------------ difficulty (custom) */
   // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .25. base −2.2: four cubes on a 3 × 3 grid,
-  // asked for the top view, ≈ .90 right for a beginner (θ = 0). Cubes +0.65 per level (more blocks
-  // to track, more hidden faces: Kurtuluş & Yolcu 2013), 4 × 4 grid +0.6, view (toview only): front
-  // +0.45, right +0.9 (the right view needs the turned viewpoint; DJ). Variants: toobject +0.9 (three
-  // views to combine), count −0.2 (every cube shows a face). Range −2.4 … +1.9 (4.3 logits); the
-  // dims' steps alone span 4.1.
-  var DIFF = { base: -2.2, cubes: 0.65, grid: 0.6, view: [0, 0.45, 0.9], variant: { toview: 0, toobject: 0.9, count: -0.2 } };
+  // asked for the top view, ≈ .90 right for a beginner (θ = 0): the pre-1.2 floor. Cubes +0.65 per
+  // level (more blocks to track, more hidden faces: Kurtuluş & Yolcu 2013), 4 × 4 grid +0.6, view
+  // (toview only): front +0.45, right +0.9 (the right view needs the turned viewpoint; DJ).
+  // Variants: toobject +0.9 (three views to combine), count −0.2 (every cube shows a face). Range
+  // −2.4 … +1.9 (4.3 logits) in 1.1; with the starter level (toview −1.6) −3.8 … +1.9; the dims'
+  // steps alone span 4.1.
+  // The starter level (v1.2): toview Δ −1.6 (note D2 §3.1); for count and toobject it is level 0.
+  var DIFF = { base: -2.2, cubes: 0.65, grid: 0.6, view: [0, 0.45, 0.9], variant: { toview: 0, toobject: 0.9, count: -0.2 }, band: -1.6 };
   function difficulty(params) {
     var p = cleanParams(params);
-    return DIFF.base + DIFF.cubes * p.cubes + DIFF.grid * p.grid + (p.variant === 'toview' ? DIFF.view[p.view] : 0) + DIFF.variant[p.variant];
+    return DIFF.base + DIFF.cubes * oldLevel(p) + (isBand(p) ? DIFF.band : 0) + DIFF.grid * p.grid + (p.variant === 'toview' ? DIFF.view[p.view] : 0) + DIFF.variant[p.variant];
   }
 
   PX.ex.define({
-    id: 'views', version: 1, code: 'EX-07', name: 'Orthographic views', short: 'Views',
+    id: 'views', version: 2, code: 'EX-07', name: 'Orthographic views', short: 'Views',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4,
     dims: [
-      { key: 'cubes', label: 'Cubes', levels: CUBES.slice(), step: DIFF.cubes },
+      { key: 'cubes', label: 'Cubes', levels: LEVELS.slice(), step: DIFF.cubes },
       { key: 'grid', label: 'Grid', levels: ['3 × 3', '4 × 4'], step: DIFF.grid },
       { key: 'view', label: 'View', levels: ASKED.slice(), step: 0.45 }, // asked view (toview only)
     ],
     base: DIFF.base,
+    starter: { dim: 'cubes', levels: 1 },
     variants: VARIANTS.slice(),
     difficulty: difficulty,
     generate: generate,
     validate: validate,
     score: score,
     lib: {
-      HMAX: HMAX, DIRS: DIRS, ASKED: ASKED, CUBES: CUBES, GRIDS: GRIDS, BAL: BAL, DIFF: DIFF, stats: stats,
+      HMAX: HMAX, DIRS: DIRS, ASKED: ASKED, CUBES: CUBES, LEVELS: LEVELS, BAND: BAND, GRIDS: GRIDS, BAL: BAL, DIFF: DIFF, stats: stats,
+      isBand: isBand, oldLevel: oldLevel, mirrorEdges: mirrorEdges, genToviewBand: genToviewBand, bandFamily: bandFamily, maxHeight: maxHeight,
       randomStructure: randomStructure, connected: connected, normH: normH, keyH: keyH, hdist: hdist, total: total, footprint: footprint,
       depthImage: depthImage, drawing: drawing, view: view, mirror: mirror, ddist: ddist, edgeCount: edgeCount,
       cubesOf: cubesOf, isoOwners: isoOwners, isoFaces: isoFaces, allVisible: allVisible, isoSignature: isoSignature,
