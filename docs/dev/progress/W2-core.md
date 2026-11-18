@@ -16,6 +16,25 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
 - Found: the node suite's load check fails on every run until js/engine/trend.js is in tests/node/run.mjs's MANIFEST
   (W2-measure's 20:00 UTC request); a one-line test-runner change, first in Phase B unless the lead wants it now.
 
+## 2026-11-18 22:02 UTC: Phase B (the lead's go; the 12 conflicts accepted, 27390c1)
+- Engine hooks (a84cc94): modes.hook at start, kind, pick, answer, finish; schedule exclude and setStage; merge.register;
+  E.defaults; tests/node/engine-w2.test.mjs. W2-progress builds on them.
+- PX.ui.hooks (7ab13ab), then place/screen (0845f20); tests/node/hooks.test.mjs (35 checks, fake DOM).
+- Record format 4 (4dd8b51): js/engine/record.js (plateau, bets, measure, game; upgrade from formats 1–3), js/engine/events.js,
+  trial columns 14–19, sessions' kind and ext, CSV 26 columns, pooled formatVersion 2 with store.header; index.html entries
+  and PENDING lines; tests record4 (fixtures of formats 1–3), events, engine-w2 rows; older tests moved to format 4.
+  Browser smoke: a stored format-3 record loads as 4 in memory (form0 'A', pv stamped), no console errors.
+- Call sites (0845f20): session:start, item:before, item:notes, summary:panels (one ranked invite), today:slots,
+  today:session, exercise:lines (page, How to play), settings/lab/progress/about; amode and orient reach the row; events
+  showme, card, wtg, suggest. play.py run_hooks 20/0 incl. the phone check of the top-corner Pause copy; screens.py reads
+  the 26-column CSV.
+- Registry (e75a4c9): format, layers, atlas validated; conflict 12 (the produce variant out of the range and refChance).
+- Wiring for W2-bets and W2-plateau (8483c63): PENDING layer blocks, pureFiles loads layers.js; engine-w2 hook-order test
+  compares its own ids.
+- Fresh-player round 3 (player items 1–8 and the trial shift, from the lead): see DECISIONS; play.py run_round3.
+- Requests answered: W2-plateau (manifest, test ids), W1-band-B (Openings phrase), W2-measure (test edits in its switch
+  commit: yes), W2-bets (layer files); filed: W1-band-B (Form's worked-example caption numbers).
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with
