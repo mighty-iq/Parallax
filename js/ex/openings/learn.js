@@ -19,19 +19,21 @@
     // "Pick a face, trace, then turn" before Try 1, Try 1 with the key face's outline already traced.
     rules: [
       'Every cut runs straight through the solid: what shows on one face carries on to the opposite face.',
-      'The solid may be turned any way before it goes in. Then it slides straight through without turning.',
+      'Any face may go in first: the front, a side or the top. The solid is turned that way, then slides straight through.',
       'An exact fit: the opening is the solid\'s outline seen along that direction, at the same size.',
     ],
     strategyFirst: 'analytic',
     minutes: 3,
-    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 4, kind: 'front' }],
+    // the Watch goes in side first (fresh-player test: which face leads was unclear); Try 1 goes in front
+    // first, Try 2 side first
+    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, seed: 39, kind: 'side' }],
     // Try 3 brings turned openings, after a worked example of a quarter-turned one on a sister item
     // (note D2 addendum C change 4).
     practice: [
-      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, assist: { trace: true }, seed: 104 },
-      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 239 },
-      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }, tip: 'turned', seed: 301, example: { seed: 3 } },
-      { params: { features: 1, edges: 0, keyview: 1, pose: 0, foils: 0 }, tip: 'side', seed: 400 },
+      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, assist: { trace: true }, seed: 104 },
+      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, seed: 239 },
+      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, tip: 'turned', seed: 301, example: { seed: 3 } },
+      { params: { features: 1, edges: 0, keyview: 1, pose: 0, foils: 0, task: 'tutorial' }, tip: 'side', seed: 400 },
     ],
     tips: [
       { id: 'one', when: { dim: 'features', levels: [0] }, text: 'Starter items: one notch, step or cut, on one face. Find that face, then the opening with its outline; the openings are drawn the way that face is seen.' },
@@ -62,7 +64,7 @@
         id: 'analytic', title: 'Pick a face, trace, then turn',
         text: 'Each opening is the outline of one face of the solid, seen straight on. Trace a face, then look for its outline.',
         steps: [
-          'Pick a face (front, side or top) and trace its outline with your eye. No opening has it? Pick the next face.',
+          'Any face may go in first: front, side or top. Pick one and trace its outline with your eye; no opening has it? Pick the next face.',
           'Find the openings with the same corners in the same order; turned or flipped is fine.',
           'Check the sizes last: the right shape at the wrong size is wrong.',
         ],
@@ -79,11 +81,9 @@
       },
     ],
     captions: {
-      solid: 'The solid. Every cut runs straight through it.',
-      openings: 'Five openings: one fits exactly.',
-      rules: 'Turn it first if needed, then slide it straight through.',
+      // the Watch (v1.2: few captions, each waits for a tap): the first says that any face may go in first
+      lead: '1/3 · Any face may go in first: front, side or top. Here the {face} has the cut: turned to face you, its outline is the shape to find.',
       turn: '1/3 · Pick a face: the {face}, turned to face you. Every cut runs straight through, so this face shows the whole outline.',
-      outline: '1/3 · Trace its outline: an opening for this face must have exactly this shape.',
       spin: '2/3 · Same corners in the same order: the outline turns and flips until it lies the way the openings are drawn.',
       straight: '2/3 · Same corners in the same order: the openings are drawn the way this face is seen, so no turn is needed.',
       land: '3/3 · Sizes last: the same shape at the same size is opening {n}.',
