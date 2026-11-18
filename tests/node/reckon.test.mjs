@@ -501,3 +501,18 @@ export async function run(t) {
   t.ok(missing.length === 0, `every caption the shared view kit uses exists for Reckon (${kitKeys.length} keys${missing.length ? '; missing ' + missing.join(', ') : ''})`);
   console.log('       EX-12 reckon: ' + items.length + ' items; ' + report.join('; '));
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (homing.test.mjs's
+   shortcutReport answers per item: the no-integration ones bounded, return items given the true home distance
+   (the most generous case) and, for turning around, the last leg; the turn-only family as information) */
+export function shortcutScores(PX, def, it, params) {
+  const p = params || it.params || {}, chance = def.chance(p), ret = p.variant === 'return', T = sumOf(it.turns), key = ret ? it.keyDeg : it.key;
+  if (!ret && p.variant !== 'point') return {};
+  const hit = (a, r, info) => ({ hit: def.score(it, ret ? at(a, r === undefined ? it.distance : r) : norm360(a)).correct ? 1 : 0, chance, info: !!info });
+  const out = { 'turn around': hit(180), mirror: hit(360 - key), 'turns reversed': hit(180 - T), 'heading not updated': hit(key + T) };
+  if (ret) out['turn around, last leg'] = hit(180, it.legs.at(-1));
+  const eq = walk(it.startHeading, it.legs.map(() => (ret ? it.pathLength / it.legs.length : 1)), it.turns);
+  out['equal legs'] = hit(eq.key, ret ? eq.distance : undefined, true);
+  return out;
+}
+export const SHORTCUT_EXEMPT = [];

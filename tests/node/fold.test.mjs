@@ -260,3 +260,15 @@ function creaseReport(cs, folds) {
   console.log(`       info  crease symmetry (the format's analytic method; not bounded): ${f('all')} % of ${cs.all[1]} items | ${TYPE_NAMES.map((x) => `${x} ${f(x)}`).join(', ')} | idle folds ${[0, 1, 2].map((x) => `${x}: ${f('idle ' + x)}`).join(', ')}`);
   console.log(`             folds ${folds.map((x) => `${x}: ${f('folds ' + x)}`).join(', ')} | every crease a mirror line of the key ${f('every crease a mirror line')} (${share('every crease a mirror line')} % of items), an idle fold ${f('an idle fold')} (${share('an idle fold')} %), a partial flap ${f('a partial flap')} (${share('a partial flap')} %)`);
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
+export function shortcutScores(PX, def, item, params) {
+  const p = params || item.params || {};
+  if (p.variant !== undefined && p.variant !== 'choose') return {}; // the option-picking form only
+  const acc = { count: 0, dKey: 0, sym1: 0, like: 0, odd: 0, punchHoles: 0, symAny: 0 }, chance = def.chance(p);
+  shortcuts(def.lib, item, acc);
+  const out = {};
+  for (const k of ['dKey', 'sym1', 'like', 'odd', 'punchHoles', 'symAny']) out[k] = { hit: acc[k], chance };
+  return out;
+}
+export const SHORTCUT_EXEMPT = [];

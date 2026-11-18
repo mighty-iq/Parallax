@@ -285,7 +285,7 @@ for (const p of PROF) {
         [r.fIn10 >= 0.94, `≥ 94 % of target items within ±0.10 of the true edge where the pool reaches it: ${pct(r.fIn10)} %`],
         [Math.abs(r.fWorstObs) <= 0.05, `no dimension level more than 5 points off (observed, cells of ≥ 200 items where the pool reaches the target): worst ${(100 * r.fWorstObs).toFixed(1)} (${r.fWorstObsKey}); expected ${(100 * r.fWorstExp).toFixed(1)}`],
         [Math.abs(r.success - r.target) <= 0.01, `overall success within ±1 point of target: ${(100 * (r.success - r.target)).toFixed(1)}`],
-        [r.coverage >= 0.93 && r.coverage <= 0.99, `about 95 % coverage (93–99 %): ${pct(r.coverage)} %`],
+        [r.coverage >= 0.93 && r.coverage <= 0.97, `about 95 % coverage (93–97 %, as tests/node/sim.mjs): ${pct(r.coverage)} %`],
         [Math.abs(r.flu.inTimeB - r.flu.targetB) <= 0.02, `fluency items in time within ±2 points of their deadline target (after each exercise's first 10): ${pct(r.flu.inTimeB)} vs ${pct(r.flu.targetB)}`],
       ];
       g.forEach(([ok, what]) => console.log(`    gate ${ok ? 'PASS' : 'FAIL'}: ${what}`));

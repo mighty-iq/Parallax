@@ -227,3 +227,12 @@ function checkLearn(t, PX, def, id, kindOf) {
     t.ok(keys.length > 5 && missing.length === 0, `every caption the view uses exists (${keys.length} keys${missing.length ? '; missing ' + missing.join(', ') : ''})`);
   }
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (the three
+   solvers of 'orient: shortcut solvers' above, per item) */
+export function shortcutScores(PX, def, it, params) {
+  const chance = def.chance(params || it.params || {}), hit = (a) => ({ hit: def.score(it, a).correct ? 1 : 0, chance });
+  const ego = bearing(it.objects[it.target].x - it.objects[it.at].x, it.objects[it.target].y - it.objects[it.at].y);
+  return { 'egocentric (C as drawn on the map)': hit(ego), 'straight ahead': hit(0), 'straight behind': hit(180) };
+}
+export const SHORTCUT_EXEMPT = [];
