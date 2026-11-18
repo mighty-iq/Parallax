@@ -110,6 +110,8 @@
     'fold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
     'patfold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
     // Hole Punch: folds whose flap the punch misses (at most folds − 1 of them)
+    // the starter level (note D2 §3.6): one fold, outside the test's format ('1 (starter)')
+    'patfold.folds': function (v) { var n = parseInt(v, 10); return /starter/.test(String(v)) ? 'one fold (starter: outside the test’s format)' : n === 1 ? 'one fold' : n + ' folds'; },
     'patfold.idle': function (v) { return v === 0 ? 'every fold matters' : 'up to ' + (v === 1 ? 'one fold' : v + ' folds') + ' the punch misses'; },
     // Openings: the cuts dealt over the three faces, the outline that fits, the wrong openings
     'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },

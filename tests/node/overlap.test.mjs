@@ -41,6 +41,7 @@ export async function run(t) {
   testPersist(t);
   testWording(t);
   testAnalogy(t);
+  testCentral(t);
   testAdaBeside(t);
   testPooled(t);
 }
@@ -77,7 +78,7 @@ function testMatch(t) {
   t.section('overlap helper matching');
   const { PX } = env(t);
   const O = PX.ui.overlap;
-  t.eq(O.KINDS.map((k) => k.id), ['folding', 'hidden', 'counting', 'nets', 'views', 'openings', 'angles', 'sections', 'rotation', 'directions', 'tapping', 'knots', 'analogies', 'matrices', 'dat', 'unsure'], 'the kinds a test can contain');
+  t.eq(O.KINDS.map((k) => k.id), ['folding', 'hidden', 'counting', 'nets', 'views', 'openings', 'angles', 'sections', 'rotation', 'directions', 'tapping', 'knots', 'central', 'analogies', 'matrices', 'dat', 'unsure'], 'the kinds a test can contain');
   t.ok(O.KINDS.every((k) => k.same.concat(k.related).every((id) => /^[a-z][a-z0-9-]*$/.test(id))), 'every kind lists exercise ids');
   let m = O.match(['folding']);
   t.eq([m.same, m.related, m.untrained], [['fold', 'patfold'], [], []], 'paper folding: Fold and Hole Punch');
@@ -182,6 +183,24 @@ function testWording(t) {
     t.ok(!/\bIQ\b|percentile|guarantee|boost|brain age|smarter|predicted|official/i.test(s), 'no forbidden claim in: ' + s.slice(0, 50));
   }
   t.ok(texts.every((s) => !/DAT(?!®| scores| score)/.test(s.replace('Dental Admission Test', ''))), 'the DAT is named only descriptively');
+}
+
+// Central Point (v1.2; docs/research/v1.2/C1-central-point.md §7): a near format with its own
+// advice line, shown only when the exercise exists in the build; no test is named.
+function testCentral(t) {
+  t.section('Central Point');
+  const without = env(t).PX.ui.overlap;
+  t.eq(without.match(['central']).notes, [], 'no line while the exercise is not in the build');
+  const { PX } = env(t, null, [...IDS, 'centralpoint']);
+  const O = PX.ui.overlap;
+  const m = O.match(['central']);
+  t.eq(m.same, ['centralpoint'], 'Central Point practises the same kind of puzzle');
+  t.ok(m.notes.length === 1 && /pause Central Point in Train\.$/.test(m.notes[0].text), 'the helper line says what to do');
+  const n = O.noteFor('centralpoint');
+  t.ok(n && n.label === 'Also in tests' && /say that you have practised\.$/.test(n.text) && n.legal === null, 'an "Also in tests" note without the ADA line');
+  t.ok(!/Wechsler|Stanford|Raven|WAIS|test called/i.test(n.text + m.notes[0].text), 'no test is named');
+  t.ok(O.shared().some((x) => x.id === 'centralpoint'), 'About lists it among the shared formats');
+  t.ok(O.match(['unsure']).same.includes('centralpoint'), '"Not sure" includes it');
 }
 
 // Decision D3 (17 Nov): one line for anyone who keeps an analogy test as a yardstick, in the helper

@@ -99,9 +99,9 @@
     // v1.2 (CONTRACT-v1.2 F): the gentle motion profile of the walking exercises
     if (s.gentleMotion !== undefined) {
       p.body.appendChild(K.segmented({
-        key: 'gentleMotion', legend: 'Gentle motion in Homing and Reckon', value: s.gentleMotion,
-        options: [{ value: 'auto', label: 'Follow Motion' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
-        hint: 'Slower walks and turns, smooth starts and stops, and a fixed dot to rest your eyes on, for anyone who feels queasy watching the walks. Follow Motion turns it on when Motion is set to reduce (or your device asks for it).',
+        key: 'gentleMotion', legend: 'Gentle motion', value: s.gentleMotion,
+        options: [{ value: 'auto', label: 'Auto' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
+        hint: 'Slower, steadier walks and turns in Homing and Reckon, with a still dot to look at, for anyone who feels queasy watching the walks. Auto: on when Motion above is set to reduce, or your device asks for less motion.',
         onChange: set('gentleMotion'),
       }));
     }
@@ -437,6 +437,7 @@
       if (m.same.length) answer.appendChild(line('Same kind of puzzle', andList(names(m.same)) + ': practice here will likely raise your score on these parts.', 'same'));
       if (m.related.length) answer.appendChild(line('Related', andList(names(m.related)) + ': a small or unknown effect.', 'related'));
       m.untrained.forEach(function (u) { answer.appendChild(line(u.label, u.text, 'untrained')); });
+      (m.notes || []).forEach(function (u) { answer.appendChild(h('p', { class: 'px-testsoon-line', 'data-line': 'note' }, u.text)); });
       if (picked.length && !m.same.length && !m.related.length && !m.untrained.length) answer.appendChild(h('p.px-meta', 'No exercise in this version matches.'));
       if (picked.indexOf('dat') >= 0) {
         // leaving formats out keeps a result free of fresh practice; preparing is what the focus is for
