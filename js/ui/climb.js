@@ -75,13 +75,6 @@
     p.body.appendChild(list);
     p.body.appendChild(h('p.px-meta', (st.best !== null ? 'Best this week: ' + st.best + '. ' : '') + (st.pb ? 'Your highest run: ' + st.pb.h + '. ' : '') + (st.last !== null ? 'Last week’s best: ' + st.last + '.' : '')));
     X.wrap.appendChild(p.el);
-    var rules = K.panel({ title: 'How it works', className: 'gm-panel' });
-    rules.body.appendChild(h('ul.gm-rules',
-      h('li', 'A right answer clears the rung. A miss leaves a notch and the same rung comes again with another item; the second miss ends the run.'),
-      h('li', 'Untimed: take the time you need. The items never change your levels.'),
-      h('li', 'Three attempts a week, each with its own items, the same for everyone; your best counts. After three, runs are practice.'),
-      h('li', 'A run you leave goes on where you stopped. A new Climb comes every Monday; a missed week costs nothing.')));
-    X.wrap.appendChild(rules.el);
     var s = rec().settings || {}, foot = h('div.pl-summary-actions');
     if (s.sound !== true) {
       var sb = ui.button('Turn sound on', { kind: 'ghost', onClick: function () {
@@ -100,6 +93,13 @@
     foot.insertBefore(go, foot.firstChild);
     foot.appendChild(ui.button('Back to Today', { kind: 'ghost', go: 'home' }));
     X.wrap.appendChild(foot);
+    var rules = K.panel({ title: 'How it works', className: 'gm-panel' });
+    rules.body.appendChild(h('ul.gm-rules',
+      h('li', 'A right answer clears the rung. A miss leaves a notch and the same rung comes again with another item; the second miss ends the run.'),
+      h('li', 'Untimed: take the time you need. The items never change your levels.'),
+      h('li', 'Three attempts a week, each with its own items, the same for everyone; your best counts. After three, runs are practice.'),
+      h('li', 'A run you leave goes on where you stopped. A new Climb comes every Monday; a missed week costs nothing.')));
+    X.wrap.appendChild(rules.el);
     try { go.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   }
 
