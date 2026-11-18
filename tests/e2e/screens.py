@@ -196,6 +196,8 @@ def library_checks(page, tag, w, phone):
     page.wait_for_selector('.px-practise-sheet')
     ids = page.evaluate("[...document.querySelectorAll('.px-practise-sheet [data-practise]')].map(b => b.dataset.practise)")
     C.ok(all(x in ids for x in ['train', 'path', 'speed', 'free', 'challenge']), f'{tag}: practise options {ids}')
+    when = page.evaluate("Object.fromEntries([...document.querySelectorAll('.px-practise-sheet [data-practise]')].map(b => [b.dataset.practise, (b.querySelector('.px-practise-when') || {}).textContent || '']))")
+    C.ok(all(when[x].startswith('Right when ') for x in ['train', 'path', 'speed', 'free']) and when['challenge'] == '', f'{tag}: each mode says when it is the right one (gap M3)')
     page.click('.px-practise-sheet [data-practise="train"]')
     page.wait_for_timeout(100)
     cur = page.evaluate('PX.core.router.current()')
@@ -244,8 +246,39 @@ def exercise_checks(page, tag, w):
     basics(page, f'{tag} exercise', w)
     go(page, 'exercise/track')
     C.ok('attention practice' in page.locator('.px-ex-note').first.inner_text(), f'{tag}: Track page says attention practice')
+    # O43: an experimental exercise leads with one plain line; the research terms wait below How to play
+    go(page, 'exercise/homing')
+    note = page.locator('[data-note="experimental"]').inner_text()
+    order = page.evaluate("[...document.querySelectorAll('main [data-section]')].map(e => e.dataset.section)")
+    C.ok('dead-reckoning' not in note and len(note) < 140, f'{tag}: Homing\'s first note is one plain line ({len(note)} characters)')
+    C.ok('experimental' in order and 'howto' in order and order.index('howto') < order.index('experimental'), f'{tag}: the details follow How to play {order}')
     go(page, 'exercise/cubematch')
     C.ok('never trained' in page.locator('main').inner_text(), f'{tag}: a probe has no exercise page')
+
+
+def suggest_checks(page, tag):
+    """Today's mode suggestion (v1.2, gap M3; CONTRACT-v1.2 J): the engine's one suggestion with its
+    reason and the mode's line; Not now hides it for 14 days."""
+    sg = page.evaluate('PX.engine.modes.suggest(PX.core.store.state, Date.now())')
+    go(page, 'home')
+    slot = page.locator('[data-suggest]')
+    if not sg:
+        C.ok(slot.count() == 0, f'{tag}: no suggestion when the log points to none')
+        return
+    C.ok(slot.count() == 1 and slot.get_attribute('data-suggest') == sg['key'], f'{tag}: Today shows the suggestion {sg["key"]}')
+    C.ok(sg['why'] in slot.inner_text() and 'Right when' in slot.inner_text(), f'{tag}: with its reason and the mode\'s line')
+    page.click('[data-suggest-hide]')
+    page.wait_for_timeout(150)
+    hid = page.evaluate(f'PX.core.store.state.ui.hiddenTips[{json.dumps(sg["key"])}] - Date.now()')
+    C.ok(13.9 * 86400000 < hid <= 14 * 86400000 and page.locator(f'[data-suggest="{sg["key"]}"]').count() == 0, f'{tag}: Not now hides it for 14 days')
+    nxt = page.evaluate('PX.engine.modes.suggest(PX.core.store.state, Date.now())')
+    if nxt:
+        page.click('[data-suggest-go]')
+        page.wait_for_timeout(120)
+        cur = page.evaluate('PX.core.router.current()')
+        C.ok(cur['name'] == 'play' and cur['params'].get('mode') == nxt['mode'] and cur['params'].get('exId') == nxt['exId'], f'{tag}: Start opens the suggested mode {cur.get("params")}')
+        go(page, 'home')
+    page.evaluate(f'delete PX.core.store.state.ui.hiddenTips[{json.dumps(sg["key"])}]')
 
 
 def challenge_checks(page, tag):
@@ -292,7 +325,7 @@ def share_checks(page, tag, shots=False, name=''):
     sheet = page.locator('.px-modal.px-share')
     C.ok(sheet.locator('.px-share-img').get_attribute('src').startswith('data:image/png'), f'{tag}: the sheet shows the card')
     text = sheet.locator('.px-copybox-text').input_value()
-    C.ok('Built by the Chimera community · discord.gg/chmr' in text and text.startswith('Parallax · Train session'), f'{tag}: the sheet offers the text')
+    C.ok(text.endswith('Built by the Chimera community on Discord: https://discord.gg/chmr') and text.startswith('Parallax · Train session'), f'{tag}: the sheet offers the text, with the full Chimera link last')
     a = sheet.locator('a[data-chimera="join"]').evaluate('a => [a.getAttribute("href"), a.target, a.rel]')
     C.ok(a[0] == DISCORD and a[1] == '_blank' and 'noopener' in a[2], f'{tag}: Discord link {a}')
     C.ok(sheet.locator('.px-linkcopy-url').input_value() == DISCORD, f'{tag}: Discord address shown with Copy')
@@ -447,6 +480,19 @@ def lab_checks(page, tag, w):
     head = re.split(r'\r?\n', page.locator('.px-modal.px-export .px-copybox-text').input_value())[0]
     C.ok(re.search(r'p_pred,stage,(display,input,)?(value2,)?b,g,answer$', head) is not None and ',version,' in head, f'{tag}: research export columns {head[-40:]}')
     page.keyboard.press('Escape')
+    # the community export (v1.2; CONTRACT-v1.2 I): no settings, no ui, no name, device details only when ticked
+    page.click('[data-action="lab-pooled"]')
+    page.wait_for_selector('.px-modal.px-export [data-pool="device"]')
+    pooled = json.loads(page.locator('.px-modal.px-export .px-copybox-text').input_value())
+    C.ok(pooled.get('format') == 'parallax-pooled' and 'trials' in pooled and not ({'settings', 'ui', 'nickname', 'device', 'streak', 'daily'} & set(pooled)), f'{tag}: the community export keeps no settings, name or device {sorted(pooled)[:12]}')
+    C.ok(not re.search(r'"\d{4}-\d{2}-\d{2}"', json.dumps(pooled.get('hygiene', {}))), f'{tag}: noted tests carry no calendar day')
+    page.check('.px-modal.px-export [data-pool="device"]')
+    pooled = json.loads(page.locator('.px-modal.px-export .px-copybox-text').input_value())
+    C.ok(set(pooled.get('device', {})) >= {'ua', 'lang', 'tz', 'screen'}, f'{tag}: ticking device details adds them')
+    C.ok(page.locator('.px-modal.px-export [data-invite="export"]').count() == 1, f'{tag}: the export invites the player in (gap C10)')
+    page.keyboard.press('Escape')
+    page.click('[data-part="modes"] > summary')
+    C.ok(page.locator('[data-part="modes"] .px-mode-when').count() == 5, f'{tag}: the Lab says when each mode is the right one')
     page.click('[data-part="check"] > summary')
     C.ok(page.locator('[data-part="check"] .px-lab-part-body').is_visible(), f'{tag}: engine explainer opens')
     txt = page.locator('main').inner_text()
@@ -466,6 +512,7 @@ def run_file(b):
         simulate(page, tag)
         library_checks(page, tag, w, phone)
         exercise_checks(page, tag, w)
+        suggest_checks(page, tag)
         challenge_checks(page, tag)
         share_sheet_file(page, tag)
         progress_checks(page, tag, w)
