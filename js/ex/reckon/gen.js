@@ -498,6 +498,7 @@
   PX.ex.define({
     id: 'reckon', version: 1, code: 'EX-12', name: 'Reckon (experimental)', short: 'Reckon', experimental: true,
     abilities: ['NAV'], cell: 'extrinsic-dynamic', role: 'train', answer: 'angle', answers: { point: 'angle', return: 'position' },
+    bet: 'calibrate', format: { point: 'reckon:walk-point-start', return: 'reckon:walk-back-start' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     perDisplay: true, variants: VARIANTS.slice(), extraParams: ['task'],
     requires: ['homing'], // its route model (gen.js) and its 3D kit (view.js): load Homing's files first
     dims: [

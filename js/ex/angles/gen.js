@@ -507,6 +507,7 @@
   PX.ex.define({
     id: 'angles', version: 2, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
     abilities: ['LE'], cell: null, role: 'train', pat: true, perDisplay: true,
+    bet: 'format', format: 'angles:rank-four-angles', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     practice: 'perception', // shown as perceptual-judgement practice, not visuospatial training
     answer: 'choice', nOptions: 4,
     dims: [

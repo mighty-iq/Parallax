@@ -2203,6 +2203,7 @@
   PX.ex.define({
     id: 'knots', version: 1, code: 'EX-13', name: 'Knots', short: 'Knots',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train',
+    bet: 'compare', format: { pull: 'knots:pull-knot-remains', untie: 'knots:switch-to-untie', tie: 'knots:switch-to-tie', link: 'knots:loops-linked' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     // Variants answer differently (ARCHITECTURE §6): items carry answer and nOptions.
     answer: 'yesno', answers: ANSWER,
     // Hand-set starting design (R2 §7.2), to be refitted from pooled exports:

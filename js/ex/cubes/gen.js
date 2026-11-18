@@ -508,6 +508,7 @@
   PX.ex.define({
     id: 'cubes', version: 2, code: 'EX-18', name: 'Painted cubes', short: 'Painted Cubes',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', pat: true,
+    bet: 'format', format: 'cubes:count-painted-sides', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     answer: 'choice', nOptions: 5,
     extraParams: ['ask'],
     dims: [

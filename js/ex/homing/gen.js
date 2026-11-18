@@ -597,6 +597,7 @@
   PX.ex.define({
     id: 'homing', version: 2, code: 'EX-11', name: 'Homing (experimental)', short: 'Homing', experimental: true,
     abilities: ['NAV'], cell: 'extrinsic-dynamic', role: 'train', answer: 'angle', perDisplay: true,
+    bet: 'calibrate', format: 'homing:walk-point-home', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     // Steps document the main effects; difficulty() gives each route its legs × turns cost (see MODEL).
     dims: [
       { key: 'route', label: 'Route', levels: ROUTES.map(routeName), step: (routeCost(ROUTES[ROUTES.length - 1]) - routeCost(ROUTES[0])) / (ROUTES.length - 1) },
