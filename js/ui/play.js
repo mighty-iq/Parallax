@@ -380,9 +380,18 @@
     el.end.setAttribute('data-end', '');
     el.pauseText = h('p.pl-pause-text');
     el.pauseNote = h('p.pl-pause-note.px-meta', 'A skipped item counts nowhere and is replaced.'); // the Spatial Check rewords it
+    el.pauseExtra = h('div.pl-pause-extra'); // playtest mode's note button (W1-rules' request, CONTRACT-v1.2 G)
     el.pause = h('div.pl-pause', { hidden: true },
       h('div.pl-pause-in', h('p.pl-pause-title', 'Paused'), el.pauseText,
-        h('div.pl-pause-actions', el.resume, el.skip, el.end), el.pauseNote));
+        h('div.pl-pause-actions', el.resume, el.skip, el.end), el.pauseNote, el.pauseExtra));
+    // Playtest notes during a session go through the pause sheet (the floating note button hides
+    // while an item is on screen); null when playtest mode is off.
+    function pauseExtras() {
+      ui.clear(el.pauseExtra);
+      var nb = null;
+      try { nb = PX.ui.playtest && typeof PX.ui.playtest.noteButton === 'function' ? PX.ui.playtest.noteButton('session: ' + (P.def ? P.def.short || P.def.name : P.exId || '')) : null; } catch (e) { nb = null; }
+      if (nb) el.pauseExtra.appendChild(nb);
+    }
     el.trial = h('section.pl-trial', { 'aria-label': 'Item', tabindex: '-1' }, el.host, el.grid, el.confirmRow, el.limit, el.pause);
     el.verdict = h('div.pl-verdict', { role: 'status', 'aria-live': 'polite' });
     el.notes = h('div.pl-notes');
@@ -974,6 +983,7 @@
       el.pauseText.textContent = P.voidReason === 'paused'
         ? 'This item was paused while it played, so it will not count. Resume to answer it anyway, or skip it.'
         : 'The clock is stopped and the item is hidden, so a pause never counts as thinking time.';
+      pauseExtras();
       el.pause.hidden = false;
       if (quiet === true) return true;
       if (!P.popPause) P.popPause = keys.push({ Escape: function () { resume(); }, '*': function () { return false; } });
@@ -991,6 +1001,7 @@
       setState('paused');
       el.skip.hidden = true;
       el.pauseText.textContent = 'Paused between items. Resume, or end the session here; everything you answered is kept.';
+      pauseExtras();
       el.pause.hidden = false;
       el.trial.setAttribute('data-paused', '');
       el.feedback.setAttribute('inert', ''); // Next and Show me wait under the sheet
