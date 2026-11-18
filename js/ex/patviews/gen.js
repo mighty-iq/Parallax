@@ -892,6 +892,19 @@
     throw new Error('patviews: no valid item could be built'); // unreachable while the fallback test passes
   }
 
+  // v1.2 (fresh-player test: a scored item was the Watch's own item, answerable from memory): an item of
+  // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
+  // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
+  // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
+  var TUTORIAL = [337167328, 1869791245, 968252950, 1422305051, 242981060, 2398888743];
+  function stemSig(item) { return PX.rng.hash('patviews-stem', JSON.stringify([item.missing, Object.keys(item.given).sort().map(function (v) { return [v, item.given[v].segs]; })])); }
+  function generateFresh(rng, params) {
+    var item = generate(rng, params);
+    if (params && params.task === 'tutorial') return item;
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    return item;
+  }
+
   /* ------------------------------------------------------------ definition */
   // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .25. base −2.2: 4–5 cubes on a 3 × 3 grid,
   // the end view missing, outline foils: ≈ .90 right at θ = 0. Steps hand-set (DJ, to be refitted
@@ -916,8 +929,9 @@
       { key: 'foil', label: 'Foils', levels: ['outline', 'same outline', 'solid or dotted'], step: 0.6 },
     ],
     base: -2.2,
-    generate: generate, validate: validate, score: score,
+    generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
       VIEWS: VIEWS, MISSING: MISSING, CUBES: CUBES, GRIDS: GRIDS, FOILS: FOILS, HMAX: HMAX, SOLVERS: SOLVERS, stats: stats,
       boxOf: boxOf, rowsOf: rowsOf, fills: fills, connectedBox: connectedBox, drawView: drawView, drawRay: drawRay, codeOf: codeOf,
       sameGrid: sameGrid, pub: pub, grid: grid, counts: counts, gdist: gdist, kindOf: kindOf, hullFails: hullFails, alignFails: alignFails,

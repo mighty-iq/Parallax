@@ -398,14 +398,14 @@
       // 3/3: the cubes fade to the drawing: seen edges solid, hidden ones dotted
       { ms: 2400, caption: cap(nd ? 'fade' : 'fadeNone', { view: miss }), enter: function () { draw(item, S({ proj: 1, turn: { t: 1 }, keyAt: { t: 0, alpha: 0 } })); },
         update: function (k) { draw(item, S({ proj: 1, turn: { t: 1, cubes: 1 - 0.8 * k }, keyAt: { t: 0, alpha: k } })); } },
-      { ms: 1500, caption: cap('lay', { view: miss }), enter: function () { draw(item, S({ proj: 1, keyAt: { t: 0 } })); }, update: function (k) { draw(item, S({ proj: 1, keyAt: { t: k } })); },
+      { id: 'lay', ms: 1500, caption: cap('lay', { view: miss }), enter: function () { draw(item, S({ proj: 1, keyAt: { t: 0 } })); }, update: function (k) { draw(item, S({ proj: 1, keyAt: { t: k } })); },
         exit: function () { draw(item, S({ built: all })); } },
     ];
     // Dotted lines often decide the item: a long step, the structure in view, every dotted line marked
     // (the Watch waits there for a tap: O52).
     var ndAll = nd + Object.keys(item.given).reduce(function (a, v) { return a + item.given[v].segs.filter(function (q) { return q[4] === 2; }).length; }, 0);
     if (ndAll) list.push({ ms: 4200, caption: cap('dotted'), dotted: true, enter: function () { draw(item, S({ built: all, object: true, dotted: true })); } });
-    list.push({ ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
+    list.push({ id: 'land', ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
     if (picked >= 0) {
       var why = item.options[picked].why;
       list.push({ ms: 3200, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: picked + 1 }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
@@ -452,12 +452,26 @@
     revealStage(ctx);
     return play(steps(item, response), ctx, { name: 'show-me' });
   }
+  // The Watch (v1.2: each caption waits for a tap in the player, so few of them): the views, the slot and
+  // the drawings under one caption; the card's three steps, the drawing laid in the slot under the
+  // third; the dotted lines last (O52: the runner waits there in any pace), ending on the answer.
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    var intro = [{ ms: 1700, caption: cap('options'), enter: function () { draw(item, { picked: -1 }); } }], list = steps(item, null);
-    list.forEach(function (x) { if (x.dotted) x.hold = true; }); // O52: the runner waits for "Continue"
-    return play(list.slice(0, 2).concat(intro, list.slice(2)), ctx, { name: 'demo', caption: caption || null });
+    var list = steps(item, null), dotted = list.some(function (x) { return x.dotted; }), out = [];
+    list.forEach(function (x, i) {
+      var y = {};
+      for (var k in x) y[k] = x[k];
+      if (i === 0) y.caption = cap('intro');
+      else if (i === 1 || x.id === 'lay') y.caption = null;
+      if (x.dotted) {
+        y.hold = true;
+        y.enter = function () { draw(item, { picked: -1, built: keySegs(item).length, object: true, dotted: true, focus: item.key, ghostKey: true }); };
+      }
+      if (x.id === 'land' && dotted) return;
+      out.push(y);
+    });
+    return play(out, ctx, { name: 'demo', caption: caption || null }).then(function () { if (st) st.caption.textContent = ''; });
   }
   function unmount() {
     if (!st) return;
