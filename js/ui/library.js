@@ -464,6 +464,7 @@
       h('p.px-lead', 'Every exercise with your level, how to play it, and the ways to practise it. Tasks used to measure change are kept out of training, so they are not here.')));
     var box = PX.ui.share && PX.ui.share.challenge ? PX.ui.share.challenge.box({ className: 'px-panel px-lib-challenge' }) : null;
     if (box) host.appendChild(box);
+    host.appendChild(jumpTo(main, pat, host));
     var grid = h('div.px-excards', { 'data-group': 'main' });
     main.forEach(function (def) { grid.appendChild(card(def, rec, now)); });
     host.appendChild(grid);
@@ -472,6 +473,25 @@
       host.appendChild(h('p.px-lib-foot', 'New here? Today’s session picks three exercises for you. ',
         ui.button('Go to Today', { kind: 'ghost', small: true, go: 'home' })));
     }
+  }
+
+  // "Jump to": one select that scrolls to an exercise's card (the cards are tall on phones, and a
+  // fresh-player test needed several scrolls to find one). A button-free control: no hash links,
+  // which would navigate a sandboxed preview away; focus moves to the card's name.
+  function jumpTo(main, pat, host) {
+    var opt = function (d) { return h('option', { value: d.id }, entry(d.id).code + ' · ' + entry(d.id).name); };
+    var kids = [h('option', { value: '' }, 'Choose an exercise…')].concat(main.map(opt));
+    if (pat.length) kids.push(h('optgroup', { label: 'DAT-style formats' }, pat.map(opt)));
+    var sel = h('select.px-select', { id: 'px-lib-jump', 'data-lib': 'jump' }, kids);
+    sel.addEventListener('change', function () {
+      var id = sel.value, el = id ? host.querySelector('.px-excard[data-ex="' + id + '"]') : null;
+      sel.value = '';
+      if (!el) return;
+      try { el.scrollIntoView({ block: 'start', behavior: 'auto' }); } catch (e) { el.scrollIntoView(); }
+      var nm = el.querySelector('.px-excard-name');
+      if (nm) { try { nm.focus({ preventScroll: true }); } catch (e2) { nm.focus(); } }
+    });
+    return h('div.px-lib-jump', h('label', { for: 'px-lib-jump' }, 'Jump to'), sel);
   }
 
   /* ---------- the DAT-style formats (v1.1 PLAN M5; R3 §6, §8.0, §9) ---------- */
