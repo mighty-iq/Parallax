@@ -426,10 +426,111 @@ def run_expect(b):
     ctx.close()
 
 
+# ---------- draw-the-answer items (the produce layer; CONTRACT-v1.2 S) ----------
+
+PRODUCE = {
+    # exercise: (params of an easy item, the board's selector, cells across the board for the 44 px check)
+    'fold': ({'folds': 1, 'type': 0, 'punches': 0, 'idle': 0, 'variant': 'mark'}, '.bets-fold-board svg', 8.12),
+}
+FOLD_TAP_JS = """(c) => {
+  const r = document.querySelector('.bets-fold-board svg').getBoundingClientRect(), u = r.width / 8.12;
+  return [r.left + (0.06 + (c % 8) + 0.5) * u, r.top + (0.06 + Math.floor(c / 8) + 0.5) * u];
+}"""
+STATE_JS = """() => ({ layout: document.querySelector('.pl-trial').getAttribute('data-item-layout'),
+  choices: document.querySelectorAll('.pl-grid .px-choice').length, key: __play.item.key, answer: __play.item.answer,
+  variant: __play.item.variant })"""
+LAST_ROW = 'PX.core.store.state.trials[PX.core.store.state.trials.length - 1]'
+
+
+def fold_tap(page, cells):
+    for c in cells:
+        x, y = page.evaluate(FOLD_TAP_JS, c)
+        page.mouse.click(x, y)
+        page.wait_for_timeout(40)
+
+
+def produce_start(b, w, h, ex):
+    params, board, across = PRODUCE[ex]
+    ctx = ctx_for(b, w, h)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    go(page, 'play', {'mode': 'free', 'exId': ex, 'params': params, 'trials': 3})
+    page.wait_for_function('__play.state === "respond"', timeout=15000)
+    tag = f'produce {ex} {w}x{h}'
+    st = page.evaluate(STATE_JS)
+    C.ok(st['layout'] == 'custom' and st['choices'] == 0 and st['answer'] == 'targets' and st['variant'] == params['variant'],
+         f'{tag}: its own input, no answer grid ({ {k: st[k] for k in ("layout", "choices", "answer", "variant")} })')
+    cell = page.evaluate(f"document.querySelector('{board}').getBoundingClientRect().width / {across}")
+    C.ok(cell >= 43.9, f'{tag}: cells of {cell:.1f} px (44 px targets)')
+    small = page.evaluate(SMALL_JS, '.bets-draw-actions .px-btn')
+    C.ok(not small, f'{tag}: 44 px buttons ({small})')
+    no_scroll(page, tag)
+    bottom = page.evaluate("Math.round(document.querySelector('.bets-draw-actions').getBoundingClientRect().bottom + window.scrollY)")
+    print(f'       info  {tag}: the Check button ends {bottom} px down the page (viewport height {h})')
+    return ctx, page, con, tag, st
+
+
+def produce_fold(b, w, h):
+    ctx, page, con, tag, st = produce_start(b, w, h, 'fold')
+    page.locator('.bets-fold-board').scroll_into_view_if_needed()
+    page.screenshot(path=str(OUT / f'produce_fold_{w}.png'))
+    key = st['key']
+    spare = next(c for c in range(64) if c not in key)
+    fold_tap(page, key[:-1] + [spare])
+    marked = page.evaluate("document.querySelector('.bets-draw-count').textContent")
+    C.ok(marked == f'Marked: {len(key)}', f'{tag}: taps mark squares ({marked})')
+    page.locator('.bets-draw-actions .px-btn', has_text='Check').click()
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
+    row = page.evaluate(LAST_ROW)
+    C.ok(row[5] == 0 and row[14] == 2 and row[15] == 6, f'{tag}: a wrong answer, logged as a produce item answered by placing (outcome {row[5]}, layer {row[14]}, amode {row[15]})')
+    v = page.evaluate("document.querySelector('.bets-draw-verdict').textContent")
+    C.ok('missed' in v and 'extra' in v, f'{tag}: the reveal names the missed and extra marks ({v})')
+    rv = page.evaluate("({ right: document.querySelectorAll('.bets-fold-ring.is-right').length, missed: document.querySelectorAll('.bets-fold-ring.is-missed').length, cross: document.querySelectorAll('.bets-fold-cross').length })")
+    C.ok(rv == {'right': len(key) - 1, 'missed': 1, 'cross': 1}, f'{tag}: right, missed and extra drawn in place ({rv})')
+    page.locator('.bets-fold-board').scroll_into_view_if_needed()
+    page.screenshot(path=str(OUT / f'produce_fold_reveal_{w}.png'))
+    page.evaluate('__play.showMe()')
+    page.wait_for_timeout(600)
+    page.evaluate('__play.next()')
+    page.wait_for_function('__play.state === "respond"', timeout=15000)
+    key = page.evaluate('__play.item.key')
+    if w > 700:  # keyboard: arrows move the cursor, Space marks, Enter checks
+        page.locator('.bets-fold-board').focus()
+        pos = 0
+        for c in key:
+            dx, dy = c % 8 - pos % 8, c // 8 - pos // 8
+            for _ in range(abs(dx)):
+                page.keyboard.press('ArrowRight' if dx > 0 else 'ArrowLeft')
+            for _ in range(abs(dy)):
+                page.keyboard.press('ArrowDown' if dy > 0 else 'ArrowUp')
+            page.keyboard.press('Space')
+            pos = c
+        page.keyboard.press('Enter')
+    else:
+        fold_tap(page, key)
+        page.locator('.bets-draw-actions .px-btn', has_text='Check').click()
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
+    row = page.evaluate(LAST_ROW)
+    C.ok(row[5] == 1, f'{tag}: the exact holes are right ({"keys" if w > 700 else "taps"}; outcome {row[5]})')
+    C.ok(page.evaluate("document.querySelector('.bets-draw-verdict').textContent").startswith('✓'), f'{tag}: the verdict says so')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
+def run_produce(b, which=None):
+    for (w, h) in SIZES:
+        for ex, fn in (('fold', produce_fold),):
+            if not which or ex in which:
+                fn(b, w, h)
+
+
 if __name__ == '__main__':
-    which = sys.argv[1:] or ['screens', 'round', 'draw', 'bridge', 'expect']
+    which = sys.argv[1:] or ['screens', 'round', 'draw', 'bridge', 'expect', 'produce']
     if any(x.startswith('round:') for x in which):
         which.append('round')
+    if any(x.startswith('produce:') for x in which):
+        which.append('produce')
     with sync_playwright() as p:
         b = p.chromium.launch(headless=True, args=LAUNCH)
         if 'screens' in which:
@@ -442,5 +543,7 @@ if __name__ == '__main__':
             run_bridge(b)
         if 'expect' in which:
             run_expect(b)
+        if 'produce' in which:
+            run_produce(b, [x[8:] for x in which if x.startswith('produce:')] or None)
         b.close()
     sys.exit(C.summary())

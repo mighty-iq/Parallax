@@ -8,6 +8,7 @@
 
   PX.ex.learn('fold', {
     goal: 'The sheet is folded, then punched through every layer. Which sheet do you get when you unfold it?',
+    goals: { choose: 'Pick the unfolded sheet from the options.', mark: 'Mark every hole yourself on a blank sheet.' }, // v1.2 wave 2 (W2-bets): the produce variant
     parts: [
       { id: 'folds', label: 'Folds', text: 'One panel per fold: the dashed line is the crease, the shaded part is the flap and the arrow shows where it goes.' },
       { id: 'punch', label: 'Punch', text: 'The last panel shows the folded paper and the punch. A punch goes through every layer under it.' },

@@ -114,3 +114,26 @@
 .px-bets-bridge { display: grid; gap: var(--s3); }
 .px-bets-solo { max-width: 22rem; width: 100%; }
 .px-bets-other label { display: grid; gap: var(--s1); }
+
+/* Draw-the-answer items: the produce layer (v1.2 wave 2, W2-bets; CONTRACT-v1.2 S) */
+.bets-draw { margin-top: var(--s3); }
+.bets-draw-task { margin: 0 0 var(--s2); font-size: var(--fs-sm); color: var(--ink-2); }
+.bets-draw-actions { display: flex; align-items: center; gap: var(--s2); justify-content: flex-end; margin-top: var(--s2); }
+.bets-draw-actions .px-btn { min-height: 44px; min-width: 44px; }
+.bets-draw-count { margin-right: auto; font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink-2); }
+.bets-draw-keys { margin: var(--s2) 0 0; }
+@media (hover: none) and (pointer: coarse) { .bets-draw-keys { display: none; } }
+.bets-draw-verdict { margin-top: var(--s2); }
+.bets-draw [data-px-keys]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Fold: the blank sheet spans a phone's width (8.12 cells: 44 px squares from 357 px wide) */
+.bets-fold-board { width: min(100vw, 23rem); margin-left: calc(50% - min(50vw, 11.5rem)); touch-action: manipulation; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bets-fold-svg { display: block; width: 100%; height: auto; }
+.ex-fold .bets-fold-mark { fill: var(--fold-hole); }
+.ex-fold .bets-fold-mark.is-extra { fill: var(--wrong); opacity: 0.55; }
+.ex-fold .bets-fold-ring { fill: none; stroke-width: 0.09; }
+.ex-fold .bets-fold-ring.is-right { stroke: var(--right); }
+.ex-fold .bets-fold-ring.is-missed { stroke: var(--fold-edge); stroke-dasharray: 0.16 0.12; }
+.ex-fold .bets-fold-cross { stroke: var(--wrong); stroke-width: 0.1; stroke-linecap: round; fill: none; }
+.bets-fold-cursor { fill: none; stroke: var(--focus); stroke-width: 0.08; visibility: hidden; }
+.bets-fold-cursor.is-on { visibility: visible; }
