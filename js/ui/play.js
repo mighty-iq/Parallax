@@ -239,6 +239,8 @@
         // and the motion ends with a Next. Auto-play (rec.ui.autoplay) brings back the timed pace
         // everywhere. Show-me after an answer keeps its pace; fast mode never waits.
         var demo = !!P.demoing && !FAST;
+        // a show-me after an answer has the reading strip's Next in its bar too (same place as the strip's)
+        var answered = !P.demoing && !!P.last && (prev === 'reveal' || prev === 'showme');
         var moving = !!(P.view && P.view.motion === true) || !!(P.def && P.def.practice === 'attention');
         var group = [], g = -1;
         steps.forEach(function (st, a) { if (a === 0 || (st && st.caption)) g++; group.push(g); });
@@ -285,7 +287,8 @@
           var tap = tapMode();
           P.el.pPause.firstChild.textContent = waiting && !tap ? 'Continue' : paused && !waiting ? 'Resume' : 'Pause';
           P.el.pPause.disabled = !!(tap && waiting); // nothing moves while a caption waits
-          P.el.pNext.hidden = !demo; P.el.pStep.hidden = demo;
+          P.el.pNext.hidden = !(demo || answered); P.el.pStep.hidden = demo;
+          P.el.pNext.toggleAttribute('data-answered', answered); // wide screens keep the strip's own Next
           P.el.pNext.classList.toggle('is-waiting', !!waiting);
           P.el.pAuto.hidden = !demo;
           P.el.pAuto.setAttribute('aria-pressed', autoplay() ? 'true' : 'false');
@@ -329,8 +332,15 @@
         // (a tap never skips a caption unseen); in motion, finish the motion and wait.
         function next() {
           if (done) return;
+          if (answered) { P.goNext(); return; } // after an answer: the item after this one
           if (waiting) { waiting = false; paused = false; label(); return; }
           paused = false;
+          if (!tapMode()) { // Auto-play: on to the next caption
+            var g0 = group[i];
+            while (!done && group[i] === g0) { finish(); if (i + 1 < steps.length) enter(i + 1); else end(); }
+            label();
+            return;
+          }
           while (!done) {
             if ((steps[i].hold && !FAST) || waitsAt(i)) {
               if (lastK !== 1) { safe(steps[i].update, 1); lastK = 1; }
@@ -956,11 +966,16 @@
 
     // The reading strip sticks to the bottom of the window: the marked options (or the stage's
     // marks) are scrolled up above it, as far as the stem allows.
+    // The Pause row (HUD) stays on the screen meanwhile when that leaves at most 24 px of the options
+    // under the strip: what lies above it (Watch, Try, Go's stepper) scrolls away first (the lead's
+    // fresh-player note). On a short phone where it cannot, the marks win: they are the feedback.
     function marksIntoView() {
       try {
         var t = (P.grid ? el.grid : el.host).getBoundingClientRect(), f = el.feedback.getBoundingClientRect();
         if (!t.height || t.bottom <= f.top) return;
-        var by = Math.min(t.bottom - f.top + 12, Math.max(0, t.top - 64));
+        var need = t.bottom - f.top + 12, by = Math.min(need, Math.max(0, t.top - 64));
+        var hr = el.hud.hidden ? null : el.hud.getBoundingClientRect();
+        if (hr && hr.height) { var keep = Math.max(0, hr.top - topEdge()); if (need - keep <= 24) by = Math.min(by, keep); }
         if (by > 0) win.scrollBy(0, by);
       } catch (e) { /* cosmetic */ }
     }
@@ -1570,7 +1585,17 @@
       openCards.push(done);
       if (o.onShow) o.onShow(p, done);
       if (primary) { try { primary.b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
-      try { var r = p.el.getBoundingClientRect(); if (r.top < 0 || r.bottom > win.innerHeight) win.scrollTo(0, Math.max(0, r.top + (win.pageYOffset || 0) - 72)); } catch (e) { /* ignore */ }
+      // o.top (Watch, Try, Go's stepper): the card screen opens at that element's top, under a
+      // sticky header if there is one (W1-band-A's request: the stepper was cut at the top edge)
+      try {
+        var r = p.el.getBoundingClientRect();
+        if (o.top && o.top.isConnected) {
+          var off = 8, hd = doc.querySelector('.px-header'), hs = hd ? win.getComputedStyle(hd) : null;
+          if (hs && hs.display !== 'none' && /sticky|fixed/.test(hs.position)) off = Math.max(8, hd.getBoundingClientRect().bottom + 8);
+          var tr = o.top.getBoundingClientRect();
+          if (Math.abs(tr.top - off) > 1) win.scrollTo(0, Math.max(0, tr.top + (win.pageYOffset || 0) - off));
+        } else if (r.top < 0 || r.bottom > win.innerHeight) win.scrollTo(0, Math.max(0, r.top + (win.pageYOffset || 0) - 72));
+      } catch (e) { /* ignore */ }
     });
   }
 
@@ -1599,6 +1624,21 @@
      wtg(P, exId, { host, before, tour }) → Promise<'done' | 'skipped' | 'end' | 'none'>
      ===================================================================================== */
 
+  // The reading strip's height after an answer on a phone (verdict line and one row of buttons)
+  // The top of the visible page: under the sticky header on wide screens, else the window's top edge
+  function topEdge() {
+    try {
+      var hd = doc.querySelector('.px-header'), hs = hd ? win.getComputedStyle(hd) : null;
+      if (hs && hs.display !== 'none' && /sticky|fixed/.test(hs.position)) { var r = hd.getBoundingClientRect(); if (r.bottom > 0 && r.top <= 0) return r.bottom; }
+    } catch (e) { /* none */ }
+    return 0;
+  }
+  function stripRoom() { // portrait phones only: held sideways the item needs every pixel of height
+    try { if (!(win.matchMedia && win.matchMedia('(max-width: 719px) and (min-height: 501px)').matches)) return 0; } catch (e) { return 0; }
+    var rem = 16;
+    try { rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16; } catch (e) { /* default */ }
+    return Math.round(6.75 * rem);
+  }
   function isPhone() {
     try { return !!(win.matchMedia && win.matchMedia('(max-width: 719px), (max-height: 500px)').matches); } catch (e) { return false; }
   }
@@ -1608,7 +1648,7 @@
   // (the strip and the goal may scroll away above it then). Under the sticky header on wide screens.
   // When both cannot hold, the top wins. pinned: a demo or show-me runs, or is about to (before its
   // bar is up, phones keep 7.5rem for it). Watch, Try, Go's own header may scroll away above.
-  function stageIntoView(P, pinned) {
+  function stageIntoView(P, pinned, reserve) {
     try {
       var vh = win.innerHeight || 640, top = 0, rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
       var head = doc.querySelector('.px-header');
@@ -1621,7 +1661,7 @@
       });
       if (!bottom || !hud.height) return;
       var anchor = pinned ? itemTop - 8 : hud.top;
-      var limit = vh - 8;
+      var limit = vh - 8 - (reserve > 0 ? reserve : 0); // reserve: room kept for the reading strip
       if (pinned) {
         var found = false;
         [P.el.feedback, P.el.root.querySelector('.pl-showme-buttons'), P.el.host.querySelector('.ex-caption'), P.el.caption].forEach(function (e) {
@@ -1710,10 +1750,14 @@
     // The header above the item can push it down: just before an item plays (its first frame comes
     // after this), the item is brought onto the screen (the header may scroll away). A demo is
     // fitted again when it starts, under its pinned caption and bar (makeRunner).
+    // A Try item on a phone keeps the reading strip's room free under it (W1-band-A's request, the
+    // lead's fresh-player note): the stepper scrolls away above the Pause row before the item plays,
+    // so the reveal moves nothing and the Pause row stays at the top.
     function stageSoon(item, demo) {
-      P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
+      var room = demo ? 0 : stripRoom();
+      P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo, room); });
       // and once its answer controls are up (Span's Undo and Done, Reckon's Walk and Here come then)
-      if (!demo) P.when('respond').then(function () { if (P.item === item) stageIntoView(P, false); });
+      if (!demo) P.when('respond').then(function () { if (P.item === item) stageIntoView(P, false, room); });
     }
     // Phones size the item from --pl-avail (css/play.css), the screen less the status strip. Here a
     // Try item's goal and tip shown above it take their share first (--pl-extra on the host, read by
@@ -1726,7 +1770,7 @@
         P.setGoal(goal); P.setTip(tip); // run() sets the same again
         var g = P.el.guide, gh = g ? g.getBoundingClientRect().height : 0;
         var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
-        var extra = demo ? 4 * rem : gh > 0 ? gh + 0.5 * rem : 0;
+        var extra = demo ? 4 * rem : (gh > 0 ? gh + 0.5 * rem : 0) + stripRoom();
         host.style.setProperty('--pl-extra', Math.round(extra) + 'px');
       } catch (e) { /* the item keeps its usual size */ }
     }
@@ -1759,7 +1803,7 @@
         return h('li.pl-rule', fig, h('span.pl-rule-text', r.text));
       }));
       return showCard(host, P.el.root, {
-        id: 'wtg-rules', title: 'The rules of ' + (def.short || def.name), className: 'pl-rules-card', hide: P.el.root, lines: [list],
+        id: 'wtg-rules', title: 'The rules of ' + (def.short || def.name), className: 'pl-rules-card', hide: P.el.root, lines: [list], top: head,
         actions: [{ label: 'Watch it solved', value: 'watch', primary: true }],
       }).then(function (v) { if (v !== 'watch') skipped = true; });
     }
@@ -1770,7 +1814,7 @@
       stage(1, 'Try: first a way to solve it, then practice items that never count.');
       emit('play:screen', { screen: 'card:wtg-strategy', mode: P.mode, exId: exId });
       return showCard(host, P.el.root, {
-        id: 'wtg-strategy', title: card.title || 'How to solve it', className: 'pl-strategy-card', hide: P.el.root, lines: strategyBody(card),
+        id: 'wtg-strategy', title: card.title || 'How to solve it', className: 'pl-strategy-card', hide: P.el.root, lines: strategyBody(card), top: head,
         actions: [{ label: 'Got it: try one', value: 'try', primary: true }],
       }).then(function (v) {
         if (v !== 'try') { skipped = true; return; }

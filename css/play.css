@@ -499,3 +499,23 @@
 @media (max-width: 719px) {
   .pl-showme-buttons [data-showme-auto] { padding-left: var(--s1); padding-right: var(--s1); }
 }
+/* After an answer the reading strip and its Next keep one place on a phone: the bottom of the screen,
+   whatever the item's height (Angles fresh test: Next and Go sat lower or higher from item to item).
+   The space under the item lets its end scroll above the strip. A show-me pins its own bar instead;
+   "Your turn" after a demo keeps its place under the item's controls. */
+@media (max-width: 719px) {
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback:not([hidden]) { position: fixed; left: 0; right: 0; margin: 0; }
+  body.px-item .pl-player[data-state="reveal"]:has(> .pl-feedback:not([hidden])) { padding-bottom: 8rem; }
+}
+/* during a show-me after an answer, Next is the bar's last button (where a demo's Next is), so the
+   strip's own row waits under the item until the show-me ends */
+@media (max-width: 719px) {
+  .pl-player[data-state="showme"] .pl-feedback .pl-actions:has([data-next]:not([hidden])) { display: none; }
+}
+@media (min-width: 720px) and (min-height: 501px) { .pl-showme-buttons [data-showme-next][data-answered] { display: none; } }
+/* Watch, Try, Go on a portrait phone: room under the player from the start, so the stepper can
+   scroll away above the Pause row before a Try item plays (play.js stageIntoView keeps the strip's
+   room free), and the reveal then moves nothing */
+@media (max-width: 719px) and (min-height: 501px) {
+  body.px-item .is-wtg > .pl-player { padding-bottom: 8rem; }
+}
