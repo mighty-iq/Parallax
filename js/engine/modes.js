@@ -174,10 +174,30 @@
     return plan.deck.pop();
   }
 
-  // v1.2 (note D2 §3.0 B2): no stretch item among an exercise's first rated answers
-  // (C.mix.noStretchBefore): each new feature should arrive alone, with its tip.
-  function earlyKind(kind, st) {
-    return kind === 'stretch' && st && isNum(st.n) && st.n < C.mix.noStretchBefore ? 'target' : kind;
+  // v1.2 (note D2 §3.0 B2): among an exercise's first rated answers (C.mix.noStretchBefore) a
+  // stretch item may move one setting only from the last item, so each new feature arrives alone,
+  // with its tip; when no such item is near the stretch target, a target item comes instead.
+  function early(st) { return !!st && isNum(st.n) && st.n < C.mix.noStretchBefore; }
+  function earlyKind(kind, st) { return kind === 'stretch' && early(st) ? 'target' : kind; }
+  function oneStep(def, last) {
+    if (!last) return null;
+    return function (c) {
+      var moved = 0;
+      for (var d = 0; d < def.dims.length && moved < 2; d++) if (c.params[def.dims[d].key] !== last[def.dims[d].key]) moved++;
+      if (def.variants && c.params.variant !== last.variant) moved++;
+      return moved <= 1;
+    };
+  }
+  function both(f, g) { return f && g ? function (c) { return f(c) && g(c); } : f || g || null; }
+  // A stretch item early on (kind 'stretch1'): one setting moved from the last item and at least half
+  // a logit above it, aimed a little lower than a later stretch (g + (1 − g)·C.mix.earlyStretchK);
+  // else null (the caller deals a target item).
+  function earlyStretch(def, st, o, recent) {
+    var last = recent && recent.last;
+    if (!last) return null;
+    var f = both(o.filter, oneStep(def, last)), lastB = def.difficulty(last);
+    var r = E.select.pick(def, st, Object.assign({}, o, { kind: 'stretch1', filter: both(f, function (c) { return c.b >= lastB + 0.5; }) }));
+    return r || null;
   }
 
   // v1.2: automatic choices keep to the exercise's trainVariants (Central Point's Exact form is an
@@ -371,11 +391,11 @@
         var r = null;
         if (def) {
           var st = E.est.get(rec, def, { display: plan.display }, now);
-          kind = earlyKind(kind, st);
           var weakList = kind === 'target' && plan.rng.chance(C.weak.share) ? E.select.weak(rec, def) : null;
           var filter = autoFilter(def, run.variant !== undefined ? function (c) { return c.params.variant === run.variant; } : null);
           var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: filter, weak: weakList, rng: plan.rng };
-          r = E.select.pick(def, st, o);
+          if (kind === 'stretch' && early(st)) { r = earlyStretch(def, st, o, o.recent); kind = o.kind = r ? 'stretch1' : 'target'; }
+          if (!r) r = E.select.pick(def, st, o);
           if (!r && filter) { o.filter = autoFilter(def, null); r = E.select.pick(def, st, o); }
           if (!r && o.filter) { o.filter = null; r = E.select.pick(def, st, o); }
         }
@@ -583,11 +603,16 @@
       if (rc) { s = rc.s; kind = 'target'; filter = inStage(def, s); }
       else {
         s = ps.stage;
-        kind = end === 'last' ? 'last' : earlyKind(kindFor(plan), st);
+        kind = end === 'last' ? 'last' : kindFor(plan);
         filter = kind === 'warmup' || kind === 'easy' || kind === 'last' ? upTo(def, s) : kind === 'stretch' ? stretchOf(def, s) : inStage(def, s);
       }
-      var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: autoFilter(def, filter), rng: plan.rng };
-      var r = E.select.pick(def, st, o);
+      var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: autoFilter(def, filter), rng: plan.rng }, r = null;
+      if (kind === 'stretch' && early(st)) {
+        r = earlyStretch(def, st, o, o.recent);
+        if (r) kind = o.kind = 'stretch1';
+        else { kind = o.kind = 'target'; o.filter = autoFilter(def, inStage(def, s)); }
+      }
+      if (!r) r = E.select.pick(def, st, o);
       if (!r) { o.filter = autoFilter(def, null); r = E.select.pick(def, st, o); }
       if (!r && o.filter) { o.filter = null; r = E.select.pick(def, st, o); }
       if (!r) return null;
@@ -1168,6 +1193,6 @@
     start: start, next: next, answer: answer, finish: finish, MODES: MODES, RATED: RATED,
     available: available, checkin: checkin, checkinDue: checkinDue, STRATEGIES: STRATEGIES,
     timeLeft: timeLeft, pace: paceOf, suggest: suggest,
-    _: { atEnd: atEnd, kindFor: kindFor, earlyKind: earlyKind, autoFilter: autoFilter, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn },
+    _: { atEnd: atEnd, kindFor: kindFor, earlyKind: earlyKind, early: early, oneStep: oneStep, autoFilter: autoFilter, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn },
   };
 })(window.PX);
