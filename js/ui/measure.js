@@ -184,11 +184,14 @@
       if (again) { var ms = def.timeLimit ? def.timeLimit(step.params) : null; lim = ms ? { lo: Math.round(ms / 1000), hi: Math.round(ms / 1000) } : null; }
       if (lim) lines.push((lim.lo === lim.hi ? 'Each item has up to ' + lim.lo + ' seconds' : 'Each item has ' + lim.lo + ' to ' + lim.hi + ' seconds (harder items get more)') + ', shown as a slow bar under it.');
       if (block && !canDemo) lines = lines.slice(0, 1).concat(lim ? [lines[lines.length - 1]] : []); // a known task: its goal and its time
+      var bg = again ? null : background(def);
+      if (bg) lines = lines.concat(bg.lines);
       return o.card({
         id: again ? 'probe-format' : 'probe-intro', title: again ? 'Next in ' + (ins.title || nameOf(def)) + ': a new kind of question' : 'Task ' + (probes.indexOf(def.id) + 1) + ' of ' + probes.length + ': ' + (ins.title || nameOf(def)), def: again ? null : def,
         lines: lines.concat(canDemo ? ['First, one worked example. It is never scored.'] : []),
         actions: canDemo ? [{ label: 'Skip the example', value: 'skip' }, { label: 'Show the example', value: 'example', primary: true }] : [{ label: 'Start', value: 'start', primary: true }],
       }).then(function (v) {
+        if (bg) bg.done();
         if (v === 'closed') return 'stop';
         if (v !== 'example') return null;
         var item;
@@ -423,6 +426,35 @@
       lines.push(go);
     }
     return ctx.card({ id: 'measure-done', title: out.res ? 'Saved' : 'Stopped', lines: lines, actions: [{ label: where === 'item' ? 'Back to the session' : 'Start the session', value: 'go', primary: true }] });
+  }
+
+  // A background question in a probe's first instruction card, kept for the Lab next to the data (CONTRACT-v1.2
+  // events: background): optional, one tap, never scored; asked once whatever happens (a = 'skip' when none was tapped).
+  var BACKGROUND = {
+    motiongraphs: { q: 'motion-graphs', text: 'Have you learned to read motion graphs before (position or speed against time, as in physics or maths)?',
+      options: [['no', 'No'], ['some', 'A little'], ['yes', 'Yes']] },
+  };
+  function background(def) {
+    var bq = BACKGROUND[def.id];
+    if (!bq) return null;
+    try { if (E().events.count(rec(), 'background', def.id) > 0) return null; } catch (e) { return null; }
+    var chosen = null, btns = [], row = h('div.pl-expect.pl-background-q', { role: 'group', 'aria-label': 'Your background' });
+    bq.options.forEach(function (x) {
+      var b = ui.button(x[1], { kind: 'secondary', onClick: function () {
+        chosen = x[0];
+        btns.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      } });
+      b.setAttribute('data-background-answer', x[0]);
+      b.setAttribute('aria-pressed', 'false');
+      btns.push(b);
+      row.appendChild(b);
+    });
+    return {
+      lines: [h('p', bq.text), row, h('p.px-meta', 'Schooling in this changes results on it, so the Lab keeps your answer next to your data. Optional and never scored.')],
+      done: function () {
+        try { E().events.add(rec(), 'background', def.id, { q: bq.q, a: chosen || 'skip' }, now()); save(); } catch (e) { log('background failed', e); }
+      },
+    };
   }
 
   // The expectation question, once, before the first baseline's first item (kept for the Lab; never a score).
