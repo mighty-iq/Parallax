@@ -96,6 +96,11 @@ body.px-stim .gm-fx-sweep .px-bar-fill { animation: none !important; }
 .gm-table th, .gm-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--rule); text-align: right; }
 .gm-table th:first-child, .gm-table td:first-child { text-align: left; }
 .gm-table th { font-weight: 600; color: var(--ink-2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; }
+@media (max-width: 479px) {
+  .gm-table { font-size: var(--fs-xs); }
+  .gm-table th, .gm-table td { padding: 0.3rem 0.2rem; }
+  .gm-table th { letter-spacing: 0.02em; }
+}
 .gm-grade-chip { display: inline-block; min-width: 1.6rem; padding: 0 0.3rem; border: 1.5px solid var(--ink); border-radius: 2px; text-align: center; font-family: var(--font-mono); }
 .gm-records { margin: var(--s3) 0 0; }
 .gm-records > div { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); gap: var(--s2); padding: 0.25rem 0; }

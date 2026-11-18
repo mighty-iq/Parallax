@@ -116,11 +116,17 @@
   // A stuttered or skipped item comes back unchanged: the rung and the misses decide the item.
   function voidStep() { /* nothing moves */ }
 
-  function answer(plan, rec, step, ok) {
+  // Each answer is written through (a run left by a reload or a closed tab goes on where it stopped);
+  // finish() writes the final entry.
+  function answer(plan, rec, step, ok, now) {
     var K = plan.climb;
     if (!K || !step.climb || step.climb.rung !== K.rung || step.climb.misses !== K.misses) return;
     K.answered += 1;
     if (ok) { K.height = K.rung; K.rung += 1; } else { K.misses += 1; K.notches.push(K.rung); }
+    if (K.scored) {
+      var c = slot(rec), w = c.w[K.week] || (c.w[K.week] = {});
+      w[K.attempt] = { r: K.rung, h: K.height, m: K.misses, n: K.notches.slice(), p: 1, t: Math.round(isNum(now) ? now : 0) };
+    }
   }
 
   function finish(plan, rec, now, res) {
@@ -148,7 +154,7 @@
   }
 
   if (E.modes && E.modes.MODES && !hasOwn.call(E.modes.MODES, 'climb')) {
-    E.modes.MODES.climb = { start: start, next: next, void: voidStep, answer: function (plan, rec, step, ok) { answer(plan, rec, step, ok); }, over: over, finish: finish };
+    E.modes.MODES.climb = { start: start, next: next, void: voidStep, answer: function (plan, rec, step, ok, result, now) { answer(plan, rec, step, ok, now); }, over: over, finish: finish };
   }
 
   E.climb = { week: week, number: number, order: order, item: item, state: state, over: over, letters: letters, _: { start: start, next: next, answer: answer, finish: finish } };
