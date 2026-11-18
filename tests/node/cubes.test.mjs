@@ -282,6 +282,9 @@ function testLearn(t, PX, def) {
   t.ok(keys.every((k, i) => i === 0 || k !== keys[i - 1]), `answers vary their slot from item to item (${keys.map((k) => k + 1).join(', ')})`);
   t.ok(demoItem.hidden === 0 && tryItems[0].hidden === 0 && tryItems[1].hidden === 0, 'the Watch and the first two Try items are flat: nothing hidden');
   t.eq(tryItems[2].hidden, 1, 'Try 3 hides exactly one cube');
+  const ex3 = P[2].example ? def.generate(PX.rng(P[2].example.seed), P[2].example.params || P[2].params) : null;
+  t.ok(ex3 && !ex3.fallback && def.validate(ex3) === true && ex3.hidden === 1 && JSON.stringify(ex3.heights) !== JSON.stringify(tryItems[2].heights),
+    'before Try 3 a worked example with one hidden support (another figure than Try 3\'s)');
   const rr4 = def.lib.render(tryItems[3].heights);
   t.ok(rr4.cubes.some((q, i) => q.painted === tryItems[3].ask && rr4.perCube[i].any === 0), 'Try 4 hides a cube that the count includes');
   for (const tip of L.tips || []) {

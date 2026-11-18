@@ -38,7 +38,10 @@
     practice: [
       { params: { cubes: 0, height: 0, asked: 0 }, seed: 13, assist: { numbers: 2 } },
       { params: { cubes: 0, height: 0, asked: 0 }, seed: 2 },
-      { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden' },
+      // Before Try 3 one more item solved for you (play.js `example`): its hidden support shown dashed
+      // and numbered, so the hidden-cube rule is seen worked once before it is used (note D2 addendum C
+      // change 4: a second worked example right before its matched problem; Atkinson et al. 2000).
+      { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden', example: { seed: 5 } },
       { params: { cubes: 1, height: 1, asked: 0 }, seed: 113 },
     ],
     tips: [
