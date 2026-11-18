@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 13:10 UTC.
+Updated 2026-11-18 13:40 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -39,15 +39,13 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
-## In progress (Phase 1, last steps)
-- Done: the eight research notes (docs/research/v1.2/, spikes kept), docs/research/ACCESS.md (all unopened sources, ranked v1.2 top 10), PLAN-v1.2.md rewritten from the notes, PLAN-v1.3.md backlog started, DECISIONS logged.
-- Running: an independent review of the plan's claims and O-item coverage → docs/dev/reviews/RV-plan-v1.2.md; the private decision board (outside the repository) gets its real content and the Central Point sketch in the planned design.
-- Then: publish the board (private), send the plan message, save brief and status to the project, and stop at the plan gate.
+## In progress
+- **Plan gate.** Phase 1 is done: eight research notes (docs/research/v1.2/), ACCESS.md, PLAN-v1.2.md corrected after an independent review (docs/dev/reviews/RV-plan-v1.2.md), PLAN-v1.3.md. The decision board is published as a private page (link in the project status note only) and declares a db; the owner's answers land in its document answers/owner. Nothing is building; no subagents run. Waiting for the owner's go and answers.
 
 ## Next three steps
-1. Fix the plan from the review; publish the decision board and declare its db; send the plan message.
-2. Wait for the owner's go and answers (board db document answers/owner, or pasted "Copy my answers"); save them to BRIEF.md word for word.
-3. On the go: PLAN-v1.2.md becomes PLAN.md (PLAN.md → PLAN-v1.1.md), CONTRACT-v1.2.md, CLAUDE.md rewritten for the standing rules, then milestone 1, 2 and Central Point builders; the first playable build goes to the owner with playtest mode on.
+1. Read the owner's answers (board db answers/owner, or his pasted "Copy my answers"); save them to BRIEF.md word for word; log each decision.
+2. On the go: PLAN-v1.2.md becomes PLAN.md (PLAN.md → PLAN-v1.1.md), applied with his answers; write CONTRACT-v1.2.md; rewrite CLAUDE.md for the standing rules (milestone 2).
+3. Start milestone 1, milestone 2 and Central Point with parallel builders; the first playable build goes to the owner with playtest mode on.
 
 Open owner items carried over: CC BY-SA for prose (L1), the C13 Chimera lines, the history-cleanup finish (Support / recreate / leave), optionally the name of the test Central Point comes from.
 
@@ -65,7 +63,7 @@ Open owner items carried over: CC BY-SA for prose (L1), the C13 Chimera lines, t
   | Spatial Check, desktop and phone | 11/0 |
   | srcdoc | 12/0 |
   | Preview smoke test | 22/22 |
-- **PLAN-v1.2.md** references all 61 sweep items (O1–O61) and all 32 gaps that are not met (a script checked this).
+- **PLAN-v1.2.md** names every sweep item O1–O61 where its work sits (or PLAN-v1.3 / closed / dropped) and every gap ID the draft used (a script checked this on 18 Nov after the review).
 
 ## Dead ends
 - **Browser slots** are the bottleneck: the machine has two.
