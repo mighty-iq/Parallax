@@ -35,6 +35,15 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
 - Requests answered: W2-plateau (manifest, test ids), W1-band-B (Openings phrase), W2-measure (test edits in its switch
   commit: yes), W2-bets (layer files); filed: W1-band-B (Form's worked-example caption numbers).
 
+## 2026-11-18 22:38 UTC: after the round-3 fixes (stopped on the lead's word, usage)
+- Committed since: 4355d31 (round 3, play.py 184/0), f64d64b (DECISIONS), 287101e (docs), df79add (window.PX_HOOKS_MUTE),
+  65d7a95 (Design A texts; flows, clock, twotabs, screens follow the builders' hooks and Design A), 19a9bc2 (milestone 7
+  wiring: lastRated, untimedRt, Speed's fluent pool), 6a98b26 (record4 test vs owners' checks).
+- Browser: play.py 184/0, twotabs 11/0, clock repro 32/0, screens 387/0 expected after the 'trend' fix (372/2 before it),
+  flows 73/0 (the check button is matched by its route prefix: Today's slot opens play?mode=check&kind=…). fit.py 221/1 on others' items (patfold 844 × 390; the check's
+  cubematch with W2-measure's timer at 360 × 640).
+- Open: none of the requests to W2-core; Form's worked-example numbering is with W1-band-B.
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with

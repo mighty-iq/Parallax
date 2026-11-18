@@ -92,7 +92,7 @@ def run_check(b, C):
     page = ctx.new_page()
     con = Console(page)
     boot(page)
-    page.locator('.px-slot--check [data-go="play?mode=check"]').click()
+    page.locator('.px-slot--check [data-go^="play?mode=check"]').click()
     page.wait_for_timeout(200)
     C.ok(card(page) == 'check-intro' and 'Baseline 1' in page.locator('[data-card-box]').inner_text(), f'{tag}: intro for baseline 1')
     click_card(page, 'start')
