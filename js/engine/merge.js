@@ -9,7 +9,9 @@
    rows from `mine` are re-indexed into the merged lists. The seed counter takes the larger
    value so new seeds stay unique. Inputs are not changed. The store calls it when a save
    meets a newer record: app.js sets store.merge = PX.engine.merge at boot (the engine itself
-   never touches the store). */
+   never touches the store).
+   v1.2 wave 2: PX.engine.merge.register(key, fn) gives a field its own merge (the events table,
+   plateau events, the reserved containers); merge.registered() lists them. */
 (function (PX) {
   'use strict';
 
@@ -205,8 +207,32 @@
       Object.keys(obj(obj(mine.tour).seen)).forEach(function (k) { seenT[k] = true; });
       out.tour = { done: !!(obj(theirs.tour).done || obj(mine.tour).done), seen: seenT };
     }
+    // v1.2 wave 2: fields with their own merge (register below); a throw keeps the newer side's value
+    Object.keys(OWN).forEach(function (key) {
+      if (!hasOwn.call(theirs, key) && !hasOwn.call(mine, key)) return;
+      var v;
+      try { v = OWN[key](cp(theirs[key]), cp(mine[key]), { newer: newer === mine ? 'mine' : 'theirs' }); } catch (e) { v = undefined; }
+      if (v !== undefined) out[key] = v;
+    });
     return out;
   }
 
+  /* register(key, fn(theirs, mine, info) → value) (v1.2 wave 2; docs/dev/CONTRACT-v1.2.md Q): a
+     top-level field's own two-tab merge. fn gets deep copies (undefined where a side lacks the field)
+     and info.newer ('theirs' | 'mine'); undefined keeps the newer side's value, which is also what
+     every field without a merge gets. Fields merged above cannot be registered. */
+  var BUILT_IN = ['v', 'rev', 'created', 'updated', 'idx', 'trials', 'sessions', 'achievements', 'daily', 'assess', 'mot', 'strategies', 'ex', 'timed', 'path',
+    'trialDays', 'eng', 'train', 'spatial', 'lab', 'practiceMs', 'section', 'reckon', 'hygiene', 'streak', 'tour', 'settings', 'ui'];
+  var OWN = {};
+  function register(key, fn) {
+    if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(key) || typeof fn !== 'function') throw new Error('PX.engine.merge.register: needs a field key and a function');
+    if (BUILT_IN.indexOf(key) >= 0) throw new Error('PX.engine.merge.register: "' + key + '" is merged by merge.js itself');
+    if (hasOwn.call(OWN, key)) throw new Error('PX.engine.merge.register: "' + key + '" already has a merge');
+    OWN[key] = fn;
+  }
+  function registered() { return Object.keys(OWN).sort(); }
+
+  merge.register = register;
+  merge.registered = registered;
   E.merge = merge;
 })(window.PX);
