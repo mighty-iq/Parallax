@@ -830,7 +830,8 @@
       if (tr.outcome === 'stutter') el.verdict.appendChild(h('span.pl-verdict-void', voidText(tr.voidReason)));
       else sound.play(ok ? 'right' : 'wrong'); // a short tone when the setting is on (never during a stimulus)
       var canShow = !!(P.view && P.view.showMe);
-      var slow = ok && !cfg.practice && isNum(tr.rtMs) && tr.rtMs > slowMs(P.exId);
+      // "See solution" after a slow right answer, and after any right practice answer (W1-fixes' request)
+      var slow = ok && (cfg.practice || (isNum(tr.rtMs) && tr.rtMs > slowMs(P.exId)));
       var auto = !ok && canShow && (cfg.practice || counter('showMe', P.exId) < AUTO_SHOWME);
       el.showBtn.firstChild.textContent = !ok ? (auto ? 'Show me again' : 'Why?') : 'See solution';
       el.showBtn.hidden = !canShow || (ok && !slow) || auto;
@@ -922,43 +923,56 @@
       cfg = cfg || {};
       var p = run(item, Object.assign({ practice: true, demo: true }, cfg));
       var tok = P.token;
-      when('respond').then(function () {
-        if (tok !== P.token || !P.view || !P.view.demo) return;
-        if (P.grid) P.grid.lock(true);
-        stemIntoView();
-        var d;
-        P.demoing = true;
-        try { d = Promise.resolve(P.view.demo(item, P.ctx, null)); } catch (e) { d = Promise.reject(e); }
-        d.catch(function (e) { log('demo failed (' + P.exId + ')', e); }).then(function () {
-          P.demoing = false;
-          P.played.demos++;
-          if (tok !== P.token || P.last) return;
-          if (P.state === 'showme' || P.state === 'reveal') setState('respond');
-          // The answer clock starts again now: the demo's time is never answer time.
-          P.paintTs = timing.now(); P.pausedMs = 0; P.pauseStart = 0;
-          if (P.grid) P.grid.lock(false);
-          if (typeof cfg.onDemoEnd === 'function') cfg.onDemoEnd();
-          if (cfg.turn) yourTurn(cfg.turn);
-        });
-      });
+      when('respond').then(function () { playDemo(item, cfg, tok); });
       return p;
+    }
+    // Plays view.demo on the item in 'respond'; afterwards the item can be answered. "Watch again"
+    // in the Your turn strip plays it again until the first answer (W1-fixes' request).
+    function playDemo(item, cfg, tok) {
+      if (tok !== P.token || !P.view || !P.view.demo || P.last) return;
+      if (P.grid) P.grid.lock(true);
+      stemIntoView();
+      var d;
+      P.demoing = true;
+      try { d = Promise.resolve(P.view.demo(item, P.ctx, null)); } catch (e) { d = Promise.reject(e); }
+      d.catch(function (e) { log('demo failed (' + P.exId + ')', e); }).then(function () {
+        P.demoing = false;
+        P.played.demos++;
+        if (tok !== P.token || P.last) return;
+        if (P.state === 'showme' || P.state === 'reveal') setState('respond');
+        // The answer clock starts again now: the demo's time is never answer time.
+        P.paintTs = timing.now(); P.pausedMs = 0; P.pauseStart = 0;
+        if (P.grid) P.grid.lock(false);
+        if (typeof cfg.onDemoEnd === 'function') cfg.onDemoEnd();
+        if (cfg.turn) yourTurn(cfg.turn, function () { playDemo(item, cfg, tok); });
+      });
     }
     P.demo = demo;
 
     // After a Watch demo the next step is said where the demo's controls were (the reading strip),
     // so the screen is never a dead end: answer it as the demo did, or go on (RV-play-dat).
-    function yourTurn(o) {
+    // v1.2 (W1-fixes' request, fresh-player retests): the strip says it loudly, the HUD says it
+    // too, and "Watch again" replays the demo until the first answer.
+    function yourTurn(o, again) {
       if (P.state !== 'respond') return;
       ui.clear(el.verdict);
       el.verdict.setAttribute('data-kind', 'turn');
       el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, '→'));
       el.verdict.appendChild(h('strong.pl-verdict-word', 'Your turn'));
-      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'Pick the answer the demo found.' : 'Answer it yourself, the way the demo did.'));
+      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'Answer it the way the demo did: pick the answer it found.' : 'Answer it yourself, the way the demo did.'));
+      var row = h('span.pl-turn-actions');
+      if (typeof again === 'function' && P.view && P.view.demo) {
+        var w = ui.button('Watch again', { kind: 'secondary', small: true, onClick: function () { if (P.state === 'respond' && !P.last) again(); } });
+        w.setAttribute('data-turn-again', '');
+        row.appendChild(w);
+      }
       if (o.skip) {
         var b = ui.button(o.skip, { kind: 'ghost', small: true, onClick: function () { skipItem(false); } });
         b.setAttribute('data-turn-skip', '');
-        el.verdict.appendChild(b);
+        row.appendChild(b);
       }
+      if (row.firstChild) el.verdict.appendChild(row);
+      setMeta('Your turn');
       el.actions.hidden = true;
       el.feedback.hidden = false;
       marksIntoView();
@@ -1556,6 +1570,8 @@
     host.insertBefore(head, P.el.root);
     host.classList.add('is-wtg'); // css/play.css sizes Watch, Try, Go to fit one screen
     P.setLabel(def);
+    P.setMeta('Watch, Try, Go'); // its own step count follows (a session's count waits meanwhile)
+    P.setProgress(0, practice.length + 1);
     function stage(n, t) {
       marks.forEach(function (m, i) { m.classList.toggle('is-current', i === n); m.classList.toggle('is-done', i < n); if (i === n) m.setAttribute('aria-current', 'step'); else m.removeAttribute('aria-current'); });
       text.textContent = t;
@@ -1821,7 +1837,8 @@
 
     function progress() {
       var pl = S.plan, total, done, txt;
-      if (!P) return;
+      if (!P || S.wtg) return; // Watch, Try, Go shows its own step count
+
       if (mode === 'daily' && pl.daily) {
         total = pl.daily.items.length; done = pl.daily.n;
         txt = 'Daily #' + pl.daily.number + (pl.daily.scored ? '' : ' · practice') + ' · item ' + Math.min(total, S.itemNo) + ' of ' + total;
@@ -1938,7 +1955,11 @@
       S.skipRun = 0;
       hud(step, def, item);
       var pre = Promise.resolve(null);
-      if (!wtgSeen(def.id) && mode !== 'speed' && mode !== 'threshold') { pre = offerWtg(def); S.introDemo = undefined; } // the intro's choice never reaches a later stage
+      if (!wtgSeen(def.id) && mode !== 'speed' && mode !== 'threshold') { // the intro's choice never reaches a later stage
+        S.wtg = true;
+        pre = offerWtg(def).then(function (r) { S.wtg = false; return r; }, function (e) { S.wtg = false; throw e; });
+        S.introDemo = undefined;
+      }
       else if (step.watch && S.introDemo !== undefined) { pre = S.introDemo ? stageDemo(step, def) : Promise.resolve(null); S.introDemo = undefined; } // asked on the intro card
       else if (step.watch) pre = stageWatch(step, def);
       pre.then(function (r) {

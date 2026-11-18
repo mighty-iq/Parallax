@@ -464,3 +464,14 @@
 }
 .pl-pause-extra:empty { display: none; }
 .pl-pause-extra { display: flex; justify-content: center; margin-top: var(--s3); }
+/* "Your turn" after a Watch demo (v1.2, fresh-player retests): louder, with Watch again beside Skip */
+.pl-turn-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-left: auto; }
+.pl-verdict[data-kind="turn"] .pl-verdict-word { font-size: var(--fs-xl); }
+.pl-verdict[data-kind="turn"] .pl-verdict-text { color: var(--ink); font-size: var(--fs-md); }
+.pl-feedback:has(> .pl-feedback-main > .pl-verdict[data-kind="turn"]) { border-color: var(--signal-strong); box-shadow: inset 0.25rem 0 0 var(--signal-strong), 0 -10px 24px -18px rgba(26, 29, 33, 0.35); }
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-verdict[data-kind="turn"] { grid-template-areas: "icon word word" "text text text" "acts acts acts"; }
+  .pl-verdict[data-kind="turn"] .pl-turn-actions { grid-area: acts; margin: var(--s1) 0 0; }
+  .pl-verdict[data-kind="turn"] .pl-verdict-word { font-size: var(--fs-lg); }
+  .pl-verdict[data-kind="turn"] .pl-verdict-text { font-size: var(--fs-sm); }
+}
