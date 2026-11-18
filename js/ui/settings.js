@@ -164,13 +164,15 @@
     }));
     var copy = ui.button('Copy playtest report', { kind: 'primary', onClick: function () { T.copyReport(); } });
     copy.setAttribute('data-action', 'playtest-copy');
+    var show = ui.button('Show the report', { kind: 'secondary', onClick: function () { T.showReport(); } });
+    show.setAttribute('data-action', 'playtest-show');
     var clear = ui.button('Clear the playtest log', { kind: 'secondary', onClick: function () {
       ui.confirm('This removes the ratings, notes, errors and timings of playtest mode. Your progress stays.', { title: 'Clear the playtest log?', ok: 'Clear the log', cancel: 'Keep it' })
         .then(function (yes) { if (yes) { T.clear(); showCount(); ui.toast('The playtest log is empty.', { kind: 'ok' }); } });
     } });
     clear.setAttribute('data-action', 'playtest-clear');
     showCount();
-    p.body.appendChild(h('div.px-setting', h('div.px-data-row', copy, clear), count));
+    p.body.appendChild(h('div.px-setting', h('div.px-data-row', copy, show, clear), count));
     return p.el;
   }
 

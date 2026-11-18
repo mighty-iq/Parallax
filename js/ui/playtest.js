@@ -6,7 +6,9 @@
 
    BUILD is the one switch for a release: 'test' builds have playtest mode on by default; set it
    to 'release' and playtest mode waits behind its Settings switch, off by default. The setting
-   `playtest` is 'auto' (follow BUILD), 'on' or 'off'.
+   `playtest` is 'auto' (follow BUILD), 'on' or 'off'. Under browser automation (navigator.webdriver)
+   'auto' means off, so the app's own browser tests see the release behaviour unless they switch
+   the mode on.
 
    What it listens to (PX.bus, emitted by js/ui/play.js): play:screen { screen, mode, exId },
    play:trial { mode, exId, practice, outcome, rtMs, timeout, voidReason, display, input, frames,
@@ -30,6 +32,7 @@
      report() → string     the playtest report
      copyReport() → Promise<bool>   copies it (async clipboard, then execCommand); when both are
                            blocked it opens the text, selected, with a Copy button
+     showReport(blocked?)  the report in a dialog with Copy
      clear()               empties the log
      counts() → { ratings, notes, errors, sessions, visits }
      where() → string      the current screen as the log names it */
@@ -115,10 +118,13 @@
   }
 
   var ready = false;
+  // Browser automation (navigator.webdriver) gets the release behaviour unless a test switches the
+  // mode on: a floating button must not catch the clicks of the app's own browser tests.
+  function automated() { try { return !!(win.navigator && win.navigator.webdriver); } catch (e) { return false; } }
   function on() {
     if (!registered || !ready) return false;
     var s = store.state.settings.playtest;
-    return s === 'on' || (s !== 'off' && BUILD === 'test');
+    return s === 'on' || (s !== 'off' && BUILD === 'test' && !automated());
   }
   function log() {
     var R = store.state;
@@ -492,16 +498,23 @@
     return { ratings: L.ratings.length, notes: L.notes.length, errors: L.errors.length, sessions: L.sessions.length, visits: L.visits.length };
   }
 
+  // The report in a dialog with Copy (Settings' "Show the report", and the fallback when copying
+  // is blocked: then the text opens selected).
+  function showReport(blocked) {
+    var text = report(), K = PX.ui.kit, field = K.copyField(text, { rows: 12, ariaLabel: 'Playtest report', label: 'Copy' });
+    var close = ui.modal({ title: 'Playtest report', className: 'pt-report', body: [
+      h('p', blocked ? 'Copying is blocked here. The report is selected below: press Ctrl+C (Cmd+C on a Mac), or long-press it and choose Copy.'
+        : 'Everything in the playtest log, with this device’s facts. Copy it and send it with your feedback.'), field],
+      actions: [{ label: 'Done', kind: 'secondary' }] });
+    if (close.el) close.el.setAttribute('data-playtest-report', blocked ? 'blocked' : '');
+    if (blocked) { try { field.textarea.focus(); field.textarea.select(); } catch (e) { /* ignore */ } }
+    return close;
+  }
   function copyReport() {
     var text = report();
     return ui.copyText(text).then(function (ok) {
       if (ok) { ui.toast('Playtest report copied (' + text.split('\n').length + ' lines).', { kind: 'ok' }); return true; }
-      var K = PX.ui.kit, field = K.copyField(text, { rows: 10, ariaLabel: 'Playtest report', label: 'Copy' });
-      var close = ui.modal({ title: 'Playtest report', className: 'pt-report', body: [
-        h('p', 'Copying is blocked here. The report is selected below: press Ctrl+C (Cmd+C on a Mac), or long-press it and choose Copy.'), field],
-        actions: [{ label: 'Done', kind: 'secondary' }] });
-      if (close.el) close.el.setAttribute('data-playtest-report', '');
-      try { field.textarea.focus(); field.textarea.select(); } catch (e) { /* ignore */ }
+      showReport(true);
       return false;
     });
   }
@@ -541,6 +554,6 @@
 
   PX.ui.playtest = {
     BUILD: BUILD, on: on, set: set, rate: rate, rateRow: rateRow, addNote: addNote, noteButton: noteButton, openNote: openNote,
-    report: report, copyReport: copyReport, clear: clear, counts: counts, where: where, fix: fix,
+    report: report, copyReport: copyReport, showReport: showReport, clear: clear, counts: counts, where: where, fix: fix,
   };
 })(window.PX);

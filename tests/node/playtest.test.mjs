@@ -43,6 +43,13 @@ function testFlag(t) {
   t.ok(T.on() && s.playtest === 'on', 'set(true) switches it on');
   T.set(false);
   t.ok(!T.on() && s.playtest === 'off', 'set(false) switches it off');
+  // browser automation sees the release behaviour unless the test switches the mode on
+  const e2 = env(t);
+  e2.window.navigator = { webdriver: true };
+  e2.PX.bus.emit('app:ready', {});
+  t.eq(e2.PX.ui.playtest.on(), false, 'auto is off under browser automation');
+  e2.PX.ui.playtest.set(true);
+  t.eq(e2.PX.ui.playtest.on(), true, 'and on when a test switches it on');
 }
 
 function testLog(t, storage) {
