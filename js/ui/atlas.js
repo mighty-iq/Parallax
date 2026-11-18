@@ -84,7 +84,7 @@
     var st = E().est.get(r, def, { display: 'large' }, now), aim = st && st.n > 0 ? E().est.bRef(def, st.mu) : null;
     var ease = G().cellEase(def), wr = st && st.n > 0 ? G().withinReach(r, now, def.id) : null;
     var seen = uiRec().seen || (uiRec().seen = {}), seenAt = isNum(seen[def.id]) ? seen[def.id] : 0;
-    var fresh = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return f.ex === def.id && !f.old && f.at > seenAt; }).map(function (f) { return f.cell; });
+    var fresh = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return G().firstOk(f) && f.ex === def.id && !f.old && f.at > seenAt; }).map(function (f) { return f.cell; });
     var cols = at.cols, rows = at.rows;
     var grid = h('div.gm-atlas-grid', { role: 'grid', 'aria-label': nameOf(def) + ': ' + ad.dims[0].label + (ad.dims[1] ? ' by ' + ad.dims[1].label : ''), style: '--cols:' + cols });
     var animated = 0;
@@ -115,7 +115,7 @@
       aim !== null ? h('li', h('span.gm-cell.gm-key.is-band', { 'data-state': 'unseen' }, h('span.gm-cell-mark')), 'at your level now') : null,
       wr ? h('li', h('span.gm-cell.gm-key.is-reach', { 'data-state': 'unseen' }, h('span.gm-cell-mark')), 'within reach') : null));
     if (wr) p.body.appendChild(h('p.gm-reachable', h('span.gm-k', 'Within reach '), GU().cellText(def, wr.i, wr.j) + '.'));
-    var firsts = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return f.ex === def.id && f.v === (def.version || 1); }).slice(-6).reverse();
+    var firsts = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return G().firstOk(f) && f.ex === def.id && f.v === (def.version || 1); }).slice(-6).reverse();
     if (firsts.length) {
       p.body.appendChild(h('h3.gm-h3', 'Latest firsts'));
       p.body.appendChild(h('ul.gm-firsts', firsts.map(function (f) {

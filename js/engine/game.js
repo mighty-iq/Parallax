@@ -345,6 +345,8 @@
 
   /* ---------- the container's repair and its two-tab merge ---------- */
 
+  function firstOk(f) { return isObj(f) && typeof f.ex === 'string' && isNum(f.v) && typeof f.cell === 'string' && /^\d{1,3}\.\d{1,3}$/.test(f.cell) && isNum(f.at); }
+
   var CELL_RE = /^\d{1,3}\.\d{1,3}$/, WEEK_RE = /^\d{4}-\d{2}-\d{2}$/, LETTER_RE = /^[A-Z]$/;
   function int(x, lo) { return isNum(x) && x >= (lo || 0) ? Math.round(x) : null; }
   function cleanCell(x) {
@@ -370,7 +372,9 @@
       if (!isObj(a) || !int(a.v, 1) || !isObj(a.c)) { delete v.atlas[id]; return; }
       Object.keys(a.c).forEach(function (k) { var c = CELL_RE.test(k) ? cleanCell(a.c[k]) : null; if (c) a.c[k] = c; else delete a.c[k]; });
     });
-    v.firsts = v.firsts.filter(function (f) { return isObj(f) && typeof f.ex === 'string' && int(f.v, 1) && typeof f.cell === 'string' && CELL_RE.test(f.cell) && isNum(f.at); });
+    // firsts: entries that are not objects go; an object of another shape is kept as it is (the open
+    // container's rule) and every reader skips it (firstOk)
+    v.firsts = v.firsts.filter(isObj);
     var c = v.climb;
     if (c.w !== undefined) {
       if (!isObj(c.w)) c.w = {};
@@ -409,11 +413,12 @@
     });
     var seen = {};
     out.firsts = a.firsts.concat(b.firsts).filter(function (f) {
+      if (!firstOk(f)) return true;
       var k = f.ex + '@' + f.v + ':' + f.cell;
       if (hasOwn.call(seen, k)) { if (f.at < seen[k].at) seen[k].at = f.at; return false; }
       seen[k] = f;
       return true;
-    }).sort(function (x, y) { return x.at - y.at; });
+    }).sort(function (x, y) { return (isNum(x.at) ? x.at : 0) - (isNum(y.at) ? y.at : 0); });
     var cw = out.climb.w = isObj(out.climb.w) ? out.climb.w : {}, ow = isObj(older.climb.w) ? older.climb.w : {};
     Object.keys(ow).forEach(function (wk) {
       var w = cw[wk] || (cw[wk] = {});
@@ -445,7 +450,7 @@
   E.game = {
     ATLAS: ATLAS, RANKS: RANKS, game: game, gradeOf: gradeOf, band: band, bestOf: bestOf, grades: grades, reach: reach, rank: rank,
     atlasDims: atlasDims, cellOf: cellOf, tail: tail, handledBy: handledBy, atlas: atlas, cellEase: cellEase,
-    withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair,
+    withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair, firstOk: firstOk,
     _: { tally: tally, seedAtlas: seedAtlas, slotOf: slotOf, chanceOf: chanceOf, atlasMode: atlasMode, trainDefs: trainDefs, reachDefs: reachDefs, defOf: defOf, near: near },
   };
 })(window.PX);

@@ -258,7 +258,8 @@ function testContainer(t) {
   bad.firsts.push({ ex: 'fold' }, 7);
   bad.climb.w['not-a-week'] = { A: {} };
   const fixed = rep(bad);
-  t.ok(!fixed.atlas.fold.c['0.0'] && !fixed.atlas.fold.c.x && fixed.firsts.every((f) => f && f.cell) && !fixed.climb.w['not-a-week'], 'broken parts are dropped, never thrown');
+  t.ok(!fixed.atlas.fold.c['0.0'] && !fixed.atlas.fold.c.x && fixed.firsts.every((f) => f && typeof f === 'object') && fixed.firsts.some((f) => f.ex === 'fold' && !f.cell) && !fixed.climb.w['not-a-week'], 'broken parts are dropped, never thrown; a first of another shape is kept and skipped by readers');
+  t.ok(!G.firstOk({ ex: 'fold' }) && G.firstOk({ ex: 'fold', v: 1, cell: '2.1', at: 5 }), 'firstOk tells them apart');
   // merge: Reach's mark the larger, the union of firsts, the run further up
   const a = JSON.parse(JSON.stringify(rec.game)), b = JSON.parse(JSON.stringify(rec.game));
   a.reach.high += 7;
