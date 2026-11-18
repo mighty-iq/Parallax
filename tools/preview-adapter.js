@@ -60,9 +60,9 @@
       lastBody = body;
       lastSig = sig;
       lastMarks = marks(counts);
-      if (newMark && !noticed && !stim() && w.PX.core && w.PX.core.ui && w.PX.core.ui.toast) {
+      if (newMark && !noticed && !stim() && w.PX.ui && typeof w.PX.ui.toast === 'function') {
         noticed = true;
-        w.PX.core.ui.toast('Playtest notes saved for the lead. Copy playtest report still works.', { kind: 'ok', ms: 3500 });
+        w.PX.ui.toast('Playtest notes saved for the lead. Copy playtest report still works.', { kind: 'ok', ms: 3500 });
       }
     }, function (err) {
       inFlight = false;
