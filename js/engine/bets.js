@@ -437,6 +437,67 @@
     return bridgeDue(rec, plan, def, now, ctx, use) || compareDue(rec, plan, def, now, ctx, use);
   }
 
+  /* ---------- comparison rounds: the pair, the menu and the apply item (note T1 §4.1) ----------
+     A principle (content.compare.principles[]) is { id, claim: <statement id>, text: the principle in one
+     sentence, applies(params)?, anyItem? (every item shows it: the apply item is the step's own),
+     decides(item)? (the apply item must show it), vary(params, rng)? (stage 2: the second item's settings) }.
+     A statement (content.compare.statements[]) is { id, text, test(item) → bool }. A round is valid when
+     the claim is true of both items and every other statement offered is false of at least one of them
+     (so the right one is never the odd one out, and no wrong one is true of both). */
+
+  function gen(def, seed, params) {
+    try { var it = def.generate(PX.rng(seed), params); return it && !it.fallback ? it : null; } catch (e) { return null; }
+  }
+  function stmtOf(cc, id) {
+    var list = cc && isArray(cc.statements) ? cc.statements : [];
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return list[i];
+    return null;
+  }
+  function truth(st, item) { try { return !!st.test(item); } catch (e) { return null; } }
+  // round(exId, principle, params, seed, stage) → { exId, principle, stage, a: { seed, params, item }, b,
+  // opts: [statement ids], correct (index), text } | null. Deterministic in its arguments.
+  function round(exId, pid, params, seed, stage) {
+    var def = defOf(exId), c = content(exId), cc = c && c.compare;
+    var p = cc && isArray(cc.principles) ? cc.principles.filter(function (x) { return x && x.id === pid; })[0] : null;
+    var claim = p ? stmtOf(cc, p.claim) : null;
+    if (!def || !p || !claim) return null;
+    var r = PX.rng(PX.rng.hash('bets-round', exId, pid, seed >>> 0, stage || 1)), first = null, tries = cfg().compare.tries;
+    for (var k = 0; k < tries; k++) {
+      var ps = first && stage === 2 && typeof p.vary === 'function' ? p.vary(params, r) : params;
+      var sd = r.u32() & 0x7fffffff, it = ps ? gen(def, sd, ps) : null;
+      if (!it || truth(claim, it) !== true) continue;
+      if (!first) { first = { seed: sd, params: ps, item: it }; continue; }
+      if (typeof p.pair === 'function' && !p.pair(first.item, it)) continue;
+      var b = { seed: sd, params: ps, item: it };
+      var pool = cc.statements.filter(function (st) {
+        if (!st || st.id === claim.id) return false;
+        var ta = truth(st, first.item), tb = truth(st, b.item);
+        return ta !== null && tb !== null && !(ta && tb);
+      });
+      if (pool.length < 3) continue;
+      var opts = r.shuffle([claim.id].concat(r.shuffle(pool).slice(0, 3).map(function (st) { return st.id; })));
+      return { exId: exId, principle: pid, stage: stage || 1, a: first, b: b, opts: opts, correct: opts.indexOf(claim.id), text: p.text };
+    }
+    return null;
+  }
+  // The apply item's seed at the step's settings: the step's own when its item shows the principle (or
+  // every item does), else the first of a few fresh training seeds (E.select.seed: the record's counter, so
+  // the logged row's seed stays one the counter knows) whose item shows it and is decided by it. null: none.
+  function applySeed(rec, exId, pid, params, seed) {
+    var def = defOf(exId), c = content(exId), cc = c && c.compare;
+    var p = cc && isArray(cc.principles) ? cc.principles.filter(function (x) { return x && x.id === pid; })[0] : null;
+    var claim = p ? stmtOf(cc, p.claim) : null;
+    if (!def || !p || !claim || (typeof p.applies === 'function' && !p.applies(params))) return null;
+    if (p.anyItem) return seed >>> 0;
+    function shows(it) { return !!it && truth(claim, it) === true && (typeof p.decides !== 'function' || p.decides(it)); }
+    if (shows(gen(def, seed >>> 0, params))) return seed >>> 0;
+    for (var k = 0, n = Math.min(cfg().compare.tries, 24); k < n; k++) {
+      var sd = E.select.seed(rec);
+      if (shows(gen(def, sd, params))) return sd;
+    }
+    return null;
+  }
+
   /* ---------- recording (callers add between items, then save the record) ---------- */
 
   // A comparison round ended. info: { exId, principle, stage, a, aSeed, b, bSeed, choice, correct, rt,
@@ -673,7 +734,7 @@
     VERSION: VERSION, IDS: IDS, INFO: INFO, GRADES: GRADES, STRANDS: STRANDS, LAYERS: LAYER_IDS, ROW_LAYER: ROW_LAYER,
     of: of, exercises: exercises, byExercise: byExercise, formats: formats,
     register: register, content: content, hosts: hosts, hostsOf: hostsOf,
-    joined: joined, period: period, arm: arm, active: active, due: due,
+    joined: joined, period: period, arm: arm, active: active, due: due, round: round, applySeed: applySeed,
     compared: compared, applied: applied, bridged: bridged, offscreen: offscreen, expect: expect, expectDue: expectDue, join: join,
     calibPush: calibPush, calibSummary: calibSummary, dose: dose,
     _: { drawUnits: drawUnits, drawOwn: drawOwn, unitOf: unitOf, seedOf: seedOf, armAt: armAt, advance: advance, check: check, merge: merge,
