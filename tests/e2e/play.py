@@ -523,7 +523,9 @@ def run_review(b, C):
     page.wait_for_function(READY, timeout=20000)
     page.wait_for_timeout(1200)
     st = page.evaluate('__play.state')
-    C.ok(page.evaluate('PX.ui.modalOpen()') >= 1 and st not in ('present', 'respond'), f'{tag} 3: under the pop-up no item runs ({st})')
+    # v1.2 (gap C2): a later launch shows the one-tap Chimera card (not a modal) instead of the full welcome
+    shown = page.evaluate('PX.ui.modalOpen() >= 1 || !!document.querySelector("[data-chimera-card]:not([hidden])")')
+    C.ok(shown and st not in ('present', 'respond'), f'{tag} 3: after a reload the Chimera welcome or card shows and no item runs ({st})')
     page.keyboard.press('Escape')
     page.wait_for_timeout(300)
     # the session the reload cut shows its kept summary; nothing starts by itself
@@ -678,11 +680,149 @@ def run_reload(b, C):
     ctx.close()
 
 
+# v1.2 wave 1 (docs/dev/CONTRACT-v1.2.md D, E, F, G, K): two stub exercises defined in the page:
+# 'qtest' (Quick deadline from def.pace, round scores) and 'mtest' (a view that moves on its own).
+STUBS_JS = """() => {
+  if (PX.ex.get('qtest')) return true;
+  const base = { abilities: ['Vz'], role: 'train', answer: 'choice', nOptions: 4, dims: [{ key: 'a', levels: [0, 1], step: 0.5 }], base: -1,
+    validate: () => true, score: (item, r) => ({ correct: r === item.key }) };
+  PX.ex.define(Object.assign({ id: 'qtest', code: 'EX-97', name: 'Quick stub', variants: ['quick', 'exact'], trainVariants: ['quick'],
+    pace: { variants: ['quick'], startMs: 4000, minMs: 1000, maxMs: 8000 },
+    roundScore: (item, result, info) => (result.correct ? 90 : info.timeout ? 5 : 10),
+    generate: (rng, params) => ({ ex: 'qtest', seed: rng.seed, params, key: rng.seed % 4 }) }, base));
+  PX.ex.define(Object.assign({ id: 'mtest', code: 'EX-96', name: 'Motion stub', generate: (rng, params) => ({ ex: 'mtest', seed: rng.seed, params, key: rng.seed % 4 }) }, base));
+  const view = (id, motion) => ({ layout: 'stem+options', motion,
+    present: (item, ctx) => { ctx.host.textContent = id + ' item'; if (motion && ctx.addMotion) ctx.addMotion(100000); return PX.core.timing.nextPaint(); },
+    drawOption: (el, item, i) => { el.textContent = 'ABCD'[i]; } });
+  PX.ex.view('qtest', view('qtest', false));
+  PX.ex.view('mtest', view('mtest', true));
+  ['qtest', 'mtest'].forEach((id) => { PX.core.store.state.tour.seen[id] = true; });
+  window.__ev = { trial: 0, screen: [], summary: 0, slot: false, session: 0 };
+  PX.bus.on('play:trial', () => { __ev.trial++; });
+  PX.bus.on('play:screen', (e) => { __ev.screen.push(e.screen); });
+  PX.bus.on('play:summary', (e) => { __ev.summary++; __ev.slot = !!(e.slot && e.slot.classList.contains('pl-playtest-slot')); });
+  PX.bus.on('play:session', () => { __ev.session++; });
+  return true;
+}"""
+
+
+def run_v12(b, C):
+    tag = 'v1.2'
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate(STUBS_JS)
+    # E: the Quick deadline and round scores (Free play on the Quick variant: the current deadline, never moved)
+    go(page, {'mode': 'free', 'exId': 'qtest', 'params': {'a': 0, 'variant': 'quick'}, 'trials': 3})
+    wait_state(page, 'respond')
+    C.ok(page.evaluate('!document.querySelector(".pl-limit").hidden'), f'{tag} E: a Quick item shows its countdown')
+    page.evaluate('__play.answer(true)')
+    wait_state(page, 'reveal')
+    C.ok(page.locator('.pl-verdict-round[data-round="90"]').count() == 1, f'{tag} E: the verdict shows the round score')
+    page.evaluate('PX.ui.play.config.limitScale = 0.05')  # the next deadline passes in about 0.2 s
+    page.evaluate('PX.ui.play.current().goNext()')
+    page.wait_for_function('__play.state === "reveal" && __play.last && __play.last.timeout === true', timeout=8000)
+    C.ok(page.locator('.pl-verdict-round[data-round="5"]').count() == 1, f'{tag} E: a time-out still gets its round score')
+    page.evaluate('PX.ui.play.config.limitScale = 1')
+    # K (O4): Pause while feedback shows: Resume puts it back; End ends the session
+    page.keyboard.press('Escape')
+    wait_state(page, 'paused')
+    C.ok(page.locator('[data-skip]').is_hidden() and page.locator('[data-end]').is_visible(), f'{tag} K: the pause between items offers End, not Skip')
+    page.locator('[data-resume]').click()
+    wait_state(page, 'reveal')
+    page.locator('[data-pause]').click()
+    wait_state(page, 'paused')
+    page.locator('[data-end]').click()
+    page.wait_for_function('!!document.querySelector(".pl-summary")', timeout=8000)
+    C.ok(page.locator('.pl-res-stats', has_text='round score 95 over 2 rounds').count() == 1, f'{tag} E: the summary sums the round scores ({page.locator(".pl-res-stats").first.inner_text()[:90]})')
+    C.ok(page.evaluate('__ev.summary === 1 && __ev.slot && __ev.trial >= 2 && __ev.session === 1'), f'{tag} G: playtest events (trial, summary with its slot, session) {page.evaluate("JSON.stringify(__ev)")[:160]}')
+    C.ok(page.evaluate('(() => { const s = PX.core.store.state.sessions; const x = s[s.length - 1]; return !!(x && x.rounds && x.rounds.qtest && x.rounds.qtest[0] === 2 && x.ended === "early"); })()'), f'{tag} E: the session keeps its round scores and ended early')
+    # F: motion comfort: the one-time notice, then a check-in after 3 minutes of motion
+    page.evaluate('delete PX.core.store.state.ui.seen.walkNotice; PX.core.store.state.ui.motionMs = 3600000')
+    go(page, {'mode': 'free', 'exId': 'mtest', 'params': {'a': 0}, 'trials': 4})
+    page.wait_for_selector('[data-card-box="motion-notice"]', timeout=8000)
+    C.ok(state(page) not in ('present', 'respond'), f'{tag} F: the motion notice comes before the item')
+    page.locator('[data-card-box="motion-notice"] [data-card="start"]').click()
+    wait_state(page, 'respond')
+    page.evaluate('__play.answer(true)')
+    wait_state(page, 'reveal')
+    page.evaluate('PX.ui.play.current().goNext()')
+    wait_state(page, 'respond')
+    page.evaluate('__play.answer(true)')
+    wait_state(page, 'reveal')
+    page.evaluate('PX.ui.play.current().goNext()')
+    page.wait_for_selector('[data-card-box="motion-checkin"]', timeout=8000)
+    C.ok(state(page) not in ('present', 'respond'), f'{tag} F: the check-in card comes between items after 3 minutes of motion')
+    page.locator('[data-card-box="motion-checkin"] [data-card="gentle"]').click()
+    wait_state(page, 'respond')
+    C.ok(page.evaluate('PX.core.store.state.settings.gentleMotion === "on" && PX.ui.play.current().ctx.gentleMotion === true'), f'{tag} F: "Gentle motion" turns the profile on')
+    page.evaluate('PX.ui.play.current().skip(true)')
+    page.wait_for_function('!!document.querySelector(".pl-summary")', timeout=8000)
+    C.ok(page.evaluate('(() => { const s = PX.core.store.state.sessions; return s[s.length - 1].gentle === true; })()'), f'{tag} F: the session notes the gentle profile')
+    # D: the teaching template on an exercise with learn.rules (Angles): rules card, Watch, strategy card, Try 1
+    page.evaluate('PX.core.store.state.settings.gentleMotion = "auto"')
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "angles" }, { force: true })')
+    page.wait_for_selector('[data-card-box="wtg-rules"]', timeout=8000)
+    n_rules = page.locator('[data-card-box="wtg-rules"] .pl-rule').count()
+    C.ok(n_rules >= 2 and page.locator('[data-wtg]').count() == 1, f'{tag} D: the rules card opens Watch, Try, Go ({n_rules} rules)')
+    page.screenshot(path=str(OUT / 'v12_rules_1366.png'))
+    page.locator('[data-card-box="wtg-rules"] [data-card="watch"]').click()
+    page.wait_for_function('document.querySelector("[data-turn-skip]") || __play.state === "respond"', timeout=20000)
+    page.wait_for_selector('[data-turn-skip], [data-next]:not([hidden])', timeout=20000)
+    page.evaluate('__play.answer(true)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    page.evaluate('PX.ui.play.current().goNext()')
+    page.wait_for_selector('[data-card-box="wtg-strategy"]', timeout=8000)
+    C.ok(page.locator('[data-card-box="wtg-strategy"] ol li').count() >= 2, f'{tag} D: the strategy card comes before Try 1')
+    page.locator('[data-card-box="wtg-strategy"] [data-card="try"]').click()
+    wait_state(page, 'respond')
+    C.ok(page.locator('[data-howto]').is_visible(), f'{tag} D: "How to solve" is in the HUD during Try')
+    page.locator('[data-howto]').click()
+    page.wait_for_timeout(200)
+    C.ok(page.evaluate('PX.ui.modalOpen()') >= 1 and state(page) == 'paused', f'{tag} D: "How to solve" opens the card and pauses the item')
+    page.keyboard.press('Escape')
+    wait_state(page, 'respond')
+    C.ok('wtg-rules' in page.evaluate('__ev.screen') and 'wtg-try' in page.evaluate('__ev.screen'), f'{tag} G: screen events for the tutorial {page.evaluate("__ev.screen")[-6:]}')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+    # D on a phone (360 × 640): the rules card and the strategy card are on screen, with 44 px buttons
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "angles" }, { force: true })')
+    page.wait_for_selector('[data-card-box="wtg-rules"]', timeout=8000)
+    page.wait_for_timeout(200)
+    box = page.locator('[data-card-box="wtg-rules"] [data-card="watch"]').bounding_box()
+    C.ok(box is not None and box['y'] + box['height'] <= 640 and box['height'] >= 43.5, f'{tag} D phone: the rules card and its button fit 360 × 640 ({box})')
+    C.ok(page.evaluate('document.documentElement.scrollWidth <= 360'), f'{tag} D phone: no horizontal scroll')
+    page.screenshot(path=str(OUT / 'v12_rules_360.png'))
+    page.locator('[data-card-box="wtg-rules"] [data-card="watch"]').tap()
+    page.wait_for_function('__play.state === "respond"', timeout=20000)
+    page.evaluate('__play.answer(true)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    page.evaluate('PX.ui.play.current().goNext()')
+    page.wait_for_selector('[data-card-box="wtg-strategy"]', timeout=8000)
+    page.wait_for_timeout(200)
+    box = page.locator('[data-card-box="wtg-strategy"] [data-card="try"]').bounding_box()
+    C.ok(box is not None and box['y'] + box['height'] <= 640, f'{tag} D phone: the strategy card fits ({box})')
+    page.screenshot(path=str(OUT / 'v12_strategy_360.png'))
+    C.ok(not con.errors(), f'{tag} phone: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
+    only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        for fn in (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload):
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12)
+        for fn in fns:
+            if only and fn.__name__.replace('run_', '') not in only:
+                continue
             try:
                 fn(b, C)
             except Exception as e:  # a crash in one part is a failure, the rest still runs
