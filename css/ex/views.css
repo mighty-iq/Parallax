@@ -110,3 +110,32 @@
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-views .ex-views-dlabel { font-size: 13px; }
 }
+
+/* v1.2: Try 1's outline frame (the asked view's outline, its cell grid), show me's outline and
+   crossed-out options (greyed with a diagonal stroke: a shape as well as a tone), rule figures. */
+.ex-views .ex-views-assist {
+  position: absolute; top: 1.75rem; left: 0.35rem; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  padding: 0.2rem 0.35rem; background: var(--stim-ground, #F7F8F7); border: 1px dashed var(--signal, #0B6A86); border-radius: var(--r-control, 4px);
+  pointer-events: none;
+}
+.ex-views .ex-views-assist-label {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: var(--fs-xs, 0.75rem); letter-spacing: 0.04em;
+  color: var(--signal, #0B6A86); white-space: nowrap;
+}
+.ex-views .ex-views-assist-svg { display: block; height: auto; font-size: 18px; overflow: visible; }
+.ex-views .ex-views-assist-grid { fill: none; stroke: var(--ink-3, #5D646C); stroke-width: 1px; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.ex-views .ex-views-assist-line { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 6 3; stroke-linecap: square; vector-effect: non-scaling-stroke; }
+.ex-views .ex-views-trace--outline { stroke-width: 4px; stroke-dasharray: 9 5; }
+.ex-views .px-choice.ex-views-out { opacity: 0.38; background-image: linear-gradient(to top right, transparent calc(50% - 1.5px), var(--ink-3, #5D646C) calc(50% - 1.5px), var(--ink-3, #5D646C) calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+.ex-views.ex-views-rulefig { width: 100%; height: 100%; }
+.ex-views .ex-views-rule-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ex-views .ex-views-rf { stroke: var(--stim-edge, #22262A); stroke-width: 1.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.ex-views .ex-views-rf--top { fill: var(--stim-face, #ECEEF0); }
+.ex-views .ex-views-rf--front { fill: var(--stim-face-2, #C9CED3); }
+.ex-views .ex-views-rf--right { fill: var(--stim-face-3, #A4ABB2); }
+.ex-views .ex-views-rf--base { fill: var(--stim-ground, #F7F8F7); stroke-width: 1px; }
+.ex-views .ex-views-rf-thick { fill: none; stroke: var(--stim-edge, #22262A); stroke-width: 4px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.ex-views .ex-views-rf-arrow { fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 2.5px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.ex-views .ex-views-rf-line { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 2px; stroke-linecap: square; vector-effect: non-scaling-stroke; }
+.ex-views .ex-views-rf-step { fill: none; stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.ex-views .ex-views-rf-text { font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 0.42px; fill: var(--ink-2, #454B52); text-anchor: middle; }
