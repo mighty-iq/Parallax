@@ -15,28 +15,37 @@
       { id: 'options', label: 'Answers', text: 'Five answers: 1 to 5 cubes. Exactly one is right.' },
       { id: 'answer', label: 'Answer', text: 'Pick a count with keys 1–5, or tap it.' },
     ],
+    // The teaching template (v1.2, docs/research/v1.2/D2-first-band.md §3.0 C, §3.3): the rules
+    // card first, the Watch at the starter band (a flat figure), the "Count by position" card before
+    // Try 1, Try 1 with every cube's number shown but two, then the band unaided, the pre-1.2 floor
+    // with a hidden cube, and three-high columns. Format rules before practice: d ≈ 0.9–1.2 on the
+    // format (Schneider et al. 2020, Levacher et al. 2022, via R4 §4.2); faded worked examples
+    // (D2 §2.2). Figures: view.drawRule.
     rules: [
-      'Every face that touches another cube or the ground is unpainted.',
-      'A cube you cannot see is there only to hold up cubes above it. Every column\'s top cube is in view.',
-      'A cube that sits under another one has no painted top.',
+      { text: 'Every face that touches another cube or the ground is unpainted.', fig: 'touch' },
+      { text: 'A cube under another cube has no painted top.', fig: 'under' },
+      { text: 'A cube you cannot see is there only to hold up the cubes above it, and it counts.', fig: 'hidden' },
     ],
-    // The easiest level, with a cube out of sight among the ones the tally counts: every tip is
-    // about hidden cubes, so the Watch shows one (fresh-player test, RV-play-dat).
+    strategyFirst: 'analytic',
+    // The Watch at the starter band: four flat cubes in an L, asked about 3 painted sides (the
+    // corner and the middle of the row: 2 cubes). Seeds are fixed so the answers vary their slot
+    // (Watch 2, Try 3, 1, 4, 2) and Try 3 hides a counted cube.
     demo: [
-      { params: { cubes: 0, height: 0, asked: 0 }, seed: 6, kind: 'hidden' },
+      { params: { cubes: 0, height: 0, asked: 0 }, seed: 1, kind: 'flat' },
     ],
     practice: [
-      { cubes: 0, height: 0, asked: 0 },
-      { cubes: 0, height: 1, asked: 0 },
-      { cubes: 0, height: 0, asked: 1 },
-      { cubes: 1, height: 1, asked: 0 },
-      { cubes: 1, height: 1, asked: 1 },
+      { params: { cubes: 0, height: 0, asked: 0 }, seed: 13, assist: { numbers: 2 } },
+      { params: { cubes: 0, height: 0, asked: 0 }, seed: 2 },
+      { params: { cubes: 1, height: 1, asked: 0 }, seed: 113, tip: 'hidden' },
+      { params: { cubes: 1, height: 2, asked: 0 }, seed: 24, tip: 'tall' },
     ],
     tips: [
-      { id: 'hidden', when: { dim: 'height', levels: [1, 2] }, text: 'Taller columns hide the cubes under them. Each hidden cube still counts: work out its painted sides from its neighbours.' },
+      { id: 'flat', when: { dim: 'height', levels: [0] }, text: 'A flat figure: every cube is in view, and each one has 5 painted sides minus the cubes it touches.' },
+      { id: 'hidden', when: { dim: 'height', levels: [1, 2, 3] }, text: 'Cubes stand on cubes now. A cube you cannot see holds up the ones above it: it counts too, and its sides follow from its neighbours.' },
+      { id: 'tall', when: { dim: 'height', levels: [2, 3] }, text: 'Three high: a cube in the middle of a column has no painted top, only the sides no cube touches.' },
       { id: 'few', when: { dim: 'asked', levels: [1] }, text: 'Cubes with one or two painted sides sit inside the figure or under other cubes. Check the hidden ones too.' },
-      { id: 'bottom', when: { dim: 'cubes', levels: [1] }, text: 'The bottom is never painted: a cube on the ground has at most five painted sides, and only if nothing touches it.' },
-      { id: 'big', when: { dim: 'cubes', levels: [2, 3] }, text: 'Many cubes now: go column by column and keep a tally, so no cube is counted twice or missed.' },
+      { id: 'bottom', when: { dim: 'cubes', levels: [2] }, text: 'The bottom is never painted: a cube on the ground has at most five painted sides, and only if nothing touches it.' },
+      { id: 'big', when: { dim: 'cubes', levels: [3, 4] }, text: 'Many cubes now: go column by column and keep a tally, so no cube is counted twice or missed.' },
     ],
     // Prep courses teach a tally table (rows cubes, columns 0–5 painted sides) filled column by column
     // and re-checked from another direction, plus learning common positions; the classic errors are
@@ -55,14 +64,16 @@
         when: 'Quick on small figures with few hidden cubes.',
       },
       {
-        id: 'analytic', title: 'Tally column by column',
-        text: 'Go through the figure one column at a time, from the top cube down, and count every cube\'s painted sides, hidden ones included.',
+        // The card before Try 1 (strategyFirst): the tally in the format's own terms, a number per
+        // cube (D2 §3.3); show-me carries out the same steps on the item.
+        id: 'analytic', title: 'Count by position',
+        text: 'Give every cube its number of painted sides, one cube at a time, hidden ones included; then count the cubes with the number asked.',
         steps: [
-          'For each cube: top painted only if nothing sits on it; each side painted only if no cube touches it.',
-          'Make a mark in the column of its count (0 to 5) as you go.',
-          'Read off the count you need, then check it once more from another side of the figure.',
+          'A cube\'s painted sides: its top if nothing sits on it, plus every side no cube touches. Never the bottom.',
+          'Say each cube\'s number as you go, column by column. On a flat figure: 5 minus the cubes it touches.',
+          'Count the cubes with the number asked, hidden cubes included.',
         ],
-        when: 'Safe on large figures and when the question asks for 1 or 2 painted sides.',
+        when: 'Safe on every figure, and the way to start.',
       },
       {
         id: 'switch', title: 'When to switch',
@@ -80,11 +91,15 @@
       hidden: '{what} out of sight, {where}. Hidden cubes count too.',
       question: 'The question names a number of painted sides to look for.',
       options: 'Answers are 1 to 5 cubes. One is right.',
-      tally: 'Cube {n}: {sides}.',
-      tallyHidden: 'Cube {n} is hidden under the cube above it: {sides}.',
+      explode: 'Pulled apart: faces that touched another cube are bare (hatched), the rest are painted.',
+      numbers: 'Each cube\'s number: its top if nothing sits on it, plus every side no cube touches.',
+      numbersFlat: 'Flat figure: each cube has 5 painted sides minus the cubes it touches.',
+      tally: 'Cube {n} of {k}: {sides}.',
+      tallyHidden: 'Cube {n} of {k} is hidden under the cube above it: {sides}.',
       skip: 'The other cubes have a different number of painted sides.',
       done: '{k} {cubes} exactly {sides}: answer {k}.',
       chosen: 'Answer {n} is {d} the true count: check the hidden cubes and the faces at the back.',
+      assist: 'Every cube but two has its number. Work out the two blank ones, then count.',
     },
     checkin: { whole: 'I recognised the positions at a glance', parts: 'I went through the cubes one by one', unsure: 'Not sure, or both' },
     bridge: 'Cube counting is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). Practice on a format usually raises scores on that format; an effect of Parallax on DAT scores has not been shown or measured, and those scores relate only modestly to dental-school grades. ' + ADA,

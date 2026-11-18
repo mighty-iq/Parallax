@@ -208,7 +208,7 @@
     list.forEach(function (c, k) {
       out.push({
         ms: c.hidden ? 2200 : 1600,
-        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: k + 1, sides: plural(c.q.painted, 'painted side', 'painted sides') + ' (' + sidesText(c.q) + ')' }),
+        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: k + 1, k: list.length, sides: plural(c.q.painted, 'painted side', 'painted sides') + ' (' + sidesText(c.q) + ')' }),
         enter: function () { markAll(item, k + 1); focusOption(-1); },
       });
     });
