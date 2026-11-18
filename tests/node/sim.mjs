@@ -138,10 +138,12 @@ function simLearner(PX, run, i, S) {
       now = res.now + 60e3;
       return res;
     };
-    const due = E.assess.due(rec, now);
-    if (due.due && (/^B/.test(due.kind) || rng.chance(0.85))) {
+    // Design A (PLAN milestone 6): what nextMeasure offers at the session start (the baselines, a block, the
+    // 4-weekly check); a full check is sometimes put off, a block always taken
+    const nm = E.assess.nextMeasure(rec, now);
+    if (nm.due && (/^B/.test(nm.kind) || nm.kind === 'block' || rng.chance(0.85))) {
       L.setProbeDay(d);
-      const res = play('check', {}, false);
+      const res = play('check', { kind: nm.kind }, false);
       checkStats(PX, L, rec, res, S);
     }
     if (rng.chance(0.3)) play('daily', {}, false);
@@ -236,7 +238,7 @@ function finishLearner(PX, run, rec, L, S, passLog, favs, display) {
     });
   }
   const rep = E.assess.report(rec, end);
-  const o = rep.composite ? rep.composite.outcome : rep.status;
+  const o = rep.verdict ? rep.verdict.words : rep.status; // the latest milestone's words (Design A)
   S.check.outcomes[o] = (S.check.outcomes[o] || 0) + 1;
   if (S.guardKept === null && S.guard) {
     const g = S.guard(JSON.parse(JSON.stringify(rec)));
@@ -317,8 +319,8 @@ function report(run, S, secs) {
   }
   if (S.check.n) {
     out.push(`  Spatial Checks: ${S.check.n}; probe 95 % intervals hold the true probe ability ${pct(S.check.cover.in / Math.max(1, S.check.cover.n))} % of ${S.check.cover.n}`);
-    out.push('  composite outcome at the end: ' + Object.entries(S.check.outcomes).map(([k, v]) => `${k} ${pct(v / S.learners)} %`).join(', '));
-    if (!run.transfer && !run.misspec) check((S.check.outcomes['beyond familiarity'] || 0) / S.learners <= 0.05, `${run.id}: "beyond familiarity" in at most 5 % of learners without transfer`);
+    out.push('  latest verdict at the end: ' + Object.entries(S.check.outcomes).map(([k, v]) => `${k} ${pct(v / S.learners)} %`).join(', '));
+    if (!run.transfer && !run.misspec) check((S.check.outcomes['likely gain'] || 0) / S.learners <= 0.05, `${run.id}: "likely gain" in at most 5 % of learners without transfer`);
   }
   if (S.guardKept) out.push(`  store guard round trip: engine fields kept ${S.guardKept.engineFields}; trial columns kept ${S.guardKept.trialColumns} of 12; probe rtMed kept ${S.guardKept.assessRtMed}; id@version names kept ${S.guardKept.idxNames}`);
   return { text: out.join('\n'), hard };
