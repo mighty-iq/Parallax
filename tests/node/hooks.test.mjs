@@ -2,7 +2,9 @@
    async points (run: the first result ends the run; failures are skipped) and the sync points
    (collect: every result, lists spread), and failures reported as play:error. The placements in the
    player and the screens are checked in a browser (tests/e2e/play.py run_hooks). */
-import { MANIFEST } from './run.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { MANIFEST, ROOT } from './run.mjs';
 import { installDom } from './chimera-dom.mjs';
 
 const FILE = 'js/ui/hooks.js';
@@ -75,6 +77,27 @@ export async function run(t) {
     t.eq(order, ['a', 'b', 'c', 'd', 'e', 'f'], 'later handlers do not run');
     t.eq(await H.run('session:start', {}), null, 'a point without handlers resolves null');
     await t.rejects(H.run('today:slots', {}), /sync point/, 'run() refuses a sync point');
+  }
+
+  t.section('ui hooks: mute (a test knob) and window.PX_HOOKS_MUTE (a preview switch)');
+  {
+    const e = env(t), H = e.PX.ui.hooks;
+    H.on('item:notes', () => 'a', { id: 'test.a' });
+    H.on('item:notes', () => 'b', { id: 'plateau.b' });
+    H.mute((id) => id.startsWith('test.'));
+    t.eq(H.collect('item:notes', {}), ['a'], 'mute(fn) runs only the ids fn accepts');
+    H.mute(true);
+    t.eq([H.collect('item:notes', {}), await H.run('item:before', {})], [[], null], 'mute(true) runs none');
+    H.mute(false);
+    t.eq(H.collect('item:notes', {}), ['a', 'b'], 'mute(false) runs every handler again');
+    t.eq(H.list('item:notes').length, 2, 'muted handlers stay registered');
+    const m = t.context({ files: [...MANIFEST], exercises: false });
+    m.window.PX_HOOKS_MUTE = true;
+    m.run(fs.readFileSync(path.join(ROOT, FILE), 'utf8'));
+    m.PX.ui.hooks.on('item:notes', () => 'x', { id: 'bets.x' });
+    t.eq(m.PX.ui.hooks.collect('item:notes', {}), [], 'window.PX_HOOKS_MUTE set before the file loads mutes every handler');
+    m.PX.ui.hooks.mute(false);
+    t.eq(m.PX.ui.hooks.collect('item:notes', {}), ['x'], 'and mute(false) switches them back on');
   }
 
   t.section('ui hooks: place and screen (the screens\' call sites)');
