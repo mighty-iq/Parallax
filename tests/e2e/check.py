@@ -47,6 +47,25 @@ def play_measurement(page, done='measure-done'):
                  cards={'expect': 'skip', 'overlap': 'skip'}, limit=900, right=0.65)
 
 
+def to_item(page, ms=30000):
+    """Goes on to the session's next item: skips a Watch, Try, Go offer, takes any other card's primary button."""
+    for _ in range(ms // 150):
+        if page.evaluate('__play.state') == 'respond' and not card(page):
+            return True
+        cid = card(page)
+        if cid == 'wtg-offer':
+            click_card(page, 'skip')
+        elif cid:
+            prim = page.locator('[data-card-box] .px-btn--primary')
+            if prim.count():
+                prim.first.click()
+        nb = page.locator('.ex-track-notice:not([hidden]) .px-btn')
+        if nb.count() and nb.first.is_visible():
+            nb.first.click()
+        page.wait_for_timeout(150)
+    return False
+
+
 def no_hscroll(page):
     return page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
 
@@ -57,6 +76,7 @@ def desktop(b, C):
     page = ctx.new_page()
     con = Console(page)
     boot(page)
+    page.evaluate('PX.ui.hooks.mute(false)')  # play.boot mutes every builder's hooks; this suite tests them
     page.evaluate('void PX.core.router.go("home")')
     page.wait_for_selector('.px-today', timeout=8000)
     slot = page.locator('.px-today > [data-measure]')
@@ -93,7 +113,7 @@ def desktop(b, C):
     C.ok(a['skind'] == 'baseline' and a['smode'] == 'check' and not a['late'], f'{tag}: its session is marked baseline; not late')
     C.ok(a['practice'] == practice0, f'{tag}: the measurement is not practice time')
     click_card(page, 'go')
-    wait_state(page, 'respond', 20000)
+    to_item(page)
     C.ok(page.evaluate('PX.core.store.state.assess.length') == 1, f'{tag}: back to the session\'s first item')
     page.evaluate('__play.end()')
     page.wait_for_function('!!document.querySelector(".pl-summary")', timeout=10000)
@@ -118,7 +138,7 @@ def desktop(b, C):
     e2 = page.evaluate('(() => { const e = PX.core.store.state.assess[1] || {}; return { kind: e.kind, ov: e.overlapAnswer || null }; })()')
     C.ok(ok and e2 == {'kind': 'B2', 'ov': 'no'}, f'{tag}: B2 saved with the answer ({e2})')
     click_card(page, 'go')
-    wait_state(page, 'respond', 20000)
+    to_item(page)
     page.evaluate('__play.end()')
     page.wait_for_function('!!document.querySelector(".pl-summary")', timeout=10000)
 
@@ -138,7 +158,7 @@ def desktop(b, C):
     done = page.locator('[data-card-box="measure-done"]').inner_text()
     C.ok('Chance that your probe results rose' in done, f'{tag}: its done card gives the meter\'s line')
     click_card(page, 'go')
-    wait_state(page, 'respond', 20000)
+    to_item(page)
     page.evaluate('__play.end()')
     page.wait_for_function('!!document.querySelector(".pl-summary")', timeout=10000)
     sm = page.locator('.px-ms-summary')
@@ -188,6 +208,7 @@ def phones(b, C, state):
         page = ctx.new_page()
         con = Console(page)
         boot(page)
+        page.evaluate('PX.ui.hooks.mute(false)')
         page.evaluate('(s) => { const r = JSON.parse(s); Object.assign(PX.core.store.state, r); PX.core.store.save(); }', state)
         page.evaluate('void PX.core.router.go("home", null, { force: true })')
         page.wait_for_selector('.px-today > [data-measure]', timeout=8000)
