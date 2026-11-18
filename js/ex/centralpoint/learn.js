@@ -123,7 +123,7 @@
       whyChain: 'Laid head to tail, the pulls leave a gap: the leftover pull points the way to a smaller total.',
       whyMove: 'Follow the leftover pull: the gap closes as the spot moves.',
       whyBalanced: 'Here the pulls cancel. This is the best spot.',
-      whySlide: 'Slide the farthest target away: its pull keeps the same strength and direction, so the best spot stays put.',
+      whySlide: 'Slide the farthest target along its line: its pull keeps the same strength and direction, so the best spot stays put.',
       whyBack: 'Distance adds to the total, but each target pulls equally: that is what the best spot balances.',
       // the Watch (demo); the Watch alone shows the average once
       demoTargets: 'Five targets: four round an empty dot, one far away. Find the spot with the least total distance to all five.',

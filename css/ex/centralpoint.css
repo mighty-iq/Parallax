@@ -1,0 +1,106 @@
+/* EX-20 Central Point (js/ex/centralpoint/view.js). A square plate of 7 × 7 dots, the controls under it, the
+   result row in their place after an answer. Geometry is in half-steps inside a group scaled by 20, so
+   stroke widths below are in half-steps; labels undo the scale, so their font sizes are plain pixels of
+   the plate's units (20 per half-step). Colours come from the tokens of css/base.css (light and dark);
+   shape and words carry every mark too (rings for targets, the cross-hair marker, "you", "best"). */
+
+.ex-centralpoint .ex-cp {
+  --cp-board: min(100%, 30rem);
+  display: flex; flex-direction: column; align-items: center; gap: var(--s2, 0.5rem);
+}
+.ex-centralpoint .ex-cp-stage { width: var(--cp-board); aspect-ratio: 1 / 1; touch-action: none; }
+.ex-centralpoint .ex-cp-board {
+  display: block; width: 100%; height: 100%;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+}
+.ex-centralpoint .ex-cp:not(.is-why) .ex-cp-board { cursor: crosshair; }
+
+/* the board */
+.ex-centralpoint .ex-cp-dot { fill: var(--stim-edge, #22262A); fill-opacity: 0.5; }
+.ex-centralpoint .ex-cp-half { fill: var(--ink-3, #5D646C); fill-opacity: 0.55; }
+.ex-centralpoint .ex-cp-half.is-far { fill-opacity: 0.25; }
+.ex-centralpoint .ex-cp-ring { fill: var(--stim-ground, #F7F8F7); stroke: var(--ink, #1A1D21); stroke-width: 0.12; }
+.ex-centralpoint .ex-cp-pip { fill: var(--ink, #1A1D21); }
+.ex-centralpoint .ex-cp-disc { fill: var(--signal, #0B6A86); fill-opacity: 0.88; stroke: var(--signal-strong, #08536A); stroke-width: 0.06; }
+.ex-centralpoint .ex-cp-hair { stroke: var(--signal, #0B6A86); stroke-width: 0.07; stroke-linecap: round; }
+.ex-centralpoint .ex-cp-centre { fill: var(--signal-ink, #FFFFFF); }
+.ex-centralpoint .ex-cp-diag { stroke: var(--signal, #0B6A86); stroke-width: 0.08; stroke-dasharray: 0.32 0.22; stroke-opacity: 0.85; }
+
+/* labels: font sizes in plate units (20 per half-step; 12.5 is about 14 px on a 360 px phone) */
+.ex-centralpoint .ex-cp-label {
+  font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: 12px; font-weight: 500;
+  fill: var(--ink, #1A1D21); paint-order: stroke; stroke: var(--stim-ground, #F7F8F7); stroke-width: 4px; stroke-linejoin: round;
+}
+.ex-centralpoint .ex-cp-len { font-size: 12.5px; }
+.ex-centralpoint .ex-cp-youlabel { fill: var(--signal-strong, #08536A); font-weight: 600; font-size: 13px; }
+.ex-centralpoint .ex-cp-bestlabel { fill: var(--right, #2A7239); font-weight: 600; font-size: 13px; }
+.ex-centralpoint .ex-cp-maplabel { fill: var(--ink-2, #454B52); font-size: 12px; }
+.ex-centralpoint .ex-cp-maplabel.is-band { fill: var(--right, #2A7239); font-weight: 600; }
+
+/* after the answer */
+.ex-centralpoint .ex-cp-line { stroke: var(--ink-2, #454B52); stroke-width: 0.06; }
+.ex-centralpoint .ex-cp-bestring { fill: none; stroke: var(--right, #2A7239); stroke-width: 0.12; }
+.ex-centralpoint .ex-cp-cross { fill: none; stroke: var(--right, #2A7239); stroke-width: 0.07; stroke-linecap: round; }
+.ex-centralpoint .ex-cp-bandpt { fill: var(--right, #2A7239); fill-opacity: 0.75; }
+.ex-centralpoint .ex-cp-contour { fill: none; stroke: var(--ink-3, #5D646C); stroke-width: 0.05; }
+.ex-centralpoint .ex-cp-contour.is-band { fill: var(--right-wash, #E3EFE5); fill-opacity: 0.7; stroke: var(--right, #2A7239); stroke-width: 0.11; }
+
+/* Why? and the Watch: equal pulls, the leftover pull, the count lines (and, in the Watch only, the average) */
+.ex-centralpoint .ex-cp-pull { stroke: var(--ink, #1A1D21); stroke-width: 0.07; fill: var(--ink, #1A1D21); stroke-linecap: round; stroke-linejoin: round; }
+.ex-centralpoint .ex-cp-leftover { stroke: var(--signal, #0B6A86); stroke-width: 0.13; fill: var(--signal, #0B6A86); stroke-linecap: round; stroke-linejoin: round; }
+.ex-centralpoint .ex-cp-closed { fill: none; stroke: var(--right, #2A7239); stroke-width: 0.1; }
+.ex-centralpoint .ex-cp-countline { stroke: var(--ink-2, #454B52); stroke-width: 0.06; stroke-dasharray: 0.25 0.2; }
+.ex-centralpoint .ex-cp-avgline { stroke: var(--wrong, #B33A2F); stroke-width: 0.07; stroke-dasharray: 0.2 0.15; }
+.ex-centralpoint .ex-cp-avgmark { fill: var(--stim-ground, #F7F8F7); stroke: var(--wrong, #B33A2F); stroke-width: 0.1; }
+.ex-centralpoint .ex-cp-label.ex-cp-avglabel { fill: var(--wrong, #B33A2F); font-weight: 600; }
+.ex-centralpoint .ex-cp.is-why .ex-cp-lines, .ex-centralpoint .ex-cp.is-why .ex-cp-labels,
+.ex-centralpoint .ex-cp.is-why .ex-cp-band, .ex-centralpoint .ex-cp.is-why .ex-cp-map { display: none; }
+
+/* controls: four 44 px arrows (exact) and Confirm; after the answer the result row takes their place */
+.ex-centralpoint .ex-cp-controls, .ex-centralpoint .ex-cp-result {
+  display: flex; align-items: center; gap: var(--s2, 0.5rem); width: var(--cp-board); min-height: var(--tap, 44px);
+}
+.ex-centralpoint .ex-cp-controls[hidden], .ex-centralpoint .ex-cp-result[hidden], .ex-centralpoint .ex-cp-nudges[hidden] { display: none; }
+.ex-centralpoint .ex-cp-nudges { display: flex; gap: var(--s1, 0.25rem); }
+.ex-centralpoint .ex-cp-nudge { min-width: var(--tap, 44px); min-height: var(--tap, 44px); padding: 0; font-size: 0.875rem; line-height: 1; }
+.ex-centralpoint .ex-cp-confirm { flex: 1 1 auto; min-height: var(--tap, 44px); }
+.ex-centralpoint .ex-cp[data-form="quick"] .ex-cp-confirm { flex: 0 1 12rem; margin: 0 auto; }
+.ex-centralpoint .ex-cp-result { justify-content: space-between; }
+.ex-centralpoint .ex-cp-result-text { min-width: 0; }
+.ex-centralpoint .ex-cp-totals { margin: 0; font-size: var(--fs-sm, 0.875rem); line-height: 1.35; color: var(--ink, #1A1D21); }
+.ex-centralpoint .ex-cp-note { margin: 0; font-size: var(--fs-xs, 0.8125rem); line-height: 1.35; color: var(--ink-2, #454B52); }
+.ex-centralpoint .ex-cp-mapbtn { flex: 0 0 auto; min-height: var(--tap, 44px); min-width: var(--tap, 44px); }
+.ex-centralpoint .ex-cp-hint { margin: 0; text-align: center; }
+@media (pointer: coarse) { .ex-centralpoint .ex-cp-hint { display: none; } }
+
+/* the rules card's small pictures (drawRule): a 0–100 plate */
+.ex-centralpoint.ex-cp-rule { display: block; width: 6rem; height: 6rem; }
+.ex-centralpoint.ex-cp-rule .ex-cp-rulefig { display: block; width: 100%; height: 100%; }
+.ex-centralpoint.ex-cp-rule .ex-cp-ring { stroke-width: 1.8; }
+.ex-centralpoint.ex-cp-rule .ex-cp-line { stroke-width: 1.4; }
+.ex-centralpoint.ex-cp-rule .ex-cp-pull { stroke-width: 2; }
+.ex-centralpoint.ex-cp-rule .ex-cp-tapring { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 1.6; stroke-dasharray: 3 3; }
+.ex-centralpoint.ex-cp-rule .ex-cp-bartrack { fill: var(--surface-2, #E9ECEA); }
+.ex-centralpoint.ex-cp-rule .ex-cp-barfill { fill: var(--ink-3, #5D646C); }
+.ex-centralpoint.ex-cp-rule .ex-cp-label { font-size: 13px; stroke-width: 0; }
+.ex-centralpoint.ex-cp-rule .ex-cp-dot { fill-opacity: 0.6; }
+
+/* phones in the player (css/play.css sets --pl-avail, the height left for the item, and --pl-w, its
+   width): the plate is as wide as the screen, or as tall as what is left above the controls row and the
+   player's countdown bar */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-centralpoint .ex-cp {
+    --cp-board: min(var(--pl-w, 100%), calc(var(--pl-avail, 100vh) - var(--tap, 44px) - 2 * var(--s2, 0.5rem) - 1rem - 2px));
+    gap: var(--s2, 0.5rem);
+  }
+}
+/* sideways: the plate on the left at full height, the controls beside it */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-centralpoint .ex-cp {
+    --cp-board: min(calc(var(--pl-avail, 100vh) - 2px), 60vw);
+    display: grid; grid-template-columns: var(--cp-board) minmax(10rem, 1fr); grid-template-rows: auto auto 1fr; align-items: start;
+  }
+  .pl-trial.ex-centralpoint .ex-cp-stage { grid-row: 1 / span 3; }
+  .pl-trial.ex-centralpoint .ex-cp-controls, .pl-trial.ex-centralpoint .ex-cp-result { width: 100%; flex-wrap: wrap; }
+}
+/* reduced motion: show me and the Watch move in the runner's keyframes; nothing here animates by CSS */
