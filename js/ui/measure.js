@@ -158,7 +158,10 @@
     function progress(step) {
       var pr = step && step.probe;
       var at = pr ? probes.indexOf(pr.id) + 1 : S.probeNo;
-      P.setMeta((NAMES[kind] || 'Check') + ' · task ' + at + ' of ' + probes.length + (pr ? ' · item ' + Math.min(pr.of, pr.index + 1) + ' of ' + pr.of : ''));
+      var it = pr ? ' · item ' + Math.min(pr.of, pr.index + 1) + ' of ' + pr.of : '';
+      // shorter forms when the line would wrap (a taller strip would push the item's controls down on phones)
+      P.setMeta((NAMES[kind] || 'Check') + ' · task ' + at + ' of ' + probes.length + it, ['Task ' + at + ' of ' + probes.length + it,
+        'Task ' + at + '/' + probes.length + (pr ? ' · ' + Math.min(pr.of, pr.index + 1) + '/' + pr.of : '')]);
       P.setProgress(S.answered, plan.total);
     }
     function markKey(def, item) {
