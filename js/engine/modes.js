@@ -29,7 +29,9 @@
      res = modes.finish(plan, rec, now)    pushes the session, updates schedules, bests, streak,
              achievements → { session, summary, stageUps, bests, achievements, streak, ... }
    Ratings: Train and Path update the untimed rating, Speed its own timed rating; Threshold,
-   Free play, Daily and the Spatial Check never change a rating. */
+   Free play, Daily and the Spatial Check never change a rating.
+   Hooks (v1.2 wave 2): modes.hook(point, fn, { id, order }) at start, kind, pick, answer and finish
+   (the hook-points block below; docs/dev/CONTRACT-v1.2.md Q); modes.hooks(point) lists them. */
 (function (PX) {
   'use strict';
 
@@ -48,6 +50,85 @@
   function isNum(x) { return typeof x === 'number' && isFin(x); }
   function isObj(x) { return !!x && typeof x === 'object' && !isArray(x); }
   function defOf(id) { return PX.ex.get(id); }
+
+  /* ---------- hook points (v1.2 wave 2; docs/dev/CONTRACT-v1.2.md Q) ----------
+     hook(point, fn, { id, order }) → off      hooks(point) → [{ id, order }]
+       start  fn(plan, rec, opts, now)                    after the mode's own start (plan.unavailable set)
+       kind   fn(plan, rec, def, kind, ctx) → kind | null Train and Path (not Path rechecks): after the
+              deck deals `kind`; ctx { st, now, run, recent, deck (the kinds left), share }
+       pick   fn(plan, rec, def, o, ctx) → extra | null   Train, Path (not rechecks) and Free play's
+              adaptive items, right before select.pick: o (the select options) is mutable; ctx { kind,
+              st, now, run, runFilter (the run's own variant or stage filter, before trainVariants),
+              share }; extra: step fields (kind, deadlineMs, timed, layer, bTimed, …), later hooks win
+       answer fn(plan, rec, step, result, out, now)        at the end of answer(), every outcome
+       finish fn(plan, rec, now, res)                      after the session is pushed, before the
+              streak and achievements
+     share is plan.share[exId], an object start hooks may fill (a plateau change raising the share of
+     fluency items) and kind hooks read. Lower order first, ties in registration order. Hooks are
+     pure like the rest of the engine; one that throws is skipped and noted in plan.errors as
+     { point, id, message } (finish copies them to res.errors). */
+  var HOOKS = { start: [], kind: [], pick: [], answer: [], finish: [] };
+  var hookSeq = 0;
+  // step fields a pick hook may not set (the item itself and its prediction come from select.pick)
+  var STEP_OWN = { done: 1, i: 1, mode: 1, sessionId: 1, exId: 1, params: 1, key: 1, code: 1, seed: 1, kind: 1, b: 1, g: 1, pPred: 1, target: 1, noNote: 1 };
+
+  function hook(point, fn, opts) {
+    if (!hasOwn.call(HOOKS, point)) throw new Error('PX.engine.modes.hook: unknown point ' + JSON.stringify(point) + ' (start, kind, pick, answer, finish)');
+    if (typeof fn !== 'function') throw new Error('PX.engine.modes.hook("' + point + '"): needs a function');
+    var id = opts && typeof opts.id === 'string' && opts.id ? opts.id : null;
+    if (!id) throw new Error('PX.engine.modes.hook("' + point + '"): opts.id (a unique name) is required');
+    var list = HOOKS[point];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) throw new Error('PX.engine.modes.hook("' + point + '"): "' + id + '" is already registered');
+    var h = { id: id, order: opts && isNum(opts.order) ? opts.order : 50, seq: ++hookSeq, fn: fn };
+    list.push(h);
+    list.sort(function (a, b) { return a.order - b.order || a.seq - b.seq; });
+    return function off() { var j = list.indexOf(h); if (j >= 0) list.splice(j, 1); };
+  }
+  function hooksOf(point) {
+    return hasOwn.call(HOOKS, point) ? HOOKS[point].map(function (h) { return { id: h.id, order: h.order }; }) : [];
+  }
+  function hookFail(plan, point, h, e) {
+    if (!isObj(plan)) return;
+    if (!isArray(plan.errors)) plan.errors = [];
+    if (plan.errors.length < 50) plan.errors.push({ point: point, id: h.id, message: String(e && e.message || e) });
+  }
+  function runHooks(point, plan, args) {
+    var list = HOOKS[point].slice();
+    for (var i = 0; i < list.length; i++) {
+      try { list[i].fn.apply(null, args); } catch (e) { hookFail(plan, point, list[i], e); }
+    }
+  }
+  function kindHooks(plan, rec, def, kind, ctx) {
+    var list = HOOKS.kind.slice(), k = kind;
+    for (var i = 0; i < list.length; i++) {
+      var r = null;
+      try { r = list[i].fn(plan, rec, def, k, ctx); } catch (e) { hookFail(plan, 'kind', list[i], e); r = null; }
+      if (typeof r === 'string' && r) k = r;
+    }
+    return k;
+  }
+  function pickHooks(plan, rec, def, o, ctx) {
+    var list = HOOKS.pick.slice(), extra = null;
+    for (var i = 0; i < list.length; i++) {
+      var r = null;
+      try { r = list[i].fn(plan, rec, def, o, ctx); } catch (e) { hookFail(plan, 'pick', list[i], e); r = null; }
+      if (!isObj(r)) continue;
+      extra = extra || {};
+      for (var k in r) if (hasOwn.call(r, k)) extra[k] = r[k];
+    }
+    return extra;
+  }
+  // The step fields a pick hook asked for, without the item's own (kind is the step's argument).
+  function extraFields(extra) {
+    var out = {};
+    if (!isObj(extra)) return out;
+    for (var k in extra) if (hasOwn.call(extra, k) && !hasOwn.call(STEP_OWN, k)) out[k] = extra[k];
+    return out;
+  }
+  function shareOf(plan, exId) {
+    if (!isObj(plan.share)) plan.share = {};
+    return isObj(plan.share[exId]) ? plan.share[exId] : (plan.share[exId] = {});
+  }
 
   function sessionMinutes(rec) {
     var m = rec.settings && rec.settings.sessionMin;
@@ -82,9 +163,10 @@
       exs: [], count: {}, rated: {}, log: [], shown: {}, level0: {}, blockN: {}, blocks: {}, stage: {},
       lastEx: null, lastAt: now, activeMs: 0, deck: [], can: typeof opts.can === 'function' ? opts.can : null,
       rng: E.select.rng(rec, 'plan:' + mode + ':' + now), unavailable: null, finished: null, stageBacks: [],
-      clocked: false, lastActive: 0, paces: [], boxed: false, natural: false, ended: null,
+      clocked: false, lastActive: 0, paces: [], boxed: false, natural: false, ended: null, share: {},
     };
     MODES[mode].start(plan, rec, opts, now);
+    runHooks('start', plan, [plan, rec, opts, now]); // v1.2 wave 2 (CONTRACT-v1.2 Q)
     plan.boxed = isNum(plan.budgetMs) && plan.budgetMs !== Infinity;
     if (!plan.unavailable && !plan.exs.length) plan.unavailable = 'No exercise is available for this mode on this device.';
     if (plan.unavailable) plan.done = true;
@@ -290,6 +372,7 @@
         }
       }
     }
+    runHooks('answer', plan, [plan, rec, step, result, out, now]); // v1.2 wave 2 (CONTRACT-v1.2 Q)
     var M2 = MODES[plan.mode];
     out.done = plan.done || (M2.over ? M2.over(plan) : atEnd(plan, now, 0) === 'over');
     if (out.done) plan.natural = true;
@@ -352,6 +435,8 @@
       if (plan.mode !== 'check') rec.practiceMs = (isNum(rec.practiceMs) ? rec.practiceMs : 0) + session.practiceMs;
       res.session = session;
     }
+    runHooks('finish', plan, [plan, rec, now, res]); // v1.2 wave 2 (CONTRACT-v1.2 Q)
+    if (isArray(plan.errors) && plan.errors.length) res.errors = plan.errors.slice();
     res.streak = E.streak.status(rec, now);
     res.achievements = E.achievements.check(rec, now);
     plan.finished = res;
@@ -388,12 +473,19 @@
         if (!plan.run || plan.run.left <= 0 || plan.exs.indexOf(plan.run.exId) < 0) E.schedule.nextRun(plan, rec);
         var run = plan.run, def = defOf(run.exId);
         var kind = end === 'last' ? 'last' : kindFor(plan);
-        var r = null;
+        var r = null, extra = null;
         if (def) {
           var st = E.est.get(rec, def, { display: plan.display }, now);
+          var recent = E.select.recent(rec, def), share = shareOf(plan, def.id);
+          // v1.2 wave 2 (CONTRACT-v1.2 Q): kind hooks may turn the dealt kind into another
+          kind = kindHooks(plan, rec, def, kind, { st: st, now: now, run: run, recent: recent, deck: plan.deck.slice(), share: share });
           var weakList = kind === 'target' && plan.rng.chance(C.weak.share) ? E.select.weak(rec, def) : null;
-          var filter = autoFilter(def, run.variant !== undefined ? function (c) { return c.params.variant === run.variant; } : null);
-          var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: filter, weak: weakList, rng: plan.rng };
+          var runFilter = run.variant !== undefined ? function (c) { return c.params.variant === run.variant; } : null;
+          var filter = autoFilter(def, runFilter);
+          var o = { kind: kind, k: plan.k, policy: plan.policy, recent: recent, filter: filter, weak: weakList, rng: plan.rng };
+          // ... and pick hooks the select options and the step's fields
+          extra = pickHooks(plan, rec, def, o, { kind: kind, st: st, now: now, run: run, runFilter: runFilter, share: share });
+          if (extra && typeof extra.kind === 'string' && extra.kind) kind = o.kind = extra.kind;
           if (kind === 'stretch' && early(st)) { r = earlyStretch(def, st, o, o.recent); kind = o.kind = r ? 'stretch1' : 'target'; }
           if (!r) r = E.select.pick(def, st, o);
           if (!r && filter) { o.filter = autoFilter(def, null); r = E.select.pick(def, st, o); }
@@ -404,7 +496,7 @@
           plan.run = null;
           continue;
         }
-        var step = makeStep(plan, rec, def, r, kind, { stage: run.stage, banner: run.fresh ? run.banner : false, newRun: run.fresh });
+        var step = makeStep(plan, rec, def, r, kind, Object.assign({ stage: run.stage, banner: run.fresh ? run.banner : false, newRun: run.fresh }, extraFields(extra)));
         run.fresh = false;
         run.left -= 1;
         if (kind === 'last') plan.lastServed = true;
@@ -463,12 +555,18 @@
       if (end === 'over') return null;
       var def = defOf(plan.exs[0]);
       var st = E.est.get(rec, def, { display: plan.display }, now);
-      var r = plan.fixed ? E.select.fixed(def, st, plan.fixed) :
-        E.select.pick(def, st, { kind: 'target', k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), rng: plan.rng });
+      var r, extra = null, kind = plan.fixed ? 'fixed' : 'target';
+      if (plan.fixed) r = E.select.fixed(def, st, plan.fixed);
+      else { // adaptive items: the pick hooks run here too (v1.2 wave 2, CONTRACT-v1.2 Q)
+        var o = { kind: 'target', k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), rng: plan.rng };
+        extra = pickHooks(plan, rec, def, o, { kind: kind, st: st, now: now, run: null, runFilter: null, share: shareOf(plan, def.id) });
+        if (extra && typeof extra.kind === 'string' && extra.kind) kind = o.kind = extra.kind;
+        r = E.select.pick(def, st, o);
+      }
       if (!r) return null;
-      var step = makeStep(plan, rec, def, r, plan.fixed ? 'fixed' : 'target', {
+      var step = makeStep(plan, rec, def, r, kind, Object.assign({
         banner: plan.pos === 0, newRun: plan.pos === 0, deadlineMs: plan.deadlineMs, timed: !!plan.deadlineMs,
-      });
+      }, extraFields(extra)));
       if (end === 'last') plan.lastServed = true;
       return step;
     },
@@ -600,13 +698,20 @@
       var def = defOf(plan.exs[0]), ps = pathState(rec, def.id), rc = null, s, kind, filter;
       var st = E.est.get(rec, def, { display: plan.display }, now);
       for (var i = 0; i < plan.rechecks.length && end !== 'last'; i++) if (plan.rechecks[i].left > 0) { rc = plan.rechecks[i]; break; }
+      var recent = E.select.recent(rec, def), share = shareOf(plan, def.id), extra = null;
       if (rc) { s = rc.s; kind = 'target'; filter = inStage(def, s); }
       else {
         s = ps.stage;
         kind = end === 'last' ? 'last' : kindFor(plan);
+        // v1.2 wave 2 (CONTRACT-v1.2 Q): kind hooks (never on a recheck); a kind they add takes the stage's items
+        kind = kindHooks(plan, rec, def, kind, { st: st, now: now, run: null, recent: recent, deck: plan.deck.slice(), share: share });
         filter = kind === 'warmup' || kind === 'easy' || kind === 'last' ? upTo(def, s) : kind === 'stretch' ? stretchOf(def, s) : inStage(def, s);
       }
-      var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: autoFilter(def, filter), rng: plan.rng }, r = null;
+      var o = { kind: kind, k: plan.k, policy: plan.policy, recent: recent, filter: autoFilter(def, filter), rng: plan.rng }, r = null;
+      if (!rc) {
+        extra = pickHooks(plan, rec, def, o, { kind: kind, st: st, now: now, run: null, runFilter: filter, share: share });
+        if (extra && typeof extra.kind === 'string' && extra.kind) kind = o.kind = extra.kind;
+      }
       if (kind === 'stretch' && early(st)) {
         r = earlyStretch(def, st, o, o.recent);
         if (r) kind = o.kind = 'stretch1';
@@ -619,10 +724,10 @@
       var watch = false;
       if (!rc && !ps.watched[s]) { ps.watched[s] = true; watch = true; }
       if (rc) rc.left -= 1;
-      var step = makeStep(plan, rec, def, r, kind, {
+      var step = makeStep(plan, rec, def, r, kind, Object.assign(extraFields(extra), {
         pathStage: s, recheck: rc ? s : null, watch: watch, banner: plan.pos === 0, newRun: plan.pos === 0,
         preset: watch ? preset(def, s) : null,
-      });
+      }));
       if (end === 'last') plan.lastServed = true;
       return step;
     },
@@ -1192,7 +1297,8 @@
   E.modes = {
     start: start, next: next, answer: answer, finish: finish, MODES: MODES, RATED: RATED,
     available: available, checkin: checkin, checkinDue: checkinDue, STRATEGIES: STRATEGIES,
-    timeLeft: timeLeft, pace: paceOf, suggest: suggest,
-    _: { atEnd: atEnd, kindFor: kindFor, earlyKind: earlyKind, early: early, oneStep: oneStep, autoFilter: autoFilter, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn },
+    timeLeft: timeLeft, pace: paceOf, suggest: suggest, hook: hook, hooks: hooksOf,
+    _: { atEnd: atEnd, kindFor: kindFor, earlyKind: earlyKind, early: early, oneStep: oneStep, autoFilter: autoFilter, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn,
+      runHooks: runHooks, kindHooks: kindHooks, pickHooks: pickHooks, extraFields: extraFields, shareOf: shareOf },
   };
 })(window.PX);

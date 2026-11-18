@@ -25,7 +25,10 @@
      choose(rec, opts, now) → { exs, roles (role → id), roleOf (id → role or 'new'), info, patPick
                                (the DAT-style format the PAT focus put in, or null) }
      build(rec, opts, now) → the Train part of a plan: exs, roles, quota, total, stage, ...
-     nextRun(plan) → sets plan.run { exId, left, len, variant, stage, banner } */
+     nextRun(plan) → sets plan.run { exId, left, len, variant, stage, banner }
+     v1.2 wave 2 (docs/dev/CONTRACT-v1.2.md Q): hook('exclude', fn, { id, order }) → off, excluded(rec,
+     def, now) → { why, until, by } | null (automatic choices skip an excluded exercise), setStage(rec,
+     exId, stage) (1–5; restarts the switch window), hooks(point), hookErrors() */
 (function (PX) {
   'use strict';
 
@@ -104,6 +107,16 @@
     return 0;
   }
 
+  // v1.2 wave 2 (CONTRACT-v1.2 Q): moves an exercise's interleaving stage (a plateau change: a stage
+  // back or forward) and restarts its switch window. Returns the stage set (1–5), or 0 for a bad id.
+  function setStage(rec, exId, s) {
+    if (typeof exId !== 'string' || !/^[a-z][a-z0-9-]{0,39}$/.test(exId) || !isNum(s)) return 0;
+    var t = train(rec), v = U.clamp(Math.round(s), 1, 5);
+    t.stage[exId] = v;
+    t.sw[exId] = [];
+    return v;
+  }
+
   // A trial that followed a different exercise. Returns true when the stage stepped back.
   function switchNote(rec, exId, x, p, style) {
     var S = C.stages, t = train(rec), w = t.sw[exId];
@@ -152,8 +165,44 @@
     return E.day(now) <= tp.until && tp.ids.indexOf(exId) >= 0;
   }
   function auto(rec, def, now) {
-    return !!def && (def.pat !== true || patFocus(rec)) && !testPaused(rec, def.id, now);
+    return !!def && (def.pat !== true || patFocus(rec)) && !testPaused(rec, def.id, now) && !excluded(rec, def, now);
   }
+
+  /* ---------- exclude hooks (v1.2 wave 2; docs/dev/CONTRACT-v1.2.md Q) ----------
+     hook('exclude', fn(rec, def, now) → { why, until } | null, { id, order }) → off: an exercise a
+     hook excludes (a plateau change's rest days) stays out of automatic choices (auto: Train, Today's
+     plan, the beginner order, Path without a chosen exercise); explicit picks never ask.
+     excluded(rec, def, now) → the first hook's { why, until } (the Library and Today say why) or null.
+     A hook must be pure and cheap: auto() asks it per exercise and plan; one that throws counts as
+     no exclusion and is listed in hookErrors(). */
+  var HOOKS = { exclude: [] }, hookSeq = 0, hookErrs = [];
+  function hook(point, fn, opts) {
+    if (!hasOwn.call(HOOKS, point)) throw new Error('PX.engine.schedule.hook: unknown point ' + JSON.stringify(point) + ' (exclude)');
+    if (typeof fn !== 'function') throw new Error('PX.engine.schedule.hook("' + point + '"): needs a function');
+    var id = opts && typeof opts.id === 'string' && opts.id ? opts.id : null;
+    if (!id) throw new Error('PX.engine.schedule.hook("' + point + '"): opts.id (a unique name) is required');
+    var list = HOOKS[point];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) throw new Error('PX.engine.schedule.hook("' + point + '"): "' + id + '" is already registered');
+    var h = { id: id, order: opts && isNum(opts.order) ? opts.order : 50, seq: ++hookSeq, fn: fn };
+    list.push(h);
+    list.sort(function (a, b) { return a.order - b.order || a.seq - b.seq; });
+    return function off() { var j = list.indexOf(h); if (j >= 0) list.splice(j, 1); };
+  }
+  function hooksOf(point) { return hasOwn.call(HOOKS, point) ? HOOKS[point].map(function (h) { return { id: h.id, order: h.order }; }) : []; }
+  function excluded(rec, def, now) {
+    var list = HOOKS.exclude;
+    if (!def || !list.length) return null;
+    for (var i = 0; i < list.length; i++) {
+      var r = null;
+      try { r = list[i].fn(rec, def, now); } catch (e) {
+        if (hookErrs.length < 50) hookErrs.push({ point: 'exclude', id: list[i].id, message: String(e && e.message || e) });
+        r = null;
+      }
+      if (isObj(r)) return { why: typeof r.why === 'string' ? r.why : '', until: isNum(r.until) ? r.until : null, by: list[i].id };
+    }
+    return null;
+  }
+  function hookErrors() { return hookErrs.slice(); }
 
   /* ---------- trial times ---------- */
 
@@ -412,6 +461,8 @@
     switchNote: switchNote, group: group, similar: similar, trialTimes: trialTimes, trialMs: trialMs, typical: typical, estOf: estOf,
     auto: auto, patFocus: patFocus, testPaused: testPaused, beginOrder: beginOrder,
     trainable: trainable, choose: choose, build: build, nextRun: nextRun, runLength: runLength, quotas: quotas,
+    // v1.2 wave 2 (CONTRACT-v1.2 Q)
+    hook: hook, hooks: hooksOf, excluded: excluded, setStage: setStage, hookErrors: hookErrors,
   };
 
   E.pooled('train', function (v) { return v; }); // stages, pins and switch notes: no days (v1.2)

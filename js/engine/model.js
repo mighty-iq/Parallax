@@ -5,6 +5,7 @@
 
    PX.engine.config              the defaults (one object, read live by every engine file)
    PX.engine.configure(patch)    deep-merges a patch into config (experiments, tests); 'reset' restores
+   PX.engine.defaults(key, block) a module's own config block (v1.2 wave 2), kept by 'reset'
    PX.engine.model:
      p(theta, b, g, lapse?, a?)  P(right) = g + (1 − g − lapse) · σ(a(θ − b)); lapse 0.03, a 1
      pExp(mu, sd, b, g, ...)     the same averaged over θ ~ N(mu, sd²) (probit approximation)
@@ -123,6 +124,19 @@
       mergeInto(config, DEFAULTS);
     } else if (patch && typeof patch === 'object') mergeInto(config, patch);
     return config;
+  }
+
+  // v1.2 wave 2 (CONTRACT-v1.2 Q): a module's own config block, E.config[key], from its own file
+  // (dims, plateau, bets…), so no builder edits DEFAULTS here; configure('reset') restores it too.
+  // Throws when the key is already a block. Returns the live block.
+  function defaults(key, block) {
+    if (typeof key !== 'string' || !/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(key) || !U.isPlainObject(block)) {
+      throw new Error('PX.engine.defaults: needs a key (an identifier) and a plain object');
+    }
+    if (hasOwn.call(DEFAULTS, key) || hasOwn.call(config, key)) throw new Error('PX.engine.defaults: "' + key + '" is already a config block');
+    DEFAULTS[key] = U.deepCopy(block);
+    config[key] = U.deepCopy(block);
+    return config[key];
   }
 
   /* ---------- the item model ---------- */
@@ -408,6 +422,7 @@
   E.config = config;
   E.DEFAULTS = DEFAULTS;
   E.configure = configure;
+  E.defaults = defaults;
   E.DAY = DAY;
   // Difficulty at which pExp(mu, sd, b, g) equals prob (inverse of pExp in b).
   function bAtExp(mu, sd, prob, g, lapse, a) {
