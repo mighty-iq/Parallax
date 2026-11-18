@@ -1523,10 +1523,124 @@
     throw new Error('slice: no valid item could be built'); // unreachable while the fallback test passes
   }
 
+  /* ===== v1.2 wave 2 (W2-bets): the produce variant 'mark' (PLAN milestone 4; CONTRACT-v1.2 S and
+     conflict 12; note T1 §4.3) =====
+     Mark the cut: the solid and the plane of the choose item with the same seed and settings; the player
+     taps every edge of the solid that the plane crosses (hidden edges are drawn dashed), each tap marking a
+     point on the edge, and the app draws the polygon through the points (js/ex/slice/layers-view.js).
+     Straight solids only (one box, cube, triangular prism or pyramid: lib.markOk); for other settings the
+     variant gives the nearest simple, straight item marked fallback, which the engine never rates, and
+     the bets pick hook asks only for settings that markOk allows. Edges come from each solid's corners
+     (markEdges: world corners, faces and edges in a fixed order, independent of the meshes). An item
+     takes a problem only when the cut is clean: no corner within 6 % of the solid's size of the plane,
+     every crossed edge crossed between 12 % and 88 % of its length, 3 to 6 crossed edges. The item is
+     the choose item with produce 'mark', answer 'targets', pick (the right option's index; validate
+     re-runs the sampling check on the item as generated) and key = the crossed edges' ids, ascending.
+     Scoring: right only when the marked edges are exactly the crossed ones (where on an edge a mark
+     sits is shown, not scored); detail counts right, missing and extra edges. Difficulty: the same
+     settings' + MARK_D (provisional); guessing rate 0; out of the level scale (conflict 12). */
+  var MARKV = 'mark', MARK_D = 0.4, MARK_MARGIN = 0.06, MARK_T = [0.12, 0.88];
+  function markOk(params) { return lvl(params, 'structure', 3) === 0 && lvl(params, 'curved', 2) === 0; }
+  function copyOwn(o, skip) {
+    var out = {};
+    for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k) && !(skip && skip[k])) out[k] = o[k];
+    return out;
+  }
+  // The solid's corners (world), faces (corner cycles) and edges ([a, b, faceA, faceB]) in a fixed order.
+  function markEdges(solid) {
+    var q = solid && solid.parts && solid.parts.length === 1 ? solid.parts[0] : null, L = [], F = [];
+    if (!q) return null;
+    if (q.type === 'box') {
+      for (var i = 0; i < 8; i++) L.push([(i & 1 ? 0.5 : -0.5) * q.w, (i & 2 ? 0.5 : -0.5) * q.h, (i & 4 ? 0.5 : -0.5) * q.d]);
+      F = [[0, 2, 6, 4], [1, 3, 7, 5], [0, 1, 5, 4], [2, 3, 7, 6], [0, 1, 3, 2], [4, 5, 7, 6]];
+    } else if (q.type === 'prism') {
+      [-0.5, 0.5].forEach(function (z) { L.push([-q.b / 2, -q.t / 2, z * q.L], [q.b / 2, -q.t / 2, z * q.L], [q.ax, q.t / 2, z * q.L]); });
+      F = [[0, 1, 2], [3, 4, 5], [0, 1, 4, 3], [1, 2, 5, 4], [2, 0, 3, 5]];
+    } else if (q.type === 'pyramid') {
+      L = [[-q.ax / 2, -q.h / 2, -q.az / 2], [q.ax / 2, -q.h / 2, -q.az / 2], [q.ax / 2, -q.h / 2, q.az / 2], [-q.ax / 2, -q.h / 2, q.az / 2], [0, q.h / 2, 0]];
+      F = [[0, 1, 2, 3], [0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]];
+    } else return null;
+    var R = solidRot(solid), A = q.rot ? mmul(R, q.rot) : R, t = q.rot ? mvec(R, q.pos || [0, 0, 0]) : [0, 0, 0];
+    var V = L.map(function (c) { return add(mvec(A, c), t); }), E = [], seen = {};
+    F.forEach(function (f, fi) {
+      for (var k = 0; k < f.length; k++) {
+        var a = f[k], b = f[(k + 1) % f.length], key = Mth.min(a, b) + '-' + Mth.max(a, b);
+        if (seen[key] === undefined) { seen[key] = E.length; E.push([Mth.min(a, b), Mth.max(a, b), fi, -1]); } else E[seen[key]][3] = fi;
+      }
+    });
+    return { V: V, F: F, E: E };
+  }
+  // Where the plane crosses each edge: { ids (ascending), t (per edge: the crossing's share of the edge, or
+  // null), clean } for the item's plane.
+  function markCut(item) {
+    var g = markEdges(item.solid);
+    if (!g) return null;
+    var n = item.plane.n, off = dot(item.plane.p, n), d = g.V.map(function (c) { return dot(c, n) - off; });
+    var size = 0;
+    g.V.forEach(function (a) { g.V.forEach(function (b) { size = Mth.max(size, len(sub(a, b))); }); });
+    var clean = d.every(function (x) { return Mth.abs(x) >= MARK_MARGIN * size; }), ids = [], ts = [];
+    g.E.forEach(function (e, i) {
+      var da = d[e[0]], db = d[e[1]];
+      if ((da < 0) !== (db < 0)) {
+        var tt = da / (da - db);
+        ids.push(i); ts.push(tt);
+        if (tt < MARK_T[0] || tt > MARK_T[1]) clean = false;
+      } else ts.push(null);
+    });
+    if (ids.length < 3 || ids.length > 6) clean = false;
+    return { ids: ids, t: ts, clean: clean, g: g };
+  }
+  function markItem(base) {
+    var c = markCut(base);
+    if (!c || !c.clean) return null;
+    var out = copyOwn(base);
+    out.produce = MARKV;
+    out.answer = 'targets';
+    out.pick = base.key;
+    out.key = c.ids.slice();
+    return out;
+  }
+  function generateAll(rng, params) {
+    if (!params || params.variant !== MARKV) return generate(rng, params);
+    var p = markOk(params) ? params : { structure: 0, cut: lvl(params, 'cut', 3), curved: 0, variant: MARKV }, item = null;
+    for (var i = 0; i < 40 && markOk(params) && !item; i++) item = markItem(generate(i === 0 ? rng : rng.fork('mark' + i), p));
+    if (!item) { // settings without straight edges, or no clean cut found: the fixed search, never rated
+      for (var k = 0; k < 400 && !item; k++) item = markItem(generate(PX.rng(PX.rng.hash('slice-mark-fallback', p.cut, k)), { structure: 0, cut: p.cut, curved: 0, variant: MARKV }));
+      if (!item) throw new Error('slice: no clean cut for the mark variant'); // unreachable while the produce test passes
+      item.fallback = true;
+    }
+    item.seed = rng.seed;
+    item.params = PX.util.deepCopy(params);
+    return item;
+  }
+  function validateAll(item) {
+    if (!item || item.produce !== MARKV) return validate(item);
+    if (item.answer !== 'targets' || !item.params || item.params.variant !== MARKV) return 'mark: answer and params';
+    if (!item.solid || item.solid.structure !== 'simple' || item.solid.curved) return 'mark: a simple, straight solid';
+    var c = markCut(item), k = item.key;
+    if (!c) return 'mark: the solid has no straight edges';
+    if (!c.clean) return 'mark: the cut is not clean';
+    if (!isArr(k) || k.some(function (e, i) { return !Number.isInteger(e) || (i > 0 && e <= k[i - 1]); }) || k.join() !== c.ids.join()) return 'mark: the key is not the crossed edges';
+    var base = copyOwn(item, { produce: 1, answer: 1, pick: 1 });
+    base.key = item.pick;
+    return validate(base);
+  }
+  function scoreAll(item, response) {
+    if (!item || item.produce !== MARKV) return score(item, response);
+    var got = {}, n = 0, right = 0, key = item.key;
+    (isArr(response) ? response : []).forEach(function (e) { if (Number.isInteger(e) && e >= 0 && e < 12 && !got[e]) { got[e] = true; n++; } });
+    key.forEach(function (e) { if (got[e]) right++; });
+    return { correct: right === key.length && n === key.length, detail: { right: right, missing: key.length - right, extra: n - right } };
+  }
+  function difficultyAll(params) { return difficulty(params) + (params && params.variant === MARKV ? MARK_D : 0); }
+  function chanceAll(params) { return params && params.variant === MARKV ? 0 : 0.25; }
+  /* ===== end of the 'mark' block (W2-bets) ===== */
+
   PX.ex.define({
     id: 'slice', version: 1, code: 'EX-06', name: 'Cross-sections', short: 'Slice',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 4,
-    bet: 'bridge', format: 'slice:plane-to-section', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    bet: 'bridge', format: { '*': 'slice:plane-to-section', mark: 'slice:plane-to-marked-cut' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    variants: ['choose', MARKV], trainVariants: ['choose'], layers: { produce: MARKV }, // v1.2 wave 2 (W2-bets): the produce variant (block above)
     // Steps document the main effects; difficulty() below adds the interactions (see DIFF).
     dims: [
       { key: 'structure', label: 'Structure', levels: ['simple', 'joined', 'embedded'], step: 0.4 },
@@ -1534,11 +1648,14 @@
       { key: 'curved', label: 'Curved solid', levels: ['no', 'yes'], step: 0.75 },
     ],
     base: DIFF.base,
-    difficulty: difficulty,
-    generate: generate,
-    validate: validate,
-    score: score,
+    // v1.2 wave 2 (W2-bets): these five also serve the 'mark' variant (the block above)
+    difficulty: difficultyAll,
+    chance: chanceAll,
+    generate: generateAll,
+    validate: validateAll,
+    score: scoreAll,
     lib: {
+      markOk: markOk, markEdges: markEdges, markCut: markCut, produceOk: markOk, // v1.2 wave 2 (W2-bets): the mark variant
       VIEW: VIEW, DIFF: DIFF, GRID: GRID, GRID_R: GRID_R, stats: stats,
       sincos: sincos, atan2: atan2, solidRot: solidRot, solidMeshes: solidMeshes, primitiveMesh: primitiveMesh,
       meshSection: meshSection, planeFrame: planeFrame, sectionOf: sectionOf, flatLoops: flatLoops,

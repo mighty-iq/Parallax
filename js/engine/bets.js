@@ -622,8 +622,9 @@
     if (plan.mode === 'train' && ctx && ctx.kind === 'target' && hosts(def, 'produce') && active(rec, def.id, 'produce', now)) {
       var r = E.select.rng(rec, 'bets:produce:' + plan.id + ':' + plan.pos);
       if (r.chance(cfg().produceShare)) {
-        var pv = def.layers.produce;
-        o.filter = function (c) { return c.params.variant === pv; };
+        // only settings the variant can draw (Slice marks straight solids only: lib.produceOk)
+        var pv = def.layers.produce, okFn = def.lib && typeof def.lib.produceOk === 'function' ? def.lib.produceOk : null;
+        o.filter = function (c) { return c.params.variant === pv && (!okFn || okFn(c.params)); };
         extra = { layer: ROW_LAYER.produce };
       }
     }

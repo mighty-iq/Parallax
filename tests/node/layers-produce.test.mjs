@@ -5,7 +5,10 @@
    missing and extra parts); the variant's difficulty offset and a guessing rate of 0; the level scale,
    Train's variants and the reference guessing rate leave the variant out. */
 
+import { newRecord } from './fixtures/learner.mjs';
+
 const SEEDS = Number(process.env.PRODUCE_SEEDS || 10000);
+const T0 = Date.UTC(2026, 10, 2, 9, 0, 0);
 
 // Settings spread evenly over an exercise's level combinations, in the given variant.
 function spread(PX, def, variant, n, keep) {
@@ -92,6 +95,7 @@ export async function run(t) {
     t.ok(plain.variant === undefined && typeof plain.key === 'number', 'fold: an item without a variant is the choose form, as before');
   }
   await runViews(t, PX);
+  await runSlice(t, PX);
 }
 
 /* ---------- Views: an independent projection ----------
@@ -146,4 +150,77 @@ export async function runViews(t, PX) {
   scoreChecks(t, def, items, 'views draw');
   const it = items[0], moved = it.key.map((e) => e + 2 * (16 + 1));
   t.ok(def.score(it, moved).correct, 'views draw: the drawing may sit anywhere on the grid');
+}
+
+/* ---------- Slice: the crossed edges against the meshes' section ----------
+   The key comes from the solid's corners (lib.markEdges, lib.markCut). The right option's outline comes from
+   cutting the triangle meshes (lib.meshSection) and was checked by the sampling validator. Here every
+   crossing point, carried into the outline's normalised frame, must be a corner of that outline, and the
+   outline must have no other corner: the crossed edges are exactly the section's corners. */
+function corners(loop) {
+  const out = [], n = loop.length;
+  for (let i = 0; i < n; i++) {
+    const a = loop[(i + n - 1) % n], b = loop[i], c = loop[(i + 1) % n];
+    const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    const la = Math.hypot(b[0] - a[0], b[1] - a[1]), lc = Math.hypot(c[0] - b[0], c[1] - b[1]);
+    if (la > 1e-9 && lc > 1e-9 && Math.abs(cr) / (la * lc) > 2e-3) out.push(b);
+  }
+  return out;
+}
+
+export async function runSlice(t, PX) {
+  t.section('produce: Slice, mark the cut');
+  const def = PX.ex.get('slice'), L = def.lib;
+  scaleChecks(t, PX, def, 'mark');
+  t.ok(PX.ex.enumerate(def).filter((p) => p.variant === 'choose').every((p) => Math.abs(def.difficulty({ ...p, variant: 'mark' }) - def.difficulty(p) - 0.4) < 1e-9), 'slice: mark = choose + 0.4 logit (provisional offset)');
+  const ok = PX.ex.enumerate(def).filter((p) => p.variant === 'mark' && L.markOk(p));
+  t.eq(ok.map((p) => p.cut).sort().join(), '0,1,2', 'slice: mark takes simple, straight solids at every cut (lib.markOk)');
+  const { list } = spread(PX, def, 'mark', SEEDS, (p) => L.markOk(p));
+  let valid = 0, agree = 0, fallback = 0, firstBad = '', firstOff = '';
+  const items = [], kinds = {}, counts = {};
+  for (const x of list) {
+    const it = def.generate(PX.rng(x.seed), x.params);
+    if (it.fallback) fallback++;
+    const v = def.validate(it);
+    if (v === true && it.produce === 'mark' && it.answer === 'targets' && it.params.variant === 'mark') valid++; else firstBad = firstBad || String(v);
+    kinds[it.solid.parts[0].type] = (kinds[it.solid.parts[0].type] || 0) + 1;
+    counts[it.key.length] = (counts[it.key.length] || 0) + 1;
+    const c = L.markCut(it), g = c.g, n = it.plane.n, p0 = it.plane.p, u = it.frame.u, w = it.frame.v, nm = it.norm;
+    const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    const pts = c.ids.map((e) => {
+      const A = g.V[g.E[e][0]], B = g.V[g.E[e][1]], tt = c.t[e], X = [0, 1, 2].map((k) => A[k] + tt * (B[k] - A[k])), d = X.map((q, k) => q - p0[k]);
+      return [(dot(d, u) - nm.cx) * nm.s, (dot(d, w) - nm.cy) * nm.s];
+    });
+    const loop = it.options[it.pick].loops[0], cs = corners(loop);
+    const near = (q) => cs.some((r) => Math.hypot(q[0] - r[0], q[1] - r[1]) < 2e-3);
+    if (it.options[it.pick].loops.length === 1 && cs.length === pts.length && pts.every(near) && Math.abs(dot(n, n) - 1) < 1e-4) agree++;
+    else firstOff = firstOff || JSON.stringify({ seed: x.seed, pts: pts.length, corners: cs.length });
+    if (items.length < 400) { it.spare = [...Array(12).keys()].find((e) => e < g.E.length && it.key.indexOf(e) < 0); items.push(it); }
+  }
+  t.eq(valid, list.length, `slice mark: ${list.length} items pass the validator (the clean cut, the key, the sampling check) ${firstBad}`);
+  t.eq(agree, list.length, `slice mark: the crossed edges are exactly the corners of the meshes' section in every item ${firstOff}`);
+  t.ok(fallback <= list.length * 0.001, `slice mark: fallbacks ${fallback} of ${list.length}`);
+  console.log(`       info  slice mark: solids ${JSON.stringify(kinds)}, crossed edges ${JSON.stringify(counts)}`);
+  t.ok(Object.keys(kinds).length >= 3, 'slice mark: boxes, prisms and pyramids all appear');
+  scoreChecks(t, def, items, 'slice mark');
+  const other = def.generate(PX.rng(5), { structure: 2, cut: 1, curved: 1, variant: 'mark' });
+  t.ok(other.fallback === true && def.validate(other) === true && other.solid.structure === 'simple', 'slice mark: settings without straight edges give a simple item marked fallback (never rated)');
+  // the bets pick hook asks Slice only for settings markOk allows (Train, the arm on, a produce share of 1)
+  const E = PX.engine, B = E.bets;
+  let rec = null;
+  for (let c = 0; c < 300 && !rec; c++) { const r = newRecord(PX, T0 + c * 1000); if (B.arm(r, 'slice', 'produce', T0) === 'on') rec = r; }
+  t.ok(!!rec, 'a record with Slice\'s produce arm on exists');
+  E.configure({ bets: { produceShare: 1 } });
+  const plan = E.modes.start(rec, 'train', { now: T0, pin: 'slice', minutes: 30 }), got = [];
+  let now = T0;
+  for (let i = 0; i < 60; i++) {
+    const step = E.modes.next(plan, rec, now);
+    if (step.done) break;
+    now += 5000;
+    if (step.exId === 'slice') got.push(step);
+    E.modes.answer(plan, rec, step, { correct: i % 2 === 0, rt: 2000 }, now);
+  }
+  E.configure('reset');
+  const marks = got.filter((s) => s.params.variant === 'mark');
+  t.ok(marks.length >= 1 && marks.every((s) => L.markOk(s.params) && s.layer === 'produce'), `slice: produce items only at settings markOk allows (${marks.length} of ${got.length} Slice items)`);
 }
