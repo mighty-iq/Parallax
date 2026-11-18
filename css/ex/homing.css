@@ -29,6 +29,12 @@
   border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid var(--ink-3, #5D646C); opacity: 0.75;
   pointer-events: none;
 }
+/* v1.2 O36: the gentle profile's fixation dot, still at the view's centre while the scene moves (under the map) */
+.ex-fp .ex-fp-fix {
+  position: absolute; left: 50%; top: 50%; z-index: 2; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%;
+  background: var(--ink, #1A1D21); box-shadow: 0 0 0 2px var(--surface, #FFFFFF); pointer-events: none;
+}
+.ex-fp .ex-fp-fix[hidden] { display: none; }
 .ex-fp .ex-fp-sub {
   position: absolute; left: var(--s2, 0.5rem); right: var(--s2, 0.5rem); bottom: var(--s2, 0.5rem); z-index: 6; margin: 0;
   padding: 0.3rem 0.6rem; text-align: center; pointer-events: none;

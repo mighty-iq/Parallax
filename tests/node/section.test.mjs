@@ -57,6 +57,8 @@ export async function run(t) {
   testRepair(t);
   testField(t);
   testAchievement(t);
+  testNumbers(t);
+  testKeep(t);
   testReal(t);
 }
 
@@ -376,13 +378,74 @@ function testField(t) {
   t.section('section field');
   const PX = mk(t);
   const field = PX.engine.fields().find((f) => f.key === 'section');
-  t.eq(field.def(), { runs: [], next: { full: 1, mini: 1 }, live: null }, 'defaults');
+  t.eq(field.def(), { runs: [], next: { full: 1, mini: 1 }, live: null, last: null }, 'defaults (last: v1.2, the finished run kept for its review)');
   t.eq(field.fix('nope'), undefined, 'not an object → the default');
   t.eq(field.fix({ runs: [{ id: 'a', size: 'mini', start: 1 }, { id: 'b', size: 'huge', start: 1 }, null], next: { full: -3, mini: 5 } }),
-    { runs: [{ id: 'a', size: 'mini', start: 1 }], next: { full: 1, mini: 5 }, live: null }, 'bad runs dropped, form numbers clamped');
+    { runs: [{ id: 'a', size: 'mini', start: 1 }], next: { full: 1, mini: 5 }, live: null, last: null }, 'bad runs dropped, form numbers clamped; a 1.1 field (no last) loads with last null');
   const many = { runs: Array.from({ length: 250 }, (_, i) => ({ id: 'r' + i, size: 'full', start: i })) };
   const fixed = field.fix(many);
   t.eq([fixed.runs.length, fixed.runs[0].id], [200, 'r50'], 'the latest 200 runs are kept');
+}
+
+// v1.2 O11: item numbers never shift. In 1.1 the screen numbered an item by its place among the part's items
+// that count, so a void earlier in the part moved later numbers down (a flagged "item 4" became "item 3").
+function testNumbers(t) {
+  t.section('section: item numbers never shift (v1.2 O11)');
+  const PX = mk(t), S = PX.engine.section, rec = rec0();
+  if (!t.ok(typeof S.numberOf === 'function' && typeof S.numberCount === 'function', 'numberOf and numberCount exist')) return;
+  const run = S.start(rec, { size: 'mini', now: T0 });
+  t.eq([0, 1, 2, 3, 4].map((i) => S.numberOf(run, i)), [1, 2, 3, 4, 5], 'items are numbered 1–5 in the form’s order');
+  S.flag(run, 3, true);
+  S.answer(run, 1, { voided: true, voidReason: 'turned' }, T0 + 1000);
+  t.eq([S.numberOf(run, 3), S.numberOf(run, 4)], [4, 5], 'after a void earlier in the part, the flagged item 4 is still item 4 (1.1: item 3)');
+  t.eq([run.parts[0].items.length, S.numberOf(run, 5)], [6, 2], 'the replacement, shown at the end of the part, carries the number of the item it replaces');
+  t.eq(S.numberCount(run), 5, 'numbers run to 5, the part’s items');
+  S.answer(run, 5, { voided: true, voidReason: 'stutter' }, T0 + 2000);
+  t.eq(S.numberOf(run, 6), 2, 'a replacement of a replacement keeps the number too');
+  const run2 = S.start(rec0(), { size: 'mini', now: T0 });
+  run2.parts[0].items.forEach((it) => { delete it.j; });
+  S.answer(run2, 0, { voided: true }, T0);
+  t.eq([S.numberOf(run2, 1), S.numberOf(run2, 2)], [1, 2], 'a run saved without places falls back to counting the items that count');
+  t.eq(S.numberOf(run, 99), null, 'no item, no number');
+  S.endPart(run, rec, T0 + 3000, 3000);
+  t.eq([S.numberOf(run, 0), S.numberOf(run, 0, 0), S.numberOf(run, 5, 0)], [1, 1, 2], 'numbers of the current part, or of part p');
+}
+
+// v1.2 O10: the finished run is kept (rec.section.last) so its review survives a reload; it rebuilds the
+// same result, round-trips through the record field, and is dropped when an exercise changed version.
+function testKeep(t) {
+  t.section('section: the finished run is kept for its review (v1.2 O10)');
+  const PX = mk(t), S = PX.engine.section, rec = rec0();
+  if (!t.ok(typeof S.lastResult === 'function' && typeof S.last === 'function' && typeof S.lastOpen === 'function', 'last, lastResult and lastOpen exist')) return;
+  t.eq([S.last(rec), S.lastResult(rec)], [null, null], 'nothing kept before a run ends');
+  const run = S.start(rec, { size: 'mini', now: T0 });
+  S.flag(run, 2, true);
+  const { now, used } = play(S, run, rec, [['r', 'w', 's', 'v', 'r'], ['r', 'w'], [], [], [], []], T0);
+  const res = S.finish(run, rec, now, { usedMs: used, pausedMs: 777, ended: 'user' });
+  const kept = rec.section.last;
+  t.ok(kept && kept.id === run.id && kept.open === true && kept.parts.length === 6, 'finish keeps the run, its review open');
+  t.eq(clone(kept), kept, 'the kept run is plain JSON (no result inside it)');
+  t.ok(JSON.stringify(kept).length < 40000, `and small (${JSON.stringify(kept).length} characters for a mini run)`);
+  console.log(`       section: the kept run of a mini section takes ${JSON.stringify(kept).length} characters`);
+  const field = PX.engine.fields().find((f) => f.key === 'section');
+  const rec2 = Object.assign(rec0(), { section: field.fix(clone(rec.section)) }), back = S.lastResult(rec2);
+  t.ok(back && back.kept === true && back.session === null, 'after a reload (the record field fixed from storage) the review is rebuilt');
+  t.eq(back.summary, Object.assign({}, res.summary), 'with the same summary');
+  t.eq(back.parts, res.parts, 'the same results per part');
+  t.eq(S.review(back, 'all'), S.review(res, 'all'), 'and the same items to look at, with the answers and flags');
+  t.eq(S.review(back, 'again').map((e) => S.numberOf(back.run, e.index, e.part)), S.review(res, 'again').map((e) => S.numberOf(res.run, e.index, e.part)), 'with the same numbers');
+  t.eq([S.lastOpen(rec2, false), S.last(rec2).open], [true, false], 'lastOpen(false): the review closed (the setup screen then offers it)');
+  rec2.section.last.parts[5].version = 2; // the run's Form was version 2; this build's is 1
+  t.eq(S.lastResult(rec2), null, 'an exercise at another version: the review cannot be rebuilt (its items would differ)');
+  rec2.section.last.parts[5].version = 1;
+  t.ok(S.lastResult(rec2) !== null, 'at its version: it can');
+  const bad = clone(rec.section);
+  bad.last.parts[0].items[0].seed = 'x';
+  t.eq(field.fix(bad).last, null, 'a damaged kept run is dropped');
+  t.eq(field.fix(Object.assign(clone(rec.section), { last: { id: 'z', size: 'mini', parts: [] } })).last, null, 'an empty one too');
+  const r2 = S.start(rec, { size: 'mini', now: T0 + 1e6 });
+  S.finish(r2, rec, T0 + 2e6, { usedMs: 1000, ended: 'user' });
+  t.eq(rec.section.last.id, r2.id, 'the next finished run replaces it');
 }
 
 // Active script lines of index.html (outside the PENDING blocks): what the app ships.

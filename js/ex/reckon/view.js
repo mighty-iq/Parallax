@@ -80,7 +80,8 @@
     el.keysWalk = h('span.ex-fp-keys.ex-reckon-keyswalk', ' ' + cap('hintKeysWalk'));
     el.hint.appendChild(el.keysWalk);
     st = { ctx: ctx, el: el, kit: kit, item: null, value: null, raw: 0, dist: 0, v: 0, dir: 0, live: false, playing: false, done: false, walking: false,
-      paused: false, hostPause: false, voided: null, voidStats: null, frames: null, respond: null, popKeys: null, W: null, walkStop: null, input: null, mode: null };
+      paused: false, hostPause: false, voided: null, voidStats: null, frames: null, respond: null, popKeys: null, W: null, walkStop: null, input: null, mode: null,
+      gentle: false, mv: null, motionMs: 0, walkMs: 0 }; // mv: the item as it moves (gentle or not); motionMs: motion reported; walkMs: the walk back's, not yet reported
     st.S = kit.stage(ctx, el.stage, { cap: cap, hfov: HFOV, pitch: PITCH, eye: EYE, fog: [18, 190] });
     st.D = kit.dial({ cap: cap, onAngle: function (a, e) { if (canTurn()) setValue(a, 'dial', e); } });
     el.dialbox.appendChild(st.D.svg);
@@ -130,7 +131,7 @@
       if (e.detail !== 0 || b.disabled || !st || !live()) return;
       st.input = 'key'; st.mode = 'walk';
       setDir(dir);
-      var v = st.item.walkSpeed * (dir < 0 ? BACK_SHARE : 1);
+      var v = speedBack() * (dir < 0 ? BACK_SHARE : 1);
       window.setTimeout(function () { if (st && st.dir === dir) setDir(0); }, Math.round(1000 * STEP_M / v));
     });
     b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
@@ -140,6 +141,8 @@
   /* ---------- the walk ---------- */
   function leadSec() { return (lib().LEAD_MS || 1200) / 1000; }
   function planOf(item) { return lib().homing.plan(item, leadSec()); }
+  // the walk back's speed: the item's, or the gentle profile's (2/3 of it) while that is on (v1.2 O36)
+  function speedBack() { return (st.mv || st.item).walkSpeed; }
   function endOf(item) { var E = item.path[item.path.length - 1]; return { x: E[0], y: E[1], h: item.heading }; }
   function describe(item) {
     if (item.task === 'heading') return cap('describeHeading');
@@ -175,8 +178,10 @@
     st.item = item; st.value = null; st.raw = 0; st.dist = 0; st.v = 0; st.dir = 0; st.done = false; st.playing = false; st.respond = null;
     st.voided = null; st.voidStats = null; st.paused = false; st.hostPause = false; st.frames = null; st.input = null; st.mode = null;
     st.demoed = !!ctx.demo; st.lostDuring = false; st.practice = !!ctx.practice;
+    st.gentle = st.kit.gentleOn(ctx); st.mv = st.kit.shownItem(item, ctx); st.walkMs = 0;
     var S = st.S, el = st.el, S0 = item.path[0];
     S.attach();
+    S.setFix(st.gentle);
     S.setPose(S0[0], S0[1], item.startHeading);
     S.setStart(S0[0], S0[1], START_R);
     S.setGround(item.ground);
@@ -204,7 +209,7 @@
       if (!st || st.item !== item) return timing.now();
       // a Watch item (ctx.demo, when the player sets it): the demo replays the walk with captions, so the
       // first, silent walk is skipped and the item starts at the end of the route
-      st.W = ctx.demo ? null : st.kit.walker(S, planOf(item), {
+      st.W = ctx.demo ? null : st.kit.walker(S, planOf(st.mv), {
         ctx: ctx, fast: ctx.fast,
         paused: function () { return !!(st && (st.paused || st.hostPause || st.kit.hostPaused(ctx))); },
         // the ring hides once you have stepped out of it, for good (no fix after the start)
@@ -212,6 +217,9 @@
         onVoid: function (reason, stats) { voidTrial(reason, stats); },
       });
       return (st.W ? st.W.done : Promise.resolve(null)).then(function (stats) {
+        // the motion shown counts even when the walk was cut short (a new item, the session ended)
+        var shown = stats ? K().reportMotion(ctx, stats.motionMs) : 0;
+        if (st) st.motionMs += shown;
         if (!st || st.item !== item) return timing.now();
         st.frames = stats;
         st.walking = false; st.paused = false;
@@ -299,7 +307,8 @@
       // there, so the walk stops at once and stays where it was
       if (st.kit.hostPaused(st.ctx)) { st.dir = 0; st.v = 0; st.walkStop = null; readout(); controls(); return false; }
       if (st.shape) st.shape.check(); // a turned phone mid-walk voids at once (resize events can come late)
-      var s = dt / 1000, want = st.dir * st.item.walkSpeed * (st.dir < 0 ? BACK_SHARE : 1);
+      var s = dt / 1000, want = st.dir * speedBack() * (st.dir < 0 ? BACK_SHARE : 1);
+      if (st.v !== 0 || want !== 0) st.walkMs += Math.min(250, dt); // first-person motion shown (v1.2 O36)
       st.v += (want - st.v) * Math.min(1, s / WALK_TAU);
       if (st.dir === 0 && Math.abs(st.v) < 0.02) st.v = 0;
       st.dist = Math.max(0, Math.min(MAX_WALK, st.dist + st.v * s));
@@ -310,13 +319,20 @@
       st.S.render();
       readout();
       controls();
-      if (st.dir === 0 && st.v === 0) { st.walkStop = null; return false; }
+      if (st.dir === 0 && st.v === 0) { st.walkStop = null; walkReport(); return false; }
       return true;
     });
   }
   function stopWalkBack() {
     if (st && st.walkStop) { st.walkStop(); st.walkStop = null; }
-    if (st) { st.dir = 0; st.v = 0; }
+    if (st) { st.dir = 0; st.v = 0; walkReport(); }
+  }
+  // Each stretch of walking back goes to the player's motion count when it stops.
+  function walkReport() {
+    if (!st || !(st.walkMs > 0)) return;
+    var ms = st.walkMs;
+    st.walkMs = 0;
+    st.motionMs += K().reportMotion(st.ctx, ms);
   }
   // ↑ / ↓ walk while held: keyup (or the window losing focus, or the page hiding) stops it.
   function keyWalk(dir, e) {
@@ -339,7 +355,7 @@
     st.respond(response(), answerMeta());
   }
   function answerMeta() {
-    return st ? { frames: st.frames || null, void: st.voided || null, input: st.input || null, mode: st.mode || null, walked: st.item && isReturn(st.item) ? Math.round(st.dist * 100) / 100 : undefined } : null;
+    return st ? { frames: st.frames || null, void: st.voided || null, input: st.input || null, mode: st.mode || null, walked: st.item && isReturn(st.item) ? Math.round(st.dist * 100) / 100 : undefined, gentle: !!st.gentle } : null;
   }
   function stopInput() {
     if (!st) return;
@@ -384,6 +400,12 @@
 
   /* ---------- feedback ---------- */
   function sideOf(a) { return st.kit.side(a); }
+  // "12 % short", "4 % too far", or "under 1 % off" (never "0 % too far"; v1.2 O40)
+  function distText(fb) {
+    var x = fb && fb.dist;
+    if (!x) return '';
+    return x.word === 'even' ? cap('distEven') : cap('distOff', { dpct: x.pct, dword: cap(x.word === 'short' ? 'short' : 'long') });
+  }
   // Named error types (R1 §3.5, §6.4): which shortcut the answer's direction matches, when the key does not.
   function errorHint(item, dir, ok) {
     if (ok || !isNum(dir) || item.task) return '';
@@ -417,7 +439,12 @@
       var k = st.kit.norm180(e[2]), err = Math.max(-90, Math.min(90, st.kit.norm180(e[3] - e[2]) * (k < 0 ? -1 : 1)));
       svg.appendChild(S2.el('circle', { cx: ((i + 1) * dx).toFixed(1), cy: (mid - err * sc).toFixed(1), r: 3.2, class: e[7] ? 'ex-reckon-dot is-right' : 'ex-reckon-dot is-wrong' }));
     });
-    return h('div', svg, h('p.ex-reckon-chartnote', cap('chartNote')));
+    // axis words beside and under the plot (v1.2 O40): which side is too far, which end is the latest route
+    return h('div.ex-reckon-chartbox',
+      h('div.ex-reckon-chartplot',
+        h('div.ex-reckon-yax', { 'aria-hidden': 'true' }, h('span', cap('chartFar')), h('span', cap('chartShort'))),
+        h('div.ex-reckon-chartcol', svg, h('div.ex-reckon-xax', { 'aria-hidden': 'true' }, h('span', cap('chartOld')), h('span', cap('chartNew'))))),
+      h('p.ex-reckon-chartnote', cap('chartNote')));
   }
 
   // The flag (the start, or the end of the same distance) appears; the view turns to it from where you
@@ -428,6 +455,7 @@
     stopWalkBack();
     st.done = true;
     var res = result || { correct: false }, ok = !!res.correct, el = st.el, d = res.detail || {}, lines = [], kit = st.kit;
+    var fb = lib().feedback ? lib().feedback(item, res) : { dist: null, drift: null }; // v1.2 O40: the numbers behind the text
     var ret = isReturn(item), dir = ret ? (isNum(d.dir) ? d.dir : null) : isNum(response) ? kit.norm360(response) : null;
     // the bias line learns only from clean answers: not a voided trial (by the view, or a lost 3D view the
     // player voids), not an item whose solution the Watch demo just showed, not a practice item
@@ -458,17 +486,17 @@
       var T = item.turns[0], ts = sideOf(T);
       lines.push(cap('headingWas', { deg: ts.deg, side: kit.sideText(cap, T).replace(/^\d+° /, '') }));
     } else if (item.task === 'distance') {
-      lines.push(cap('distanceWas', { L: r1(item.distance), r: r1(d.dist || 0), dpct: Math.round(Math.abs((d.ratio || 0) - 1) * 100), dword: cap((d.ratio || 0) < 1 ? 'short' : 'long') }));
+      lines.push(cap('distanceWas', { L: r1(item.distance), r: r1(d.dist || 0), dist: distText(fb) }));
     } else {
       lines.push(cap('answerWas', { deg: s.deg, side: cap(s.side) || s.side, dist: Math.round(item.distance) }));
       if (ret && isNum(d.dist)) {
         if (dir === null) lines.push(cap('walkedNone'));
         else {
           var ys = sideOf(dir);
-          lines.push(cap('walkedWas', { deg: ys.deg, side: cap(ys.side) || ys.side, r: r1(d.dist), aerr: Math.round(Math.abs(d.signed || 0)), dpct: Math.round(Math.abs(d.ratio - 1) * 100), dword: cap(d.ratio < 1 ? 'short' : 'long') }));
+          lines.push(cap('walkedWas', { deg: ys.deg, side: cap(ys.side) || ys.side, r: r1(d.dist), aerr: Math.round(Math.abs(d.signed || 0)), dist: distText(fb) }));
         }
-        var walked = item.pathLength + d.dist;
-        lines.push(cap('drift', { ep: r1(d.posErr), path: Math.round(walked), cm: Math.round(100 * d.posErr / Math.max(1, walked)) }));
+        var dr = fb.drift;
+        if (dr) lines.push(cap('drift', { ep: dr.ep, path: dr.walked, per: dr.cm >= 1 ? cap('perMetre', { cm: dr.cm }) : cap('perMetreUnder'), lim: dr.limCm }));
       }
       lines.push(cap(ret ? 'legendReturn' : 'legend', { tol: item.tolerance }));
       var hint = errorHint(item, dir, ok);
@@ -532,7 +560,9 @@
   function demo(item, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
     st.demoed = true;
-    var kit = st.kit, S = st.S, L = lib().homing, pl = planOf(item), E = endOf(item), s = sideOf(item.keyDeg), S0 = item.path[0], last = 0;
+    // the demo walks as the item does (the gentle profile when it is on); its motion is reported at the end
+    var kit = st.kit, S = st.S, L = lib().homing, pl = planOf(st.mv || item), E = endOf(item), s = sideOf(item.keyDeg), S0 = item.path[0], last = 0, meter = kit.motionMeter(), lastK = 0;
+    function moved(k, moving) { meter.tick(moving && k > lastK); lastK = k; }
     st.playing = true;
     function at(p, flag) {
       st.M.close(); st.D.key(null); st.D.wedge(null); S.showFlag(!!flag);
@@ -542,19 +572,21 @@
     }
     var watch = [
       { ms: 2200, caption: cap('demoStart'), enter: function () { st.D.set(null); last = 0; at(L.poseAt(pl, 0)); } },
-      { ms: Math.round(pl.total * 1000), caption: cap('demoWalk'), enter: function () { last = 0; at(L.poseAt(pl, 0)); },
-        update: function (k) { var t = k * pl.total; S.tick(Math.max(0, t - last)); last = t; at(L.poseAt(pl, t)); } },
+      { ms: Math.round(pl.total * 1000), caption: cap('demoWalk'), enter: function () { last = 0; lastK = 0; meter.tick(false); at(L.poseAt(pl, 0)); },
+        update: function (k) { var t = k * pl.total, p = L.poseAt(pl, t); moved(k, p.kind !== 'stand'); S.tick(Math.max(0, t - last)); last = t; at(p); } },
       { ms: 2000, caption: cap('demoEnd'), enter: function () { at(E); } },
     ];
     var answer = item.task ? [] : [
-      { ms: 2600, caption: cap('demoTurn', { deg: s.deg, side: cap(s.side) || s.side }), enter: function () { at(E); st.D.set(0); },
-        update: function (k) { var a = kit.sweep(item.keyDeg, kit.ease(k)); st.D.set(a); S.setPose(E.x, E.y, item.heading + a); S.render(); },
+      { ms: 2600, caption: cap('demoTurn', { deg: s.deg, side: cap(s.side) || s.side }), enter: function () { lastK = 0; meter.tick(false); at(E); st.D.set(0); },
+        update: function (k) { var a = kit.sweep(item.keyDeg, kit.ease(k)); moved(k, true); st.D.set(a); S.setPose(E.x, E.y, item.heading + a); S.render(); },
         exit: function () { S.moveFlag(S0[0], S0[1]); S.showFlag(true); S.render(); } },
       { ms: 2400, caption: cap('demoAnswer'), enter: function () { at({ x: E.x, y: E.y, h: item.heading + item.keyDeg }, true); st.D.set(item.keyDeg); } },
     ];
     var map = item.task ? [] : st.M.steps(item, { tol: isReturn(item) ? null : item.tolerance });
     return kit.play(S, watch.concat(map, answer), ctx, { name: 'demo' }).then(function () {
+      var shown = K().reportMotion(ctx, meter.take());
       if (!st) return;
+      st.motionMs += shown;
       st.playing = false;
       S.sub.textContent = '';
       if (st.item === item && !st.done) {
@@ -584,6 +616,7 @@
   PX.ex.view('reckon', {
     layout: 'custom',
     needs: 'webgl',
+    motion: true, // v1.2 O36 (CONTRACT-v1.2 F): the player's motion notice and check-in cards apply
     css: true,
     requires: ['homing'],
     mount: mount,
@@ -596,15 +629,17 @@
     pause: function () { if (st && st.walking) st.hostPause = true; },
     resume: function () { if (st) { st.hostPause = false; st.paused = false; st.S.pauseNote.hidden = true; } },
     // for tests
-    timeline: function (item) { return planOf(item); },
+    // the plan the view plays for this item (the gentle profile's while it is on)
+    timeline: function (item) { return planOf(st && st.item === item && st.mv ? st.mv : item); },
     pose: function () { return st && st.S ? { x: st.S.pose.x, y: st.S.pose.y, h: st.S.pose.h } : null; },
     state: function () {
       return st ? { walking: st.walking, paused: st.paused, hostPause: st.hostPause, voided: st.voided, voidStats: st.voidStats, live: st.live,
         value: st.value, dist: Math.round(st.dist * 1000) / 1000, speed: st.v, dir: st.dir, flag: !!(st.S.flag && st.S.flag.visible), ring: !!(st.S.ring && st.S.ring.visible),
         map: st.M.shown(), frames: st.frames, input: st.input, mode: st.mode, fade: [st.S.fadeU.value.x, st.S.fadeU.value.y],
-        ground: st.S.spec ? st.S.spec.kind : null, dots: st.S.dots ? st.S.dots.count : 0, hist: hist().length } : null;
+        ground: st.S.spec ? st.S.spec.kind : null, dots: st.S.dots ? st.S.dots.count : 0, hist: hist().length,
+        gentle: st.gentle, fix: !st.S.fix.hidden, motionMs: st.motionMs, walkSpeed: st.mv ? st.mv.walkSpeed : null, fit: st.mv && st.mv.gentle ? st.mv.fit : null } : null;
     },
-    trialInfo: function () { return st ? { input: st.input, mode: st.mode, void: st.voided, frames: st.frames } : null; },
+    trialInfo: function () { return st ? { input: st.input, mode: st.mode, void: st.voided, frames: st.frames, gentle: !!st.gentle } : null; },
     answerMeta: answerMeta,
     history: function () { return hist().slice(); },
   });

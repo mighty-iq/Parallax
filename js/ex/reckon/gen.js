@@ -266,7 +266,9 @@
 
   function generate(rng, params) {
     var p = normParams(params), item = null;
-    if (p.task) { item = taskItem(rng, p); item.seed = rng.seed; return item; }
+    // a tutorial item keeps its task in params too (an extra param, as Painted Cubes keeps `ask`), so the
+    // player's tips can be aimed at it (learn.js tips with when: { dim: 'task' }; v1.2 O39)
+    if (p.task) { item = taskItem(rng, p); item.params.task = p.task; item.seed = rng.seed; return item; }
     var strict = spreads(p) ? STRICT : 0, target = H.drawTarget(rng.fork('target'), axisGap(tolDeg(p)));
     for (var i = 0; i < 50 && !item; i++) {
       var it = build(i === 0 ? rng : rng.fork('retry' + i), p, i < strict, target);
@@ -438,6 +440,25 @@
     };
   }
 
+  /* ------------------------------------------------------------ the numbers behind the feedback (v1.2 O40) */
+  // feedback(item, result) → { dist, drift } for the view's text (RV-play-nav-knots, Reckon's feedback):
+  //   dist (walked items): { pct: whole % off, word: 'even' | 'short' | 'long' }; 'even' when it rounds to
+  //     0 %, so the text never reads "0 % too far"
+  //   drift (route items walked back): { ep: m off, walked: m in all (the route plus the walk back; the text
+  //     says so), cm: cm per metre walked, limCm: this item's own limit in the same unit, τ·d / walked, so
+  //     cm ≤ limCm exactly when the answer is right (a yardstick from the scoring rule, not a norm) }
+  function feedback(item, result) {
+    var d = result && result.detail ? result.detail : {}, out = { dist: null, drift: null };
+    if (!item || item.answer !== 'position' || !isNum(d.ratio)) return out;
+    var pct = Math.round(Math.abs(d.ratio - 1) * 100);
+    out.dist = { pct: pct, word: pct === 0 ? 'even' : d.ratio < 1 ? 'short' : 'long' };
+    if (!item.task && isNum(d.posErr) && isNum(d.dist) && isNum(item.pathLength)) {
+      var walked = Math.max(1, item.pathLength + d.dist);
+      out.drift = { ep: rnd(d.posErr, 10), walked: Math.round(walked), cm: Math.round(100 * d.posErr / walked), limCm: Math.round(100 * item.tolerance * item.distance / walked) };
+    }
+    return out;
+  }
+
   /* ------------------------------------------------------------ timing */
   var RESPONSE_MS = 5000;   // typical time to turn to face the start and confirm
   var STOP_MS = 2000;       // after the walk back: stopping and confirming
@@ -480,6 +501,8 @@
       normParams: normParams, routeCost: routeCost, tolDeg: tolDeg, axisGap: axisGap, shortcuts: shortcuts, shortcutsMiss: shortcutsMiss, spreads: spreads,
       build: build, assemble: assemble, speedPlan: speedPlan, drawSpeeds: drawSpeeds, taskItem: taskItem, fallback: fallback, keyXZ: keyXZ,
       entry: entry, bias: bias, median: median,
+      // the gentle motion profile (Homing's lib; v1.2 O36) and the feedback numbers (v1.2 O40)
+      GENTLE: H.GENTLE, gentle: H.gentle, feedback: feedback,
     },
   });
 })(window.PX);

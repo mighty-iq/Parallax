@@ -23,8 +23,11 @@
       { id: 'ground', label: 'Ground', text: 'Its marks slide past as you move, so they show how far and how fast you turn and walk. Nothing on it marks a place, and speeds change, so count what you see, not seconds.' },
       { id: 'turn', label: 'Turn', text: 'At the end, drag the view sideways, drag the arrow circle, or use the ◀ ▶ buttons (keys: ← and →, Shift for 1°). The top of the circle is the way you face now.' },
       { id: 'walk', label: 'Walk back', text: 'On return items: turn first, then hold Walk (key ↑) and let go to stop; Back (↓) steps back. Tap Here (Enter) where you think the start is.', variant: 'return' },
-      { id: 'comfort', label: 'Comfort', text: 'The view moves on its own during the walk. Pause, or stop the session, if it makes you feel unwell.' },
+      { id: 'comfort', label: 'Comfort', text: 'The view moves on its own during the walk. Pause, or stop the session, if it makes you feel unwell. Gentle motion, in Settings, slows the walk and adds a still dot to look at.' },
     ],
+    // v1.2 O36: the one-time notice before the first route outside Watch, Try, Go (the player shows it once,
+    // rec.ui.seen.walkNotice; docs/research/v1.2/N1-reckon.md §5.4 #1)
+    motionNotice: 'The view moves on its own. If you feel unwell, pause or stop. Gentle motion is in Settings.',
     // 2 legs, medium turn, textured ground, steady speed, 40°: seed 34 walks 8.0 m, turns 100.6° right,
     // walks 10.2 m; the start is 138° to the right, 11.7 m away.
     demo: [
@@ -36,11 +39,17 @@
       { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 },
       { variant: 'return', route: 0, flow: 0, speed: 0, tolerance: 0 },
     ],
+    // The player shows the first tip whose `when` fits the item. The two tutorial rungs come first (their items
+    // carry params.task): a turn on the spot has no start to point at, and a straight walk no turn to keep
+    // (v1.2 O39: "After each turn…" showed on the straight walk). Then the walk back before route tips, so
+    // Try 4 explains Walk and Here.
     tips: [
-      { id: 'update', when: { dim: 'route', levels: [0, 1, 2] }, text: 'After each turn, say to yourself where the start is now: behind, behind-left, left…' },
+      { id: 'headingTurn', when: { dim: 'task', levels: ['heading'] }, text: 'Watch the ground slide past as you turn: it shows how far round you go, even with nothing else to see.' },
+      { id: 'distanceFlow', when: { dim: 'task', levels: ['distance'] }, text: 'The second walk goes at another speed: judge the distance by how much ground slides past, not by counting seconds.' },
       { id: 'walkback', when: { variant: 'return' }, text: 'Turn first, then hold Walk. The ground slides past at your walking speed, which changes from item to item: judge the distance by the ground, not by counting.' },
+      { id: 'update', when: { dim: 'route', levels: [0, 1, 2] }, text: 'After each turn, say to yourself where the start is now: behind, behind-left, left…' },
       { id: 'speeds', when: { dim: 'speed', levels: [1] }, text: 'Speeds change from leg to leg now: watch the ground flow, not the seconds.' },
-      { id: 'speedsWithin', when: { dim: 'speed', levels: [2] }, text: 'Speeds now change even within a leg: watch the ground flow, not the seconds.' },
+      { id: 'speedsWithin', when: { dim: 'speed', levels: [2] }, text: 'Speeds may now change within a leg too: watch the ground flow, not the seconds.' },
       { id: 'sparse', when: { dim: 'flow', levels: [1] }, text: 'Fewer marks on the ground now. They still slide past at your speed.' },
       { id: 'dots', when: { dim: 'flow', levels: [2] }, text: 'The marks now fade after a moment, so no single one can be followed. Their flow still shows each turn and each metre.' },
       { id: 'legs', when: { dim: 'route', levels: [4, 5, 6, 7] }, text: 'Long routes: keep updating where the start is after every leg, or picture the shape from above as it grows.' },
@@ -136,11 +145,17 @@
       posRightDistance: '{err} m off: within {pct} % of the distance ({lim} m)',
       posWrongDistance: '{err} m off: more than {pct} % of the distance ({lim} m)',
       answerWas: 'The start was {deg}° to your {side}, {dist} m away.',
-      walkedWas: 'You turned {deg}° {side} and walked {r} m: {aerr}° off in direction, {dpct} % {dword} in distance.',
+      walkedWas: 'You turned {deg}° {side} and walked {r} m: {aerr}° off in direction, {dist} in distance.',
       walkedNone: 'You did not walk back, so only your direction counts as a miss.',
-      drift: 'Drift: {ep} m off after {path} m walked, about {cm} cm per metre.',
+      // the drift: the route and the walk back together, against this item's own limit in the same unit (v1.2 O40)
+      drift: 'Drift: {ep} m off after {path} m walked in all (the route and your walk back), {per}; the limit for this item was about {lim} cm per metre.',
+      perMetre: 'about {cm} cm per metre',
+      perMetreUnder: 'under 1 cm per metre',
       headingWas: 'You turned {deg}° {side} in all; turning back by as much faces the way you started.',
-      distanceWas: 'The first walk was {L} m; you walked {r} m ({dpct} % {dword}).',
+      distanceWas: 'The first walk was {L} m; you walked {r} m ({dist}).',
+      // a distance off by less than 1 % reads "under 1 % off", never "0 % too far" (v1.2 O40)
+      distOff: '{dpct} % {dword}',
+      distEven: 'under 1 % off',
       short: 'short',
       long: 'too far',
       legend: 'Filled arrow: the way to the start; shaded: ± {tol}°.',
@@ -158,8 +173,13 @@
       biasWalkLong: 'you walked about {pct} % too far',
       biasWalkEven: 'your distances were about right on average',
       biasSwaps: '{k} answers on the wrong side',
-      chartLabel: 'Your last routes: how far round you turned, one dot each, above the line too far and below too little, filled when right, against the current tolerance (band).',
-      chartNote: 'Above the line: turned too far round; below: too little. Filled: right; shaded: the current tolerance.',
+      // the chart has axis words and says solid and hollow, not "filled: right", which read as a direction (v1.2 O40)
+      chartLabel: 'Your last routes, oldest first: how far round you turned, one dot each, above the line too far and below it too little, solid when right and hollow when missed, against the current tolerance (the shaded band).',
+      chartNote: 'One dot per route, oldest on the left. Above the line you turned too far round, below it too little; the shaded band is the current tolerance. Solid dots were right, hollow dots missed.',
+      chartFar: 'too far',
+      chartShort: 'too little',
+      chartOld: 'older',
+      chartNew: 'latest',
       // show me: the route from above (shared kit keys) and Reckon's extra steps
       hideMap: 'Hide the map',
       mapStart: 'start',
@@ -174,7 +194,7 @@
       mapYours: 'Your answer: {deg}° to the {side} (the open arrow).',
       mapYoursLine: 'Your answer: {deg}° to the {side} (the solid line).',
       mapYoursWalk: 'You walked {r} m that way and stopped at the ring: {ep} m from the start.',
-      mapYou: 'you',
+      mapYou: 'your answer', // the arrow of your answer, not where you are (v1.2 O40)
       // the demo
       demoStart: 'You start here, inside the ring. Nothing else will ever mark this spot.',
       demoWalk: 'Watch the walk: straight legs with turns on the spot between them. The ground shows every metre and every degree.',

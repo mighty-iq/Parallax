@@ -319,6 +319,57 @@
   // Duration of the route's motion (legs and turns with their ramps), s.
   function motionSeconds(item) { return plan(item, 0).motion; }
 
+  /* ------------------------------------------------------------ the gentle motion profile (v1.2, O36) */
+  // Motion comfort (docs/research/v1.2/N1-reckon.md §5.4, §6 #3; PLAN milestone 1): the same route, shown
+  // slower and steadier, for players who switch Gentle motion on (or use reduced motion while it is on
+  // 'auto'). Legs, turns, the path and the key are untouched; only how the view moves changes:
+  //   every speed and turn rate × SCALE (2/3: 1.8 → 1.2 m/s, 45 → 30°/s), ramps of RAMP s (0.6, not 0.4),
+  //   one speed per leg (a leg that changed speed takes the one speed that gives it the same time, so time
+  //   still says as little about length), the walk back (Reckon's walkSpeed) × SCALE too;
+  //   at most MAX s of motion per route (40; normal routes keep their 30 s): a route that would take longer
+  //   has all its rates raised by the one factor `fit` that brings it to MAX (never above × 1.5, the
+  //   normal rates, which always fit).
+  // gentle(item) → a copy with speeds/turn rates (Reckon: speeds, splits, turnRates), ramp, duration and
+  // walkSpeed replaced, gentle: true and fit (1 unless the route was sped up to fit). An item already
+  // gentle is returned as it is.
+  var GENTLE = { SCALE: 2 / 3, RAMP: 0.6, MAX: 40, FIT_MAX: 1.5 };
+  function gentle(item) {
+    if (!item || item.gentle === true || !Array.isArray(item.legs) || !Array.isArray(item.turns)) return item;
+    var g = {}, k, sc = GENTLE.SCALE, per = Array.isArray(item.speeds);
+    for (k in item) if (Object.prototype.hasOwnProperty.call(item, k)) g[k] = item[k];
+    // the base rates (m/s, deg/s) before the scale: a two-speed leg as the single speed that keeps its time
+    var legV = per ? item.legs.map(function (L, i) {
+      var v = item.speeds[i];
+      return v.length < 2 ? v[0] : L / (piecesDur(legPieces(item, i)) - (item.ramp || RAMP));
+    }) : null;
+    function set(f) {
+      if (per) {
+        g.speeds = legV.map(function (v) { return [Math.min(V_MAX, rnd(v * sc * f, 100))]; });
+        g.splits = legV.map(function () { return null; });
+        g.turnRates = item.turnRates.map(function (w) { return Math.min(W_MAX, rnd(w * sc * f, 10)); });
+      } else {
+        g.speed = Math.min(V_MAX, rnd(item.speed * sc * f, 100));
+        g.turnRate = Math.min(W_MAX, rnd(item.turnRate * sc * f, 10));
+      }
+      return motionSeconds(g);
+    }
+    g.ramp = GENTLE.RAMP;
+    var f = 1, s = set(1);
+    if (s > GENTLE.MAX) {
+      // motion = cruise + pieces × ramp, and cruise ∝ 1 / f: the factor that brings it to MAX, then up in
+      // small steps while the rounded rates still leave it over
+      var n = item.legs.length + item.turns.length, cruise = s - n * GENTLE.RAMP;
+      f = Math.min(GENTLE.FIT_MAX, cruise / Math.max(0.1, GENTLE.MAX - n * GENTLE.RAMP));
+      s = set(f);
+      for (var i = 0; i < 40 && s > GENTLE.MAX && f < GENTLE.FIT_MAX; i++) { f = Math.min(GENTLE.FIT_MAX, f * 1.004); s = set(f); }
+    }
+    if (isNum(item.walkSpeed)) g.walkSpeed = rnd(item.walkSpeed * sc, 100);
+    g.duration = rnd(s, 100);
+    g.gentle = true;
+    g.fit = rnd(f, 1000);
+    return g;
+  }
+
   /* ------------------------------------------------------------ Homing's items */
   // Scores a candidate (see search): 8 the shortcuts miss ("reversed" always; "turn around" unless the
   // target itself lies within the tolerance of 180°; in a DEGENERATE cell only the one drawn as `prefer`),
@@ -572,6 +623,8 @@
       // motion
       piece: piece, pieceDist: pieceDist, pieceAt: pieceAt, rateAt: rateAt, rampPieces: rampPieces, twoRatePieces: twoRatePieces,
       legPieces: legPieces, turnPieces: turnPieces, plan: plan, segAt: segAt, poseAt: poseAt, motionSeconds: motionSeconds,
+      // the gentle motion profile (v1.2)
+      GENTLE: GENTLE, gentle: gentle,
     },
   });
 })(window.PX);

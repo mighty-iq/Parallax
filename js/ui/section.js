@@ -13,7 +13,12 @@
    does not count and a replacement joins the end of its part. Time up, "End the section" (pause
    sheet) or the last part's end → the review: each part's results and pacing, then the items to
    look at again, each replayed with its answer, the right answer and its show-me.
-   The run is saved between items, so a reload offers to resume it. Never during a stimulus.
+   The run is saved between items, so a reload offers to resume it. Never during a stimulus. When the
+   page is hidden or left (a reload, a closed tab, another app), the clock's time is written at once, so a
+   reload never gives back the time spent on the current item (v1.2 O9; the store writes even while held:
+   a hidden page shows no stimulus). Item numbers never shift (v1.2 O11: PX.engine.section.numberOf).
+   The finished run is kept for its review (rec.section.last): a reload during the review reopens it, and
+   the setup screen offers it later (v1.2 O10).
 
    PX.ui.section = { config, state() } (tests: config.idleMs; window.__section mirrors state()) */
 (function (PX) {
@@ -84,8 +89,20 @@
     var live = null;
     try { live = SE().live(rec()); } catch (e) { live = null; }
     if (live && live.parts.some(function (p) { return !PX.ex.get(p.exId); })) live = null; // an exercise left this build
-    if (live) resumeCard(X, live); else setup(X, route.params || {});
+    var kept = live ? null : keptReview(true);
+    if (live) resumeCard(X, live); else if (kept) review(X, kept); else setup(X, route.params || {});
     return function cleanup() { leaveScreen(X); };
+  }
+
+  // The last finished run's review (v1.2 O10). openOnly: only while it was open (a reload during the review)
+  // and recent (REOPEN_MS); later the setup screen offers it with a button instead.
+  var REOPEN_MS = 2 * 3600000;
+  function keptReview(openOnly) {
+    var L = null, res = null;
+    try { L = SE().last ? SE().last(rec()) : null; } catch (e) { L = null; }
+    if (!L || (openOnly && (!L.open || !(now() - L.end < REOPEN_MS)))) return null;
+    try { res = SE().lastResult(rec()); } catch (e) { log('the last review could not be rebuilt', e); res = null; }
+    return res;
   }
 
   function setState(X, s) { X.mode = s; X.wrap.setAttribute('data-sec-state', s); }
@@ -125,7 +142,11 @@
       });
       body.appendChild(sizes);
       var runs = rec().section && Array.isArray(rec().section.runs) ? rec().section.runs : [], last = runs[runs.length - 1];
-      if (last) body.appendChild(h('p.px-meta.sec-last', 'Your last section: ' + last.size + ', form ' + last.form + ', ' + last.right + ' of ' + last.n + ' right in ' + clockText(last.usedMs) + ' (' + K.fmtWhen(last.end) + '). Section runs are also in the Log.'));
+      if (last) {
+        var kept = keptReview(false), open = kept && kept.summary.id === last.id ? ui.button('Open its review', { kind: 'ghost', small: true, onClick: function () { review(X, kept); } }) : null;
+        if (open) open.setAttribute('data-sec-lastreview', '');
+        body.appendChild(h('p.px-meta.sec-last', 'Your last section: ' + last.size + ', form ' + last.form + ', ' + last.right + ' of ' + last.n + ' right in ' + clockText(last.usedMs) + ' (' + K.fmtWhen(last.end) + '). Section runs are also in the Log. ', open));
+      }
       var next = SE().nextForm(rec(), size), formSel = h('select.px-select', { id: 'sec-form', 'data-sec-form': '' });
       for (var f = 1; f <= next; f++) formSel.appendChild(h('option', { value: String(f), selected: f === next }, 'Form ' + f + (f === next ? ' (new to you)' : ' (taken before)')));
       body.appendChild(h('div.px-setting.sec-formrow', h('label.px-setting-label', { for: 'sec-form' }, 'Form'), formSel,
@@ -242,6 +263,16 @@
     X.offs.push(X.C.on('resume', function () { tick(X); }));
     X.offs.push(bus.on('modal:open', function () { if (X.C) X.C.pause('modal'); }));
     X.offs.push(bus.on('modal:close', function () { if (X.C && !ui.modalOpen()) X.C.resume('modal'); }));
+    // v1.2 O9: the page hidden or left (a reload, a closed tab, another app) writes the clock's time at once
+    function checkpoint() {
+      if (!X.run || X.done || !X.C) return;
+      persist(X);
+      try { store.flush({ evenIfHeld: true }); } catch (e) { /* the store's own pagehide write follows */ }
+    }
+    function onHide() { if (doc.hidden) checkpoint(); }
+    win.addEventListener('pagehide', checkpoint);
+    doc.addEventListener('visibilitychange', onHide);
+    X.offs.push(function () { win.removeEventListener('pagehide', checkpoint); doc.removeEventListener('visibilitychange', onHide); });
     X.popKeys = keys.push({
       ArrowLeft: function () { if (X.mode !== 'item') return false; back(X); },
       ArrowRight: function () { if (X.mode !== 'item') return false; next(X); },
@@ -322,13 +353,12 @@
   function drawStrip(X) {
     var run = X.run, P = run.parts[run.part], el = X.el;
     ui.clear(el.strip);
-    var shown = 0;
     P.items.forEach(function (it, i) {
-      if (it.status === 'void') return; // its replacement is at the end of the part
-      shown++;
-      var st = itemState(it), label = 'Item ' + shown + ', ' + (st === 'answered' ? 'answered' : 'not answered') + (it.flag ? ', flagged' : '') + (i === run.index ? ', current' : '');
+      if (it.status === 'void') return; // its replacement is at the end of the part, with its number
+      var no = numberOf(run, i);
+      var st = itemState(it), label = 'Item ' + no + ', ' + (st === 'answered' ? 'answered' : 'not answered') + (it.flag ? ', flagged' : '') + (i === run.index ? ', current' : '');
       var b = h('button', { type: 'button', class: ['sec-chip', 'is-' + st, it.flag ? 'is-flagged' : null, i === run.index ? 'is-current' : null], 'data-sec-item': String(i), 'aria-label': label, 'aria-current': i === run.index ? 'true' : null },
-        h('span.sec-chip-n', String(shown)),
+        h('span.sec-chip-n', String(no)),
         st === 'answered' ? h('span.sec-chip-dot', { 'aria-hidden': 'true' }, '●') : null, // answered: a dot, not colour alone (rule 8)
         it.flag ? h('span.sec-chip-flag', { 'aria-hidden': 'true' }, '⚑') : null);
       b.addEventListener('click', function () {
@@ -343,13 +373,10 @@
     el.items.firstChild.textContent = 'Items ' + info.answered + '/' + info.n;
   }
 
-  // The number shown for an item: its place among the part's items that count (voids skipped).
-  function numberOf(run, index) {
-    var P = run.parts[run.part], n = 0;
-    for (var i = 0; i <= index && i < P.items.length; i++) if (P.items[i].status !== 'void') n++;
-    return n;
-  }
-  function countOf(run) { return SE().partInfo(run).n; }
+  // The number shown for an item: its place in the form, which never shifts; a replacement shows the number of
+  // the item it replaces (v1.2 O11; PX.engine.section.numberOf). Out of the part's numbers (its original items).
+  function numberOf(run, index) { return SE().numberOf(run, index); }
+  function countOf(run) { return SE().numberCount(run); }
   function totalAnswered(run) { var n = 0; run.parts.forEach(function (P) { P.items.forEach(function (it) { if (it.status === 'answered') n++; }); }); return n; }
   function totalItems(run) { var n = 0; run.parts.forEach(function (P) { P.items.forEach(function (it) { if (it.status !== 'void') n++; }); }); return n; }
 
@@ -628,6 +655,7 @@
       persist(X); // kept in rec.section.live: the next visit offers to resume it
       try { store.flush(); } catch (e) { /* ignore */ }
     }
+    if (X.mode === 'review') reviewClosed(); // another screen: the review is closed (a reload would not run this)
     X.done = true;
     X.token++;
     stopRun(X);
@@ -684,8 +712,8 @@
     box.appendChild(p.el);
 
     var again = SE().review(res, 'again'), all = SE().review(res, 'all');
-    all.forEach(function (e) { e.n = countUpTo(run.parts[e.part], e.index); });
-    again.forEach(function (e) { e.n = countUpTo(run.parts[e.part], e.index); });
+    all.forEach(function (e) { e.n = SE().numberOf(run, e.index, e.part); });
+    again.forEach(function (e) { e.n = SE().numberOf(run, e.index, e.part); });
     var ip = K.panel({ title: 'Items to look at again', className: 'pl-panel sec-items-panel' });
     var filter = again.length ? 'again' : 'all';
     var lists = h('div.sec-lists');
@@ -725,18 +753,16 @@
     }
     drawLists();
 
-    var more = ui.button('Another section', { kind: 'primary', onClick: function () { closeStage(X); X.done = false; setup(X, { size: s.size }); try { win.scrollTo(0, 0); } catch (e) { /* ignore */ } } });
+    var more = ui.button('Another section', { kind: 'primary', onClick: function () { closeStage(X); reviewClosed(); X.done = false; setup(X, { size: s.size }); try { win.scrollTo(0, 0); } catch (e) { /* ignore */ } } });
     more.setAttribute('data-sec-again', '');
     box.appendChild(h('div.pl-summary-actions', more, ui.button('Back to the Library', { kind: 'secondary', go: 'library' })));
     box.appendChild(ada());
+    // a reload from here comes back to this review (v1.2 O10); leaving it any other way closes it
+    try { if (SE().lastOpen && SE().lastOpen(rec(), true)) save(); } catch (e) { log('keeping the review open failed', e); }
     try { win.scrollTo(0, 0); } catch (e) { /* ignore */ }
   }
+  function reviewClosed() { try { if (SE().lastOpen && SE().lastOpen(rec(), false)) save(); } catch (e) { /* ignore */ } }
 
-  function countUpTo(P, index) {
-    var n = 0;
-    for (var i = 0; i <= index && i < P.items.length; i++) if (P.items[i].status !== 'void') n++;
-    return n;
-  }
 
   // One item of the review: the item again, the player's answer replayed so the reveal marks it
   // and the right one, then show-me (automatic after a wrong answer, a button after a right one).
@@ -789,7 +815,7 @@
   function state() {
     var X = current;
     if (!X) return null;
-    var r = X.run;
+    var r = X.run || (X.result && X.result.run) || null; // a review reopened after a reload has only its result
     return {
       mode: X.mode, done: X.done, part: r ? r.part : null, index: r ? r.index : null, parts: r ? r.parts.map(function (p) { return p.exId; }) : [],
       usedMs: X.result ? X.result.summary.usedMs : r ? used(X) : 0, budgetMs: r ? r.budgetMs : 0, running: !!(X.C && X.C.running && X.C.running()),
