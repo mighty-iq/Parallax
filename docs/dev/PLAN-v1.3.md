@@ -12,5 +12,5 @@ Started 2026-11-18 at the v1.2 plan. Add each item the moment it is deferred, wi
 | New exercises for closure speed, spatial scanning and imagery | O61 | no research this round | L each |
 | Openings' curved features (quarter-circle notches) and remaining top-level foils: interaction outlines, "face, not outline" and "too large" foils, the strict-superset foil, the 15 % proportion level, the congruent-silhouette report | rest of O50; note D1 §6.6 | curves break the exact quarter-cell model and need a new solver; the foils extend the top levels after the v1.2 test-range rebuild lands | L |
 | Hole Punch half folds | note D1 §6.8 | after the v1.2 look change settles | M |
-| Central Point weighted targets, and a speed variant | note C1 §3.2, §9 | not simulated in v1.2 | M |
+| Central Point weighted targets | note C1 §3.2, §9 | not simulated in v1.2 (the speed form moved into v1.2 as Central Point's default, Quick) | M |
 | Game option C pieces worth a later look: the cooperative tile on the Climb card, a ghost comparison on the summary only | note G1 §4 | only if the community asks | M |
