@@ -15,7 +15,9 @@
        'check': the meter, the rungs, the verdicts, the history), settings:sections (Measurement week),
        lab:panels (the ladder). The pooled export's header gains `probes` ({ 'id@v': rung }; CONTRACT-v1.2 T).
    Words follow CLAUDE.md rules 2 and 10: probe points and words, never an IQ, an index, a percentile, a norm or a
-   brain age; verdict words only at milestones; "unclear yet" is not "no progress". */
+   brain age; verdict words only at milestones; "unclear yet" is not "no progress".
+   Offers come in rated sessions only (Train, Path, Speed; Free play never measures). PX.ui.measure.quiet = true
+   silences them (browser suites mute every builder's hooks with PX.ui.hooks.mute; tests/e2e/check.py unmutes). */
 (function (PX) {
   'use strict';
 
@@ -27,7 +29,7 @@
     'unclear yet': 'Unclear yet: the usual verdict for one person at this point. It is not the same as no progress.',
   };
   var RUNGS = [['near', 'Near', 'Other Way Round: the same skills, run backwards'], ['mid', 'Mid', 'other spatial tasks you never train'], ['far', 'Far', 'motion and mechanisms: furthest from the training']];
-  var SESSION_MODES = { train: 1, path: 1, speed: 1, free: 1 };
+  var SESSION_MODES = { train: 1, path: 1, speed: 1 };
 
   function E() { return PX.engine; }
   function A() { return PX.engine.assess; }
@@ -45,6 +47,7 @@
   function minutes(m) { return (m % 1 ? m.toFixed(1) : String(m)) + (m === 1 ? ' minute' : ' minutes'); }
   function when(t) { var K = PX.ui.kit; return K && K.fmtWhen ? K.fmtWhen(t) : U.fmtDate(t, 'long'); }
   function next(r, t) { try { return A().nextMeasure(r, t, { can: canRun }); } catch (e) { log('nextMeasure failed', e); return null; } }
+  function quiet() { var M = PX.ui.measure; return !!M && M.quiet === true; }
 
   try { A().wire(); } catch (e) { log('wire failed', e); } // the measure container's repair, merge and events, before the first load
   try { store().setting('measureWeek', { def: false, type: 'bool' }); } catch (e) { log('the measureWeek setting', e); }
@@ -467,7 +470,7 @@
   /* ---------- hooks: the session ---------- */
 
   PX.ui.hooks.on('session:start', function (ctx) {
-    if (!SESSION_MODES[ctx.mode] || !ctx.P) return null;
+    if (!SESSION_MODES[ctx.mode] || !ctx.P || quiet()) return null;
     var nm = next(rec(), now());
     if (!nm || !nm.due || nm.when !== 'session-start') return null;
     return offer(ctx, nm, 'start');
@@ -475,7 +478,7 @@
 
   // B1 right after the first tutorial (decision 3): the session clock is paused while it runs.
   PX.ui.hooks.on('item:before', function (ctx) {
-    if (!SESSION_MODES[ctx.mode] || !ctx.P || !(ctx.afterTutorial || ctx.first)) return null;
+    if (!SESSION_MODES[ctx.mode] || !ctx.P || !(ctx.afterTutorial || ctx.first) || quiet()) return null;
     var nm = next(rec(), now());
     if (!nm || !nm.due || nm.kind !== 'B1' || nm.when !== 'after-tutorial') return null;
     ctx.clock.pause('measure');
@@ -609,6 +612,6 @@
     return { el: p.el, after: 'crossover' };
   }, { id: 'measure.ladder', order: 40 });
 
-  PX.ui.measure = { play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows,
+  PX.ui.measure = { quiet: false, play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows,
     _: { limitRange: limitRange, sessions: SESSIONS, askExpect: askExpect, askOverlap: askOverlap, offer: offer } };
 })(window.PX);
