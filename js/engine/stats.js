@@ -179,8 +179,13 @@
       var x = rec.trialDays[d], pr = 0;
       if (!isObj(x)) return;
       folded += x.n || 0;
-      // folded days keep no mode: Spatial Check rows are known by their probe exercises
-      if (isObj(x.ex)) Object.keys(x.ex).forEach(function (k) { if (probe[k.split('@')[0]] && isObj(x.ex[k])) pr += x.ex[k].n || 0; });
+      // folded days keep no mode: Spatial Check rows are known by their probe exercises. Their
+      // answers (right or wrong) are subtracted: `a` since v1.2 (O15); older days kept only every
+      // row's count `n`, voided and skipped rows included, so they subtract that as before.
+      if (isObj(x.ex)) Object.keys(x.ex).forEach(function (k) {
+        var e = x.ex[k];
+        if (probe[k.split('@')[0]] && isObj(e)) pr += isNum(e.a) ? e.a : e.n || 0;
+      });
       foldedAns += Math.max(0, (x.right || 0) + (x.wrong || 0) - pr);
     });
     E.log.scan(rec, function (r, id, mode) { if ((r[5] === 0 || r[5] === 1) && mode !== 'check' && !probe[id]) answers++; });

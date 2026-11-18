@@ -25,6 +25,9 @@
    (default null = untimed), customDifficulty (boolean), version (default 1), nCorrect (1 unless
    answer 'multi'), perDisplay (default false), cell (null = outside the 2×2), pat (default false: a
    PAT-format exercise, trained only under the player's PAT focus; v1.1), experimental (default false).
+   v1.2 (docs/dev/CONTRACT-v1.2.md A): starter ({ dim, levels } or null), trainVariants (the variants
+   automatic choices use; all by default), pace (a deadline spec or null), roundScore (function or
+   null), bet (one of BETS or null); a dim may carry `at` (per-level difficulty contributions).
    key(def) → 'id@version' (how trial logs index exercises). Definitions are frozen after define. */
 (function (PX) {
   'use strict';
@@ -39,7 +42,10 @@
   var CELLS = ['intrinsic-static', 'intrinsic-dynamic', 'extrinsic-static', 'extrinsic-dynamic', null]; // null: outside the 2×2 (a checklist label only)
   var ROLES = ['train', 'probe'];
   // position (v1.1): a point on the ground plane, { x, z } in metres in the item's own frame (Reckon's walk-back).
-  var ANSWERS = ['choice', 'multi', 'yesno', 'angle', 'targets', 'sequence', 'position'];
+  // point (v1.2): a point on the item's own lattice, { x, y } in its units (Central Point's half-step answers).
+  var ANSWERS = ['choice', 'multi', 'yesno', 'angle', 'targets', 'sequence', 'position', 'point'];
+  // v1.2 (PLAN milestone 4, gap T2): the transfer bet an exercise makes, one of nine ids.
+  var BETS = ['attention', 'load', 'variety', 'strategy', 'compare', 'bridge', 'produce', 'calibrate', 'format'];
   var LAYOUTS = ['stem+options', 'custom'];
   var ENUM_LIMIT = 5000;
   var ENUM_SAMPLE = 400;
@@ -122,13 +128,32 @@
       keys[dim.key] = true;
       if (!Array.isArray(dim.levels) || !dim.levels.length) fail(id, 'dim "' + dim.key + '" needs a non-empty levels array');
       if (!isNum(dim.step)) fail(id, 'dim "' + dim.key + '" needs a numeric step (got ' + JSON.stringify(dim.step) + ')');
+      // at (v1.2): per-level difficulty contributions, used instead of step × index (a starter
+      // level in front: at = [Δ, 0, step, 2·step, …] keeps every old combination's difficulty)
+      if (dim.at !== undefined) {
+        if (!Array.isArray(dim.at) || dim.at.length !== dim.levels.length || !dim.at.every(isNum)) {
+          fail(id, 'dim "' + dim.key + '": at must be an array of numbers, one per level (' + dim.levels.length + ')');
+        }
+      }
       var copy = {};
       for (var p in dim) if (hasOwn.call(dim, p)) copy[p] = dim[p];
       copy.label = isStr(dim.label) ? dim.label : dim.key;
       copy.levels = Object.freeze(dim.levels.slice());
+      if (dim.at !== undefined) copy.at = Object.freeze(dim.at.slice());
       return Object.freeze(copy);
     });
     if (!isNum(d.base)) fail(id, 'base must be a number (difficulty in logits with every dim at level 0)');
+    // starter (v1.2, note D2 §3.0 A): the first `levels` levels of dim `dim` are the starter band
+    // below the pre-1.2 floor. Display only: the engine needs nothing else.
+    if (d.starter === undefined || d.starter === null) d.starter = null;
+    else {
+      var sd = d.starter, sdim = sd && typeof sd === 'object' ? d.dims.filter(function (x) { return x.key === sd.dim; })[0] : null;
+      if (!sdim) fail(id, 'starter must be { dim, levels } naming one of the dims');
+      if (!(Number.isInteger(sd.levels) && sd.levels >= 1 && sd.levels < sdim.levels.length)) {
+        fail(id, 'starter.levels must be an integer from 1 to ' + (sdim.levels.length - 1));
+      }
+      d.starter = Object.freeze({ dim: sd.dim, levels: sd.levels });
+    }
 
     if (d.variants === undefined || d.variants === null) d.variants = null;
     else {
@@ -141,6 +166,37 @@
       });
       d.variants = d.variants.slice();
     }
+    // trainVariants (v1.2): the variants automatic choices use (Train, Path, Today's plan, the
+    // Daily); explicit picks (Free play, the Library, Speed) may use any. Default: all.
+    if (d.trainVariants === undefined || d.trainVariants === null) d.trainVariants = d.variants ? d.variants.slice() : null;
+    else {
+      if (!d.variants) fail(id, 'trainVariants needs variants');
+      if (!Array.isArray(d.trainVariants) || !d.trainVariants.length || d.trainVariants.some(function (v) { return d.variants.indexOf(v) < 0; })) {
+        fail(id, 'trainVariants must be a non-empty list of the exercise\'s variants');
+      }
+      d.trainVariants = d.trainVariants.slice();
+    }
+    // pace (v1.2): items of these variants carry a deadline in Train, Path, Free play and the
+    // Daily, from a per-exercise staircase (js/engine/pace.js; CONTRACT-v1.2 A and E).
+    if (d.pace === undefined || d.pace === null) d.pace = null;
+    else {
+      var pc = d.pace;
+      if (!pc || typeof pc !== 'object') fail(id, 'pace must be an object { startMs, minMs, maxMs, … }');
+      if (!(isNum(pc.minMs) && isNum(pc.maxMs) && isNum(pc.startMs) && pc.minMs > 0 && pc.minMs <= pc.startMs && pc.startMs <= pc.maxMs)) {
+        fail(id, 'pace needs minMs ≤ startMs ≤ maxMs (milliseconds, > 0)');
+      }
+      if (pc.variants !== undefined && pc.variants !== null && (!d.variants || !Array.isArray(pc.variants) || pc.variants.some(function (v) { return d.variants.indexOf(v) < 0; }))) {
+        fail(id, 'pace.variants must list variants of the exercise');
+      }
+      var tgt = pc.target === undefined ? 0.85 : pc.target, stp = pc.step === undefined ? 0.03 : pc.step;
+      if (!(isNum(tgt) && tgt >= 0.5 && tgt < 1)) fail(id, 'pace.target must be in [0.5, 1)');
+      if (!(isNum(stp) && stp > 0 && stp <= 0.2)) fail(id, 'pace.step must be in (0, 0.2] (log10 units)');
+      d.pace = Object.freeze({ variants: pc.variants ? Object.freeze(pc.variants.slice()) : null, startMs: pc.startMs, minMs: pc.minMs, maxMs: pc.maxMs, target: tgt, step: stp });
+    }
+    if (d.roundScore !== undefined && d.roundScore !== null && !isFn(d.roundScore)) fail(id, 'roundScore must be a function or left out');
+    if (d.roundScore === undefined) d.roundScore = null;
+    if (d.bet === undefined) d.bet = null;
+    else if (d.bet !== null && BETS.indexOf(d.bet) < 0) fail(id, 'bet must be one of ' + BETS.join(', ') + ' (got ' + JSON.stringify(d.bet) + ')');
 
     ['generate', 'validate', 'score'].forEach(function (fn) {
       if (!isFn(d[fn])) fail(id, fn + '(…) is missing (generate, validate and score are required)');
@@ -182,6 +238,7 @@
     }
     Object.freeze(d.abilities);
     if (d.variants) Object.freeze(d.variants);
+    if (d.trainVariants) Object.freeze(d.trainVariants);
     Object.freeze(d.dims);
     defs[d.id] = Object.freeze(d);
     return d;
@@ -244,7 +301,8 @@
     var b = d.base;
     for (var i = 0; i < d.dims.length; i++) {
       var dim = d.dims[i], ix = params ? params[dim.key] : 0;
-      b += dim.step * (Number.isInteger(ix) ? ix : 0);
+      ix = Number.isInteger(ix) ? ix : 0;
+      b += dim.at ? (ix >= 0 && ix < dim.at.length ? dim.at[ix] : 0) : dim.step * ix;
     }
     return b;
   }
@@ -355,6 +413,11 @@
     if (!d.customDifficulty) {
       lo = hi = d.base;
       d.dims.forEach(function (dim) {
+        if (dim.at) { // per-level contributions (v1.2): the smallest and the largest
+          lo += Math.min.apply(null, dim.at);
+          hi += Math.max.apply(null, dim.at);
+          return;
+        }
         var span = dim.step * (dim.levels.length - 1);
         lo += Math.min(0, span);
         hi += Math.max(0, span);
@@ -395,6 +458,7 @@
   PX.ex.ABILITIES = ABILITIES;
   PX.ex.CELLS = CELLS;
   PX.ex.ANSWERS = ANSWERS;
+  PX.ex.BETS = BETS;
   PX.ex.ENUM_LIMIT = ENUM_LIMIT;
   PX.ex.ENUM_SAMPLE = ENUM_SAMPLE;
 })(window.PX);

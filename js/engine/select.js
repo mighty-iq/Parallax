@@ -393,6 +393,7 @@
     unmix31: unmix31, rng: rngFor, eng: engState, dimTag: dimTag, freshness: freshness,
   };
 
+  E.pooled('eng', false); // seed counters and the page salt: device state, not data (v1.2)
   E.field('eng', function () { return { seedN: 0, salt: null }; }, function (v) {
     if (!isObj(v)) return undefined;
     var out = U.deepCopy(v);

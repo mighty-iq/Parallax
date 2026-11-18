@@ -406,7 +406,7 @@ function shapeProblems(rec, defaults) {
   need(isObj(rec), 'record is an object');
   if (!isObj(rec)) return bad;
   need(deepDiff(Object.keys(rec).sort(), Object.keys(defaults).sort()) === null, 'exactly the known top-level keys');
-  need(rec.v === 2, 'v === 2');
+  need(rec.v === 3, 'v === 3');
   need(isInt(rec.rev) && rec.rev >= 0, 'rev');
   need(isNum(rec.created) && isNum(rec.updated), 'created, updated');
   const s = rec.settings;
@@ -417,7 +417,9 @@ function shapeProblems(rec, defaults) {
     need(['auto', 'on', 'off'].includes(s.reducedMotion), 'settings.reducedMotion');
     need(typeof s.sound === 'boolean' && typeof s.keyHints === 'boolean', 'settings booleans');
     need(isNum(s.textScale) && s.textScale >= 0.75 && s.textScale <= 2, 'settings.textScale');
+    need(typeof s.nickname === 'string' && s.nickname.length <= 24 && typeof s.exportDevice === 'boolean' && ['auto', 'on', 'off'].includes(s.gentleMotion), 'settings (v1.2)');
   }
+  need(isObj(rec.scales) && Object.values(rec.scales).every((r) => Array.isArray(r) && r.length === 2 && isNum(r[0]) && isNum(r[1]) && r[0] <= r[1]), 'scales');
   need(isObj(rec.ex), 'ex');
   if (isObj(rec.ex)) {
     for (const [id, e] of Object.entries(rec.ex)) {
@@ -453,7 +455,7 @@ function shapeProblems(rec, defaults) {
 function goodRecord() {
   return {
     v: 1, rev: 7, created: T0 - 86400000 * 3, updated: T0 - 1000,
-    settings: { sessionMin: 20, weeklyGoal: 4, lastBackup: 0, theme: 'dark', reducedMotion: 'on', sound: true, keyHints: false, textScale: 1.25 },
+    settings: { sessionMin: 20, weeklyGoal: 4, lastBackup: 0, theme: 'dark', reducedMotion: 'on', sound: true, keyHints: false, textScale: 1.25, nickname: 'Ada', exportDevice: false, gentleMotion: 'auto' },
     ex: {
       rotate: { mu: 0.4, sd: 0.8, n: 40, nRight: 31, last: T0 - 5000, seen: { 'angle=1,axis=0': 3 }, best: { streak: 9 }, hist: [['2026-10-29', 0.2, 0.9]], extra: 'engine' },
     },
@@ -463,7 +465,7 @@ function goodRecord() {
     practiceMs: 140, achievements: { first: '2026-10-29' }, streak: { days: 2 }, daily: { '2026-10-29': { score: 3 } },
     assess: [{ date: '2026-10-28', form: 'A', results: { paper: { right: 5, n: 8, theta: 0.3, se: 0.6 } } }],
     tour: { done: true, seen: { rotate: true } }, ui: { lastRoute: 'home' },
-    idx: { ex: ['rotate'], mode: ['daily'] }, trialDays: {},
+    idx: { ex: ['rotate'], mode: ['daily'] }, trialDays: {}, scales: {},
   };
 }
 
@@ -529,7 +531,7 @@ function testStore(t) {
     env.clock.tick(600);
     const saved = JSON.parse(env.storage.get(KEY));
     t.eq([saved.practiceMs, saved.rev], [12, 1], 'the debounced save writes and increments rev');
-    t.ok(env.storage.get(KEY).startsWith('{"v":2,"rev":1,'), 'the saved JSON starts with v and rev');
+    t.ok(env.storage.get(KEY).startsWith('{"v":3,"rev":1,'), 'the saved JSON starts with v and rev');
     t.ok(env.events.some((e) => e.evt === 'store:saved'), 'store:saved is emitted');
 
     // Repeated requests keep pushing the debounce out, but never past 5 s.
@@ -651,7 +653,7 @@ function testStore(t) {
     const xpBefore = SB.state.practiceMs, revBefore = SB.state.rev;
     const rejects = [
       ['', /empty/], ['not json', /not valid JSON/], ['[1,2]', /not a Parallax progress file/],
-      ['{"practiceMs":5}', /not a Parallax progress file/], ['{"v":3,"practiceMs":5}', /newer version/],
+      ['{"practiceMs":5}', /not a Parallax progress file/], ['{"v":4,"practiceMs":5}', /newer version/],
     ];
     for (const [text, pattern] of rejects) {
       const r = SB.importJSON(text);
@@ -721,7 +723,7 @@ function testStore(t) {
     };
     const log = [];
     const g = S.guard(v1, log);
-    t.eq(g.v, 2, 'a v1 record is upgraded to v2');
+    t.eq(g.v, 3, 'a v1 record is upgraded to the current format (3)');
     t.ok(!log.includes('v'), 'the upgrade is silent (not a repair)');
     t.eq([g.trials[0], g.trials[1], g.sessions[0], g.practiceMs, g.settings.theme], [v1.trials[0], v1.trials[1], v1.sessions[0], 600000, 'dark'], 'its rows, sessions and settings load unchanged');
     const row12 = [Math.floor(T0 / 1000), 0, 0, 3, 13, 1, 900, null, 650, 3, 2, 4];
@@ -746,7 +748,7 @@ function testStore(t) {
     // export → import round trip with the new fields
     S.importJSON(JSON.stringify(Object.assign({}, v1, { trials: [row12, row13], sessions: [ses] })));
     const back = JSON.parse(S.exportJSON());
-    t.eq([back.v, back.trials[0], back.trials[1], back.sessions[0]], [2, row12, row13, ses], 'export and import round-trip the new fields (columns 11-13, session fields)');
+    t.eq([back.v, back.trials[0], back.trials[1], back.sessions[0]], [3, row12, row13, ses], 'export and import round-trip the new fields (columns 11-13, session fields)');
   }
 
   t.section('store: two tabs with v1.1 data (the engine merge)');
@@ -893,13 +895,13 @@ function testStore(t) {
     t.eq(SA.state.practiceMs, 45, 'tab A receives the merged record');
 
     // A tab running a newer version: never overwrite it.
-    const st = new SharedStorage({ [KEY]: JSON.stringify({ v: 3, rev: 3, practiceMs: 5 }) });
+    const st = new SharedStorage({ [KEY]: JSON.stringify({ v: 4, rev: 3, practiceMs: 5 }) });
     const C = t.env({ storage: st });
     t.ok(C.PX.core.store.volatile && C.PX.core.store.volatileReason === 'newer-version', 'a record from a newer version puts the store in memory mode');
     C.PX.core.store.state.practiceMs = 1;
     C.PX.core.store.save();
     C.clock.tick(2000);
-    t.eq(JSON.parse(st.get(KEY)).v, 3, 'the newer-version record is never overwritten');
+    t.eq(JSON.parse(st.get(KEY)).v, 4, "the newer-version record is never overwritten");
   }
 
   t.section('store: memory fallback');

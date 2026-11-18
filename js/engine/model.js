@@ -45,8 +45,9 @@
     style: 'balanced',
     levelRef: 0.75,                                // level = difficulty answered right at g + (1 − g)·0.75
     z: 1.96,                                       // 95 % ranges
-    mix: { easy: 0.10, stretch: 0.10, easyUp: 0.10, easyCap: 0.95, stretchK: 0.50 },
-    prior: { offset: 1.0, sd: 1.0 },               // μ0 = easiest item + 1.0 logit, σ0 = 1.0
+    // noStretchBefore (v1.2, note D2 §3.0 B2): no stretch item among an exercise's first 10 rated answers
+    mix: { easy: 0.10, stretch: 0.10, easyUp: 0.10, easyCap: 0.95, stretchK: 0.50, noStretchBefore: 10 },
+    prior: { offset: 1.0, sd: 1.5 },               // μ0 = easiest item + 1.0 logit, σ0 = 1.5 (v1.2, note D2 §3.0 B1; 1.0 before)
     noise: { trial: 0.002, day: 0.01, maxVar: 1.0 }, // process noise (variance) per trial, per day; cap
     grid: { lo: -8, hi: 8, points: 121, width: 6 },  // moment matching on μ ± 6σ inside −8..+8
     // noRepeat: dimensions whose level never repeats on consecutive items while another level is
@@ -247,6 +248,12 @@
     for (var i = 0; i < FIELDS.length; i++) if (FIELDS[i].key === key) throw new Error('PX.engine field "' + key + '" is registered twice');
     FIELDS.push({ key: key, def: def, fix: fix });
   }
+  // v1.2 (CONTRACT-v1.2 I): how an engine field appears in the pooled export (store.pooled());
+  // fn(copy, ctx) → value, or false to leave it out. Fields without a rule are left out.
+  function pooled(key, fn) {
+    var S = PX.core && PX.core.store;
+    if (S && typeof S.exportRule === 'function') S.exportRule(key, { pooled: fn });
+  }
   // For app.js: PX.engine.fields().forEach(f => store.field(f.key, f.def, f.fix)).
   function fields() {
     return FIELDS.map(function (f) { return { key: f.key, def: f.def, fix: f.fix }; });
@@ -411,6 +418,7 @@
     pool: pool, poolEntry: poolEntry, byKey: byKey, refChance: refChance, range: range, nearest: nearest,
   };
   E.field = field;
+  E.pooled = pooled;
   E.fields = fields;
   E.fix = fix;
   E.log = {

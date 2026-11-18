@@ -42,6 +42,8 @@
   var M = E.model;
   var MODES = {};
   var RATED = { train: true, path: true, speed: true };
+  // Modes whose items carry an exercise's Quick deadline (def.pace) when no other deadline is set (v1.2).
+  var PACED = { train: true, path: true, free: true, daily: true };
 
   function isNum(x) { return typeof x === 'number' && isFin(x); }
   function isObj(x) { return !!x && typeof x === 'object' && !isArray(x); }
@@ -172,6 +174,20 @@
     return plan.deck.pop();
   }
 
+  // v1.2 (note D2 §3.0 B2): no stretch item among an exercise's first rated answers
+  // (C.mix.noStretchBefore): each new feature should arrive alone, with its tip.
+  function earlyKind(kind, st) {
+    return kind === 'stretch' && st && isNum(st.n) && st.n < C.mix.noStretchBefore ? 'target' : kind;
+  }
+
+  // v1.2: automatic choices keep to the exercise's trainVariants (Central Point's Exact form is an
+  // explicit pick: Free play and the Library). extra: another filter that must hold too.
+  function autoFilter(def, extra) {
+    var tv = def && def.trainVariants;
+    if (!def || !def.variants || !isArray(tv) || tv.length >= def.variants.length) return extra || null;
+    return function (c) { return tv.indexOf(c.params.variant) >= 0 && (!extra || extra(c)); };
+  }
+
   function makeStep(plan, rec, def, r, kind, extra) {
     var seed = extra && isNum(extra.seed) ? extra.seed : E.select.seed(rec);
     if (!(extra && extra.noNote)) E.select.note(rec, def, r.cand);
@@ -182,6 +198,12 @@
       watch: false, deadlineMs: null, feedback: true, timed: false, weak: !!r.weak,
     };
     if (extra) for (var k in extra) if (hasOwn.call(extra, k) && k !== 'seed' && k !== 'noNote') step[k] = extra[k];
+    // v1.2: an exercise's Quick deadline (def.pace; js/engine/pace.js) where no other deadline is set
+    // (Speed and the deadline protocol keep their own; the Spatial Check has none)
+    if (!step.deadlineMs && PACED[plan.mode] && E.pace && E.pace.applies(def, r.params)) {
+      step.deadlineMs = E.pace.ms(rec, def);
+      step.paced = true;
+    }
     plan.pos += 1;
     plan.lastEx = def.id;
     return step;
@@ -230,6 +252,11 @@
       tl.n += 1;
       if (oc === 1) { tl.right += 1; if (row[6] !== null) tl.rt.push(row[6]); }
       MODES[plan.mode].answer(plan, rec, step, oc === 1, result, now, out);
+      // v1.2: rated Train and Path answers move the Quick deadline (an answer before it counts as in
+      // time, right or wrong: the rating judges accuracy)
+      if (step.paced && (plan.mode === 'train' || plan.mode === 'path') && E.pace) {
+        out.paceMs = E.pace.step(rec, def, !(result && result.timeout));
+      }
       if (out.rated && RATED[plan.mode]) {
         plan.blockN[step.exId] = (plan.blockN[step.exId] || 0) + 1;
         if (plan.blockN[step.exId] >= 10) { // shown levels change only at block ends
@@ -337,11 +364,13 @@
         var r = null;
         if (def) {
           var st = E.est.get(rec, def, { display: plan.display }, now);
+          kind = earlyKind(kind, st);
           var weakList = kind === 'target' && plan.rng.chance(C.weak.share) ? E.select.weak(rec, def) : null;
-          var filter = run.variant !== undefined ? function (c) { return c.params.variant === run.variant; } : null;
+          var filter = autoFilter(def, run.variant !== undefined ? function (c) { return c.params.variant === run.variant; } : null);
           var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: filter, weak: weakList, rng: plan.rng };
           r = E.select.pick(def, st, o);
-          if (!r && filter) { o.filter = null; r = E.select.pick(def, st, o); }
+          if (!r && filter) { o.filter = autoFilter(def, null); r = E.select.pick(def, st, o); }
+          if (!r && o.filter) { o.filter = null; r = E.select.pick(def, st, o); }
         }
         if (!r) { // an exercise that cannot produce items leaves the session; never a dead end
           plan.exs = plan.exs.filter(function (id) { return id !== run.exId; });
@@ -542,17 +571,18 @@
       var end = atEnd(plan, now, plan.avgMs);
       if (end === 'over') return null;
       var def = defOf(plan.exs[0]), ps = pathState(rec, def.id), rc = null, s, kind, filter;
+      var st = E.est.get(rec, def, { display: plan.display }, now);
       for (var i = 0; i < plan.rechecks.length && end !== 'last'; i++) if (plan.rechecks[i].left > 0) { rc = plan.rechecks[i]; break; }
       if (rc) { s = rc.s; kind = 'target'; filter = inStage(def, s); }
       else {
         s = ps.stage;
-        kind = end === 'last' ? 'last' : kindFor(plan);
+        kind = end === 'last' ? 'last' : earlyKind(kindFor(plan), st);
         filter = kind === 'warmup' || kind === 'easy' || kind === 'last' ? upTo(def, s) : kind === 'stretch' ? stretchOf(def, s) : inStage(def, s);
       }
-      var st = E.est.get(rec, def, { display: plan.display }, now);
-      var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: filter, rng: plan.rng };
+      var o = { kind: kind, k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), filter: autoFilter(def, filter), rng: plan.rng };
       var r = E.select.pick(def, st, o);
-      if (!r) { o.filter = null; r = E.select.pick(def, st, o); }
+      if (!r) { o.filter = autoFilter(def, null); r = E.select.pick(def, st, o); }
+      if (!r && o.filter) { o.filter = null; r = E.select.pick(def, st, o); }
       if (!r) return null;
       var watch = false;
       if (!rc && !ps.watched[s]) { ps.watched[s] = true; watch = true; }
@@ -1078,6 +1108,51 @@
     }, 1000);
   });
 
+  // One mode suggestion from the log (v1.2, gap M3; CONTRACT-v1.2 J), or null: Path for an exercise
+  // started but young (1–39 rated answers, no Path yet), then Speed for one whose level has settled,
+  // with Speed open and never played. Keys hidden until rec.ui.hiddenTips[key] > now are skipped
+  // (the UI hides a dismissed suggestion for 14 days). Exercises outside automatic choices (the
+  // DAT-style ones without the focus, paused ones) are never suggested.
+  function suggest(rec, now) {
+    if (!isNum(now)) now = Date.now();
+    var hidden = isObj(rec.ui) && isObj(rec.ui.hiddenTips) ? rec.ui.hiddenTips : {};
+    function open(key) { return !(isNum(hidden[key]) && hidden[key] > now); }
+    var defs = PX.ex.list('train').filter(function (d) { return E.schedule.auto(rec, d, now); });
+    var i, def, st, name;
+    for (i = 0; i < defs.length; i++) {
+      def = defs[i];
+      st = E.est.get(rec, def);
+      if (st.n >= 1 && st.n < 40 && !(isObj(rec.path) && isObj(rec.path[def.id])) && open('path:' + def.id)) {
+        name = def.short || def.name;
+        return { key: 'path:' + def.id, mode: 'path', exId: def.id, why: 'You have started ' + name + '. Path takes it up in ten short stages, each one passed by a check: a good fit for a new exercise.' };
+      }
+    }
+    for (i = 0; i < defs.length; i++) {
+      def = defs[i];
+      st = E.est.get(rec, def);
+      var t = isObj(rec.timed) ? rec.timed[def.id] : null, played = isObj(t) && isArray(t.sessions) && t.sessions.length > 0;
+      if (played || st.sd > C.speed.unlockSd || !speedOpen(rec, def, {}).ok || !open('speed:' + def.id)) continue;
+      name = def.short || def.name;
+      return { key: 'speed:' + def.id, mode: 'speed', exId: def.id, why: 'Your level on ' + name + ' has settled and Speed is open: it gives you items you already answer well, against a deadline that adapts to you.' };
+    }
+    return null;
+  }
+
+  // The pooled export (v1.2): Path and strategy reports carry epoch ms only; Speed's sessions lose
+  // their local day (column 0) and the timed ratings their per-day history.
+  E.pooled('path', function (v) { return v; });
+  E.pooled('strategies', function (v) { return v; });
+  E.pooled('timed', function (m) {
+    Object.keys(m).forEach(function (id) {
+      var t = m[id];
+      if (!isObj(t)) return;
+      delete t.hist;
+      if (isObj(t.small)) delete t.small.hist;
+      if (isArray(t.sessions)) t.sessions.forEach(function (x) { if (isArray(x)) x[0] = null; });
+    });
+    return m;
+  });
+
   E.path = { state: pathState, band: band, items: stageItems, model: stageModel, gateT: gateT, gateOf: gateOf, due: dueRechecks, preset: preset };
   E.speed = { open: speedOpen, state: timedState, untimedRt: untimedRt };
   E.threshold = { PROTOCOLS: PROTOCOLS, protocol: protocol, value: xValue };
@@ -1085,7 +1160,7 @@
   E.modes = {
     start: start, next: next, answer: answer, finish: finish, MODES: MODES, RATED: RATED,
     available: available, checkin: checkin, checkinDue: checkinDue, STRATEGIES: STRATEGIES,
-    timeLeft: timeLeft, pace: paceOf,
-    _: { atEnd: atEnd, kindFor: kindFor, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn },
+    timeLeft: timeLeft, pace: paceOf, suggest: suggest,
+    _: { atEnd: atEnd, kindFor: kindFor, earlyKind: earlyKind, autoFilter: autoFilter, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn },
   };
 })(window.PX);

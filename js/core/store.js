@@ -50,9 +50,12 @@
 
   var KEY = 'parallax.v1';
   // Record format. 2 (Parallax 1.1): trial columns 11-12 (display class, input), session
-  // display/viewport/input/ended, json settings. A v1 record loads unchanged and is written back
-  // as v2; a Parallax 1.0 tab that meets a v2 record runs from memory instead of overwriting it.
-  var VERSION = 2;
+  // display/viewport/input/ended, json settings. 3 (Parallax 1.2): `scales` (the range each
+  // exercise's stored levels were written on; js/engine/rebase.js converts 1.1 levels once through
+  // the upgrade hooks below), folded days count answers per exercise (`a`), settings nickname,
+  // exportDevice and gentleMotion. Older records load and are written back in the current format;
+  // an older Parallax tab that meets a newer record runs from memory instead of overwriting it.
+  var VERSION = 3;
   var TRIAL_CAP = 20000;
   var DEBOUNCE_MS = 1000;
   var MAX_WAIT_MS = 5000;
@@ -205,6 +208,12 @@
     sound: { def: false, type: 'bool' },
     keyHints: { def: true, type: 'bool' },
     textScale: { def: 1, type: 'num', min: 0.75, max: 2 },
+    // v1.2 (CONTRACT-v1.2 F and I): a nickname the player typed for result cards (the only name an
+    // export may carry); device details (browser, language, time zone) in exports only when on;
+    // the gentle motion profile for Homing and Reckon ('auto': on when reduced motion is on).
+    nickname: { def: '', type: 'str', max: 24 },
+    exportDevice: { def: false, type: 'bool' },
+    gentleMotion: { def: 'auto', type: 'enum', values: ['auto', 'on', 'off'] },
   };
 
   function checkSetting(spec, v) {
@@ -422,8 +431,9 @@
       rtN: take(x, 'rtN', c, 0, log, path),
       ex: take(x, 'ex', cMap(DAYEX_RE, function (v) {
         if (!plain(v) || !isNum(v.n) || !isNum(v.right)) return undefined;
-        var n = Math.max(0, Math.round(v.n));
-        return { n: n, right: clampN(Math.round(v.right), 0, n) };
+        var n = Math.max(0, Math.round(v.n)), out = { n: n, right: clampN(Math.round(v.right), 0, n) };
+        if (isNum(v.a)) out.a = clampN(Math.round(v.a), out.right, n); // v1.2: answers (right + wrong); older days lack it
+        return out;
       }, log, path + '.ex'), obj, log, path),
     };
   }
@@ -488,6 +498,35 @@
   field('ui', function () { return { lastRoute: null }; }, fixUi);
   field('idx', function () { return { ex: [], mode: [] }; }, fixIdx);
   field('trialDays', obj, function (x, log, p) { return fixMap(x, DAY_RE, fixDay, log, p); });
+  // v1.2: the range [min, max] each exercise's stored levels were written on (js/engine/rebase.js)
+  field('scales', obj, function (x, log, p) {
+    return fixMap(x, ID_RE, function (v) {
+      return Array.isArray(v) && v.length === 2 && isNum(v[0]) && isNum(v[1]) && v[0] <= v[1] ? [v[0], v[1]] : undefined;
+    }, log, p);
+  });
+
+  /* ---------- upgrade hooks (v1.2) ---------- */
+
+  // fn(rec, fromVersion) runs on every record guard() returns (load, import, another tab's record,
+  // a merge), after the field repairs; fromVersion is the format the raw record declared (a fresh
+  // record: VERSION). Hooks must be idempotent and must not throw (a throw is caught and logged).
+  // js/engine/rebase.js registers one. Registered after a load: it runs at once on the record.
+  var UPGRADES = [];
+  var lastFrom = VERSION;
+  function runUpgrades(rec, from, log) {
+    for (var i = 0; i < UPGRADES.length; i++) {
+      try { UPGRADES[i](rec, from); } catch (e) {
+        note(log, '(upgrade: ' + (e && e.message) + ')');
+        if (win.console) console.error('PX.core.store: an upgrade hook failed', e);
+      }
+    }
+  }
+  function upgrade(fn) {
+    if (typeof fn !== 'function') throw new Error('PX.core.store.upgrade: needs a function');
+    if (UPGRADES.indexOf(fn) >= 0) return;
+    UPGRADES.push(fn);
+    if (loaded) runUpgrades(state, lastFrom, []);
+  }
 
   function defaults() {
     var out = {};
@@ -521,6 +560,9 @@
         }
       }
       if (capTrials(out, TRIAL_CAP)) note(log, 'trials (capped)');
+      var from = isNum(raw.v) && raw.v >= 1 ? Math.floor(raw.v) : VERSION;
+      if (from > VERSION) from = VERSION;
+      runUpgrades(out, from, log);
       return out;
     } catch (e) {
       note(log, '(record: ' + (e && e.message) + ')');
@@ -546,9 +588,11 @@
       else d.skipped++;
       if ((o === 0 || o === 1) && r[6] !== null) { d.rtSum += r[6]; d.rtN++; }
       var id = rec.idx.ex[r[1]] || ('#' + r[1]);
-      var e = d.ex[id] || (d.ex[id] = { n: 0, right: 0 });
+      var e = d.ex[id] || (d.ex[id] = { n: 0, right: 0, a: 0 });
       e.n++;
       if (o === 1) e.right++;
+      // answers (right or wrong) per exercise (v1.2, O15): voided and skipped rows are not answers
+      if (o === 0 || o === 1) e.a = (isNum(e.a) ? e.a : 0) + 1;
     }
     return extra;
   }
@@ -619,8 +663,10 @@
     pendingExternal = null;
     unknown = { top: {}, settings: {} };
     var raw = readRaw(), rec;
+    lastFrom = VERSION;
     if (raw === null || raw === undefined) {
       rec = defaults();
+      runUpgrades(rec, VERSION, []); // stamps a fresh record (v1.2)
     } else {
       var p = parseJSON(raw);
       if (!p.ok) {
@@ -629,9 +675,11 @@
         try { ls.setItem(KEY + '.corrupt', raw); } catch (e) { /* full or blocked: the copy in memory remains */ }
         bus.emit('store:error', { reason: 'corrupt', error: 'The saved progress could not be read; starting fresh.' });
         rec = defaults();
+        runUpgrades(rec, VERSION, []);
       } else {
         // A record from a newer version is never overwritten by this one.
         if (p.value && isNum(p.value.v) && p.value.v > VERSION) goMemory('newer-version');
+        lastFrom = p.value && isNum(p.value.v) ? Math.min(VERSION, p.value.v) : VERSION;
         rec = guard(p.value, null, unknown);
       }
     }
@@ -763,7 +811,108 @@
 
   /* ---------- import, export, undo, reset ---------- */
 
-  function exportJSON() { return JSON.stringify(ensure()); }
+  /* Exports and privacy (v1.2; docs/dev/CONTRACT-v1.2.md I; the owner's standing rules, Privacy):
+     the backup and the pooled (community) export carry no name but a nickname the player typed, and
+     no user-agent, language or time zone unless the player turned `exportDevice` on.
+     exportRule(key, { pooled: fn(value, ctx) → value | undefined, or false; private: bool })
+       private: a field left out of backups (exportJSON) unless device details are on (a playtest
+       log that keeps device facts). pooled: how the field appears in pooled(); without a rule a
+       field registered outside this file is left out. fn gets a deep copy and must drop or
+       convert local day keys ('YYYY-MM-DD' of the player's calendar): ctx.utcDay(ms) gives the
+       UTC day of a time, ctx.dayless(x) drops day-only strings. */
+  var RULES = {};
+  function exportRule(key, rule) {
+    if (typeof key !== 'string' || badKey(key) || !plain(rule)) throw new Error('PX.core.store.exportRule: needs a key and { pooled, private }');
+    if (rule.pooled !== undefined && rule.pooled !== false && typeof rule.pooled !== 'function') throw new Error('PX.core.store.exportRule("' + key + '"): pooled must be a function or false');
+    RULES[key] = { pooled: rule.pooled === undefined ? undefined : rule.pooled, private: rule.private === true };
+  }
+  function deviceOn(opts) {
+    if (opts && opts.device !== undefined) return opts.device === true;
+    var s = ensure();
+    return !!(s.settings && s.settings.exportDevice === true);
+  }
+  // Read only when the player turned device details on (never stored in the record by this file).
+  function deviceFacts() {
+    var n = win.navigator || {}, sc = win.screen || {}, tz = null;
+    try { tz = win.Intl && win.Intl.DateTimeFormat ? win.Intl.DateTimeFormat().resolvedOptions().timeZone || null : null; } catch (e) { tz = null; }
+    return {
+      ua: String(n.userAgent || ''), lang: String(n.language || ''), tz: tz,
+      screen: Math.round(sc.width || 0) + 'x' + Math.round(sc.height || 0), dpr: isNum(win.devicePixelRatio) ? win.devicePixelRatio : null,
+    };
+  }
+
+  // The backup (the whole record, for import): opts.device true/false overrides the setting.
+  function exportJSON(opts) {
+    var s = ensure(), dev = deviceOn(opts), out = s, drop = [];
+    for (var k in RULES) if (hasOwn.call(RULES, k) && RULES[k].private && hasOwn.call(s, k)) drop.push(k);
+    if (!dev && drop.length) {
+      out = {};
+      for (var key in s) if (hasOwn.call(s, key) && drop.indexOf(key) < 0) out[key] = s[key];
+    }
+    return JSON.stringify(out);
+  }
+
+  function utcDay(ms) { return isNum(ms) && ms >= 0 && ms < 8.64e15 ? new Date(ms).toISOString().slice(0, 10) : null; }
+  function dayless(x) { return typeof x === 'string' && DAY_RE.test(x) ? null : x; }
+  function noHist(slot) {
+    if (!plain(slot)) return slot;
+    delete slot.hist; // [localDay, mu, sd] per practice day: the trials carry the times
+    if (plain(slot.small)) delete slot.small.hist;
+    return slot;
+  }
+  // Core fields in the pooled export. Day-keyed or day-holding structures are dropped or reduced;
+  // times stay epoch ms (UTC) or ISO strings with a Z.
+  var CORE_POOLED = {
+    v: false, rev: false, settings: false, streak: false, daily: false, tour: false, ui: false,
+    created: function (v) { return v; }, updated: function (v) { return v; },
+    ex: function (m) { for (var id in m) if (hasOwn.call(m, id)) noHist(m[id]); return m; },
+    mot: function (m) {
+      for (var k in m) if (hasOwn.call(m, k) && Array.isArray(m[k])) m[k].forEach(function (e) { if (plain(e)) e.date = dayless(e.date); });
+      return m;
+    },
+    sessions: function (v) { return v; },
+    trials: function (v) { return v; },
+    practiceMs: function (v) { return v; },
+    achievements: function (m) { return Object.keys(m).sort(); }, // ids only: the values are dates
+    assess: function (list) { list.forEach(function (a) { if (plain(a)) a.date = dayless(a.date); }); return list; },
+    idx: function (v) { return v; },
+    trialDays: function (m) { // folded trials, without their days
+      var t = dayDefaults(), days = 0;
+      for (var d in m) {
+        if (!hasOwn.call(m, d) || !plain(m[d])) continue;
+        days++;
+        ['n', 'right', 'wrong', 'stutter', 'skipped', 'rtSum', 'rtN'].forEach(function (k) { if (isNum(m[d][k])) t[k] += m[d][k]; });
+        var ex = plain(m[d].ex) ? m[d].ex : {};
+        for (var id in ex) {
+          if (!hasOwn.call(ex, id) || !plain(ex[id])) continue;
+          var e = t.ex[id] || (t.ex[id] = { n: 0, right: 0, a: 0 });
+          e.n += ex[id].n || 0; e.right += ex[id].right || 0; e.a += isNum(ex[id].a) ? ex[id].a : 0;
+        }
+      }
+      t.days = days;
+      return t;
+    },
+    scales: function (v) { return v; },
+  };
+
+  // The pooled (community) export: a plain object. opts: { nickname: true (adds the typed nickname),
+  // device: true | false (overrides the setting) }.
+  function pooled(opts) {
+    opts = opts || {};
+    var s = ensure(), out = { format: 'parallax-pooled', formatVersion: 1, app: PX.version || null, record: VERSION, exported: new Date().toISOString() };
+    var ctx = { utcDay: utcDay, dayless: dayless, opts: opts };
+    for (var i = 0; i < FIELDS.length; i++) {
+      var k = FIELDS[i].key, rule = hasOwn.call(RULES, k) ? RULES[k].pooled : CORE_POOLED[k];
+      if (typeof rule !== 'function' || !hasOwn.call(s, k)) continue;
+      var v;
+      try { v = rule(U.deepCopy(s[k]), ctx); } catch (e) { v = undefined; if (win.console) console.error('PX.core.store.pooled: the rule for "' + k + '" failed', e); }
+      if (v !== undefined) out[k] = jsonSafe(v);
+    }
+    var nick = s.settings && typeof s.settings.nickname === 'string' ? s.settings.nickname.trim() : '';
+    if (opts.nickname === true && nick) out.nickname = nick;
+    if (deviceOn(opts)) out.device = deviceFacts();
+    return out;
+  }
 
   // Replaces the record after validation. Returns { ok, error?, repairs? }.
   function importJSON(text) {
@@ -805,6 +954,7 @@
     var s = ensure();
     undoSlot = U.deepCopy(s);
     var rec = defaults();
+    runUpgrades(rec, VERSION, []);
     if (opts && opts.keepSettings) rec.settings = U.deepCopy(s.settings);
     rec.rev = Math.max(s.rev, storedRev());
     replaceState(rec);
@@ -953,6 +1103,7 @@
     exIndex: exIndex, modeIndex: modeIndex, exId: exId, modeName: modeName,
     exState: exState, addTrial: addTrial, capTrials: capTrials, displayCode: displayCode, inputCode: inputCode,
     field: field, setting: setting, settingsSpec: SETTINGS,
+    upgrade: upgrade, exportRule: exportRule, pooled: pooled, deviceFacts: deviceFacts, utcDay: utcDay,
     merge: null, // optional fn(theirs, mine) → record, used when a save meets a newer rev
     csv: null,   // optional fn(state) → the trial CSV (js/ui/log.js), used by exportCSV()
   };

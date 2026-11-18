@@ -368,8 +368,10 @@
   function lruVariant(rec, def) {
     if (!def.variants) return undefined;
     var e = rec.ex && rec.ex[def.id], lru = e && isObj(e.lru) ? e.lru : {};
-    var best = def.variants[0], at = Infinity;
-    def.variants.forEach(function (v) {
+    // v1.2: automatic choices keep to def.trainVariants (all variants unless the exercise says so)
+    var vs = isArray(def.trainVariants) && def.trainVariants.length ? def.trainVariants : def.variants;
+    var best = vs[0], at = Infinity;
+    vs.forEach(function (v) {
       var a = isNum(lru['variant=' + v]) ? lru['variant=' + v] : -1;
       if (a < at) { at = a; best = v; }
     });
@@ -412,6 +414,7 @@
     trainable: trainable, choose: choose, build: build, nextRun: nextRun, runLength: runLength, quotas: quotas,
   };
 
+  E.pooled('train', function (v) { return v; }); // stages, pins and switch notes: no days (v1.2)
   E.field('train', function () { return { style: C.style, variability: 'high', pins: [], stage: {}, sw: {} }; }, function (v) {
     if (!isObj(v)) return undefined;
     var F = E.fix;
