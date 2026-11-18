@@ -314,10 +314,23 @@
   }
 
   // Every way to practise one exercise: [{ id, title, desc, ok, why, run() }].
+  // Never played: no answer on any screen class and its Watch, Try, Go not seen (the player's
+  // record of tutorials, rec.tour.seen).
+  function neverPlayed(rec, def, now) {
+    var seen = rec.tour && rec.tour.seen && rec.tour.seen[def.id] === true;
+    return !seen && !(level(rec, def, now).total > 0);
+  }
+
   function practiseOptions(def, rec, now) {
-    var id = def.id, out = [], disp = display();
+    var id = def.id, out = [], disp = display(), fresh = neverPlayed(rec, def, now);
     var ps = rec.path && rec.path[id], stage = ps && isNum(ps.stage) ? ps.stage : 1;
-    out.push({ id: 'train', title: 'Train, with ' + def.short + ' as focus', primary: true,
+    // The tutorial comes first for every exercise, and is the default for one never played
+    // (fresh-player tests: a newcomer who taps Practise must meet it).
+    out.push({ id: 'watch', title: 'Watch, Try, Go', primary: fresh, tag: fresh ? 'start here' : null,
+      desc: 'Learn it first: a slow demo with captions, a few practice items that don’t count, then easy items that do.',
+      when: 'Right when ' + def.short + ' is new to you, or you want to see how it is solved again.',
+      ok: true, run: function () { watch(def); } });
+    out.push({ id: 'train', title: 'Train, with ' + def.short + ' as focus', primary: !fresh,
       desc: 'A session at your target success: ' + def.short + ' leads, mixed with two other exercises.', when: MODE_WHEN.train,
       ok: true, run: function () { start(def, { mode: 'train', exId: id, pin: id }); } });
     out.push({ id: 'path', title: 'Path, stage ' + stage + ' of 10',
@@ -347,7 +360,8 @@
     var list = h('ul.px-practise', { 'data-unavailable': unavailable(def) ? '' : null });
     practiseOptions(def, rec, now).forEach(function (o) {
       var b = h('button', { type: 'button', class: ['px-practise-item', o.primary ? 'is-primary' : null], 'data-practise': o.id, 'aria-disabled': o.ok ? null : 'true' },
-        h('b', o.title), h('span', o.desc), o.when ? h('span.px-practise-when', o.when) : null);
+        h('b', o.title, o.tag ? h('span.px-tag.px-practise-tag', o.tag) : null), h('span', o.desc), o.when ? h('span.px-practise-when', o.when) : null);
+      if (o.primary) b.setAttribute('data-autofocus', ''); // the sheet opens on the default choice
       b.addEventListener('click', function () {
         if (!o.ok) { ui.toast(o.why || 'Not available yet.', { kind: 'info' }); return; }
         if (onPick) onPick();
@@ -572,7 +586,7 @@
     host.appendChild(top);
 
     var howKids = [];
-    var watchBtn = ui.button('Watch the demo', { kind: 'secondary', onClick: function () { watch(def); } });
+    var watchBtn = ui.button('Watch, Try, Go', { kind: 'primary', onClick: function () { watch(def); } });
     watchBtn.setAttribute('data-ex-action', 'watch');
     var howBtn = ui.button('How to play', { kind: 'ghost', onClick: function () { howTo(def); } });
     howBtn.setAttribute('data-ex-action', 'howto');
