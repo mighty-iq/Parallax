@@ -226,7 +226,7 @@
       if (cur) cur.close();
       steps = Array.isArray(steps) ? steps : [];
       return new Promise(function (resolve) {
-        var i = 0, t = 0, paused = false, done = false, stop = null, prev = P.state, lastK = -1, waiting = false, waited = -1;
+        var i = 0, t = 0, paused = false, done = false, stop = null, prev = P.state, lastK = -1, waiting = false, waited = -1, lastNoted = false;
         var rm = reducedMotion(), scale = FAST ? 0.02 : rm ? 0.75 : 1;
         // A Watch demo plays slowly: at least DEMO_MS in all (PLAN §8), unless motion is reduced.
         var total = steps.reduce(function (a, st) { return a + Math.max(0, (st && st.ms) || 0); }, 0);
@@ -277,6 +277,7 @@
         function dur() { return Math.max(1, (steps[i].ms || 0) * scale); }
         function safe(fn, k) { try { if (fn) fn(k); } catch (e) { log('show-me step failed', e); } }
         function enter(k) {
+          if (waiting) { waiting = false; label(); }
           i = k; t = 0; lastK = 0; waiting = false;
           var s = steps[i];
           if (s.caption) caption(s.caption);
@@ -287,9 +288,17 @@
           var tap = tapMode();
           P.el.pPause.firstChild.textContent = waiting && !tap ? 'Continue' : paused && !waiting ? 'Resume' : 'Pause';
           P.el.pPause.disabled = !!(tap && waiting); // nothing moves while a caption waits
-          P.el.pNext.hidden = !(demo || answered); P.el.pStep.hidden = demo;
+          P.el.pNext.hidden = !(demo || answered); P.el.pStep.hidden = demo || answered;
           P.el.pNext.toggleAttribute('data-answered', answered); // wide screens keep the strip's own Next
           P.el.pNext.classList.toggle('is-waiting', !!waiting);
+          // while a caption's steps still play, the first tap finishes them: say so; at the demo's last
+          // caption the tap hands the item over, and Watch, Try, Go's line says so (fresh-player tests)
+          var lastWait = demo && tap && waiting && i === steps.length - 1;
+          P.el.pNext.firstChild.textContent = demo && tap && !waiting ? 'Skip ahead' : lastWait ? 'Your turn' : 'Next';
+          if (lastWait && !lastNoted) {
+            lastNoted = true;
+            try { if (P.demoCfg && typeof P.demoCfg.onLastWait === 'function') P.demoCfg.onLastWait(); } catch (e) { log('onLastWait failed', e); }
+          }
           P.el.pAuto.hidden = !demo;
           P.el.pAuto.setAttribute('aria-pressed', autoplay() ? 'true' : 'false');
           P.el.player.toggleAttribute('data-waiting', !!waiting);
@@ -334,10 +343,9 @@
         function next() {
           if (done) return;
           lastCmd = timing.now();
-          if (answered) { P.goNext(); return; } // after an answer: the item after this one
           if (waiting) { waiting = false; paused = false; label(); return; }
           paused = false;
-          if (!tapMode()) { // Auto-play: on to the next caption
+          if (!tapMode()) { // Auto-play, and a show-me after an answer: on to the next caption (Next means the same in both players)
             var g0 = group[i];
             while (!done && group[i] === g0) { finish(); if (i + 1 < steps.length) enter(i + 1); else end(); }
             label();
@@ -366,7 +374,7 @@
           next: next,
           // a tap on the figure: Next, while a caption waits
           tap: function () { if (waiting && tapMode() && timing.now() - lastCmd > 250) next(); },
-          replay: function () { paused = false; waited = -1; enter(0); label(); },
+          replay: function () { paused = false; waited = -1; lastNoted = false; enter(0); label(); },
           close: function () { while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
           auto: function () {
             setAutoplay(!autoplay());
@@ -443,6 +451,12 @@
     el.guideBtn.setAttribute('aria-controls', P.guideId);
     el.guideBtn.hidden = true;
     el.pauseBtn = ui.button('Pause', { kind: 'secondary', small: true, key: 'Escape', onClick: function () { togglePause(); } });
+    // When an answer's scroll takes the title row off a phone's screen, a copy of Pause stays at the
+    // top corner (Openings fresh test: Pause was out of reach after each answer). css/play.css shows
+    // it on phones only, while the row is out of view (data-hud-off on the player).
+    el.floatPause = ui.button('Pause', { kind: 'secondary', small: true, ariaLabel: 'Pause', onClick: function () { el.pauseBtn.click(); } });
+    el.floatPause.classList.add('pl-float-pause');
+    el.floatPause.setAttribute('data-float-pause', '');
     el.pauseBtn.setAttribute('data-pause', '');
     // "How to solve" (v1.2, note D2 §3.0 C3): the strategy card shown before Try 1, again on a tap
     // through Try and an exercise's first session (P.setHowTo). A sheet pauses the item under it.
@@ -481,7 +495,7 @@
     el.confirmText = h('span.pl-confirm-text');
     el.confirmRow = h('div.pl-confirm', { hidden: true }, el.confirmText, el.confirm);
     el.limitFill = h('div.pl-limit-fill');
-    el.limit = h('div.pl-limit.px-keep-motion', { hidden: true, 'aria-hidden': 'true' }, el.limitFill);
+    el.limit = h('div.pl-limit.px-keep-motion', { hidden: true, 'aria-hidden': 'true' }, el.limitFill); // labelled by data-label (css/play.css)
     el.resume = ui.button('Resume', { kind: 'primary', key: 'Escape', onClick: function () { resume(); } });
     el.resume.setAttribute('data-resume', '');
     el.skip = ui.button('Skip this item', { kind: 'secondary', onClick: function () { skipItem(false); } });
@@ -502,7 +516,7 @@
       try { nb = PX.ui.playtest && typeof PX.ui.playtest.noteButton === 'function' ? PX.ui.playtest.noteButton('session: ' + (P.def ? P.def.short || P.def.name : P.exId || '')) : null; } catch (e) { nb = null; }
       if (nb) el.pauseExtra.appendChild(nb);
     }
-    el.trial = h('section.pl-trial', { 'aria-label': 'Item', tabindex: '-1' }, el.host, el.grid, el.confirmRow, el.limit, el.pause);
+    el.trial = h('section.pl-trial', { 'aria-label': 'Item', tabindex: '-1' }, el.host, el.grid, el.limit, el.confirmRow, el.pause);
     el.verdict = h('div.pl-verdict', { role: 'status', 'aria-live': 'polite' });
     el.notes = h('div.pl-notes');
     el.caption = h('p.pl-caption', { 'aria-live': 'polite' });
@@ -530,7 +544,17 @@
     el.actions = h('div.pl-actions', el.showBtn, el.nextBtn);
     el.feedback = h('section.pl-feedback', { hidden: true, 'aria-label': 'Result' },
       h('div.pl-feedback-main', el.verdict, el.actions), el.player, el.notes);
-    el.root = h('div.pl-player', { 'data-state': 'idle' }, el.hud, el.guide, el.notice, el.trial, el.feedback);
+    el.root = h('div.pl-player', { 'data-state': 'idle' }, el.hud, el.guide, el.notice, el.trial, el.feedback, el.floatPause);
+    try {
+      if (win.IntersectionObserver) {
+        var hudSeen = new win.IntersectionObserver(function (es) {
+          var e = es[es.length - 1];
+          el.root.toggleAttribute('data-hud-off', !!(e && !e.isIntersecting && e.boundingClientRect.top < 0));
+        });
+        hudSeen.observe(el.hud);
+        P.offs.push(function () { hudSeen.disconnect(); });
+      }
+    } catch (e) { /* the title row stays the only Pause */ }
     function toggleGuide(on) {
       var open = on === undefined ? !el.root.classList.contains('pl-guide-open') : !!on;
       el.root.classList.toggle('pl-guide-open', open);
@@ -656,6 +680,7 @@
         // answer is never judged late while the timer still runs (I1 T7).
         P.limit.start = P.paintTs > 0 && P.paintTs <= t ? P.paintTs : t;
         if (P.cfg.limitBar) {
+          el.limit.setAttribute('data-label', 'Time left · ' + Math.round(ms / 1000) + ' s'); // the bar says what it is (fresh-player test)
           el.limit.hidden = false;
           el.limitFill.style.animationPlayState = '';
           el.limitFill.style.animationDuration = ms + 'ms';
@@ -1055,6 +1080,7 @@
       stemIntoView();
       var d;
       P.demoing = true;
+      P.demoCfg = cfg;
       try { d = Promise.resolve(P.view.demo(item, P.ctx, null)); } catch (e) { d = Promise.reject(e); }
       d.catch(function (e) { log('demo failed (' + P.exId + ')', e); }).then(function () {
         P.demoing = false;
@@ -1142,7 +1168,8 @@
       pauseExtras();
       el.pause.hidden = false;
       el.trial.setAttribute('data-paused', '');
-      el.feedback.setAttribute('inert', ''); // Next and Show me wait under the sheet
+      el.feedback.setAttribute('inert', ''); // Next and Show me wait under the sheet (and are hidden: css/play.css)
+      el.pauseNote.hidden = true; // no item is on screen to skip
       if (!P.popPause) P.popPause = keys.push({ Escape: function () { resume(); }, '*': function () { return false; } });
       try { el.resume.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
       emit('play:screen', { screen: 'card:pause', mode: P.mode, exId: P.exId });
@@ -1153,6 +1180,7 @@
       P.fbPause = null;
       if (P.popPause) { P.popPause(); P.popPause = null; }
       el.skip.hidden = false;
+      el.pauseNote.hidden = false;
       el.pause.hidden = true;
       el.trial.removeAttribute('data-paused');
       el.feedback.removeAttribute('inert');
@@ -1826,6 +1854,7 @@
       return P.demo(item, {
         goal: goalOf(learn, item),
         turn: { skip: practice.length ? 'Skip to Try' : 'Skip to Go' },
+        onLastWait: function () { text.textContent = 'Watch: that was the last step. Tap “Your turn” and answer the item yourself.'; },
         onDemoEnd: function () { text.textContent = 'Your turn: answer the demo item yourself. Practice never counts.'; partsOn(false); }, // the item and its options fit again
       }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
@@ -1846,7 +1875,9 @@
       makeRoom(goalOf(learn, item), null, true);
       stageSoon(item, true);
       emit('play:screen', { screen: 'wtg-example', mode: P.mode, exId: exId });
-      return P.demo(item, { goal: goalOf(learn, item), turn: { skip: 'Now your turn' } }).then(function (tr) {
+      return P.demo(item, { goal: goalOf(learn, item), turn: { skip: 'Now your turn' },
+        onLastWait: function () { text.textContent = 'Try: that was the worked example. Tap “Your turn”, then go on to your own item.'; },
+      }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; }
         if (tr.outcome === 'skipped') return null;
@@ -1873,7 +1904,9 @@
       if (!item) item = first;
       if (!item) return tryStep(i + 1);
       answers.push(keyOf(item));
-      stage(1, 'Try: practice item ' + (i + 1) + ' of ' + practice.length + '. Practice items never count.');
+      // a Try item against the clock is announced before it starts (Central Point's Quick form)
+      var dl0 = isNum(item.deadlineMs) && item.deadlineMs > 0 ? item.deadlineMs : null;
+      stage(1, 'Try: practice item ' + (i + 1) + ' of ' + practice.length + (dl0 ? ', against the clock: answer within ' + Math.round(dl0 / 1000) + ' s; the bar under the item shows the time left.' : '. Practice items never count.'));
       partsOn(false); // the labelled parts belong to Watch; Try keeps the item in view
       P.setMeta('Try ' + (i + 1) + ' of ' + practice.length);
       P.setProgress(i + 1, practice.length + 1);
@@ -1890,9 +1923,8 @@
         if (tr.end) { skipped = true; ended = true; return null; }
         if (tr.outcome === 'skipped' || tr.error) return tryStep(i + 1);
         var last = i + 1 >= practice.length;
-        // The third step shows while the last practice item is up. In the tour no scored items
-        // follow, so it says honestly where they come: a session's first items of the exercise.
-        if (last) stage(2, o.tour ? 'Go: in your sessions, the first ' + (def.short || def.name) + ' items are easy ones, and they count.' : 'Go: the next items count.');
+        // The step strip stays on Try while a Try item is on screen (fresh-player test: "3 Go" showed
+        // over "Try 3 of 3"); Go comes when it is done (below, and the tutorial's end screen).
         return P.waitNext({ label: !last ? 'Next practice item' : o.tour ? 'Continue' : 'Go' }).then(function (w) {
           if (w === 'end') { skipped = true; ended = true; return null; }
           return w === 'abort' ? null : tryStep(i + 1);
@@ -1902,7 +1934,8 @@
     return rulesStep().then(watchStep).then(function (w) { return w === 'end' ? null : strategyStep(); }).then(function () { return tryStep(0); }).then(function () {
       bump('tries', exId);
       markWtg(exId);
-      stage(2, 'Go: the next items count.');
+      // In the tour no scored items follow, so Go says honestly where they come: a session's first items.
+      stage(2, o.tour ? 'Go: in your sessions, the first ' + (def.short || def.name) + ' items are easy ones, and they count.' : 'Go: the next items count.');
       if (head.parentNode) head.parentNode.removeChild(head);
       host.classList.remove('is-wtg');
       host.style.removeProperty('--pl-extra');
@@ -2637,6 +2670,11 @@
     if (res && res.streak) {
       var pw = K.panel({ title: 'This week', className: 'pl-panel', aside: 'goal ' + res.streak.goal + ' a week' });
       pw.body.appendChild(h('p', res.streak.text + (res.streak.week && isNum(res.streak.week.ms) ? ' Practice this week: ' + PX.core.clock.fmtMinutes(res.streak.week.ms) + '.' : '')));
+      // a session too short to count says so, with the rule's own numbers (fresh-player tests)
+      var EN = E(), sc = res.session, CS = EN && EN.config && EN.config.streak;
+      if (sc && CS && EN.streak && typeof EN.streak.counts === 'function' && sc.mode !== 'check' && !EN.streak.counts(sc)) {
+        pw.body.appendChild(h('p.px-meta.pl-week-short', 'This session does not count toward the week yet: a session counts from ' + CS.minTrials + ' answers or ' + Math.round(CS.minMs / 60000) + ' minutes of practice (this one: ' + (sc.trials || 0) + ' answers, ' + PX.core.clock.fmtMinutes(sc.practiceMs || 0) + ').'));
+      }
       pw.body.appendChild(weekDots(res.streak));
       if (res.streak.current > 1) pw.body.appendChild(h('p.px-meta', res.streak.current + ' weeks in a row at your goal. One missed week in four is forgiven automatically.'));
       out.appendChild(pw.el);

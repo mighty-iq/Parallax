@@ -520,3 +520,19 @@
   .pl-player[data-state="showme"] .pl-feedback .pl-actions:has([data-next]:not([hidden])) { display: none; }
 }
 @media (min-width: 720px) and (min-height: 501px) { .pl-showme-buttons [data-showme-next][data-answered] { display: none; } }
+/* fresh-player round 2 (W1-core): the strip hides under a pause between items; the time bar has a
+   label; a copy of Pause stays at a phone's top corner when the title row has scrolled away */
+.pl-player[data-state="paused"] > .pl-feedback { visibility: hidden; }
+.pl-limit[data-label] { overflow: visible; margin-left: 7.75rem; } /* the label sits at the bar's left, adding no height */
+.pl-limit[data-label]::before {
+  content: attr(data-label); position: absolute; right: calc(100% + var(--s2)); top: 50%; transform: translateY(-50%);
+  font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.2; color: var(--ink-2); white-space: nowrap;
+}
+.pl-float-pause { display: none; }
+@media (max-width: 719px) {
+  body.px-item .pl-player[data-hud-off]:is([data-state="respond"], [data-state="reveal"], [data-state="showme"], [data-state="present"]) > .pl-float-pause {
+    display: inline-flex; position: fixed; z-index: 33;
+    top: calc(var(--s2) + env(safe-area-inset-top, 0px)); right: max(var(--gutter), env(safe-area-inset-right, 0px));
+    background: var(--surface); box-shadow: var(--lift);
+  }
+}
