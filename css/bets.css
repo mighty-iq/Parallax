@@ -70,3 +70,12 @@
 /* the detailed calibration note (calib-detail items) */
 .px-bets-calib { max-width: var(--measure); }
 .px-bets-calib p { margin: 0 0 var(--s1); }
+.px-bets-figbox.is-tall { aspect-ratio: auto; }
+.px-bets-figbox.is-tall .px-bets-fig { height: auto; }
+
+/* Spin's shapes (cell units) */
+.bets-spin-shape, .bets-spin-copy, .bets-spin-mirror { fill: var(--stim-face); stroke: var(--stim-edge); stroke-width: 0.06; stroke-linejoin: round; }
+.bets-spin-copy { stroke: var(--right); stroke-width: 0.1; }
+.bets-spin-ghost { fill: none; stroke: var(--right); stroke-width: 0.09; stroke-dasharray: 0.22 0.16; }
+.bets-spin-label { fill: var(--ink-2); font-family: var(--font-mono); }
+.bets-spin-label.is-ok { fill: var(--right); }
