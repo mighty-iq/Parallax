@@ -5,7 +5,7 @@ import { MANIFEST, deepDiff } from './run.mjs';
 import { performance } from 'node:perf_hooks';
 
 const FILES = [...MANIFEST, 'js/ex/fold/gen.js', 'js/ex/patfold/gen.js', 'js/ex/patfold/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 24 level combinations × 420
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 36 level combinations × 280 (12 on the starter band)
 const procMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
 
 // Expected accuracy of a heuristic that picks uniformly among the best-scoring options.
@@ -22,17 +22,21 @@ export async function run(t) {
   t.ok(def, 'patfold is registered');
   if (!def) return;
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat, def.perDisplay],
-    ['patfold', 1, 'EX-17', ['Vz'], 'intrinsic-dynamic', 'train', 'choice', 5, true, false], 'id, version, code, abilities, cell, role, answer, 5 options, pat');
+    ['patfold', 2, 'EX-17', ['Vz'], 'intrinsic-dynamic', 'train', 'choice', 5, true, false], 'id, version 2 (the starter band), code, abilities, cell, role, answer, 5 options, pat');
   t.eq(def.dims.map((d) => d.key), ['folds', 'type', 'idle'], 'dims');
-  t.eq(def.dims[0].levels, [2, 3], 'two or three folds (the official rules: more than one fold)');
+  t.eq(def.dims[0].levels, ['1 (starter)', 2, 3], 'one fold on the starter band (outside the official format, so labelled), then two or three folds');
+  t.eq(def.starter, { dim: 'folds', levels: 1 }, 'the starter band is the first level of folds');
   const all = PX.ex.enumerate(def);
-  t.eq(all.length, 24, 'every level combination is enumerated');
+  t.eq(all.length, 36, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 2.5, `difficulty spans at least 2.5 logits (${lo.toFixed(2)} … ${hi.toFixed(2)}; the format caps folds at 3)`);
-  const easiest = all.reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
-  const g = def.chance(easiest);
-  const pBeginner = g + (1 - g - 0.03) / (1 + Math.exp(def.difficulty(easiest)));
-  t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the easiest item is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
+  t.ok(Math.abs(lo + 3.15) < 1e-9 && Math.abs(def.difficulty({ folds: 0, type: 0, idle: 0 }) - def.difficulty({ folds: 1, type: 0, idle: 0 }) + 1.3) < 1e-9,
+    `the starter band sits 1.3 below two folds that both matter, 0.85 below the pre-1.2 floor (floor ${lo.toFixed(2)}; note D2 §3.6)`);
+  t.ok([0, 1, 2].every((ty) => [0, 1, 2].every((id) => Math.abs(def.difficulty({ folds: 1 + Math.floor(ty / 3), type: ty, idle: id }) - (-1.85 + 0.45 * ty - 0.45 * Math.min(id, 1))) < 1e-9)),
+    'older levels keep their 1.1 difficulty (two folds: base −1.85, type +0.45, an idle fold −0.45)');
+  const old0 = { folds: 1, type: 0, idle: 1 }, g = def.chance(old0);
+  const pBeginner = g + (1 - g - 0.03) / (1 + Math.exp(def.difficulty(old0)));
+  t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the pre-1.2 floor is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
   t.ok(all.every((p) => Math.abs(def.chance(p) - 0.2) < 1e-12), 'chance = 1/5');
 
   t.section('patfold: Fold is unchanged');
@@ -49,6 +53,7 @@ export async function run(t) {
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, optCount = 0, fallbacks = 0, firstBad = null, n = 0;
   const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0 };
+  const band = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, gate: 0, oneFold: 0, shareUnder: 0, symFoil: 0 };
   const keyPos = [0, 0, 0, 0, 0], holesHist = {}, whyHist = {}, items = [], cs = {};
   for (let ci = 0; ci < all.length; ci++) {
     for (let s = 0; s < per; s++) {
@@ -67,7 +72,8 @@ export async function run(t) {
       keyPos[item.key]++;
       holesHist[item.holes] = (holesHist[item.holes] || 0) + 1;
       item.why.forEach((w) => { if (w) { const k = w.replace(/\d+/g, '#'); whyHist[k] = (whyHist[k] || 0) + 1; } });
-      def.lib.onSheet((A) => { shortcuts(A, def.lib, item, acc); creaseSym(A, item, cs); });
+      if (params.folds === 0) def.lib.onSheet((A) => { shortcuts(A, def.lib, item, band); bandChecks(A, item, band); });
+      else def.lib.onSheet((A) => { shortcuts(A, def.lib, item, acc); creaseSym(A, item, cs); });
     }
   }
   t.eq(threw, 0, 'generate never throws' + (firstBad && threw ? ` (${firstBad})` : ''));
@@ -98,7 +104,7 @@ export async function run(t) {
   }
   // The drawn panels (RV-dat-style-A §4: each of these passed before the per-step check), on the
   // reviewer's item: seed 99, three mixed folds.
-  const panelBase = def.generate(PX.rng(99), { folds: 1, type: 3, idle: 0 });
+  const panelBase = def.generate(PX.rng(99), { folds: 2, type: 3, idle: 0 });
   const last = panelBase.folds.length;
   const panels = [
     ['step 1: a face shifted one cell', (it) => { it.steps[1].faces[0].poly = it.steps[1].faces[0].poly.map(([x, y]) => [x + 1, y]); }],
@@ -172,6 +178,17 @@ export async function run(t) {
     t.ok(acc[k] / acc.count <= bound, `"${name}" ≤ chance + 10 (${pct(acc[k])}, chance 20 %)`);
   }
   creaseReport(cs, [2, 3]);
+  t.section('patfold: the starter band (one fold; note D2 §3.6)');
+  const bp = (x) => (100 * x / band.count).toFixed(1) + ' %';
+  t.ok(band.count >= 2000, `starter band items (${band.count})`);
+  t.eq(band.oneFold, band.count, 'one straight fold that matters (the band\'s type 0), or the level\'s one corner or slanted fold; two holes');
+  t.eq(band.symFoil, band.count, 'every band item has a foil symmetric about the crease without the punch hole');
+  t.ok(band.shareUnder / band.count >= 2.5, `most foils share the punch hole (${(band.shareUnder / band.count).toFixed(2)} of 4 on average)`);
+  for (const [k, name] of [['under', 'a hole under the punch'], ['low1', 'least symmetric about the crease'], ['symAny', 'most symmetric about any sheet axis'],
+    ['like', 'most like the others'], ['odd', 'odd one out'], ['count2', 'the hole count 2^folds']]) {
+    t.ok(band[k] / band.count <= bound, `starter band: "${name}" ≤ chance + 10 (${bp(band[k])}, chance 20 %)`);
+  }
+  console.log(`       info  starter band, the format's method (reported, not bounded; PLAN Defaults): crease symmetry alone ${bp(band.sym1)}, punch-gated crease symmetry ${bp(band.gate)}`);
   if (process.env.PX_REPORT) {
     console.log(`       patfold: n ${acc.count}; under ${pct(acc.under)}, sym1 ${pct(acc.sym1)}, low1 ${pct(acc.low1)}, symAny ${pct(acc.symAny)}, like ${pct(acc.like)}, odd ${pct(acc.odd)}, count ${pct(acc.count2)}; CPU p95 ${p95.toFixed(1)} ms`);
     console.log('       holes', JSON.stringify(holesHist), 'keys', keyPos.join(','));
@@ -214,6 +231,17 @@ function creaseSym(H, item, cs) {
     const a = cs[key] = cs[key] || [0, 0]; a[0] += hit; a[1]++;
   }
 }
+// The starter band's promises: one fold that matters, two holes; at least one foil symmetric about the
+// crease without the punch hole; how many foils share the punch hole; the format's method (gate).
+function bandChecks(A, item, b) {
+  const opts = item.options, k = item.key, pm = A.maskOf(item.punches), L1 = item.folds[0].line;
+  const up = opts.map((o) => { const m = A.maskOf(o); return (m[0] & pm[0]) === pm[0] && (m[1] & pm[1]) === pm[1] ? 1 : 0; });
+  const s1 = opts.map((o) => A.symScore(o, L1));
+  if (item.folds.length === 1 && item.folds[0].matters && item.holes === 2 && (item.params.type !== 0 || item.folds[0].cls === 'H')) b.oneFold++;
+  if (opts.some((o, i) => i !== k && !up[i] && s1[i] > 1 - 1e-9)) b.symFoil++;
+  b.shareUnder += up.reduce((s, u, i) => s + (i === k ? 0 : u), 0);
+  b.gate += pickBest(opts.map((o, i) => up[i] * 10 + s1[i]), k);
+}
 function creaseReport(cs, folds) {
   const f = (key) => (cs[key] ? (100 * cs[key][0] / cs[key][1]).toFixed(1) : '–');
   const share = (key) => (cs[key] ? (100 * cs[key][1] / cs.all[1]).toFixed(0) : '0');
@@ -230,23 +258,33 @@ function testLearn(t, PX, def) {
   if (!L) return;
   t.ok(typeof L.goal === 'string' && L.goal.length > 10 && L.goal.length <= 120, `a one-line goal (${(L.goal || '').length} characters)`);
   t.ok(Array.isArray(L.parts) && L.parts.length >= 3 && L.parts.every((p) => p.id && p.label && p.text), 'labelled parts');
+  // the teaching template (CONTRACT-v1.2 D; note D2 §3.0 C, §3.6, §3.9 item 1)
+  t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => typeof r === 'string' && r.length > 20 && r.length <= 140), 'a rules card of 2–4 short rules');
+  t.ok((L.strategies || []).some((x) => x.id === L.strategyFirst) && L.strategies.find((x) => x.id === L.strategyFirst).steps.length === 3, `the strategy card before Try 1 exists, with three steps (${L.strategyFirst})`);
+  t.eq(L.minutes, 2, 'the offer card says about two minutes');
   const valid = (p) => PX.ex.validParams(def, p) === true;
-  t.ok(Array.isArray(L.demo) && L.demo.length >= 1 && L.demo.every((d) => valid(d.params) && Number.isInteger(d.seed)), 'demo items with valid params');
-  t.ok(L.demo.every((d) => def.difficulty(d.params) <= PX.ex.minDifficulty(def) + 1e-9), 'demos are at the easiest level');
-  for (const d of L.demo) {
-    const item = def.generate(PX.rng(d.seed), d.params);
-    const kind = item.folds.every((f) => f.cls === 'H') && item.holes === 2 && !item.fallback ? 'straight' : 'other';
-    t.eq(kind, d.kind, `demo seed ${d.seed} gives a ${d.kind} item (straight folds, two holes)`);
-  }
-  t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
-  const diffs = L.practice.map((p) => def.difficulty(p));
-  t.ok(diffs[0] === Math.min(...diffs), 'practice starts at the easiest of its levels');
-  // RV-play-dat: the Watch has straight folds only, so the first slanted Try is the easiest kind
-  // (one fold matters) and Try shows it the slanted-crease tip (the first tip that fits the item).
-  const tipOf = (p) => (L.tips || []).find((tp) => tp.when && Array.isArray(tp.when.levels) && tp.when.levels.includes(p[tp.when.dim]));
-  const firstSlant = L.practice.findIndex((p) => p.type > 0), corner = L.practice.findIndex((p) => p.type === 1);
-  t.ok(firstSlant > 0 && L.practice[firstSlant].idle >= 1 && (tipOf(L.practice[firstSlant]) || {}).id === 'diagonal' && corner > firstSlant && (tipOf(L.practice[corner]) || {}).id === 'corner',
-    'the first slanted fold in Try is an easy one with the slanted-crease tip, before the corner fold');
+  t.ok(Array.isArray(L.demo) && L.demo.length === 1 && valid(L.demo[0].params) && Number.isInteger(L.demo[0].seed), 'one demo item with valid params');
+  t.ok(def.difficulty(L.demo[0].params) <= PX.ex.minDifficulty(def) + 1e-9, 'the Watch is at the starter band (the easiest level)');
+  const demoItem = def.generate(PX.rng(L.demo[0].seed), L.demo[0].params);
+  t.ok(def.validate(demoItem) === true && !demoItem.fallback && demoItem.folds.length === 1 && demoItem.folds[0].cls === 'H' && demoItem.holes === 2, `demo seed ${L.demo[0].seed}: one straight fold, two holes`);
+  t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
+  if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
+  const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
+  t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
+  t.ok(P[0].folds === 0 && P[1].folds === 0 && P[0].type === 0 && P[1].type === 0, 'Try 1 and Try 2 are at the starter band (one straight fold)');
+  t.eq(P[2], { folds: 1, type: 0, idle: 1 }, 'Try 3 is the pre-1.2 floor (an idle fold)');
+  t.eq(P[3], { folds: 1, type: 0, idle: 0 }, 'Try 4: two folds that both matter');
+  t.eq(L.practice[0].assist, { twin: true }, 'Try 1 has its first step done (the twin ringed)');
+  t.ok(L.practice.slice(1).every((e) => e.assist === undefined), 'only Try 1 is assisted');
+  const tipIds = new Set((L.tips || []).map((x) => x.id));
+  t.ok(L.practice[2].tip === 'idle' && L.practice.every((e) => e.tip === undefined || tipIds.has(e.tip)), 'Try 3 shows the idle-fold tip; forced tips exist');
+  t.eq(new Set(items.map((it) => it.key)).size, 4, `the Try answers sit in four different places (${items.map((it) => it.key + 1).join(', ')})`);
+  const cls = (w) => (/wrong order/.test(w) ? 'order' : /one cell away|another place/.test(w) ? 'moved' : /turned/.test(w) ? 'turned' : /mirrored/.test(w) ? 'mirrored' : /across/.test(w) ? 'crease' : 'other');
+  const kindsOf = (it) => new Set(it.why.filter((w, i) => i !== it.key).map(cls));
+  const dk = kindsOf(demoItem), tk = new Set(items.flatMap((it) => [...kindsOf(it)]));
+  t.ok([...tk].every((k) => dk.has(k)), `every kind of wrong sheet in Try (${[...tk].join(', ')}) is in the Watch item (${[...dk].join(', ')})`);
+  const diffs = P.map((p) => def.difficulty(p));
+  t.ok(diffs.every((x, i) => i === 0 || x >= diffs[i - 1] - 1e-9), `practice goes from easy to harder (${diffs.map((x) => x.toFixed(2)).join(', ')})`);
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
@@ -255,7 +293,7 @@ function testLearn(t, PX, def) {
   }
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['folds', 'punch', 'options', 'punched', 'unfold', 'unfoldIdle', 'done', 'chosen'];
+  const caps = ['folds', 'punch', 'options', 'punched', 'unfold', 'unfoldIdle', 'done', 'chosen', 'assist'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   t.ok(typeof L.bridge === 'string' && /not been shown/.test(L.bridge), 'a "where it is used" card with its limitation line');
   const ADA = 'DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.';

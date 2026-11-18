@@ -9,7 +9,12 @@
    - Show me: one large panel starts from the punched paper and undoes the folds in reverse order;
      each flap turns back over its crease carrying its holes, then the flat sheet is set beside the
      key (and the chosen sheet's extra holes after a wrong answer).
-   - Drawing code is this file's own (Fold's view stays B2's); colours from css/ex/patfold.css. */
+   - Drawing code is this file's own (Fold's view stays B2's); colours from css/ex/patfold.css.
+   - Starter band (v1.2, one fold; note D2 §3.6): two larger panels (O55), and the 16 positions as
+     faint dots on the folded paper of the punch panel, so the punch's cell can be read. Try 1
+     (ctx.assist = { twin: true }): the punch's twin cell across the crease is ringed on the punch
+     panel, the first step of the card "Unfold backwards" done (CONTRACT-v1.2 D).
+   - The Watch also shows why one sheet of each kind of wrong answer fails. */
 (function (PX) {
   'use strict';
 
@@ -100,11 +105,26 @@
     return svg;
   }
   function polyArea(P) { var s = 0; for (var i = 0; i < P.length; i++) { var p = P[i], q = P[(i + 1) % P.length]; s += p[0] * q[1] - q[0] * p[1]; } return s / 2; }
-  function punchPanel(item) {
+  function pip(P, x, y) {
+    var c = false;
+    for (var i = 0, j = P.length - 1; i < P.length; j = i++) { var a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; }
+    return c;
+  }
+  function punchPanel(item, assist) {
     var s = item.steps[item.steps.length - 1], svg = panelSvg('ex-patfold-svg--panel', VB);
     svg.appendChild(outline([[0, 0], [N, 0], [N, N], [0, N]], 'ex-patfold-was'));
     s.faces.forEach(function (face) { svg.appendChild(faceGroup(face, false)); });
+    if (item.folds.length === 1) { // the starter band: the 16 positions, faint, wherever paper lies
+      for (var j = 0; j < N; j++) for (var i = 0; i < N; i++) {
+        if (s.faces.some(function (f) { return pip(f.poly, i + 0.5, j + 0.5); })) svg.appendChild(S.el('circle', { cx: i + 0.5, cy: j + 0.5, r: 0.07, class: 'ex-patfold-dot' }));
+      }
+    }
     item.punches.forEach(function (c) { svg.appendChild(hole(c, 'ex-patfold-hole ex-patfold-punch')); });
+    if (assist && assist.twin && item.folds.length === 1) {
+      var P = item.punches[0], tw = lib.reflCell(item.folds[0].line, P[0], P[1]);
+      svg.appendChild(crease(item.folds[0]));
+      svg.appendChild(ring(tw, 'ex-patfold-ring ex-patfold-twin'));
+    }
     return svg;
   }
   // An unfolded sheet: the 16 positions, holes filled, the rest as open rings.
@@ -148,7 +168,7 @@
       item: null, optItem: null, opts: [], labels: [], bigSvg: null };
   }
   function setMode(mode) { st.strip.hidden = mode !== 'strip'; st.big.hidden = mode !== 'big'; }
-  function drawStrip(item) {
+  function drawStrip(item, assist) {
     PX.ui.clear(st.strip);
     st.labels = [];
     var F = item.folds.length;
@@ -156,7 +176,7 @@
     for (var k = 1; k <= F + 1; k++) {
       var label = h('span.ex-label.ex-patfold-plabel', k <= F ? 'Fold ' + k : 'Punch');
       st.labels.push(label);
-      st.strip.appendChild(h('div.ex-patfold-panel', label, k <= F ? foldPanel(item, k) : punchPanel(item)));
+      st.strip.appendChild(h('div.ex-patfold-panel', label, k <= F ? foldPanel(item, k) : punchPanel(item, assist)));
     }
   }
   function present(item, ctx) {
@@ -168,7 +188,9 @@
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
     st.root.classList.remove('is-revealed');
-    drawStrip(item);
+    var assist = ctx && ctx.assist && ctx.assist.twin ? ctx.assist : null;
+    drawStrip(item, assist);
+    if (assist && item.folds.length === 1) st.caption.textContent = cap('assist');
     PX.ui.clear(st.big);
     st.bigSvg = null;
     setMode('strip');
@@ -308,19 +330,21 @@
     }
     out.push({ ms: 1800, caption: cap('done', { n: item.key + 1 }), enter: function () { setMode('big'); drawState(item, 0, []); focusOption(item.key); } });
     var r = response;
-    if (typeof r === 'number' && r !== item.key && r >= 0 && r < item.options.length) {
-      out.push({
-        ms: 2400, caption: cap('chosen', { n: r + 1, why: whyText(item, r) }),
-        enter: function () {
-          setMode('big');
-          var svg = drawState(item, 0, []), keyCells = {};
-          item.options[item.key].forEach(function (c) { keyCells[cellKey(c)] = true; });
-          item.options[r].forEach(function (c) { if (!keyCells[cellKey(c)]) svg.appendChild(ring(c, 'ex-patfold-other')); });
-          focusOption(r);
-        },
-      });
-    }
+    if (typeof r === 'number' && r !== item.key && r >= 0 && r < item.options.length) out.push(chosenStep(item, r));
     return out;
+  }
+  // Sheet r against the true holes: the holes these folds do not make, dashed.
+  function chosenStep(item, r) {
+    return {
+      ms: 2400, caption: cap('chosen', { n: r + 1, why: whyText(item, r) }),
+      enter: function () {
+        setMode('big');
+        var svg = drawState(item, 0, []), keyCells = {};
+        item.options[item.key].forEach(function (c) { keyCells[cellKey(c)] = true; });
+        item.options[r].forEach(function (c) { if (!keyCells[cellKey(c)]) svg.appendChild(ring(c, 'ex-patfold-other')); });
+        focusOption(r);
+      },
+    };
   }
 
   function runSteps(list, ctx, opts) {
@@ -364,7 +388,10 @@
       { ms: 1800, caption: cap('punch'), enter: function () { setMode('strip'); point([F]); }, exit: function () { point([]); } },
       { ms: 1800, caption: cap('options'), enter: function () { setMode('strip'); point([]); } },
     ];
-    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null })
+    // then why one wrong sheet of each kind fails (the Watch shows every kind of foil Try uses)
+    var kinds = {}, tour = [];
+    item.options.forEach(function (o, i) { var w = shortWhy(item.why[i]); if (i !== item.key && !kinds[w]) { kinds[w] = 1; tour.push(chosenStep(item, i)); } });
+    return play(intro.concat(steps(item, null), tour), ctx, { name: 'demo', caption: caption || null })
       .then(function () { if (st) focusOption(-1); });
   }
 
