@@ -46,3 +46,23 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
 - Late fix: items are [b, g, ok, rtMs?, a?] so the rows the wave-2 contract stores in rec.assess pass straight in
   (a stored response time was being read as the item slope); results checked unchanged (classic-opt and the crossover).
 - Open for the build: the MANIFEST line (requested 20:00 UTC; W2-core inherits it), index.html, ENGINE.md §21.
+
+## 2026-11-18 22:15 UTC: build phase, first half
+- Engine: trend.js takes probe versions ('id@v', own probe; folded once into the composite and its rung) and gives
+  readouts in probe points (7347b25). assess.js in two steps: d4f77fb (additive: blocks, the week, items/pv/late on
+  every entry, nextMeasure, the meter, verdicts stored once per milestone, the measure container's repair and merge,
+  the measure and background events, session kinds) and 0fe46af (the switch: full checks 16 + 5 + … + 5 = 46 items,
+  25 until Other Way Round lands; easy-first only on first contact; the first form drawn per record; no B3; the
+  4-weekly check; Lab crossover checks; report() status 'trend'). testAssess and sim.mjs's Spatial Check part follow
+  (W2-core's yes; review asked in requests.md). tests/node/measure.test.mjs: 105 checks.
+- App: js/ui/measure.js + css/measure.css (725abae): the shared runner and every hook of CONTRACT R that milestone 6
+  names; js/ui/check.js plays through the runner. tests/e2e/check.py: 35/0 at 1366 x 768, 390 x 844 and 360 x 640
+  (screenshots looked at: Today's slot, the B1 card, the summary meter, Progress, the Lab ladder). overlap.py 58/0.
+- Reserved formats: tests/node/formats.test.mjs (17 ids) and the probes' format ids (a85066b).
+- Incident: a sync-index run with an unknown argument activated W2-bets' centralpoint/layers.js beside trend.js at
+  21:56 UTC; 8483c63 committed it; fixed in 3fea396 and reported in requests.md.
+- Running: tests/node/sim.mjs --learners 200 (Design A in the regression sim; first four runs: false "likely gain"
+  0.5–1.0 % without transfer, hard checks pass); tests/e2e/play.py with measure.js active (W2-core's run_hooks may
+  count two 'check' replacements: request to follow if so).
+- Next: Other Way Round (six strands), Motion Graphs, the probe upgrades as new versions, Balance and the Lab checks,
+  ENGINE.md §21.
