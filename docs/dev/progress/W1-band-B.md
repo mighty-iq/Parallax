@@ -29,11 +29,30 @@ Design source: docs/research/v1.2/D2-first-band.md §3.0, §3.4–3.9, §4. Requ
 - 16:40 UTC: card-step captions (R-reader's request) for Openings, Form, Hole Punch (27d76a4).
 - 16:45 UTC: Missing View band rebuilt for balance (enumerated boxes, chooser at 1/4 per rule, wide count
   windows above the band); full node run in progress; seeds re-chosen.
+- 16:47 UTC: Missing View v2 committed (2df084b): band (Δ −1.6), turn-to-side show-me, Watch hold on dotted
+  lines (O52), learn data. Node: 270 checks pass.
+- 16:55 UTC: Try 1's assist captions shortened to one line (a6ddae9): Openings' Try 1 now fits 360 × 640.
+- 17:00 UTC: Openings' band at Δ −1.6 (W1-core's firstband line: 74.4 % sat on the 74 % bound; now 75.4 %);
+  worked examples before the first hard feature (addendum C change 4) in all four learn.js; Form's show-me
+  starts at the card's steps, with a half-mark corner step; decisions logged (a8c3100).
+- 17:03 UTC: fixes from the 360 × 640 screenshots: Form's fold-up layer shared the class of the pattern's dashed
+  fold lines, so the folded faces were drawn dashed (renamed fm-foldup); Missing View's turn covered the
+  structure's label (the cover now starts below it). The fresh-player check needs a subagent, which I cannot
+  start: brief and driver are ready outside the repository, and the lead has the request.
+- 17:05–17:15 UTC: committed Form (265c0fd), Openings (4609419), Hole Punch (574d0e3), Missing View (b746e47);
+  answered W1-core's firstband line (c939f8d). Full node suites: 608 checks pass; firstband passes for all four.
+- 17:28 UTC: tests/e2e/harness_starter_b.py also runs the app's own Watch, Try, Go for each of the four at
+  360 × 640 (rules card, Watch, strategy card, Try 1–4 with the worked example in its place, end screen):
+  66 pass. Browser slots were the bottleneck (both held for about half an hour by long-lived servers).
+- 17:38 UTC: screenshots of the four worked examples: Form's seed 8 showed its half mark edge-on, so seed 54
+  (75a7791, decision cc93265); Openings' turn in show me now runs at the guide's 2–4 s a movement (1.3 s
+  a turn plus a hold, was 0.9 s); Missing View's browser check reads the v1.2 step order (the dotted step
+  after the turn and the laid drawing).
 
 ## Next
-- Commit Missing View once its full node run passes; e2e short checks (tests/e2e/harness_starter_b.py) for all
-  four through pwslot; look at the screenshots; fresh-player check through the app (W1-core's answer: (b)).
-- R-reader change 4 (a second worked example before the first hard feature) waits for W1-core's `example` entry.
+- Commit Openings' view and the browser checks once harness_openings and harness_patviews pass.
+- The fresh-player check, if the lead starts it: fix what it finds once.
 
 ## Open problems
-- none yet
+- The fresh-player check (note D2 §4) is not run: no subagent tool in this session. Brief and driver are
+  ready outside the repository (named in the handback).
