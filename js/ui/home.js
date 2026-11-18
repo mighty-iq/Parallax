@@ -1,7 +1,9 @@
 /* PX.ui.screens.home: Today (ARCHITECTURE §9; PLAN §5, §7, §8).
-   Slots in reading order: today's session (a protocol card with a minute ruler), weekly goal
-   (a dial with one segment per planned session, and the days practised), Daily Challenge,
-   Spatial Check, your data (last backup, Back up now), exercise levels, recent achievements.
+   Slots in reading order: today's session (a protocol card with a minute ruler), a mode
+   suggestion from the log when there is one (v1.2, gap M3: one at a time, "Not now" hides it for
+   14 days in rec.ui.hiddenTips), weekly goal (a dial with one segment per planned session, and the
+   days practised), Daily Challenge, exercise levels, Spatial Check, recent achievements, your
+   data (last backup, Back up now, and the phone storage hint while a backup is due).
 
    Every panel shows the player's own record, never sample data: a fresh profile sees empty
    states (no levels yet, no achievements yet), and a plan that cannot be built says so.
@@ -45,7 +47,15 @@
     { id: 'patfold', code: 'EX-17', name: 'Hole Punch', kind: 'Hole punching', abilities: ['Vz'], note: 'DAT-style', blurb: 'A folded square is punched once: pick where the holes are when it opens.' },
     { id: 'cubes', code: 'EX-18', name: 'Painted Cubes', kind: 'Cube counting', abilities: ['Vz'], note: 'DAT-style', blurb: 'Count the cubes in a painted stack that have exactly the number of painted sides asked.' },
     { id: 'form', code: 'EX-19', name: 'Form', kind: 'Pattern folding', abilities: ['Vz'], note: 'DAT-style', blurb: 'Fold a flat pattern in your mind and pick the solid it makes.' },
+    // v1.2
+    { id: 'centralpoint', code: 'EX-20', name: 'Central Point', kind: 'Central point', abilities: ['LE', 'Vz'], blurb: 'Find the spot with the shortest total distance to every marked dot, by eye.' },
   ];
+  // 'level 1 · starter items' or 'level 12' (CONTRACT-v1.2 C)
+  function levelText(n) {
+    var X = PX.ui.exinfo;
+    if (X && typeof X.levelText === 'function') return X.levelText(n);
+    return typeof n === 'number' && isFinite(n) ? 'level ' + Math.round(n) : 'level –';
+  }
 
   // One entry per id (a repeated catalog line never counts twice: RV-play-dat).
   function catalog() {
@@ -300,6 +310,50 @@
         h('strong', K.storageText()),
         h('span', K.backupLine(), '. A backup is a file you can import again here or on another device.')),
       b));
+    // v1.2 (gap C2): later launches show the one-tap card, not the welcome, so the phone storage
+    // hint (iPhones, iPads, in-app browsers) comes here while a backup is due.
+    var W = PX.ui.welcome, hint = null;
+    try { hint = W && typeof W.storageHint === 'function' ? W.storageHint({ dueOnly: true }) : null; } catch (e) { hint = null; }
+    if (hint) {
+      hint.setAttribute('data-welcome', 'storage-today');
+      var dup = hint.querySelector('[data-welcome="backup"]'); // this slot has its own Back up button
+      if (dup && dup.parentNode) dup.parentNode.removeChild(dup);
+      p.body.appendChild(hint);
+    }
+    return p.el;
+  }
+
+  // One mode suggestion from the log at a time (gap M3; CONTRACT-v1.2 J; note P1 §5): its reason,
+  // the mode's "right when" line, a start, and "Not now", which hides it for 14 days.
+  var HIDE_MS = 14 * 864e5;
+  function suggestSlot(rec, now) {
+    var M = PX.engine && PX.engine.modes, sg = null;
+    try { sg = M && typeof M.suggest === 'function' ? M.suggest(rec, now) : null; } catch (e) { sg = null; }
+    var def = sg && sg.exId && PX.ex.get(sg.exId);
+    if (!def || !sg.key) return null;
+    var K = PX.ui.kit, X = PX.ui.exinfo;
+    var mode = X && X.modeName ? X.modeName(sg.mode) : sg.mode;
+    var p = K.panel({ title: mode + ' for ' + (def.short || def.name), className: 'px-slot px-slot--suggest', aside: 'a suggestion from your log' });
+    p.el.setAttribute('data-suggest', sg.key);
+    p.body.appendChild(h('p.px-suggest-why', sg.why));
+    var when = X && X.MODE_WHEN ? X.MODE_WHEN[sg.mode] : null;
+    if (when) p.body.appendChild(h('p.px-meta.px-mode-when', when));
+    var go = ui.button('Start ' + mode, { kind: 'secondary', onClick: function () {
+      var route = { mode: sg.mode, exId: def.id };
+      if (X && typeof X.start === 'function') X.start(def, route); else PX.core.router.go('play', route);
+    } });
+    go.setAttribute('data-suggest-go', '');
+    var later = ui.button('Not now', { kind: 'ghost', onClick: function () {
+      var R = PX.core.store.state;
+      if (!R.ui || typeof R.ui !== 'object') R.ui = { lastRoute: null };
+      if (!R.ui.hiddenTips || typeof R.ui.hiddenTips !== 'object') R.ui.hiddenTips = {};
+      R.ui.hiddenTips[sg.key] = Date.now() + HIDE_MS;
+      PX.core.store.save();
+      ui.toast('Hidden for two weeks.', { kind: 'info' });
+      PX.ui.app.rerender();
+    } });
+    later.setAttribute('data-suggest-hide', '');
+    p.body.appendChild(h('div.px-slot-foot', go, later));
     return p.el;
   }
 
@@ -324,11 +378,12 @@
   function levelRow(r) {
     var e = entry(r.ex), has = typeof r.level === 'number';
     var bar = has ? ui.bar(r.level, 100, { band: [r.lo, r.hi], label: e.name + ' level' }) : ui.bar(0, 100, { label: e.name + ' level' });
-    if (has) bar.setAttribute('aria-valuetext', 'level ' + r.level + ', likely between ' + r.lo + ' and ' + r.hi);
+    if (has) bar.setAttribute('aria-valuetext', levelText(r.level) + ', likely between ' + r.lo + ' and ' + r.hi);
     var num = has
       ? h('div.px-level-num', { 'aria-hidden': 'true' }, h('b', String(r.level)), h('span', r.lo + '–' + r.hi))
       : h('div.px-level-num', h('b', r.n ? r.n + ' trials' : 'Not started'));
     var set = [];
+    if (has && r.level <= 1 && e.def && e.def.starter) set.push('Starter items. ');
     if (r.settings) set.push('Handles ' + r.settings + '.');
     if (r.stage) set.push(' Path stage ' + r.stage + ' of 10.');
     return h('li', { class: ['px-level', has ? null : 'is-new'], 'data-ex': r.ex },
@@ -386,8 +441,10 @@
     host.appendChild(h('div.px-screen-head',
       h('p.px-screen-meta', DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · week ' + isoWeek(d)),
       h('h1', 'Today')));
-    host.appendChild(h('div.px-today',
+    var sug = suggestSlot(rec, now);
+    host.appendChild(h('div', { class: ['px-today', sug ? 'has-suggest' : null] },
       sessionSlot(rec, now),
+      sug,
       goalSlot(rec, now),
       dailySlot(rec, now),
       levelsSlot(rec),

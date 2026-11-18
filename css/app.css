@@ -281,6 +281,15 @@
   .px-today > .px-slot--check { grid-column: 9 / span 4; grid-row: 3; }
   .px-today > .px-slot--achievements { grid-column: 9 / span 4; grid-row: 4; }
   .px-today > .px-slot--data { grid-column: 1 / -1; grid-row: 5; }
+  /* a mode suggestion (v1.2) takes the left column's third row; the rows below move down one */
+  .px-today.has-suggest > .px-slot--suggest { grid-column: 1 / span 8; grid-row: 3; align-self: start; }
+  .px-today.has-suggest > .px-slot--levels { grid-row: 4 / span 2; }
+  .px-today.has-suggest > .px-slot--check { grid-row: 3; }
+  .px-today.has-suggest > .px-slot--achievements { grid-row: 4; }
+  .px-today.has-suggest > .px-slot--data { grid-row: 6; }
+}
+@media (min-width: 720px) {
+  .px-today > .px-slot--suggest { grid-column: span 6; }
 }
 .px-slot { display: flex; flex-direction: column; }
 .px-slot > .px-panel-body { flex: 1 1 auto; display: flex; flex-direction: column; }

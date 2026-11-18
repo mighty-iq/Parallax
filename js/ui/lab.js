@@ -317,14 +317,17 @@
       para('In every 10 items, 8 aim at the target, 1 is easier and 1 is a stretch. Among equally good settings, the ones used least recently win, which keeps practice varied. A setting whose answers fall clearly below prediction is flagged as a weak spot and comes up more often.'),
       para('Every item has its own seed, so the same seed never repeats in training and anyone can regenerate an item from a log.'),
     ]));
+    // gap M3: each mode says when it is the right one, in the practise sheet's words (library.js MODE_WHEN)
+    var W = (X() && X().MODE_WHEN) || {};
+    function mode(name, key, text) { return h('div', h('dt', name), h('dd', text, W[key] ? h('span.px-mode-when', W[key]) : null)); }
     p.body.appendChild(part('modes', 'Modes, and why there are several', [
-      para('Research on how to schedule practice does not agree on one method, and each mode answers a different question. All of them share one record.'),
+      para('Research on how to schedule practice does not agree on one method, and each mode answers a different question. All of them share one record. Today suggests a mode now and then when your log points to one; “Not now” hides that suggestion for two weeks.'),
       h('dl.px-facts.px-facts--dims',
-        h('div', h('dt', 'Train'), h('dd', 'Daily practice: three exercises per session (a focus, one due for review, one practised least), mixed more as each exercise settles, from blocks of 20 up to random order.')),
-        h('div', h('dt', 'Path'), h('dd', 'Ten stages per exercise, practised one at a time. A stage passes when your success stays high and the rating agrees, and comes back for rechecks after 3, 7, 14, 30 and 60 days.')),
-        h('div', h('dt', 'Speed'), h('dd', 'Fluency: items you already answer well, against a deadline that adapts. It keeps its own timed level and opens after a passed Path stage or 60 settled answers.')),
-        h('div', h('dt', 'Threshold'), h('dd', 'Measures one setting with a staircase (above). Results are kept apart from levels.')),
-        h('div', h('dt', 'Free play'), h('dd', 'You choose the exercise, settings and timer. Logged, never rated.')),
+        mode('Train', 'train', 'Daily practice: three exercises per session (a focus, one due for review, one practised least), mixed more as each exercise settles, from blocks of 20 up to random order.'),
+        mode('Path', 'path', 'Ten stages per exercise, practised one at a time. A stage passes when your success stays high and the rating agrees, and comes back for rechecks after 3, 7, 14, 30 and 60 days.'),
+        mode('Speed', 'speed', 'Fluency: items you already answer well, against a deadline that adapts. It keeps its own timed level and opens after a passed Path stage or 60 settled answers.'),
+        mode('Threshold', 'threshold', 'Measures one setting with a staircase (above). Results are kept apart from levels.'),
+        mode('Free play', 'free', 'You choose the exercise, settings and timer. Logged, never rated.'),
         h('div', h('dt', 'Daily Challenge'), h('dd', 'The same 8 items for everyone on a date, one scored attempt: a community game, not training.')),
         h('div', h('dt', 'Spatial Check'), h('dd', 'Measurement on tasks you never train (below).')))
     ]));

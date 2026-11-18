@@ -2,6 +2,8 @@
    (js/ui/overlap.js; v1.1 PLAN M5, M6; R4 §6). overlap.js is a UI file without DOM work at load,
    so it runs here with the store and stub exercises: the notes, the helper's matching, the pause
    and its end, PAT-focus history, noted tests, and that all of it survives a save and a reload. */
+import fs from 'node:fs';
+import path from 'node:path';
 import { MANIFEST, SharedStorage } from './run.mjs';
 
 const T0 = Date.UTC(2026, 10, 13, 10, 0, 0);
@@ -38,6 +40,9 @@ export async function run(t) {
   testSettings(t);
   testPersist(t);
   testWording(t);
+  testAnalogy(t);
+  testAdaBeside(t);
+  testPooled(t);
 }
 
 function testNotes(t) {
@@ -177,4 +182,68 @@ function testWording(t) {
     t.ok(!/\bIQ\b|percentile|guarantee|boost|brain age|smarter|predicted|official/i.test(s), 'no forbidden claim in: ' + s.slice(0, 50));
   }
   t.ok(texts.every((s) => !/DAT(?!®| scores| score)/.test(s.replace('Dental Admission Test', ''))), 'the DAT is named only descriptively');
+}
+
+// Decision D3 (17 Nov): one line for anyone who keeps an analogy test as a yardstick, in the helper
+// and in About, the same words in both.
+function testAnalogy(t) {
+  t.section('the analogy line (D3)');
+  const { PX } = env(t);
+  const O = PX.ui.overlap;
+  const k = O.kind('analogies');
+  t.ok(/take it before your first Spatial Check\.$/.test(k.untrained), 'the helper says when to take an analogy test');
+  t.ok(O.ANALOGY.endsWith(k.untrained.split('. ').pop()), 'About and the helper share the line');
+  t.ok(/O\.ANALOGY/.test(fs.readFileSync(path.join(t.root, 'js/ui/about.js'), 'utf8')), 'About shows it');
+}
+
+// O25 (note D1 §4.5): "DAT score(s)" may appear only in negations that carry the ADA line beside
+// them. A learn.js bridge carries it in its own text; a screen file that says it shows O.ADA.
+const ADA_RE = /American Dental Association|overlap\.ADA|\bO\.ADA\b|\bada\(\)/;
+function literals(src) {
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+  return code.match(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g) || [];
+}
+function testAdaBeside(t) {
+  t.section('O25: the ADA line beside every "DAT score"');
+  const files = [];
+  (function walk(dir) {
+    for (const d of fs.readdirSync(path.join(t.root, dir), { withFileTypes: true })) {
+      const rel = dir + '/' + d.name;
+      if (d.isDirectory()) walk(rel); else if (d.name.endsWith('.js')) files.push(rel);
+    }
+  })('js');
+  let seen = 0;
+  for (const rel of files) {
+    const src = fs.readFileSync(path.join(t.root, rel), 'utf8');
+    const hits = literals(src).filter((l) => /DAT scores?\b/.test(l));
+    if (!hits.length) continue;
+    seen += hits.length;
+    for (const l of hits) {
+      t.ok(/\b(not|no|never)\b/.test(l), rel + ': "DAT score" only in a negation: ' + l.slice(0, 70));
+      if (/\/learn\.js$/.test(rel)) {
+        // the bridge's own line: the ADA text itself, or the file's ADA constant appended to it
+        const line = src.split('\n').find((x) => x.includes(l)) || '';
+        t.ok(/American Dental Association/.test(line) || (/\+\s*ADA\b/.test(line) && /ADA\s*=\s*'[^']*American Dental Association/.test(src)), rel + ': the bridge that says it carries the ADA line');
+      } else t.ok(ADA_RE.test(src), rel + ': the screen that says it shows the ADA line');
+    }
+  }
+  t.ok(seen >= 3, 'the check found the phrases (' + seen + ')');
+  const readme = fs.readFileSync(path.join(t.root, 'README.md'), 'utf8').split('\n').filter((l) => /DAT scores?\b/.test(l));
+  t.ok(readme.every((l) => /American Dental Association/.test(l)), 'README: the same paragraph carries the ADA line');
+}
+
+// The community export (CONTRACT-v1.2 I): a noted test keeps its kinds and how many days after the
+// note it falls, never its calendar day.
+function testPooled(t) {
+  t.section('hygiene in the community export');
+  const { PX } = env(t);
+  const O = PX.ui.overlap, st = PX.core.store, rec = st.state;
+  O.noteTest(rec, { date: '2026-11-20', kinds: ['dat'], paused: ['angles'] }, T0);
+  O.setFocus(rec, true, T0);
+  const p = st.pooled();
+  t.ok(p.hygiene && p.hygiene.tests.length === 1, 'the noted test is in the export');
+  const x = p.hygiene.tests[0];
+  t.eq([x.inDays, x.kinds, x.paused], [7, ['dat'], ['angles']], 'days after the note, kinds and what it paused');
+  t.ok(!('date' in x) && !JSON.stringify(p.hygiene).includes('2026-11-20'), 'no calendar day of the player');
+  t.eq(p.hygiene.focus, rec.hygiene.focus, 'focus switches stay epoch seconds');
 }

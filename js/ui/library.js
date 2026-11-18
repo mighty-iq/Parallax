@@ -40,6 +40,7 @@
     forward: 'forward', backward: 'backward', still: 'still camera', orbit: 'orbiting camera',
     point: 'point home', 'return': 'walk back home',
     pull: 'pull the ends', untie: 'which crossing unties it', tie: 'which crossing ties it', link: 'linked or apart',
+    quick: 'quick estimate, against a clock', exact: 'exact answer, no clock', // Central Point
   };
   // A few words after the name on cards and pages (R1 §8.1 d: Homing is the stage with landmarks).
   var NAME_TAIL = { homing: 'with landmarks', reckon: 'no landmarks' };
@@ -52,6 +53,15 @@
   };
   var CARD_NOTE = { reckon: 'Hard at first? Practise Homing, where landmarks help, then come back.' };
   var MODES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', section: 'Section practice' };
+  // When each mode is the right one (gap M3; docs/research/v1.2/P1-plateaus-progress.md §5): the
+  // practise sheet, the exercise page and the Lab say it in these words.
+  var MODE_WHEN = {
+    train: 'Right when you want the most progress per minute without choosing anything: mixed exercises at the edge of your level, with reviews spaced out.',
+    path: 'Right when an exercise is new to you, or mixed practice feels like too much: one band at a time, with a clear finish line.',
+    speed: 'Right when you answer an exercise accurately but slowly, or your test is timed: deadlines on items you already solve, with a separate timed level.',
+    threshold: 'Right when you want one number to compare over months. It measures; it does not change your level.',
+    free: 'Right when you want to explore a setting, replay a friend’s code or rehearse exactly what you will meet, without touching your level.',
+  };
   var PROTOCOL_NAMES = {
     'track-standard': 'Track Standard 3D-MOT protocol',
     'track': 'Track speed at your target',
@@ -94,12 +104,13 @@
     'slice.curved': function (v) { return v === 'yes' ? 'curved solid' : 'flat-sided solid'; },
     'fold.folds': function (v) { return v === 1 ? 'one fold' : v + ' folds'; },
     'fold.punches': function (v) { return v === 1 ? 'one punch' : v + ' punches'; },
-    'fold.idle': function (v) { return v === 0 ? 'every fold matters' : v + (v === 1 ? ' fold that does not matter' : ' folds that do not matter'); },
+    // O59: with fewer folds the generator caps the idle ones at folds − 1, so "up to"
+    'fold.idle': function (v) { return v === 0 ? 'every fold matters' : 'up to ' + (v === 1 ? 'one fold that does not matter' : v + ' folds that do not matter'); },
     // Fold's and Hole Punch's fold types (all straight; a corner among straight ones; 45° only; both)
     'fold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
     'patfold.type': function (v) { return FOLD_TYPE[v] || v + ' folds'; },
     // Hole Punch: folds whose flap the punch misses (at most folds − 1 of them)
-    'patfold.idle': function (v) { return v === 0 ? 'every fold matters' : v === 1 ? 'one fold the punch misses' : 'up to ' + v + ' folds the punch misses'; },
+    'patfold.idle': function (v) { return v === 0 ? 'every fold matters' : 'up to ' + (v === 1 ? 'one fold' : v + ' folds') + ' the punch misses'; },
     // Openings: the cuts dealt over the three faces, the outline that fits, the wrong openings
     'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },
     'openings.edges': function (v) { return v === 'chamfers' ? 'slanted cuts too' : 'right-angled cuts only'; },
@@ -112,7 +123,8 @@
     'patviews.missing': function (v) { return 'the ' + v + ' view to find'; },
     'patviews.foil': function (v) { return v === 'same outline' ? 'wrong drawings with the same outline' : v === 'solid or dotted' ? 'wrong drawings that differ in one line (solid or dotted)' : 'wrong drawings with another outline'; },
     // Angles (size ranges from the generator)
-    'angles.gap': function (v) { return 'closest two angles ' + v + '° apart'; },
+    // the starter level (9°) ignores the size class: all near a right angle (note D2 §3.2)
+    'angles.gap': function (v) { return 'closest two angles ' + v + '° apart' + (v === 9 ? ', all near a right angle' : ''); },
     'angles.size': function (v) {
       var d = PX.ex.get('angles'), r = d && d.lib && d.lib.RANGE ? d.lib.RANGE[v] : null, span = r ? ' (' + r[0] + '–' + r[1] + '°)' : '';
       return (v === 'right' ? 'angles near a right angle' : v + ' angles') + span;
@@ -121,7 +133,8 @@
     'angles.pose': function (v) { return v === 'aligned' ? 'one arm of each angle horizontal' : 'angles turned any way'; },
     // Painted Cubes
     'cubes.cubes': function (v) { return v + ' cubes'; },
-    'cubes.height': function (v) { return 'columns up to ' + v + ' cubes high'; },
+    // the starter level (note D2 §3.4): one layer
+    'cubes.height': function (v) { return v === 1 ? 'flat: one layer, no cube on another' : 'columns up to ' + v + ' cubes high'; },
     'cubes.asked': function (v) { return 'asked for cubes with ' + v + ' painted sides'; },
     // Form
     'form.solid': function (v) { return v === 'frusta and five-sided' ? 'cut-off pyramids and five-sided prisms' : String(v); },
@@ -129,6 +142,9 @@
     'form.view': function (v) { return 'solids pictured ' + v; },
     'form.foil': function (v) { return v === 'marks only' ? 'wrong solids differ only in their marks' : 'wrong solids differ in size or in marks'; },
     'views.view': function (v) { return v + ' view'; },
+    'views.cubes': function (v) { return v + ' cubes'; }, // the starter level's value is a range ('3–4')
+    // Central Point (EX-20): right within a share of the best total distance
+    'centralpoint.band': function (v) { return 'right within ' + v + ' % of the best total'; },
     'homing.route': function (v) { return String(v).replace(', ', ' with '); }, // '3 legs with small turns (30–60°)': no comma inside a list
     'homing.landmarks': function (v) { return v === 'none' ? 'no landmarks' : v === 'one' ? 'one landmark' : v + ' landmarks'; },
     'reckon.route': function (v) { return String(v).replace(', ', ' with '); },
@@ -167,16 +183,24 @@
   }
 
   // The rating shown on this screen (Track and Homing: this screen class). total counts the
-  // answers of every screen class.
+  // answers of every screen class. starter: { toNext, needOf5 } while the shown level is 1 on an
+  // exercise with starter items (CONTRACT-v1.2 C), else null.
   function level(rec, def, now) {
     var opts = { display: display() }, total = 0;
     try { total = E().schedule.totals(rec, def).n; } catch (e) { total = 0; }
     try {
       var st = E().est.get(rec, def, opts, now);
       if (!(st.n > 0)) return { n: 0, total: total };
-      var lv = E().est.level(def, st);
-      return { n: st.n, total: total, level: lv.level, lo: lv.lo, hi: lv.hi, sd: st.sd, last: st.last, settings: settingsText(def, lv.settings), params: lv.settings ? lv.settings.params : null, exact: lv.exact };
+      var lv = E().est.level(def, st), sb = null;
+      try { sb = def.starter && typeof E().est.starter === 'function' ? E().est.starter(def, st) : null; } catch (e2) { sb = null; }
+      return { n: st.n, total: total, level: lv.level, lo: lv.lo, hi: lv.hi, sd: st.sd, last: st.last, settings: settingsText(def, lv.settings), params: lv.settings ? lv.settings.params : null, exact: lv.exact, starter: sb };
     } catch (e) { return { n: 0, total: total }; }
+  }
+  // 'level 1 · starter items' or 'level 12': the player's wording on every screen (CONTRACT-v1.2 C)
+  function levelText(n) {
+    var P = PX.ui.play;
+    if (P && typeof P.levelText === 'function') return P.levelText(n);
+    return isNum(n) ? (n <= 1 ? 'level 1 · starter items' : 'level ' + Math.round(n)) : 'level –';
   }
 
   function unavailable(def) {
@@ -231,7 +255,8 @@
 
   function modeName(m) { return hasOwn.call(MODES, m) ? MODES[m] : m ? m.charAt(0).toUpperCase() + m.slice(1) : 'Unknown'; }
   function pct(x) { return isNum(x) ? Math.round(x * 100) + ' %' : '–'; }
-  function secs(ms) { return isNum(ms) ? (ms < 10000 ? U.round(ms / 1000, 1) : Math.round(ms / 1000)) + ' s' : '–'; }
+  // O5: the one answer-time format of every screen (js/core/util.js)
+  function secs(ms) { return U.fmtSecs ? U.fmtSecs(ms) : isNum(ms) ? U.round(ms / 1000, 1) + ' s' : '–'; }
   function when(t) { return PX.ui.kit ? PX.ui.kit.fmtWhen(t) : U.fmtDate(t, 'datetime'); }
   function ago(t, now) {
     if (!isNum(t)) return 'never';
@@ -291,20 +316,20 @@
     var id = def.id, out = [], disp = display();
     var ps = rec.path && rec.path[id], stage = ps && isNum(ps.stage) ? ps.stage : 1;
     out.push({ id: 'train', title: 'Train, with ' + def.short + ' as focus', primary: true,
-      desc: 'A session at your target success: ' + def.short + ' leads, mixed with two other exercises.',
+      desc: 'A session at your target success: ' + def.short + ' leads, mixed with two other exercises.', when: MODE_WHEN.train,
       ok: true, run: function () { start(def, { mode: 'train', exId: id, pin: id }); } });
     out.push({ id: 'path', title: 'Path, stage ' + stage + ' of 10',
-      desc: 'Blocked practice, one tenth of the range at a time. A stage passes when your success stays high.',
+      desc: 'Blocked practice, one tenth of the range at a time. A stage passes when your success stays high.', when: MODE_WHEN.path,
       ok: true, run: function () { start(def, { mode: 'path', exId: id }); } });
     var sp = { ok: false, why: '' };
     try { sp = E().speed.open(rec, def, { display: disp }); } catch (e) { sp = { ok: false, why: 'Speed is not available.' }; }
-    out.push({ id: 'speed', title: 'Speed', desc: sp.ok ? 'Items you answer well, against a deadline that adapts to you. It has its own timed level.' : sp.why,
+    out.push({ id: 'speed', title: 'Speed', desc: sp.ok ? 'Items you answer well, against a deadline that adapts to you. It has its own timed level.' : sp.why, when: MODE_WHEN.speed,
       ok: !!sp.ok, why: sp.ok ? null : sp.why, run: function () { start(def, { mode: 'speed', exId: id }); } });
     protocolsOf(def).forEach(function (pr) {
-      out.push({ id: 'threshold:' + pr.id, title: 'Threshold: ' + pr.name, desc: pr.label + '. Changes no level.', ok: pr.ok, why: pr.why,
+      out.push({ id: 'threshold:' + pr.id, title: 'Threshold: ' + pr.name, desc: pr.label + '. Changes no level.', when: MODE_WHEN.threshold, ok: pr.ok, why: pr.why,
         run: function () { start(def, { mode: 'threshold', protocol: pr.id, exId: id }); } });
     });
-    out.push({ id: 'free', title: 'Free play', desc: 'Choose adaptive or fixed settings, a timer and the length. Logged, never rated.', ok: true,
+    out.push({ id: 'free', title: 'Free play', desc: 'Choose adaptive or fixed settings, a timer and the length. Logged, never rated.', when: MODE_WHEN.free, ok: true,
       run: function () { freePlay(def); } });
     out.push({ id: 'challenge', title: 'Challenge a friend', desc: 'A code for the same 8 items at your level. Your friend pastes it into Play a challenge.', ok: true,
       run: function () {
@@ -320,7 +345,7 @@
     var list = h('ul.px-practise', { 'data-unavailable': unavailable(def) ? '' : null });
     practiseOptions(def, rec, now).forEach(function (o) {
       var b = h('button', { type: 'button', class: ['px-practise-item', o.primary ? 'is-primary' : null], 'data-practise': o.id, 'aria-disabled': o.ok ? null : 'true' },
-        h('b', o.title), h('span', o.desc));
+        h('b', o.title), h('span', o.desc), o.when ? h('span.px-practise-when', o.when) : null);
       b.addEventListener('click', function () {
         if (!o.ok) { ui.toast(o.why || 'Not available yet.', { kind: 'info' }); return; }
         if (onPick) onPick();
@@ -354,11 +379,14 @@
         : 'No level yet. It appears after your first few items, with a range that narrows as you practise.'));
     }
     var bar = ui.bar(lv.level, 100, { band: [lv.lo, lv.hi], label: def.short + ' level', kind: 'signal' });
-    bar.setAttribute('aria-valuetext', 'level ' + lv.level + ', likely between ' + lv.lo + ' and ' + lv.hi);
+    bar.setAttribute('aria-valuetext', levelText(lv.level) + ', likely between ' + lv.lo + ' and ' + lv.hi);
+    var sb = lv.starter;
     return h('div', { class: ['px-lvl', big ? 'px-lvl--big' : null] },
       h('div.px-lvl-row',
         h('div.px-lvl-bar', bar),
         h('div.px-lvl-num', { 'aria-hidden': 'true' }, h('b', String(lv.level)), h('span', lv.lo + '–' + lv.hi))),
+      lv.level <= 1 && def.starter ? h('p.px-lvl-starter', { 'data-starter': '' }, 'Starter items' +
+        (sb && isNum(sb.needOf5) ? ': level 2 comes at about ' + sb.needOf5 + ' of 5 right over a block.' : '.')) : null,
       lv.settings ? h('p.px-lvl-set', 'Handles ', lv.settings.charAt(0).toLowerCase() + lv.settings.slice(1), '.') : null,
       def.perDisplay ? h('p.px-meta', 'Rated separately on small and larger screens; this is your level on ' + (display() === 'small' ? 'small' : 'larger') + ' screens.') : null);
   }
@@ -518,7 +546,9 @@
       h('p.px-lead', (L && L.goal) || e.blurb)));
     if (def.practice === 'attention') host.appendChild(h('p.px-notice.px-ex-note', PX.ui.kit.icon('about'), h('span', 'Track is attention practice: it trains following several moving objects at once, which relates to attention and working memory rather than to visuospatial ability, and evidence that its gains carry over to other tasks is weak.')));
     if (def.practice === 'perception' && L && L.labelLine) host.appendChild(h('p.px-notice.px-ex-note', PX.ui.kit.icon('about'), h('span', L.labelLine)));
-    if (experimental(def)) host.appendChild(h('p.px-notice.px-ex-note', PX.ui.kit.icon('about'), h('span', EXPERIMENTAL[def.id] || def.short + ' is experimental: its item model is new and untested.')));
+    // O43: one plain line here; the research terms wait below How to play, after the rule
+    if (experimental(def)) host.appendChild(h('p.px-notice.px-ex-note', { 'data-note': 'experimental' }, PX.ui.kit.icon('about'),
+      h('span', def.short + ' is experimental: its items are new and still being tested.' + (EXPERIMENTAL[def.id] ? ' More under “About this exercise” below.' : ''))));
     var adaBelow = !!(L && typeof L.bridge === 'string' && /American Dental Association/.test(L.bridge)); // the bridge carries the ADA line
     var ov = PX.ui.overlap ? PX.ui.overlap.noteNode(def.id, 'px-notice px-ex-note', { legal: !adaBelow }) : null;
     if (ov) host.appendChild(ov);
@@ -530,7 +560,7 @@
       factsList([
         ['Path', 'stage ' + pi.stage + ' of 10' + (pi.passed ? ', ' + pi.passed + (pi.passed === 1 ? ' stage passed' : ' stages passed') : '')],
         ['Answers', lv.n ? lv.n + ', last ' + ago(lv.last, now) : 'none yet'],
-        best ? ['Best whole block', 'level ' + best.level + ' (' + Math.round(best.acc * 10) + ' of 10 right), ' + U.fmtDate(best.at, 'long')] : null,
+        best ? ['Best whole block', levelText(best.level) + ' (' + Math.round(best.acc * 10) + ' of 10 right), ' + U.fmtDate(best.at, 'long')] : null,
       ]),
       lv.n ? h('div.px-data-row', ui.button('Learning curve', { kind: 'ghost', small: true, go: 'progress?ex=' + def.id }), ui.button('Trials in the Log', { kind: 'ghost', small: true, go: 'log?ex=' + def.id })) : null,
     ], { 'data-section': 'level' });
@@ -551,6 +581,7 @@
       })));
     } else if (!L) howKids.push(h('p.px-meta', 'How to play arrives with the exercise.'));
     host.appendChild(section('How to play', howKids, { 'data-section': 'howto' }));
+    if (experimental(def) && EXPERIMENTAL[def.id]) host.appendChild(section('About this exercise', [h('p', EXPERIMENTAL[def.id])], { 'data-section': 'experimental' }));
 
     var strats = strategyCards(L);
     if (strats) host.appendChild(section('Strategies', [h('p.px-muted.px-ex-intro', 'Two ways to solve the same item. On rotation tasks, people who switch strategies tend to score higher; elsewhere this is untested, so try both.'), strats], { 'data-section': 'strategies' }));
@@ -589,7 +620,7 @@
     defs: defs, entry: entry, display: display, level: level, settingsText: settingsText, paramsText: paramsText,
     variantName: variantName, valueText: valueText, dimText: dimText, unavailable: unavailable, explain: explain, start: start, // dimText(def, dim, value): '10 cubes', 'board turned 90°'… (Free play's labels)
     tags: tags, tagEls: tagEls, modeName: modeName, pct: pct, secs: secs, when: when, ago: ago,
-    protocolsOf: protocolsOf, PROTOCOL_NAMES: PROTOCOL_NAMES, MODES: MODES,
+    protocolsOf: protocolsOf, PROTOCOL_NAMES: PROTOCOL_NAMES, MODES: MODES, MODE_WHEN: MODE_WHEN, levelText: levelText,
   };
   PX.ui.library = { practiseSheet: practiseSheet, freePlay: freePlay, howTo: howTo, watch: watch, options: practiseOptions };
   PX.ui.screens = PX.ui.screens || {};
