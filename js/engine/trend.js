@@ -43,7 +43,8 @@
      fit(input, opts?) → { ok, day, gain: { comp, near, mid, far, …per rung }, meter, segment, eta, beta, cov, index }
        input = { occasions: [{ t (ms), h?, blocks: [{ probe, items: [[b, g, ok, rtMs?, a?], …] } | { probe, n, y, v }] }] }
        gain.x = { mean, sd (SD units of that readout), p = P(D > 0), pNone = P(D < margin), lo, hi (config.range),
-                  logits (mean in probe points), sdUnit (logits per readout SD) }
+                  logits (mean in probe points), pts: { mean, sd, lo, hi } (probe points), sdUnit (SD of the readout
+                  in per-probe SD) }; probe keys may carry a version ('cubematch@2': its own probe in the fit)
        opts.eta: linearisation points from an earlier fit of a prefix (warm start); opts.hNow: h for "now"
      track(input, opts?) → one entry per occasion: { day, t, meter, gain, verdict: null | { milestone, words, … } }
      milestoneAt(day) → { index, day, bar, none } | null     verdict(fit, milestone, readout?) → words
@@ -178,11 +179,14 @@
 
   /* ---------- the input ---------- */
 
-  function rungOf(id) {
-    var r = config.probes[id];
+  // A probe key may carry its version, 'cubematch@2': each version is its own probe in the fit (its own
+  // level and familiarity; versions never mix), while rung and SD come from the id.
+  function baseId(key) { var i = key.indexOf('@'); return i > 0 ? key.slice(0, i) : key; }
+  function rungOf(key) {
+    var id = baseId(key), r = config.probes[id];
     return typeof r === 'string' ? r : 'alone:' + id; // unknown probes: their own gain, outside the composite
   }
-  function sdOf(id) { var v = config.sd.byProbe && config.sd.byProbe[id]; return isNum(v) && v > 0 ? v : config.sd.logits; }
+  function sdOf(key) { var id = baseId(key), v = config.sd.byProbe && config.sd.byProbe[id]; return isNum(v) && v > 0 ? v : config.sd.logits; }
 
   function itemsOk(items) {
     if (!isArray(items) || !items.length) return false;
@@ -474,27 +478,38 @@
   }
 
   function readout(D, beta, V, hNow, members) {
-    // members: [{ id, w }] with Σw = 1; the gain to date in per-probe SD units is Σ w·G_rung(id)·h(now),
-    // in probe points (logits) Σ w·σ_id·G_rung(id)·h(now)
-    var g = {}, logits = 0;
+    // members: [{ id, w }] (probe ids, each once, Σw = 1); the gain to date in per-probe SD units is
+    // Σ w·G_rung(id)·h(now), in probe points (logits) Σ w·σ_id·G_rung(id)·h(now)
+    var g = {}, gl = {};
     members.forEach(function (m) {
       var k = D.idx['G:' + rungOf(m.id)];
       g[k] = (g[k] || 0) + m.w;
-      logits += m.w * sdOf(m.id) * beta[k] * hNow;
+      gl[k] = (gl[k] || 0) + m.w * sdOf(m.id);
     });
-    var keys = Object.keys(g).map(Number), mean = 0, v = 0;
-    keys.forEach(function (a) { mean += g[a] * beta[a]; keys.forEach(function (b) { v += g[a] * g[b] * V[a][b]; }); });
-    mean *= hNow; v *= hNow * hNow;
-    var f = compFactor(members.map(function (m) { return m.w; })), sd = msqrt(mmax(v, 0));
+    var keys = Object.keys(g).map(Number), mean = 0, v = 0, ml = 0, vl = 0;
+    keys.forEach(function (a) {
+      mean += g[a] * beta[a]; ml += gl[a] * beta[a];
+      keys.forEach(function (b) { v += g[a] * g[b] * V[a][b]; vl += gl[a] * gl[b] * V[a][b]; });
+    });
+    mean *= hNow; v *= hNow * hNow; ml *= hNow; vl *= hNow * hNow;
+    var f = compFactor(members.map(function (m) { return m.w; })), sd = msqrt(mmax(v, 0)), sl = msqrt(mmax(vl, 0));
     var C = config, z = zOf(0.5 + C.range / 2), mu = mean / f, s = sd / f;
     // with no spread (no training yet, h = 0) the meter reads one half, not a certainty either way
     var p = s > 0 ? Phi(mu / s) : mu > 0 ? 1 : mu < 0 ? 0 : 0.5, pNone = s > 0 ? Phi((C.none.margin - mu) / s) : mu < C.none.margin ? 1 : 0;
-    return { mean: mu, sd: s, p: p, pNone: pNone, lo: mu - z * s, hi: mu + z * s, logits: logits, sdUnit: f, probes: members.map(function (m) { return m.id; }) };
+    return { mean: mu, sd: s, p: p, pNone: pNone, lo: mu - z * s, hi: mu + z * s, logits: ml, sdUnit: f,
+      pts: { mean: ml, sd: sl, lo: ml - z * sl, hi: ml + z * sl }, probes: members.map(function (m) { return m.id; }) };
+  }
+
+  // The probe ids (versions folded) of the spatial probes that pass a test, each once, in order.
+  function idsWhere(D, test) {
+    var out = [];
+    D.spatial.forEach(function (key) { var id = baseId(key); if (test(key) && out.indexOf(id) < 0) out.push(id); });
+    return out;
   }
 
   function readouts(D, beta, V, hNow) {
     var C = config, out = {}, comp = [];
-    var inComp = D.spatial.filter(function (id) { return C.composite.rungs.indexOf(rungOf(id)) >= 0; });
+    var inComp = idsWhere(D, function (key) { return C.composite.rungs.indexOf(rungOf(key)) >= 0; });
     if (inComp.length) {
       if (C.composite.weights === 'rung') {
         var rs = [];
@@ -507,7 +522,7 @@
       out.comp = readout(D, beta, V, hNow, comp);
     } else out.comp = null;
     D.rungs.forEach(function (r) {
-      var ids = D.spatial.filter(function (id) { return rungOf(id) === r; });
+      var ids = idsWhere(D, function (key) { return rungOf(key) === r; });
       out[r] = readout(D, beta, V, hNow, ids.map(function (id) { return { id: id, w: 1 / ids.length }; }));
     });
     return out;
@@ -573,6 +588,7 @@
     DEFAULTS: DEFAULTS, config: config, configure: configure,
     fit: fit, track: track, predict: predict, milestoneAt: milestoneAt, verdict: verdict,
     familiarity: familiarity, afterBreak: afterBreak, normalise: normalise,
+    baseId: baseId,
     _: { Phi: Phi, zOf: zOf, spdInverse: spdInverse, linearise: linearise, design: design, prior: prior, compFactor: compFactor },
   };
 })(window.PX);
