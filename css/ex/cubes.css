@@ -24,10 +24,26 @@
 .ex-cubes .ex-cubes-face--front { fill: var(--cube-front); }
 .ex-cubes .ex-cubes-face--right { fill: var(--cube-right); }
 .ex-cubes .ex-cubes-ghost { fill: none; stroke: var(--cube-mark); stroke-width: 0.06; stroke-dasharray: 0.14 0.1; }
+/* Bare (unpainted) faces in the pulled-apart figure and the rule figures: white with dark hatching
+   and a dashed edge, in both themes (shape as well as tone). */
+.ex-cubes .ex-cubes-face--bare { stroke: var(--cube-edge); stroke-width: 0.045; stroke-dasharray: 0.09 0.06; }
+.ex-cubes .ex-cubes-bare-bg { fill: #FFFFFF; }
+.ex-cubes .ex-cubes-bare-line { stroke: var(--cube-edge); stroke-width: 0.035; }
+/* Badges: a cube's number in ink; counted for the question: the accent and a ring; '?': left to the
+   player (Try 1); on a hidden cube the circle is dashed. */
 .ex-cubes .ex-cubes-badge circle { fill: var(--cube-mark); stroke: #FFFFFF; stroke-width: 0.05; }
 .ex-cubes .ex-cubes-badge.is-hidden circle { fill: #FFFFFF; stroke: var(--cube-mark); stroke-width: 0.07; stroke-dasharray: 0.12 0.08; }
 .ex-cubes .ex-cubes-badge-n { font-size: 0.34px; font-weight: 700; text-anchor: middle; fill: #FFFFFF; font-family: var(--font-sans, sans-serif); }
 .ex-cubes .ex-cubes-badge.is-hidden .ex-cubes-badge-n { fill: var(--cube-mark); }
+.ex-cubes .ex-cubes-badge--number circle { fill: #FFFFFF; stroke: var(--cube-edge); stroke-width: 0.04; }
+.ex-cubes .ex-cubes-badge--number .ex-cubes-badge-n, .ex-cubes .ex-cubes-badge--number.is-hidden .ex-cubes-badge-n { fill: var(--cube-edge); }
+.ex-cubes .ex-cubes-badge--number.is-hidden circle { stroke: var(--cube-edge); }
+.ex-cubes .ex-cubes-badge--unknown circle { fill: #FFFFFF; stroke: var(--cube-mark); stroke-width: 0.06; stroke-dasharray: 0.1 0.07; }
+.ex-cubes .ex-cubes-badge--unknown .ex-cubes-badge-n { fill: var(--cube-mark); }
+.ex-cubes .ex-cubes-badge .ex-cubes-ring { fill: none; stroke: var(--cube-mark); stroke-width: 0.07; stroke-dasharray: none; }
+/* Rule figures on the rules card (play.js .pl-rule-fig): the same drawing, fitted to the box. */
+.ex-cubes.ex-cubes-rulefig { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.ex-cubes .ex-cubes-rule-svg { display: block; width: 100%; height: 100%; overflow: visible; }
 /* The question: N in large type, the most important number on the screen. */
 .ex-cubes .ex-cubes-q { margin: var(--s2, 0.5rem) 0 0; text-align: center; font-size: var(--fs-md, 1rem); line-height: 1.35; }
 .ex-cubes .ex-cubes-n {
