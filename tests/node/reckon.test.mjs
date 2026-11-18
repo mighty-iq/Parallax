@@ -378,6 +378,9 @@ export async function run(t) {
     taskItems.push(it);
     let bad = v !== true ? v : null;
     if (!bad && it.params.task !== p.task) bad = 'params.task missing (v1.2 O39: tips are aimed by it)';
+    // v1.2 (fresh-player retest): the tutorial rungs move slower than rated items, at every speed level
+    if (!bad && it.task === 'heading' && !(it.turnRates.length === 1 && it.turnRates[0] === 30)) bad = 'the tutorial turn is not 30°/s';
+    if (!bad && it.task === 'distance' && !(it.speeds[0].length === 1 && it.speeds[0][0] >= 1.08 - 1e-9 && it.speeds[0][0] <= 1.32 + 1e-9)) bad = 'the tutorial walk is not 1.2 m/s ± 10 %';
     if (!bad && it.task === 'heading') {
       if (!def.score(it, norm360(-it.turns[0])).correct || def.score(it, 0).correct || def.score(it, it.turns[0]).correct) bad = 'heading key';
     } else if (!bad) {
@@ -386,7 +389,7 @@ export async function run(t) {
     }
     if (bad) { tOk = false; tFirst = tFirst || `${JSON.stringify(p)}: ${bad}`; }
   }
-  t.ok(tOk, '1 000 tutorial items: valid; heading → turning back by the turn is right, not turning or turning on is wrong; distance → L ahead right, 0 and 2L wrong, the second walk at another speed' + (tFirst ? ` (${tFirst})` : ''));
+  t.ok(tOk, '1 000 tutorial items: valid; heading → turning back by the turn is right, not turning or turning on is wrong; distance → L ahead right, 0 and 2L wrong, the second walk at another speed; slower than rated items (30°/s, 1.2 m/s ± 10 %)' + (tFirst ? ` (${tFirst})` : ''));
   t.ok(def.difficulty({ variant: 'point', task: 'heading' }) === lo, 'a task does not change difficulty (tutorial items are never rated)');
 
   checkGentle(t, H, items.map((x) => x.it).concat(taskItems), 'reckon');

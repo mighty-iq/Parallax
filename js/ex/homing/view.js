@@ -784,6 +784,7 @@
     M.reset = function () { if (M.m && M.m.svg.parentNode) M.m.svg.parentNode.removeChild(M.m.svg); M.m = null; M.close(); };
     // The steps of show me: the start, each leg and turn (the heading needle turns with you), the end,
     // the way back; then (Reckon) your answer; then the map turns so you face up and the angle is read off.
+    // x: { yours, tol, minMs (every step at least this long: the Watch) }.
     M.steps = function (item, x) {
       x = x || {};
       var n = item.legs.length, beta = [0], out = [], i, key = keyOf(item), sd = side(key), reach = x.yours && x.yours.r > 0.3 ? x.yours.r : 0;
@@ -821,6 +822,9 @@
         enter: frame(plus(done, { back: true, turn: 1, angle: true, yours: keep })),
         update: function (k) { D.key(sweep(key, ease(k))); },
         exit: function () { if (isNum(x.tol)) D.wedge(key, x.tol); } });
+      // x.minMs: every step at least this long (the Watch: captions of 3 s or more, so a beginner can read
+      // them; v1.2 fresh-player retest); show me keeps its own, shorter pace
+      if (isNum(x.minMs)) out.forEach(function (stp) { stp.ms = Math.max(stp.ms, x.minMs); });
       return out;
     };
     return M;
@@ -978,7 +982,7 @@
     hintOn: hintOn, hintOff: hintOff, narrow: narrow,
     stage: stage, dial: dial, fine: fine, drag: drag, tapAct: tapAct, walker: walker, mapper: mapper, layout: layout, turnRow: turnRow,
     play: play, runSteps: runSteps, inputOf: inputOf, errShown: errShown, hostPaused: hostPaused, watchShape: watchShape, showAboveBar: showAboveBar, capFor: capFor, sideText: sideText, side: side,
-    norm360: norm360, norm180: norm180, adiff: adiff, ease: ease, sweep: sweep, keyOf: keyOf,
+    norm360: norm360, norm180: norm180, adiff: adiff, ease: ease, sweep: sweep, keyOf: keyOf, DEMO_MIN_MS: 3000,
     FREEZE_MS: FREEZE_MS, SLOW_SHARE: SLOW_SHARE, SLOW_GAP: SLOW_GAP, DRAG_DEG: DRAG_DEG, TILE: TILE, MIN_PX: MIN_PX, DOT_R: DOT_R,
   };
 
@@ -987,6 +991,7 @@
      ===================================================================================== */
 
   var EYE = 1.6, PITCH = -7, HFOV = 74, START_R = 4;
+  var DEMO_MIN_MS = 3000; // the Watch's captions stay at least 3 s (note D2 §4, criterion 5)
   var GROUND = { kind: 'blobs', density: 0.35, size: [0.3, 0.9] }; // as Reckon's textured level
   var cap = capFor('homing');
   var st = null;
@@ -1242,22 +1247,27 @@
       S.render();
     }
     function moved(k, moving) { meter.tick(moving && k > lastK); lastK = k; }
+    // every caption stays at least DEMO_MIN_MS (the v1.2 fresh-player retest could not read 1–2.6 s ones), and
+    // the phase line says the demo is playing until it ends
     var watch = [
-      { ms: 2200, caption: cap('demoStart'), enter: function () { st.D.set(null); at(L.poseAt(pl, 0)); } },
-      { ms: Math.round(pl.total * 1000), caption: cap('demoWalk'), enter: function () { lastK = 0; meter.tick(false); at(L.poseAt(pl, 0)); },
+      { ms: DEMO_MIN_MS, caption: cap('demoStart'), enter: function () { st.D.set(null); at(L.poseAt(pl, 0)); } },
+      { ms: Math.max(DEMO_MIN_MS, Math.round(pl.total * 1000)), caption: cap('demoWalk'), enter: function () { lastK = 0; meter.tick(false); at(L.poseAt(pl, 0)); },
         update: function (k) { var p = L.poseAt(pl, k * pl.total); moved(k, p.kind !== 'stand'); at(p); } },
-      { ms: 2000, caption: cap('demoEnd'), enter: function () { at(E); } },
+      { ms: DEMO_MIN_MS, caption: cap('demoEnd'), enter: function () { at(E); } },
     ];
     var answer = [
-      { ms: 2600, caption: cap('demoTurn', { deg: s.deg, side: s.side }), enter: function () { lastK = 0; meter.tick(false); at(E); st.D.set(0); },
+      { ms: DEMO_MIN_MS, caption: cap('demoTurn', { deg: s.deg, side: s.side }), enter: function () { lastK = 0; meter.tick(false); at(E); st.D.set(0); },
         update: function (k) { var a = sweep(item.key, ease(k)); moved(k, true); st.D.set(a); S.setPose(E.x, E.y, item.heading + a); S.render(); },
         exit: function () { S.showFlag(true); S.render(); } },
-      { ms: 2400, caption: cap('demoAnswer'), enter: function () { at({ x: E.x, y: E.y, h: item.heading + item.key }, true); st.D.set(item.key); } },
+      { ms: DEMO_MIN_MS, caption: cap('demoAnswer'), enter: function () { at({ x: E.x, y: E.y, h: item.heading + item.key }, true); st.D.set(item.key); } },
     ];
-    return play(S, watch.concat(st.M.steps(item, { tol: item.tolerance }), answer), ctx, { name: 'demo' }).then(function () {
+    var phase0 = st.el.phase.textContent;
+    st.el.phase.textContent = cap('phaseDemo');
+    return play(S, watch.concat(st.M.steps(item, { tol: item.tolerance, minMs: DEMO_MIN_MS }), answer), ctx, { name: 'demo' }).then(function () {
       var shown = reportMotion(ctx, meter.take());
       if (!st) return;
       st.motionMs += shown;
+      if (st.item === item) st.el.phase.textContent = phase0;
       st.playing = false;
       S.sub.textContent = '';
       if (st.item === item && !st.done) {

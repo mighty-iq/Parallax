@@ -574,23 +574,29 @@
       S.showRing(Math.hypot(p.x - S0[0], p.y - S0[1]) < START_R + 0.3 && !flag);
       S.render();
     }
+    // every caption stays at least the kit's DEMO_MIN_MS (3 s; the v1.2 fresh-player retest could not read the
+    // 1–2.6 s ones), and the phase line says the demo is playing until it ends
+    var M3 = kit.DEMO_MIN_MS || 3000;
     var watch = [
-      { ms: 2200, caption: cap('demoStart'), enter: function () { st.D.set(null); last = 0; at(L.poseAt(pl, 0)); } },
-      { ms: Math.round(pl.total * 1000), caption: cap('demoWalk'), enter: function () { last = 0; lastK = 0; meter.tick(false); at(L.poseAt(pl, 0)); },
+      { ms: M3, caption: cap('demoStart'), enter: function () { st.D.set(null); last = 0; at(L.poseAt(pl, 0)); } },
+      { ms: Math.max(M3, Math.round(pl.total * 1000)), caption: cap('demoWalk'), enter: function () { last = 0; lastK = 0; meter.tick(false); at(L.poseAt(pl, 0)); },
         update: function (k) { var t = k * pl.total, p = L.poseAt(pl, t); moved(k, p.kind !== 'stand'); S.tick(Math.max(0, t - last)); last = t; at(p); } },
-      { ms: 2000, caption: cap('demoEnd'), enter: function () { at(E); } },
+      { ms: M3, caption: cap('demoEnd'), enter: function () { at(E); } },
     ];
     var answer = item.task ? [] : [
-      { ms: 2600, caption: cap('demoTurn', { deg: s.deg, side: cap(s.side) || s.side }), enter: function () { lastK = 0; meter.tick(false); at(E); st.D.set(0); },
+      { ms: M3, caption: cap('demoTurn', { deg: s.deg, side: cap(s.side) || s.side }), enter: function () { lastK = 0; meter.tick(false); at(E); st.D.set(0); },
         update: function (k) { var a = kit.sweep(item.keyDeg, kit.ease(k)); moved(k, true); st.D.set(a); S.setPose(E.x, E.y, item.heading + a); S.render(); },
         exit: function () { S.moveFlag(S0[0], S0[1]); S.showFlag(true); S.render(); } },
-      { ms: 2400, caption: cap('demoAnswer'), enter: function () { at({ x: E.x, y: E.y, h: item.heading + item.keyDeg }, true); st.D.set(item.keyDeg); } },
+      { ms: M3, caption: cap('demoAnswer'), enter: function () { at({ x: E.x, y: E.y, h: item.heading + item.keyDeg }, true); st.D.set(item.keyDeg); } },
     ];
-    var map = item.task ? [] : st.M.steps(item, { tol: isReturn(item) ? null : item.tolerance });
+    var map = item.task ? [] : st.M.steps(item, { tol: isReturn(item) ? null : item.tolerance, minMs: M3 });
+    var phase0 = st.el.phase.textContent;
+    st.el.phase.textContent = cap('phaseDemo');
     return kit.play(S, watch.concat(map, answer), ctx, { name: 'demo' }).then(function () {
       var shown = K().reportMotion(ctx, meter.take());
       if (!st) return;
       st.motionMs += shown;
+      if (st.item === item) st.el.phase.textContent = phase0;
       st.playing = false;
       S.sub.textContent = '';
       if (st.item === item && !st.done) {

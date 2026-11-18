@@ -103,6 +103,7 @@
       voidLost: 'The 3D view was interrupted, so this answer will not count.',
       phaseWatch: 'You start in the ring. Watch the route and keep track of the start.',
       phaseTurn: 'Turn to face the start, then confirm.',
+      phaseDemo: 'Watch the demo: it walks this route and turns to the start. Then it is your turn.',
       phaseReveal: 'The flag marks the start.',
       // after the answer
       noAnswer: 'No answer',
