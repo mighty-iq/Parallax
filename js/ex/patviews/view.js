@@ -293,13 +293,15 @@
       var pr = projectors(item), n = Math.ceil(U.clamp(s.proj, 0, 1) * pr.length);
       if (n) ov.appendChild(SV.el('path', { d: pr.slice(0, n).join(''), class: 'pv-proj' }));
     }
+    // the cover hides what the free corner holds; at the starter band it leaves the structure's label readable
+    var cy = st.shown ? 14 : 0;
     if (s.object) {
-      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
+      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y + cy, width: Lo.free.w + 8, height: Lo.free.h - cy, class: 'pv-cover' }));
       ov.appendChild(isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
     }
     if (s.turn) { // { t: 0 → 1 from the corner view to the missing side, cubes: opacity }
       var A = AIM[item.missing], F = turnFrame(item), e = ease(U.clamp(s.turn.t, 0, 1));
-      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
+      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y + cy, width: Lo.free.w + 8, height: Lo.free.h - cy, class: 'pv-cover' }));
       ov.appendChild(cubesGroup(item, cam(lerp(ISO.az, A.az, e), lerp(ISO.el, A.el, e)), F, s.turn.cubes === undefined ? 1 : s.turn.cubes));
     }
     if (s.keyAt) { // the key's drawing at the turned structure (t 0) or in the slot (t 1), at opacity alpha

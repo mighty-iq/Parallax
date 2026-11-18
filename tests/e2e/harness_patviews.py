@@ -70,7 +70,7 @@ def desktop_and_phone(b, cons):
                 name = f'patviews_{case}_{tag}_{theme}'
                 open_item(page, EX, {'seed': seed, 'p': params, 'fast': True, 'theme': theme}, DEPS, name)
                 stage_ok(C, page, STEM, name)
-                stem_ok(page, name, case)
+                stem_ok(page, name, 'end' if case == 'band' else case)  # the band case asks for the end view (missing:0)
                 shot(page, name + '.png')
                 if phone:
                     no_hscroll(C, page, name)

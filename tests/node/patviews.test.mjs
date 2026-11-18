@@ -399,6 +399,10 @@ function testLearn(t, PX, def) {
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
   if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
   const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
+  // a worked example before the Try item that brings the first hard feature (note D2 addendum C change 4)
+  const exE = L.practice[2].example, xe = exE && def.generate(PX.rng(exE.seed), L.practice[2].params);
+  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[2].seed && def.validate(xe) === true && !xe.fallback && xe.options[xe.key].drawing.segs.some((q) => q[4] === 2) && xe.key !== items[2].key && L.practice.every((e, i) => i === 2 || e.example === undefined),
+    `Try 3 (a dotted line) comes after a worked example on a sister item whose answer has a dotted line (seed ${exE && exE.seed})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].cubes === 0 && P[1].cubes === 0 && items[0].missing === 'end' && items[1].missing === 'front', 'Try 1 (end view) and Try 2 (front view) are at the starter band');
   t.eq(L.practice[0].assist, { proj: true }, 'Try 1 has its first step done (projection lines in the slot)');
