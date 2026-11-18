@@ -41,9 +41,10 @@
     }
     return out;
   }
-  // Answers per variant of each exercise (current version), from the trial rows.
+  // Answers per variant of each exercise (current version), from the latest 3,000 trial rows (recent play
+  // decides which version is the least played; the scan stays short on a long record).
   function variantCounts(rec) {
-    var out = {};
+    var out = {}, rows = isArray(rec.trials) ? rec.trials.length : 0;
     E.log.scan(rec, function (row, id, mode, ver) {
       if (!id || (row[5] !== 0 && row[5] !== 1)) return;
       var def = defOf(id);
@@ -52,7 +53,7 @@
       if (!p) return;
       var m = out[id] || (out[id] = {});
       m[p.variant] = (m[p.variant] || 0) + 1;
-    });
+    }, Math.max(0, rows - 3000));
     return out;
   }
 
