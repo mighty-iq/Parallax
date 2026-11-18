@@ -6,7 +6,9 @@ items without feedback, Skip, Flag, Back (the earlier answer shown as chosen), t
 pause that stops the section clock, a voided item replaced at the end of its part, the end-of-part
 card, a reload that resumes the run where it was, "End the section" from the pause sheet, and the
 review (results and pacing, the items to look at again, each replayed with the answer marked and
-its show-me). The record: trials with mode 'section', no rating change, one session, the run
+its show-me). v1.2: a reload keeps the time spent on the current item (O9); the review comes back after a
+reload and is offered on the setup screen later (O10); item numbers never shift after a void (O11); the
+Chimera pop-up is the full welcome on a first launch and a one-tap card later (gap C2). The record: trials with mode 'section', no rating change, one session, the run
 summary, the next form. A second short run checks that time running out ends the section, and
 that reading a part's instructions does not use its time. On the phone the item, its options and
 the controls fit the screen without scrolling.
@@ -15,7 +17,7 @@ Until three DAT-style exercises can run here, stand-ins (Fold, Views, Slice, Hid
 their place through the test knob PX.engine.section.config.parts.
 Screenshots: tests/e2e/out/section/. Run: tests/e2e/pwslot.sh python3 tests/e2e/section.py
 """
-import json, pathlib, sys
+import json, os, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from playwright.sync_api import sync_playwright
 from common import launch, Console, Checks, OUT as OUT_ROOT, ROOT
@@ -28,14 +30,24 @@ PAT = ['openings', 'patviews', 'angles', 'patfold', 'cubes', 'form']
 STAND_INS = ['fold', 'views', 'slice', 'hidden', 'nets']
 
 
-def boot(page, url=None):
-    page.goto(url or INDEX.as_uri())
-    page.wait_for_function(READY, timeout=20000)
-    for _ in range(4):  # the Chimera pop-up (every open), the first-run offer
+def popups(page):
+    """The Chimera welcome (a modal on a record's first launch) and the first-run offer close with Escape;
+    later launches show the one-tap card under the header (v1.2 gap C2), closed by its ✕."""
+    for _ in range(4):
         if not page.evaluate('PX.ui.modalOpen()'):
             break
         page.keyboard.press('Escape')
         page.wait_for_timeout(150)
+    card = page.locator('[data-chimera-card] [data-chimera-card-close]')
+    if card.count() and card.first.is_visible():
+        card.first.click()
+        page.wait_for_timeout(150)
+
+
+def boot(page, url=None):
+    page.goto(url or INDEX.as_uri())
+    page.wait_for_function(READY, timeout=20000)
+    popups(page)
     page.evaluate('PX.debug.fast(true)')
 
 
@@ -44,7 +56,11 @@ def knobs(page, parts, pace=None):
 
 
 def choose_parts(page):
+    # SECTION_PARTS=stand-ins forces the stand-ins (while the DAT-style exercises change version under a run,
+    # as during a build wave: a reload then loads newer exercises, and a kept review is rightly dropped)
     real = page.evaluate('(ids) => ids.filter((id) => { const d = PX.ex.get(id); return d && d.role === "train" && PX.ui.play.canRun(d); })', PAT)
+    if os.environ.get('SECTION_PARTS') == 'stand-ins':
+        return STAND_INS, 'stand-ins'
     return (real, 'real') if len(real) >= 3 else (STAND_INS, 'stand-ins')
 
 
@@ -194,6 +210,10 @@ def main_run(b, C, tag, phone):
     r = run_state(page)
     items = r['parts'][0]['items']
     C.ok(items[2]['status'] == 'void' and len(items) == 6 and items[5].get('rep') is True, f'{tag}: the voided item is replaced at the end of its part ({[x["status"] for x in items]})')
+    # v1.2 O11: numbers never shift: after the void of item 3, item 4 is still "item 4 of 5" (1.1: "item 3 of 5")
+    wait_respond(page)
+    meta = page.locator('.pl-hud-meta').first.inner_text()
+    C.ok(sec(page)['index'] == 3 and 'item 4 of 5' in meta, f'{tag}: after a void, the next item keeps its number ({meta!r})')
 
     # a pause stops the section clock
     wait_respond(page)
@@ -209,12 +229,16 @@ def main_run(b, C, tag, phone):
     wait_respond(page)
     C.ok(sec(page)['running'] is True, f'{tag}: Resume starts it again')
 
-    # the rest of the part: items 4, 5 and the replacement
+    # the rest of the part: items 4, 5 and the replacement, which carries the number of item 3 (v1.2 O11)
+    metas = []
     for _ in range(3):
         if sec(page)['mode'] != 'item':
             break
+        wait_respond(page)
+        metas.append(page.locator('.pl-hud-meta').first.inner_text().split('·')[-1].strip())
         answer_key(page, phone, True)
         page.wait_for_timeout(200)
+    C.ok(metas == ['item 4 of 5', 'item 5 of 5', 'item 3 of 5'], f'{tag}: items 4 and 5 keep their numbers; the replacement at the end is item 3 ({metas})')
     wait_mode(page, 'partend')
     card = page.locator('[data-card-box="sec-partend"]').inner_text()
     C.ok('Flagged: item 2' in card and 'cannot come back' in card, f'{tag}: the end-of-part card lists the flagged item and says the part closes')
@@ -227,21 +251,18 @@ def main_run(b, C, tag, phone):
     C.ok(len(rows) == 6 and all(x[0] for x in rows), f'{tag}: closing part 1 logged its 6 shown items with mode "section" {rows}')
     C.ok(sorted(x[1] for x in rows) == [0, 1, 1, 1, 1, 2], f'{tag}: outcomes: 4 right, 1 wrong, 1 void {sorted(x[1] for x in rows)}')
 
-    # part 2: one answer, then a reload resumes the run
+    # part 2: one answer, 2.5 s on item 2, then a reload at once resumes the run with that time kept (v1.2 O9:
+    # in 1.1 the clock was saved only between items, so the reload gave the 2.5 s back)
     press(page, '[data-card="start"]', phone)
     wait_mode(page, 'item')
     answer_key(page, phone, True)
     page.wait_for_function('__section.state.index === 1', timeout=5000)
     wait_respond(page)
+    page.wait_for_timeout(2500)
     used_before = sec(page)['usedMs']
-    page.wait_for_timeout(1300)  # the debounced save
     page.reload()
     page.wait_for_function(READY, timeout=20000)
-    for _ in range(4):
-        if not page.evaluate('PX.ui.modalOpen()'):
-            break
-        page.keyboard.press('Escape')
-        page.wait_for_timeout(150)
+    popups(page)
     page.evaluate('PX.debug.fast(true)')
     knobs(page, parts)
     on_section = page.evaluate('PX.core.router.current().name')
@@ -256,7 +277,12 @@ def main_run(b, C, tag, phone):
     wait_mode(page, 'item')
     s = sec(page)
     C.ok(s['part'] == 1 and s['index'] == 1, f'{tag}: it resumes at part 2, item 2 ({s["part"]}, {s["index"]})')
-    C.ok(s['usedMs'] >= used_before - 1500, f'{tag}: the clock keeps the time already used ({used_before:.0f} → {s["usedMs"]:.0f} ms)')
+    C.ok(s['usedMs'] >= used_before - 300, f'{tag}: a reload keeps the time spent on the current item ({used_before:.0f} → {s["usedMs"]:.0f} ms)')
+
+    # what part 2 holds now: its first answer counts unless the item was voided by the environment (a frame
+    # stutter at a 3D part's first item on a loaded machine; rule 7), which the expected totals then leave out
+    p2 = [x for x in run_state(page)['parts'][1]['items'] if x['status'] == 'answered']
+    p2_right, p2_void = sum(1 for x in p2 if x['correct']), [x.get('voidReason') for x in run_state(page)['parts'][1]['items'] if x['status'] == 'void']
 
     # End the section from the pause sheet → the review
     wait_respond(page)
@@ -271,14 +297,31 @@ def main_run(b, C, tag, phone):
     run = out['run']
     C.ok(run['ended'] == 'user' and run['size'] == 'mini' and run['form'] == 1, f'{tag}: the run summary is kept ({run["ended"]}, form {run["form"]})')
     C.ok(f'{run["right"]} of {run["n"]}' in rv, f'{tag}: the review shows right of n ({run["right"]} of {run["n"]})')
-    C.ok(run['right'] == 5 and run['answered'] == 6, f'{tag}: 5 right of 6 answered ({run["right"]}/{run["answered"]})')
+    C.ok(run['right'] == 4 + p2_right and run['answered'] == 5 + len(p2), f'{tag}: {4 + p2_right} right of {5 + len(p2)} answered ({run["right"]}/{run["answered"]}; voids in part 2: {p2_void})')
     C.ok(out['next']['mini'] == 2 and out['live'] is None, f'{tag}: the next mini form is 2; nothing is left live')
-    C.ok(out['sess']['mode'] == 'section' and out['sess']['trials'] == 6, f'{tag}: one session with mode "section" and 6 answers')
+    C.ok(out['sess']['mode'] == 'section' and out['sess']['trials'] == 5 + len(p2), f'{tag}: one session with mode "section" and {5 + len(p2)} answers ({out["sess"]["trials"]})')
     C.ok(page.evaluate('JSON.stringify(PX.core.store.state.ex)') == ex_before, f'{tag}: no rating changed')
     C.ok('not reached' in rv and 'does not turn them into a score or a prediction for the Dental Admission Test' in rv, f'{tag}: parts not reached are marked; no score prediction')
     shown = page.evaluate('__section.state.run.parts.reduce((n, P) => n + P.items.filter((x) => x.status === "seen" || x.status === "answered").length, 0)')
     C.ok(page.locator('[data-sec-chip]').count() <= shown and page.evaluate('[...document.querySelectorAll("[data-sec-chip]")].every((b) => { const [p, i] = b.getAttribute("data-sec-chip").split(":").map(Number); const it = __section.state.run.parts[p].items[i]; return it.status === "seen" || it.status === "answered"; })'), f'{tag}: the review lists only items that were shown')
     page.screenshot(path=str(OUT / f'{tag}_review.png'), full_page=True)
+
+    # v1.2 O10: a reload during the review brings the review back (1.1: the setup screen)
+    rv_counts = page.locator('.sec-totals').inner_text()
+    page.wait_for_timeout(1300)  # the debounced save of the review's state
+    page.reload()
+    page.wait_for_function(READY, timeout=20000)
+    popups(page)
+    page.evaluate('PX.debug.fast(true)')
+    knobs(page, parts)
+    if page.evaluate('PX.core.router.current().name') != 'section':
+        page.evaluate('void PX.core.router.go("section")')
+    page.wait_for_timeout(400)
+    back = page.locator('.sec-totals').inner_text() if page.locator('.sec-totals').count() else None
+    why = '' if back else page.evaluate("""() => { const S = PX.engine.section, r = PX.core.store.state, L = S.last(r);
+        return JSON.stringify({ kept: !!L, open: L && L.open, versions: L ? L.parts.map((p) => [p.exId, p.version, (PX.ex.get(p.exId) || {}).version]) : null, mode: __section.state && __section.state.mode }); }""")
+    C.ok(page.locator('[data-sec-review]').count() == 1 and back == rv_counts and page.locator('[data-sec-chip]').count() >= 1,
+         f'{tag}: after a reload the review is back, with its results and items ({back!r}{" " + why if why else ""})')
 
     # the review: a wrong item replays with the answer marked and plays its show-me
     chip = page.locator('[data-sec-chip].is-wrong').first
@@ -326,6 +369,18 @@ def main_run(b, C, tag, phone):
     page.wait_for_timeout(300)
     C.ok('Your last section: mini, form 1' in page.locator('.sec-setup').inner_text(), f'{tag}: the setup screen names the last section')
     C.ok('Form 2 (new to you)' in page.locator('[data-sec-form]').inner_text(), f'{tag}: … and offers form 2 as new')
+    # v1.2 O10: once left, the review is offered from the setup screen, also after a reload
+    page.reload()
+    page.wait_for_function(READY, timeout=20000)
+    popups(page)
+    knobs(page, parts)
+    if page.evaluate('PX.core.router.current().name') != 'section':
+        page.evaluate('void PX.core.router.go("section", { size: "mini" })')
+    page.wait_for_timeout(400)
+    C.ok(page.locator('[data-sec-start]').count() == 1 and page.locator('[data-sec-lastreview]').count() == 1, f'{tag}: a review once left stays closed after a reload; the setup screen offers it')
+    press(page, '[data-sec-lastreview]', phone)
+    page.wait_for_timeout(300)
+    C.ok(page.locator('[data-sec-review]').count() == 1 and page.locator('[data-sec-chip]').count() >= 1, f'{tag}: "Open its review" opens it')
     C.ok(len(con.errors()) == 0, f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
 
