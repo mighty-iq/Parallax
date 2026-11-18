@@ -141,14 +141,16 @@ function pooled(t) {
 
 function checks(t) {
   t.section("record 4: an owner's stricter repair (E.record.check)");
+  // 'game' has no owner's check until milestone 5 (bets, plateau and measure have theirs once their files load)
   const { PX } = env(t), S = PX.core.store, R = PX.engine.record;
   t.throws(() => R.check('events', () => null), /not a reserved container/, 'only the reserved containers take a check');
-  R.check('bets', (v) => { v.plan = v.plan && typeof v.plan === 'object' ? v.plan : {}; return v; });
-  t.throws(() => R.check('bets', (v) => v), /already added/, 'one check per container');
-  const g = S.guard(Object.assign(v4Filled(T0), { bets: { v: 1, plan: 7, kept: 'x' } }));
-  t.eq(g.bets, { v: 1, plan: {}, kept: 'x' }, 'the check runs inside the open repair');
-  R.check('measure', () => { throw new Error('broken check'); });
-  t.eq(S.guard(v4Filled(T0)).measure, { v: 1, form0: null }, 'a check that throws leaves the default');
+  R.check('game', (v) => { v.checked = 1; return v; });
+  t.throws(() => R.check('game', (v) => v), /already added/, 'one check per container');
+  const g = S.guard(Object.assign(v4Filled(T0), { game: Object.assign(copy(v4Filled(T0).game), { kept: 'x' }) }));
+  t.eq([g.game.kept, g.game.checked, g.game.reach.high], ['x', 1, v4Filled(T0).game.reach.high], 'the check runs inside the open repair (keys it does not own are kept)');
+  const P2 = env(t).PX;
+  P2.engine.record.check('game', () => { throw new Error('broken check'); });
+  t.eq(P2.core.store.guard(v4Filled(T0)).game, P2.engine.record.defaults('game'), 'a check that throws leaves the default');
 }
 
 function merges(t) {
@@ -166,5 +168,5 @@ function merges(t) {
   t.eq(m.game.reach.high, 31, 'Reach never falls: the larger high mark');
   t.eq(m.events.rows.length, a.events.rows.length + 1, 'events: the union of rows');
   t.ok(E.merge.registered().includes('plateau') && E.merge.registered().includes('game') && E.merge.registered().includes('events'), 'events, plateau and game have their own merges');
-  t.ok(!E.merge.registered().includes('bets') && !E.merge.registered().includes('measure'), 'bets and measure are left to their owners');
+  // bets and measure: their owners register their merges (js/engine/bets.js, W2-measure), so nothing is asserted here
 }
