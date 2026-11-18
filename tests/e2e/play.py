@@ -50,6 +50,9 @@ def boot(page, url=None, knobs=True):
             break
         page.keyboard.press('Escape')
         page.wait_for_timeout(120)
+    # v1.2 wave 2: these tests check the player itself; the builders' cards and panels (measurement,
+    # plateau, bets) have their own browser tests, so their hooks are muted here (run_hooks runs its own)
+    page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')
     if knobs:
         # v1.1: sessions are time-boxed on active time; the test knob gives them 8 s
         page.evaluate('PX.debug.fast(true); PX.core.store.state.settings.sessionMin = 1; PX.ui.play.config.budgetMs = 8000;')
@@ -403,7 +406,7 @@ def run_sandbox(b, C):
         if fr.locator(sel).count():
             fr.locator(sel).first.click(); fr.wait_for_timeout(120)
     C.ok(fr.evaluate('PX.core.store.volatile') is True, f'{tag}: storage blocked, the record lives in memory')
-    fr.evaluate('PX.debug.fast(true); PX.core.store.state.settings.sessionMin = 1; PX.ui.play.config.budgetMs = 8000;')
+    fr.evaluate('PX.debug.fast(true); PX.core.store.state.settings.sessionMin = 1; PX.ui.play.config.budgetMs = 8000; PX.ui.hooks && PX.ui.hooks.mute(true);')
     seen_all(fr)
     go(fr, {'mode': 'train'})
     ok = drive(fr, '!!document.querySelector(".pl-summary")')
@@ -853,11 +856,11 @@ def run_captions(b, C):
       P.ctx.play(steps.map(mk)).then(() => { __done = true; P.demoing = false; }); }"""
     probe = """() => ({ cap: document.querySelector('.pl-caption').textContent, waiting: document.querySelector('.pl-showme').hasAttribute('data-waiting'),
       log: __log.join(' '), done: __done, next: !document.querySelector('[data-showme-next]').hidden, step: !document.querySelector('.pl-showme-buttons .px-btn:nth-child(2)').hidden,
-      auto: document.querySelector('[data-showme-auto]').getAttribute('aria-pressed'), pause: document.querySelector('.pl-showme-buttons .px-btn').disabled })"""
+      auto: document.querySelector('[data-showme-auto]').getAttribute('aria-pressed'), pause: document.querySelector('.pl-showme-buttons .px-btn').hidden })"""
     page.evaluate(start, [{'name': 'a', 'cap': 'A'}, {'name': 'a2', 'anim': True}, {'name': 'b', 'cap': 'B', 'motion': True}, {'name': 'c', 'cap': 'C', 'motion': True}, {'name': 'd', 'cap': 'D'}])
     page.wait_for_timeout(4200)
     s1 = page.evaluate(probe)
-    C.ok(s1['cap'] == 'A' and s1['waiting'] and s1['log'] == 'a a2' and s1['next'] and not s1['step'] and s1['pause'], f'{tag}: a still caption waits for Next after its steps, Pause rests meanwhile ({s1})')
+    C.ok(s1['cap'] == 'A' and s1['waiting'] and s1['log'] == 'a a2' and s1['next'] and not s1['step'] and s1['pause'], f'{tag}: a still caption waits for Next after its steps; the bar has no Pause of its own, the header\'s is the one (round 3) ({s1})')
     page.locator('[data-showme-next]').tap()
     page.wait_for_timeout(1500)
     s2 = page.evaluate(probe)
@@ -881,7 +884,7 @@ def run_captions(b, C):
     page.evaluate(start, [{'name': 'e', 'cap': 'E', 'ms': 4000, 'anim': True}, {'name': 'f', 'cap': 'F'}])
     page.wait_for_timeout(500)
     lab = page.locator('[data-showme-next]').inner_text()
-    C.ok(lab.startswith('Skip ahead'), f'{tag}: while a caption\'s steps play, Next reads "Skip ahead" ({lab!r})')
+    C.ok(lab.startswith('Finish step'), f'{tag}: while a caption\'s steps play, Next reads "Finish step" ({lab!r})')
     page.locator('[data-showme-next]').tap()
     page.wait_for_timeout(300)
     s6 = page.evaluate(probe)
@@ -984,6 +987,7 @@ def run_hooks(b, C):
     boot(page)
     seen_all(page)
     page.evaluate(HOOKS_JS)
+    page.evaluate("PX.ui.hooks.mute((id) => id.startsWith('test.'))")  # only this test's own handlers
     go(page, {'mode': 'free', 'exId': 'htest', 'params': {'a': 0}, 'trials': 3})
     page.wait_for_selector('[data-card-box="hk-start"]', timeout=8000)
     st = page.evaluate('__hk.start[0]')
@@ -1089,12 +1093,126 @@ def run_hooks(b, C):
     ctx.close()
 
 
+TRIAL_TOP = "(() => { const t = document.querySelector('.pl-trial').getBoundingClientRect(); return Math.round(t.top + window.scrollY); })()"
+
+
+def run_round3(b, C):
+    """Fresh-player round 3 (W2-core, 18 Nov): the trial stays put at the first answer (Train's session
+    line leaves with the next item), the limit's label, the pause sheet hides the time bar, a walkthrough
+    after a time-out starts after the verdict and ignores taps from the item at first, the feedback's
+    Next takes no tap right after a walkthrough, and the labels Finish step, Next step and Next item."""
+    tag = 'round 3'
+    for w, h, mobile in ((1366, 768, False), (360, 640, True)):
+        ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2 if mobile else 1, has_touch=mobile, is_mobile=mobile)
+        page = ctx.new_page()
+        con = Console(page)
+        boot(page)
+        seen_all(page)
+        page.evaluate('PX.ui.play.config.budgetMs = 60000')
+        # Angles (SVG): a 3D item can be voided by the headless renderer's stalls, and a voided answer
+        # is not an answer (the line waits for the first counted one)
+        go(page, {'mode': 'train', 'exId': 'angles', 'count': 1})
+        drive(page, '__play.state === "respond"', limit=80)
+        page.wait_for_timeout(300)
+        line = page.evaluate("!!document.querySelector('.pl-session-line')")
+        y0 = page.evaluate(TRIAL_TOP)
+        page.evaluate('__play.answer(true)')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+        page.wait_for_timeout(400)
+        y1 = page.evaluate(TRIAL_TOP)
+        C.ok(line and abs(y1 - y0) <= 1, f'{tag} {w}: the trial stays put at the first answer (the session line waits for the next item): {y0} -> {y1}')
+        C.ok(page.locator('[data-next]').inner_text().strip().startswith('Next item'), f'{tag} {w}: the feedback\'s Next reads "Next item" ({page.locator("[data-next]").inner_text()!r})')
+        counted = page.evaluate('__play.session.answered')
+        page.evaluate('__play.next()')
+        wait_state(page, 'respond')
+        C.ok(counted == 1 and page.locator('.pl-session-line').count() == 0, f'{tag} {w}: the session line is gone with the next item (answers counted: {counted})')
+        C.ok(not con.errors(), f'{tag} {w}: no console errors {con.errors()[:3]}')
+        ctx.close()
+    # the limit's label, inside the margin; hidden under the pause sheet (phone)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate(STUBS_JS)
+    go(page, {'mode': 'free', 'exId': 'qtest', 'params': {'a': 0, 'variant': 'quick'}, 'trials': 3})
+    wait_state(page, 'respond')
+    lim = page.evaluate("""(() => { const l = document.querySelector('.pl-limit'), cs = getComputedStyle(l, '::before'), r = l.getBoundingClientRect();
+      const sp = document.createElement('span'); sp.style.cssText = 'position:absolute;white-space:nowrap;font:' + cs.font + ';letter-spacing:' + cs.letterSpacing;
+      sp.textContent = l.getAttribute('data-label'); document.body.appendChild(sp); const w = sp.getBoundingClientRect().width; sp.remove();
+      const gap = parseFloat(cs.right) - r.width; const wrap = document.querySelector('.pl-trial').getBoundingClientRect();
+      return { label: l.getAttribute('data-label'), left: Math.round(r.left - gap - w), trialLeft: Math.round(wrap.left) }; })()""")
+    C.ok(lim['label'] == 'Limit · 4 s' and lim['left'] >= lim['trialLeft'] - 1, f'{tag}: the bar\'s label is the limit, inside the page margin ({lim})')
+    page.locator('[data-pause]').click()
+    wait_state(page, 'paused')
+    vis = page.evaluate("getComputedStyle(document.querySelector('.pl-limit')).visibility")
+    C.ok(vis == 'hidden', f'{tag}: the time bar and its label hide under the pause sheet ({vis})')
+    page.locator('[data-resume]').first.click()
+    wait_state(page, 'respond')
+    C.ok(not con.errors(), f'{tag} limit: no console errors {con.errors()[:3]}')
+    ctx.close()
+    # a walkthrough after a time-out (Central Point's Quick form, real pace): after the verdict; taps from the item ignored at first
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    prm = page.evaluate("(() => { const d = PX.ex.get('centralpoint'), p = {}; d.dims.forEach((x) => { p[x.key] = 0; }); p.variant = 'quick'; return p; })()")
+    page.evaluate('PX.ui.play.config.limitScale = 0.05')
+    go(page, {'mode': 'free', 'exId': 'centralpoint', 'params': prm, 'trials': 3})
+    drive(page, '__play.state === "respond"', limit=60)
+    page.evaluate('PX.debug.fast(false)')
+    page.wait_for_function('__play.last && __play.last.timeout === true', timeout=15000)
+    page.wait_for_timeout(450)
+    st0 = state(page)
+    C.ok(st0 == 'reveal', f'{tag}: after a time-out the verdict shows first; the walkthrough waits ({st0})')
+    page.wait_for_function('__play.state === "showme"', timeout=8000)
+    cap0 = page.evaluate("document.querySelector('.pl-caption').textContent")
+    page.evaluate("PX.ui.play.current().ctx.playCmd('step'); PX.ui.play.current().ctx.playCmd('step')")
+    page.wait_for_timeout(200)
+    cap1 = page.evaluate("[document.querySelector('.pl-caption').textContent, !!document.querySelector('.pl-showme[data-waiting]'), document.querySelector('[data-showme] .px-btn, .pl-showme-buttons .px-btn').textContent]")
+    C.ok(cap1[0] == cap0 and 'Resume' not in cap1[2], f'{tag}: taps from the item at the start of the walkthrough do not move it ({cap0!r} -> {cap1})')
+    C.ok(page.locator('[data-showme-next]').inner_text().strip().startswith(('Next step', 'Finish step')), f'{tag}: the walkthrough\'s Next reads "Next step" or "Finish step" ({page.locator("[data-showme-next]").inner_text()!r})')
+    # round 3 (Form): after an answer the walkthrough waits at each caption for Next, as Watch does
+    page.wait_for_timeout(3500)
+    cap2 = page.evaluate("[document.querySelector('.pl-caption').textContent, !!document.querySelector('.pl-showme[data-waiting]'), document.querySelector('[data-showme-next]').textContent.trim()]")
+    C.ok(cap2[0] == cap0 and cap2[1] and cap2[2].startswith(('Next step', 'Done')), f'{tag}: the walkthrough waits at its first caption ({cap2})')
+    page.locator('[data-showme-next]').tap()
+    page.wait_for_timeout(400)
+    cap3 = page.evaluate("document.querySelector('.pl-caption').textContent")
+    C.ok(cap3 != cap0 or state(page) == 'reveal', f'{tag}: Next step shows the next caption ({cap0!r} -> {cap3!r})')
+    # round 3: a title row half cut at the top edge steps aside for the copy of Pause
+    hud = page.evaluate("(() => { const r = document.querySelector('.pl-hud').getBoundingClientRect(); return Math.round(r.top + window.scrollY); })()")
+    page.evaluate(f"document.body.style.paddingBottom = '1500px'; window.scrollTo(0, {hud} + 22)")
+    page.wait_for_timeout(400)
+    cut = page.evaluate("[document.querySelector('.pl-player').hasAttribute('data-hud-off'), getComputedStyle(document.querySelector('.pl-hud')).visibility, getComputedStyle(document.querySelector('[data-float-pause]')).display]")
+    C.ok(cut[0] and cut[1] == 'hidden' and cut[2] != 'none', f'{tag}: a half-cut title row hides and the copy of Pause shows ({cut})')
+    page.evaluate("document.body.style.paddingBottom = ''; window.scrollTo(0, 0)")
+    page.wait_for_timeout(300)
+    if state(page) != 'showme':  # the walkthrough ended: play it again, to close it
+        page.locator('[data-showme]').tap()
+        page.wait_for_function('__play.state === "showme"', timeout=8000)
+    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close: the walkthrough ends
+    page.wait_for_function('__play.state === "reveal"', timeout=8000)
+    seed0 = page.evaluate('__play.item && __play.item.seed')
+    page.locator('[data-next]').tap()  # at once: meant for the walkthrough's Next
+    page.wait_for_timeout(150)
+    C.ok(state(page) == 'reveal' and page.evaluate('__play.item && __play.item.seed') == seed0, f'{tag}: a tap right after the walkthrough ends does not start the next item ({state(page)})')
+    page.wait_for_timeout(800)
+    page.locator('[data-next]').tap()
+    page.wait_for_function('__play.state === "respond" || __play.state === "present" || __play.state === "ready"', timeout=8000)
+    C.ok(True, f'{tag}: a moment later Next item goes on')
+    page.evaluate('PX.debug.fast(true); PX.ui.play.config.limitScale = 1')
+    C.ok(not con.errors(), f'{tag} walkthrough: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

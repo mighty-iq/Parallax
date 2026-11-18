@@ -15,6 +15,7 @@
                                           screen: after or in place of a part named by data-slot,
                                           data-section or title; the rest at the end (opts.before)
      screen(point, container, ctx, opts)  collect, then place (the screens' call sites)
+     mute(fn | true | false)              a test knob: only handlers whose id fn accepts run
    A handler that throws, rejects or (async) returns something that is not a promise or a value is
    skipped and reported as 'play:error' on PX.bus (playtest mode shows it). Points:
      session:start (async), item:before (async), item:notes, summary:panels, today:slots,
@@ -32,6 +33,11 @@
   };
   var LISTS = {};
   var seq = 0;
+  // A test knob (tests/e2e): mute(fn(id) → true to run | true (mute all) | false (none)). The player
+  // tests of wave 1 run without the builders' cards; a builder's own test may run only its ids.
+  var allow = null;
+  function mute(x) { allow = typeof x === 'function' ? x : x === true ? function () { return false; } : null; }
+  function live(hs) { return allow ? hs.filter(function (h) { try { return !!allow(h.id); } catch (e) { return false; } }) : hs; }
 
   function point(name, who) {
     if (typeof name !== 'string' || !hasOwn.call(POINTS, name)) throw new Error('PX.ui.hooks.' + who + ': unknown point ' + JSON.stringify(name) + ' (' + Object.keys(POINTS).join(', ') + ')');
@@ -57,7 +63,7 @@
   }
 
   function collect(name, ctx) {
-    var hs = point(name, 'collect').slice(), out = [];
+    var hs = live(point(name, 'collect').slice()), out = [];
     if (POINTS[name].async) throw new Error('PX.ui.hooks.collect: "' + name + '" is an async point (use run)');
     for (var i = 0; i < hs.length; i++) {
       var v;
@@ -70,7 +76,7 @@
   }
 
   function run(name, ctx) {
-    var hs = point(name, 'run').slice();
+    var hs = live(point(name, 'run').slice());
     if (!POINTS[name].async) return Promise.reject(new Error('PX.ui.hooks.run: "' + name + '" is a sync point (use collect)'));
     var i = 0;
     function next() {
@@ -139,5 +145,5 @@
     return place(container, res, opts);
   }
 
-  PX.ui.hooks = { on: on, run: run, collect: collect, list: list, place: place, screen: screen, POINTS: POINTS };
+  PX.ui.hooks = { on: on, run: run, collect: collect, list: list, place: place, screen: screen, mute: mute, POINTS: POINTS };
 })(window.PX);

@@ -296,6 +296,8 @@
   }
   body.px-item .pl-player { gap: var(--s2); }
   body.px-item .pl-session-line { display: none; } /* Today showed the plan; the item needs the room */
+  /* ...and its slot goes too, so its gap does not move the item when the line leaves (round 3) */
+  body.px-item .pl-notice-slot:has(> .pl-session-line:only-child) { display: none; }
   /* Watch, Try, Go: the goal and tip above the item, and in Watch the pinned caption and bar, take
      their share first (--pl-extra, set by play.js on the host); its own header scrolls away above */
   .is-wtg { --pl-avail: calc(var(--pl-vh) - var(--tap) - 0.25rem - 3 * var(--s2) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pl-extra, 0px)); }
@@ -519,10 +521,13 @@
 @media (max-width: 719px) {
   .pl-player[data-state="showme"] .pl-feedback .pl-actions:has([data-next]:not([hidden])) { display: none; }
 }
-@media (min-width: 720px) and (min-height: 501px) { .pl-showme-buttons [data-showme-next][data-answered] { display: none; } }
+/* round 3: a walkthrough after an answer waits for "Next step" at each caption on wide screens too,
+   beside the strip's own "Next item" (the bar's Next is no longer hidden there) */
 /* fresh-player round 2 (W1-core): the strip hides under a pause between items; the time bar has a
    label; a copy of Pause stays at a phone's top corner when the title row has scrolled away */
 .pl-player[data-state="paused"] > .pl-feedback { visibility: hidden; }
+/* round 3: the time bar and its label never show around the pause sheet */
+.pl-player[data-state="paused"] .pl-limit, .pl-trial[data-paused] > .pl-limit { visibility: hidden; }
 .pl-limit[data-label] { overflow: visible; margin-left: 7.75rem; } /* the label sits at the bar's left, adding no height */
 .pl-limit[data-label]::before {
   content: attr(data-label); position: absolute; right: calc(100% + var(--s2)); top: 50%; transform: translateY(-50%);
@@ -530,6 +535,8 @@
 }
 .pl-float-pause { display: none; }
 @media (max-width: 719px) {
+  /* round 3: a title row half cut at the top edge steps aside for the copy of Pause */
+  body.px-item .pl-player[data-hud-off]:is([data-state="respond"], [data-state="reveal"], [data-state="showme"], [data-state="present"]) > .pl-hud { visibility: hidden; }
   body.px-item .pl-player[data-hud-off]:is([data-state="respond"], [data-state="reveal"], [data-state="showme"], [data-state="present"]) > .pl-float-pause {
     display: inline-flex; position: fixed; z-index: 33;
     top: calc(var(--s2) + env(safe-area-inset-top, 0px)); right: max(var(--gutter), env(safe-area-inset-right, 0px));

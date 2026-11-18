@@ -47,6 +47,10 @@
   var DYNAMIC_MS = 400;     // a present() longer than this held a moving or timed stimulus
   var DEMO_MS = 5000;       // a Watch demo lasts at least this long (slow, with captions)
   var DEMO_CAPTION_MS = 3000; // and each of its captions stays on the screen at least this long
+  // Fresh-player round 3 (Central Point, phone): a walkthrough after an answer ignores taps from the
+  // item at first (they were meant as answers); after a time-out it starts a moment after the
+  // verdict; and when it ends, its bar's place takes no tap for a moment (the tap was meant for it).
+  var SHOWME_TAP_GRACE_MS = 1500, TIMEOUT_SHOWME_DELAY_MS = 900, AFTER_SHOWME_LOCK_MS = 700;
   // Motion comfort (v1.2, O36; note N1 §5.4): a check-in after 3 min of motion in a session, then
   // every 5; a person with under 10 min of motion before is offered to stop after 5 min.
   var MOTION = { first: 180000, every: 300000, newLimit: 300000, newPlayer: 600000 };
@@ -245,6 +249,9 @@
         var demo = !!P.demoing && !FAST;
         // a show-me after an answer has the reading strip's Next in its bar too (same place as the strip's)
         var answered = !P.demoing && !!P.last && (prev === 'reveal' || prev === 'showme');
+        // round 3 (Form fresh test: after a wrong answer two of three steps played by while the tester
+        // read the first): a walkthrough after an answer waits for Next at each caption too
+        var tapped = (demo || answered) && !FAST;
         var moving = !!(P.view && P.view.motion === true) || !!(P.def && P.def.practice === 'attention');
         var group = [], g = -1;
         steps.forEach(function (st, a) { if (a === 0 || (st && st.caption)) g++; group.push(g); });
@@ -254,7 +261,7 @@
           if (m) gMove[group[a]] = true;
         });
         function lastOf(a) { return a + 1 >= steps.length || group[a + 1] !== group[a]; }
-        function tapMode() { return demo && !autoplay(); }
+        function tapMode() { return tapped && !autoplay(); }
         function waitsAt(a) {
           if (!tapMode() || !lastOf(a)) return false;
           var gg = group[a];
@@ -293,18 +300,24 @@
           var tap = tapMode();
           P.el.pPause.firstChild.textContent = waiting && !tap ? 'Continue' : paused && !waiting ? 'Resume' : 'Pause';
           P.el.pPause.disabled = !!(tap && waiting); // nothing moves while a caption waits
+          // round 3 (Views fresh test: two buttons named Pause): where captions wait for taps and Auto-play
+          // sets the pace, the header's Pause is the only one
+          P.el.pPause.hidden = tapped;
           P.el.pNext.hidden = !(demo || answered); P.el.pStep.hidden = demo || answered;
           P.el.pNext.toggleAttribute('data-answered', answered); // wide screens keep the strip's own Next
           P.el.pNext.classList.toggle('is-waiting', !!waiting);
           // while a caption's steps still play, the first tap finishes them: say so; at the demo's last
           // caption the tap hands the item over, and Watch, Try, Go's line says so (fresh-player tests)
           var lastWait = demo && tap && waiting && i === steps.length - 1;
-          P.el.pNext.firstChild.textContent = demo && tap && !waiting ? 'Skip ahead' : lastWait ? 'Your turn' : 'Next';
+          // round 3: "Skip ahead" read as skipping the whole demo; the tap finishes the caption's steps.
+          // At the last caption a demo hands the item over; a walkthrough after an answer is done.
+          var lastTap = tap && waiting && i === steps.length - 1;
+          P.el.pNext.firstChild.textContent = tapped && tap && !waiting ? 'Finish step' : lastWait ? 'Your turn' : lastTap ? 'Done' : 'Next step';
           if (lastWait && !lastNoted) {
             lastNoted = true;
             try { if (P.demoCfg && typeof P.demoCfg.onLastWait === 'function') P.demoCfg.onLastWait(); } catch (e) { log('onLastWait failed', e); }
           }
-          P.el.pAuto.hidden = !demo;
+          P.el.pAuto.hidden = !tapped;
           P.el.pAuto.setAttribute('aria-pressed', autoplay() ? 'true' : 'false');
           P.el.player.toggleAttribute('data-waiting', !!waiting);
         }
@@ -325,6 +338,7 @@
           waiting = false; paused = false; label();
           P.el.pNext.hidden = true; P.el.pAuto.hidden = true; P.el.pStep.hidden = false;
           if (P.state === 'showme') P.setState(prev === 'showme' ? 'reveal' : prev);
+          if (answered && !FAST) P.nextLockUntil = timing.now() + AFTER_SHOWME_LOCK_MS; // a tap meant for the walkthrough's Next
           resolve();
         }
         function frame(dt) {
@@ -478,7 +492,10 @@
     el.notice = h('div.pl-notice-slot');
     el.host = h('div.pl-host');
     // a tap on the figure is Next while a Watch caption waits for one
-    el.host.addEventListener('click', function () { if (P.state === 'showme' && runner.tapMode()) runner.cmd('tap'); });
+    el.host.addEventListener('click', function () {
+      if (P.showmeAt && !FAST && timing.now() - P.showmeAt < SHOWME_TAP_GRACE_MS) return; // round 3: an answer tap, not a Next
+      if (P.state === 'showme' && runner.tapMode()) runner.cmd('tap');
+    });
     el.grid = h('div.pl-grid');
     // A tap in the gap between two answer tiles answers nothing (Angles fresh test: a tap at the middle
     // of a 390-px phone answered with the right-hand tile). Phones move a tap that lands near a button
@@ -542,7 +559,10 @@
       h('div.pl-showme-buttons', el.pPause, el.pStep, el.pReplay, el.pClose, el.pAuto, el.pNext));
     el.showBtn = ui.button('Show me', { kind: 'secondary', key: 's', onClick: function () { showMe(false); } });
     el.showBtn.setAttribute('data-showme', '');
-    el.nextBtn = ui.button('Next', { kind: 'primary', key: 'Space', onClick: function () { goNext(); } });
+    el.nextBtn = ui.button('Next', { kind: 'primary', key: 'Space', onClick: function () {
+      if (P.nextLockUntil && timing.now() < P.nextLockUntil) return; // round 3: a tap meant for the walkthrough's Next
+      goNext();
+    } });
     el.nextBtn.setAttribute('data-next', '');
     // Space and Enter on the focused Next go through the player's keys: during show me Space
     // pauses it (as its bar and the Keys sheet say); Next comes once it ends or is closed.
@@ -555,8 +575,9 @@
       if (win.IntersectionObserver) {
         var hudSeen = new win.IntersectionObserver(function (es) {
           var e = es[es.length - 1];
-          el.root.toggleAttribute('data-hud-off', !!(e && !e.isIntersecting && e.boundingClientRect.top < 0));
-        });
+          // round 3 (Form fresh test): a row half cut at the screen's top edge counts as off too
+          el.root.toggleAttribute('data-hud-off', !!(e && e.boundingClientRect.top < -4 && e.intersectionRatio < 0.95));
+        }, { threshold: [0, 0.25, 0.5, 0.75, 0.95, 1] });
         hudSeen.observe(el.hud);
         P.offs.push(function () { hudSeen.disconnect(); });
       }
@@ -617,7 +638,11 @@
         addMotion: function (ms) { if (isNum(ms) && ms > 0) { P.motionMs += ms; if (opts.onMotion) { try { opts.onMotion(ms); } catch (e) { log('onMotion failed', e); } } } },
         // the show-me runner's own commands for a view ('step', 'pause', 'replay', 'close'): a tap on
         // the board may step a Watch or a show-me (W1-central's request)
-        playCmd: function (name) { if (name === 'step' || name === 'pause' || name === 'replay' || name === 'close') runner.cmd(name); },
+        playCmd: function (name) {
+          // round 3: at the start of a walkthrough after an answer, taps on the item were meant as answers
+          if (P.showmeAt && !FAST && timing.now() - P.showmeAt < SHOWME_TAP_GRACE_MS) return;
+          if (name === 'step' || name === 'pause' || name === 'replay' || name === 'close') runner.cmd(name);
+        },
         gentleMotion: gentleMotion(),
       };
     }
@@ -686,7 +711,8 @@
         // answer is never judged late while the timer still runs (I1 T7).
         P.limit.start = P.paintTs > 0 && P.paintTs <= t ? P.paintTs : t;
         if (P.cfg.limitBar) {
-          el.limit.setAttribute('data-label', 'Time left · ' + Math.round(ms / 1000) + ' s'); // the bar says what it is (fresh-player test)
+          // the bar says what it is (fresh-player tests); the label is the limit, the bar the time left
+          el.limit.setAttribute('data-label', 'Limit · ' + Math.round(ms / 1000) + ' s');
           el.limit.hidden = false;
           el.limitFill.style.animationPlayState = '';
           el.limitFill.style.animationDuration = ms + 'ms';
@@ -995,6 +1021,10 @@
       marksIntoView();
       try { el.nextBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
       Promise.resolve(done).then(function () {
+        if (P.last !== tr || P.state !== 'reveal' || !auto) return null;
+        // round 3: after a time-out the person was still placing an answer: the verdict first
+        return tr.timeout && !FAST ? timing.wait(TIMEOUT_SHOWME_DELAY_MS) : null;
+      }).then(function () {
         if (P.last !== tr || P.state !== 'reveal' || !auto) return;
         if (!cfg.practice) bump('showMe', P.exId);
         save();
@@ -1032,6 +1062,7 @@
     function showMe(auto) {
       if (P.state !== 'reveal' || !P.view || !P.view.showMe || !P.last || P.cfg.feedback === false) return Promise.resolve(false);
       var tr = P.last, p, cfg = P.cfg, exId = P.exId, n0 = P.played.finished, t0 = timing.now();
+      P.showmeAt = t0;
       el.showBtn.hidden = true;
       stemIntoView();
       try { p = Promise.resolve(P.view.showMe(tr.item, revealResponse(P.def, tr.item, tr.response), P.ctx)); } catch (e) { log('show me failed', e); p = Promise.resolve(); }
@@ -2260,6 +2291,9 @@
       try { item = def.generate(PX.rng(step.seed), step.params); } catch (e) { log('generate failed (' + step.exId + ')', e); }
       if (!item) { skipStep(step); return; }
       S.skipRun = 0;
+      // Train's line naming the session stays until the next item: removed at the answer, it moved
+      // the item up at its reveal (W1-band-A's request)
+      if (S.introLine && S.answered > 0) { if (S.introLine.parentNode) P.notice(null); S.introLine = null; }
       hud(step, def, item);
       var pre = Promise.resolve(null);
       if (!wtgSeen(def.id) && mode !== 'speed' && mode !== 'threshold') { // the intro's choice never reaches a later stage
@@ -2315,16 +2349,13 @@
       try { out = E().modes.answer(S.plan, rec(), step, result, now(), clockNow()); } catch (e) { log('answer failed', e); out = { done: false, outcome: 3 }; }
       save();
       S.last = { step: step, tr: tr, out: out };
-      if (out.outcome === 0 || out.outcome === 1) {
-        S.answered++; S.voidRun = 0;
-        if (S.introLine) { if (S.introLine.parentNode) P.notice(null); S.introLine = null; }
-      }
+      if (out.outcome === 0 || out.outcome === 1) { S.answered++; S.voidRun = 0; }
       else if (out.outcome === 2) { S.voidRun++; if (S.voidRun >= VOID_NOTICE && !S.noticed) deviceNotice(); }
       progress();
       if (tr.end) S.ended = true;
       if (tr.outcome === 'skipped' || tr.error) { loop(); return null; }
       notes(step, def, item, tr, out);
-      return P.waitNext({ label: out.done || S.ended ? 'Finish' : 'Next' }).then(function (w) {
+      return P.waitNext({ label: out.done || S.ended ? 'Finish' : 'Next item' }).then(function (w) { // round 3: not the walkthrough's "Next step"
         if (w === 'end') S.ended = true; // End on a pause between items (O4)
         if (w !== 'abort') loop();
       });
