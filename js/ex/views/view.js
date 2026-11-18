@@ -634,9 +634,11 @@
     for (i = 1; i < d.h; i++) grid.push([0, i, d.w, i]);
     svg.appendChild(SV.el('path', { d: linesPath({ lines: grid }, 0, d.h, 1), class: 'ex-views-assist-grid' }));
     svg.appendChild(SV.el('path', { d: linesPath({ lines: [[0, 0, d.w, 0], [d.w, 0, d.w, d.h], [d.w, d.h, 0, d.h], [0, d.h, 0, 0]] }, 0, d.h, 1), class: 'ex-views-assist-line' }));
-    st.assistEl = h('div.ex-views-assist', h('span.ex-views-assist-label', cap('assistLabel', { w: d.w, h: d.h })), svg);
+    // Two short lines (the card's step, then the size), so the box stays clear of the view's tag.
+    st.assistEl = h('div.ex-views-assist', h('span.ex-views-assist-label', h('span.ex-views-assist-step', cap('assistStep')), h('br'), cap('assistLabel', { w: d.w, h: d.h })), svg);
     st.stage.appendChild(st.assistEl);
-    st.caption.textContent = cap('assist', { w: d.w, h: d.h });
+    // The label says it all; no caption line under the stage, so Try 1 fits 360 × 640 (the
+    // sentence stays for screen readers).
     st.desc.textContent += ' ' + cap('assist', { w: d.w, h: d.h });
   }
 
@@ -882,8 +884,8 @@
         // the foil seen from its own side: the camera turns there, its drawing is traced and laid on it
         var df = lib.view(hm, o.from), nf = df.lines.length;
         list.push({ ms: 2200, caption: cap('whyDirectionTurn', { n: picked + 1, from: o.from }), enter: function () { begin(false); landedOption(key, d); focusOption(picked); }, update: function (k) { moveCam(hm, o.from, ease(k)); } });
-        list.push({
-          ms: 1200 + 60 * nf, caption: cap('whyDirectionTurn', { n: picked + 1, from: o.from }),
+        list.push({ // the same caption goes on (one caption, one stop if captions wait for a tap)
+          ms: 1200 + 60 * nf,
           enter: function () { begin(false); landedOption(key, d); moveCam(hm, o.from, 1); focusOption(picked); },
           update: function (k) { inkDraw(df, drawingMap(hm, o.from), Math.ceil(Math.min(1, k * 1.2) * nf), 0.86 * Math.max(0, (k - 0.5) / 0.5)); },
           exit: function () { overlayOption(picked, df); },

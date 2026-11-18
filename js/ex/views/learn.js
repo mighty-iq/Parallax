@@ -145,7 +145,8 @@
       whyMirrorFlip: 'Drawing {n} is the correct view flipped left to right.',
       whyNeighbourLines: 'Drawing {n} belongs to another structure: the marked lines differ.',
       assist: 'Step 2 done: the view is {w} × {h} cells.',
-      assistLabel: 'Outline {w} × {h}',
+      assistStep: 'Step 2 done',
+      assistLabel: '{w} × {h} cells',
     },
     bridge: 'Engineers, architects and machinists read three views like these every day. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance.',
     offscreen: {
