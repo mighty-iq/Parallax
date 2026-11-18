@@ -54,6 +54,7 @@ export const MANIFEST = [
   'js/engine/section.js',
   'js/engine/rebase.js',
   'js/engine/pace.js',
+  'js/engine/trend.js',
   // ENGINE end
   'js/ex/registry.js',
 ];
