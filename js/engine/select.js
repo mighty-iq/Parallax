@@ -10,7 +10,9 @@
      params(def, st, targetP, policy, recent)   the ARCHITECTURE §7 signature → params
      pick(def, st, opts) → { params, key, code, b, g, p, err, weak, cand } | null
        opts: target (raw P), policy, recent { keys, last, lru, count, seen }, filter(c) → bool,
-             weak [{ d, lv }], rng (PX.rng, breaks ties), tol
+             weak [{ d, lv }], rng (PX.rng, breaks ties), tol, pool (v1.2 wave 2: a person pool from
+             E.dims.pool, whose b holds the player's per-dimension offsets)
+     fixed(def, st, params, pool?) the same result for one combination
      note(rec, def, c)          remembers a shown item (lru, recent, seen) in rec.ex[id]
      recent(rec, def)           what pick() needs from that memory
      residual(rec, def, c, x, p) / weak(rec, def)   per dimension-level residuals x − p; flags
@@ -142,7 +144,11 @@
 
   function pick(def, st, opts) {
     opts = opts || {};
-    var list = M.pool(def), n = list.length;
+    // v1.2 wave 2 (PLAN milestone 7): opts.pool, a pool entry with the player's own difficulties
+    // (E.dims.pool: the same candidates in the same order, b with the per-dimension offsets, groups
+    // sorted by that b); without it, the exercise's pool
+    var entry = opts.pool && isArray(opts.pool.list) && opts.pool.list.length === M.pool(def).length ? opts.pool : null;
+    var list = entry ? entry.list : M.pool(def), n = list.length;
     grow(n);
     // A fixed raw target, or one per candidate from the item kind and the style's k (variants
     // may differ in guessing rate, so the raw target follows each candidate's g).
@@ -175,7 +181,7 @@
     // choice below can use; the full scan remains the fallback.
     var windowed = n > 64 && !opts.full;
     if (windowed) {
-      var groups = M.poolEntry(def).groups;
+      var groups = (entry || M.poolEntry(def)).groups;
       for (var gi = 0; gi < groups.length; gi++) {
         var G = groups[gi], gl = G.list, gb = G.bs;
         var bStar = M.bAtExp(mu, sd, fixedT !== null ? fixedT : M.kindTarget(kind, k, G.g), G.g);
@@ -286,9 +292,11 @@
     };
   }
 
-  // The same result shape for a given combination (Free play with fixed settings, probes).
-  function fixed(def, st, params) {
-    var c = M.byKey(def, PX.ex.paramsKey(params));
+  // The same result shape for a given combination (Free play with fixed settings, probes); pool: a
+  // person pool (E.dims.pool), so the prediction uses the player's own difficulty (v1.2 wave 2).
+  function fixed(def, st, params, pool) {
+    var key = PX.ex.paramsKey(params);
+    var c = (pool && pool.byKey ? pool.byKey[key] : null) || M.byKey(def, key);
     if (!c) return null;
     var p = M.pExp(st.mu, st.sd, c.b, c.g);
     return { params: M.copyParams(c.params), key: c.key, code: c.code, b: c.b, g: c.g, p: p, err: 0, target: p, weak: false, cand: c };
