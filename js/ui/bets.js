@@ -64,6 +64,17 @@
     return el ? { el: el, order: 10 } : null;
   }, { id: 'bets.line', order: 10 });
 
+  // The add-ons this build has, in words (the guide's page says the same; bets.test.mjs checks it):
+  // "In this version: comparison rounds for Spin, Nets, Orient and Central Point; …".
+  var ADDON_WORDS = { compare: 'comparison rounds', bridge: 'bridge sets', produce: 'draw-the-answer items', calib: 'detailed feedback on your estimates' };
+  function addonsLine() {
+    var b = B(), parts = b.LAYERS.map(function (l) {
+      var ids = b.hostsOf(l);
+      return ids.length ? ADDON_WORDS[l] + ' for ' + andList(ids.map(shortOf)) : null;
+    }).filter(Boolean);
+    return parts.length ? 'In this version: ' + parts.join('; ') + '.' : 'No add-on is in this version yet.';
+  }
+
   /* ---------- About: "Test the bets with us" ---------- */
 
   function betList(compact) {
@@ -82,6 +93,7 @@
       h('p', 'No theory of transfer has won yet, so Parallax spreads its bets. Each exercise names the one mechanism it bets on, and your record logs how much of each you got, so the community’s pooled exports can test the bets against each other. One bet, calibration, is new: no study has tested it.'),
       betList(false),
       h('p', TRIALS_TEXT + ' “Join the bet trials” in Settings is on by default; switch it off and every add-on runs for every exercise.'),
+      h('p', { 'data-bets': 'addons' }, addonsLine()),
       h('p', ui.button('The bets in the Lab', { kind: 'secondary', small: true, go: 'lab' })));
     return { el: sec, after: 'claims' };
   }, { id: 'bets.about', order: 30 });
@@ -94,7 +106,7 @@
     p.el.setAttribute('data-section', 'bettrials');
     p.body.appendChild(K.toggle({
       key: 'betTrials', label: 'Join the bet trials', checked: s.betTrials !== false,
-      hint: 'Switches each add-on (comparison rounds, bridge sets, draw-the-answer items, detailed feedback) on for half of the exercises that have it and off for the other half, swapping every period of at least 4 weeks and 8 sessions, so pooled exports can test the bets. Off: every add-on runs for every exercise. Nothing leaves this device unless you export it.',
+      hint: 'Switches each add-on on for half of the exercises that have it and off for the other half, swapping every period of at least 4 weeks and 8 sessions, so pooled exports can test the bets. Off: every add-on runs for every exercise. ' + addonsLine() + ' Nothing leaves this device unless you export it.',
       onChange: function (v) {
         var S = store(), rec = S.state;
         rec.settings.betTrials = !!v;
@@ -167,7 +179,7 @@
     p.body.appendChild(h('p.px-lab-intro', 'Each exercise names the one mechanism it bets on. Your record logs how much of each bet you got, and which add-ons ran when, so pooled exports can test the bets against each other.'));
     p.body.appendChild(betList(true));
     p.body.appendChild(h('h3', 'Your bet trials'));
-    p.body.appendChild(h('p.px-meta', TRIALS_TEXT));
+    p.body.appendChild(h('p.px-meta', TRIALS_TEXT + ' ' + addonsLine()));
     trialsNow(rec, now).forEach(function (el) { p.body.appendChild(el); });
     var set = ui.button('Bet trials in Settings', { kind: 'ghost', small: true, go: 'settings?section=bettrials' });
     p.body.appendChild(h('p', set));
@@ -531,5 +543,5 @@
     };
   }, { id: 'bets.calib', order: 40 });
 
-  PX.ui.bets = { betLine: betLine, eventsCSV: eventsCSV, doseCSV: doseCSV, LAYER_WORDS: LAYER_WORDS, exNames: exNames, uiBets: uiBets, showRound: showRound, runRound: runRound, report: report, runBridge: runBridge };
+  PX.ui.bets = { addonsLine: addonsLine, betLine: betLine, eventsCSV: eventsCSV, doseCSV: doseCSV, LAYER_WORDS: LAYER_WORDS, exNames: exNames, uiBets: uiBets, showRound: showRound, runRound: runRound, report: report, runBridge: runBridge };
 })(window.PX);

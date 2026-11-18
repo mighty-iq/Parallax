@@ -34,6 +34,9 @@ def boot(page):
         page.keyboard.press('Escape')
         page.wait_for_timeout(120)
     page.evaluate("PX.debug.fast(true); PX.ex.list('train').forEach(d => { PX.core.store.state.tour.seen[d.id] = true; });")
+    # only W2-bets' player and screen hooks run here (the lead's note: the shared suites mute every builder's
+    # hooks, so this file covers ours); other modules' cards would only get in the way
+    page.evaluate("PX.ui.hooks.mute && PX.ui.hooks.mute((id) => /^bets\\./.test(id))")
 
 
 def go(page, route, params=None):
