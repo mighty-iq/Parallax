@@ -395,10 +395,11 @@
       { ms: 1500, caption: cap('outline'), enter: function () { reset(); straight(); }, update: function (k) { inkOutline(item, Math.min(1, k * 1.6)); } },
     ];
     if (turns) {
-      // quarter turns first, then the flip, each about 0.9 s, in sight over the solid
+      // quarter turns first, then the flip, each about 1.3 s, in sight over the solid, then a short hold
+      // (2-4 s a movement, as the exercise guide sets: the turn is what the turned levels teach)
       var r = tn.n ? 1 : 0, f = tn.flip ? 1 : 0, kr = r / (r + f);
       list.push({
-        ms: 900 * (r + f) + 500, caption: cap('spin'),
+        ms: 1300 * (r + f) + 900, caption: cap('spin'),
         enter: function () { reset(); straight(); st.spinA = outlinePage(item); st.spinC = centreOf(st.spinA); inkPage(st.spinA, 1); },
         update: function (k) {
           var u = Math.min(1, k * 1.25), a = kr ? ease(Math.min(1, u / kr)) : 1, b = f ? ease(U.clamp((u - kr) / (1 - kr), 0, 1)) : 0;
