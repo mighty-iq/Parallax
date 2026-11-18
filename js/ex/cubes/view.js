@@ -6,12 +6,19 @@
    - Drawing order: cubes far to near (ascending x + y + z: with the viewer at +x, +y, +z a cube
      can only hide cubes that are behind it in all three directions), each cube's exposed top,
      front and right faces. Cubes carry no marks (Cube Match's format stays with the probe).
-   - Reveal and show me: the cubes with exactly N painted sides get numbered badges; hidden ones
-     are drawn as dashed ghost cubes on top of the figure. Show me tallies them one by one, column
-     by column from the back, with each cube's painted sides named (lib.cubesOf: the same neighbour
-     tests the validator recounts).
-   - Demo (Watch): the figure, then its hidden cubes as dashed ghosts when it has any, the answers,
-     then the tally as in show me. */
+   - A cube's number is its count of painted sides (lib.cubesOf: the same neighbour tests the
+     validator recounts). Badges: a number in ink; a cube counted for the question in the accent
+     with a ring (shape as well as colour); '?' on a cube left to the player; hidden cubes as
+     dashed ghost cubes with dashed badges.
+   - v1.2 (docs/research/v1.2/D2-first-band.md §3.3, CONTRACT-v1.2 D): Try 1's first step done
+     (ctx.assist = { numbers: 2 }: every cube's number but two, which show '?'); rule figures
+     (drawRule: a touching face bare, a cube under another, a hidden support); show me carries out
+     the "Count by position" card on the item, its captions numbered by the card's steps: the
+     figure pulled apart (faces that touch another cube bare, hatched), every cube's number (on a
+     flat figure 5 minus the cubes it touches), then the cubes with the number asked, one at a
+     time, hidden ones included. Reveal rings the counted cubes with their number.
+   - Demo (Watch): the figure, its hidden cubes as dashed ghosts when it has any, the answers,
+     then show me's steps. */
 (function (PX) {
   'use strict';
 
@@ -19,7 +26,8 @@
   var h = PX.ui.h;
   var def = PX.ex.get('cubes'), lib = def.lib;
   var SIDES = ['top', 'front', 'right', 'back', 'left'];
-  var st = null;
+  var SPREAD = 1.4; // pulled apart: cube origins 1.4 edges apart, so touching faces show in the gaps
+  var st = null, uid = 0;
 
   function learn() { return PX.ex.learn('cubes') || {}; }
   function cap(key, vars) {
@@ -28,22 +36,26 @@
     return s;
   }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function tallest(H) { var m = 0; H.forEach(function (r) { r.forEach(function (v) { if (v > m) m = v; }); }); return m; }
 
   /* ---------- geometry ---------- */
 
   function pt(P) { return lib.proj(P); }
-  // Corners of the face (side 0 top, 1 front, 2 right) of the cube at (x, y, z), in screen units.
-  function faceCorners(x, y, z, side) {
+  // Corners of a face (side 0 top, 1 front, 2 right) of the unit cube whose corner is at o.
+  function faceAt(o, side) {
+    var x = o[0], y = o[1], z = o[2];
     if (side === 0) return [[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]].map(pt);
     if (side === 1) return [[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]].map(pt);
     return [[x + 1, y, z], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x + 1, y + 1, z]].map(pt);
   }
-  // The figure's own bounds (every cube corner), padded.
-  function bounds(cubes) {
+  function origin(q, s) { return [q.x * s, q.y * s, q.z * s]; }
+  // The figure's bounds (every cube corner at spread s), padded: [x, y, w, h] for the viewBox.
+  function bounds(cubes, s) {
     var b = [Infinity, Infinity, -Infinity, -Infinity];
     cubes.forEach(function (q) {
+      var o = origin(q, s);
       for (var i = 0; i < 8; i++) {
-        var c = pt([q.x + (i & 1), q.y + ((i >> 1) & 1), q.z + ((i >> 2) & 1)]);
+        var c = pt([o[0] + (i & 1), o[1] + ((i >> 1) & 1), o[2] + ((i >> 2) & 1)]);
         b[0] = Math.min(b[0], c[0]); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], c[0]); b[3] = Math.max(b[3], c[1]);
       }
     });
@@ -53,19 +65,33 @@
 
   /* ---------- drawing ---------- */
 
-  function figureSvg(item, cls) {
-    var cubes = lib.cubesOf(item.heights), vb = bounds(cubes);
-    var svg = S.svg(vb[2], vb[3], { viewBox: vb, class: 'ex-cubes-svg ' + (cls || ''), width: '100%' });
+  // A hatch for bare (unpainted) faces: light ground, dark diagonal lines (shape, not colour alone).
+  function hatchDef(svg) {
+    var id = 'ex-cubes-hatch-' + (++uid), w = 0.16;
+    var pat = S.el('pattern', { id: id, patternUnits: 'userSpaceOnUse', width: w, height: w, patternTransform: 'rotate(45)' });
+    pat.appendChild(S.el('rect', { width: w, height: w, class: 'ex-cubes-bare-bg' }));
+    pat.appendChild(S.el('line', { x1: 0.04, y1: 0, x2: 0.04, y2: w, class: 'ex-cubes-bare-line' }));
+    svg.appendChild(S.el('defs', null, pat));
+    return id;
+  }
+  // The figure of height map H at spread s. s = 1: the exposed top, front and right faces (the
+  // others are covered by a neighbour). s > 1 (pulled apart): every top, front and right face, a
+  // face that touches another cube bare.
+  function figureSvg(H, s, cls) {
+    var cubes = lib.cubesOf(H), vb = bounds(cubes, s);
+    var svg = S.svg(vb[2], vb[3], { viewBox: vb, class: cls || 'ex-cubes-svg', width: '100%' });
+    var hatch = s > 1 ? hatchDef(svg) : null;
     var order = cubes.map(function (q, i) { return i; }).sort(function (a, b) {
       var qa = cubes[a], qb = cubes[b];
       return (qa.x + qa.y + qa.z) - (qb.x + qb.y + qb.z) || qa.y - qb.y || a - b;
     });
     var g = S.el('g', { class: 'ex-cubes-figure' });
     order.forEach(function (i) {
-      var q = cubes[i];
-      for (var s = 0; s < 3; s++) {
-        if (!q.sides[s]) continue;
-        g.appendChild(S.path(faceCorners(q.x, q.y, q.z, s), true, { class: 'ex-cubes-face ex-cubes-face--' + SIDES[s] }));
+      var q = cubes[i], o = origin(q, s);
+      for (var f = 0; f < 3; f++) {
+        var bare = !q.sides[f];
+        if (bare && !hatch) continue;
+        g.appendChild(S.path(faceAt(o, f), true, bare ? { class: 'ex-cubes-face ex-cubes-face--bare', style: 'fill:url(#' + hatch + ')' } : { class: 'ex-cubes-face ex-cubes-face--' + SIDES[f] }));
       }
     });
     svg.appendChild(g);
@@ -80,40 +106,73 @@
     var d = E.map(function (e) { return 'M' + c[e[0]][0] + ' ' + c[e[0]][1] + 'L' + c[e[1]][0] + ' ' + c[e[1]][1]; }).join('');
     return S.el('path', { d: d, class: 'ex-cubes-ghost' });
   }
-  // A numbered badge on the cube's most visible face, or at its centre when it is hidden.
-  function badge(q, n, hidden, vis) {
-    var at;
-    if (hidden) at = pt([q.x + 0.5, q.y + 0.5, q.z + 0.5]);
+  // A badge on the cube's most visible face, or at its centre when it is hidden. kind: 'number'
+  // (ink), 'count' (counted for the question: the accent and a ring), 'unknown' ('?').
+  function badge(c, text, kind) {
+    var q = c.q, at;
+    if (c.hidden) at = pt([q.x + 0.5, q.y + 0.5, q.z + 0.5]);
     else {
-      var best = 0, side = 0;
-      for (var s = 0; s < 3; s++) if (vis && vis.faces[s] > best) { best = vis.faces[s]; side = s; }
-      var f = faceCorners(q.x, q.y, q.z, side);
+      var best = -1, side = 0;
+      for (var s = 0; s < 3; s++) if (c.vis.faces[s] > best) { best = c.vis.faces[s]; side = s; }
+      var f = faceAt([q.x, q.y, q.z], side);
       at = [(f[0][0] + f[2][0]) / 2, (f[0][1] + f[2][1]) / 2];
     }
-    var g = S.el('g', { class: 'ex-cubes-badge' + (hidden ? ' is-hidden' : '') });
+    var g = S.el('g', { class: 'ex-cubes-badge ex-cubes-badge--' + kind + (c.hidden ? ' is-hidden' : '') });
+    if (kind === 'count') g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.4, class: 'ex-cubes-ring' }));
     g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.3 }));
-    g.appendChild(S.text(at[0], at[1] + 0.11, String(n), { class: 'ex-cubes-badge-n' }));
+    g.appendChild(S.text(at[0], at[1] + 0.11, String(text), { class: 'ex-cubes-badge-n' }));
     return g;
   }
   function marks() { var m = st.fig.svg.querySelector('.ex-cubes-marks'); PX.ui.clear(m); return m; }
-  // The cubes with exactly N painted sides, in tally order: column by column from the back left,
-  // each column from the top down (as the tally strategy goes).
-  function counted(item) {
-    var cubes = st.fig.cubes, rr = lib.render(item.heights), out = [];
-    cubes.forEach(function (q, i) { if (q.painted === item.ask) out.push({ q: q, i: i, vis: rr.perCube[i], hidden: rr.perCube[i].any === 0 }); });
+
+  // Every cube with what the steps need, in tally order: column by column from the back left,
+  // each column from the top down (as the card goes).
+  function cubeList(item) {
+    if (st.list && st.listItem === item) return st.list;
+    var rr = lib.render(item.heights), out = [];
+    rr.cubes.forEach(function (q, i) { out.push({ q: q, i: i, vis: rr.perCube[i], hidden: rr.perCube[i].any === 0, counted: q.painted === item.ask }); });
     out.sort(function (a, b) { return a.q.z - b.q.z || a.q.x - b.q.x || b.q.y - a.q.y; });
+    st.list = out; st.listItem = item;
     return out;
   }
+  function counted(item) { return cubeList(item).filter(function (c) { return c.counted; }); }
   function sidesText(q) {
     var names = [];
     q.sides.forEach(function (on, s) { if (on) names.push(SIDES[s]); });
     return names.length ? names.join(', ') : 'none';
   }
+  function touching(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) === 1; }
+
+  // Numbers on the figure. opts: { counted: how many of the counted cubes (tally order) are ringed,
+  // blank: [cube indices showing '?'], only: counted cubes alone }. Ghosts go first, so no dashed
+  // edge crosses a number.
+  function numbers(item, opts) {
+    var m = marks(), all = cubeList(item), k = 0, ring = {};
+    counted(item).forEach(function (c) { if (k++ < (opts.counted || 0)) ring[c.i] = true; });
+    var shown = all.filter(function (c) { return opts.only ? ring[c.i] : true; });
+    shown.forEach(function (c) { if (c.hidden) m.appendChild(ghost(c.q)); });
+    shown.forEach(function (c) {
+      var blank = (opts.blank || []).indexOf(c.i) >= 0;
+      m.appendChild(badge(c, blank ? '?' : c.q.painted, ring[c.i] ? 'count' : blank ? 'unknown' : 'number'));
+    });
+  }
+  // Try 1's first step done (ctx.assist = { numbers: n }): every cube's number but n. Left blank:
+  // the last counted cube in tally order and a cube that touches it, so the rule has to be used once
+  // on a counted cube and once on another.
+  function assistBlanks(item, n) {
+    var all = cubeList(item), cnt = all.filter(function (c) { return c.counted && !c.hidden; }), out = [];
+    var a = cnt[cnt.length - 1];
+    if (a) out.push(a.i);
+    var others = all.filter(function (c) { return !c.counted && !c.hidden; });
+    var b = a ? others.filter(function (c) { return touching(c.q, a.q); })[0] || others[0] : others[0];
+    if (b && out.length < n) out.push(b.i);
+    return out;
+  }
 
   function describe(item) {
     var n = lib.total(item.heights);
     return 'A figure of ' + plural(n, 'cube', 'cubes') + ' glued together on a ' + item.grid + ' by ' + item.grid + ' grid, at most ' +
-      Math.max.apply(null, item.heights.map(function (r) { return Math.max.apply(null, r); })) + ' high, painted on every outside face except the bottom. ' +
+      tallest(item.heights) + ' high, painted on every outside face except the bottom. ' +
       'How many cubes have exactly ' + plural(item.ask, 'painted side', 'painted sides') + '?';
   }
 
@@ -132,7 +191,7 @@
     root.appendChild(h('div.ex-cubes-under', caption, verdict));
     root.appendChild(desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, stage: stage, figure: figure, q: q, verdict: verdict, caption: caption, desc: desc, item: null, optItem: null, opts: [], fig: null };
+    st = { ctx: ctx, root: root, stage: stage, figure: figure, q: q, verdict: verdict, caption: caption, desc: desc, item: null, optItem: null, opts: [], fig: null, pulled: null, assist: null, list: null, listItem: null };
   }
 
   function question(item) {
@@ -149,12 +208,19 @@
     st.verdict.hidden = true;
     st.verdict.textContent = '';
     st.caption.textContent = '';
-    st.desc.textContent = describe(item);
     st.root.classList.remove('is-revealed');
     PX.ui.clear(st.figure);
-    st.fig = figureSvg(item);
+    st.fig = figureSvg(item.heights, 1);
+    st.pulled = null;
     st.figure.appendChild(st.fig.svg);
     question(item);
+    var a = ctx && ctx.assist && typeof ctx.assist === 'object' && ctx.assist.numbers > 0 ? ctx.assist : null;
+    st.assist = a ? assistBlanks(item, a.numbers) : null;
+    if (st.assist) {
+      numbers(item, { blank: st.assist });
+      st.caption.textContent = cap('assist');
+    }
+    st.desc.textContent = describe(item) + (st.assist ? ' Every cube but ' + st.assist.length + ' shows its number of painted sides.' : '');
     return timing.nextPaint();
   }
 
@@ -173,19 +239,33 @@
   function optionLabel(item, i) { return plural(item.options[i], 'cube', 'cubes'); }
   function gridCols() { return 5; }
 
+  /* ---------- rule figures (the rules card; CONTRACT-v1.2 D) ---------- */
+
+  // touch: two cubes side by side, pulled apart, the faces that touched bare; under: two stacked,
+  // the lower top bare; hidden: a column of two whose lower cube is hidden by a cube in front and
+  // one to its right, drawn as a dashed ghost.
+  // (Height maps are square, H[z][x]; the rule figures spread wider than show me's, 1.6, so the bare
+  // face shows well at 72–96 px.)
+  var RULES = { touch: { H: [[1, 1], [0, 0]], s: 1.6 }, under: { H: [[2]], s: 1.6 }, hidden: { H: [[2, 1], [1, 0]], s: 1, ghosts: true } };
+  function drawRule(el, fig) {
+    var r = RULES[fig];
+    if (!r || !el) return;
+    var f = figureSvg(r.H, r.s, 'ex-cubes-rule-svg');
+    if (r.ghosts) {
+      var rr = lib.render(r.H), m = f.svg.querySelector('.ex-cubes-marks');
+      rr.cubes.forEach(function (q, i) { if (rr.perCube[i].any === 0) m.appendChild(ghost(q)); });
+    }
+    el.appendChild(h('div.ex-cubes.ex-cubes-rulefig', f.svg));
+  }
+
   /* ---------- reveal ---------- */
 
-  // Ghosts first, then badges, so no dashed edge crosses a number.
-  function markAll(item, upTo) {
-    var m = marks(), list = counted(item), shown = list.filter(function (c, k) { return upTo === undefined || k < upTo; });
-    shown.forEach(function (c) { if (c.hidden) m.appendChild(ghost(c.q)); });
-    shown.forEach(function (c, k) { m.appendChild(badge(c.q, k + 1, c.hidden, c.vis)); });
-    return list;
-  }
   function reveal(item, response, result, ctx) {
     if (!st) return Promise.resolve();
     st.root.classList.add('is-revealed');
-    var list = markAll(item), hid = list.filter(function (c) { return c.hidden; }).length;
+    var list = counted(item), hid = list.filter(function (c) { return c.hidden; }).length;
+    // After Try 1 every number shows (the two left blank filled in); otherwise the counted cubes.
+    numbers(item, { counted: list.length, only: !st.assist });
     st.verdict.textContent = '✓ ' + plural(item.count, 'cube has', 'cubes have') + ' exactly ' + plural(item.ask, 'painted side', 'painted sides') +
       (hid ? ' (' + hid + ' hidden, dashed)' : '') + '.';
     st.verdict.setAttribute('data-kind', 'key');
@@ -193,7 +273,7 @@
     return timing.wait(ctx && ctx.fast ? 0 : 250);
   }
 
-  /* ---------- show me: the tally, cube by cube ---------- */
+  /* ---------- show me: the "Count by position" card, step by step ---------- */
 
   function focusOption(i) {
     st.opts.forEach(function (o, j) {
@@ -202,26 +282,37 @@
       if (b) b.classList.toggle('ex-focus', j === i);
     });
   }
+  // The figure in the stem: normal, or pulled apart (the same cubes, spread out).
+  function normal() {
+    if (st.pulled && st.pulled.svg.parentNode) { st.figure.replaceChild(st.fig.svg, st.pulled.svg); }
+    st.figure.classList.remove('is-pulled');
+  }
+  function pulledApart(item) {
+    if (!st.pulled) st.pulled = figureSvg(item.heights, SPREAD);
+    if (st.fig.svg.parentNode) st.figure.replaceChild(st.pulled.svg, st.fig.svg);
+    st.figure.classList.add('is-pulled');
+  }
   function steps(item, response) {
-    var list = counted(item), out = [];
-    out.push({ ms: 1400, caption: cap('question'), enter: function () { marks(); focusOption(-1); st.q.classList.add('is-pointed'); }, exit: function () { st.q.classList.remove('is-pointed'); } });
-    list.forEach(function (c, k) {
+    var list = counted(item), k = list.length, N = item.ask, flat = tallest(item.heights) === 1, out = [];
+    out.push({ ms: 1500, caption: cap('question'), enter: function () { normal(); marks(); focusOption(-1); st.q.classList.add('is-pointed'); }, exit: function () { st.q.classList.remove('is-pointed'); } });
+    out.push({ ms: 2800, caption: cap('explode'), enter: function () { marks(); focusOption(-1); pulledApart(item); }, exit: normal });
+    out.push({ ms: 2600, caption: cap(flat ? 'numbersFlat' : 'numbers'), enter: function () { normal(); numbers(item, {}); focusOption(-1); } });
+    list.forEach(function (c, j) {
       out.push({
         ms: c.hidden ? 2200 : 1600,
-        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: k + 1, k: list.length, sides: plural(c.q.painted, 'painted side', 'painted sides') + ' (' + sidesText(c.q) + ')' }),
-        enter: function () { markAll(item, k + 1); focusOption(-1); },
+        caption: cap(c.hidden ? 'tallyHidden' : 'tally', { n: j + 1, k: k, N: N, sides: plural(c.q.painted, 'painted side', 'painted sides') + ' (' + sidesText(c.q) + ')' }),
+        enter: function () { normal(); numbers(item, { counted: j + 1 }); focusOption(-1); },
       });
     });
-    out.push({ ms: 1300, caption: cap('skip'), enter: function () { markAll(item); } });
     out.push({
       ms: 1800, caption: cap('done', { k: item.count, cubes: item.count === 1 ? 'cube has' : 'cubes have', sides: plural(item.ask, 'painted side', 'painted sides') }),
-      enter: function () { markAll(item); focusOption(item.key); },
+      enter: function () { normal(); numbers(item, { counted: k }); focusOption(item.key); },
     });
     var r = response;
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < 5) {
       out.push({
         ms: 2200, caption: cap('chosen', { n: item.options[r], d: item.options[r] > item.count ? 'more than' : 'fewer than' }),
-        enter: function () { markAll(item); focusOption(r); },
+        enter: function () { normal(); numbers(item, { counted: k }); focusOption(r); },
       });
     }
     return out;
@@ -255,33 +346,31 @@
     if (ctx && typeof ctx.play === 'function') return ctx.play(list, o);
     return runSteps(list, ctx, o);
   }
+  function done() { if (st) { normal(); focusOption(-1); } }
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
-    return play(steps(item, response), ctx, { name: 'show-me' }).then(function () { if (st) focusOption(-1); });
+    return play(steps(item, response), ctx, { name: 'show-me' }).then(done, done);
   }
   // The cubes nothing of which shows (supports under taller columns), as dashed ghosts.
   function ghostHidden(item) {
-    var m = marks(), rr = lib.render(item.heights), n = 0;
-    rr.cubes.forEach(function (q, i) { if (rr.perCube[i].any === 0) { m.appendChild(ghost(q)); n++; } });
+    var m = marks(), n = 0;
+    cubeList(item).forEach(function (c) { if (c.hidden) { m.appendChild(ghost(c.q)); n++; } });
     return n;
   }
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
-    var hid = lib.render(item.heights).perCube.filter(function (pc) { return pc.any === 0; }).length;
+    var hid = cubeList(item).filter(function (c) { return c.hidden; }).length;
     var intro = [
-      { ms: 2200, caption: cap('figure'), enter: function () { marks(); focusOption(-1); st.figure.classList.add('is-pointed'); }, exit: function () { st.figure.classList.remove('is-pointed'); } },
+      { ms: 2200, caption: cap('figure'), enter: function () { normal(); marks(); focusOption(-1); st.figure.classList.add('is-pointed'); }, exit: function () { st.figure.classList.remove('is-pointed'); } },
     ];
-    // The Watch item hides a cube (learn.js demo), and the tips are about hidden cubes, so the demo
-    // shows it first, dashed (RV-play-dat).
     if (hid) {
       intro.push({
         ms: 2600, caption: cap('hidden', { what: hid === 1 ? 'The dashed cube is' : 'The dashed cubes are', where: hid === 1 ? 'under the cube above it' : 'under the cubes above them' }),
-        enter: function () { ghostHidden(item); focusOption(-1); }, exit: function () { marks(); },
+        enter: function () { normal(); ghostHidden(item); focusOption(-1); }, exit: function () { marks(); },
       });
     }
-    intro.push({ ms: 1800, caption: cap('options'), enter: function () { marks(); } });
-    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null })
-      .then(function () { if (st) focusOption(-1); });
+    intro.push({ ms: 1800, caption: cap('options'), enter: function () { normal(); marks(); } });
+    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null }).then(done, done);
   }
 
   function unmount() {
@@ -294,7 +383,7 @@
     layout: 'stem+options',
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
-    reveal: reveal, showMe: showMe, demo: demo, unmount: unmount,
+    reveal: reveal, showMe: showMe, demo: demo, unmount: unmount, drawRule: drawRule,
     steps: function (item, response) { return st ? steps(item, response) : []; },
   });
 })(window.PX);
