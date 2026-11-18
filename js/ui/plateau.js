@@ -118,7 +118,8 @@
   }
 
   // The card body for one event: fired (plateau, faster, ceiling) or ended (a verdict).
-  function body(ev, rec, phase) {
+  // opts.today: Today's shorter card (no line about the draw: the summary said it)
+  function body(ev, rec, phase, opts) {
     var def = PX.ex.get(ev.exId), out = [];
     if (!def) return out;
     if (phase === 'verdict' || (phase !== 'fire' && ev.verdict)) {
@@ -141,7 +142,7 @@
     out.push(h('p.pt-head', flatLine(ev, def)));
     out.push(h('p', cl[0] + ' ' + cl[1]));
     out.push(h('p.px-meta', trialLine(ev, def)));
-    var dl = drawnLine(ev);
+    var dl = opts && opts.today ? null : drawnLine(ev);
     if (dl) out.push(h('p.px-meta.pt-drawn', dl));
     return out;
   }
@@ -197,7 +198,7 @@
     var K = PX.ui.kit, running = ev.kind === 'plateau' && ev.trial && ev.trial.end === null && !ev.verdict;
     var p = K.panel({ title: titleOf(ev, ev.verdict ? 'verdict' : 'fire'), className: 'px-slot px-slot--plateau pt-panel', aside: running ? 'a change from your log' : null });
     p.el.setAttribute('data-plateau', ev.id);
-    body(ev, rec, ev.verdict ? 'verdict' : 'fire').forEach(function (el) { p.body.appendChild(el); });
+    body(ev, rec, ev.verdict ? 'verdict' : 'fire', { today: true }).forEach(function (el) { p.body.appendChild(el); });
     if (running) {
       var pr = P().progress(rec, ev, now);
       if (pr) p.body.appendChild(h('p.px-meta.pt-progress', pr.resting ? 'Resting until ' + WEEKDAYS[new Date(pr.restUntil).getDay()] + '.' :
