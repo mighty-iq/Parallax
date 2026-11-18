@@ -55,6 +55,9 @@
 .ex-centralpoint .ex-cp-label.ex-cp-avglabel { fill: var(--wrong, #B33A2F); font-weight: 600; }
 .ex-centralpoint .ex-cp.is-why .ex-cp-lines, .ex-centralpoint .ex-cp.is-why .ex-cp-labels,
 .ex-centralpoint .ex-cp.is-why .ex-cp-band, .ex-centralpoint .ex-cp.is-why .ex-cp-map { display: none; }
+/* the map replaces the lengths (the totals line keeps the sum) */
+.ex-centralpoint .ex-cp.is-map .ex-cp-labels .ex-cp-len { display: none; }
+.ex-centralpoint .ex-cp.is-map .ex-cp-line { stroke-opacity: 0.45; }
 
 /* controls: four 44 px arrows (exact) and Confirm; after the answer the result row takes their place */
 .ex-centralpoint .ex-cp-controls, .ex-centralpoint .ex-cp-result {
@@ -67,7 +70,7 @@
 .ex-centralpoint .ex-cp[data-form="quick"] .ex-cp-confirm { flex: 0 1 12rem; margin: 0 auto; }
 .ex-centralpoint .ex-cp-result { justify-content: space-between; }
 .ex-centralpoint .ex-cp-result-text { min-width: 0; }
-.ex-centralpoint .ex-cp-totals { margin: 0; font-size: var(--fs-sm, 0.875rem); line-height: 1.35; color: var(--ink, #1A1D21); }
+.ex-centralpoint .ex-cp-totals { margin: 0; font-size: var(--fs-sm, 0.875rem); line-height: 1.35; color: var(--ink, #1A1D21); font-variant-numeric: tabular-nums; }
 .ex-centralpoint .ex-cp-note { margin: 0; font-size: var(--fs-xs, 0.8125rem); line-height: 1.35; color: var(--ink-2, #454B52); }
 .ex-centralpoint .ex-cp-mapbtn { flex: 0 0 auto; min-height: var(--tap, 44px); min-width: var(--tap, 44px); }
 .ex-centralpoint .ex-cp-hint { margin: 0; text-align: center; }

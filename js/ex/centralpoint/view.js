@@ -85,7 +85,7 @@
     var mapBtn = PX.ui.button(cap('map') || 'Map', { kind: 'secondary', small: true, className: 'ex-cp-mapbtn', onClick: function () { setMap(!st.mapOn); } });
     mapBtn.setAttribute('aria-pressed', 'false');
     mapBtn.setAttribute('aria-label', cap('mapLabel') || 'Show lines of equal total distance');
-    var totals = h('p.ex-cp-totals.px-num'), verdict = h('p.ex-cp-note');
+    var totals = h('p.ex-cp-totals'), verdict = h('p.ex-cp-note');
     var result = h('div.ex-cp-result', { hidden: true }, h('div.ex-cp-result-text', totals, verdict), mapBtn);
     var root = h('div.ex-cp', stage, controls, result, hint, live, sr);
     ctx.host.appendChild(root);
@@ -140,6 +140,41 @@
   }
   function labelAt(x, y, text, cls) {
     return E('text', { x: x * U, y: y * U, transform: 'scale(' + (1 / U) + ')', class: 'ex-cp-label ' + (cls || ''), 'text-anchor': 'middle', 'dominant-baseline': 'central' }, text);
+  }
+  // A small greedy label placer: each label goes to the candidate spot that keeps farthest from what the
+  // plate already shows (targets, rings, the marker, lines, earlier labels) and stays on the plate.
+  function placer(base) {
+    var pts = base ? base.pts.slice() : [], segs = base ? base.segs.slice() : [];
+    function segDist(c, a, b) {
+      var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? ((c[0] - a[0]) * dx + (c[1] - a[1]) * dy) / L2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      return Math.sqrt(Math.pow(a[0] + t * dx - c[0], 2) + Math.pow(a[1] + t * dy - c[1], 2));
+    }
+    function score(c, w) {
+      var r = Math.max(w / 2, 0.36), m = Infinity, i;
+      for (i = 0; i < pts.length; i++) m = Math.min(m, Math.sqrt(Math.pow(c[0] - pts[i][0], 2) + Math.pow(c[1] - pts[i][1], 2)) - pts[i][2] - r);
+      for (i = 0; i < segs.length; i++) m = Math.min(m, segDist(c, segs[i][0], segs[i][1]) - 0.12 - Math.min(r, 0.4));
+      var edge = Math.min(c[0] - w / 2 + M, LAST + M - c[0] - w / 2, c[1] - 0.35 + M, LAST + M - c[1] - 0.35);
+      return edge < 0.05 ? -99 + edge : m;
+    }
+    return {
+      pts: pts, segs: segs,
+      point: function (x, y, r) { pts.push([x, y, r || 0]); },
+      seg: function (a, b) { segs.push([a, b]); },
+      // cands: [[x, y], …] in order of preference (ties keep the earlier one); text: the label
+      place: function (cands, text) {
+        var w = 0.38 * String(text).length + 0.2, best = null, bs = -Infinity;
+        cands.forEach(function (c) { var v = score(c, w); if (v > bs + 0.02) { bs = v; best = c; } });
+        pts.push([best[0], best[1], Math.max(w / 2, 0.36)]);
+        return best;
+      },
+      copy: function () { return placer({ pts: pts, segs: segs }); },
+    };
+  }
+  function around(x, y, r) {
+    var out = [], d = [[1, -1], [-1, -1], [1, 1], [-1, 1], [0, -1.2], [0, 1.2], [1.3, 0], [-1.3, 0]];
+    d.forEach(function (v) { out.push([x + v[0] * r, y + v[1] * r]); });
+    return out;
   }
   // Try 1's first step: the kite's two diagonals (each pair of targets with the best point between them).
   function drawAssist(item, kind) {
@@ -275,7 +310,6 @@
     clear(st.L.best);
     var k = item.key, g = item.gm;
     st.L.best.appendChild(E('circle', { cx: k.x, cy: k.y, r: R_BEST, class: 'ex-cp-bestring' }));
-    st.L.best.appendChild(labelAt(k.x - 0.85, k.y + 0.95, cap('best') || 'best', 'ex-cp-bestlabel'));
     if (Math.abs(g[0] - k.x) + Math.abs(g[1] - k.y) > 0.08) { // the continuous best spot lies between answer points
       st.L.best.appendChild(E('path', { d: 'M' + (g[0] - 0.2) + ' ' + (g[1] - 0.2) + 'L' + (g[0] + 0.2) + ' ' + (g[1] + 0.2) + 'M' + (g[0] - 0.2) + ' ' + (g[1] + 0.2) + 'L' + (g[0] + 0.2) + ' ' + (g[1] - 0.2), class: 'ex-cp-cross' }));
     }
@@ -288,16 +322,36 @@
       st.L.band.appendChild(E('rect', { x: x - 0.14, y: y - 0.14, width: 0.28, height: 0.28, class: 'ex-cp-bandpt' }));
     });
   }
-  // Lines from a spot to every target, each labelled with its length in dots (one decimal).
+  // Lines from a spot to every target; their lengths in dots (one decimal) are placed by the reveal.
   function drawLines(T, from) {
     clear(st.L.lines); clear(st.L.labels);
-    T.forEach(function (t, i) {
-      var dx = t[0] - from.x, dy = t[1] - from.y, d = Math.sqrt(dx * dx + dy * dy);
-      if (d < 1e-9) return;
+    T.forEach(function (t) {
+      if (Math.abs(t[0] - from.x) + Math.abs(t[1] - from.y) < 1e-9) return;
       st.L.lines.appendChild(E('line', { x1: from.x, y1: from.y, x2: t[0], y2: t[1], class: 'ex-cp-line' }));
-      var ux = dx / d, uy = dy / d, side = i % 2 ? 1 : -1, at = d < 2.4 ? 0.5 : 0.6;
-      var lx = from.x + dx * at - uy * 0.42 * side, ly = from.y + dy * at + ux * 0.42 * side;
-      st.L.labels.appendChild(labelAt(lx, ly, oneDec(d / F), 'ex-cp-len'));
+    });
+  }
+  // The labels of the reveal: "you" and "best" round their marks, then each line's length, shortest
+  // lines first (they have the fewest good places): along the line on either side, or past its target.
+  function labelReveal(item, from, spot) {
+    var T = item.targets, P = placer(), k = item.key, i;
+    T.forEach(function (t) { P.point(t[0], t[1], R_TGT + 0.12); P.seg([from.x, from.y], t); });
+    P.point(k.x, k.y, R_BEST + 0.06);
+    if (spot) P.point(spot.x, spot.y, 0.64);
+    if (spot) { var yp = P.place(around(spot.x, spot.y, 1.0), cap('you')); st.L.labels.appendChild(labelAt(yp[0], yp[1], cap('you') || 'you', 'ex-cp-youlabel')); }
+    var bp = P.place(around(k.x, k.y, 1.15), cap('best'));
+    st.L.labels.appendChild(labelAt(bp[0], bp[1], cap('best') || 'best', 'ex-cp-bestlabel'));
+    st.place = P.copy(); // the map's labels avoid these, not the lengths (hidden while the map shows)
+    var order = T.map(function (t, j) { return { t: t, d: Math.sqrt(Math.pow(t[0] - from.x, 2) + Math.pow(t[1] - from.y, 2)), j: j }; })
+      .filter(function (o) { return o.d > 1e-9; }).sort(function (a, b) { return a.d - b.d; });
+    order.forEach(function (o) {
+      var ux = (o.t[0] - from.x) / o.d, uy = (o.t[1] - from.y) / o.d, txt = oneDec(o.d / F), c = [];
+      [0.5, 0.38, 0.62, 0.28, 0.72].forEach(function (f) {
+        if (o.d * f < 1.0 || o.d * (1 - f) < 0.75) return; // never on the marker or the ring
+        [1, -1].forEach(function (sd) { c.push([from.x + ux * o.d * f - uy * 0.45 * sd, from.y + uy * o.d * f + ux * 0.45 * sd]); });
+      });
+      c.push([o.t[0] + ux * 1.0, o.t[1] + uy * 1.0], [o.t[0] + ux * 0.8 - uy * 0.6, o.t[1] + uy * 0.8 + ux * 0.6], [o.t[0] + ux * 0.8 + uy * 0.6, o.t[1] + uy * 0.8 - ux * 0.6]);
+      var p = P.place(c, txt);
+      st.L.labels.appendChild(labelAt(p[0], p[1], txt, 'ex-cp-len'));
     });
   }
   function bandWord(b) { return String(Math.round(b * 10000) / 100); }
@@ -309,7 +363,8 @@
     drawBest(item, s);
     drawBand(item, s);
     drawLines(item.targets, spot || item.key);
-    drawMarker(spot, spot ? cap('you') : null);
+    drawMarker(spot, null);
+    labelReveal(item, spot || item.key, spot);
     var e = spot ? Math.max(0, s.S[spot.y * N + spot.x] / best - 1) : null;
     if (!spot) st.totals.textContent = cap('totalsNone', { best: oneDec(best / F) });
     else if (e < 1e-12) st.totals.textContent = cap('totalsBest', { best: oneDec(best / F) });
@@ -327,18 +382,24 @@
   function drawMap(item, s) {
     clear(st.L.map);
     var L = lib(), levels = [item.band].concat([0.02, 0.05, 0.10].filter(function (x) { return x > item.band + 1e-12; }));
-    var names = [];
+    var P = st.place ? st.place.copy() : placer(), names = [];
     for (var i = levels.length - 1; i >= 0; i--) {
       var pts = L.contour(item.targets, item.gm, s.best * (1 + levels[i]), 72), isBand = i === 0;
       st.L.map.appendChild(E('path', { d: S2.pathData(pts, true), class: 'ex-cp-contour' + (isBand ? ' is-band' : '') }));
-      var lp = pts[Math.round(pts.length * 7 / 8) % pts.length];
-      st.L.map.appendChild(labelAt(clampN(lp[0]) + 0.15, Math.max(-0.6, lp[1]) - 0.15, isBand ? (cap('bandLine') || 'band') : '+' + Math.round(levels[i] * 100) + ' %', 'ex-cp-maplabel' + (isBand ? ' is-band' : '')));
+      var txt = isBand ? (cap('bandLine') || 'band') : '+' + Math.round(levels[i] * 100) + ' %', c = [];
+      for (var j = 0; j < 24; j++) { // on the line, or just outside it (a label beside its line reads as its own)
+        var q = pts[(j * 3 + 63) % 72], ox = q[0] - item.gm[0], oy = q[1] - item.gm[1], od = Math.sqrt(ox * ox + oy * oy) || 1;
+        c.push([q[0] + ox / od * 0.55, q[1] + oy / od * 0.55], [q[0] + ox / od * 0.95, q[1] + oy / od * 0.95], [q[0], q[1]]);
+      }
+      var lp = P.place(c, txt);
+      st.L.map.appendChild(labelAt(lp[0], lp[1], txt, 'ex-cp-maplabel' + (isBand ? ' is-band' : '')));
       if (!isBand) names.unshift('+' + Math.round(levels[i] * 100) + ' %');
     }
     st.mapBtn.setAttribute('title', cap('contourNote', { levels: names.join(', ') }));
   }
   function setMap(on) {
     st.mapOn = !!on;
+    st.root.classList.toggle('is-map', st.mapOn);
     st.mapBtn.setAttribute('aria-pressed', st.mapOn ? 'true' : 'false');
     st.mapBtn.firstChild.textContent = st.mapOn ? (cap('hideMap') || 'Hide map') : (cap('map') || 'Map');
     if (!st.revealed || !st.item) return;
@@ -449,7 +510,7 @@
       st.root.classList.remove('is-why');
       clear(st.L.over);
       drawTargets(T);
-      drawMarker(isLatticePt(response) ? response : null, isLatticePt(response) ? cap('you') : null);
+      drawMarker(isLatticePt(response) ? response : null, null);
     });
   }
 
