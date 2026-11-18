@@ -337,8 +337,17 @@ function checkLearnCP(t, PX, def) {
     t.ok(!item.fallback && def.validate(item) === true && item.form === d.params.variant, `the Watch seed ${d.seed} (${d.params.variant}) gives a regular, valid item`);
   }
   t.eq(L.demo[0].seed, L.demo[1].seed, 'both forms watch the same layout');
-  t.ok(Array.isArray(L.practice) && L.practice.length === 3 && L.practice.every(valid), '3 Try items');
-  t.eq(L.practice.map((p) => p.task), ['kite', 'group', 'loose'], 'Try: the kite, the group with a far target, a rated-style item');
+  const pp = (L.practice || []).map((x) => (x && x.params ? x.params : x));
+  t.ok(pp.length === 3 && pp.every(valid), '3 Try items with valid params (CONTRACT-v1.2 D practice entries)');
+  t.eq(pp.map((p) => p.task), ['kite', 'group', 'loose'], 'Try: the kite, the group with a far target, a rated-style item');
+  for (const x of L.practice) {
+    const item = def.generate(PX.rng(x.seed >>> 0), x.params);
+    t.ok(Number.isInteger(x.seed) && !item.fallback && def.validate(item) === true, `Try seed ${x.seed} (${x.params.task}) gives a regular, valid item`);
+    if (x.tip) t.ok((L.tips || []).some((tip) => tip.id === x.tip), `Try ${x.params.task} names an existing tip (${x.tip})`);
+  }
+  t.eq(L.practice[0].assist, 'diagonals', 'Try 1 comes with its first step done: the diagonals drawn');
+  t.ok((L.strategies || []).some((st) => st.id === L.strategyFirst), 'strategyFirst names one of the cards');
+  t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => r.text && r.fig), 'a rules card of 2–4 rules, each with a picture');
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
