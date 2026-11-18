@@ -7,6 +7,7 @@
 
   PX.ex.learn('slice', {
     goal: 'A flat plane cuts through the solid: which outline is the cut face, seen straight on?',
+    goals: { choose: 'Pick the outline of the cut face, seen straight on.', mark: 'Mark every edge the plane crosses; the cut face is the shape between the marks.' }, // v1.2 wave 2 (W2-bets): the produce variant
     parts: [
       { id: 'solid', label: 'Solid', text: 'One solid, two solids joined into one, or a solid inside a see-through one.' },
       { id: 'plane', label: 'Cutting plane', text: 'The tinted sheet. It slices right through the solid; the cut face lies in this sheet.' },

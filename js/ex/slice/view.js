@@ -880,19 +880,70 @@
     st = null;
   }
 
+  /* ===== v1.2 wave 2 (W2-bets): the produce variant 'mark' (CONTRACT-v1.2 S) =====
+     Its items (produce 'mark') show the solid and the plane as every item; their answer is a set of marked
+     edges, tapped on a layer over the picture (layoutFor → 'custom'), made by js/ex/slice/layers-view.js
+     (PX.ui.betsDraw.slice) with this view's pieces (api). Every other item runs exactly as before. */
+  function produceOf(item) {
+    var D = PX.ui.betsDraw && PX.ui.betsDraw.slice;
+    return item && item.produce === 'mark' && D ? D : null;
+  }
+  var api = {
+    st: function () { return st; }, cap: cap, play: play, revealStage: revealStage,
+    // a world point on the trial picture, in CSS px of the stage
+    project: function (X) {
+      if (!st || !st.it || !st.v3) return null;
+      var s = stageSize(), fr = trialFrame(), b = st.it.vb, c = fr.center, k = pxPerUnit(fr, s.H);
+      return [s.W / 2 + (dot(X, b.right) - dot(c, b.right)) * k, s.H / 2 - (dot(X, b.up) - dot(c, b.up)) * k];
+    },
+    size: function () { return st && st.v3 ? stageSize() : null; },
+    trial: function () { if (st && st.it) { reset(); showTrial(); } },
+    // show me without the options: the plane slides in, the front piece lifts away, the view turns to face the cut
+    steps: function (item) {
+      var c = {}, keep = [cap('sweep'), cap('lift'), cap('turn')];
+      for (var k in item) if (Object.prototype.hasOwnProperty.call(item, k)) c[k] = item[k];
+      c.key = item.pick;
+      return steps(c, null).filter(function (x) { return keep.indexOf(x.caption) >= 0; });
+    },
+  };
+  function presentAll(item, ctx) {
+    var any = PX.ui.betsDraw && PX.ui.betsDraw.slice;
+    if (any) any.stop(); // a choice item after a mark item keeps no marking layer
+    var p = present(item, ctx), D = produceOf(item);
+    if (D && st) D.prepare(item, ctx, api);
+    return p;
+  }
+  function revealAll(item, response, result, ctx) {
+    var D = produceOf(item);
+    return D && st ? D.reveal(item, response, result, ctx, api) : reveal(item, response, result, ctx);
+  }
+  function showMeAll(item, response, ctx) {
+    var D = produceOf(item);
+    if (D) return st && st.v3 && st.it && st.it.item === item ? D.showMe(item, response, ctx, api) : Promise.resolve();
+    return showMe(item, response, ctx);
+  }
+  function unmountAll() {
+    var D = PX.ui.betsDraw && PX.ui.betsDraw.slice;
+    if (D) D.stop();
+    unmount();
+  }
+  /* ===== end of the 'mark' block (W2-bets) ===== */
+
   PX.ex.view('slice', {
     layout: 'stem+options',
     needs: 'webgl',
     css: true,
     mount: mount,
-    present: present,
+    present: presentAll, // v1.2 wave 2 (W2-bets): present, reveal, showMe and unmount also serve 'mark'
     drawOption: drawOption,
     optionLabel: optionLabel,
     gridCols: gridCols,
-    reveal: reveal,
-    showMe: showMe,
+    reveal: revealAll,
+    showMe: showMeAll,
     demo: demo,
-    unmount: unmount,
+    unmount: unmountAll,
+    layoutFor: function (item) { return produceOf(item) ? 'custom' : 'stem+options'; }, // v1.2 wave 2 (W2-bets)
+    collect: function (item, ctx, respond) { var D = produceOf(item); if (D && st && st.it && st.it.item === item) D.collect(item, ctx, respond, api); },
     // for tests: the steps show-me would play (same model as the key)
     steps: function (item, response) { return st && st.it ? steps(item, response) : []; },
     // for tests: what the 3D picture draws now (outline bars, the plane's meet line)

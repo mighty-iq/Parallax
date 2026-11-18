@@ -432,8 +432,14 @@ PRODUCE = {
     # exercise: (params of an easy item, the board's selector, cells across the board for the 44 px check)
     'fold': ({'folds': 1, 'type': 0, 'punches': 0, 'idle': 0, 'variant': 'mark'}, '.bets-fold-board svg', 8.12),
     'views': ({'cubes': 1, 'grid': 0, 'view': 1, 'variant': 'draw'}, '.bets-views-board svg', 4.6),
+    'slice': ({'structure': 0, 'cut': 1, 'curved': 0, 'variant': 'mark'}, '.bets-slice-svg', None),
 }
-MIN_CELL = {'fold': 43.9, 'views': 63}  # views: a line's own area (a diamond one cell across) holds a 44 px circle from 63 px
+MIN_CELL = {'fold': 43.9, 'views': 63}
+SLICE_PT_JS = """([i, ts]) => {
+  const D = PX.ui.betsDraw.slice;
+  for (const t of ts) { const p = D.at(i, t); if (p && D.nearest(p[0], p[1]) === i) return p; }
+  return null;
+}"""  # views: a line's own area (a diamond one cell across) holds a 44 px circle from 63 px
 VIEWS_PT_JS = """([e, dx, dy]) => {
   const r = document.querySelector('.bets-views-board svg').getBoundingClientRect(), c = e >> 1, x = c % 16, y = (c - x) / 16, v = e & 1;
   const bx = (v ? x : x + 0.5) + dx, by = (v ? y + 0.5 : y) + dy;
@@ -472,8 +478,9 @@ def produce_start(b, w, h, ex):
     st = page.evaluate(STATE_JS)
     C.ok(st['layout'] == 'custom' and st['choices'] == 0 and st['answer'] == 'targets' and st['variant'] == params['variant'],
          f'{tag}: its own input, no answer grid ({ {k: st[k] for k in ("layout", "choices", "answer", "variant")} })')
-    cell = page.evaluate(f"document.querySelector('{board}').getBoundingClientRect().width / {across}")
-    C.ok(cell >= MIN_CELL[ex], f'{tag}: cells of {cell:.1f} px (44 px targets)')
+    if across:
+        cell = page.evaluate(f"document.querySelector('{board}').getBoundingClientRect().width / {across}")
+        C.ok(cell >= MIN_CELL[ex], f'{tag}: cells of {cell:.1f} px (44 px targets)')
     small = page.evaluate(SMALL_JS, '.bets-draw-actions .px-btn')
     C.ok(not small, f'{tag}: 44 px buttons ({small})')
     no_scroll(page, tag)
@@ -613,9 +620,67 @@ def produce_views(b, w, h):
     ctx.close()
 
 
+def slice_tap(page, edges):
+    for i in edges:
+        p = page.evaluate(SLICE_PT_JS, [i, [0.5, 0.4, 0.6, 0.3, 0.7, 0.25, 0.75]])
+        C.ok(p is not None, f'slice: edge {i} has a point that a tap marks')
+        if p:
+            page.mouse.click(p[0], p[1])
+            page.wait_for_timeout(30)
+
+
+def produce_slice(b, w, h):
+    ctx, page, con, tag, st = produce_start(b, w, h, 'slice')
+    page.locator('.ex-slice-stage').scroll_into_view_if_needed()
+    page.screenshot(path=str(OUT / f'produce_slice_{w}.png'))
+    key = st['key']
+    n_edges = page.evaluate("PX.ex.get('slice').lib.markEdges(__play.item.solid).E.length")
+    wrong = next(i for i in range(n_edges) if i not in key)
+    slice_tap(page, key[:-1] + [wrong])
+    marked = page.evaluate("document.querySelector('.bets-draw-count').textContent")
+    C.ok(marked == f'Marked: {len(key)}', f'{tag}: taps mark edges ({marked})')
+    poly = page.evaluate("document.querySelector('.bets-slice-poly').getAttribute('points').split(' ').filter(Boolean).length")
+    C.ok(poly == len(key), f'{tag}: the app draws the polygon through the marks ({poly} corners)')
+    page.locator('.bets-draw-actions .px-btn', has_text='Check').click()
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
+    row = page.evaluate(LAST_ROW)
+    C.ok(row[5] == 0 and row[14] == 2 and row[15] == 6, f'{tag}: a wrong answer, logged as a produce item answered by placing (outcome {row[5]}, layer {row[14]}, amode {row[15]})')
+    v = page.evaluate("document.querySelector('.bets-draw-verdict').textContent")
+    C.ok('missed' in v and 'extra' in v, f'{tag}: the reveal names the missed and extra edges ({v})')
+    rv = page.evaluate("({ right: document.querySelectorAll('.bets-slice-ring.is-right').length, missed: document.querySelectorAll('.bets-slice-ring.is-missed').length, extra: document.querySelectorAll('.bets-slice-mark.is-extra').length })")
+    C.ok(rv == {'right': len(key) - 1, 'missed': 1, 'extra': 1}, f'{tag}: right, missed and extra drawn on the solid ({rv})')
+    page.locator('.ex-slice-stage').scroll_into_view_if_needed()
+    page.screenshot(path=str(OUT / f'produce_slice_reveal_{w}.png'))
+    page.evaluate('__play.showMe()')
+    page.wait_for_timeout(1200)
+    page.evaluate('__play.next()')
+    page.wait_for_function('__play.state === "respond"', timeout=15000)
+    key = page.evaluate('__play.item.key')
+    if w > 700:  # keyboard: arrows choose an edge, Space marks it, Enter checks
+        page.locator('.bets-slice').focus()
+        foc = -1
+        for i in key:
+            for _ in range(i - foc):
+                page.keyboard.press('ArrowRight')
+            page.keyboard.press('Space')
+            foc = i
+        page.keyboard.press('Enter')
+        how = 'keys'
+    else:
+        slice_tap(page, key)
+        page.locator('.bets-draw-actions .px-btn', has_text='Check').click()
+        how = 'taps'
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
+    row = page.evaluate(LAST_ROW)
+    C.ok(row[5] == 1, f'{tag}: exactly the crossed edges are right ({how}; outcome {row[5]})')
+    C.ok(page.evaluate("document.querySelector('.bets-draw-verdict').textContent").startswith('✓'), f'{tag}: the verdict says so')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def run_produce(b, which=None):
     for (w, h) in SIZES:
-        for ex, fn in (('fold', produce_fold), ('views', produce_views)):
+        for ex, fn in (('fold', produce_fold), ('views', produce_views), ('slice', produce_slice)):
             if not which or ex in which:
                 fn(b, w, h)
 
