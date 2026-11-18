@@ -44,6 +44,9 @@
   };
   // A few words after the name on cards and pages (R1 §8.1 d: Homing is the stage with landmarks).
   var NAME_TAIL = { homing: 'with landmarks', reckon: 'no landmarks' };
+  // A tag for exercises new in this version, shown until the player has rated answers on it (the
+  // Library lists them by code, so a new one can sit away from where a player looks).
+  var NEW_IN = { centralpoint: '1.2' };
   // Notes under an experimental exercise's lead (B3's wording for Homing and Reckon).
   var EXPERIMENTAL = {
     // the middle sentence follows the per-cell tables in tests/node/{homing,reckon}.test.mjs: turns alone are right
@@ -417,6 +420,7 @@
     var out = [];
     if (why === 'coming soon') out.push({ text: 'coming soon', kind: null });
     else if (why) out.push({ text: 'not available here', kind: 'warn' });
+    if (!lv.n && NEW_IN[def.id] && !why) out.push({ text: 'new in ' + NEW_IN[def.id], kind: null });
     if (lv.n && due && due.due) out.push({ text: 'review due', kind: null });
     return out;
   }
