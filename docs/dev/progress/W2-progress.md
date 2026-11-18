@@ -32,3 +32,21 @@ lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.md.
 - Development: dims.js and its tests are written in a mirror of the working tree (/tmp/w2p/tree) until they pass, since
   the node runner loads js/engine/dims.js for every builder as soon as it exists; the edits to select.js and modes.js go
   straight into the shared tree and do nothing until dims.js is there.
+
+## 2026-11-18 23:00 UTC: engine, screens and tests in (0d220fe); acceptance runs on the final engine
+- Done: js/engine/dims.js (offsets, person pool, frontier, leading dimension, fluency items, deck room; hooks start,
+  kind, pick and finish at order 10); select.js and modes.js functions (ca3887b); js/ui/frontier.js ("Settings you
+  handle" on the exercise page and in How to play; the fluency note); tests/node/dims.test.mjs (78 checks),
+  tests/node/shortcut-levels.test.mjs (per dimension level; Hidden from its gen.js solvers, the other 19 exercises
+  pending the exports requested at 22:11 UTC), tests/node/sim-progress.mjs with fixtures/learner-progress.mjs,
+  tests/e2e/frontier.py (33/0 at 360 x 640, 390 x 844, 1366 x 768); index.html activates my two lines.
+- Design changes against note P1 §4.3, each in DECISIONS (088ea87): offsets centred on the player's recent answers
+  (coverage 93 % → 98 %); a level per session as the fit's ability term (bias on Span's length +0.16 → +0.03 per
+  step); leading items planned with the kind; fluency scope; leading and fluency items from the session after the
+  exercise's first fit (so a first session keeps the 80/10/10 mix).
+- First 200-learner results (engine before the last change): uneven f = 0.5: 93.8 % of target items within ±0.10
+  where the pool reaches the target (gate 94 %; without Track 94.8 %), engine before 1.2 86.5 %, oracle 97.3 %; even:
+  96.0 % (before 1.2: 97.3 %); per-level worst cells all on Track's 46 speed levels; coverage 98 %; fluency in time
+  within 1 point of its target. Rerunning on the final engine, with the cap lever (1.5) and the reported profiles.
+- Next: progress-sim.md, ENGINE.md §19, the "nothing else moves" sim.mjs comparison (100 learners, with and without
+  dims.js), the final report.
