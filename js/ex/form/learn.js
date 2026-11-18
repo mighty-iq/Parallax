@@ -14,21 +14,32 @@
       { id: 'solids', label: 'Solids', text: 'Four solids, each turned its own way. Only the faces turned toward you count; hidden faces may carry anything.' },
       { id: 'answer', label: 'Answer', text: 'Exactly one solid folds from the pattern: right shape, right sizes, marks in the right places. Tap it or press its key (1–4).' },
     ],
-    // The easiest level: a box or simple prism, one shaded and one half-shaded face, upright pictures,
-    // a proportion foil.
-    demo: [{ params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 8, kind: 'box' }],
+    // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.5): the rules card first, the
+    // Watch at the starter band (one shaded face, a box, upright), the card "Shape, then one landmark"
+    // before Try 1, Try 1 with the shaded face's neighbours lettered; Try 3 brings the half mark with its
+    // tip and its shaded corner dotted (the mirror image's first appearance), Try 4 a third mark.
+    rules: [
+      'The pattern is the outside surface of the solid, cut open and laid flat.',
+      'Dashed lines fold; solid lines are cut edges that meet another edge once folded.',
+      'Only the faces turned towards you count; hidden faces may carry anything.',
+      'The right solid matches the pattern in shape, sizes and marks.',
+    ],
+    strategyFirst: 'analytic',
+    minutes: 2,
+    demo: [{ params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 5, kind: 'box' }],
     practice: [
-      { solid: 0, marks: 0, view: 0, foil: 0 },
-      { solid: 0, marks: 1, view: 0, foil: 0 },
-      { solid: 1, marks: 1, view: 0, foil: 1 },
-      { solid: 1, marks: 2, view: 1, foil: 1 },
+      { params: { solid: 0, marks: 0, view: 0, foil: 0 }, assist: { letters: true }, seed: 12 },
+      { params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 207 },
+      { params: { solid: 0, marks: 1, view: 0, foil: 0 }, assist: { half: true }, tip: 'half', seed: 303 },
+      { params: { solid: 0, marks: 2, view: 0, foil: 0 }, tip: 'two', seed: 406 },
     ],
     tips: [
+      { id: 'one', when: { dim: 'marks', levels: [0] }, text: 'Starter items: one shaded face. First drop the solids of the wrong size, then check that the shaded face has the shape it has in the pattern.' },
       { id: 'shape', when: { dim: 'foil', levels: [0] }, text: 'First check the shape: compare the face shapes and sizes in the pattern with each solid.' },
       { id: 'marksOnly', when: { dim: 'foil', levels: [1] }, text: 'All four have the right shape now: pick one marked face and check which faces must be its neighbours.' },
-      { id: 'half', when: { dim: 'marks', levels: [0] }, text: 'A half-shaded face shows which way it is turned: name the corner its shaded triangle points to by the faces that meet there.' },
-      { id: 'two', when: { dim: 'marks', levels: [1] }, text: 'Three marks: check the half mark first, since it tells a solid from its mirror image. Faces apart in the pattern can still meet.' },
-      { id: 'halves', when: { dim: 'marks', levels: [2] }, text: 'Two half marks: check each one\'s corner on its own, then whether the two sit right against each other.' },
+      { id: 'half', when: { dim: 'marks', levels: [1] }, text: 'New: a half-shaded face. It also shows which way it is turned: its shaded corner (dotted) must touch the same faces once folded, or the solid is the mirror image.' },
+      { id: 'two', when: { dim: 'marks', levels: [2] }, text: 'Three marks: check the half mark first, since it tells a solid from its mirror image. Faces apart in the pattern can still meet.' },
+      { id: 'halves', when: { dim: 'marks', levels: [3] }, text: 'Two half marks: check each one\'s corner on its own, then whether the two sit right against each other.' },
       { id: 'side', when: { dim: 'view', levels: [1] }, text: 'The solids lie on their sides: find the base or the slanted faces first, then the marks.' },
       { id: 'upside', when: { dim: 'view', levels: [2] }, text: 'Upside down: the base is on top. Name it first, then work round its edges.' },
     ],
@@ -47,14 +58,16 @@
         when: 'Quick for small patterns and few marks.',
       },
       {
-        id: 'analytic', title: 'Landmarks and neighbours',
-        text: 'Rule out by shape first, then check one marked face and its neighbours.',
+        // The analytic card in the format's own terms (note D2 §3.5; prep "key landmarks", R3 §3.6):
+        // shown before Try 1 and as "How to solve" through the first session; show-me carries out its steps.
+        id: 'analytic', title: 'Shape, then one landmark',
+        text: 'Rule out by shape and size first, then check one marked face and the faces around it.',
         steps: [
-          'Drop any solid whose shape or sizes do not match the pattern.',
-          'Pick a landmark: a marked face, or a face with a shape of its own.',
-          'Name its neighbours in the pattern (two faces joined by a dashed line, or edges that meet when folded), then check them in each picture.',
+          'Drop every solid whose face shapes or sizes differ from the pattern.',
+          'Pick the shaded face. In the pattern, name the faces that share its edges once folded (joined by a dashed line, or edges that meet).',
+          'In each solid left, check that those faces sit beside it.',
         ],
-        when: 'Steady when the pictures are turned or upside down.',
+        when: 'From the first item on; steady when the pictures are turned or upside down.',
       },
       {
         id: 'switch', title: 'When to switch',
@@ -78,6 +91,11 @@
       whyShapeAny: 'Solid {n} is the wrong size: one of its edges has another length than in the pattern.',
       whyMarks: 'Solid {n}: the face marked {f} cannot look like that once the pattern is folded.',
       whyMirror: 'Solid {n} is the mirror image of the folded pattern: see the face marked {f}.',
+      foldTilt: 'Now fold the pattern itself:',
+      foldUp: 'Every face turns up about its dashed line.',
+      foldTurn: 'Turned to match, the folded pattern is solid {n}.',
+      assist: 'The faces that meet the shaded face once folded are lettered for you. Which solid has the shaded face with those neighbours, at the right size?',
+      assistHalf: 'New: a half-shaded face. Its shaded corner is dotted: that corner must touch the same faces once folded.',
     },
     bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
   });

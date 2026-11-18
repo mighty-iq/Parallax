@@ -71,3 +71,9 @@
 
 /* The key digit (1–5) stays above the drawing in its cell. */
 .ex-form .px-choice-key { z-index: 1; }
+
+/* v1.2: the fold-up layer (show-me, O51) over the pattern: the pattern fades while it folds; the inside
+   of a face, seen during the fold, is a pale plain tone (marks sit only on the outside). */
+.ex-form .fm-fold { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+.ex-form .fm-inside { fill: var(--stim-face-3, #A4ABB2); fill-opacity: 0.55; }
+.ex-form .fm-corner { fill: var(--stim-target, #0B6A86); stroke: var(--surface, #FFFFFF); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }

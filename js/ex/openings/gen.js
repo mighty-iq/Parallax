@@ -1052,6 +1052,7 @@
     var tries = [p, { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }];
     for (var t = 0; t < tries.length; t++) for (var k = 0; k < 400; k++) {
       var q = tries[t], item = attempt(PX.rng(PX.rng.hash('openings-fallback', q.features, q.edges, q.keyview, q.pose, q.foils, k)), q);
+      if (item) item.params = q; // validate reads the level (the starter band's checks)
       if (item && validate(item) === true) { item.fallback = true; return item; }
     }
     throw new Error('openings: no valid item could be built'); // unreachable while the fallback test passes
