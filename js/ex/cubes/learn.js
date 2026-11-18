@@ -110,7 +110,7 @@
       skip: 'The other cubes have a different number of painted sides.',
       done: '{k} {cubes} exactly {sides}: answer {k}.',
       chosen: 'Answer {n} is {d} the true count: check the hidden cubes and the faces at the back.',
-      assist: 'Step 2 done, except the two cubes marked ?.',
+      assist: 'Numbers given, except the two cubes marked ?.',
       assistHidden: '{what} drawn dashed for you.',
     },
     checkin: { whole: 'I recognised the positions at a glance', parts: 'I went through the cubes one by one', unsure: 'Not sure, or both' },

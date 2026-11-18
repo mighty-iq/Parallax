@@ -99,7 +99,7 @@
       largest: '2/3 · Largest next: {b} opens the most, so keep the answers that end with {b}.',
       left: 'One answer is left: {order}.',
       disagree: '3/3 · The pair left: the answers left disagree on {a} and {b}, so lay one on the other.',
-      assist: 'Step 1 done: the smallest angle is marked.',
+      assist: 'The smallest angle is marked for you.',
     },
     checkin: { whole: 'I laid the angles on each other in my mind', parts: 'I settled the smallest and largest first', unsure: 'Not sure, or both' },
     bridge: 'Angle ranking is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). This is perceptual-judgement practice: judging angles by eye improves with practice, but the gains tend to stay with this kind of figure, and an effect of Parallax on DAT scores has not been shown or measured. ' + ADA,

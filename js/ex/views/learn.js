@@ -48,18 +48,19 @@
       // Try 3: the right view at the starter level, its tip on where the front is (Views fresh test:
       // the first right view came in Go); seed 175 has the front view among its drawings.
       { params: { cubes: 0, grid: 0, view: 2, variant: 'toview' }, seed: 175, tip: 'right' },
-      { params: { cubes: 1, grid: 0, view: 0, variant: 'toview' }, seed: 2, tip: 'stacks' },
+      // Try 4: four cubes in an L, one stack three high at the back (seed 41: read at a glance)
+      { params: { cubes: 1, grid: 0, view: 0, variant: 'toview' }, seed: 41, tip: 'stacks' },
     ],
     tips: [
       // The view tips only where a view is asked or drawn: when.variant may list several variants,
       // and every condition in `when` must hold (not on 'count' items, whose view level means nothing).
       { id: 'top', when: { dim: 'view', levels: [0], variant: ['toview', 'toobject'] }, text: 'From the top you see only the roofs: one cell for each column, whatever its height. The front is at the bottom of the drawing.' },
-      { id: 'front', when: { dim: 'view', levels: [1], variant: ['toview', 'toobject'] }, text: 'From the front, each column of the drawing shows the tallest stack in that row, from left to right.' },
+      { id: 'front', when: { dim: 'view', levels: [1], variant: ['toview', 'toobject'] }, text: 'From the front, each column of the drawing is as tall as the tallest stack behind it, from left to right.' },
       { id: 'right', when: { dim: 'view', levels: [2], variant: ['toview', 'toobject'] }, text: 'From the right, the front of the structure is on the left of the drawing. Turn it in your mind, or walk round it.' },
       { id: 'toobject', when: { variant: 'toobject' }, text: 'Check one view at a time: rule out every structure whose top view does not fit, then use the front and the right.' },
       { id: 'count', when: { variant: 'count' }, text: 'Count column by column: the height of each stack, then add them up. No cube is hidden here.' },
       { id: 'grid', when: { dim: 'grid', levels: [1] }, text: 'A bigger grid: the same rules. Find the front edge first, then read the drawing from there.' },
-      { id: 'stacks', when: { dim: 'cubes', levels: [1], variant: 'toview' }, text: 'Bigger structures now, up to four high. One drawing may be the correct one flipped left to right: check which side the front is on.' },
+      { id: 'stacks', when: { dim: 'cubes', levels: [1], variant: 'toview' }, text: 'Bigger structures now, some stacks taller: find the front first, then match the drawing cell by cell.' },
     ],
     // Sorby 2009: sketching views and building block models raised spatial test scores in engineering
     // students. Imagery (moving round the object) and analytic (feature by feature) strategies, and
@@ -139,15 +140,15 @@
       countKey: '{n} cubes: option {k}.',
       tint: 'The faces you see from the {view} are shaded: the view is made of those faces.',
       outline: '2/3 · Outline: {w} × {h} cells, and no other drawing has that size.',
-      outlineAll: '2/3 · Outline: {w} × {h} cells: drawings of another size drop out, and the inner lines decide the rest.',
+      outlineAll: '2/3 · Outline: {w} × {h} cells: drawings of another size drop out; then compare the shapes left.',
       inner: '3/3 · Inner lines: each one is a step between {what}.',
       innerTop: 'heights; cubes of one height leave no line between them',
       innerSide: 'depths; cubes at one depth leave no line between them',
       whyDirectionTurn: 'Drawing {n} is the view from the {from}: from there it looks like this.',
       whyMirrorFlip: 'Drawing {n} is the correct view flipped left to right.',
       whyNeighbourLines: 'Drawing {n} belongs to another structure: the marked lines differ.',
-      assist: 'Step 2 done: the view is {w} × {h} cells.',
-      assistStep: 'Step 2 done',
+      assist: 'The outline is counted for you: {w} × {h} cells.',
+      assistStep: 'Size counted',
       assistLabel: '{w} × {h} cells',
     },
     bridge: 'Engineers, architects and machinists read three views like these every day. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance.',
