@@ -14,7 +14,8 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_centralpoint.py   (two brows
    with no average mark left; Try 1's assist draws the kite's two diagonals
 5. the harness inlined into a sandboxed srcdoc iframe renders and plays by keyboard; no console errors
 6. the app at 360 x 640: the rules card with pictures, the Watch (captions, the average once), the strategy
-   card, Try 1 with the diagonals, three Try items answered by taps with a round score in the verdict
+   card, Try 1 with the diagonals, three Try items answered by taps with a round score in the verdict;
+   a quick item in Free play whose deadline passes with the marker placed (a late time-out, a quarter round)
 Screenshots: tests/e2e/out/centralpoint/cp_<viewport>_<theme>[_reveal|_map|_exact|_why|_assist].png """
 import sys
 
@@ -293,6 +294,49 @@ def run_app_wtg(b):
     ctx.close()
 
 
+def run_app_deadline(b):
+    """Free play in the real player with the Quick deadline cut to its minimum: the countdown bar runs; a
+    marker left unconfirmed is handed in at the deadline (a time-out for the rating, late: true), earns a
+    quarter of its closeness as round score, and the note says time ran out."""
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    con = Console(page)
+    page.goto(file_url('index.html'))
+    page.wait_for_function('document.documentElement.getAttribute("data-px-ready") === "1"', timeout=30000)
+    for _ in range(4):
+        if not page.evaluate('PX.ui.modalOpen()'):
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(150)
+    page.evaluate("""() => { const r = PX.core.store.state; r.tour = r.tour || { seen: {} }; r.tour.seen = r.tour.seen || {};
+        PX.ex.list().forEach(d => { r.tour.seen[d.id] = true; }); r.ex = r.ex || {}; r.ex.centralpoint = r.ex.centralpoint || {};
+        r.ex.centralpoint.pace = { ms: PX.ex.get('centralpoint').pace.minMs, n: 0 }; }""")
+    page.evaluate("""void PX.core.router.go('play', { mode: 'free', exId: 'centralpoint', run: '1', trials: 3, params: { variant: 'quick', targets: 1, band: 0 } }, { force: true })""")
+    for _ in range(200):
+        if page.evaluate("() => window.__play && __play.state === 'respond'"):
+            break
+        for sel in ('[data-card-box] [data-card="skip"]', '[data-card-box] .px-btn--primary'):
+            loc = page.locator(sel)
+            if loc.count() and loc.first.is_visible():
+                loc.first.click()
+                page.wait_for_timeout(150)
+        page.wait_for_timeout(100)
+    bar = page.evaluate("() => { const e = document.querySelector('.pl-limit'); return !!e && e.offsetHeight > 0 && e.classList.contains('is-running'); }")
+    C.ok(bar, 'app deadline: the countdown bar runs on a quick item')
+    k = page.evaluate('() => __play.key')
+    tap(page, True, k['x'] + 1 if k['x'] < 12 else k['x'] - 1, k['y'])
+    # after a miss the player plays Why? at once, so the state may already be 'showme'
+    page.wait_for_function("() => ['reveal', 'showme'].includes(__play.state) && !!__play.last", timeout=15000)
+    r = page.evaluate("""() => ({ timeout: __play.last.timeout, late: __play.last.result.late, correct: __play.last.result.correct, credit: __play.last.result.credit,
+        round: __play.last.result.round, note: (document.querySelector('.ex-cp-note') || {}).textContent || '', marker: document.querySelectorAll('.ex-cp-marker .ex-cp-mark').length })""")
+    want = round(100 * r['credit'] * 0.25) if isinstance(r.get('credit'), (int, float)) else None
+    C.ok(r['timeout'] is True and r['late'] is True and r['correct'] is False and r['marker'] == 1, f'app deadline: the placed marker is handed in at the deadline as a time-out ({r})')
+    C.ok(r['round'] == want and 'Time ran out' in r['note'], f'app deadline: a quarter of its closeness as round score ({r["round"]} vs {want}) and the note says so')
+    shot(page, 'app_360_deadline.png')
+    C.ok(not con.errors(), f'app deadline: no console errors ({con.errors()[:3]})')
+    ctx.close()
+
+
 def run_srcdoc(b):
     page = b.new_page(viewport={'width': 900, 'height': 900})
     con = Console(page)
@@ -321,6 +365,7 @@ with sync_playwright() as p:
     run_viewport(b, '412x880', {'width': 412, 'height': 880}, True, ['light'])
     run_slow_why(b)
     run_app_wtg(b)
+    run_app_deadline(b)
     run_srcdoc(b)
     b.close()
 sys.exit(C.summary())
