@@ -350,7 +350,7 @@ function testLearn(t, PX, def) {
   // the teaching template (CONTRACT-v1.2 D; note D2 §3.0 C, §3.5, §3.9 item 1)
   t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => typeof r === 'string' && r.length > 20 && r.length <= 140), 'a rules card of 2–4 short rules');
   t.ok((L.strategies || []).some((x) => x.id === L.strategyFirst) && L.strategies.find((x) => x.id === L.strategyFirst).steps.length === 3, `the strategy card before Try 1 exists, with three steps (${L.strategyFirst})`);
-  t.eq(L.minutes, 2, 'the offer card says about two minutes');
+  t.eq(L.minutes, 3, 'the offer card says about three minutes (the worked example included)');
   const valid = (p) => PX.ex.validParams(def, p) === true;
   t.ok(Array.isArray(L.demo) && L.demo.length === 1 && valid(L.demo[0].params) && Number.isInteger(L.demo[0].seed), 'one demo item with valid params');
   const demoItem = def.generate(PX.rng(L.demo[0].seed), L.demo[0].params);

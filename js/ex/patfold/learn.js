@@ -28,7 +28,7 @@
     // Try 1, Try 1 with the punch's twin ringed; then the pre-1.2 floor (an idle fold, with its tip)
     // and two folds that both matter. Corner and slanted folds come later in Go, each with its tip.
     strategyFirst: 'analytic',
-    minutes: 2,
+    minutes: 3,
     demo: [{ params: { folds: 0, type: 0, idle: 0 }, seed: 14, kind: 'one fold' }],
     // Try 4 brings two folds that both matter, after a worked example on a sister item (note D2 addendum
     // C change 4; Try has no slanted fold, so the example goes to the first item with two folds).

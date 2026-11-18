@@ -26,7 +26,7 @@
       'The right solid matches the pattern in shape, sizes and marks.',
     ],
     strategyFirst: 'analytic',
-    minutes: 2,
+    minutes: 3,
     demo: [{ params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 5, kind: 'box' }],
     practice: [
       { params: { solid: 0, marks: 0, view: 0, foil: 0 }, assist: { letters: true }, seed: 12 },
