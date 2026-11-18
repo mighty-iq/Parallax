@@ -35,6 +35,11 @@ Owns: see docs/dev/CONTRACT-v1.2.md "File ownership" (W1-rules row). Requests: d
   (the full run stops at its 15-minute limit on this shared machine); README counts twenty exercises; Today's
   suggestion layout checked at 1366 and 900 px (a286e0a). Milestone 2's W1-rules part is done.
 
+- Follow-up round (lead, fresh-player findings), done 17:40 UTC: Watch, Try, Go first in every Practise sheet and the
+  default for an exercise never played; How to play keeps it on the screen; the welcome's full-width Continue to
+  Parallax at its foot (36f334b, de4d21a). shell.py 274/0, screens.py 389/0 (all 20 exercises at 360 × 640).
+  No player hook needed: the Library starts the tutorial through PX.ui.play.watch (mode 'watch').
+
 ## Next
 1. Later milestones (not wave 1): the guide's Central Point section (W1-central's request; milestone 10/11).
 
