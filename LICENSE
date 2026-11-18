@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 the Parallax contributors (the Chimera community, https://discord.gg/chmr)
+Copyright (c) 2026 the Chimera community (https://discord.gg/chmr)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,4 +25,5 @@ SOFTWARE.
 Third-party components shipped in this repository keep their own licences:
 - three.js (vendor/three.min.js): MIT, see vendor/LICENSE-three.txt
 - IBM Plex Sans and IBM Plex Mono (fonts/): SIL Open Font License 1.1, see fonts/OFL.txt
-- The user guide's text and figures (docs/): CC BY-SA 4.0, see LICENSE-GUIDE.md
+- Texts (the user guide's text and figures, README.md, CHANGELOG.md and the prose notes in docs/):
+  CC BY-SA 4.0, see LICENSE-GUIDE.md

@@ -1,10 +1,12 @@
+Built by the Chimera community on Discord: **[https://discord.gg/chmr](https://discord.gg/chmr)**
+
 # Parallax
 
 Parallax is a free, open-source web app that trains visuospatial ability: picturing objects as they turn, fold, are cut, or are seen from somewhere else. It runs offline in any modern browser, keeps everything on your device, and measures whether your practice carries over to tasks you never train, instead of promising that it does.
 
 ![Parallax: the Today screen with today's session, the weekly goal and the Daily Challenge](docs/shots/app-today.png)
 
-**Built by the Chimera community on Discord: [discord.gg/chmr](https://discord.gg/chmr).** Come and say hi, share your results, and suggest exercises you would like to train.
+Come and say hi in the [Chimera Discord](https://discord.gg/chmr), share your results, and suggest exercises you would like to train.
 
 The full user guide, with the research behind every design choice, is [docs/Parallax-Guide.pdf](docs/Parallax-Guide.pdf). What changed in version 1.1 is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -33,7 +35,7 @@ Practice improves the practised tasks and often similar spatial tests: across 20
 - **The repository:** clone or download it and open `index.html`. There is nothing to build.
 - **GitHub Pages:** push the repository to GitHub, then in the repository's **Settings → Pages** choose **Deploy from a branch**, the main branch and the root folder.
 
-On first open, the Chimera pop-up appears (it appears every time), then a short tour (Rotate, Fold, Track) and the offer of a first baseline Spatial Check. The default routine is about 20 minutes, three times a week. On iPhone and iPad, Safari may clear site data after seven days of use without a visit: add Parallax to the home screen or back up.
+On the first open, the Chimera welcome appears, then a short tour (Rotate, Fold, Track) and the offer of a first baseline Spatial Check; later opens show a one-tap Chimera note under the header instead. The default routine is about 20 minutes, three times a week. On iPhone and iPad, Safari may clear site data after seven days of use without a visit: add Parallax to the home screen or back up.
 
 ## Running the tests
 
@@ -105,7 +107,7 @@ New exercises, better items, translations, accessibility fixes and analyses of p
 
 ## Licences
 
-- Code: MIT ([LICENSE](LICENSE)).
-- The user guide's text and figures: Creative Commons Attribution-ShareAlike 4.0 ([LICENSE-GUIDE.md](LICENSE-GUIDE.md)).
+- Code, code comments and code examples: MIT ([LICENSE](LICENSE)).
+- Texts: the user guide's text and figures, this README, the CHANGELOG and the prose notes in `docs/`: Creative Commons Attribution-ShareAlike 4.0 ([LICENSE-GUIDE.md](LICENSE-GUIDE.md)).
 - three.js: MIT, © three.js authors ([vendor/LICENSE-three.txt](vendor/LICENSE-three.txt)).
 - IBM Plex Sans and IBM Plex Mono: SIL Open Font License 1.1 ([fonts/OFL.txt](fonts/OFL.txt)).
