@@ -24,7 +24,56 @@
     ]);
   }
 
+  // A town map: streets along the dots, a house at each home, lettered spots; mark(i) rings spot i and
+  // draws the straight walks from it. (The bridge set "Meeting point"; never the average position.)
+  function house(x, y) {
+    return E('path', { d: 'M' + (x - 0.42) + ' ' + (y + 0.34) + ' L' + (x - 0.42) + ' ' + (y - 0.08) + ' L' + x + ' ' + (y - 0.46) + ' L' + (x + 0.42) + ' ' + (y - 0.08) + ' L' + (x + 0.42) + ' ' + (y + 0.34) + ' Z', class: 'bets-town-house' });
+  }
+  function town(host, homes, spots, opts) {
+    opts = opts || {};
+    var svg = E('svg', { viewBox: '-1 -1 14 14', class: 'px-bets-fig bets-town', role: 'img',
+      'aria-label': 'A town map with ' + homes.length + ' homes' + (spots ? ' and ' + spots.length + ' lettered meeting spots' : '') });
+    svg.appendChild(E('rect', { x: -1, y: -1, width: 14, height: 14, class: 'bets-town-ground' }));
+    var st = E('g', { class: 'bets-town-streets' });
+    for (var k = 0; k <= 12; k += 2) { st.appendChild(E('line', { x1: k, y1: -1, x2: k, y2: 13 })); st.appendChild(E('line', { x1: -1, y1: k, x2: 13, y2: k })); }
+    svg.appendChild(st);
+    var walks = E('g', { class: 'bets-town-walks' });
+    walks.style.display = 'none';
+    svg.appendChild(walks);
+    homes.forEach(function (h) { svg.appendChild(house(h[0], h[1])); });
+    var ring = null;
+    (spots || []).forEach(function (p, i) {
+      svg.appendChild(E('circle', { cx: p[0], cy: p[1], r: 0.55, class: 'bets-town-spot' }));
+      var t = E('text', { x: p[0], y: p[1], class: 'bets-town-letter', 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+      t.textContent = String.fromCharCode(65 + i);
+      svg.appendChild(t);
+    });
+    if (opts.meet) svg.appendChild(E('circle', { cx: opts.meet[0], cy: opts.meet[1], r: 0.62, class: 'bets-cp-best' }));
+    host.appendChild(svg);
+    return {
+      mark: function (i) {
+        var p = spots[i];
+        walks.innerHTML = '';
+        homes.forEach(function (h) { walks.appendChild(E('line', { x1: p[0], y1: p[1], x2: h[0], y2: h[1], class: 'bets-town-walk' })); });
+        walks.style.display = '';
+        if (ring) ring.remove();
+        ring = E('circle', { cx: p[0], cy: p[1], r: 0.8, class: 'bets-cp-best' });
+        svg.appendChild(ring);
+      },
+    };
+  }
+  // The idealised twin: the same layout as a Central Point board, its best spot ringed.
+  function board(host, homes, meet) {
+    var svg = E('svg', { viewBox: '-1 -1 14 14', class: 'px-bets-fig bets-cp', role: 'img', 'aria-label': 'The same layout as a Central Point board: ' + homes.length + ' targets and the best spot' });
+    for (var y = 0; y <= 12; y += 2) for (var x = 0; x <= 12; x += 2) svg.appendChild(E('circle', { cx: x, cy: y, r: 0.13, class: 'bets-cp-dot' }));
+    homes.forEach(function (t) { svg.appendChild(E('line', { x1: meet[0], y1: meet[1], x2: t[0], y2: t[1], class: 'bets-cp-line' })); });
+    homes.forEach(function (t) { svg.appendChild(E('g', { transform: 'translate(' + t[0] + ' ' + t[1] + ')' }, [E('circle', { r: 0.44, class: 'bets-cp-ring' }), E('circle', { r: 0.1, class: 'bets-cp-pip' })])); });
+    svg.appendChild(E('circle', { cx: meet[0], cy: meet[1], r: 0.62, class: 'bets-cp-best' }));
+    host.appendChild(svg);
+  }
+
   V.centralpoint = {
+    town: town, board: board,
     solved: function (host, item, opts) {
       opts = opts || {};
       var g = item.gm, k = item.key, T = item.targets;

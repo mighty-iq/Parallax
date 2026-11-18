@@ -89,6 +89,136 @@
     { id: 'more-above', text: 'More of the targets lie above the best spot than below it.', test: function (it) { var s = sides(it, 1); return s[0] > s[1]; } },
   ];
 
+  /* ---------- the bridge set "Meeting point" (note T1 §4.2; homes on a town map, straight-line walks) ----------
+     A bridge item: 4–6 homes (a rated Central Point layout at its easiest settings, whose average position is
+     6 % or more worse than the best spot), four lettered spots from
+     the good region (within 35 % of the best total) and "where should the friends meet so that their walks
+     add up to the least?". The key is the best of the four by total straight-line distance; every other
+     spot is 5–30 % worse; spots are at least a dot apart, never within half a dot of the average position
+     (the Balance check stays untrained, PLAN Defaults) and never on a home. The three foils are chosen against six cheap pickers (the spot nearest the map's middle, the spot
+     nearest a home, the spot in the middle of the four, the spot with most homes within a dot, the spot
+     nearest the homes' average position, which is the habit the exercise corrects, and the spot with most
+     homes within two dots, a coarse total that is reported as partial skill, not bounded): per item
+     each picker's target is hit with probability ¼ and the foil set closest to those targets is kept, so
+     each lands on the key about one time in four. validateBridge() re-derives everything apart. */
+  function total(T, x, y) { var s = 0; for (var j = 0; j < T.length; j++) { var dx = x - T[j][0], dy = y - T[j][1]; s += sqrt(dx * dx + dy * dy); } return s; }
+  function mean(T) { var x = 0, y = 0; T.forEach(function (t) { x += t[0]; y += t[1]; }); return [x / T.length, y / T.length]; }
+  function d2(a, b) { var dx = a[0] - b[0], dy = a[1] - b[1]; return dx * dx + dy * dy; }
+  // The cheap pickers, as a score per spot (lower is preferred); pick(it) takes the first best, acc() the
+  // chance that the key is picked when ties are broken at random (what the generator balances).
+  var SCORES = {
+    middle: function (it, p) { return d2(p, [CENTRE, CENTRE]); },
+    nearHome: function (it, p) { return Math.min.apply(null, it.homes.map(function (h) { return d2(p, h); })); },
+    midSpots: function (it, p) { return d2(p, mean(it.spots)); },
+    crowd: function (it, p) { return -it.homes.filter(function (h) { return d2(p, h) <= 4; }).length; },   // homes within a dot (Central Point's group radius)
+    crowd2: function (it, p) { return -it.homes.filter(function (h) { return d2(p, h) <= 16; }).length; }, // within two dots: a coarse total, reported (partial skill)
+    average: function (it, p) { return d2(p, mean(it.homes)); },
+  };
+  var PICKERS = {};
+  Object.keys(SCORES).forEach(function (k) {
+    PICKERS[k] = function (it) { var b = 0, bv = Infinity; it.spots.forEach(function (p, i) { var v = SCORES[k](it, p); if (v < bv - 1e-9) { bv = v; b = i; } }); return b; };
+  });
+  function accOf(k, it, keyIndex) {
+    var v = it.spots.map(function (p) { return SCORES[k](it, p); }), best = Math.min.apply(null, v);
+    var ties = v.filter(function (x) { return Math.abs(x - best) <= 1e-9; }).length;
+    return Math.abs(v[keyIndex] - best) <= 1e-9 ? 1 / ties : 0;
+  }
+  function bridgeItem(seed) {
+    var r = PX.rng(PX.rng.hash('bets-bridge-cp', seed >>> 0)), keys = Object.keys(SCORES);
+    for (var attempt = 0; attempt < 60; attempt++) {
+      var it = def.generate(PX.rng(r.u32()), { variant: 'exact', targets: r.int(0, 2), band: 0 });
+      if (!it || it.fallback) continue;
+      var T = it.targets, avg = mean(T), best = total(T, it.key.x, it.key.y), pool = [];
+      if (total(T, avg[0], avg[1]) / best - 1 < 0.06) continue; // a layout whose average misleads (so spots near it can be foils)
+      for (var y = 0; y <= 12; y++) for (var x = 0; x <= 12; x++) {
+        if (T.some(function (t) { return t[0] === x && t[1] === y; }) || d2([x, y], avg) < 1) continue;
+        if (total(T, x, y) / best - 1 <= 0.35) pool.push([x, y]);
+      }
+      if (pool.length < 8) continue;
+      // the key: one of the best spots (within 4 % of the best total). The foils are the natural wrong
+      // answers: the centre of the closest group of homes (it ignores the far homes' pulls), a spot on the
+      // far side (the middle of the homes' box, or the average without the farthest home: it lets the far
+      // homes pull too hard, without marking the average itself) and one more spot from the good region;
+      // each 5–30 % worse than the key. Among the valid sets, the one closest to the pickers' targets.
+      var near = pool.filter(function (q) { return total(T, q[0], q[1]) / best - 1 <= 0.04; });
+      if (!near.length) continue;
+      var key = near[r.int(0, near.length - 1)], kt = total(T, key[0], key[1]);
+      function fits(q) { var e = total(T, q[0], q[1]) / kt - 1; return !!q && e >= 0.05 && e <= 0.30 && d2(q, key) >= 4 && d2(q, avg) >= 1 && !T.some(function (t) { return t[0] === q[0] && t[1] === q[1]; }); }
+      function snap(x, y) { return [Math.max(0, Math.min(12, Math.round(x))), Math.max(0, Math.min(12, Math.round(y)))]; }
+      var dense = null, top = -1, spread = Infinity;
+      T.forEach(function (t) {
+        var mem = T.filter(function (o) { return d2(t, o) <= 4 + 1e-9; }), sp = mem.reduce(function (a, o) { return a + Math.sqrt(d2(t, o)); }, 0);
+        if (mem.length > top || (mem.length === top && sp < spread)) { top = mem.length; spread = sp; dense = snap(mean(mem)[0], mean(mem)[1]); }
+      });
+      var xs = T.map(function (t) { return t[0]; }), ys = T.map(function (t) { return t[1]; });
+      var far = [snap((Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2)];
+      var dists = T.map(function (t) { return d2(t, avg); }), fi = dists.indexOf(Math.max.apply(null, dists));
+      far.push(snap.apply(null, mean(T.filter(function (t, i) { return i !== fi; }))));
+      var f1 = [dense].concat(pool.filter(function (q) { return d2(q, dense) <= 2; })).filter(fits);
+      var f2 = far.concat(pool.filter(function (q) { return far.some(function (fq) { return d2(q, fq) <= 2; }); })).filter(fits);
+      var f3 = pool.filter(fits);
+      if (!f1.length || !f2.length || f3.length < 3) continue;
+      var targets = {};
+      keys.forEach(function (k) { targets[k] = r.chance(0.25) ? 1 : 0; });
+      var bestSet = null, bestCost = Infinity;
+      for (var tries = 0; tries < 600; tries++) {
+        var f = [f1[r.int(0, f1.length - 1)], f2[r.int(0, f2.length - 1)], f3[r.int(0, f3.length - 1)]];
+        if (d2(f[0], f[1]) < 4 || d2(f[0], f[2]) < 4 || d2(f[1], f[2]) < 4) continue;
+        var spots = [key].concat(f), probe = { homes: T, spots: spots }, cost = 0;
+        keys.forEach(function (kk) { cost += Math.abs(accOf(kk, probe, 0) - targets[kk]); });
+        if (cost < bestCost) { bestCost = cost; bestSet = spots; if (!cost) break; }
+      }
+      if (!bestSet) continue;
+      var order = r.shuffle([0, 1, 2, 3]);
+      return { kind: 'cp-meet', seed: seed >>> 0, homes: T.map(function (t) { return t.slice(); }), spots: order.map(function (i) { return bestSet[i].slice(); }), key: order.indexOf(0) };
+    }
+    return null;
+  }
+  // Written apart from bridgeItem: totals with plain arithmetic, the key the unique minimum with a margin,
+  // the spots' spacing, homes and the average position kept clear.
+  function validateBridge(it) {
+    try {
+      if (!it || !Array.isArray(it.homes) || it.homes.length < 3 || !Array.isArray(it.spots) || it.spots.length !== 4) return 'shape';
+      var tot = it.spots.map(function (p) { return it.homes.reduce(function (s, h) { return s + Math.hypot(p[0] - h[0], p[1] - h[1]); }, 0); });
+      var k = tot.indexOf(Math.min.apply(null, tot));
+      if (k !== it.key) return 'the key is not the spot with the least total';
+      for (var i = 0; i < 4; i++) {
+        if (i === k) continue;
+        var e = tot[i] / tot[k] - 1;
+        if (!(e >= 0.05 - 1e-9 && e <= 0.30 + 1e-9)) return 'a foil is not 5–30 % worse (' + e.toFixed(3) + ')';
+      }
+      var mx = 0, my = 0;
+      it.homes.forEach(function (h) { mx += h[0]; my += h[1]; });
+      mx /= it.homes.length; my /= it.homes.length;
+      for (var a = 0; a < 4; a++) {
+        var P = it.spots[a];
+        if (Math.hypot(P[0] - mx, P[1] - my) < 1 - 1e-9) return 'a spot marks the average position';
+        if (it.homes.some(function (h) { return h[0] === P[0] && h[1] === P[1]; })) return 'a spot is on a home';
+        for (var b = a + 1; b < 4; b++) if (Math.hypot(P[0] - it.spots[b][0], P[1] - it.spots[b][1]) < 2 - 1e-9) return 'two spots are closer than a dot';
+      }
+      return true;
+    } catch (e) { return 'threw: ' + e.message; }
+  }
+  var BRIDGE = {
+    id: 'cp-meet',
+    title: 'Meeting point',
+    pairText: 'A town map and a Central Point board with the same layout.',
+    map: { q: 'On the town map, what plays the part of the targets?', options: [
+      { id: 'homes', text: 'The friends’ homes', right: true },
+      { id: 'streets', text: 'The streets between them' },
+      { id: 'spot', text: 'The meeting point' },
+      { id: 'edge', text: 'The edge of the map' },
+    ], line: 'The homes are the targets, the meeting point is the best spot, and each walk is one of the lines. The same rule holds: every home pulls equally hard, near or far.' },
+    q: 'The friends want to meet at one of the lettered spots, so that their walks, in straight lines, add up to the least. Where?',
+    uses: [
+      { id: 'meet', text: 'Choosing a café or a park to meet friends' },
+      { id: 'shared', text: 'Placing a shared printer, bin or first-aid kit' },
+      { id: 'stop', text: 'Placing a bus stop or a delivery point' },
+      { id: 'other', text: 'Somewhere else' },
+    ],
+    item: bridgeItem, validate: validateBridge, pickers: PICKERS, total: total,
+  };
+
   B.register('centralpoint', {
     compare: {
       principles: [
@@ -111,6 +241,7 @@
       ],
       note: 'Real meeting choices use roads and travel times, and often care about whoever travels farthest; whether practice here changes them has not been tested.',
     },
+    bridge: { b: -0.35, sets: { 'cp-meet': BRIDGE } }, // b: the bridge items' difficulty (exact form, 4–6 targets, the widest band)
     facts: { pullSum: pullSum, crossPoint: crossPoint, equalPulls: equalPulls, crossing: crossing, sides: sides }, // the drawing and the tests
   });
 

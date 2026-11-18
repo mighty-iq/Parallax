@@ -101,3 +101,16 @@
 .bets-or-top { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 2 1.4; }
 .bets-or-tophead { fill: var(--ink-2); }
 .bets-or-toplabel { font-family: var(--font-mono); font-size: 6px; fill: var(--ink-2); paint-order: stroke; stroke: var(--stim-ground); stroke-width: 2px; }
+
+/* the town map of the bridge set "Meeting point" (half-step units) */
+.bets-town-ground { fill: var(--surface-2); }
+.bets-town-streets line { stroke: var(--surface); stroke-width: 0.5; stroke-linecap: square; }
+.bets-town-house { fill: var(--stim-face); stroke: var(--ink); stroke-width: 0.08; stroke-linejoin: round; }
+.bets-town-spot { fill: var(--surface); stroke: var(--ink-2); stroke-width: 0.08; }
+.bets-town-letter { font-family: var(--font-mono); font-size: 0.62px; font-weight: 700; fill: var(--ink); }
+.bets-town-walk { stroke: var(--right); stroke-width: 0.1; stroke-dasharray: 0.3 0.18; }
+
+/* bridge sets */
+.px-bets-bridge { display: grid; gap: var(--s3); }
+.px-bets-solo { max-width: 22rem; width: 100%; }
+.px-bets-other label { display: grid; gap: var(--s1); }
