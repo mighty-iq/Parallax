@@ -29,14 +29,14 @@
     // and two folds that both matter. Corner and slanted folds come later in Go, each with its tip.
     strategyFirst: 'analytic',
     minutes: 3,
-    demo: [{ params: { folds: 0, type: 0, idle: 0 }, seed: 14, kind: 'one fold' }],
+    demo: [{ params: { folds: 0, type: 0, idle: 0, task: 'tutorial' }, seed: 14, kind: 'one fold' }],
     // Try 4 brings two folds that both matter, after a worked example on a sister item (note D2 addendum
     // C change 4; Try has no slanted fold, so the example goes to the first item with two folds).
     practice: [
-      { params: { folds: 0, type: 0, idle: 0 }, assist: { twin: true }, seed: 1 },
-      { params: { folds: 0, type: 0, idle: 0 }, seed: 13 },
-      { params: { folds: 1, type: 0, idle: 1 }, tip: 'idle', seed: 303 },
-      { params: { folds: 1, type: 0, idle: 0 }, tip: 'two', seed: 403, example: { seed: 1 } },
+      { params: { folds: 0, type: 0, idle: 0, task: 'tutorial' }, assist: { twin: true }, seed: 1 },
+      { params: { folds: 0, type: 0, idle: 0, task: 'tutorial' }, seed: 13 },
+      { params: { folds: 1, type: 0, idle: 1, task: 'tutorial' }, tip: 'idle', seed: 303 },
+      { params: { folds: 1, type: 0, idle: 0, task: 'tutorial' }, tip: 'two', seed: 403, example: { seed: 1 } },
     ],
     // In Try and Go the first tip that fits the item is shown, so the slanted-crease tips come first.
     tips: [
@@ -86,9 +86,7 @@
       },
     ],
     captions: {
-      folds: 'These panels show the folds, one at a time: dashed where the paper was, solid where it is now.',
-      punch: 'The last panel shows where the folded paper is punched.',
-      options: 'Every sheet below has the same number of holes. One of them is right.',
+      intro: 'The panels show the folds, one at a time (dashed: where the paper was), then the punch. One sheet below shows the holes once it is unfolded.',
       punched: '1/3 · Mark the punch: it goes through {n} layers of paper, so the sheet gets {n} holes.',
       unfold: '2/3 · Undo the last fold, fold {n}: each hole on the flap gets a twin straight across the crease.',
       unfoldMore: '3/3 · Keep undoing, fold {n}: each hole on its flap gets a twin across its crease.',
