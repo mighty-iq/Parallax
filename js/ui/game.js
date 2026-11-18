@@ -438,7 +438,9 @@
     if (arch.length) {
       p.body.appendChild(h('p.px-meta', 'Missed a day? Past Dailies stay open in the archive: scored once, marked archive, outside that day’s shared result.'));
       p.body.appendChild(h('div.gm-archive', arch.slice(0, 4).map(function (x) {
-        var b = ui.button('#' + x.number + (x.state === 'partial' ? ' (go on)' : ''), { kind: 'ghost', small: true, go: 'play?mode=daily&day=' + x.day });
+        var when = '';
+        try { when = PX.util.fmtDate(new Date(x.day + 'T12:00:00').getTime(), 'short'); } catch (e) { when = x.day; }
+        var b = ui.button('#' + x.number + ' · ' + when + (x.state === 'partial' ? ' (go on)' : ''), { kind: 'ghost', small: true, go: 'play?mode=daily&day=' + x.day });
         b.setAttribute('data-archive', x.day);
         return b;
       })));
