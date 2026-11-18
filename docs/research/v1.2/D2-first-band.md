@@ -1,6 +1,6 @@
 # D2. A first band and a taught start for the DAT-style exercises and Views
 
-Phase 1 research note for v1.2, milestone 1, first bullet ("An easier, better-taught start"). Started 2026-11-18 11:19 UTC on branch `build`; complete 2026-11-18 11:57 UTC.
+Phase 1 research note for v1.2, milestone 1, first bullet ("An easier, better-taught start"). Started 2026-11-18 11:19 UTC on branch `build`; complete 2026-11-18 11:57 UTC. Addendum 2026-11-18 (UTC) at the end: Atkinson et al. 2000, read in full, and what it changes in the teaching template.
 
 Scope: Views (`views`), Angles (`angles`), Painted Cubes (`cubes`), Openings (`openings`), Form (`form`), Hole Punch (`patfold`), Missing View (`patviews`).
 
@@ -272,7 +272,7 @@ Sorby's courses start from blocks and sketches; low starters gain most (PSVT:R a
   - Guidance that helps novices can hinder experienced users.
   - In Chu et al., a colour cue plus a 3D-animation strategy for mental rotation helped low-ability students (gain 1.87 against 1.24) and hurt high-ability ones (−1.06 against −0.54).
   - So scaffolds must fade with skill, and must be skippable.
-- **Worked → faded → independent practice** (Atkinson et al. 2000; Renkl & Atkinson 2003; Atkinson, Renkl & Merrill 2003; a 2023 meta-analysis of worked examples in mathematics). **Not opened this pass** (see Could not open). Working assumption, from the general literature and **[unverified] here**:
+- **Worked → faded → independent practice** (Atkinson et al. 2000; Renkl & Atkinson 2003; Atkinson, Renkl & Merrill 2003; a 2023 meta-analysis of worked examples in mathematics). **Not opened this pass** (see Could not open; Atkinson et al. 2000 was read later: see the addendum at the end, which supports the first and third points below and does not test the second). Working assumption, from the general literature and **[unverified] here**:
   - worked examples help novices most on well-structured problems;
   - removing worked steps one at a time (fading) eases the move to solving alone better than abrupt example–problem pairs;
   - prompts to explain a step add to the effect.
@@ -806,6 +806,7 @@ The shared web-search budget was spent before this section's searches, and most 
   - Needed: the worked-example effect for novices, sizes and conditions.
   - Assumed: worked examples help novices on well-structured problems.
   - Used for: the Watch at the band (§3.0 C2).
+  - Read in full on 2026-11-18: see the addendum below. It supports the Watch and the faded Try 1 in kind; it does not test fading.
 - **Renkl & Atkinson 2003**, *Educ Psychol* 38(1), 15–22, doi 10.1207/S15326985EP3801_3 (from memory); and **Atkinson, Renkl & Merrill 2003**, *J Educ Psychol* 95(4), 774–783, doi 10.1037/0022-0663.95.4.774 (from memory).
   - Needed: whether fading worked steps one at a time beats example–problem pairs, and the size of the effect; the effect of self-explanation prompts.
   - Assumed: fading helps near transfer, and prompts add to it.
@@ -851,3 +852,48 @@ The shared web-search budget was spent before this section's searches, and most 
   - Used the v1.0 note's secondary figures meanwhile.
 - **Sorby, Veurink & Streiner 2018**, full text. Needed: effect sizes, which the record page does not give.
 - **Ahissar & Hochstein 1997**, full text. Needed: the methods and the size of the easy-first effect; only the abstract was seen.
+
+## Addendum 2026-11-18: Atkinson et al. 2000 (full text read)
+
+Added 2026-11-18 (UTC) by a research reader.
+
+**Source.** Atkinson, R. K., Derry, S. J., Renkl, A., & Wortham, D. (2000). Learning from examples: Instructional principles from the worked examples research. *Review of Educational Research*, 70(2), 181–214. https://doi.org/10.3102/00346543070002181 (the DOI listed under "Could not open"; journal, volume and pages match the copy read). **[F]**: all 34 pages, from the text layer of a scanned copy the owner supplied, with the framework figure checked on its page image. The copy stays outside the repository.
+
+**What kind of source it is.** A narrative review that turns the worked-examples research into design principles; not a meta-analysis. It reports directions and conditions, one effect size (item 8 below) and almost no sample sizes. Nearly all its studies used well-structured textbook problems (geometry, algebra, probability, statistics, physics, programming), in laboratories or classes. Carrying the principles over to spatial formats is my inference.
+
+### A. What the review found
+
+1. **Scope.** Worked examples matter most early in learning a skill, while learners solve by analogy to examples and are forming verbal rules (the first two stages of the ACT-R account the authors use). For fluent, automatic performance, practice is what counts.
+2. **Integrated format; split attention.** Examples that make the learner combine a diagram with separate text lose their benefit. In Tarmizi & Sweller 1988 (circle geometry, experiment 3), split-source examples were no better than problem solving and slower on the posttest; with the explanations placed into the diagram (experiments 4–5) they beat both problem solving and split-source examples. Ward & Sweller 1990 replicated this in high-school physics classes, over three long experiments.
+3. **Two modalities.** Diagrams with spoken statements gave faster posttest solutions than all-visual examples (Mousavi, Low & Sweller 1995: modest evidence in experiments 1–2, consistent in 3–4). With visually complex diagrams the spoken version helped only when a visual cue, a flashing highlight, showed which part was being described (Jeung, Chandler & Sweller 1997).
+4. **Subgoal labels.** Marking the solution's subgoals, with a label or simply by setting each group of steps apart, improved transfer to new problems across Catrambone's studies. The presence of a label mattered more than its wording, and visual separation alone worked as well. In the first study the gain showed on one of four novel items (Catrambone & Holyoak 1990). Labels also improved learners' self-explanations (Catrambone 1996, 1998).
+5. **How many examples, and in what order.** Two examples, a simple and a more complex one, beat a single example, even one given with written procedures (Reed & Bolstad 1991); the authors' rule is to add at least a second example. Alternating each example with a matched practice problem beat a block of examples followed by a block of problems, in time and accuracy on near transfer (Trafton & Reiser 1993).
+6. **Variability.** Mixing problem types within a lesson helped transfer only together with worked examples; variability had no main effect (Paas & van Merriënboer 1994). Different cover stories within a type, with the same set of stories across types, taught learners to sort problems by structure (Quilici & Mayer 1996).
+7. **Incomplete examples**, the review's nearest thing to fading. Examples with blanks that learners filled in, with feedback after each, raised self-explanation, cut shallow rereading and improved transfer against complete examples (Stark 1999); Paas 1992 found no difference, but that was not its main question. The review does not test fading as such (removing steps one by one over a series) or which step to remove first; a fading report by Renkl, Atkinson & Maier (2000) is cited only as the source of its first figure.
+8. **Self-explanation.** Learners who explain the steps to themselves learn more (Chi et al. 1989). The successful styles are anticipating the next step and then checking it, or explaining the principle behind each step; most learners are passive (Renkl 1997b). Self-explanation rises with structure (subgoal labels, incomplete examples, an integrated format) and with short training: explicit training beat implicit training, with better programming outcomes (Bielaczyc, Pirolli & Brown 1995); in Renkl, Stark, Gruber & Mandl 1998 about 15 minutes (why explaining matters, one modelled example, one coached example) raised self-explanation activity by **about two standard deviations**, the review's only effect size, improved transfer, and helped learners with little prior knowledge most on near transfer. Training helped on conceptual story problems but not on bare symbol manipulation, where there is little to explain (Nathan, Mertz & Ryan 1994).
+9. **Explaining to others.** Expecting to teach did not help and seemed to hurt, through stress and lower intrinsic motivation; explaining to a partner raised explanations but not learning (the listeners did better); a partner's questions helped poorly motivated learners and hindered the others (Renkl 1995–1998). Novices without tutoring experience were overloaded by the double task.
+10. **The authors' framework** (their Figure 2). Lesson and example design act on learning directly and through the quality of self-explanation; short prompts or training act through self-explanation; a learner's own explanation style matters too.
+
+### B. What this checks in D2
+
+| D2 statement (where) | Verdict |
+|---|---|
+| Worked examples help novices most on well-structured problems (§2.2, first point) | Supported in kind: the review places worked examples in the first stages of skill learning, on well-structured problems. No effect size. |
+| Fading steps one at a time beats abrupt example–problem pairs (§2.2, second point) | Not tested in this review. Its nearest evidence: incomplete examples beat complete ones (Stark 1999), and examples paired with problems beat blocked ones (Trafton & Reiser 1993). Stays [unverified] until Renkl & Atkinson 2003 or Atkinson, Renkl & Merrill 2003 is read. |
+| Prompts to explain a step add to the effect (§2.2, third point) | Supported for training and for prompts built into the example (labels, blanks), with one size: about 2 SD on self-explanation activity, transfer improved, learners with little prior knowledge helped most (Renkl et al. 1998). Limit: little gain where the procedure leaves nothing to explain (Nathan et al. 1994). |
+| The Watch is the worked example; Try 1 has its first step done; Try 2 is unaided (§2.6 #2, §3.0 C) | Consistent: Try 1 is an incomplete example in Stark's sense, and Watch → Your turn → Try 1 is an example–problem pair. Feedback on the done step itself (Stark gave it per blank) is missing; show-me after a miss covers part of it. |
+| One strategy in the format's terms before practice (§2.6 #3) | Consistent with subgoal labelling, if the card's steps are the labelled steps the Watch shows (change 1 below). |
+| Try stays within one variant (§3.1, Views) | Supported: variability helped only together with examples (Paas & van Merriënboer 1994). |
+
+### C. Changes to the teaching template (§3.0 C–D)
+
+[Proposal], concrete, with owners. Requests filed on 2026-11-18 in docs/dev/v1.2/requests.md where marked.
+1. **Labelled steps in the Watch** (item 4). The captions that solve the item (after the ones that introduce the parts) start with the strategy card's step they carry out, in the card's order and words, e.g. "1/3 · Smallest first: …". The card that follows the Watch repeats those labels, and show-me after a miss uses them too, as §3.0 D already asks. Data only, in learn.js and view.js. Request: W1-band-A, W1-band-B.
+2. **Point at what each caption names** (item 2, and Jeung et al. in item 3). While a caption shows, the part it names is marked on the figure (ring, tint or trace); no caption refers to an unmarked part. It matters most on phones, where the caption sits pinned under the item. Same request lines.
+3. **Say why** (item 8: principle-based explanations; the authors' call to make an expert's reasoning visible). Each solving caption names the rule behind its step in a few words ("…: it touches the ground, so its bottom is unpainted"), within the 3 s reading floor. Same request lines.
+4. **A second worked example before the first hard feature** (item 5). The Try item that brings the first hard feature (Painted Cubes' hidden cube, Missing View's dotted line, Openings' turned openings, Form's half mark, which is §3.5's mini-demo, Hole Punch's slanted fold) is preceded by a short worked example of that feature on a sister item, and then answered. Player: a practice entry `example: { seed }` (W1-core); data: the band builders. Request: W1-core, low priority.
+5. **One new feature per Try item** (§3.0 B2; the official sheet's first cube example teaches the hidden support on four cubes, note D1 addendum A.1 row 8). Painted Cubes' Try 3 becomes a 4–5-cube figure with one hidden support; the pre-1.2 floor moves to Try 4. Request: W1-band-A.
+6. **Later, not wave 1.** A one-tap "why?" after the first right Try answer on the rule-based formats (Painted Cubes, Missing View, Hole Punch, Form; not Angles, which is perceptual): three reasons to pick from, feedback that names the rule. It fits milestone 4's one-tap menus (comparison rounds).
+7. **Not adopted.** Spoken captions (modest evidence, and with complex figures only alongside visual pointers, which change 2 gives). Asking beginners to explain items to others as a way to learn (it overloaded novices); community features should not lean on it.
+
+Unchanged: the rules card before the Watch, the strategy card before Try 1, Try 1 with its first step done, Try 2 unaided, show-me after a miss, and scaffolds that fade with skill (examples serve the early stages; practice builds fluency).

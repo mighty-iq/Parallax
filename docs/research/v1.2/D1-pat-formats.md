@@ -5,6 +5,8 @@ Phase 1 research note for v1.2, milestone 8 ("DAT-style, rebuilt to the real PAT
 already settled a fact, this note cites R3 and adds only what is new or corrected.
 
 Status: complete, 2026-11-18 (UTC). Gaps and unread sources are listed under "Could not open".
+Addendum, 2026-11-18 (UTC), at the end of this note: the ADA's PAT instruction sheet and the DAT 2026 Candidate
+Guide, both read in full. Where the addendum differs from §1–§6, the addendum wins.
 
 ## 0. How to read this note
 
@@ -819,3 +821,106 @@ js/ui/overlap.js.
 | Justia record "DAT PERFECTER" (https://trademarks.justia.com/889/06/dat-88906775.html) | whether third-party DAT marks were opposed by the ADA | site error; none |
 | Court opinions: *ETS v. Katzman* (3d Cir. 1986), *NCBE v. Multistate Legal Studies* (7th Cir. 1982), *AAMC v. Mikaelian* (E.D. Pa. 1983), *ISC2 v. Security University* (2d Cir. 2016, nominative use by a test-prep provider) | holdings on reconstructed test items and on prep providers naming a test | prior knowledge, marked [unverified] in §4; not relied on for any recommendation |
 | Not searched (the shared web-search budget ran out mid-pass): Google Patents by classification and claim language; the USPTO record of the ADA's DAT mark; any litigation by the ADA against prep providers; Reddit r/predental threads (only third-party mirrors appeared, and they were not used); newer forum reports on real-test figure sizes and slopes in views; DAT Destroyer's PAT content | patent freedom to operate; mark status; enforcement history; recent student views | no patent or dispute found in what was searched; R3's trademark reading; SDN threads stand in for Reddit |
+
+Rows 1 and 2 were read in full on 2026-11-18: see the addendum below. Row 3 (the Prometric tutorial) stays open.
+
+## Addendum 2026-11-18: the official instruction sheet (full text read)
+
+Added 2026-11-18 (UTC) by a research reader, from two documents the owner supplied. They stay outside the
+repository, and nothing from them is copied here: no instruction text, item, figure or page image. Formats are
+described in my own words. This also does §6.9 #1.
+
+**Sources and read levels**
+- [Sheet] ADA, *Perceptual Ability Test Section* instruction sheet (© 2025, 18 pages; the document behind the ada.org
+  link in §7). [F]: the text of every page, and every page image looked at, figures zoomed. Per part it holds the
+  rules in words, one or two worked examples with a short explanation, and one sample question with its key. It
+  says nothing about item counts, time, navigation or scores.
+- [Guide] ADA, *Dental Admission Test (DAT) 2026 Candidate Guide* (34 pages). [F]: the whole text; its few figures
+  belong to other sections. See §A.4.
+- [Meas] marks my rough measurements of the sheet's sample drawings, made with scratch scripts outside the
+  repository. They describe one sample, not the test.
+
+### A.1 Assumptions checked against the sheet
+
+| # | D1 assumption (where) | What the sheet shows (my words) | What changes |
+|---|---|---|---|
+| 1 | Options: apertures 5, views 4, angles 4, paper folding 5 "best-supported", cube counting 5 (1–5 cubes), pattern folding 4; all lettered (§2.0, §2.4, §2.8 #1) | The same counts in every part, with a letter under or beside each option. Paper folding shows five answer sheets, A–E, in both figures laid out as on the test. Cube counting lists A–E as one to five cubes and says zero is never right. | None: lettered options as planned. §2.8 #1 closed: five options in paper folding is official. |
+| 2 | Angles numbered 1–4, options A–D listing orderings (§2.3, §3.3) | Each angle sits in its own tall framed cell with its number under it, the four in a row. The four options are orderings written as numbers, smallest first, lettered A–D. | Confirms milestone 8's labelling. Wave 1: new Angles texts written label-neutral (request to W1-band-A). |
+| 3 | More than one fold per paper-folding item (via R3); prep says 1–3 (§2.4, §2.8 #2) | The part overview allows one or more folds, but the part's own instructions say every item has several. Its single-fold figure is a teaching example; the figure it presents as a test item has two folds, the sample question three. Creases in the samples: the middle line, and a quarter line (a one-row strip folded, then folded again). No diagonal fold in the samples. | §2.8 #2 closed: test items have two or more folds. D2's one-fold band stays labelled "starter"; it matches the sheet's own first teaching figure. Diagonal and corner folds stay prep-documented. |
+| 4 | Paper-folding panels: broken old outline, solid folded paper; 16 positions, filled = hole (§2.4, §3.4) | One panel per fold, showing the paper after it, then a punch panel; the sample question labels them by fold number and punch. The original square stays a broken outline in every panel; the folded paper and the edges of folded-over strips are solid. No shading, no arrows, no positions marked on the folded paper; the punch is a small open circle. Each answer shows the square with all 16 positions, filled where there is a hole. | Test look as planned (no flap shading, no arrow), plus no position dots on the folded paper and panels labelled "Fold 1 … Punch". The band's faint dots (D2 §3.6) stay a starter scaffold. |
+| 5 | (not in D1's "Real" column) 1.1 gives all five sheets the key's hole count (§3.4) | In both figures laid out as on the test, the answers differ in hole count. In the three-fold sample every answer has a different count, so counting the layers alone finds the key. Both worked explanations derive the number of holes from the number of layers punched. | **New for milestone 8.** 1.1's rule is stricter than the official samples and switches off a method the sheet itself teaches. [Prop] In the test range, allow fold-error foils whose count differs (a fold not undone, a layer missed or added); keep at least one foil at the key's count, so a full unfold still decides most items; record "count the layers under the punch" as a format method in DECISIONS, as crease symmetry was; keep the naive count rules (two to the power of the folds, most holes, most like the others) within chance + 10. "Every sheet at the key's count" stays as a harder level, tagged beyond the official samples. Wave 1: none (Hole Punch's rules card already teaches one hole per layer). |
+| 6 | Five painted sides can be asked [Inf] (§2.5, §3.5, flag 7) | The list of questions runs from one to all five painted sides, and the worked example has a top cube with five painted sides. | Confirmed: milestone 8 keeps five painted sides, with its answer skew handled, as planned. |
+| 7 | Questions per figure: 2–5, about 3 (prep; §2.5, §6.3) | No number. The text speaks of examining each figure for the questions that follow; the sample shows one figure with one question. | None: the 2–4 figure sets rest on prep sources (Kaplan-C, BC-guide), not on the sheet. |
+| 8 | Cube figures: black-and-white line drawings; projection and size unknown (§2.5, §2.7, §3.5, flag 14) | Plain line drawings: white faces, black edges, no tones, no hidden lines. The worked example is drawn in an oblique view (front faces as true squares, depth edges at 45°), the sample question in an axonometric view from a low front corner. [Meas] The sample figure has roughly 15–20 cubes, with columns up to four high. Hidden cubes appear only as supports, and the first worked example already has one, in a figure of four cubes. | Test look: white faces, black edges, as planned. No single projection is "the" test look, so Parallax keeps its own axonometric view. Flag 14 answered: 1.1's largest figures (18–22 cubes, four high) are about the sample's size, so they are test range. Wave 1: Painted Cubes' first hidden-cube Try item on a 4–5-cube figure (request to W1-band-A). |
+| 9 | Pattern-folding fold lines: dotted (BO-guide) or solid (SH-SR) (§2.6, §2.8 #5; §3.6 "keep dashed") | Every line of both nets is a plain solid line: folds are drawn like cut edges. | §2.8 #5 closed. Milestone 8: the test look draws every edge plain; dashed fold lines remain a starter scaffold only, and a tip says so when they go. Wave 1: none (dashes stay at the band). |
+| 10 | Three pattern-folding item kinds: plain, shaded, cubes (prep; §2.6, §6.4) | The worked example is a cube net with four faces shaded in one flat grey; its four options are cubes in one pose. The sample question is unshaded: a five-sided prism (a box with one long top edge bevelled away), its net laid out irregularly (one face hangs at a tilt), and four options of the same kind of solid in different proportions. The pattern is the outside of the solid. No half-shaded face anywhere. | Milestone 8, Form: the plain kind gets bevelled boxes and same-type proportion foils (convex, so no new visibility solver); the full-shading kind includes cube nets with whole faces shaded (PR-1 allows it; §6.4's "no cubes" alternative is dropped); partial shading is prep-documented only, so it stays last. Shading: one flat tone; Parallax's hatch stays as its own addition (rule 8). |
+| 11 | Views: fixed quadrants, any view missing, no 3D picture (§2.2, §3.2) | Two crossing lines make the quadrants: top upper left, front lower left, end lower right, each labelled. Any view can be asked (the sample asks for the top). Items show no 3D picture; 3D sketches appear only where the conventions are explained. | Confirmed; VT's 3D picture is wrong. Missing View's structure beside the views stays a starter scaffold (D2 §3.7), in line with the sheet's own teaching sketches. |
+| 12 | Hidden edges: "dots rather than dashes" in the rebuild (§3.2) | The text calls hidden lines dotted; the drawings use short, fine dashes. | Withdrawn: keep 1.1's short dashes, and keep calling them dotted. |
+| 13 | Views' objects: steps, notches, holes, curved features (prep); slopes unsettled (§2.2, §2.8 #3) | The view figures show a block with a round boss on it, a slab with a square hole through it (dotted in the side views), and a block with a tapered top and round holes (slanted edges and dotted circles in the views). | §2.8 #3 closed: slopes and round features are in the official samples, so in Missing View phase B (O49) holes, round features and slopes are all test range, not beyond. The build order can stay. |
+| 14 | Views' foils: one line, or solid against dotted; pairs by line type (SDN-BD26) (§2.2, §3.2) | In the worked example the wrong answers lack the boss, show a recess instead, or add hidden lines that would mean a hole. In the sample question all four answers share the outline and differ only in which lines are solid or dotted. Each answer is drawn beside a small cross that shows the quadrant it fills. | Line-type foils now rest on an official sample, not on a forum report. Optional test-look detail: the small quadrant cross in each option cell. |
+| 15 | Apertures: turned or flipped openings are a prep convention (§2.1, §3.1) | The rules let the solid be turned any way before it goes in, and go in by a side the picture does not show. So the fitting opening can appear turned in the plane, and mirrored. | The turn dim's top level (turned or flipped) is test range by the official rules; 1.1's turned or flipped openings are inside the format. |
+| 16 | Apertures: look undocumented; 1.1's three features at the floor flagged as harder than the test (§2.1, §2.7, §3.1, flag 2) | The solid is a plain line drawing (white faces, black edges, no hidden lines, no shading) in a tilted pose, in its own lighter panel; the openings are white shapes outlined in black on grey panels. The sample solid has straight edges only: a notch, a large bevel and small cut corners, spread over more than one profile; the fitting outline carries one of them, the large bevel. No curves, no holes. | Flag 2 withdrawn for the feature count: 1.1's three-feature floor is about the sample's complexity, and the planned two-feature start is the easy end of the test range. Arcs stay prep-only (O50's second part stays outside milestone 8). Small bevels are a documented kind of feature. |
+| 17 | Apertures: pure-size foils ≥ 25 % in the test range, 15 % beyond (§3.1, §6.6) | [Meas] The answer closest to the key is about 10 % smaller in both directions and also differs by a small cut corner; no answer differs by size alone. The rules say size differences are always large enough to see. | None: ≥ 25 % pure-size foils in the test range and the 15 % level beyond stay Parallax's choices. The sheet neither supports nor rules out smaller pure-size differences. |
+| 18 | Angles: gaps of about 2–10° (forum); arms vary; real lines thin (§2.3, §3.3, flag 4) | [Meas] The sample's four angles are all acute, roughly 25–60°, the closest two about 7° apart. Each has one long and one short arm (about 0.3 of the long one), the same two lengths in all four, pointing in all directions. The explanatory example spans roughly 30–105°, with gaps of 15° or more. Thin lines, no arcs. | One sample: the test's gap range stays unknown, and the forum range is a recollection (§A.4 row 7). Acute angles are documented; D2's band (near-right, aligned, 9°) stays below the test. With equal arms, the tip-to-tip distance grows with the angle in the sample; Parallax keeps that cue uninformative (rule 5), which is stricter than the sample. Say so in the test-range note rather than relax rule 5. |
+| 19 | The look across parts is undocumented (§2.7 gap, §6.1) | Black line drawings on white or light grey, each stem and option in a framed panel, grey panels behind the openings and the answer sheets. The only fill is the flat grey of shaded faces in pattern folding. | §2.7 closed: white faces, black edges, short-dash hidden lines, one flat tone for marked faces. Draw it from Parallax's own models; never trace the sheet. |
+| 20 | Time, item counts, order, navigation, part instructions (§2.0, §2.8 #8) | Nothing. | See §A.4. |
+
+Still open after the sheet: §2.8 #4 (curved or holed apertures: prep only), #6 in part (whether each cube question's
+screen repeats the figure) and #8 in part (whether part instructions sit inside the timed section).
+
+### A.2 What changes in PLAN.md milestone 8 (suggested wording, for the lead)
+
+Fragments of the "DAT-style, the real formats" line, old → new:
+1. "lettered options and a plain line-drawing look in all six" → "lettered options and the documented line-drawing
+   look in all six (white faces, black edges, hidden edges as short dashes, one flat tone for marked faces)".
+2. "then the test's kinds (plain shapes, full shading, partial shading)" → "then the test's kinds (plain shapes, with
+   bevelled boxes and proportion foils; full shading, cube nets included; partial shading last, documented by prep
+   sources only), with fold lines drawn plain in the test range".
+3. "Missing View on profile solids (O49)" → "Missing View on profile solids, with holes, round features and slopes all
+   in the test range (O49)".
+4. "Openings with a test-range start at two features and a turn dim (O50, first part)" → "Openings with a turn dim
+   whose turned-or-flipped level is test range (the official rules), and two features as the easy end of the test
+   range (O50, first part)".
+5. "Hole Punch's new look" → "Hole Punch's new look (panels labelled by fold; no shading, arrows or position dots) and
+   foils whose hole counts differ, as in the official samples, with the layer count recorded as a format method".
+6. Section practice: see §A.4.
+
+Unchanged by the sheet: Painted Cubes' 2–4 questions per figure (prep-based) and its five-painted-sides handling
+(now official); Angles' numbering and lettering (now official); D2's starter bands.
+
+### A.3 Effects on wave 1's starter bands (D2 §3.2–3.7)
+
+| D2 § | Exercise | Effect | Request |
+|---|---|---|---|
+| 3.2 | Angles | Band unchanged (below the test). Milestone 8 switches to the official labels, so texts written now should not name the symbols. | to W1-band-A |
+| 3.3 | Painted Cubes | Band unchanged. The sheet's first worked example teaches the hidden support on a four-cube figure, while today's Try 3 brings more cubes and the hidden cube at once. | to W1-band-A |
+| 3.4 | Openings | None: unturned openings are a starter, and the rules card already says the solid may be turned any way. | none |
+| 3.5 | Form | None now; milestone 8 adds a tip when fold lines turn plain. | none |
+| 3.6 | Hole Punch | None: the one-fold band matches the sheet's own first teaching figure, and the rules card already teaches one hole per layer. | none |
+| 3.7 | Missing View | None: hidden lines stay short dashes; the structure beside the views is a scaffold, as the sheet's teaching sketches are. | none |
+
+### A.4 The DAT 2026 Candidate Guide (full text read)
+
+| # | D1 assumption (where) | What the guide says (my words) | What changes |
+|---|---|---|---|
+| 1 | 90 items in 60 minutes on one clock, about 40 s an item (§2.0) | The PAT has 90 items in six subtests and 60 minutes. A timer shows on screen and stops while an item is loading. No count per subtest. | Confirmed; 15 per part stays a prep figure. Section practice: the clock should not run while an item is being prepared, as on the test. |
+| 2 | Six parts in a fixed order (§2.0) | The six subtests are listed in a table in the usual order (apertures to spatial relations / 3D form development). Nothing on the order of presentation or on moving between subtests. The PAT is the second of the day's four test sections, after the natural sciences and before the optional break. | "Fixed order" is the listed order, not a documented rule. The forum report of a candidate starting with angles stays unconfirmed. |
+| 3 | One item per screen; marking, a review list, strike-out and free movement (BO-day, SDN-BC16, SDN-BD26) (§2.0, §3.7) | Items appear one at a time. Nothing on marking, review lists, strike-out or moving between subtests. | These stay test-taker and prep descriptions. Section practice may offer them, labelled as how test takers describe the screen. |
+| 4 | An optional 15-minute tutorial (BO-day); noteboards; no measuring tools (§2.0) | An optional 15-minute tutorial at the start of the session shows how to move through the test on the computer. The test vendor's paid sample experience is a generic 15-minute test, not this one. The centre provides two erasable note boards without grid lines and two fine markers. Rulers and other measuring tools, magnifiers and watches are banned, and candidates may not touch the screen. The on-screen aids it names are for other sections (a periodic table, a calculator); none for the PAT. | Confirmed, now official. The tally pad (O12) should be blank like the note boards (prep's 4 × 4 grid is drawn by hand). Parallax's angle overlay in show-me is a teaching device with no counterpart on the test. |
+| 5 | Part instructions and the clock unknown (§2.8 #8) | Candidates are strongly encouraged to study the PAT instructions on the ADA's site before test day. Nothing on whether instructions appear inside the timed section. | Supports "part instructions before the clock" in Section practice. [Prop] The "Taking a test soon?" helper can point to the ADA's own instructions page: a link, never a copy. |
+| 6 | (texts) Scores, practice material, prep products (§4.4–4.5, §5.3) | Scale scores 200–600 in steps of 10 since 1 March 2025; no passing score; no penalty for guessing; some unscored trial items look like scored ones. The official practice questions are copyrighted and meant to show the question types, not to predict performance. The program endorses no prep course and has no data on their content or effect. | No score forecast (rules 2 and 10, as planned), in line with the official caution. Section practice can say that guessing is not penalised. The ADA line's "not affiliated with or endorsed by" matches the program's own statement. |
+| 7 | Confidentiality and recalled items: [unverified] candidates agree to keep content confidential; [Inf] recalled items count as the ADA's protected questions (§4.2; Could not open row 2) | Test questions are confidential, copyrighted material. Getting, using or passing them on by any means, memorising included, is forbidden, and so is discussing or posting remembered questions or their keys, or any piece of them, with anyone, test-prep organisations named. Sharing remembered questions on forums or social media is listed as misconduct. People sent unreleased items are told not to look at them and to report them. | §4.2's inference is now the program's stated position. [Prop] (a) Parallax never builds items from recollections of live items, and its texts and test-range tags never present a candidate's recollection as a fact about the test; forum reports stay direction-only (§2.8 #9), and where only they exist (angle gaps, half-hole frequency) the tag says "not documented officially". (b) The PAT statement adds the ADA's published practice questions to the off-limits list. |
+| 8 | Marks: the ADA writes DAT®; descriptive use with the ADA line (§4.3) | The guide writes DAT® with the registered sign and says nothing about use of the name by others. Its arbitration clause keeps the ADA's right to go to court over its intellectual property (in disputes with candidates). | No change to §4.3 (not legal advice). |
+| 9 | No PAT content change 2022–2026 (§2.0) | The only changes it records are the score scale (March 2025) and an announced renaming of organic chemistry topics; nothing for the PAT. | Confirmed. |
+
+**PLAN.md text, old → new (for the lead)**
+- "The PAT statement" (Decisions): "Off-limits: the ADA's questions (recalled ones and old sample tests included),
+  instructions and drawings;" → "Off-limits: the ADA's questions (recalled ones, its published practice questions and
+  old sample tests included), instructions and drawings, and candidates' recollections of live items as a source for
+  items or for claims about the test;". The rest stands.
+- Milestone 8: "Section practice under test conditions (free navigation across parts, strike-out, a review list of
+  marked and unanswered items, part instructions before the clock)" → "Section practice under test conditions (one
+  60-minute clock on screen that stops while an item is prepared; part instructions before the clock, as the
+  official guide asks candidates to study them before test day; free navigation across parts, strike-out and a
+  review list of marked and unanswered items, as test takers describe the screen, which the official documents do
+  not; a line that guessing is not penalised)".
