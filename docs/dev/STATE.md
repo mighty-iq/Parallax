@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 18:50 UTC.
+Updated 2026-11-18 20:15 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -38,19 +38,18 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
-## In progress (Phase 2, wave 1: milestones 1, 2 and Central Point)
-- Done and reported (logs in docs/dev/progress/): W1-central (Central Point: Quick and Exact forms, validator over 10 000 items per cell, shortcut bounds, 166 browser checks), W1-band-A and W1-band-B (taught first bands for all seven; firstband passes: Views 78.0, Painted Cubes 76.8, Angles 72.4, Openings 75.4, Form 76.4, Missing View 80.1, Hole Punch 70.3 %), W1-fixes (motion comfort O36, Section O9–O11, Reckon texts O39–O40, tutorial pace after a fresh test), W1-rules (milestone 2: Chimera welcome and card, invites, licences, CLAUDE.md, playtest mode with `BUILD = 'test'`, modes' lines, Watch, Try, Go first in every Practise sheet).
-- Still running: W1-core (player: Watch captions wait for Next with Auto-play, tutorial title row, 44 px tools, answer-grid gap, layout shifts; its full node suite, fit/play/flows/clock/twotabs and longrun are running in the background). The session server restarted at about 18:44 UTC; W1-core was resumed from its transcript.
-- Fresh-player tests (note D2 §4): Painted Cubes 4/4 Try, 5/5 scored; Angles 3/4 (a mis-tap), 5/5; Reckon partial (pace and captions fixed since); Views and the four band-B exercises still to run once no builder holds a browser slot.
-- Paper readers: all done; addenda in the notes; ACCESS.md marked; PLAN.md updated (measurement numbers revised and the owner told).
-
-## Owed at the end of wave 1 (the owner's yes, 18 Nov)
-- Rewrite commits 6a0c3d0 and 99768e0 so docs/dev/v1.2/requests.md's four W1-central stamps read the true UTC times (15:55), keeping every other byte; force-push build; record old → new IDs for the GitHub Support list. Do it only when no builder is running.
+## In progress (Phase 2)
+- **Wave 1 (milestones 1, 2, Central Point): DONE.** Logs in docs/dev/progress/W1-*.md. Test build 1.2.0-test.1 (playtest mode on) went to the owner as a private preview at 20:00 UTC; it saves playtest reports to the preview's database (tools/build-preview.mjs, tools/preview-adapter.js).
+  - Node: full suite 4760/4760 before W1-core's last commits (current run by the lead in progress). Browser: play 138/0, flows 73/0, clock 74/0, twotabs 10/0, single 17/0, preview adapter 10/0; fit.py at 360 × 640: Hole Punch's worked example still too tall (request to band-B).
+  - Open from W1-core (requests.md): reveal lines push the answer tiles about 30 px (Cubes, Form, Hole Punch, Missing View) and Angles' order tags; Openings' options end under the strip at 390 × 844; the guide needs a line on Watch pacing (Next, Auto-play).
+- **The owed history rewrite: DONE** at 19:58 UTC (117 commits; only the four stamps changed, verified per commit; old IDs in the project status note).
+- **Fresh-player tests (note D2 §4) running:** Views, Central Point (driver /tmp/w1a/fp), Form, Openings, Missing View, Hole Punch (driver /tmp/bandB/fp). Findings go to band-A and band-B (resumed) with W1-core's requests.
+- **Wave 2 started:** W2-measure (milestone 6 simulation; new files js/engine/trend.js, tests/node/trend.test.mjs, tests/node/measure-*.mjs, docs/dev/v1.2/measure-sim.md); W2-core (the wave-2 section of docs/dev/CONTRACT-v1.2.md, then shared hooks: record fields and migration, events table, trial-row fields, player and Today hook points). No app code changes while the fresh tests run.
 
 ## Next three steps
-1. When W1-core reports: the owed history rewrite (script /tmp/rewrite/fix-stamps.sh outside the repository; verify, then force-push build), with nothing else running.
-2. Integration: PX.version for the test build, band-B tutorials' minutes, node suite and key browser suites, dist/Parallax.html; publish a private preview with playtest mode on and send it to the owner; run the pending fresh tests in parallel.
-3. Wave 2 (milestones 7, 3, 6, 4): contract additions by W1-core, then builders.
+1. Fresh-test findings and W1-core's open requests → band-A and band-B fixes; a second test build when they land.
+2. W2-core's contract → its hooks → builders W2-progress (7), W2-plateau (3), W2-measure build (6), W2-bets (4).
+3. Read the owner's playtest reports from the preview's database (playtest/<device>) and fold them in.
 
 Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from.
 
