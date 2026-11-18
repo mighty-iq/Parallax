@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 15:15 UTC.
+Updated 2026-11-18 18:50 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -39,19 +39,18 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
 ## In progress (Phase 2, wave 1: milestones 1, 2 and Central Point)
-Intent: a contract and shared hooks first, then parallel builders in their own files; then integration and the first playable build for the owner (playtest mode on).
-- W1-core → docs/dev/CONTRACT-v1.2.md (wave-1 ownership and interfaces), docs/dev/v1.2/requests.md (append-only requests between owners), shared hooks in the player/app/store/engine (σ0 1.5, no early stretch, starter-level display, teaching template, Quick deadline support, playtest and Chimera hooks) with node tests.
-- W1-central → js/ex/centralpoint/, css/ex/centralpoint.css, its node tests (Quick + Exact forms; validator; strict shortcut policy; generator speed); shared needs go to requests.md.
-- Contract committed 15:19 UTC (docs/dev/CONTRACT-v1.2.md). Running since ~15:35 UTC, each with a log in docs/dev/progress/: W1-band-A (views, angles, cubes), W1-band-B (openings, form, patfold, patviews), W1-fixes (motion comfort O36, Section O9–O11, Reckon texts), W1-rules (milestone 2, playtest mode, CLAUDE.md rewrite).
-- Builders commit only their own files with explicit paths (`TZ=UTC`, the Co-Authored-By line, no session line); the lead pushes.
+- Done and reported (logs in docs/dev/progress/): W1-central (Central Point: Quick and Exact forms, validator over 10 000 items per cell, shortcut bounds, 166 browser checks), W1-band-A and W1-band-B (taught first bands for all seven; firstband passes: Views 78.0, Painted Cubes 76.8, Angles 72.4, Openings 75.4, Form 76.4, Missing View 80.1, Hole Punch 70.3 %), W1-fixes (motion comfort O36, Section O9–O11, Reckon texts O39–O40, tutorial pace after a fresh test), W1-rules (milestone 2: Chimera welcome and card, invites, licences, CLAUDE.md, playtest mode with `BUILD = 'test'`, modes' lines, Watch, Try, Go first in every Practise sheet).
+- Still running: W1-core (player: Watch captions wait for Next with Auto-play, tutorial title row, 44 px tools, answer-grid gap, layout shifts; its full node suite, fit/play/flows/clock/twotabs and longrun are running in the background). The session server restarted at about 18:44 UTC; W1-core was resumed from its transcript.
+- Fresh-player tests (note D2 §4): Painted Cubes 4/4 Try, 5/5 scored; Angles 3/4 (a mis-tap), 5/5; Reckon partial (pace and captions fixed since); Views and the four band-B exercises still to run once no builder holds a browser slot.
+- Paper readers: all done; addenda in the notes; ACCESS.md marked; PLAN.md updated (measurement numbers revised and the owner told).
 
 ## Owed at the end of wave 1 (the owner's yes, 18 Nov)
 - Rewrite commits 6a0c3d0 and 99768e0 so docs/dev/v1.2/requests.md's four W1-central stamps read the true UTC times (15:55), keeping every other byte; force-push build; record old → new IDs for the GitHub Support list. Do it only when no builder is running.
 
 ## Next three steps
-1. Review CONTRACT-v1.2.md when W1-core delivers it; launch the four wave-1 builders against it.
-2. Integrate wave 1, run node and browser tests, build dist/Parallax.html, publish a private test preview with playtest mode on, and send it to the owner with one line on what to try.
-3. Wave 2 (milestones 7, 3, 6, 4): contract additions, then builders.
+1. When W1-core reports: the owed history rewrite (script /tmp/rewrite/fix-stamps.sh outside the repository; verify, then force-push build), with nothing else running.
+2. Integration: PX.version for the test build, band-B tutorials' minutes, node suite and key browser suites, dist/Parallax.html; publish a private preview with playtest mode on and send it to the owner; run the pending fresh tests in parallel.
+3. Wave 2 (milestones 7, 3, 6, 4): contract additions by W1-core, then builders.
 
 Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from.
 
