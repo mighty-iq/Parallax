@@ -211,7 +211,10 @@ def play_session(page, mode, P):
             break
         a = sess(page)['activeMs']
         answer(page)
-        page.wait_for_timeout(60)
+        # About half a second an item, still far quicker than a person: a session must end by its budget,
+        # not by the engine's safety cap of one item per 0.5 s of budget (600 items in 5 minutes), which
+        # answers at the browser's own pace (about 0.2 s an item) can reach first.
+        page.wait_for_timeout(300)
         s2 = sess(page)
         items.append(s2['activeMs'] - last_a)
         last_a = s2['activeMs']
