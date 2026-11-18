@@ -103,10 +103,12 @@
   };
   var TASK_NAMES = ['watch', 'kite', 'group', 'loose'];
   // Quick form: the deadline (def.pace; the engine's staircase in js/engine/pace.js runs it). It starts
-  // generous for a first gut estimate, moves 0.03 log10 down after any answer before the deadline and
-  // 0.17 up after a time-out, so about 85 % of answers come in time: it follows the player's pace while
-  // the band ladder follows accuracy. 2.5 s is about a confident tap, tap (C1 §5.5); hand-set.
-  var PACE = { variants: ['quick'], startMs: 15000, minMs: 2500, maxMs: 30000, target: 0.85, step: 0.03 };
+  // generous for a first gut estimate, 20 s (two thirds of Try 3's 30 s, so the first scored items do not
+  // halve the clock; a fresh tester timed out at 15 s), moves 0.03 log10 down after any answer before the
+  // deadline (15 s after four answers in time) and 0.17 up after a time-out, so about 85 % of answers come
+  // in time: it follows the player's pace while the band ladder follows accuracy. 2.5 s is about a
+  // confident tap, tap (C1 §5.5); hand-set.
+  var PACE = { variants: ['quick'], startMs: 20000, minMs: 2500, maxMs: 30000, target: 0.85, step: 0.03 };
   var LATE = 0.25;                                  // the round score's pace factor for a marker left unconfirmed
 
   function clampInt(x, n) { x = isInt(x) ? x : 0; return x < 0 ? 0 : x >= n ? n - 1 : x; }

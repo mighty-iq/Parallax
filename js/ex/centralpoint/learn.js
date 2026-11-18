@@ -105,9 +105,10 @@
       hintKeys: 'Arrow keys move half a dot · Enter answers',
       // after the answer
       totals: 'Your total {you} · best {best} (+{pct} %)',
-      totalsBest: 'Best total {best}: that spot counts.',
+      totalsBest: 'Your total {best}: the least there is.',
       totalsNone: 'Best total {best}.',
-      within: 'Within {band} % of the best total: right.',
+      bestSpot: 'You found the best spot.',
+      within: 'Not the best spot, but within {band} % of its total: close enough to count as right.',
       outside: 'More than {band} % farther in total than the best spot.',
       late: 'Time ran out with the marker here: it still earns part of its closeness.',
       noAnswer: 'No answer in time. The best spot is marked.',
