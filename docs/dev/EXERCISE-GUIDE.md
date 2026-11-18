@@ -3,7 +3,8 @@
 This guide shows how to add an exercise, using **Rotate (EX-02)** as the worked example: copy its
 structure, not its geometry. The contracts live in `ARCHITECTURE.md` (§3 load order, §4 core APIs,
 §5 definition, §6 view, §12 tests). If something here disagrees with ARCHITECTURE.md, the
-architecture file wins; report the difference.
+architecture file wins; report the difference. Fields added in 1.1 and 1.2 are marked so; while
+several builders work at once, docs/dev/CONTRACT-v1.2.md says who owns what.
 
 ## 1. Files
 
@@ -12,7 +13,7 @@ architecture file wins; report the difference.
 | `js/ex/<id>/gen.js` | pure | definition, generator, **independent** validator, scorer, shared model (`lib`) | `js/ex/rotate/gen.js` |
 | `js/ex/<id>/learn.js` | pure, data only | Watch–Try–Go: goal, labelled parts, demo, practice, tips, strategy cards, captions | `js/ex/rotate/learn.js` |
 | `js/ex/<id>/view.js` | DOM / 3D | drawing, options, reveal, show me, demo | `js/ex/rotate/view.js` |
-| `css/ex/<id>.css` | CSS | your styles, every rule under `.ex-<id>` | Rotate is the exception: it lives in `css/ex.css` |
+| `css/ex/<id>.css` | CSS | your styles, every rule under `.ex-<id>`; phone sizes under `.pl-trial.ex-<id>` from `--pl-avail` (§5) | Rotate is the exception: it lives in `css/ex.css` |
 | `tests/node/<id>.test.mjs` | node | ≥ 10 000 seeds, key/other options, determinism, shortcut solvers, timing, learn data | `tests/node/rotate.test.mjs` |
 | `tests/e2e/harness_<id>.py` | Playwright | the harness on file:// and in a sandboxed srcdoc, both input methods, screenshots | `tests/e2e/harness_rotate.py` |
 
@@ -94,6 +95,23 @@ PX.ex.define({
 - `lib` is where you put the model shared by the validator, the view and the tests (camera,
   geometry, rasteriser, feature functions). Show-me must be drawn from the same model that grades
   the answer, so the view reads `PX.ex.get(id).lib` instead of re-deriving anything.
+- **Labels and loading (1.1):** `pat: true` for a DAT-style format (trained only under the DAT-style
+  focus, in the Library's own group and in Section practice; its learn.js bridge carries the ADA
+  line, CLAUDE.md rules 2 and 3); `experimental: true` (the Library says so and explains it under How
+  to play); `practice: 'attention' | 'perception'` (Track; Angles); `requires: ['<id>']` on the
+  definition and the view when you reuse another exercise's model or kit (Reckon → Homing).
+- **The transfer bet (1.2):** `bet` names the one mechanism the exercise bets on (attention, load,
+  variety, strategy, compare, bridge, produce, calibrate, format; CLAUDE.md rule 15).
+- **A starter band (1.2; CONTRACT-v1.2 A, B):** a new easiest level goes in front of a dim with
+  `at: [Δ, 0, step, 2·step, …]` (base unchanged, so every old combination keeps its difficulty),
+  `starter: { dim, levels: 1 }` and `version` + 1; js/engine/rebase.js converts stored levels
+  once. The Library and the player then say "level 1 · starter items".
+- **A deadline and a round score (1.2):** `trainVariants: ['quick']` limits the variants that
+  automatic choices use; `pace: { variants, startMs, minMs, maxMs, target, step }` gives those
+  items a deadline that a staircase moves (js/engine/pace.js); `roundScore(item, result, info)`
+  returns 0–100 for one item (Central Point Quick: closeness and speed), never a lifetime total.
+- **Answer types (1.1, 1.2):** `position` (`{ x, z }` on the ground plane) and `point` (`{ x, y }`
+  on the item's lattice) need `chance(params)`; `score` judges the distance.
 
 ## 4. Generator, validator, scorer
 
@@ -156,9 +174,19 @@ PX.ex.view('rotate', {
 });
 ```
 
-- **ctx** = `{ host, stage3d, svg, ui, keys, timing, theme, settings, fast, reducedMotion, play }`.
-  The player wraps the trial (your `host` and the choice grid) in an element with class
-  `ex-<id>`, so your CSS can style the grid cells too.
+- **ctx** = `{ host, stage3d, svg, ui, keys, timing, theme, settings, fast, reducedMotion, play }`,
+  plus `practice` (a Try item: not logged) and `demo` (a Watch demo) from 1.1, and from 1.2
+  `assist` (the Try item's first step, done by the app: draw it when it is not null),
+  `addMotion(ms)` and `gentleMotion` (views with `motion: true` report the motion they show; the
+  gentle profile slows walks and turns). The player wraps the trial (your `host` and the choice
+  grid) in an element with class `ex-<id>`, so your CSS can style the grid cells too.
+- **Phones (1.1):** while an item is up (`body.px-item`) a phone shows it alone on one screen
+  that does not scroll. Size the figure and the options from `--pl-avail` (the height left for
+  the item), `--pl-w` (its width) and, held sideways, `--pl-col` (one of two columns), under
+  `.pl-trial.ex-<id>`; `tests/e2e/fit.py` checks every scored item at 360 × 640 and 844 × 390.
+- **Optional view functions (1.2):** `drawRule(el, fig, ctx)` draws a small picture on the rules
+  card; `atDeadline(item, ctx) → response | null` hands the player a placed answer when a Quick
+  deadline runs out.
 - **Order of calls in a trial:** generate → the grid is built **laid out but invisible**
   (`visibility: hidden`) → `drawOption(el, item, i)` for every option (**ready phase**: put
   heavy work here, e.g. `stage3d.snapshot` thumbnails; `el.clientWidth` is valid) → `present`
@@ -227,11 +255,19 @@ PX.ex.learn('rotate', {
   strategies: [{ id: 'imagery' | 'analytic' | 'switch', title, text, steps: [], when }],
   captions: { key: 'text with {n}' },                           // read by view.demo / showMe
   bridge: 'where the skill shows up, honestly worded',
+  // 1.2, the teaching template (CONTRACT-v1.2 D; the player renders it):
+  rules: [text | { text, fig }],                                 // 2–4 lines: the rules card, Watch's first screen
+  strategyFirst: '<strategy id>',                                // the card that opens before Try 1
+  // practice entries may be { params, assist, tip, seed }: Try 1 at the band with its first step
+  // done (assist), Try 2 at the band, Try 3 at today's level 0, Try 4 the first hard feature
+  minutes: 2,                                                    // the offer card's estimate
+  motionNotice: 'text',                                          // views with motion: the one-time notice
 });
 ```
 
 Wording is about the task, never the person; no IQ, "smarter" or "mastered" (CLAUDE.md rules 2
-and 12; the node test greps for them). Strategy cards cite the research behind them in a comment.
+and 11; the node test greps for them). Strategy cards cite the research behind them in a comment.
+A show-me or demo step `{ hold: true, caption }` waits for a tap on Continue (1.2).
 
 ## 8. Tests
 
@@ -246,7 +282,7 @@ and 12; the node test greps for them). Strategy cards cite the research behind t
 - The fallback is valid for every params combination.
 - Timing: p95 of **CPU time** (`process.cpuUsage`) at the hardest level < 20 ms; report wall time
   too (the build machine is shared, so wall time is not asserted).
-- **Shortcut solvers** (CLAUDE.md rule 9), each ≤ chance + 10 points over ≥ 2 000 items:
+- **Shortcut solvers** (CLAUDE.md rule 5), each ≤ chance + 10 points over ≥ 2 000 items:
   stem-based (the option most like the reference by each cheap feature) and **stem-blind** (odd
   ones out, the options most like the others, the most alike pair), with the best possible
   threshold for yes/no formats. Print the accuracies on one line.
@@ -267,7 +303,8 @@ counters rather than on transient states (with `fast=1` show me finishes within 
 ## 9. Checklist
 
 - [ ] gen.js: definition with `version`, abilities (primary first), cell, role, answer(s), dims
-      with justified steps, base for ≈ 90 % at θ = 0, range ≥ 4 logits, chance per variant
+      with justified steps, base for ≈ 90 % at θ = 0, range ≥ 4 logits, chance per variant, `bet`
+- [ ] a new easiest band: `at` steps, `starter`, `version` + 1 (stored levels are re-based)
 - [ ] generate never throws; 50 forked retries; fallback valid everywhere; < 20 ms CPU (p95)
 - [ ] validate re-derives the key by brute force; visibility of the deciding feature; options
       pairwise different; no structural distractors; chirality / symmetry where it matters
@@ -276,7 +313,9 @@ counters rather than on transient states (with `fast=1` show me finishes within 
 - [ ] view: drawOption does the heavy work in the ready phase; present returns the paint
       timestamp; reveal ≤ 700 ms; show me and demo through `ctx.play`, from the grading model
 - [ ] keyboard and pointer both play; ≥ 44 px targets; colour never alone; reduced motion
-- [ ] learn.js: goal, parts, demo (tested seeds), 3–5 practice params, tips, strategy cards
+- [ ] learn.js: goal, parts, demo (tested seeds), 3–5 practice params, tips, strategy cards;
+      for a taught first band also rules, strategyFirst, practice with assist, minutes
+- [ ] phones: the item fits 360 × 640 and 844 × 390 (`--pl-avail`, `tests/e2e/fit.py`)
 - [ ] CSS under `.ex-<id>` in `css/ex/<id>.css` (and `css: true` in the view), tokens with
       fallbacks; light and dark checked in screenshots
 - [ ] node and e2e tests pass; screenshots reviewed (desktop and phone, light and dark)
