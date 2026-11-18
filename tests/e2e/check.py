@@ -12,7 +12,7 @@
   and the rung rows; Settings: Measurement week after Training (the setting and its event); the Lab: the ladder.
 - The check screen on its own (play?mode=check&kind=week): its intro card and Later.
 - Phones (390 x 844 and 360 x 640): Today's slot and the Progress panel, no horizontal scroll.
-Screenshots: tests/e2e/out/measure/. Run: tests/e2e/pwslot.sh python3 tests/e2e/measure.py
+Screenshots: tests/e2e/out/check/. Run: tests/e2e/pwslot.sh python3 tests/e2e/check.py
 """
 import json, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright
 from common import launch, Console, Checks, OUT as OUT_ROOT
 from play import boot, go, card, click_card, drive, wait_state, seen_all
 
-OUT = OUT_ROOT / 'measure'
+OUT = OUT_ROOT / 'check'
 OUT.mkdir(parents=True, exist_ok=True)
 HOUR = 3600 * 1000
 
@@ -204,7 +204,7 @@ def phones(b, C, state):
 
 
 def main():
-    C = Checks('measure')
+    C = Checks('check')
     with sync_playwright() as p:
         b = launch(p)
         state = desktop(b, C)

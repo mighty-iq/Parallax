@@ -258,6 +258,7 @@
   PX.ex.define({
     id: 'level', version: 1, code: 'PR-5', name: 'Level', short: 'Level',
     abilities: ['Vz'], cell: 'extrinsic-static', role: 'probe', answer: 'choice', nOptions: 4,
+    format: 'level:liquid-plumb-tilted-frame', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
     // Hand-set item model (DJ, no pilot yet): base + Σ step × level; the gap to the nearest foil dominates.
     dims: [
       { key: 'tilt', label: 'Tilt', levels: ['about 18°', 'about 28°', 'about 38°', 'about 48°'], step: 0.35 },

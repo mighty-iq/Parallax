@@ -561,6 +561,7 @@
   PX.ex.define({
     id: 'viewmatch', version: 1, code: 'PR-2', name: 'View Match', short: 'View Match',
     abilities: ['PT'], cell: 'extrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 4,
+    format: 'viewmatch:scene-from-marked-spot', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
     // Hand-set item model (DJ, no pilot yet): base + Σ step × level.
     dims: [
       { key: 'angle', label: 'Flag angle', levels: ['about 45°', 'about 75°', 'about 105°', 'about 135°', 'about 160°'], step: 0.5 },

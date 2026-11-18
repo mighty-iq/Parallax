@@ -213,6 +213,7 @@
   PX.ex.define({
     id: 'patterns', version: 1, code: 'PR-4', name: 'Pattern Memory', short: 'Patterns',
     abilities: ['MV'], cell: 'extrinsic-static', role: 'probe', answer: 'targets',
+    format: 'patterns:grid-pattern-recall', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
     dims: [
       { key: 'size', label: 'Grid and filled cells', levels: ['3×3 · 4', '3×4 · 6', '4×4 · 8', '4×5 · 10', '5×5 · 12', '5×6 · 15', '6×6 · 18'], step: 0.45 },
       { key: 'regularity', label: 'Pattern', levels: REGULARITY, step: 0.75 },
