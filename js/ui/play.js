@@ -968,16 +968,14 @@
 
     // The reading strip sticks to the bottom of the window: the marked options (or the stage's
     // marks) are scrolled up above it, as far as the stem allows.
-    // The Pause row (HUD) stays on the screen meanwhile when that leaves at most 24 px of the options
-    // under the strip: what lies above it (Watch, Try, Go's stepper) scrolls away first (the lead's
-    // fresh-player note). On a short phone where it cannot, the marks win: they are the feedback.
+    // The scroll is the least that clears the strip, so what lies above the Pause row (Watch, Try, Go's
+    // stepper) goes first and the row itself only when the options need it (fit.py: no option under
+    // the strip; the marks are the feedback).
     function marksIntoView() {
       try {
         var t = (P.grid ? el.grid : el.host).getBoundingClientRect(), f = el.feedback.getBoundingClientRect();
         if (!t.height || t.bottom <= f.top) return;
-        var need = t.bottom - f.top + 12, by = Math.min(need, Math.max(0, t.top - 64));
-        var hr = el.hud.hidden ? null : el.hud.getBoundingClientRect();
-        if (hr && hr.height) { var keep = Math.max(0, hr.top - topEdge()); if (need - keep <= 24) by = Math.min(by, keep); }
+        var by = Math.min(t.bottom - f.top + 12, Math.max(0, t.top - 64));
         if (by > 0) win.scrollBy(0, by);
       } catch (e) { /* cosmetic */ }
     }
@@ -1627,14 +1625,6 @@
      ===================================================================================== */
 
   // The reading strip's height after an answer on a phone (verdict line and one row of buttons)
-  // The top of the visible page: under the sticky header on wide screens, else the window's top edge
-  function topEdge() {
-    try {
-      var hd = doc.querySelector('.px-header'), hs = hd ? win.getComputedStyle(hd) : null;
-      if (hs && hs.display !== 'none' && /sticky|fixed/.test(hs.position)) { var r = hd.getBoundingClientRect(); if (r.bottom > 0 && r.top <= 0) return r.bottom; }
-    } catch (e) { /* none */ }
-    return 0;
-  }
   function stripRoom() { // portrait phones only: held sideways the item needs every pixel of height
     try { if (!(win.matchMedia && win.matchMedia('(max-width: 719px) and (min-height: 501px)').matches)) return 0; } catch (e) { return 0; }
     var rem = 16;
@@ -1650,7 +1640,7 @@
   // (the strip and the goal may scroll away above it then). Under the sticky header on wide screens.
   // When both cannot hold, the top wins. pinned: a demo or show-me runs, or is about to (before its
   // bar is up, phones keep 7.5rem for it). Watch, Try, Go's own header may scroll away above.
-  function stageIntoView(P, pinned, reserve) {
+  function stageIntoView(P, pinned) {
     try {
       var vh = win.innerHeight || 640, top = 0, rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
       var head = doc.querySelector('.px-header');
@@ -1663,7 +1653,7 @@
       });
       if (!bottom || !hud.height) return;
       var anchor = pinned ? itemTop - 8 : hud.top;
-      var limit = vh - 8 - (reserve > 0 ? reserve : 0); // reserve: room kept for the reading strip
+      var limit = vh - 8;
       if (pinned) {
         var found = false;
         [P.el.feedback, P.el.root.querySelector('.pl-showme-buttons'), P.el.host.querySelector('.ex-caption'), P.el.caption].forEach(function (e) {
@@ -1752,14 +1742,12 @@
     // The header above the item can push it down: just before an item plays (its first frame comes
     // after this), the item is brought onto the screen (the header may scroll away). A demo is
     // fitted again when it starts, under its pinned caption and bar (makeRunner).
-    // A Try item on a phone keeps the reading strip's room free under it (W1-band-A's request, the
-    // lead's fresh-player note): the stepper scrolls away above the Pause row before the item plays,
-    // so the reveal moves nothing and the Pause row stays at the top.
+    // A Try item on a phone is sized to leave the reading strip's room (makeRoom), so at the reveal
+    // the scroll is about the stepper's height and the Pause row stays (W1-band-A's request).
     function stageSoon(item, demo) {
-      var room = demo ? 0 : stripRoom();
-      P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo, room); });
+      P.when('present').then(function () { if (P.item === item) stageIntoView(P, demo); });
       // and once its answer controls are up (Span's Undo and Done, Reckon's Walk and Here come then)
-      if (!demo) P.when('respond').then(function () { if (P.item === item) stageIntoView(P, false, room); });
+      if (!demo) P.when('respond').then(function () { if (P.item === item) stageIntoView(P, false); });
     }
     // Phones size the item from --pl-avail (css/play.css), the screen less the status strip. Here a
     // Try item's goal and tip shown above it take their share first (--pl-extra on the host, read by
