@@ -37,6 +37,7 @@ LAST = '''(() => { const l = __play.last; if (!l || !l.item) return null;
 def boot(page):
     page.goto(INDEX.as_uri())
     page.wait_for_function(READY, timeout=30000)
+    page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')  # v1.2 wave 2: the builders' cards have their own tests
     for _ in range(6):
         if not page.evaluate('PX.ui.modalOpen()'):
             break
@@ -117,6 +118,9 @@ def main():
                 pg.evaluate('PX.debug.fast(false); __play.next()')
             print(f'round {i + 1}: A {len(done["A"])}, B {len(done["B"])}; visible A {A.evaluate("document.visibilityState")}, B {B.evaluate("document.visibilityState")}', flush=True)
         cuts = {}
+        # v1.2 wave 2 (CONTRACT-v1.2 U): an event in each tab; the merge keeps both (events register their own merge)
+        for name in ('A', 'B'):
+            tabs[name].evaluate(f"""PX.engine.events.add(PX.core.store.state, 'suggest', 'rotate', {{ key: 'tab-{name}', mode: 'path', act: 'go' }}, Date.now()); PX.core.store.save();""")
         for name in ('A', 'B'):
             cuts[name] = end_session(tabs[name])
         for name in ('A', 'B'):
@@ -162,6 +166,8 @@ def main():
         # draw different items; the merge still keeps same-seed trials apart (checked above). Two
         # pages share a salt about once in 1 024 runs, which would fail this check by chance.
         C.ok(rep['seedCollisions'] == 0, f'the two tabs drew different items ({rep["seedCollisions"]} of {len(seeds)} seeds shared)')
+        evk = A.evaluate('PX.engine.events.list(JSON.parse(localStorage.getItem("parallax.v1")), { kind: "suggest" }).map((e) => e.data.key).sort()')
+        C.ok(evk == ['tab-A', 'tab-B'], f'the events table keeps both tabs\' events after the merge ({evk})')
         for n in ('A', 'B'):
             C.ok(not cons[n].errors(), f'tab {n}: no page or console errors {cons[n].errors()[:3]}')
         ctx.close()

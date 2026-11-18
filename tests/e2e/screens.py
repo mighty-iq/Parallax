@@ -409,7 +409,8 @@ WORDS = {'beyond familiarity', 'unclear yet', 'no change'}
 def progress_checks(page, tag, w):
     go(page, 'progress')
     status = page.get_attribute('[data-section="check"] .px-panel-body', 'data-status')
-    C.ok(status in ('change', 'baseline-done', 'baseline'), f'{tag}: Spatial Check status {status}')
+    # v1.2 wave 2 (Design A, W2-measure 0fe46af): the report's status is 'trend' once training has begun
+    C.ok(status in ('trend', 'change', 'baseline-done', 'baseline'), f'{tag}: Spatial Check status {status}')
     if status == 'change':
         rows = page.locator('.px-fp-row:not(.px-fp-axisrow)').count()
         C.ok(rows >= 6, f'{tag}: interval rows for the composite, the probes and the control ({rows})')
