@@ -45,6 +45,9 @@ Intent: a contract and shared hooks first, then parallel builders in their own f
 - Contract committed 15:19 UTC (docs/dev/CONTRACT-v1.2.md). Running since ~15:35 UTC, each with a log in docs/dev/progress/: W1-band-A (views, angles, cubes), W1-band-B (openings, form, patfold, patviews), W1-fixes (motion comfort O36, Section O9–O11, Reckon texts), W1-rules (milestone 2, playtest mode, CLAUDE.md rewrite).
 - Builders commit only their own files with explicit paths (`TZ=UTC`, the Co-Authored-By line, no session line); the lead pushes.
 
+## Owed at the end of wave 1 (the owner's yes, 18 Nov)
+- Rewrite commits 6a0c3d0 and 99768e0 so docs/dev/v1.2/requests.md's four W1-central stamps read the true UTC times (15:55), keeping every other byte; force-push build; record old → new IDs for the GitHub Support list. Do it only when no builder is running.
+
 ## Next three steps
 1. Review CONTRACT-v1.2.md when W1-core delivers it; launch the four wave-1 builders against it.
 2. Integrate wave 1, run node and browser tests, build dist/Parallax.html, publish a private test preview with playtest mode on, and send it to the owner with one line on what to try.
