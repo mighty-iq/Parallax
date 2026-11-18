@@ -462,3 +462,5 @@
   .pl-rule-fig { width: 4.5rem; height: 4.5rem; }
   .pl-rules-card .pl-card-actions .px-btn, .pl-strategy-card .pl-card-actions .px-btn { min-height: 44px; }
 }
+.pl-pause-extra:empty { display: none; }
+.pl-pause-extra { display: flex; justify-content: center; margin-top: var(--s3); }
