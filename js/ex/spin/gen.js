@@ -596,6 +596,7 @@
     id: 'spin', version: 1, code: 'EX-03', name: '2D speeded rotation', short: 'Spin',
     abilities: ['SR'], cell: 'intrinsic-dynamic', role: 'train',
     bet: 'variety', format: { samediff: 'spin:same-or-mirror-2d', pick: 'spin:pick-two-turned-2d' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    layers: { compare: ['mirror-never'] }, // v1.2 wave 2 (W2-bets): comparison rounds (js/ex/spin/layers.js)
     // The registry holds one answer type; samediff items are 'yesno' (item.answer says which).
     answer: 'multi', nOptions: 4, nCorrect: 2,
     answers: { samediff: 'yesno', pick: 'multi' },

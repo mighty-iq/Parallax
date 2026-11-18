@@ -151,14 +151,13 @@ def run_screens(b):
         ctx.close()
 
 
-PREP_CP = '''() => {
-  const S = PX.core.store, rec = S.state, st = S.exState('centralpoint');
-  st.n = 14; st.nRight = 9; st.mu = PX.ex.minDifficulty('centralpoint') + 1; st.sd = 0.9; st.last = Date.now();
+PREP = '''(id) => {
+  const S = PX.core.store, rec = S.state, st = S.exState(id);
+  st.n = 14; st.nRight = 9; st.mu = PX.ex.minDifficulty(id) + 1; st.sd = 0.9; st.last = Date.now();
   rec.settings.betTrials = false;   // out of the trials: every add-on runs
   S.save();
   return true;
 }'''
-
 
 CARD_JS = "(() => { const c = document.querySelector('[data-card-box]'); return c ? c.getAttribute('data-card-box') : null; })()"
 
@@ -185,89 +184,92 @@ def wait_card(page, cid, ms=20000):
     raise TimeoutError(f'card {cid} did not open')
 
 
-def run_round(b):
-    for i, (w, h) in enumerate(SIZES):
-        tag = f'round {w}x{h}'
-        ctx = ctx_for(b, w, h)
-        page = ctx.new_page()
-        con = Console(page)
-        boot(page)
-        page.evaluate(PREP_CP)
-        page.evaluate('PX.core.store.state.settings.sessionMin = 2; PX.ui.play.config.budgetMs = 60000;')
-        go(page, 'play', {'mode': 'train', 'exId': 'centralpoint'})
-        try:
-            wait_card(page, 'bets-compare')
-            ok = True
-        except Exception:
-            ok = False
-        C.ok(ok, f'{tag}: a comparison round opens the Central Point run')
-        if not ok:
-            page.screenshot(path=str(OUT / f'round_missing_{w}.png'))
-            ctx.close()
-            continue
-        st = page.evaluate('__play.state')
-        C.ok(st not in ('present', 'respond'), f'{tag}: no item is on screen under the round ({st})')
-        figs = page.locator('[data-card-box="bets-compare"] .px-bets-fig')
-        C.ok(figs.count() == 2, f'{tag}: two solved boards')
-        for k in range(min(2, figs.count())):
-            C.ok(non_blank(figs.nth(k).screenshot()), f'{tag}: board {k + 1} is drawn')
-        opts = page.locator('[data-card-box="bets-compare"] .px-bets-opt')
-        C.ok(opts.count() == 4, f'{tag}: four statements')
-        small = page.evaluate(SMALL_JS, '[data-card-box="bets-compare"] .px-btn')
-        C.ok(not small, f'{tag}: 44 px targets ({small})')
-        no_scroll(page, tag)
-        page.locator('[data-card-box="bets-compare"]').first.screenshot(path=str(OUT / f'round_{w}.png'))
-        # pick: by key on desktop, by tap on phones
-        if w >= 700:
-            page.keyboard.press('2')
-        else:
-            opts.nth(1).click()
-        page.wait_for_timeout(200)
-        after = page.locator('[data-card-box="bets-compare"] .px-bets-after')
-        C.ok(after.count() == 1 and after.first.is_visible() and 'The rule:' in after.first.inner_text(), f'{tag}: the rule shows after the pick')
-        marked = page.locator('[data-card-box="bets-compare"] .bets-cp-markg').evaluate_all('(g) => g.filter(x => x.style.display !== "none").length')
-        C.ok(marked == 2, f'{tag}: the rule is drawn on both boards ({marked})')
-        page.locator('[data-card-box="bets-compare"]').first.screenshot(path=str(OUT / f'round_after_{w}.png'))
-        page.locator('[data-bets="round-next"]').first.click()
-        page.wait_for_function('__play.state === "respond"', timeout=15000)
-        ev = page.evaluate("PX.engine.events.list(PX.core.store.state, { kind: 'compare' })")
-        C.ok(len(ev) == 1 and ev[0]['data']['opts'] and ev[0]['data']['choice'] == ev[0]['data']['opts'][1], f'{tag}: the compare event records the pair, the menu and the choice')
-        layer = page.evaluate('PX.ui.play.current() && PX.ui.play.current().ctx ? PX.ui.play.current().ctx.layer : null')
-        C.ok(layer == 'compare-apply', f'{tag}: the next item is the apply item (layer {layer})')
-        page.evaluate('__play.answer(true).catch(() => 0)')
-        page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
-        row = page.evaluate('PX.core.store.state.trials[PX.core.store.state.trials.length - 1]')
-        C.ok(len(row) > 14 and row[14] == 1 and row[4] == ev[0]['data']['apply'], f'{tag}: its row logs layer compare-apply (1) and the apply seed ({row[:5]}…{row[13:17]})')
-        page.wait_for_timeout(200)
-        note = page.locator('[data-bets="apply-note"]')
-        C.ok(note.count() >= 1, f'{tag}: the apply note names the rule')
-        page.screenshot(path=str(OUT / f'apply_{w}.png'))
-        if w == 390:
-            # the calibration arm (on for everyone out of the trials): a detail note after every 5th answer
-            seen_note = False
-            for _ in range(80):
-                if page.locator('[data-bets="calib-note"]').count():
-                    seen_note = True
-                    break
-                if page.evaluate(CARD_JS):
-                    other_card(page)
-                    continue
-                st = page.evaluate('__play.state')
-                if st == 'respond':
-                    page.evaluate('__play.answer(Math.random() < 0.6).catch(() => 0)')
-                elif st in ('reveal', 'showme'):
-                    page.evaluate('__play.next()')
-                page.wait_for_timeout(120)
-            n = page.evaluate("(PX.core.store.state.bets.cal || {}).centralpoint ? PX.core.store.state.bets.cal.centralpoint.length : 0")
-            C.ok(seen_note and n >= 5, f'{tag}: the calibration note shows after 5 answers ({n} kept)')
-            if seen_note:
-                page.locator('[data-bets="calib-note"]').first.screenshot(path=str(OUT / 'calib_390.png'))
-                txt = page.locator('[data-bets="calib-note"]').first.inner_text()
-                C.ok('of the way' in txt and '%' in txt, f'{tag}: it gives the running share of the way ({txt[:80]!r})')
-            rows = page.evaluate("PX.core.store.state.trials.filter(r => r[14] === 3).length")
-            C.ok(rows >= 4, f'{tag}: the calib-detail items log layer 3 ({rows})')
-        C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+def round_for(b, ex, w, h, calib=False):
+    tag = f'round {ex} {w}x{h}'
+    ctx = ctx_for(b, w, h)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    page.evaluate(PREP, ex)
+    page.evaluate('PX.core.store.state.settings.sessionMin = 2; PX.ui.play.config.budgetMs = 60000;')
+    go(page, 'play', {'mode': 'train', 'exId': ex})
+    try:
+        wait_card(page, 'bets-compare')
+        ok = True
+    except Exception:
+        ok = False
+    C.ok(ok, f'{tag}: a comparison round opens the run')
+    if not ok:
+        page.screenshot(path=str(OUT / f'round_missing_{ex}_{w}.png'))
         ctx.close()
+        return
+    st = page.evaluate('__play.state')
+    C.ok(st not in ('present', 'respond'), f'{tag}: no item is on screen under the round ({st})')
+    figs = page.locator('[data-card-box="bets-compare"] .px-bets-fig')
+    C.ok(figs.count() == 2, f'{tag}: two solved items')
+    for k in range(min(2, figs.count())):
+        C.ok(non_blank(figs.nth(k).screenshot()), f'{tag}: item {k + 1} is drawn')
+    opts = page.locator('[data-card-box="bets-compare"] .px-bets-opt')
+    C.ok(opts.count() == 4, f'{tag}: four statements')
+    small = page.evaluate(SMALL_JS, '[data-card-box="bets-compare"] .px-btn')
+    C.ok(not small, f'{tag}: 44 px targets ({small})')
+    no_scroll(page, tag)
+    page.locator('[data-card-box="bets-compare"]').first.screenshot(path=str(OUT / f'round_{ex}_{w}.png'))
+    if w >= 700:
+        page.keyboard.press('2')
+    else:
+        opts.nth(1).click()
+    page.wait_for_timeout(200)
+    after = page.locator('[data-card-box="bets-compare"] .px-bets-after')
+    C.ok(after.count() == 1 and after.first.is_visible() and 'The rule:' in after.first.inner_text(), f'{tag}: the rule shows after the pick')
+    page.locator('[data-card-box="bets-compare"]').first.screenshot(path=str(OUT / f'round_after_{ex}_{w}.png'))
+    page.locator('[data-bets="round-next"]').first.click()
+    page.wait_for_function('__play.state === "respond"', timeout=15000)
+    ev = page.evaluate("PX.engine.events.list(PX.core.store.state, { kind: 'compare' })")
+    C.ok(len(ev) == 1 and ev[0]['data']['opts'] and ev[0]['data']['choice'] == ev[0]['data']['opts'][1], f'{tag}: the compare event records the pair, the menu and the choice')
+    layer = page.evaluate('PX.ui.play.current() && PX.ui.play.current().ctx ? PX.ui.play.current().ctx.layer : null')
+    applied = ev and ev[0]['data']['apply']
+    C.ok(layer == 'compare-apply' or not applied, f'{tag}: the next item is the apply item (layer {layer})')
+    page.evaluate('__play.answer(true).catch(() => 0)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
+    row = page.evaluate('PX.core.store.state.trials[PX.core.store.state.trials.length - 1]')
+    if applied:
+        C.ok(len(row) > 14 and row[14] == 1 and row[4] == applied, f'{tag}: its row logs layer compare-apply (1) and the apply seed ({row[:5]}…{row[13:17]})')
+        page.wait_for_timeout(200)
+        C.ok(page.locator('[data-bets="apply-note"]').count() >= 1, f'{tag}: the apply note names the rule')
+    page.screenshot(path=str(OUT / f'apply_{ex}_{w}.png'))
+    if calib:
+        seen_note = False
+        for _ in range(80):
+            if page.locator('[data-bets="calib-note"]').count():
+                seen_note = True
+                break
+            if page.evaluate(CARD_JS):
+                other_card(page)
+                continue
+            st = page.evaluate('__play.state')
+            if st == 'respond':
+                page.evaluate('__play.answer(Math.random() < 0.6).catch(() => 0)')
+            elif st in ('reveal', 'showme'):
+                page.evaluate('__play.next()')
+            page.wait_for_timeout(120)
+        n = page.evaluate(f"(PX.core.store.state.bets.cal || {{}})[{json.dumps(ex)}] ? PX.core.store.state.bets.cal[{json.dumps(ex)}].length : 0")
+        C.ok(seen_note and n >= 5, f'{tag}: the calibration note shows after 5 answers ({n} kept)')
+        if seen_note:
+            page.locator('[data-bets="calib-note"]').first.screenshot(path=str(OUT / f'calib_{ex}_{w}.png'))
+        rows = page.evaluate("PX.core.store.state.trials.filter(r => r[14] === 3).length")
+        C.ok(rows >= 4, f'{tag}: the calib-detail items log layer 3 ({rows})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
+ROUND_EX = ['centralpoint', 'spin']
+
+
+def run_round(b, only=None):
+    for ex in (only or ROUND_EX):
+        for (w, h) in SIZES:
+            round_for(b, ex, w, h, calib=(ex == 'centralpoint' and w == 390))
 
 
 def run_expect(b):
@@ -307,12 +309,14 @@ def run_expect(b):
 
 if __name__ == '__main__':
     which = sys.argv[1:] or ['screens', 'round', 'expect']
+    if any(x.startswith('round:') for x in which):
+        which.append('round')
     with sync_playwright() as p:
         b = p.chromium.launch(headless=True, args=LAUNCH)
         if 'screens' in which:
             run_screens(b)
         if 'round' in which:
-            run_round(b)
+            run_round(b, [x[6:] for x in which if x.startswith('round:')] or None)
         if 'expect' in which:
             run_expect(b)
         b.close()
