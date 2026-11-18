@@ -13,6 +13,8 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_centralpoint.py   (two brows
    and it leaves the reveal as it was; the Watch demo runs to the end and leaves the item answerable,
    with no average mark left; Try 1's assist draws the kite's two diagonals
 5. the harness inlined into a sandboxed srcdoc iframe renders and plays by keyboard; no console errors
+6. the app at 360 x 640: the rules card with pictures, the Watch (captions, the average once), the strategy
+   card, Try 1 with the diagonals, three Try items answered by taps with a round score in the verdict
 Screenshots: tests/e2e/out/centralpoint/cp_<viewport>_<theme>[_reveal|_map|_exact|_why|_assist].png """
 import sys
 
@@ -206,6 +208,91 @@ def run_slow_why(b):
     ctx.close()
 
 
+def card(page, box, value, timeout=20000):
+    sel = f'[data-card-box="{box}"] [data-card="{value}"]'
+    page.wait_for_selector(sel, state='visible', timeout=timeout)
+    return sel
+
+
+def in_view(page, sel):
+    return page.evaluate("""(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, ok: r.top >= -0.5 && r.bottom <= window.innerHeight + 0.5 }; }""", sel)
+
+
+def run_app_wtg(b):
+    """The real player at 360 x 640 (touch): the rules card with its pictures, the Watch at normal speed (the
+    caption on screen, the average shown once), Your turn, the strategy card, Try 1 with the kite's diagonals,
+    Try 2 and 3 answered by taps, then Go; the verdict carries the round score; the page never scrolls."""
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    con = Console(page)
+    page.goto(file_url('index.html'))
+    page.wait_for_function('document.documentElement.getAttribute("data-px-ready") === "1"', timeout=30000)
+    for _ in range(4):
+        if not page.evaluate('PX.ui.modalOpen()'):
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(150)
+    page.evaluate("""() => { const r = PX.core.store.state; r.tour = r.tour || { seen: {} }; r.tour.seen = r.tour.seen || {};
+        PX.ex.list().forEach(d => { r.tour.seen[d.id] = true; }); r.tour.seen.centralpoint = false; r.ui = r.ui || {}; r.ui.seen = r.ui.seen || {}; }""")
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "centralpoint" }, { force: true })')
+    sel = card(page, 'wtg-rules', 'watch')
+    rules = page.evaluate("() => ({ n: document.querySelectorAll('.pl-rule').length, figs: document.querySelectorAll('.pl-rule .ex-cp-rulefig').length })")
+    C.ok(rules['n'] == 4 and rules['figs'] == 4, f'app 360x640: the rules card shows four rules, each with its picture ({rules})')
+    shot(page, 'app_360_rules.png')
+    page.locator(sel).click()
+    page.wait_for_function("() => window.__play && __play.state === 'showme'", timeout=20000)
+    saw_avg, caps, t_avg = False, set(), None
+    for _ in range(300):
+        s = page.evaluate("""() => ({ st: __play.state, cap: (document.querySelector('.pl-caption') || {}).textContent || '',
+            avg: document.querySelectorAll('.ex-cp-avgmark').length, turn: ((document.querySelector('.pl-wtg-text') || {}).textContent || '').startsWith('Your turn') })""")
+        if s['cap']:
+            caps.add(s['cap'][:40])
+        if s['avg'] and not saw_avg:
+            saw_avg = True
+            page.wait_for_timeout(700)
+            shot(page, 'app_360_watch_average.png')
+        if s['st'] == 'respond' and s['turn']:
+            break
+        page.wait_for_timeout(150)
+    C.ok(len(caps) >= 7, f'app 360x640: the Watch shows its captions one by one ({len(caps)} seen)')
+    C.ok(saw_avg, 'app 360x640: the Watch shows the average position once (its declared exception)')
+    st = page.evaluate("() => ({ st: __play.state, avg: document.querySelectorAll('.ex-cp-avgmark').length, marker: PX.ex.view('centralpoint').marker() })")
+    C.ok(st['st'] == 'respond' and st['avg'] == 0 and st['marker'] is None, f'app 360x640: after the Watch the item is answerable and clean ({st})')
+    k = page.evaluate('() => __play.key')
+    tap(page, True, k['x'], k['y'])
+    tap(page, True, k['x'], k['y'])
+    page.wait_for_function("() => __play.state === 'reveal'", timeout=10000)
+    page.evaluate('() => __play.next()')
+    sel = card(page, 'wtg-strategy', 'try')
+    title = page.evaluate("() => (document.querySelector('[data-card-box=\"wtg-strategy\"] h2, [data-card-box=\"wtg-strategy\"] h3') || {}).textContent || ''")
+    C.ok('First count, then balance' in title, f'app 360x640: the strategy card before Try 1 is "First count, then balance" ({title!r})')
+    shot(page, 'app_360_strategy.png')
+    page.locator(sel).click()
+    page.wait_for_function("() => __play.state === 'respond'", timeout=20000)
+    diag = page.evaluate("() => ({ task: __play.item.task, lines: document.querySelectorAll('.ex-cp-assist line').length })")
+    C.ok(diag == {'task': 'kite', 'lines': 2}, f'app 360x640: Try 1 is the kite with its two diagonals drawn ({diag})')
+    fit = page.evaluate("""() => { const ids = ['.ex-cp-stage', '.ex-cp-confirm']; return { rows: ids.map((s) => { const r = document.querySelector(s).getBoundingClientRect(); return [s, Math.round(r.top), Math.round(r.bottom)]; }),
+        h: window.innerHeight, scroll: document.documentElement.scrollHeight - window.innerHeight }; }""")
+    C.ok(all(r[1] >= -1 and r[2] <= fit['h'] + 1 for r in fit['rows']), f'app 360x640: Try 1 shows the plate and Confirm on the screen ({fit})')
+    shot(page, 'app_360_try1.png')
+    for i in range(3):
+        k = page.evaluate('() => __play.key')
+        tap(page, True, k['x'], k['y'])
+        tap(page, True, k['x'], k['y'])
+        page.wait_for_function("() => __play.state === 'reveal'", timeout=10000)
+        v = page.evaluate("() => ({ right: __play.last.result.correct, round: __play.last.result.round, verdict: (document.querySelector('.pl-verdict') || {}).textContent || '' })")
+        C.ok(v['right'] is True and isinstance(v['round'], int) and 'Round score' in v['verdict'], f'app 360x640: Try {i + 1} answered by two taps, with a round score in the verdict ({v})')
+        if i == 0:
+            shot(page, 'app_360_try1_reveal.png')
+        page.evaluate('() => __play.next()')
+        page.wait_for_timeout(300)
+        if i < 2:
+            page.wait_for_function("() => __play.state === 'respond'", timeout=20000)
+    C.ok(not con.errors(), f'app 360x640: no console errors ({con.errors()[:3]})')
+    ctx.close()
+
+
 def run_srcdoc(b):
     page = b.new_page(viewport={'width': 900, 'height': 900})
     con = Console(page)
@@ -233,6 +320,7 @@ with sync_playwright() as p:
     run_viewport(b, '360x640', {'width': 360, 'height': 640}, True, ['light', 'dark'])
     run_viewport(b, '412x880', {'width': 412, 'height': 880}, True, ['light'])
     run_slow_why(b)
+    run_app_wtg(b)
     run_srcdoc(b)
     b.close()
 sys.exit(C.summary())

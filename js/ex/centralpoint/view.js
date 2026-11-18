@@ -206,6 +206,9 @@
     drawTargets(item.targets);
     drawAssist(item, ctx && ctx.assist);
     var exact = item.form === 'exact';
+    // a show-me closed by Next ends after this item is drawn: its classes must not outlive it
+    st.root.classList.remove('is-why');
+    st.root.classList.toggle('is-map', st.mapOn);
     st.root.setAttribute('data-form', exact ? 'exact' : 'quick');
     st.nudges.hidden = !exact;
     st.controls.hidden = false;
@@ -349,7 +352,7 @@
         if (o.d * f < 1.0 || o.d * (1 - f) < 0.75) return; // never on the marker or the ring
         [1, -1].forEach(function (sd) { c.push([from.x + ux * o.d * f - uy * 0.45 * sd, from.y + uy * o.d * f + ux * 0.45 * sd]); });
       });
-      c.push([o.t[0] + ux * 1.0, o.t[1] + uy * 1.0], [o.t[0] + ux * 0.8 - uy * 0.6, o.t[1] + uy * 0.8 + ux * 0.6], [o.t[0] + ux * 0.8 + uy * 0.6, o.t[1] + uy * 0.8 - ux * 0.6]);
+      c.push([o.t[0] + ux * 1.2, o.t[1] + uy * 1.2], [o.t[0] + ux * 0.9 - uy * 0.75, o.t[1] + uy * 0.9 + ux * 0.75], [o.t[0] + ux * 0.9 + uy * 0.75, o.t[1] + uy * 0.9 - ux * 0.75]);
       var p = P.place(c, txt);
       st.L.labels.appendChild(labelAt(p[0], p[1], txt, 'ex-cp-len'));
     });
