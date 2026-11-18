@@ -167,6 +167,12 @@ function aggregate(results, spec) {
     // any readout reading "likely gain" (the multiplicity of showing words per rung)
     const anyNow = results.filter((r) => r.verdicts[md] && Object.values(r.verdicts[md].words).includes('likely gain')).length;
     v.any = { gain: pct(anyNow, n) };
+    // words for the composite and the near rung only (the policy measure-sim.md recommends)
+    const cn = results.filter((r) => r.verdicts[md] && (r.verdicts[md].words.comp === 'likely gain' || r.verdicts[md].words.near === 'likely gain')).length;
+    v.compNear = { gain: pct(cn, n) };
+    everSoFar.compNear = everSoFar.compNear || results.map(() => false);
+    results.forEach((r, i) => { if (r.verdicts[md] && (r.verdicts[md].words.comp === 'likely gain' || r.verdicts[md].words.near === 'likely gain')) everSoFar.compNear[i] = true; });
+    e.compNear = pct(everSoFar.compNear.filter(Boolean).length, n);
     out.verdicts[md] = v; out.ever[md] = e;
   }
   out.meter95 = pct(results.filter((r) => r.meterMax >= 0.95).length, n);
@@ -218,7 +224,8 @@ function fmtRun(res) {
   for (const [arm, a] of Object.entries(res.arms)) {
     L.push(`  arm ${arm}: ${a.minutesPerWeek.toFixed(1)} min/week (to day 28: ${a.minutes4.toFixed(0)} min, day 56: ${a.minutes8.toFixed(0)} min; longest block ${a.blockMinutes.toFixed(2)} min); items stored ${a.items}; fits ${a.fitsPerLearner}, ${a.itersPerFit.toFixed(1)} iterations each, ${a.unconverged} unconverged; meter ≥ 0.95 between milestones ${a.meter95.toFixed(1)} %`);
     for (const [d, v] of Object.entries(a.verdicts)) {
-      L.push(`    milestone day ${d}: ` + Object.entries(v).filter(([k]) => k !== 'any').map(([k, x]) => `${k} likely gain ${x.gain.toFixed(1)} % (ever ${a.ever[d][k].toFixed(1)}) no change ${x.none.toFixed(1)} %`).join(' | ') + ` | any readout ${v.any.gain.toFixed(1)} %`);
+      L.push(`    milestone day ${d}: ` + Object.entries(v).filter(([k]) => k !== 'any' && k !== 'compNear').map(([k, x]) => `${k} likely gain ${x.gain.toFixed(1)} % (ever ${a.ever[d][k].toFixed(1)}) no change ${x.none.toFixed(1)} %`).join(' | ') +
+        ` | any readout ${v.any.gain.toFixed(1)} %` + (v.compNear ? ` | composite or near ${v.compNear.gain.toFixed(1)} % (ever ${a.ever[d].compNear.toFixed(1)})` : ''));
     }
     for (const [d, v] of Object.entries(a.reports)) {
       L.push(`    report day ${d}: ` + Object.entries(v).map(([k, x]) => `${k} MDG ${x.mdg.toFixed(2)} cover ${x.cover.toFixed(1)} z ${x.zMean.toFixed(2)}/${x.zSd.toFixed(2)} P≥.95 ${x.p95.toFixed(1)} % truth ${x.truth.toFixed(2)}`).join(' | '));
@@ -294,7 +301,8 @@ const want = arg('runs', '') ? new Set(arg('runs', '').split(',')) : null;
 const out = { n: N, seed: SEED, started: new Date().toISOString(), runs: [] };
 let failed = 0;
 if (argv.includes('--crossover')) {
-  const cr = crossover(env.PX, T, { players: parseInt(arg('players', '2000'), 10), seed: SEED, design: DESIGNS[arg('design', 'L15')], truth: TRUTH, model: modelFor(DESIGNS[arg('design', 'L15')], TRUTH), sdComp: sdCompOf(DESIGNS.L15, TRUTH.rho) });
+  const dn = arg('design', 'N14'), run = R('crossover', dn, 'central');
+  const cr = crossover(env.PX, T, { players: parseInt(arg('players', '1500'), 10), seed: SEED, designName: dn, truth: TRUTH, model: modelFor(DESIGNS[dn], TRUTH), spec: () => specOf(run, 'none') });
   console.log(cr.text);
   out.crossover = cr.data;
 } else {
