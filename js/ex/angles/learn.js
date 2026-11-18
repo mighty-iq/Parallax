@@ -92,10 +92,12 @@
       pair: 'Angle {b} opens {d}° wider than angle {a}.',
       done: 'So the order is {order}: answer {n}.',
       chosen: 'Answer {n} puts angle {b} before angle {a}, but angle {b} is the larger one.',
-      smallest: 'The clearly smallest angle is {a}: keep the answers that start with {a}.',
-      largest: 'The clearly largest angle is {b}: keep the answers that end with {b}.',
+      // Show me and the Watch carry out the "Extremes first" card; the solving captions start with
+      // the card's step (n/3), name the reason and mark what they name (R-reader, note D2 addendum C).
+      smallest: '1/3 · Smallest first: {a} opens the least, so keep the answers that start with {a}.',
+      largest: '2/3 · Largest next: {b} opens the most, so keep the answers that end with {b}.',
       left: 'One answer is left: {order}.',
-      disagree: 'The answers left disagree on {a} and {b}: lay one angle on the other.',
+      disagree: '3/3 · The pair left: the answers left disagree on {a} and {b}, so lay one on the other.',
       assist: 'The smallest angle is marked, and the answers that do not start with it are greyed.',
     },
     checkin: { whole: 'I laid the angles on each other in my mind', parts: 'I settled the smallest and largest first', unsure: 'Not sure, or both' },

@@ -85,3 +85,23 @@
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   .pl-trial.ex-angles { --ang-size: min(calc((var(--pl-col) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 3 * var(--s1, 0.25rem) - 1rem) / 2)); }
 }
+
+/* v1.2: Try 1's first step done (the smallest angle marked) and show me's crossed-out answers:
+   greyed and struck through, still answerable (shape as well as tone). */
+.ex-angles .ex-angles-cell.is-assist { outline: 2px dashed var(--ang-mark); outline-offset: 2px; }
+.ex-angles .ex-angles-flag {
+  position: absolute; right: 0.3rem; bottom: 0.2rem; z-index: 1; padding: 0 0.3rem;
+  font-size: var(--fs-xs, 0.75rem); font-weight: 600; color: var(--ang-mark); background: var(--ang-cell); border: 1px solid var(--ang-mark); border-radius: 0.6rem;
+}
+.ex-angles .ex-angles-flag[data-corner="bl"] { right: auto; left: 0.3rem; }
+.ex-angles .ex-angles-flag[data-corner="tr"] { bottom: auto; top: 0.2rem; }
+.ex-angles .ex-angles-flag[data-corner="tl"] { bottom: auto; right: auto; top: 0.2rem; left: 0.3rem; }
+.ex-angles .ex-angles-out { opacity: 0.45; }
+.ex-angles .ex-angles-out .ex-answer-text { text-decoration: line-through; text-decoration-thickness: 2px; }
+/* Rule figures on the rules card (play.js .pl-rule-fig). */
+.ex-angles.ex-angles-rulefig { width: 100%; height: 100%; }
+.ex-angles .ex-angles-rule-svg { display: block; width: 100%; height: 100%; aspect-ratio: auto; }
+.ex-angles .ex-angles-rule-arms { stroke-width: 2.5px; }
+.ex-angles .ex-angles-rule-arc { stroke-width: 2px; }
+.ex-angles .ex-angles-rule-sign { font-size: 0.3px; font-weight: 700; }
+.ex-angles .ex-angles-rule-label { font-size: 0.15px; }

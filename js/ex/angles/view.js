@@ -5,9 +5,15 @@
    angle is never confused with an answer, whose keys are 1–4 (fresh-player test, RV-play-dat).
    - Strokes keep 2 CSS px at any size (vector-effect), anti-aliased; no arc at the vertex.
    - Reveal: every angle's size in degrees in a free corner of its cell, from the grading model.
-   - Show me: the angles in order with their sizes, then the pair that decides the item (the one
-     the key's nearest wrong list swaps) laid on top of each other, corners and one arm lined up,
-     so the wider opening shows; then the order and the answer. All from item.angles / lib.measure.
+   - Show me carries out the "Extremes first" card on the item (v1.2, docs/research/v1.2/
+     D2-first-band.md §3.2), its captions numbered by the card's steps: the smallest angle marked
+     and the answers that do not start with it crossed out, then the largest and the answers that do
+     not end with it; if more than one answer is left, the pair they disagree on is laid on top of
+     each other, corners and one arm lined up, so the wider opening shows; then the order and the
+     answer. All from item.angles / lib.measure.
+   - Try 1's first step done (ctx.assist = { smallest: true }; CONTRACT-v1.2 D): the smallest angle
+     marked, the answers that do not start with it greyed and struck through (still answerable).
+   - Rule figures (drawRule): the opening alone counts, under a straight line, smallest to largest.
    - Colours come from CSS tokens (css/ex/angles.css), so a theme change needs no redraw. */
 (function (PX) {
   'use strict';
@@ -87,7 +93,7 @@
     root.appendChild(desc);
     ctx.host.appendChild(root);
     st = { ctx: ctx, root: root, stage: stage, cells: cells, big: big, verdict: verdict, caption: caption, desc: desc,
-      item: null, optItem: null, opts: [], cellEls: [], sizeEls: [] };
+      item: null, optItem: null, opts: [], cellEls: [], sizeEls: [], assist: false };
   }
   function setMode(mode) { st.cells.hidden = mode !== 'cells'; st.big.hidden = mode !== 'big'; }
 
@@ -142,7 +148,24 @@
     drawCells(item);
     PX.ui.clear(st.big);
     setMode('cells');
+    st.assist = !!(ctx && ctx.assist && ctx.assist.smallest);
+    if (st.assist) {
+      var small = item.order[0];
+      st.cellEls[small].classList.add('is-assist');
+      st.cellEls[small].appendChild(h('span.ex-angles-flag', { 'data-corner': st.sizeEls[small].getAttribute('data-corner') || 'br' }, 'smallest'));
+      crossOut(item.options.map(function (o) { return o[0] !== small; }));
+      st.caption.textContent = cap('assist');
+      st.desc.textContent += ' The smallest angle is marked; the answers that do not start with it are greyed.';
+    }
     return timing.nextPaint();
+  }
+  // Answers crossed out (greyed and struck through; still answerable): out[i] for option i.
+  function crossOut(out) {
+    st.opts.forEach(function (o, i) {
+      if (!o) return;
+      var b = o.el.closest ? o.el.closest('.px-choice') : null;
+      if (b) b.classList.toggle('ex-angles-out', !!(out && out[i]));
+    });
   }
 
   function newItem(item) {
@@ -170,6 +193,8 @@
   function reveal(item, response, result, ctx) {
     if (!st) return Promise.resolve();
     st.root.classList.add('is-revealed');
+    crossOut(null); // the player's own marks on the answers stay fully visible
+    Array.prototype.slice.call(st.cells.querySelectorAll('.ex-angles-flag')).forEach(function (f) { f.parentNode.removeChild(f); }); // the size label takes its corner
     showSizes(item, true);
     st.opts.forEach(function (o, i) {
       if (!o) return;
@@ -229,21 +254,36 @@
     };
   }
   function steps(item, response) {
-    var m = lib.measure(item), out = [], pair = deciding(item);
+    var m = lib.measure(item), out = [], order = item.order, small = order[0], large = order[3];
+    var keepS = item.options.map(function (o) { return o[0] === small; });
+    var keepSL = item.options.map(function (o) { return o[0] === small && o[3] === large; });
+    var left = item.options.filter(function (o, i) { return keepSL[i]; });
+    var outOf = function (keep) { return keep.map(function (k) { return !k; }); };
     out.push({
-      ms: 2200, caption: cap('order', { order: listText(item.order) }),
-      enter: function () { setMode('cells'); focusOption(-1); showSizes(item, true); point(item.order.slice(0, 1)); },
-      update: function (k) { point(item.order.slice(0, 1 + Math.min(3, Math.floor(k * 4)))); },
+      ms: 2400, caption: cap('smallest', { a: letter(small) }),
+      enter: function () { setMode('cells'); focusOption(-1); showSizes(item, true); point([small]); crossOut(outOf(keepS)); },
+    });
+    out.push({
+      ms: 2400, caption: cap('largest', { b: letter(large) }),
+      enter: function () { setMode('cells'); focusOption(-1); showSizes(item, true); point([small, large]); crossOut(outOf(keepSL)); },
       exit: function () { point([]); },
     });
-    if (pair) {
-      var vars = { a: letter(pair.small), b: letter(pair.large), d: fmtDeg(pair.gap).replace('°', '') };
-      out.push(overlayStep(item, pair, 1700, 'overlay', vars));
-      out.push(overlayStep(item, pair, 1900, 'pair', vars));
+    if (left.length > 1) {
+      // The answers left disagree on a pair: the widest pair a remaining wrong answer gets wrong.
+      var foil = left.filter(function (o) { return o.join() !== order.join(); })[0];
+      var pair = foil ? widest(foil, m.map(function (x) { return x.deg; })) : deciding(item);
+      if (pair) {
+        var vars = { a: letter(pair.small), b: letter(pair.large), d: fmtDeg(pair.gap).replace('°', '') };
+        out.push({ ms: 2400, caption: cap('disagree', vars), enter: function () { setMode('cells'); showSizes(item, true); point([pair.small, pair.large]); crossOut(outOf(keepSL)); }, exit: function () { point([]); } });
+        out.push(overlayStep(item, pair, 1700, 'overlay', vars));
+        out.push(overlayStep(item, pair, 1900, 'pair', vars));
+      }
+    } else {
+      out.push({ ms: 1800, caption: cap('left', { order: listText(order) }), enter: function () { setMode('cells'); showSizes(item, true); point([]); crossOut(outOf(keepSL)); focusOption(item.key); } });
     }
     out.push({
       ms: 1800, caption: cap('done', { order: listText(item.order), n: item.key + 1 }),
-      enter: function () { setMode('cells'); showSizes(item, true); point([]); focusOption(item.key); },
+      enter: function () { setMode('cells'); showSizes(item, true); point([]); crossOut(null); focusOption(item.key); },
     });
     var r = response;
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < 4) {
@@ -253,13 +293,44 @@
         out.push({
           ms: 2400, caption: cap('chosen', wv),
           enter: function () {
-            setMode('big'); focusOption(r); PX.ui.clear(st.big);
+            setMode('big'); crossOut(null); focusOption(r); PX.ui.clear(st.big);
             st.big.appendChild(overlaySvg({ deg: m[wrong.small].deg, n: letter(wrong.small) }, { deg: m[wrong.large].deg, n: letter(wrong.large) }));
           },
         });
       }
     }
     return out;
+  }
+
+  /* ---------- rule figures (the rules card; CONTRACT-v1.2 D) ---------- */
+
+  // An angle drawn from vertex v: first arm at direction a0 (degrees, counterclockwise from +x, y
+  // up on screen), opening deg, arms l1 and l2; with its arc.
+  function ruleAngle(svg, v, a0, deg, l1, l2, rad) {
+    var u = lib.sincos(a0), w = lib.sincos(a0 + deg);
+    var A = [v[0] + l1 * u[1], v[1] - l1 * u[0]], B = [v[0] + l2 * w[1], v[1] - l2 * w[0]];
+    svg.appendChild(S.el('path', { d: arcPath(v, [u[1], -u[0]], [w[1], -w[0]], rad || 0.15), class: 'ex-angles-arc ex-angles-rule-arc' }));
+    svg.appendChild(S.el('path', { d: 'M' + A[0] + ' ' + A[1] + 'L' + v[0] + ' ' + v[1] + 'L' + B[0] + ' ' + B[1], class: 'ex-angles-arms ex-angles-rule-arms' }));
+  }
+  // Drawn in a 1 × 1 box shown at 72–96 px: few, bold strokes.
+  function drawRule(el, fig) {
+    if (!el) return;
+    var svg = S.svg(1, 1, { viewBox: [0, 0, 1, 1], class: 'ex-angles-svg ex-angles-rule-svg', width: '100%' });
+    if (fig === 'opening') { // the same opening: long arms, then short arms turned
+      ruleAngle(svg, [0.07, 0.46], 0, 45, 0.44, 0.38);
+      ruleAngle(svg, [0.6, 0.93], 60, 45, 0.24, 0.3);
+      svg.appendChild(S.text(0.3, 0.76, '=', { class: 'ex-angles-num ex-angles-rule-sign' }));
+    } else if (fig === 'straight') { // every angle opens less than a straight line
+      ruleAngle(svg, [0.5, 0.58], 20, 140, 0.42, 0.42, 0.13);
+      svg.appendChild(S.el('path', { d: 'M0.06 0.8L0.94 0.8', class: 'ex-angles-arms ex-angles-arms--large ex-angles-rule-arms' }));
+      svg.appendChild(S.text(0.5, 0.92, '180°', { class: 'ex-angles-num ex-angles-rule-label' }));
+    } else if (fig === 'order') { // three angles growing from left to right, then an arrow
+      ruleAngle(svg, [0.04, 0.6], 0, 25, 0.26, 0.26, 0.1);
+      ruleAngle(svg, [0.36, 0.6], 0, 60, 0.26, 0.26, 0.1);
+      ruleAngle(svg, [0.72, 0.6], 0, 110, 0.24, 0.24, 0.1);
+      svg.appendChild(S.el('path', { d: 'M0.08 0.82L0.9 0.82M0.82 0.76L0.9 0.82L0.82 0.88', class: 'ex-angles-arms ex-angles-rule-arms' }));
+    } else return;
+    el.appendChild(h('div.ex-angles.ex-angles-rulefig', svg));
   }
 
   function runSteps(list, ctx, opts) {
@@ -290,18 +361,18 @@
     if (ctx && typeof ctx.play === 'function') return ctx.play(list, o);
     return runSteps(list, ctx, o);
   }
+  function after() { if (st) { focusOption(-1); crossOut(null); point([]); setMode('cells'); } }
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
-    return play(steps(item, response), ctx, { name: 'show-me' }).then(function () { if (st) { focusOption(-1); setMode('cells'); } });
+    return play(steps(item, response), ctx, { name: 'show-me' }).then(after, after);
   }
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     var intro = [
-      { ms: 2200, caption: cap('angles'), enter: function () { setMode('cells'); focusOption(-1); showSizes(item, false); point([0, 1, 2, 3]); }, exit: function () { point([]); } },
-      { ms: 2000, caption: cap('options'), enter: function () { setMode('cells'); point([]); } },
+      { ms: 2200, caption: cap('angles'), enter: function () { setMode('cells'); focusOption(-1); crossOut(null); showSizes(item, false); point([0, 1, 2, 3]); }, exit: function () { point([]); } },
+      { ms: 2000, caption: cap('options'), enter: function () { setMode('cells'); crossOut(null); point([]); } },
     ];
-    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null })
-      .then(function () { if (st) { focusOption(-1); setMode('cells'); } });
+    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null }).then(after, after);
   }
 
   function unmount() {
@@ -314,7 +385,7 @@
     layout: 'stem+options',
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
-    reveal: reveal, showMe: showMe, demo: demo, unmount: unmount,
+    reveal: reveal, showMe: showMe, demo: demo, unmount: unmount, drawRule: drawRule,
     steps: function (item, response) { return st ? steps(item, response) : []; },
   });
 })(window.PX);
