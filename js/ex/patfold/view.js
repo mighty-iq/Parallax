@@ -295,7 +295,7 @@
     }
     return {
       ms: f.matters ? 1600 : 1200,
-      caption: cap(f.matters ? 'unfold' : 'unfoldIdle', { n: k }),
+      caption: cap((f.matters ? 'unfold' : 'unfoldIdle') + (k < item.folds.length ? 'More' : ''), { n: k }),
       enter: function () {
         setMode('big'); focusOption(-1);
         var svg = clearBig();

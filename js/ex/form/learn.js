@@ -82,9 +82,10 @@
     captions: {
       pattern: 'The pattern: fold along the dashed lines.',
       solids: 'Four solids, each turned its own way.',
-      landmark: 'Landmark: face {f} in the pattern.',
-      match: 'In solid {n}, the same face sits here, with the same neighbours.',
-      neighbours: 'Its neighbours match too: {list}.',
+      sizes: '1/3 · Shapes and sizes first: a solid whose faces differ from the pattern\'s is out (the marked edge).',
+      landmark: '2/3 · Pick a landmark: face {f}, the shaded face, in the pattern.',
+      match: '3/3 · Check them in each solid left: in solid {n} the same faces sit beside it.',
+      neighbours: '2/3 · Name the faces that meet it once folded: {list}.',
       land: 'Solid {n} folds from the pattern.',
       foils: 'Why the others do not fold from it:',
       whyShape: 'Solid {n} is the wrong size: the marked edge is {dir} than the same edge in the pattern.',
