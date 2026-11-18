@@ -1,8 +1,8 @@
 /* PX.ui.playtest: playtest mode (v1.2 milestone 2; docs/dev/CONTRACT-v1.2.md G; the owner's
    standing rules, "Interactive check-ins"). It is for the person testing a build: three taps after
    each exercise (fun, clarity, difficulty), a note button on every screen, and "Copy playtest
-   report", which puts the ratings and notes together with the facts behind them (the device,
-   frame timings, errors, performance, time played and where the player quit) into one text.
+   report": one text that sets the ratings and notes beside what explains them (device, frame
+   timing, errors, results, play time, and the screen where each visit stopped).
 
    BUILD is the one switch for a release: 'test' builds have playtest mode on by default; set it
    to 'release' and playtest mode waits behind its Settings switch, off by default. The setting

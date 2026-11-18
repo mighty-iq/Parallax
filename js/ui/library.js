@@ -53,7 +53,7 @@
   };
   var CARD_NOTE = { reckon: 'Hard at first? Practise Homing, where landmarks help, then come back.' };
   var MODES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', section: 'Section practice' };
-  // When each mode is the right one (gap M3; docs/research/v1.2/P1-plateaus-progress.md §5): the
+  // Which situations each mode suits (gap M3; docs/research/v1.2/P1-plateaus-progress.md §5): the
   // practise sheet, the exercise page and the Lab say it in these words.
   var MODE_WHEN = {
     train: 'Right when you want the most progress per minute without choosing anything: mixed exercises at the edge of your level, with reviews spaced out.',
