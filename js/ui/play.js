@@ -1614,6 +1614,7 @@
     // close; then "How to solve" reopens it.
     function strategyStep() {
       if (!card || skipped || !practice.length) return Promise.resolve();
+      stage(1, 'Try: first a way to solve it, then practice items that never count.');
       emit('play:screen', { screen: 'card:wtg-strategy', mode: P.mode, exId: exId });
       return showCard(host, P.el.root, {
         id: 'wtg-strategy', title: card.title || 'How to solve it', className: 'pl-strategy-card', hide: P.el.root, lines: strategyBody(card),
