@@ -269,8 +269,10 @@ function testLearn(t, PX, def) {
   const P = L.practice;
   t.ok(P[0].assist && P[0].assist.numbers === 2 && !P[1].assist && !P[2].assist && !P[3].assist, 'Try 1 alone has its first step done (every number but two)');
   t.ok(def.difficulty(P[0].params) <= floor + 1e-9 && def.difficulty(P[1].params) <= floor + 1e-9, 'Try 1 and Try 2 at the starter floor');
-  t.ok(Math.abs(def.difficulty(P[2].params) - OLD_FLOOR) < 1e-9 && P[2].tip === 'hidden', 'Try 3 at the pre-1.2 floor, with the hidden-cube tip');
-  t.ok(def.difficulty(P[3].params) > def.difficulty(P[2].params) && P[3].params.height === 2 && P[3].tip === 'tall', 'Try 4: three-high columns, with their tip');
+  t.ok(P[2].params.cubes === 0 && P[2].params.height === 1 && P[2].tip === 'hidden', 'Try 3: the small figures two high, with the hidden-cube tip (one new feature)');
+  t.ok(Math.abs(def.difficulty(P[3].params) - OLD_FLOOR) < 1e-9, 'Try 4 at the pre-1.2 floor');
+  const ds = P.map((x) => def.difficulty(x.params));
+  t.ok(ds.every((x, i) => i === 0 || x >= ds[i - 1]), `Try goes from easy to harder (${ds.map((x) => x.toFixed(2)).join(', ')})`);
   t.ok(P.every((x) => !x.tip || (L.tips || []).some((tip) => tip.id === x.tip)), 'forced tips exist');
   const gen = (x) => def.generate(PX.rng(x.seed), x.params);
   const demoItem = gen(L.demo[0]), tryItems = P.map(gen);
@@ -278,8 +280,9 @@ function testLearn(t, PX, def) {
   const keys = [demoItem, ...tryItems].map((it) => it.key);
   t.ok(keys.every((k, i) => i === 0 || k !== keys[i - 1]), `answers vary their slot from item to item (${keys.map((k) => k + 1).join(', ')})`);
   t.ok(demoItem.hidden === 0 && tryItems[0].hidden === 0 && tryItems[1].hidden === 0, 'the Watch and the first two Try items are flat: nothing hidden');
-  const rr3 = def.lib.render(tryItems[2].heights);
-  t.ok(rr3.cubes.some((q, i) => q.painted === tryItems[2].ask && rr3.perCube[i].any === 0), 'Try 3 hides a cube that the count includes');
+  t.eq(tryItems[2].hidden, 1, 'Try 3 hides exactly one cube');
+  const rr4 = def.lib.render(tryItems[3].heights);
+  t.ok(rr4.cubes.some((q, i) => q.painted === tryItems[3].ask && rr4.perCube[i].any === 0), 'Try 4 hides a cube that the count includes');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
     const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).length && tr.levels.every((l) => l >= 0 && l < d.levels.length));

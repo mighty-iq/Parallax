@@ -17,8 +17,10 @@
     ],
     // The teaching template (v1.2, docs/research/v1.2/D2-first-band.md §3.0 C, §3.3): the rules
     // card first, the Watch at the starter band (a flat figure), the "Count by position" card before
-    // Try 1, Try 1 with every cube's number shown but two, then the band unaided, the pre-1.2 floor
-    // with a hidden cube, and three-high columns. Format rules before practice: d ≈ 0.9–1.2 on the
+    // Try 1, Try 1 with every cube's number shown but two, then the band unaided, five cubes two high
+    // with one hidden support (one new feature at a time; the ADA's own first cube example teaches
+    // the hidden support on four cubes, note D1 addendum A.1), and the pre-1.2 floor, where a hidden
+    // cube is among the counted. Three-high columns keep their tip for rated play. Format rules before practice: d ≈ 0.9–1.2 on the
     // format (Schneider et al. 2020, Levacher et al. 2022, via R4 §4.2); faded worked examples
     // (D2 §2.2). Figures: view.drawRule.
     rules: [
@@ -29,15 +31,15 @@
     strategyFirst: 'analytic',
     // The Watch at the starter band: four flat cubes in an L, asked about 3 painted sides (the
     // corner and the middle of the row: 2 cubes). Seeds are fixed so the answers vary their slot
-    // (Watch 2, Try 3, 1, 4, 2) and Try 3 hides a counted cube.
+    // (Watch 2, Try 3, 1, 3, 4), Try 3 hides exactly one cube and Try 4 hides one that is counted.
     demo: [
       { params: { cubes: 0, height: 0, asked: 0 }, seed: 1, kind: 'flat' },
     ],
     practice: [
       { params: { cubes: 0, height: 0, asked: 0 }, seed: 13, assist: { numbers: 2 } },
       { params: { cubes: 0, height: 0, asked: 0 }, seed: 2 },
-      { params: { cubes: 1, height: 1, asked: 0 }, seed: 113, tip: 'hidden' },
-      { params: { cubes: 1, height: 2, asked: 0 }, seed: 24, tip: 'tall' },
+      { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden' },
+      { params: { cubes: 1, height: 1, asked: 0 }, seed: 113 },
     ],
     tips: [
       { id: 'flat', when: { dim: 'height', levels: [0] }, text: 'A flat figure: every cube is in view, and each one has 5 painted sides minus the cubes it touches.' },
