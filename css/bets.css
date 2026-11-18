@@ -120,7 +120,7 @@
 .bets-draw-task { margin: 0 0 var(--s2); font-size: var(--fs-sm); color: var(--ink-2); }
 .bets-draw-actions { display: flex; align-items: center; gap: var(--s2); justify-content: flex-end; margin-top: var(--s2); }
 .bets-draw-actions .px-btn { min-height: 44px; min-width: 44px; }
-.bets-draw-count { margin-right: auto; font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink-2); }
+.bets-draw-count { margin-right: auto; font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink-2); white-space: nowrap; }
 .bets-draw-keys { margin: var(--s2) 0 0; }
 @media (hover: none) and (pointer: coarse) { .bets-draw-keys { display: none; } }
 .bets-draw-verdict { margin-top: var(--s2); }
@@ -137,3 +137,31 @@
 .ex-fold .bets-fold-cross { stroke: var(--wrong); stroke-width: 0.1; stroke-linecap: round; fill: none; }
 .bets-fold-cursor { fill: none; stroke: var(--focus); stroke-width: 0.08; visibility: hidden; }
 .bets-fold-cursor.is-on { visibility: visible; }
+
+/* Views: the grid of dots (4 × 4 cells, 4.6 across: 65 px between dots, so every line's own area holds a 44 px circle) */
+.bets-views-board { width: min(100%, 18.75rem); margin: 0 auto; touch-action: none; cursor: crosshair; -webkit-tap-highlight-color: transparent; }
+.bets-views-svg { display: block; width: 100%; height: auto; }
+.bets-views-paper { fill: var(--surface); stroke: var(--rule); stroke-width: 0.02; }
+.bets-views-dots circle { fill: var(--ink-2); }
+.bets-views-line { stroke: var(--ink); stroke-width: 0.09; stroke-linecap: round; }
+.bets-views-line.is-right { stroke: var(--right); }
+.bets-views-line.is-missed { stroke: var(--ink); stroke-dasharray: 0.12 0.1; stroke-width: 0.07; }
+.bets-views-line.is-extra { stroke: var(--wrong); }
+.bets-views-pen { fill: none; stroke: var(--focus); stroke-width: 0.05; visibility: hidden; }
+.bets-views-pen.is-on { visibility: visible; }
+.bets-views-pen.is-down { fill: var(--focus); fill-opacity: 0.25; }
+/* Phones: a smaller stage over the grid, so the item and its Check button fit one screen (360 × 640) */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-views[data-item-layout="custom"] .ex-views-stage { height: min(11rem, calc(var(--pl-w) * 0.6)); }
+}
+/* Wide screens: the stage on the left, the drawing on the right */
+@media (min-width: 720px) and (min-height: 501px) {
+  .ex-views-stem:has(> .bets-draw), .ex-fold-stem:has(> .bets-draw) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s4); align-items: start; }
+  .ex-views-stem:has(> .bets-draw) > .bets-draw, .ex-fold-stem:has(> .bets-draw) > .bets-draw { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; width: 20rem; }
+  .ex-fold-stem:has(> .bets-draw) > .bets-draw { width: 23rem; }
+  .ex-views-stem:has(> .bets-draw) > :not(.bets-draw), .ex-fold-stem:has(> .bets-draw) > :not(.bets-draw) { grid-column: 1; }
+  .ex-fold-stem:has(> .bets-draw) .bets-fold-board { margin-left: 0; }
+}
+.bets-draw.bets-fold { margin-top: var(--s1); }
+.bets-draw.bets-fold .bets-draw-task { margin-bottom: var(--s1); }
+.bets-draw.bets-fold .bets-draw-actions { margin-top: var(--s1); }

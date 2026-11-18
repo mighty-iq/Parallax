@@ -1208,19 +1208,57 @@
     el.appendChild(h('div.ex-views.ex-views-rulefig', svg));
   }
 
+  /* ===== v1.2 wave 2 (W2-bets): the produce variant 'draw' (CONTRACT-v1.2 S) =====
+     Its items (variant 'toview', produce 'draw') are drawn as toview items; their answer is a drawing on a
+     grid of dots under the stage (layoutFor → 'custom'), made by js/ex/views/layers-view.js
+     (PX.ui.betsDraw.views) with this view's pieces (api). Every other item runs exactly as before. */
+  function produceOf(item) {
+    var D = PX.ui.betsDraw && PX.ui.betsDraw.views;
+    return item && item.produce === 'draw' && D ? D : null;
+  }
+  var api = {
+    st: function () { return st; }, cap: cap, play: play, revealStage: revealStage, cleanUp: function () { cleanUp(); },
+    // the toview show-me of the item (the right option's index in place of the drawn key)
+    steps: function (item) { var c = {}; for (var k in item) if (Object.prototype.hasOwnProperty.call(item, k)) c[k] = item[k]; c.key = item.pick; return toviewSteps(c, null); },
+  };
+  function presentAll(item, ctx) {
+    var any = PX.ui.betsDraw && PX.ui.betsDraw.views;
+    if (any) any.stop(); // a choice item after a draw item keeps no grid of dots
+    var p = present(item, ctx), D = produceOf(item);
+    if (D && st) D.prepare(item, ctx, api);
+    return p;
+  }
+  function revealAll(item, response, result, ctx) {
+    var D = produceOf(item);
+    return D && st ? D.reveal(item, response, result, ctx, api) : reveal(item, response, result, ctx);
+  }
+  function showMeAll(item, response, ctx) {
+    var D = produceOf(item);
+    if (D) return st && st.v3 && st.item === item ? D.showMe(item, response, ctx, api) : Promise.resolve();
+    return showMe(item, response, ctx);
+  }
+  function unmountAll() {
+    var D = PX.ui.betsDraw && PX.ui.betsDraw.views;
+    if (D) D.stop();
+    unmount();
+  }
+  /* ===== end of the 'draw' block (W2-bets) ===== */
+
   PX.ex.view('views', {
     layout: 'stem+options',
     needs: 'webgl',
     css: true,
     mount: mount,
-    present: present,
+    present: presentAll, // v1.2 wave 2 (W2-bets): present, reveal, showMe and unmount also serve 'draw'
     drawOption: drawOption,
     optionLabel: optionLabel,
     gridCols: gridCols,
-    reveal: reveal,
-    showMe: showMe,
+    reveal: revealAll,
+    showMe: showMeAll,
     demo: demo,
-    unmount: unmount,
+    unmount: unmountAll,
+    layoutFor: function (item) { return produceOf(item) ? 'custom' : 'stem+options'; }, // v1.2 wave 2 (W2-bets)
+    collect: function (item, ctx, respond) { var D = produceOf(item); if (D && st && st.item === item) D.collect(item, ctx, respond, api); },
     drawRule: drawRule,
     // for tests: the steps show-me would play (same model as the key)
     steps: function (item, response) { return st && st.item === item ? steps(item, response) : []; },

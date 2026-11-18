@@ -431,14 +431,25 @@ def run_expect(b):
 PRODUCE = {
     # exercise: (params of an easy item, the board's selector, cells across the board for the 44 px check)
     'fold': ({'folds': 1, 'type': 0, 'punches': 0, 'idle': 0, 'variant': 'mark'}, '.bets-fold-board svg', 8.12),
+    'views': ({'cubes': 1, 'grid': 0, 'view': 1, 'variant': 'draw'}, '.bets-views-board svg', 4.6),
 }
+MIN_CELL = {'fold': 43.9, 'views': 63}  # views: a line's own area (a diamond one cell across) holds a 44 px circle from 63 px
+VIEWS_PT_JS = """([e, dx, dy]) => {
+  const r = document.querySelector('.bets-views-board svg').getBoundingClientRect(), c = e >> 1, x = c % 16, y = (c - x) / 16, v = e & 1;
+  const bx = (v ? x : x + 0.5) + dx, by = (v ? y + 0.5 : y) + dy;
+  return [r.left + (bx + 0.3) / 4.6 * r.width, r.top + (4 - by + 0.3) / 4.6 * r.height];
+}"""
+DOT_JS = """([x, y]) => {
+  const r = document.querySelector('.bets-views-board svg').getBoundingClientRect();
+  return [r.left + (x + 0.3) / 4.6 * r.width, r.top + (4 - y + 0.3) / 4.6 * r.height];
+}"""
 FOLD_TAP_JS = """(c) => {
   const r = document.querySelector('.bets-fold-board svg').getBoundingClientRect(), u = r.width / 8.12;
   return [r.left + (0.06 + (c % 8) + 0.5) * u, r.top + (0.06 + Math.floor(c / 8) + 0.5) * u];
 }"""
 STATE_JS = """() => ({ layout: document.querySelector('.pl-trial').getAttribute('data-item-layout'),
   choices: document.querySelectorAll('.pl-grid .px-choice').length, key: __play.item.key, answer: __play.item.answer,
-  variant: __play.item.variant })"""
+  variant: __play.item.produce || __play.item.variant })"""
 LAST_ROW = 'PX.core.store.state.trials[PX.core.store.state.trials.length - 1]'
 
 
@@ -462,7 +473,7 @@ def produce_start(b, w, h, ex):
     C.ok(st['layout'] == 'custom' and st['choices'] == 0 and st['answer'] == 'targets' and st['variant'] == params['variant'],
          f'{tag}: its own input, no answer grid ({ {k: st[k] for k in ("layout", "choices", "answer", "variant")} })')
     cell = page.evaluate(f"document.querySelector('{board}').getBoundingClientRect().width / {across}")
-    C.ok(cell >= 43.9, f'{tag}: cells of {cell:.1f} px (44 px targets)')
+    C.ok(cell >= MIN_CELL[ex], f'{tag}: cells of {cell:.1f} px (44 px targets)')
     small = page.evaluate(SMALL_JS, '.bets-draw-actions .px-btn')
     C.ok(not small, f'{tag}: 44 px buttons ({small})')
     no_scroll(page, tag)
@@ -518,9 +529,93 @@ def produce_fold(b, w, h):
     ctx.close()
 
 
+def views_tap(page, edges, dx=0, dy=0):
+    for e in edges:
+        x, y = page.evaluate(VIEWS_PT_JS, [e, dx, dy])
+        page.mouse.click(x, y)
+        page.wait_for_timeout(30)
+
+
+def produce_views(b, w, h):
+    ctx, page, con, tag, st = produce_start(b, w, h, 'views')
+    page.locator('.bets-views-board').scroll_into_view_if_needed()
+    page.screenshot(path=str(OUT / f'produce_views_{w}.png'))
+    key = st['key']
+    extra = next(e for e in range(0, 2 * 16 * 4, 2) if e not in key and (e >> 1) % 16 < 4)
+    views_tap(page, key[1:] + [extra])
+    n = page.evaluate("document.querySelector('.bets-draw-count').textContent")
+    C.ok(n == f'Lines: {len(key)}', f'{tag}: taps between dots draw lines ({n})')
+    views_tap(page, [extra])
+    C.ok(page.evaluate("document.querySelector('.bets-draw-count').textContent") == f'Lines: {len(key) - 1}', f'{tag}: a second tap erases the line')
+    page.locator('.bets-draw-actions .px-btn', has_text='Undo').click()
+    C.ok(page.evaluate("document.querySelector('.bets-draw-count').textContent") == f'Lines: {len(key)}', f'{tag}: Undo brings it back')
+    page.locator('.bets-draw-actions .px-btn', has_text='Check').click()
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
+    row = page.evaluate(LAST_ROW)
+    C.ok(row[5] == 0 and row[14] == 2 and row[15] == 7, f'{tag}: a wrong drawing, logged as a produce item answered by drawing (outcome {row[5]}, layer {row[14]}, amode {row[15]})')
+    v = page.evaluate("document.querySelector('.bets-draw-verdict').textContent")
+    C.ok('missing' in v and 'extra' in v, f'{tag}: the reveal names the missing and extra lines ({v})')
+    rv = page.evaluate("({ right: document.querySelectorAll('.bets-views-line.is-right').length, missed: document.querySelectorAll('.bets-views-line.is-missed').length, extra: document.querySelectorAll('.bets-views-line.is-extra').length })")
+    C.ok(rv == {'right': len(key) - 1, 'missed': 1, 'extra': 1}, f'{tag}: right, missing and extra lines drawn in place ({rv})')
+    page.locator('.bets-views-board').scroll_into_view_if_needed()
+    page.screenshot(path=str(OUT / f'produce_views_reveal_{w}.png'))
+    page.evaluate('__play.showMe()')
+    page.wait_for_timeout(800)
+    page.evaluate('__play.next()')
+    page.wait_for_function('__play.state === "respond"', timeout=15000)
+    key = page.evaluate('__play.item.key')
+    if w > 700:  # keyboard: move the pen up, put it down for one step, lift it
+        page.locator('.bets-views-board').focus()
+        pen = [0, 0]
+        for e in key:
+            c = e >> 1
+            x, y, vert = c % 16, c // 16, e & 1
+            for _ in range(abs(x - pen[0])):
+                page.keyboard.press('ArrowRight' if x > pen[0] else 'ArrowLeft')
+            for _ in range(abs(y - pen[1])):
+                page.keyboard.press('ArrowUp' if y > pen[1] else 'ArrowDown')
+            page.keyboard.press('Space')
+            page.keyboard.press('ArrowUp' if vert else 'ArrowRight')
+            page.keyboard.press('Space')
+            pen = [x, y + 1] if vert else [x + 1, y]
+        page.keyboard.press('Enter')
+        how = 'keys'
+    else:
+        # one drag along the bottom row of the key draws it whole, the rest by taps; the drawing sits one cell up
+        # when there is room (anywhere on the grid is right)
+        top = max((e >> 1) // 16 + (e & 1) for e in key)
+        up = 1 if top < 4 else 0
+        bottom = sorted(e for e in key if not e & 1 and (e >> 1) // 16 == 0)
+        xs = [(e >> 1) % 16 for e in bottom]
+        run = xs[0]
+        while run + 1 in xs:
+            run += 1
+        x0, y0 = page.evaluate(DOT_JS, [xs[0], up])
+        x1, y1 = page.evaluate(DOT_JS, [run + 1, up])
+        page.mouse.move(x0, y0)
+        page.mouse.down()
+        steps = 12
+        for i in range(1, steps + 1):
+            page.mouse.move(x0 + (x1 - x0) * i / steps, y0)
+            page.wait_for_timeout(15)
+        page.mouse.up()
+        dragged = [e for e in bottom if (e >> 1) % 16 <= run]
+        drawn = page.evaluate("document.querySelector('.bets-draw-count').textContent")
+        C.ok(drawn == f'Lines: {len(dragged)}', f'{tag}: a drag along the dots draws {len(dragged)} lines ({drawn})')
+        views_tap(page, [e for e in key if e not in dragged], 0, up)
+        page.locator('.bets-draw-actions .px-btn', has_text='Check').click()
+        how = 'a drag and taps' + (', one cell up' if up else '')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=15000)
+    row = page.evaluate(LAST_ROW)
+    C.ok(row[5] == 1, f'{tag}: the exact view is right ({how}; outcome {row[5]})')
+    C.ok(page.evaluate("document.querySelector('.bets-draw-verdict').textContent").startswith('✓'), f'{tag}: the verdict says so')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def run_produce(b, which=None):
     for (w, h) in SIZES:
-        for ex, fn in (('fold', produce_fold),):
+        for ex, fn in (('fold', produce_fold), ('views', produce_views)):
             if not which or ex in which:
                 fn(b, w, h)
 

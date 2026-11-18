@@ -12,7 +12,7 @@
   var cur = null; // the item being marked
 
   var T = {
-    task: 'Tap every square that will be a hole; tap again to clear.',
+    task: 'Tap each square that will be a hole.',
     keys: 'Keys: arrows move, Space marks, Enter checks.',
     done: 'Flat again: these are all the holes. Your marks are on the sheet below.',
   };
@@ -106,7 +106,7 @@
     cur.respond = null;
     stopInput();
     paint(false);
-    respond(ids, { amode: 'place' });
+    respond(ids, { amode: 'place', frames: null }); // still pictures: no frame verdict (it cannot change what was seen)
   }
 
   function stopInput() {

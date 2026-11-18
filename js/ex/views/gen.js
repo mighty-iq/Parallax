@@ -945,10 +945,89 @@
     return DIFF.base + DIFF.cubes * oldLevel(p) + (isBand(p) ? DIFF.band : 0) + DIFF.grid * p.grid + (p.variant === 'toview' ? DIFF.view[p.view] : 0) + DIFF.variant[p.variant];
   }
 
+  /* ===== v1.2 wave 2 (W2-bets): the produce variant 'draw' (PLAN milestone 4; CONTRACT-v1.2 S and
+     conflict 12; note T1 §4.3) =====
+     Draw the view: the toview item of the same seed and settings (the structure and the asked view);
+     the player draws the asked view on a dot grid (js/ex/views/layers-view.js). The item keeps variant
+     'toview', so the stem is drawn as for toview, and adds produce 'draw', answer 'targets', pick (the
+     right option's index; validate re-runs the ray casts on the item as generated) and key = the right
+     drawing's unit edges, ascending: 2·(16y + x) for the edge from (x, y) to (x + 1, y) and
+     2·(16y + x) + 1 for the edge from (x, y) to (x, y + 1), in cells from the drawing's bottom-left
+     corner. Scoring: right when the drawn edges, moved so that the lowest and the leftmost reach 0, are
+     exactly the key's (the drawing may sit anywhere on the grid); detail counts the right, missing and
+     extra edges at the shift that matches most. Difficulty: the toview item's + DRAW_D (provisional,
+     refitted from pooled exports); guessing rate 0; the level scale leaves the variant out (conflict 12). */
+  var DRAW = 'draw', DRAW_D = 1.0, EDGE_W = 16;
+  function copyOwn(o, skip) {
+    var out = {};
+    for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k) && !(skip && skip[k])) out[k] = o[k];
+    return out;
+  }
+  function edgeIds(d) {
+    var out = [];
+    d.lines.forEach(function (l) {
+      var k;
+      if (l[1] === l[3]) for (k = Mth.min(l[0], l[2]); k < Mth.max(l[0], l[2]); k++) out.push(2 * (l[1] * EDGE_W + k));
+      else for (k = Mth.min(l[1], l[3]); k < Mth.max(l[1], l[3]); k++) out.push(2 * (k * EDGE_W + l[0]) + 1);
+    });
+    return out.sort(function (a, b) { return a - b; });
+  }
+  function edgeXY(e) { var c = e >> 1, x = c % EDGE_W; return [x, (c - x) / EDGE_W, e & 1]; }
+  // Edge ids moved so that the leftmost and the lowest reach 0 (repeats and junk dropped), ascending.
+  function normEdges(list) {
+    var es = [], seen = {}, x0 = INF, y0 = INF;
+    (Array.isArray(list) ? list : []).forEach(function (e) {
+      if (Number.isInteger(e) && e >= 0 && e < 2 * EDGE_W * EDGE_W && !seen[e]) { seen[e] = true; es.push(edgeXY(e)); }
+    });
+    es.forEach(function (p) { if (p[0] < x0) x0 = p[0]; if (p[1] < y0) y0 = p[1]; });
+    return es.map(function (p) { return 2 * ((p[1] - y0) * EDGE_W + p[0] - x0) + p[2]; }).sort(function (a, b) { return a - b; });
+  }
+  function drawItem(item) {
+    var out = copyOwn(item);
+    out.produce = DRAW;
+    out.answer = 'targets';
+    out.pick = item.key;
+    out.key = edgeIds(item.options[item.key].drawing);
+    return out;
+  }
+  function generateAll(rng, params) {
+    var item = generate(rng, params);
+    return params && params.variant === DRAW ? drawItem(item) : item;
+  }
+  function validateAll(item) {
+    if (!item || item.produce !== DRAW) return validate(item);
+    if (item.variant !== 'toview' || item.answer !== 'targets' || !item.params || item.params.variant !== DRAW) return 'draw: a toview item with produce, answer and params';
+    var opt = item.options && item.options[item.pick], k = item.key;
+    if (!opt || !opt.drawing) return 'draw: pick names no drawing';
+    if (!Array.isArray(k) || !k.length || k.some(function (e, i) { return !Number.isInteger(e) || e < 0 || (i > 0 && e <= k[i - 1]); })) return 'draw: key edges must be ascending ids';
+    if (k.join() !== edgeIds(opt.drawing).join() || normEdges(k).join() !== k.join()) return 'draw: the key is not the right drawing\'s edges';
+    var base = copyOwn(item, { produce: 1, answer: 1, pick: 1 });
+    base.key = item.pick;
+    return validate(base);
+  }
+  function scoreAll(item, response) {
+    if (!item || item.produce !== DRAW) return score(item, response);
+    var mine = normEdges(response), key = item.key, set = {}, best = 0, dx, dy;
+    key.forEach(function (e) { set[e] = true; });
+    var pts = mine.map(edgeXY);
+    for (dx = -EDGE_W / 2; dx <= EDGE_W / 2; dx++) {
+      for (dy = -EDGE_W / 2; dy <= EDGE_W / 2; dy++) {
+        var n = 0;
+        pts.forEach(function (p) { var x = p[0] + dx, y = p[1] + dy; if (x >= 0 && y >= 0 && x < EDGE_W && y < EDGE_W && set[2 * (y * EDGE_W + x) + p[2]]) n++; });
+        if (n > best) best = n;
+      }
+    }
+    return { correct: mine.length === key.length && mine.join() === key.join(), detail: { right: best, missing: key.length - best, extra: mine.length - best } };
+  }
+  function difficultyAll(params) { return difficulty(params) + (params && params.variant === DRAW ? DRAW_D : 0); }
+  function chanceAll(params) { return params && params.variant === DRAW ? 0 : 0.25; }
+  /* ===== end of the 'draw' block (W2-bets) ===== */
+
   PX.ex.define({
     id: 'views', version: 2, code: 'EX-07', name: 'Orthographic views', short: 'Views',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4,
-    bet: 'produce', format: { toview: 'views:object-to-view', toobject: 'views:views-to-object', count: 'views:count-cubes' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    bet: 'produce', format: { toview: 'views:object-to-view', toobject: 'views:views-to-object', count: 'views:count-cubes', draw: 'views:object-to-drawn-view' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    layers: { produce: DRAW }, // v1.2 wave 2 (W2-bets): the produce variant (block above)
     dims: [
       { key: 'cubes', label: 'Cubes', levels: LEVELS.slice(), step: DIFF.cubes },
       { key: 'grid', label: 'Grid', levels: ['3 × 3', '4 × 4'], step: DIFF.grid },
@@ -956,11 +1035,13 @@
     ],
     base: DIFF.base,
     starter: { dim: 'cubes', levels: 1 },
-    variants: VARIANTS.slice(),
-    difficulty: difficulty,
-    generate: generate,
-    validate: validate,
-    score: score,
+    variants: VARIANTS.concat(DRAW), trainVariants: VARIANTS.slice(), // v1.2 wave 2 (W2-bets): 'draw' last, out of Train's variants
+    // v1.2 wave 2 (W2-bets): these five also serve the 'draw' variant (the block above)
+    difficulty: difficultyAll,
+    chance: chanceAll,
+    generate: generateAll,
+    validate: validateAll,
+    score: scoreAll,
     lib: {
       HMAX: HMAX, DIRS: DIRS, ASKED: ASKED, CUBES: CUBES, LEVELS: LEVELS, BAND: BAND, GRIDS: GRIDS, BAL: BAL, DIFF: DIFF, stats: stats,
       isBand: isBand, oldLevel: oldLevel, mirrorEdges: mirrorEdges, genToviewBand: genToviewBand, bandFamily: bandFamily, maxHeight: maxHeight,

@@ -12,6 +12,7 @@
       toview: 'Which line drawing is the structure seen straight on from the side the arrow marks?',
       toobject: 'Which structure has exactly these three views: top, front and right?',
       count: 'How many cubes does the structure have? Every cube shows at least one face.',
+      draw: 'Draw the view the arrow marks yourself, line by line, on a grid of dots.', // v1.2 wave 2 (W2-bets): the produce variant
     },
     parts: [
       { id: 'structure', label: 'Structure', text: 'Unit cubes stacked on a grid, seen from the front-right corner. The thick edge of the base is the front.' },
