@@ -5,7 +5,10 @@ import { MANIFEST, deepDiff } from './run.mjs';
 import { performance } from 'node:perf_hooks';
 
 const FILES = [...MANIFEST, 'js/ex/angles/gen.js', 'js/ex/angles/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 90 level combinations × 112
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10152); // 108 level combinations × 94
+// The starter band (v1.2, note D2 §3.2): the 9° gap level, near-right angles only.
+const BAND_PER_RESOLVE = Math.max(300, Math.min(2000, Math.round(N_ITEMS / 5))); // extra band items per resolve level
+const OLD_FLOOR = -2.2, NEW_FLOOR = -3.15;
 const procMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
 
 export async function run(t) {
@@ -16,16 +19,24 @@ export async function run(t) {
   if (!def) return;
   const L = def.lib;
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat, def.perDisplay, def.practice],
-    ['angles', 1, 'EX-16', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version, code, LE, no cell, choice of 4, pat, per display, perceptual practice');
+    ['angles', 2, 'EX-16', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version 2 (starter band), code, LE, no cell, choice of 4, pat, per display, perceptual practice');
   t.eq(def.dims.map((d) => d.key), ['gap', 'size', 'resolve', 'pose'], 'dims');
+  t.eq(def.dims[0].levels, [9, 6, 5, 4, 3, 2], 'gaps: the 9° starter level in front of 6 … 2°');
+  t.eq(def.starter, { dim: 'gap', levels: 1 }, 'starter: the 9° level');
   t.ok(def.dims[0].levels.every((g) => g >= 2), 'no gap below 2° (the phone floor holds on every screen)');
   const all = PX.ex.enumerate(def);
-  t.eq(all.length, 90, 'every level combination is enumerated');
+  t.eq(all.length, 108, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${lo.toFixed(2)} … ${hi.toFixed(2)})`);
-  const easiest = all.reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
-  const pBeginner = 0.25 + (1 - 0.25 - 0.03) / (1 + Math.exp(def.difficulty(easiest)));
-  t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the easiest item is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
+  t.near(lo, NEW_FLOOR, 1e-9, 'the new floor is −3.15 (Δ −0.95)');
+  t.near(hi, 1.8, 1e-9, 'the top of the range is the 1.1 top');
+  let same11 = 0, n11 = 0;
+  for (const p of all) if (p.gap > 0) { n11++; if (Math.abs(def.difficulty(p) - (OLD_FLOOR + 0.55 * (p.gap - 1) + 0.3 * p.size + 0.45 * p.resolve + 0.3 * p.pose)) < 1e-9) same11++; }
+  t.eq(same11, n11, `every 1.1 combination keeps its 1.1 difficulty (${n11})`);
+  t.ok(all.filter((p) => p.gap === 0).every((p) => Math.abs(def.difficulty(p) - def.difficulty({ ...p, size: 0 })) < 1e-12), 'at 9° the size class is ignored, so it is priced as near-right');
+  const easiest11 = all.filter((p) => p.gap > 0).reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
+  const pBeginner = 0.25 + (1 - 0.25 - 0.03) / (1 + Math.exp(def.difficulty(easiest11)));
+  t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the pre-1.2 floor (6°) is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
 
   t.section('angles: deterministic trigonometry');
   let trigErr = 0;
@@ -41,7 +52,8 @@ export async function run(t) {
   t.section('angles: items');
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, fallbacks = 0, firstBad = null, n = 0;
-  const keyPos = [0, 0, 0, 0], cues = {}, items = [];
+  const keyPos = [0, 0, 0, 0], cues = {}, bandCues = {}, items = [];
+  let bandClass = 0, nBand = 0;
   let minArmPx = Infinity, sumScale = 0, labelOff = 0, firstLabel = null, longShort = 0, phoneShort = 0, nAngles = 0;
   // The reveal labels round each measured angle to 0.1° (view.js fmtDeg); with degrees on a 0.1°
   // grid, neighbouring labels differ by exactly the gaps show-me states.
@@ -73,6 +85,18 @@ export async function run(t) {
         if (lab(ms[b].deg) - lab(ms[a].deg) !== lab(item.gaps[k]) || lab(ms[a].deg) !== lab(item.deg[a])) { labelOff++; firstLabel = firstLabel || `seed ${seed}`; }
       }
       shortcuts(L, item, cues);
+      if (params.gap === 0) { nBand++; shortcuts(L, item, bandCues); if (item.deg.some((d) => d < 70 - 0.02 || d > 110 + 0.02)) bandClass++; }
+    }
+  }
+  // The starter band's own pool: more 9° items, BAND_PER_RESOLVE per resolve level (the size class
+  // is ignored there), so every rule meets its bound on at least 2,000 band items per level.
+  for (let res = 0; res < 3; res++) {
+    for (let s = 0; s < BAND_PER_RESOLVE; s++) {
+      const params = { gap: 0, size: s % 3, resolve: res, pose: s % 2 }, item = def.generate(PX.rng(PX.rng.hash('angles-band', res, s)), params);
+      if (item.fallback) fallbacks++;
+      if (def.validate(item) !== true) { invalid++; firstBad = firstBad || `band ${JSON.stringify(params)}: ${def.validate(item)}`; continue; }
+      nBand++; shortcuts(L, item, bandCues);
+      if (item.deg.some((d) => d < 70 - 0.02 || d > 110 + 0.02)) bandClass++;
     }
   }
   t.eq(threw, 0, 'generate never throws' + (firstBad && threw ? ` (${firstBad})` : ''));
@@ -85,6 +109,7 @@ export async function run(t) {
   t.ok(keyPos.every((c) => Math.abs(c / n - 0.25) < Math.max(0.03, 3 * Math.sqrt(0.25 * (1 - 0.25) / n))), `keys spread over the four positions (${keyPos.join(', ')})`);
   t.eq(labelOff, 0, 'the reveal labels (0.1°) differ by exactly the stated gaps' + (firstLabel ? ` (${firstLabel})` : ''));
   t.eq(longShort, 0, `every longer arm is at least ${L.LONG_MIN}·L (RV-dat-style-A §7; info: ${(100 * phoneShort / nAngles).toFixed(1)} % of longer arms are under 90 px in a 155 px phone cell)`);
+  t.eq(bandClass, 0, `every 9° item is near-right, whatever the size param (${nBand} items)`);
 
   t.section('angles: validator catches broken items');
   const base = items[0].item;
@@ -157,9 +182,16 @@ export async function run(t) {
     const rate = v.hit / v.n, slack = v.n < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / v.n) : 0;
     t.ok(rate <= bound + slack, `"${k}" ≤ chance + 10 (${pct(rate)} over ${v.n} items${slack ? `, quick run: +${pct(slack)} noise allowed` : ''})`);
   }
+  t.section('angles: shortcut solvers on the starter band\'s own pool (9°), all and per resolve level');
+  for (const [k, v] of Object.entries(bandCues)) {
+    const rate = v.hit / v.n, slack = v.n < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / v.n) : 0;
+    t.ok(rate <= bound + slack, `starter band: "${k}" ≤ chance + 10 (${pct(rate)} over ${v.n} items${slack ? `, quick run: +${pct(slack)} noise allowed` : ''})`);
+  }
   if (process.env.PX_REPORT) {
     const worst = Object.entries(cues).sort((a, b) => b[1].hit / b[1].n - a[1].hit / a[1].n).slice(0, 12);
     console.log('       angles, worst rules: ' + worst.map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
+    const worstB = Object.entries(bandCues).sort((a, b) => b[1].hit / b[1].n - a[1].hit / a[1].n).slice(0, 8);
+    console.log('       angles, starter band, worst rules: ' + worstB.map(([k, v]) => `${k} ${pct(v.hit / v.n)} (${v.n})`).join(', '));
     console.log(`       keys ${keyPos.join(',')}; mean scale ${(sumScale / n).toFixed(2)}; shortest arm ${minArmPx.toFixed(3)} cell; longer arms under 90 px in a 155 px cell ${(100 * phoneShort / nAngles).toFixed(1)} %; CPU p95 ${p95.toFixed(1)} ms`);
   }
   testLearn(t, PX, def);
@@ -243,11 +275,31 @@ function testLearn(t, PX, def) {
   t.ok(typeof L.goal === 'string' && L.goal.length > 10 && L.goal.length <= 120, `a one-line goal (${(L.goal || '').length} characters)`);
   t.ok(Array.isArray(L.parts) && L.parts.length >= 3 && L.parts.every((p) => p.id && p.label && p.text), 'labelled parts');
   const valid = (p) => PX.ex.validParams(def, p) === true;
+  const floor = PX.ex.minDifficulty(def);
   t.ok(Array.isArray(L.demo) && L.demo.length >= 1 && L.demo.every((d) => valid(d.params) && Number.isInteger(d.seed)), 'demo items with valid params');
-  t.ok(L.demo.every((d) => def.difficulty(d.params) <= PX.ex.minDifficulty(def) + 1e-9), 'demos are at the easiest level');
-  t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
-  const diffs = L.practice.map((p) => def.difficulty(p));
-  t.ok(diffs[0] === Math.min(...diffs), 'practice starts at the easiest of its levels');
+  t.ok(L.demo.every((d) => def.difficulty(d.params) <= floor + 1e-9), 'the Watch is at the starter floor (9°; note D2 §3.0 C 2)');
+  // The teaching template (CONTRACT-v1.2 D; note D2 §3.0 C, §3.2).
+  t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => (typeof r === 'string' && r.length > 10) || (r && typeof r.text === 'string' && r.text.length > 10 && typeof r.fig === 'string' && r.fig)), 'a rules card: 2–4 rules, each a text or { text, fig }');
+  const ruleText = L.rules.map((r) => (typeof r === 'string' ? r : r.text)).join(' ');
+  t.ok(/opening/.test(ruleText) && /180/.test(ruleText) && /smallest angle to the largest/.test(ruleText), 'the three rules of note D2 §3.2: the opening only, under 180°, lists from smallest to largest');
+  const first = (L.strategies || []).find((x) => x.id === L.strategyFirst);
+  t.ok(first && first.steps.length === 3 && /Extremes first/.test(first.title), 'strategyFirst names the "Extremes first" card, three steps');
+  t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((x) => x && valid(x.params) && Number.isInteger(x.seed)), 'four Try items as objects { params, seed, … }');
+  const P = L.practice;
+  t.ok(P[0].assist && P[0].assist.smallest === true && !P[1].assist && !P[2].assist && !P[3].assist, 'Try 1 alone has its first step done (the smallest angle marked)');
+  t.ok(def.difficulty(P[0].params) <= floor + 1e-9 && def.difficulty(P[1].params) <= floor + 1e-9, 'Try 1 and Try 2 at the starter floor');
+  t.ok(Math.abs(def.difficulty(P[2].params) - OLD_FLOOR) < 1e-9, 'Try 3 at the pre-1.2 floor (6°)');
+  t.ok(P[3].params.pose === 1 && P[3].tip === 'free' && def.difficulty(P[3].params) > def.difficulty(P[2].params), 'Try 4: turned angles, with their tip');
+  t.ok(P.every((x) => !x.tip || (L.tips || []).some((tip) => tip.id === x.tip)), 'forced tips exist');
+  // Every Try item is solved by the Watch's procedure: the extremes settle it (resolve 0), as in the Watch.
+  t.ok([L.demo[0], ...P].every((x) => x.params.resolve === 0), 'the Watch and every Try item are settled by the extremes (the Watch shows the procedure Try needs)');
+  const gen = (x) => def.generate(PX.rng(x.seed), x.params);
+  const its = [gen(L.demo[0]), ...P.map(gen)];
+  t.ok(its.every((it) => !it.fallback && def.validate(it) === true), 'the Watch and Try seeds give valid items, none a fallback');
+  t.ok(its.every((it, i) => i === 0 || it.key !== its[i - 1].key), `answers vary their slot from item to item (${its.map((it) => it.key + 1).join(', ')})`);
+  t.eq(new Set(its.map((it) => it.order.join())).size, its.length, 'no right order repeats between the Watch and Try');
+  const a1 = its[1], kept = a1.options.filter((o) => o[0] === a1.order[0]).length;
+  t.ok(kept >= 2 && kept <= 3, `Try 1: marking the smallest angle leaves ${kept} lists (one more step to do)`);
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
     const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).length && tr.levels.every((l) => l >= 0 && l < d.levels.length));
@@ -256,7 +308,7 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['angles', 'options', 'order', 'overlay', 'pair', 'done', 'chosen'];
+  const caps = ['angles', 'options', 'order', 'overlay', 'pair', 'done', 'chosen', 'smallest', 'largest', 'left', 'disagree', 'assist'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   t.ok(typeof L.bridge === 'string' && /not been shown/.test(L.bridge), 'a "where it is used" card with its limitation line');
   t.ok(/perceptual/i.test(L.label || '') && /perceptual/i.test(L.bridge), 'labelled perceptual-judgement practice');
