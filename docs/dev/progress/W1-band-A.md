@@ -40,14 +40,18 @@ stays non-breaking for Missing View. Design source: docs/research/v1.2/D2-first-
   practice 4/4, scored 5/5; Angles practice 3/4 (a mis-tap), scored 5/5 at 5–7 s; Views stopped
   (the broken Watch, then the driver's 30-minute cap). Driver now takes a browser slot per action,
   no cap (17:39 UTC).
-- 17:30–17:45 UTC: fixes from the testers: Watch captions timed for reading in all three (1 s + 0.27 s a
+- 17:30–17:41 UTC: fixes from the testers: Watch captions timed for reading in all three (1 s + 0.27 s a
   word, ≤ 8 s); Painted Cubes Try 3 draws its hidden cube dashed (faded step), its reveal numbers it;
   Angles' Watch without degrees, a method in the turned-angles tip; one-line help captions; four
   player items filed to W1-core (requests 17:39 UTC). DECISIONS cdfcf9c.
 
+- 17:59 UTC: browser checks pass: harness_views 158/0, then its starter-band part 24/0 after the help box moved
+  into the stage; harness_cubes and harness_angles pass apart from the app-flow step that met the new
+  end screen (fixed; the app flow alone 15/0 for both); node 1009/0 (views, angles, cubes, firstband,
+  rebase, engine-v12). Commits 22f636a, 156dad0, DECISIONS cdfcf9c and ca2003b.
+
 ## Next
-- Browser checks (harness_cubes, harness_angles, harness_views with the app's Watch, Try, Go) running;
-  then commit the view changes for Angles and Painted Cubes and the e2e files; Views retest by the lead.
+- The Views fresh-player retest, run by the lead at integration (driver: /tmp/w1a/fp, slot per action).
 
 ## Open problems
-- none
+- none of mine; four player items are with W1-core (requests, 17:39 UTC).
