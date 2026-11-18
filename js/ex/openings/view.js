@@ -4,10 +4,16 @@
    item says. Options are SVG openings: a plate with the outline cut out (dark, outlined). Solid and
    openings share one scale (px per step): the openings' drawn size sets it, and the solid is drawn
    no larger (fitScale); where the stage is too small for that, the openings shrink to the solid's.
-   Show me (ctx.play steps, from the item's own model): the camera swings round to look straight
-   along the fitting axis; the solid's outline is traced over it; the outline turns and flips onto
-   the right opening; after a wrong pick, the nearest true outline is laid over the chosen opening
-   so the difference shows. Every step's enter() sets its full starting state. */
+   Show me (ctx.play steps, from the item's own model, in the words of the strategy card "Pick a
+   face, trace, then turn"): the camera swings round to look straight along the fitting axis; the
+   solid's outline is traced over it; the traced outline turns (quarter turns) and flips in sight
+   over the solid until it is drawn as the right opening is (O53; on the starter band the openings
+   are drawn as the face is seen, so it needs no turn); then it flies onto that opening; after a
+   wrong pick, the nearest true outline is laid over the chosen opening so the difference shows.
+   The Watch also shows why each kind of wrong opening fails. Every step's enter() sets its full
+   starting state.
+   Try 1 (ctx.assist = { trace: true }): the key face's outline is traced on the picture, the first
+   step of the card done (CONTRACT-v1.2 D). */
 (function (PX) {
   'use strict';
 
@@ -203,7 +209,7 @@
     st = { ctx: ctx, root: root, stage: stage, d3: d3, ink: ink, label: label, caption: caption, verdict: verdict, desc: desc, v3: null, item: null, optItem: null, opts: [], offs: [], cur: null, solid: null, k: 0, kCap: 0, M: 1 };
     if (!S3.available()) { stage.appendChild(h('p.ex-unavailable', { role: 'alert' }, 'This exercise needs 3D graphics, which are not available here: ' + S3.reason() + '.')); return; }
     st.v3 = S3.attach(d3);
-    st.v3.redraw = function () { fitScale(); render(); };
+    st.v3.redraw = function () { fitScale(); render(); if (st.assisted && st.item) traceOnPicture(st.item); };
     st.scene = new T.Scene();
     S3.lights(st.scene);
     st.cam = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 2 * CAM_D);
@@ -236,9 +242,24 @@
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
     PX.ui.clear(st.ink);
+    var band = lib.cleanParams(item.params).features === 0;
+    if (st.root.closest) { var wrap = st.root.closest('.ex-openings'); if (wrap) wrap.classList.toggle('op-band', band); }
     fitScale();
     if (st.v3) { st.cur = camAt(VIEW0.az, VIEW0.el); render(); }
+    st.assisted = !!(ctx && ctx.assist && ctx.assist.trace && st.v3);
+    if (st.assisted) { traceOnPicture(item); st.caption.textContent = cap('assist', { face: FACE[faceAxis(item)] }); }
     return timing.nextPaint();
+  }
+  // Try 1's first step done: the key face's outline traced where that face shows in the picture.
+  function traceOnPicture(item) {
+    if (!st.cur || !st.cur.fr) return;
+    var name = profOf(item, item.keyAxis), e = [0, 0, 0];
+    e[lib.AXES.indexOf(item.keyAxis)] = 1;
+    var side = dot(rot(lib.POSES[item.pose], e), lib.VIEW) >= 0 ? 1 : -1, W = st.v3.width || 1, H = st.v3.height || 1, b = basis(VIEW0.az, VIEW0.el);
+    var pts = item.prof[name].map(function (v) { var s = toScreen(vertexWorld(item, name, v, side), b, st.cur.fr, W, H); return [st.d3.offsetLeft + s[0], st.d3.offsetTop + s[1]]; });
+    PX.ui.clear(st.ink);
+    SV.attrs(st.ink, { viewBox: [0, 0, Math.max(1, st.stage.clientWidth), Math.max(1, st.stage.clientHeight)] });
+    st.ink.appendChild(SV.el('path', { d: SV.pathData(pts, true), class: 'op-trace op-assist' }));
   }
 
   function reveal(item, response, result, ctx) {
@@ -247,7 +268,7 @@
     st.opts.forEach(function (o, i) {
       if (!o) return;
       var op = item.options[i];
-      o.tag.textContent = i === item.key ? '✓ Fits, ' + FACE[faceAxis(item)] + ' first' : op.kind === 'proportion' ? 'Wrong size' : 'A feature differs';
+      o.tag.textContent = i === item.key ? '✓ Fits, ' + FACE[faceAxis(item)] + ' first' : op.kind === 'proportion' ? 'Wrong size' : op.kind === 'face' ? 'No face is this shape' : 'A feature differs';
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
     });
@@ -329,9 +350,42 @@
   }
   function reset() { clearFly(); PX.ui.clear(st.ink); focusOption(-1); st.label.classList.remove('is-pointed'); }
 
+  /* ---------- the outline turned and flipped in sight (O53) ---------- */
+  // The linear part of lib.tfPoint per turn or flip k, as [a, b, c, d]: (x, y) → (a x + b y, c x + d y),
+  // y up (the openings' own axes).
+  var MAT = [[1, 0, 0, 1], [0, -1, 1, 0], [-1, 0, 0, -1], [0, 1, -1, 0], [-1, 0, 0, 1], [1, 0, 0, -1], [0, 1, 1, 0], [0, -1, -1, 0]];
+  var ANG = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+  function mm2(P, Q) { return [P[0] * Q[0] + P[1] * Q[2], P[0] * Q[1] + P[1] * Q[3], P[2] * Q[0] + P[3] * Q[2], P[2] * Q[1] + P[3] * Q[3]]; }
+  // What carries the outline as seen straight on onto option i's drawing: n quarter turns
+  // (counterclockwise), then a left–right flip or not.
+  function turnOf(item, i) {
+    var S = MAT[lib.seenTf(item.pose, item.keyAxis)], rel = mm2(MAT[item.options[i].tf], [S[0], S[2], S[1], S[3]]);
+    var flip = rel[0] * rel[3] - rel[1] * rel[2] < 0, R = flip ? mm2([-1, 0, 0, 1], rel) : rel;
+    return { n: R[0] === 1 ? 0 : R[2] === 1 ? 1 : R[0] === -1 ? 2 : 3, flip: flip };
+  }
+  function centreOf(P) {
+    var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    P.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+    return [(x0 + x1) / 2, (y0 + y1) / 2];
+  }
+  // Page points turned by ang (counterclockwise on screen) about c, then scaled by sx left to right.
+  function spun(P, c, ang, sx) {
+    var cs = Math.cos(ang), sn = Math.sin(ang);
+    return P.map(function (p) { var x = p[0] - c[0], y = c[1] - p[1]; return [c[0] + sx * (cs * x - sn * y), c[1] - (sn * x + cs * y)]; });
+  }
+  function inkPage(P, alpha) {
+    PX.ui.clear(st.ink);
+    var o = stageOrigin();
+    SV.attrs(st.ink, { viewBox: [0, 0, Math.max(1, st.stage.clientWidth), Math.max(1, st.stage.clientHeight)] });
+    st.ink.appendChild(SV.el('path', { d: SV.pathData(P.map(function (p) { return [p[0] - o[0], p[1] - o[1]]; }), true), class: 'op-trace', style: 'opacity:' + alpha.toFixed(3) }));
+  }
+  // The outline as the key opening is drawn, over the solid: turned and flipped in full.
+  function turnedOutline(item, tn) { var A = outlinePage(item); return spun(A, centreOf(A), ANG[tn.n], tn.flip ? -1 : 1); }
+
   function steps(item, response) {
     var key = item.key, av = axisView(item), picked = typeof response === 'number' && response >= 0 && response < 5 && response !== key ? response : -1;
     var face = FACE[faceAxis(item)], name = profOf(item, item.keyAxis), dm = profDims(item, name);
+    var band = lib.cleanParams(item.params).features === 0, tn = turnOf(item, key), turns = !!(tn.n || tn.flip);
     function at(az, el) { st.cur = camAt(az, el); render(); }
     function straight() { at(av.az, av.el); }
     var list = [
@@ -339,26 +393,40 @@
       { ms: 1500, caption: cap('rules'), enter: function () { reset(); at(VIEW0.az, VIEW0.el); } },
       { ms: 2200, caption: cap('turn', { face: face }), enter: function () { reset(); at(VIEW0.az, VIEW0.el); }, update: function (k) { var e = ease(k); at(VIEW0.az + (av.az - VIEW0.az) * e, VIEW0.el + (av.el - VIEW0.el) * e); } },
       { ms: 1500, caption: cap('outline'), enter: function () { reset(); straight(); }, update: function (k) { inkOutline(item, Math.min(1, k * 1.6)); } },
-      {
-        ms: 1600, caption: cap('land', { n: key + 1 }),
-        enter: function () { reset(); straight(); inkOutline(item, 1); st.flyA = outlinePage(item); st.flyB = optionPage(item, key); flyAt(st.flyA, st.flyB, 0); },
-        update: function (k) { flyAt(st.flyA, st.flyB, ease(k)); },
-        exit: function () { clearFly(); focusOption(key); overlay(item, key, item.prof[name], dm[0], dm[1], item.options[key].tf, 'op-ghost'); },
-      },
     ];
-    if (picked >= 0) {
-      var kind = item.options[picked].kind;
+    if (turns) {
+      // quarter turns first, then the flip, each about 0.9 s, in sight over the solid
+      var r = tn.n ? 1 : 0, f = tn.flip ? 1 : 0, kr = r / (r + f);
       list.push({
-        ms: 2600, caption: cap(kind === 'proportion' ? 'whyProportion' : 'whyFeature', { n: picked + 1 }),
-        enter: function () {
-          reset(); straight(); inkOutline(item, 1); focusOption(picked);
-          var nb = nearest(item, picked);
-          overlay(item, picked, item.prof[nb.name], nb.A, nb.B, nb.k, 'op-true');
-          overlay(item, key, item.prof[name], dm[0], dm[1], item.options[key].tf, 'op-ghost');
+        ms: 900 * (r + f) + 500, caption: cap('spin'),
+        enter: function () { reset(); straight(); st.spinA = outlinePage(item); st.spinC = centreOf(st.spinA); inkPage(st.spinA, 1); },
+        update: function (k) {
+          var u = Math.min(1, k * 1.25), a = kr ? ease(Math.min(1, u / kr)) : 1, b = f ? ease(U.clamp((u - kr) / (1 - kr), 0, 1)) : 0;
+          inkPage(spun(st.spinA, st.spinC, ANG[tn.n] * a, 1 - 2 * b), 1);
         },
       });
-    }
+    } else if (band) list.push({ ms: 1600, caption: cap('straight'), enter: function () { reset(); straight(); inkOutline(item, 1); } });
+    list.push({
+      ms: 1600, caption: cap('land', { n: key + 1 }),
+      enter: function () { reset(); straight(); st.flyA = turnedOutline(item, tn); inkPage(st.flyA, 1); st.flyB = optionPage(item, key); flyAt(st.flyA, st.flyB, 0); },
+      update: function (k) { flyAt(st.flyA, st.flyB, ease(k)); },
+      exit: function () { clearFly(); focusOption(key); overlay(item, key, item.prof[name], dm[0], dm[1], item.options[key].tf, 'op-ghost'); },
+    });
+    if (picked >= 0) list.push(whyStep(item, picked, straight, name, dm));
     return list;
+  }
+  // Why option i fails: the nearest true outline of the solid laid over it, the key's beside.
+  function whyStep(item, i, straight, name, dm) {
+    var kind = item.options[i].kind, key = item.key;
+    return {
+      ms: 2600, caption: cap(kind === 'proportion' ? 'whyProportion' : kind === 'face' ? 'whyFace' : 'whyFeature', { n: i + 1 }),
+      enter: function () {
+        reset(); straight(); inkOutline(item, 1); focusOption(i);
+        var nb = nearest(item, i);
+        overlay(item, i, item.prof[nb.name], nb.A, nb.B, nb.k, 'op-true');
+        overlay(item, key, item.prof[name], dm[0], dm[1], item.options[key].tf, 'op-ghost');
+      },
+    };
   }
 
   function runSteps(list, ctx, opts) {
@@ -404,7 +472,11 @@
     if (!st || !st.v3 || st.item !== item) return Promise.resolve();
     revealStage(ctx);
     var list = steps(item, null), intro = { ms: 1700, caption: cap('openings'), enter: function () { reset(); st.cur = camAt(VIEW0.az, VIEW0.el); render(); } };
-    return play(list.slice(0, 2).concat([intro], list.slice(2)), ctx, { name: 'demo', caption: caption || null });
+    // then why one wrong opening of each kind fails (the Watch shows every kind of foil Try uses)
+    var av = axisView(item), name = profOf(item, item.keyAxis), dm = profDims(item, name), seenKinds = {}, tour = [];
+    function straight() { st.cur = camAt(av.az, av.el); render(); }
+    item.options.forEach(function (o, i) { if (i !== item.key && !seenKinds[o.kind]) { seenKinds[o.kind] = 1; tour.push(whyStep(item, i, straight, name, dm)); } });
+    return play(list.slice(0, 2).concat([intro], list.slice(2), tour), ctx, { name: 'demo', caption: caption || null });
   }
   function unmount() {
     if (!st) return;

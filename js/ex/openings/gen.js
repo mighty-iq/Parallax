@@ -27,6 +27,11 @@
    usually a sibling's, stretched or squeezed by at least 25 %).
    Every option is shown under its own random turn or flip (the D4 group), as the solid may be
    turned before it enters, so orientation is never a cue.
+   Starter band (v1.2, features level 0; note D2 §3.4): one feature in all, on the key's own profile
+   (a box with one notch, step or slanted cut through it); foils keep the key's corner count: its
+   outline with the feature moved, resized or on a neighbouring side ('feature', at least two on the
+   key's box), or the same kind of feature on another face's box, whose own outline is plain ('face');
+   every option is drawn the way its face is seen straight on, so the key needs no turn or flip.
 
    validate (independent): rebuilds the three silhouettes by casting rays through the stored
    profile polygons on a grid of twelfth units (point in polygon and exact intervals along the
@@ -712,16 +717,20 @@
       pickShare(anyC, true), topC, pickShare(boxC, true)];
   }
   var WEIGHTS = [1, 1, 1, 1, 3, 1.5, 1.5, 2.5, 2, 1];
-  function chooseFoils(rng, key, pool, S, needProp) {
+  // minSame (the starter band): at least that many foils share the key's box, as far as the sample allows.
+  function chooseFoils(rng, key, pool, S, needProp, minSame) {
     var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 12), best = null, bestScore = INF;
     var all = [key].concat(idx.map(function (i) { return pool[i]; })), M = [];
     all.forEach(function (o, i) { o.id = i; M.push([]); });
     all.forEach(function (a, i) { all.forEach(function (b, j) { M[i][j] = j < i ? M[j][i] : i === j ? 0 : dist(a.g, b.g); }); });
     var want = SOLVERS.map(function () { return rng.chance(0.2) ? 1 : 0; });
+    function same(o) { return o.kind !== 'proportion' && o.g.A === key.g.A && o.g.B === key.g.B; }
+    var needSame = Mth.min(minSame || 0, all.slice(1).filter(same).length);
     for (var a = 0; a < idx.length; a++) for (var b = a + 1; b < idx.length; b++) for (var c = b + 1; c < idx.length; c++) for (var d = c + 1; d < idx.length; d++) {
       var set = [pool[idx[a]], pool[idx[b]], pool[idx[c]], pool[idx[d]]];
       var np = set.filter(function (o) { return o.kind === 'proportion'; }).length;
       if (np !== (needProp ? 1 : 0)) continue;
+      if (needSame && set.filter(same).length < needSame) continue;
       var sh = shares([key].concat(set), S, M), score = 0;
       for (var k = 0; k < sh.length; k++) score += WEIGHTS[k] * Mth.abs(sh[k] - want[k]);
       if (score < bestScore - 1e-9) { bestScore = score; best = set; }
@@ -729,20 +738,146 @@
     return best;
   }
 
+  /* ------------------------------------------------------------ the starter band (v1.2) */
+  // The turn or flip (0–7) that shows a profile's polygon the way its face is seen straight on from
+  // the viewer's side of the posed solid: the camera of the view's show-me (a side face seen level,
+  // the top seen from above with the front at the bottom). Integer arithmetic: R is a signed permutation.
+  function seenTf(pose, axis) {
+    var R = POSES[pose], a = AXES.indexOf(axis), w = [R[a], R[3 + a], R[6 + a]];
+    if (w[0] * VIEW[0] + w[1] * VIEW[1] + w[2] * VIEW[2] < 0) w = [-w[0], -w[1], -w[2]];
+    var right = Mth.abs(w[1]) > 0.5 ? [1, 0, 0] : [w[2], 0, -w[0]], up = Mth.abs(w[1]) > 0.5 ? [0, 0, -1] : [0, 1, 0];
+    var name = PROF_OF[axis], eu = name === 'S' ? 2 : 0, ev = name === 'T' ? 2 : 1;
+    function scr(ax) { var d = [R[ax], R[3 + ax], R[6 + ax]]; return [right[0] * d[0] + right[1] * d[1] + right[2] * d[2], up[0] * d[0] + up[1] * d[1] + up[2] * d[2]]; }
+    var su = scr(eu), sv = scr(ev);
+    for (var k = 0; k < 8; k++) {
+      var pu = tfPoint(k, 1, 0, 0, 0), pv = tfPoint(k, 0, 1, 0, 0);
+      if (pu[0] === su[0] && pu[1] === su[1] && pv[0] === sv[0] && pv[1] === sv[1]) return k;
+    }
+    return 0;
+  }
+  // A starter feature (note D2 §3.4): notches at least two steps deep, so no step of the outline is a
+  // single lattice step (RV-play-dat: one-step notches were readable only when zoomed); chamfers of
+  // two to four steps.
+  function bandFeatOk(f, A, B) {
+    if (!f) return false;
+    if (f.t === 'notch') {
+      var len = f.side % 2 ? B : A, dep = f.side % 2 ? A : B;
+      return f.w >= 2 && f.w <= Mth.min(4, len - 4) && f.d >= 2 && f.d <= Mth.min(3, dep - 3) && f.p >= 2 && f.p + f.w <= len - 2;
+    }
+    if (f.t === 'step') return f.a >= 2 && f.b >= 2 && f.a <= Mth.min(4, A - 3) && f.b <= Mth.min(4, B - 3);
+    return f.L >= 2 && f.L <= Mth.min(4, A - 2, B - 2);
+  }
+  // A starter feature of kind t ('notch', 'step', 'cham'; null: a notch or a step) on an A × B profile.
+  function bandFeature(rng, A, B, t) {
+    for (var i = 0; i < 12; i++) {
+      var f = t === 'cham' ? { t: 'cham', c: rint(rng, 0, 3), L: rint(rng, 2, 4) } : randomFeature(rng, A, B, false);
+      if (f && (!t || f.t === t) && bandFeatOk(f, A, B)) return f;
+    }
+    return null;
+  }
+  // One change to a starter feature that keeps its kind, so the outline keeps its corner count: a
+  // notch moved, widened, deepened or put on a neighbouring side (the opposite side would only mirror
+  // it); a step widened, heightened or turned the other way round; a chamfer resized.
+  function bandMutate(rng, f, A, B) {
+    var g = Object.assign({}, f), r = rng.next();
+    if (f.t === 'notch') {
+      if (r < 0.3) g.p += rpick(rng, [-2, -1, 1, 2]);
+      else if (r < 0.5) g.w += rpick(rng, [-1, 1]);
+      else if (r < 0.7) g.d += rpick(rng, [-1, 1]);
+      else { g.side = (f.side + rpick(rng, [1, 3])) % 4; var len = g.side % 2 ? B : A; g.p = rint(rng, 2, Mth.max(2, len - g.w - 2)); }
+    } else if (f.t === 'step') {
+      if (r < 0.4) g.a += rpick(rng, [-1, 1]); else if (r < 0.8) g.b += rpick(rng, [-1, 1]); else { g.a = f.b; g.b = f.a; }
+    } else g.L = f.L + rpick(rng, [-2, -1, 1, 2]);
+    return bandFeatOk(g, A, B) ? g : null;
+  }
+
   /* ------------------------------------------------------------ generate */
   var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, unseen: 0, interact: 0, place: 0, lastInvalid: null, lastError: null };
   function sameGrid(a, b) { if (a.A !== b.A || a.B !== b.B) return false; for (var k = 0; k < a.m.length; k++) if (a.m[k] !== b.m[k]) return false; return true; }
-  // dim 'features': features per profile, dealt to the three profiles in a random order.
-  var FEATURES = [[1, 1, 1], [2, 1, 1], [2, 2, 1], [2, 2, 2]], EDGES = ['straight', 'chamfers'], POSE = ['upright', 'lying'], FOILS = ['features', 'proportion'];
+  // dim 'features': features per profile, dealt to the three profiles in a random order. Level 0 (v1.2,
+  // the starter band): one feature in all, on the key's own profile; the other two profiles stay plain.
+  var FEATURES = [[1, 0, 0], [1, 1, 1], [2, 1, 1], [2, 2, 1], [2, 2, 2]], EDGES = ['straight', 'chamfers'], POSE = ['upright', 'lying'], FOILS = ['features', 'proportion'];
+  var FEATURE_LABELS = ['1 in all (starter)', '1 + 1 + 1', '2 + 1 + 1', '2 + 2 + 1', '2 + 2 + 2'];
   // dim 'keyview': the face the key comes from, as world axes of the picture: front (z), side (x), top
   // (y). Every level mixes faces, and over the three levels each face is the key in a third of items,
   // so no single face is the place to look (the front is seen most, the top least).
   var KEYVIEW = ['front, sometimes side', 'front, side or top', 'top, sometimes side'], KEYVIEW_SETS = [[2, 2, 0], [2, 0, 1], [0, 1, 1]];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) {
-    return { features: lvl(params, 'features', 4), edges: lvl(params, 'edges', 2), keyview: lvl(params, 'keyview', 3), pose: lvl(params, 'pose', 2), foils: lvl(params, 'foils', 2) };
+    return { features: lvl(params, 'features', 5), edges: lvl(params, 'edges', 2), keyview: lvl(params, 'keyview', 3), pose: lvl(params, 'pose', 2), foils: lvl(params, 'foils', 2) };
+  }
+  // A foil candidate joins the pool when it fits the box limit, differs clearly from every silhouette of
+  // the solid and from every candidate already in, and has one outline.
+  function admitInto(pool, crops) {
+    return function (g, kind, axis) {
+      if (!g || Mth.max(g.A, g.B) > MAXEXT) return;
+      if (AXES.some(function (a) { return compare(g, crops[a]) !== 'differ'; })) return;
+      if (pool.some(function (o) { return compare(g, o.g) !== 'differ'; })) return;
+      var L = outline(g);
+      if (!L || L.length !== 1) return;
+      pool.push({ g: g, kind: kind, axis: axis, corners: L[0].length, poly: L[0] });
+    };
+  }
+  // The starter band (note D2 §3.4): one feature in all, on the key's own profile, so the solid is a box
+  // with one notch, step or slanted cut running through it. Foils: the key's outline with its feature
+  // moved, resized or on another side (a hidden parent one change away, so the key is not the centre of
+  // its family; the corner count kept, so counting corners is no way to the key; at least two share the
+  // key's box), and the same kind of feature on the box of another face, whose own outline is plain.
+  // Every option is drawn as its face is seen straight on (seenTf): the key needs no turn or flip, and
+  // orientation is no cue.
+  function buildBand(rng, p) {
+    var dims = rshuffle(rng, DIMS).slice(0, 3), W = dims[0], H = dims[1], D = dims[2];
+    var pose = rpick(rng, POSE_SETS[p.pose]), keyAxis = axisFacing(POSES[pose], rpick(rng, KEYVIEW_SETS[p.keyview])), keyProf = PROF_OF[keyAxis];
+    var dm = profDims(W, H, D), names = ['F', 'T', 'S'], A = dm[keyProf][0], B = dm[keyProf][1];
+    var kf = bandFeature(rng, A, B, p.edges === 1 ? 'cham' : null);
+    // steps and chamfers sit on a key face of at least 6 × 6 steps, so its outline has two or more
+    // relatives of the same kind on its own box
+    if (!kf || (kf.t !== 'notch' && Mth.min(A, B) < 6)) { stats.place++; return null; }
+    var feats = { F: [], T: [], S: [] };
+    feats[keyProf] = [kf];
+    var P = buildProfiles(W, H, D, feats), polys = P && polysOf(P);
+    if (!polys) return null;
+    if (featuresSeen(polys, W, H, D, pose).some(function (s) { return s.hits < 2; })) { stats.unseen++; return null; }
+    var S3 = sils(P);
+    if (!sameGrid(S3.z, P.F) || !sameGrid(S3.y, P.T) || !sameGrid(S3.x, P.S)) { stats.interact++; return null; }
+    var crops = { z: P.F, y: P.T, x: P.S }, key = crops[keyAxis], pool = [], admit = admitInto(pool, crops);
+    function grid(name, f) { var d = dm[name]; return bandFeatOk(f, d[0], d[1]) ? profile(d[0], d[1], [f]) : null; }
+    var parent = null;
+    for (var t = 0; t < 24 && !parent; t++) { var pf = bandMutate(rng, kf, A, B); if (pf && grid(keyProf, pf)) parent = pf; }
+    if (!parent) return null;
+    admit(grid(keyProf, parent), 'feature', keyAxis);
+    for (var m = 0; m < 40 && pool.length < 9; m++) {
+      var sf = bandMutate(rng, parent, A, B);
+      if (sf && rng.chance(0.4)) sf = bandMutate(rng, sf, A, B) || sf;
+      if (sf) admit(grid(keyProf, sf), 'feature', keyAxis);
+    }
+    names.forEach(function (nm) {
+      if (nm === keyProf) return;
+      for (var k = 0; k < 3; k++) { var tf = bandFeature(rng, dm[nm][0], dm[nm][1], kf.t); if (tf) admit(grid(nm, tf), 'face', AXIS_OF[nm]); }
+    });
+    if (p.foils === 1) {
+      var sibs = pool.filter(function (o) { return o.axis === keyAxis; });
+      for (var s = 0; s < 8; s++) { var st = stretch(rng, sibs.length && rng.chance(0.75) ? rpick(rng, sibs).g : key); if (st) admit(st, 'proportion', keyAxis); }
+    }
+    if (pool.length < 4) return null;
+    var keyO = { g: key, kind: 'key', axis: keyAxis, corners: polys[keyProf].length, poly: polys[keyProf] };
+    var nF = names.map(function (nm2) { return feats[nm2].length; }), mx = Mth.max.apply(null, nF);
+    var solid = { W: W, H: H, D: D, outs: names.map(function (nm2) { return { A: dm[nm2][0], B: dm[nm2][1], corners: polys[nm2].length }; }), top: [0, 1, 2].filter(function (i) { return nF[i] === mx; }) };
+    var set = chooseFoils(rng, keyO, pool, solid, p.foils === 1, 2);
+    // at least two foils on the key's box (one for a chamfer: two sizes one step apart are too close to
+    // tell, so a chamfer has a single relative on its own box)
+    if (!set || set.filter(function (o) { return o.kind === 'feature'; }).length < (kf.t === 'cham' ? 1 : 2)) return null;
+    var perm = rshuffle(rng, [0, 1, 2, 3, 4]), all = [keyO].concat(set);
+    var options = perm.map(function (i) {
+      var o = all[i], k = seenTf(pose, o.axis), sz = tfSize(k, o.g.A, o.g.B);
+      return { kind: o.kind, axis: o.axis, tf: k, w: sz[0], h: sz[1], poly: tfPoly(o.poly, k, o.g.A, o.g.B) };
+    });
+    var fl = {};
+    names.forEach(function (nm2) { fl[nm2] = feats[nm2].map(function (x) { return x.t; }); });
+    return { W: W, H: H, D: D, prof: polys, feats: fl, pose: pose, keyAxis: keyAxis, key: perm.indexOf(0), options: options };
   }
   function build(rng, p) {
+    if (p.features === 0) return buildBand(rng, p);
     var dims = rshuffle(rng, DIMS).slice(0, 3), W = dims[0], H = dims[1], D = dims[2];
     var pose = rpick(rng, POSE_SETS[p.pose]), keyAxis = axisFacing(POSES[pose], rpick(rng, KEYVIEW_SETS[p.keyview])), keyProf = PROF_OF[keyAxis];
     var cham = p.edges === 1, dm = profDims(W, H, D), feats = { F: [], T: [], S: [] }, names = ['F', 'T', 'S'];
@@ -773,15 +908,7 @@
     if (!sameGrid(S3.z, P.F) || !sameGrid(S3.y, P.T) || !sameGrid(S3.x, P.S)) { stats.interact++; return null; }
     var crops = { z: P.F, y: P.T, x: P.S }, key = crops[keyAxis], keyL = [polys[keyProf]];
     // Foil candidates: neighbouring solids' outlines (every axis), and resized outlines of the key's family.
-    var pool = [];
-    function admit(g, kind, axis) {
-      if (Mth.max(g.A, g.B) > MAXEXT) return;
-      if (AXES.some(function (a) { return compare(g, crops[a]) !== 'differ'; })) return;
-      if (pool.some(function (o) { return compare(g, o.g) !== 'differ'; })) return;
-      var L = outline(g);
-      if (!L || L.length !== 1) return;
-      pool.push({ g: g, kind: kind, axis: axis, corners: L[0].length, poly: L[0] });
-    }
+    var pool = [], admit = admitInto(pool, crops);
     // A hidden parent one change away from the key's profile: its other children are foils too, so
     // the key is not the centre of the family (the "most like the others" solver).
     // The key's own profile foils are its siblings (other children of the parent), never its children.
@@ -866,8 +993,41 @@
       for (i = 0; i < 5; i++) for (j = i + 1; j < 5; j++) if (rcompare(item.options[i].poly, rs[j], caches[i]) !== 'differ') return 'options ' + i + ' and ' + j + ' are not clearly different';
       var seen = featuresSeen(prof, W, H, D, item.pose);
       for (i = 0; i < seen.length; i++) if (seen[i].hits < 2) return 'a feature of profile ' + seen[i].prof + ' is hidden in the picture';
+      if (cleanParams(item.params).features === 0) return validBand(item, sil);
       return true;
     } catch (e) { return 'validate threw: ' + (e && e.message); }
+  }
+  // The starter band's promises, checked on the geometry: one feature in all, on the key's face (the
+  // other two profiles are their plain rectangles); the key drawn the way that face is seen straight
+  // on, from the camera's own basis (the view's orbit formula, in floating point: not seenTf), so it
+  // needs no turn or flip; every option in its face's straight-on turn (one convention for all five).
+  function cameraTf(pose, axis) {
+    var R = POSES[pose], a = AXES.indexOf(axis), w = [R[a], R[3 + a], R[6 + a]];
+    if (w[0] * VIEW[0] + w[1] * VIEW[1] + w[2] * VIEW[2] < 0) w = [-w[0], -w[1], -w[2]];
+    var az = Mth.abs(w[1]) > 0.5 ? 0 : Mth.atan2(w[0], w[2]), el = Mth.abs(w[1]) > 0.5 ? Mth.PI / 2 : 0;
+    var right = [Mth.cos(az), 0, -Mth.sin(az)], up = [-Mth.sin(az) * Mth.sin(el), Mth.cos(el), -Mth.cos(az) * Mth.sin(el)];
+    var name = PROF_OF[axis], axU = name === 'S' ? 2 : 0, axV = name === 'T' ? 2 : 1;
+    function on(ax) { var d = [R[ax], R[3 + ax], R[6 + ax]]; return [Mth.round(right[0] * d[0] + right[1] * d[1] + right[2] * d[2]), Mth.round(up[0] * d[0] + up[1] * d[1] + up[2] * d[2])]; }
+    var u = on(axU), v = on(axV);
+    for (var k = 0; k < 8; k++) {
+      var p0 = tfPoint(k, 0, 0, 0, 0), pu = tfPoint(k, 1, 0, 0, 0), pv = tfPoint(k, 0, 1, 0, 0);
+      if (pu[0] - p0[0] === u[0] && pu[1] - p0[1] === u[1] && pv[0] - p0[0] === v[0] && pv[1] - p0[1] === v[1]) return k;
+    }
+    return -1;
+  }
+  function validBand(item, sil) {
+    var keyProf = PROF_OF[item.keyAxis], dm = profDims(item.W, item.H, item.D), plain = 0;
+    ['F', 'T', 'S'].forEach(function (n) { if (item.prof[n].length === 4) plain++; });
+    if (plain !== 2 || item.prof[keyProf].length === 4 || featureRuns(item.prof[keyProf], dm[keyProf][0], dm[keyProf][1]).length !== 1) return 'starter: one feature in all, on the key\'s face';
+    var k = cameraTf(item.pose, item.keyAxis), o = item.options[item.key];
+    if (k < 0) return 'starter: no straight-on view of the key\'s face';
+    // the key turned back by the inverse of k lies on the silhouette exactly as it is (no other alignment)
+    var a = sil[item.keyAxis], b = polyRaster(o.poly, [0, 3, 2, 1, 4, 5, 6, 7][k]), inter = 0, uni = 0;
+    if (a.w !== b.w || a.h !== b.h) return 'starter: the key is not drawn as its face is seen';
+    for (var n = 0; n < a.r.length; n++) { if (a.r[n] && b.r[n]) inter++; if (a.r[n] || b.r[n]) uni++; }
+    if (!uni || inter / uni < 0.985) return 'starter: the key is not drawn as its face is seen';
+    for (var i = 0; i < 5; i++) { var oi = item.options[i]; if (!Number.isInteger(oi.tf) || AXES.indexOf(oi.axis) < 0 || oi.tf !== cameraTf(item.pose, oi.axis)) return 'starter: option ' + i + ' is not drawn as its face is seen'; }
+    return true;
   }
   function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
 
@@ -904,11 +1064,16 @@
   // level (one more feature), chamfers +0.5, keyview +0.4 per level (the key moves from the front
   // toward the side and top faces, of which less shows), lying +0.6, a proportion foil +0.3.
   // Range 4.0 logits.
+  // v1.2 (version 2; note D2 §3.4, §3.8): a starter level in front of 'features', one feature in all
+  // and the openings drawn unturned, Δ = −1.5 against today's level 0 (hand-set, to be refitted from
+  // pooled exports): the floor moves from −2.3 to −3.8 and every older combination keeps its exact
+  // difficulty (at = [Δ, 0, step, 2·step, 3·step]). Range 5.5 logits.
   PX.ex.define({
-    id: 'openings', version: 1, code: 'EX-14', name: 'Openings', short: 'Openings',
+    id: 'openings', version: 2, code: 'EX-14', name: 'Openings', short: 'Openings',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 5, pat: true,
+    starter: { dim: 'features', levels: 1 },
     dims: [
-      { key: 'features', label: 'Features', levels: FEATURES.map(function (c) { return c.join(' + '); }), step: 0.6 },
+      { key: 'features', label: 'Features', levels: FEATURE_LABELS.slice(), step: 0.6, at: [-1.5, 0, 0.6, 1.2, 1.8] },
       { key: 'edges', label: 'Edges', levels: EDGES.slice(), step: 0.5 },
       { key: 'keyview', label: 'Fitting face', levels: KEYVIEW.slice(), step: 0.4 },
       { key: 'pose', label: 'Pose', levels: POSE.slice(), step: 0.6 },
@@ -923,7 +1088,7 @@
       tfPoint: tfPoint, tfSize: tfSize, tfGrid: tfGrid, tfPoly: tfPoly, compare: compare, dist: dist, stretch: stretch, mutate: mutate, MAXEXT: MAXEXT, KEYVIEW_SETS: KEYVIEW_SETS, FEATURES: FEATURES,
       pip: pip, rayIntervals: rayIntervals, rayHits: rayHits, inSolid: inSolid, featureRuns: featureRuns, featuresSeen: featuresSeen, tmul: tmul, axisFacing: axisFacing,
       surface: surface, edges: edges, raySil: raySil, polyRaster: polyRaster, scanFill: scanFill, tfRaster: tfRaster, rcompare: rcompare, shares: shares, fitsBox: fitsBox,
-      build: build, fallback: fallback, cleanParams: cleanParams,
+      build: build, buildBand: buildBand, fallback: fallback, cleanParams: cleanParams, seenTf: seenTf, cameraTf: cameraTf, bandFeatOk: bandFeatOk,
       // the profiles of an item as quarter grids, from its stored polygons (centroid tests)
       gridsOf: function (item) {
         var dm = profDims(item.W, item.H, item.D), out = {};
