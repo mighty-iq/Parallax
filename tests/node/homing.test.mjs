@@ -457,6 +457,7 @@ export function boundShortcuts(t, rows) {
 // The motion is integrated independently (Simpson over the rate) and must cover every leg and turn.
 export function checkGentle(t, L, list, id) {
   t.section(id + ': gentle motion profile (v1.2, O36)');
+  if (!t.ok(L.GENTLE && typeof L.gentle === 'function', 'the route model has a gentle profile (lib.GENTLE, lib.gentle)')) return;
   t.eq([L.GENTLE.SCALE, L.GENTLE.RAMP, L.GENTLE.MAX, L.GENTLE.FIT_MAX], [2 / 3, 0.6, 40, 1.5], 'gentle: rates × 2/3, 0.6 s ramps, at most 40 s of motion per route, fit at most × 1.5');
   let same = true, ramp = true, oneSpeed = true, capped = true, normalCap = true, rates = true, covered = true, limits = true, idem = true, walk = true, tight = true, legTimes = true;
   let fitted = 0, fitSum = 0, fitMax = 1, worst = 0, worstNormal = 0, firstBad = null;
