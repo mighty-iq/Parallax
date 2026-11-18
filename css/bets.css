@@ -1,0 +1,30 @@
+/* The transfer bets and the add-on layers (v1.2 wave 2; PLAN milestone 4; js/ui/bets.js).
+   Celebrations and marks use ink and green, never the accent (the stimulus target colour). */
+
+/* the bet line: exercise page and How to play */
+.px-bet-line { margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); max-width: var(--measure); }
+.px-bet-head { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin: 0 0 var(--s1); }
+.px-bet-tag { color: var(--ink); border-color: var(--ink-2); }
+.px-bet-new { border-style: dashed; }
+.px-bet-text { margin: 0; }
+.px-bet-meta { margin: var(--s1) 0 0; }
+.px-bet-go { margin: var(--s2) 0 0; }
+.pl-howto .px-bet-line, .pl-card .px-bet-line { border-top: 0; padding-top: 0; }
+
+/* the nine bets as a list (About, the Lab) */
+.px-bets { margin: var(--s3) 0; display: grid; gap: var(--s2); }
+.px-bets > div { display: grid; grid-template-columns: minmax(9rem, 12rem) 1fr; gap: var(--s1) var(--s3); padding: var(--s2) 0; border-top: 1px solid var(--rule); }
+.px-bets dt { font-weight: 600; display: flex; flex-wrap: wrap; gap: var(--s1); align-items: baseline; }
+.px-bets dd { margin: 0; }
+.px-bets .px-bet-ex { display: block; }
+@media (max-width: 719px) { .px-bets > div { grid-template-columns: 1fr; } }
+
+/* the Lab */
+.px-bets-lab h3 { margin-top: var(--s4); }
+.px-bets-arms, .px-bets-dose { margin: var(--s2) 0; padding-left: 1.2em; }
+.px-bets-arms li, .px-bets-dose li { margin: var(--s1) 0; }
+
+/* the expectation rating */
+.px-bets-scale { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s2) 0; }
+.px-bets-scale .px-btn { min-width: var(--tap); min-height: var(--tap); }
+.px-bets-ends { margin: var(--s2) 0 0; }
