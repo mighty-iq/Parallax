@@ -351,9 +351,15 @@
     need.forEach(function (fn) {
       if (!isFn(v[fn])) throw new Error(where + fn + '(…) is missing (layout "' + v.layout + '" needs ' + need.join(', ') + ')');
     });
-    ['mount', 'unmount', 'showMe', 'demo', 'collect', 'drawOption', 'reveal'].forEach(function (fn) {
+    ['mount', 'unmount', 'showMe', 'demo', 'collect', 'drawOption', 'reveal', 'layoutFor'].forEach(function (fn) {
       if (v[fn] !== undefined && !isFn(v[fn])) throw new Error(where + fn + ' must be a function or left out');
     });
+    // v1.2 wave 2 (CONTRACT-v1.2 S): layoutFor(item) → 'custom' gives one item of a stem+options view its
+    // own input (a draw-the-answer variant); the view then collects and reveals that item itself
+    if (v.layoutFor !== undefined) {
+      if (v.layout !== 'stem+options') throw new Error(where + 'layoutFor is for stem+options views (a custom view collects every item)');
+      if (!isFn(v.collect) || !isFn(v.reveal)) throw new Error(where + 'layoutFor needs collect(…) and reveal(…) for the items it gives their own input');
+    }
     views[id] = v;
     return v;
   }

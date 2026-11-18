@@ -343,6 +343,10 @@ function testRegistry(t) {
   t.throws(() => X.view('sample', { layout: 'stem+options', present() {}, drawOption() {}, demo: 1 }), /demo must be a function/, 'view() checks optional functions');
   t.throws(() => X.view('sample', { layout: 'custom', present() {}, reveal() {} }), /collect/, 'view() needs collect for custom');
   t.throws(() => X.view('sample', { layout: 'grid', present() {}, reveal() {} }), /layout must be/, 'view() checks the layout');
+  // v1.2 wave 2: layoutFor gives one item of a stem+options view its own input (collect and reveal needed)
+  t.throws(() => X.view('sample', { layout: 'stem+options', present() {}, drawOption() {}, layoutFor: 'custom' }), /layoutFor must be a function/, 'layoutFor must be a function');
+  t.throws(() => X.view('sample', { layout: 'stem+options', present() {}, drawOption() {}, layoutFor() { return 'custom'; } }), /layoutFor needs collect/, 'layoutFor needs collect and reveal');
+  t.throws(() => X.view('sample', { layout: 'custom', present() {}, collect() {}, reveal() {}, layoutFor() { return 'custom'; } }), /for stem\+options views/, 'layoutFor is for stem+options views');
   t.ok(X.view('sample', viewDef) === viewDef && X.view('sample') === viewDef, 'view() registers and returns the view');
   t.throws(() => X.view('sample', viewDef), /already registered/, 'a second view is rejected');
   t.eq(X.view('custom'), null, 'view() of an exercise without a view is null');
