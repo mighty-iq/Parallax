@@ -97,7 +97,7 @@
       object: 'One structure with these views.',
       land: 'That is drawing {n}.',
       shown: 'The structure',
-      assist: 'The lines from the given views are drawn into the slot for you. Which drawing fits them?',
+      assist: 'Drawn for you: the lines the given views send into the slot.',
       whyHull: 'Drawing {n}: its outline cannot sit with the two given outlines.',
       whyAlign: 'Drawing {n}: its lines do not line up with the lines of the given views.',
       whySearch: 'Drawing {n}: no stack of cubes gives the two views and this one.',

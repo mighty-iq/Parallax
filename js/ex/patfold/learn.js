@@ -94,7 +94,7 @@
       unfoldIdleMore: '3/3 · Keep undoing, fold {n}: the punch missed this flap, so no new holes.',
       done: '3/3 · Flat again, compare: sheet {n} has exactly these holes.',
       chosen: 'Sheet {n}: the dashed rings are holes these folds do not make ({why}).',
-      assist: 'The punch\'s twin, straight across the crease, is ringed for you. Which sheet has both holes?',
+      assist: 'Ringed for you: the punch\'s twin across the crease.',
     },
     checkin: { whole: 'I unfolded the paper in my mind', parts: 'I tracked the hole across each crease', unsure: 'Not sure' },
     bridge: 'Hole punching is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). Practice on a format usually raises scores on that format; an effect of Parallax on DAT scores has not been shown or measured, and those scores relate only modestly to dental-school grades. ' + ADA,
