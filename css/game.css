@@ -87,6 +87,9 @@ body.px-stim .gm-fx-sweep .px-bar-fill { animation: none !important; }
   .px-today.has-suggest > .gm-slot ~ .px-slot--data { grid-row: 7; }
 }
 
+/* ---------- the exercise page ---------- */
+.gm-ex-lines p { margin: var(--s1) 0; }
+
 /* ---------- Progress ---------- */
 .gm-reach-big { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
 .gm-reach-big b { font-size: var(--fs-3xl); font-variant-numeric: tabular-nums; line-height: 1; }
