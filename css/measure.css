@@ -1,0 +1,29 @@
+/* The measurement's meter, verdict words and Today line (js/ui/measure.js; PLAN milestone 6).
+   The rung rows reuse the forest plot of css/screens.css (.px-fp-*). Celebration colours are ink and green
+   (--right), never the accent; nothing here animates. */
+
+.px-ms-meter { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s3); margin: var(--s2) 0; }
+.px-ms-meter-track {
+  position: relative; height: 0.75rem; border: 1px solid var(--rule-strong); border-radius: 999px;
+  background: var(--surface-2); overflow: hidden;
+}
+.px-ms-meter-fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--ink-2); }
+.px-ms-meter-mid { position: absolute; top: -1px; bottom: -1px; left: 50%; width: 0; border-left: 1px dashed var(--surface); }
+.px-ms-meter-num { min-width: 3.5rem; text-align: right; font-size: var(--fs-md); font-weight: 500; color: var(--ink); }
+.px-ms-meterline { margin-bottom: 0 !important; font-size: var(--fs-sm); color: var(--ink-2); }
+
+.px-ms-word {
+  display: inline-flex; align-items: center; padding: 0.1em 0.6em; border: 1px solid var(--rule-strong); border-radius: 999px;
+  font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.5; color: var(--ink-2); white-space: nowrap; vertical-align: 0.1em;
+}
+.px-ms-word.is-gain { border-color: var(--right); color: var(--right); background: var(--right-wash); }
+.px-ms-word.is-none { color: var(--ink); }
+.px-ms-word.is-unclear { border-style: dashed; }
+
+.px-ms-verdicts { margin: var(--s2) 0 0; padding: 0; list-style: none; }
+.px-ms-verdicts li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: var(--s1) 0; border-top: 1px solid var(--rule); }
+
+.px-ms-today { margin-top: var(--s3); }
+.px-ms-today .px-meta { margin-top: var(--s1); }
+.px-ms-summary .px-ms-meter { max-width: 32rem; }
+.px-ms-rows .px-fp-end .px-meta { font-family: var(--font-mono); font-size: var(--fs-xs); }
