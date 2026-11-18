@@ -178,7 +178,7 @@ def run_daily(b, C):
     ok = drive(page, '!!document.querySelector(".pl-daily")', limit=300)
     C.ok(ok, f'{tag}: the challenge runs to its result')
     line = page.locator('.pl-daily .px-copybox-text').input_value()
-    C.ok(re.fullmatch(r'Parallax Daily #\d+ · \d/\d+ · discord\.gg/chmr', line) is not None, f'{tag}: share line {line!r}')
+    C.ok(re.fullmatch(r'Parallax Daily #\d+ · \d/\d+ · https://discord\.gg/chmr', line) is not None, f'{tag}: share line {line!r}')
     page.locator('.pl-daily [data-copy]').first.click()
     page.wait_for_timeout(300)
     C.ok('Cop' in page.locator('.pl-daily .px-copybox-status').first.inner_text(), f'{tag}: Copy reports back')
