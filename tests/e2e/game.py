@@ -193,6 +193,10 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     C.ok(hud_ok, f'{name}: the item counter reads "Rung r of 20"')
     C.ok(stepped == len(seq) + voided and i == len(seq), f'{name}: the height and misses follow the answers ({stepped} of {len(seq) + voided}; {voided} voided)')
     page.wait_for_selector('[data-climb-end]', timeout=15000)
+    # touch targets in the Climb's printout and Today's slots are at least 44 px high (phones)
+    if ctx_opts.get('has_touch'):
+        small = page.evaluate('''Array.from(document.querySelectorAll('.gm-panel button, .gm-slot button')).map(b => b.getBoundingClientRect()).filter(r => r.width > 0 && r.height < 43.5).length''')
+        C.ok(small == 0, f'{name}: every button of the printout is at least 44 px high ({small} smaller)')
     end = page.locator('[data-climb-end]')
     C.ok(end.first.get_attribute('data-climb-end') == 'done' and end.first.get_attribute('data-height') == str(rungs), f'{name}: the printout after the second miss: height {rungs}')
     line = page.locator('textarea, input').filter(has_text='').evaluate_all('els => els.map(e => e.value).filter(v => /Parallax Climb/.test(v))')
@@ -205,6 +209,32 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.evaluate('PX.core.store.state.settings.sound = false; PX.core.store.save()')
     page.screenshot(path=str(OUT / f'{name}-climb-end.png'), full_page=False)
     fits(page, C, name, '.gm-panel', vw)
+
+    # attempt B left part-way (two rungs, then a reload) goes on at rung 3
+    page.locator('text=Climb attempt B').first.click()
+    for i in range(2):
+        if to_respond(page, C, name, 'climb B') is not True:
+            break
+        page.evaluate('PX.debug.fast(true); PX.debug.answer(true)')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
+        page.evaluate('PX.debug.fast(false); __play.next()')
+    to_respond(page, C, name, 'climb B 3')
+    hb = page.evaluate('(() => { const s = __climb.state(); return s && s.plan ? s.plan.height : null; })()')
+    page.reload()
+    page.wait_for_function(READY, timeout=30000)
+    page.evaluate(MUTE)
+    dismiss(page)
+    page.evaluate('void PX.core.router.go("climb", {}, { force: true })')
+    page.wait_for_selector('[data-climb-start]', timeout=10000)
+    kept = page.evaluate('(() => { const w = PX.core.store.state.game.climb.w[PX.engine.climb.week(Date.now())]; return w && w.B ? w.B : null; })()')
+    C.ok(kept and kept.get('p') == 1 and kept['h'] == hb and page.locator('[data-climb-start="B"]').count() == 1 and 'Go on with attempt B' in page.locator('[data-climb-start]').first.inner_text(),
+         f'{name}: a run left by a reload is kept and offered to go on ({kept}, height {hb})')
+    page.locator('[data-climb-start]').click()
+    to_respond(page, C, name, 'climb B resumed')
+    meta = page.evaluate('document.querySelector(".pl-hud-meta") ? document.querySelector(".pl-hud-meta").textContent : ""')
+    C.ok(f'Rung {hb + 1} of 20' in meta if isinstance(hb, int) else False, f'{name}: the run goes on at rung {hb and hb + 1} ({meta!r})')
+    page.evaluate('void PX.core.router.go("home", {}, { force: true })')
+    page.wait_for_timeout(400)
 
     # The Atlas, Progress, Settings
     page.evaluate('void PX.core.router.go("atlas", { ex: "fold" }, { force: true })')

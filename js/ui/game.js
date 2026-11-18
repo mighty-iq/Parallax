@@ -332,7 +332,9 @@
     try { st = E().notes.state(r, now); } catch (e) { st = null; }
     try { fr = G().fresh(r, now); } catch (e) { fr = null; }
     try { wr = G().withinReach(r, now); } catch (e) { wr = null; }
-    var offer = st ? st.offer : [];
+    // a player without a training session yet sees no notes: the first screen stays the two-minute start
+    var practised = (Array.isArray(r.sessions) ? r.sessions : []).some(function (x) { return isObj(x) && x.mode !== 'check' && (x.trials || 0) > 0; });
+    var offer = st && practised ? st.offer : [];
     if (!offer.length && !fr && !wr) return null;
     var K = PX.ui.kit, p = K.panel({ title: 'This week', className: 'px-slot gm-slot gm-slot--notes', aside: 'field notes' });
     p.el.setAttribute('data-gm', 'notes');
