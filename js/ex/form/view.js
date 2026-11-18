@@ -162,7 +162,7 @@
     var root = h('div.fm-stem'), stage = h('div.ex-stage.fm-stage');
     var svg = SV.el('svg', { class: 'fm-svg', 'aria-hidden': 'true', focusable: 'false', preserveAspectRatio: 'xMidYMid meet' });
     var label = h('span.ex-label.fm-label', 'Pattern');
-    var foldSvg = SV.el('svg', { class: 'fm-fold', 'aria-hidden': 'true', focusable: 'false' });
+    var foldSvg = SV.el('svg', { class: 'fm-foldup', 'aria-hidden': 'true', focusable: 'false' });
     foldSvg.style.display = 'none';
     stage.appendChild(svg); stage.appendChild(foldSvg); stage.appendChild(label);
     var caption = h('p.ex-caption', { 'aria-live': 'polite' }), verdict = h('div.ex-verdict.fm-verdict', { hidden: true, role: 'status' }), desc = h('p.px-sr');
@@ -343,7 +343,7 @@
   // The Watch: the landmark method and the fold-up, then both kinds of wrong solid, then back to the
   // right one so the Watch ends on the answer.
   function demoList(item) {
-    var base = steps(item, null), tour = foilTour(item);
+    var base = steps(item, null, true), tour = foilTour(item);
     return tour.length ? base.concat(tour, [base.landStep]) : base;
   }
 
@@ -442,7 +442,9 @@
         exit: function () { focusOption(key); } },
     ];
   }
-  function steps(item, response) {
+  // watch: the Watch's orientation steps (the pattern, the solids, where the answer lands) come too;
+  // show me starts at the card's first step, since the player has looked at the item already.
+  function steps(item, response, watch) {
     var key = item.key, picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
     var km = bestMap(item, key), S = item.solid, seenS = km ? km.seen.map(function (g) { return km.back[g]; }) : [];
     var land = seenS.filter(function (f) { return item.marks[f]; })[0];
@@ -450,18 +452,30 @@
     var nb = [];
     lib.adjacency(S).forEach(function (e) { var o = e.f === land ? e.g : e.g === land ? e.f : -1; if (o >= 0 && seenS.indexOf(o) >= 0 && nb.indexOf(o) < 0) nb.push(o); });
     var letters = 'ABCDEFG', tags = [{ f: land, t: 'A' }].concat(nb.slice(0, 3).map(function (f, j) { return { f: f, t: letters[j + 1] }; }));
+    // a half mark (from the pre-1.2 floor on): its shaded corner, dotted in the pattern, and the face
+    // pointed in the pattern and in the right solid (note D2 §3.5's mini-demo, also in show me)
+    var half = -1;
+    item.marks.forEach(function (m, f) { if (half < 0 && m && typeof m === 'object') half = f; });
+    var halfSeen = km && half >= 0 ? km.seen.filter(function (g) { return km.back[g] === half; })[0] : undefined;
+    var halfStep = half < 0 ? null : { ms: 2800, caption: cap('halfCorner'), enter: function () {
+      clearMarks(); focusOption(key); dotHalfCorner(item);
+      if (st.netG[half]) st.netG[half].g.classList.add('is-pointed');
+      var of = halfSeen !== undefined && st.opts[key] ? st.opts[key].faces[halfSeen] : null;
+      if (of) of.g.classList.add('is-pointed');
+    } };
+    var landStep = { ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } };
     var list = [
-      { ms: 1500, caption: cap('pattern'), enter: function () { clearMarks(); st.label.classList.add('is-pointed'); }, exit: function () { st.label.classList.remove('is-pointed'); } },
-      { ms: 1400, caption: cap('solids'), enter: function () { clearMarks(); } },
+      watch ? { ms: 1500, caption: cap('pattern'), enter: function () { clearMarks(); st.label.classList.add('is-pointed'); }, exit: function () { st.label.classList.remove('is-pointed'); } } : null,
+      watch ? { ms: 1400, caption: cap('solids'), enter: function () { clearMarks(); } } : null,
       // the card's steps in its order and words (note D2 addendum C): each caption marks what it names
       { ms: 2600, caption: cap('sizes'), enter: function () { clearMarks(); markSizes(item); } },
       { ms: 2200, caption: cap('landmark', { f: 'A' }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags.slice(0, 1)); } },
+      halfStep,
       { ms: 2400, caption: cap('neighbours', { list: tags.slice(1).map(function (x) { return x.t; }).join(', ') || '—' }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags); } },
       { ms: 2400, caption: cap('match', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
-      { ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
+      watch ? landStep : null,
     ];
-    var landStep = list[list.length - 1];
-    list = list.concat(foldSteps(item));
+    list = list.filter(Boolean).concat(foldSteps(item));
     if (picked >= 0) list.push(whyStep(item, picked, 3000));
     list.landStep = landStep;
     return list;

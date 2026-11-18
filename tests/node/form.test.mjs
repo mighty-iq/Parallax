@@ -359,6 +359,10 @@ function testLearn(t, PX, def) {
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
   if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
   const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
+  // a worked example before the Try item that brings the first hard feature (note D2 addendum C change 4)
+  const exE = L.practice[2].example, xe = exE && def.generate(PX.rng(exE.seed), L.practice[2].params);
+  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[2].seed && def.validate(xe) === true && !xe.fallback && xe.marks.some((m) => m && typeof m === 'object') && xe.options.some((o) => o.kind === 'mirror') && xe.key !== items[2].key && L.practice.every((e, i) => i === 2 || e.example === undefined),
+    `Try 3 (the half mark) comes after a worked example of a half mark on a sister item, with a mirror image among its solids (seed ${exE && exE.seed})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].marks === 0 && P[1].marks === 0 && items[0].solid.kind === 'box' && items[1].solid.kind !== 'box', 'Try 1 (a box) and Try 2 (a prism) are at the starter band');
   t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0 }, 'Try 3 is the pre-1.2 floor (a half mark)');
@@ -384,7 +388,7 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['pattern', 'solids', 'landmark', 'match', 'land', 'foils', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'foldTilt', 'foldUp', 'foldTurn', 'assist', 'assistHalf'];
+  const caps = ['pattern', 'solids', 'landmark', 'match', 'land', 'foils', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'foldTilt', 'foldUp', 'foldTurn', 'assist', 'assistHalf', 'halfCorner'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');

@@ -17,7 +17,8 @@
     // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.5): the rules card first, the
     // Watch at the starter band (one shaded face, a box, upright), the card "Shape, then one landmark"
     // before Try 1, Try 1 with the shaded face's neighbours lettered; Try 3 brings the half mark with its
-    // tip and its shaded corner dotted (the mirror image's first appearance), Try 4 a third mark.
+    // tip and its shaded corner dotted (the mirror image's first appearance), after a worked example of a
+    // half mark on a sister item (note D2 addendum C change 4); Try 4 a third mark.
     rules: [
       'The pattern is the outside surface of the solid, cut open and laid flat.',
       'Dashed lines fold; solid lines are cut edges that meet another edge once folded.',
@@ -30,7 +31,7 @@
     practice: [
       { params: { solid: 0, marks: 0, view: 0, foil: 0 }, assist: { letters: true }, seed: 12 },
       { params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 207 },
-      { params: { solid: 0, marks: 1, view: 0, foil: 0 }, assist: { half: true }, tip: 'half', seed: 303 },
+      { params: { solid: 0, marks: 1, view: 0, foil: 0 }, assist: { half: true }, tip: 'half', seed: 303, example: { seed: 8 } },
       { params: { solid: 0, marks: 2, view: 0, foil: 0 }, tip: 'two', seed: 406 },
     ],
     tips: [
@@ -86,6 +87,7 @@
       landmark: '2/3 · Pick a landmark: face {f}, the shaded face, in the pattern.',
       match: '3/3 · Check them in each solid left: in solid {n} the same faces sit beside it.',
       neighbours: '2/3 · Name the faces that meet it once folded: {list}.',
+      halfCorner: '2/3 · A half-shaded face also shows which way it is turned: its shaded corner (dotted) touches the same faces once folded.',
       land: 'Solid {n} folds from the pattern.',
       foils: 'Why the others do not fold from it:',
       whyShape: 'Solid {n} is the wrong size: the marked edge is {dir} than the same edge in the pattern.',

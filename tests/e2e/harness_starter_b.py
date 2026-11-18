@@ -67,7 +67,7 @@ def check(b, cons, ex):
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=60000)
     C.ok(True, f'{ex} Try 2: show me after a wrong tap ran to the end')
     if ex == 'form':
-        f = page.evaluate("() => { const s = document.querySelector('.fm-fold'); return { shown: s && s.style.display !== 'none', faces: s ? s.querySelectorAll('path.px-fig-face').length : 0 }; }")
+        f = page.evaluate("() => { const s = document.querySelector('svg.fm-foldup'); return { shown: s && s.style.display !== 'none', faces: s ? s.querySelectorAll('path.px-fig-face').length : 0 }; }")
         C.ok(f['faces'] >= 3, f'form: the fold-up drew the folded pattern ({f})')
     page.screenshot(path=str(DIR / f'{ex}_try2_showme_360.png'))
     # The Watch item plays to the end (fast: a hold never waits)
