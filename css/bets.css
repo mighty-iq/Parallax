@@ -66,3 +66,7 @@
 .bets-cp-pull line { stroke: var(--ink); stroke-width: 0.11; stroke-linecap: round; }
 .bets-cp-pull path { fill: var(--ink); }
 .bets-cp-diag { stroke: var(--right); stroke-width: 0.1; stroke-dasharray: 0.32 0.22; }
+
+/* the detailed calibration note (calib-detail items) */
+.px-bets-calib { max-width: var(--measure); }
+.px-bets-calib p { margin: 0 0 var(--s1); }

@@ -374,5 +374,51 @@
     return p ? h('p.px-bets-applynote', { 'data-bets': 'apply-note' }, h('b', 'Same rule as the pair: '), p.text) : null;
   }, { id: 'bets.apply-note', order: 30 });
 
+  /* ---------- detailed calibration feedback (the calib layer; note T1 §2.3 M9, §5.3) ----------
+     Every answer of a calib host records its signed value (both arms, so the note has data when its arm
+     turns on); on calib-detail items, after every 5th answer, a note gives the running bias over the last
+     10 and the habit it shows. Homing: the pointing error (clockwise +); Central Point: the share of the
+     way from the targets' average position to the best spot (value2; never drawn). Reckon's own bias
+     line plays this part in its view. */
+  function signedDeg(x) { return Math.abs(Math.round(x)) + '°'; }
+  var CALIB = {
+    homing: {
+      value: function (tr) { return tr && tr.result && tr.result.detail && isNum(tr.result.detail.signed) ? tr.result.detail.signed : null; },
+      note: function (s) {
+        var lean = Math.abs(s.mean) >= 5 && Math.abs(s.mean) > 2 * s.sd / Math.sqrt(s.n);
+        return [
+          'Over your last ' + s.n + ' answers you pointed on average ' + signedDeg(s.mean) + (s.mean >= 0 ? ' to the right of' : ' to the left of') + ' home; a typical miss was ' + signedDeg(s.abs) + '.',
+          lean ? 'That steady lean is a habit you can correct: aim about ' + signedDeg(s.mean) + ' further ' + (s.mean >= 0 ? 'left' : 'right') + ' than feels right.' : 'No steady lean: your misses fall on both sides.',
+        ];
+      },
+    },
+    centralpoint: {
+      value: function (tr) { return tr && tr.result && isNum(tr.result.value2) ? tr.result.value2 : null; },
+      note: function (s) {
+        var pct = Math.round(s.mean * 100);
+        return [
+          'Over your last ' + s.n + ' answers your marker went on average ' + pct + ' % of the way from the targets’ average position to the best spot.',
+          pct < 85 ? 'Far targets still pull your pick: a far target pulls no harder than a near one.' : pct > 115 ? 'You went past the best spot: the close group pulls no harder than the rest.' : 'Your picks reach the best spot’s side.',
+        ];
+      },
+    },
+  };
+  PX.ui.hooks.on('item:notes', function (ctx) {
+    var def = ctx && ctx.def, step = ctx && ctx.step, k = def ? CALIB[def.id] : null;
+    if (!k || !step || !ctx.tr || ctx.tr.outcome === 'stutter' || (ctx.mode !== 'train' && ctx.mode !== 'path') || !B().hosts(def, 'calib')) return null;
+    var v = k.value(ctx.tr);
+    if (!isNum(v)) return null;
+    var S = store();
+    B().calibPush(S.state, def.id, v, Date.now());
+    var n = S.state.bets.cal[def.id].length;
+    if (step.layer !== 'calib-detail' || n < 5 || n % 5 !== 0) return null;
+    return function () {
+      var s = B().calibSummary(store().state, def.id, 10);
+      if (!s.n) return null;
+      var lines = k.note(s);
+      return h('div.px-bets-calib', { 'data-bets': 'calib-note' }, h('p', h('b', 'Detail: '), lines[0]), h('p', lines[1]));
+    };
+  }, { id: 'bets.calib', order: 40 });
+
   PX.ui.bets = { betLine: betLine, eventsCSV: eventsCSV, doseCSV: doseCSV, LAYER_WORDS: LAYER_WORDS, exNames: exNames, uiBets: uiBets, showRound: showRound, runRound: runRound, report: report, runBridge: null };
 })(window.PX);

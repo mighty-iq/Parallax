@@ -242,6 +242,30 @@ def run_round(b):
         note = page.locator('[data-bets="apply-note"]')
         C.ok(note.count() >= 1, f'{tag}: the apply note names the rule')
         page.screenshot(path=str(OUT / f'apply_{w}.png'))
+        if w == 390:
+            # the calibration arm (on for everyone out of the trials): a detail note after every 5th answer
+            seen_note = False
+            for _ in range(80):
+                if page.locator('[data-bets="calib-note"]').count():
+                    seen_note = True
+                    break
+                if page.evaluate(CARD_JS):
+                    other_card(page)
+                    continue
+                st = page.evaluate('__play.state')
+                if st == 'respond':
+                    page.evaluate('__play.answer(Math.random() < 0.6).catch(() => 0)')
+                elif st in ('reveal', 'showme'):
+                    page.evaluate('__play.next()')
+                page.wait_for_timeout(120)
+            n = page.evaluate("(PX.core.store.state.bets.cal || {}).centralpoint ? PX.core.store.state.bets.cal.centralpoint.length : 0")
+            C.ok(seen_note and n >= 5, f'{tag}: the calibration note shows after 5 answers ({n} kept)')
+            if seen_note:
+                page.locator('[data-bets="calib-note"]').first.screenshot(path=str(OUT / 'calib_390.png'))
+                txt = page.locator('[data-bets="calib-note"]').first.inner_text()
+                C.ok('of the way' in txt and '%' in txt, f'{tag}: it gives the running share of the way ({txt[:80]!r})')
+            rows = page.evaluate("PX.core.store.state.trials.filter(r => r[14] === 3).length")
+            C.ok(rows >= 4, f'{tag}: the calib-detail items log layer 3 ({rows})')
         C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
         ctx.close()
 
