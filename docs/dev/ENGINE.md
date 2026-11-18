@@ -201,7 +201,7 @@ Results on 13 November 2026 (v1.1: sessions time-boxed on active time; the simul
 - **Mode suggestion** (gap M3). `E.modes.suggest(rec, now)`: Path for an exercise with 1–39 rated answers and no Path yet, then Speed for one with Speed open, never played and a settled level; dismissed keys stay hidden while `rec.ui.hiddenTips[key] > now`.
 - **Folded days** count answers per exercise (`a`), so the answer total no longer subtracts voided probe rows (O15).
 - **Exports** (store.js): the pooled export (`store.pooled`) drops every local day key and keeps times in UTC; engine fields appear through `E.pooled(key, fn)`.
-- **Simulation** (`node tests/node/sim.mjs --learners 200`, 18 Nov, σ₀ 1.5): Balanced success on target items 77.6 vs 77.0 % (+0.6), coverage 96.7 % (rms z 0.90); Comfortable 86.1 vs 88.5 % (coverage 96.3 %); Stretch +1.8 (96.6 %); misspecified items +0.3 (92.9 %); Path 98.6 %; all hard checks passed.
+- **Simulation** (`node tests/node/sim.mjs --learners 200`, 18 Nov, σ₀ 1.5 with `stretch1`): Balanced success on target items 77.7 vs 77.0 % (+0.7), coverage 96.8 % (rms z 0.90); misspecified items +0.2 (92.8 %; 1.1: 92.2 %); Path 98.7 %, stages passed as in 1.1 (S1 96.0 %, S5 52.5 %, S10 4.5 %); from the full run with σ₀ 1.5 before `stretch1`: Comfortable 86.1 vs 88.5 % (96.3 %), Stretch +1.8 (96.6 %); all hard checks passed. Early stretches (`stretch1`) succeed 70.8 % against their 74.0 % aim in Balanced.
 
 ## Sources
 
