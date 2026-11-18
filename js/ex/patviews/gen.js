@@ -53,7 +53,14 @@
 
   var VIEWS = ['top', 'front', 'end'];
   var MISSING = ['end', 'front', 'top'];            // dim 'missing', easiest first (DJ)
-  var CUBES = [[4, 5], [6, 7], [8, 9], [10, 12]];  // dim 'cubes'
+  // dim 'cubes' (v1.2): the shown structure's cube count, enforced, so the labels hold. The structure
+  // drawn first has the level's own count (N below: 4–5, 6–7, 8–9, 10–12 as in 1.1) and the one shown
+  // is usually a neighbour of it, so the shown counts spread: the windows hold about 95 % of 1.1's
+  // items, which keeps 1.1's foil balance (note D2 §3.7: "fix the label or the count window").
+  // Level 0 is the starter band: 4–6 cubes, at most two high, the structure drawn beside the views.
+  var CUBES = [[4, 6], [4, 7], [5, 10], [7, 12], [9, 15]];
+  var DRAWN = [[4, 6], [4, 5], [6, 7], [8, 9], [10, 12]]; // the first structure's cube count per level
+  var CUBE_LABELS = ['4–6 (starter, structure shown)', '4–7', '5–10', '7–12', '9–15'];
   var GRIDS = [3, 4];
   var FOILS = ['outline', 'lines', 'dashes'];
   var HMAX = 4;
@@ -582,44 +589,145 @@
       pickShare(sumL, false), pickShare(sumL, true), pickShare(like, false)];
   }
   var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5, 2, 1, 2];
-  function chooseFoils(rng, keyG, pool, need, giv) {
+
+  // The same shares as shares(), from per-drawing counts and pairwise distances computed once per call
+  // (the chooser scores a few hundred sets).
+  var STRICT_MAX = 0.34; // the band drops a set where a cheap rule picks the key at better than 1 in 3
+  function chooseFoils(rng, keyG, pool, need, giv, strict) {
     var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 13), best = null, bestScore = INF, bestSh = null;
-    var want = SOLVERS.map(function () { return rng.chance(0.25) ? 1 : 0; });
+    // On the starter band every solver aims at chance itself (a share of 1/4 on each item, ties
+    // included), and a set where any cheap rule finds the key half the time or more is dropped (strict):
+    // its small boxes leave few drawings, and random targets would leave each setting lopsided.
+    var want = SOLVERS.map(function () { return strict ? 0.25 : rng.chance(0.25) ? 1 : 0; });
+    var gs = [keyG].concat(idx.map(function (i) { return pool[i].g; })), n = gs.length, C = gs.map(counts), G = [], GL = [];
+    var gsol = (giv || []).map(function (v) { return counts(v).solid; });
+    var like = gs.map(function (o) { var m = 99; (giv || []).forEach(function (v) { if (v.w === o.w && v.h === o.h) m = Mth.min(m, gdist(o, v)); }); return m; });
+    for (var i = 0; i < n; i++) { G.push([]); GL.push([]); for (var j = 0; j < n; j++) { G[i].push(j < i ? G[j][i] : i === j ? 0 : gdist(gs[i], gs[j])); GL[i].push(j < i ? GL[j][i] : i === j ? 0 : gdistLines(gs[i], gs[j])); } }
+    function sharesOf(m) { // m: indices into gs, m[0] = 0 (the key)
+      function col(f) { return m.map(f); }
+      function sums(M) { return m.map(function (a) { var t = 0; m.forEach(function (b2) { if (a !== b2) t += M[a][b2]; }); return t; }); }
+      var sol = col(function (q) { return C[q].solid; }), dot = col(function (q) { return C[q].dotted; }), ar = col(function (q) { return C[q].area; }), su = sums(G), sl = sums(GL), lk = col(function (q) { return like[q]; });
+      var out = [pickShare(sol, true), pickShare(sol, false), pickShare(dot, true), pickShare(dot, false), pickShare(ar, true), pickShare(ar, false), pickShare(su, false), pickShare(su, true),
+        pickShare(sl, false), pickShare(sl, true), pickShare(lk, false)];
+      // the band also holds "as many solid units as a given view" (a stem-based count; tests/node)
+      if (strict) out.push(pickShare(col(function (q) { return gsol.indexOf(C[q].solid) >= 0 ? 1 : 0; }), true));
+      return out;
+    }
     for (var a = 0; a < idx.length; a++) for (var b = a + 1; b < idx.length; b++) for (var c = b + 1; c < idx.length; c++) {
       var set = [pool[idx[a]], pool[idx[b]], pool[idx[c]]];
       if (need && !need(set)) continue;
-      var sh = shares([keyG].concat(set.map(function (o) { return o.g; })), giv), score = 0;
-      for (var k = 0; k < sh.length; k++) score += WEIGHTS[k] * Mth.abs(sh[k] - want[k]);
+      var sh = sharesOf([0, a + 1, b + 1, c + 1]), score = 0;
+      for (var k = 0; k < sh.length; k++) score += (WEIGHTS[k] || 1.5) * Mth.abs(sh[k] - (want[k] === undefined ? 0.25 : want[k]));
       if (score < bestScore - 1e-9) { bestScore = score; best = set; bestSh = sh; }
     }
     // The pool can leave no choice (outline foils mostly add cubes, so the key's outline tends to be
     // the smallest, and the key tends to be the drawing most like a given view of its size): such a
     // set is dropped more than half the time, and the item is drawn again.
     if (best && ((bestSh[5] >= 0.5 && !want[5]) || (bestSh[6] >= 0.5 && !want[6]) || (bestSh[10] >= 0.5 && !want[10])) && rng.chance(0.6)) return null;
+    // The starter band's foils (no dotted line, no search-only foil, all from one small box) tend to
+    // share what the key lacks, leaving the key the odd one out: there every lopsided set is dropped.
+    if (best && strict && bestSh.some(function (x) { return x >= STRICT_MAX; })) return null;
     return best;
   }
 
   /* ------------------------------------------------------------ generate */
-  var stats = { tries: 0, nulls: 0, over: 0, invalid: 0, errors: 0, fallbacks: 0, lastInvalid: null, lastError: null, nodes: 0 };
+  var stats = { tries: 0, nulls: 0, over: 0, invalid: 0, errors: 0, fallbacks: 0, lastInvalid: null, lastError: null, nodes: 0, noFit: 0, fewCands: 0, noSet: 0 };
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) {
     return { cubes: lvl(params, 'cubes', CUBES.length), grid: lvl(params, 'grid', GRIDS.length), missing: lvl(params, 'missing', MISSING.length), foil: lvl(params, 'foil', FOILS.length) };
   }
-  function build(rng, p) {
-    var G = GRIDS[p.grid], win = CUBES[p.cubes], N = rint(rng, win[0], Mth.min(win[1], G * G * HMAX));
+  function cubeCount(b) { var n = 0; for (var k = 0; k < b.hm.length; k++) n += b.hm[k]; return n; }
+  // The starter band's structures (note D2 §3.7): 4–6 cubes, two high at most and somewhere, in a box of
+  // at most 2 × 3 (grid level 1: up to 3 × 3). The note's 3–4 cubes cannot be two high in a box at least
+  // two cubes wide and deep, and smaller boxes leave too few drawings for three balanced foils (DECISIONS).
+  function bandBox(b, grid) { return b.H === 2 && b.W >= 2 && b.D >= 2 && Mth.max(b.W, b.D) <= 3 && (grid === 1 || Mth.min(b.W, b.D) <= 2); }
+  // Every band structure, enumerated once (boxes 2 × 2, 2 × 3, 3 × 2 and, for grid level 1, 3 × 3;
+  // heights 0–2), with per missing view whether its drawing has a dotted line.
+  var bandLists = {};
+  function bandAll(boxes) {
+    var out = [];
+    (boxes || [[2, 2], [2, 3], [3, 2], [3, 3]]).forEach(function (wd) { out = out.concat(bandBoxList(wd[0], wd[1])); });
+    return out;
+  }
+  function bandBoxList(W, D) { // lazily, per box: a 3 × 3 box is 19 683 height maps
+    var key = W + 'x' + D;
+    if (bandLists[key]) return bandLists[key];
+    var bandList = bandLists[key] = [];
+    (function () {
+      var n = W * D, tot = Mth.pow(3, n);
+      for (var code = 0; code < tot; code++) {
+        var hm = new Int8Array(n), c = code, N = 0, H = 0;
+        for (var k = 0; k < n; k++) { hm[k] = c % 3; c = (c - hm[k]) / 3; N += hm[k]; if (hm[k] > H) H = hm[k]; }
+        if (N < 4 || N > 6 || H !== 2) continue;
+        var b = { W: W, H: 2, D: D, hm: hm };
+        if (!fills(b) || !connectedBox(b)) continue;
+        b.dotted = {};
+        VIEWS.forEach(function (v) { b.dotted[v] = counts(drawView(b, v)).dotted > 0; });
+        bandList.push(b);
+      }
+    })();
+    return bandList;
+  }
+  // The missing view is three cubes wide (the top: at least 2 × 3), so there are drawings enough for
+  // three foils without a dotted line.
+  function wide(b, miss) { return miss === 'end' ? b.D === 3 : miss === 'front' ? b.W === 3 : b.W * b.D >= 6; }
+  // Every drawing of view `miss` that a structure in a W × D box two high can have (every height map
+  // that fills the box and hangs together), once per box and view: the band's foil pool.
+  var bandDraw = {};
+  function bandDrawings(W, D, miss) {
+    var k0 = W + 'x' + D + miss;
+    if (bandDraw[k0]) return bandDraw[k0];
+    var out = [], seen = {}, n = W * D, tot = Mth.pow(3, n);
+    for (var code = 0; code < tot; code++) {
+      var hm = new Int8Array(n), c = code;
+      for (var k = 0; k < n; k++) { hm[k] = c % 3; c = (c - hm[k]) / 3; }
+      var b = { W: W, H: 2, D: D, hm: hm };
+      if (!fills(b) || !connectedBox(b)) continue;
+      var g = drawView(b, miss), cd = codeOf(g);
+      if (!seen[cd]) { seen[cd] = 1; out.push({ g: g, code: cd, dotted: counts(g).dotted > 0 }); }
+    }
+    bandDraw[k0] = out;
+    return out;
+  }
+  // The exhaustive search and the drawings it allows, remembered per box and pair of given views (the
+  // band's boxes are few).
+  var bandRes = {};
+  function bandSearch(given, W, H, D, miss) {
+    var k0 = W + 'x' + H + 'x' + D + miss + Object.keys(given).sort().map(function (v) { return codeOf(given[v]); }).join('|');
+    if (!bandRes[k0]) { var r = search(given, W, H, D); bandRes[k0] = { res: r, poss: r.over ? null : possibleViews(r, W, H, D, miss) }; }
+    return bandRes[k0];
+  }
+  function bandStructure(rng, grid, miss, foil) {
+    // A missing front view takes the 3 × 2 box for outline foils and the 3 × 3 box for same-outline
+    // foils, at either grid level: a 3 × 2 front has too few same-outline drawings, and in a 3 × 3 box
+    // the key's front outline is nearly always the smallest (DECISIONS).
+    var boxes = miss === 'front' ? [foil ? [3, 3] : [3, 2]] : [[2, 2], [2, 3], [3, 2]].concat(grid === 1 ? [[3, 3]] : []).filter(function (wd) { return wide({ W: wd[0], D: wd[1] }, miss); });
+    var list = bandAll(boxes).filter(function (b) { return bandBox(b, miss === 'front' ? 1 : grid) && (!miss || !b.dotted[miss]); });
+    var b = list[rint(rng, 0, list.length - 1)];
+    return { W: b.W, H: b.H, D: b.D, hm: new Int8Array(b.hm) };
+  }
+  function build(rng, p, relaxed) {
+    var band = p.cubes === 0, G = GRIDS[p.grid], win = CUBES[p.cubes], drawn = DRAWN[p.cubes], N = rint(rng, drawn[0], Mth.min(drawn[1], G * G * HMAX));
     // A hidden parent and its neighbours in the same box: the key is one of them, and the foils come
     // from the whole family, so the key is not the structure the others were made from (its outline
-    // is then neither the smallest nor the most typical one by construction).
-    var b0 = boxOf(VL().randomStructure(rng, G, N));
-    if (b0.W < 2 || b0.D < 2 || b0.H < 2) return null;
-    var fam = neighbours(rng, b0), b = fam.length && rng.chance(0.85) ? fam[rint(rng, 0, fam.length - 1)] : b0;
+    // is then neither the smallest nor the most typical one by construction). The shown structure
+    // keeps the level's cube count (v1.2: the labels hold).
+    // The band draws its structure straight from the enumerated list and its foils from every drawing
+    // a structure in the same box can have (bandDrawings), so no parent is needed there.
+    var b0 = band ? bandStructure(rng, p.grid, MISSING[p.missing], p.foil) : boxOf(VL().randomStructure(rng, G, N));
+    if (!b0 || (!band && (b0.W < 2 || b0.D < 2 || b0.H < 2))) return null;
+    function fits(s) { var n = cubeCount(s); return n >= win[0] && n <= win[1]; }
+    var fam = band ? [] : neighbours(rng, b0), famIn = fam.filter(fits);
+    var b = band ? b0 : famIn.length && rng.chance(0.85) ? famIn[rint(rng, 0, famIn.length - 1)] : fits(b0) ? b0 : null;
+    if (!b) { stats.noFit++; return null; }
     var miss = MISSING[p.missing], views = {}, given = {};
     VIEWS.forEach(function (v) { views[v] = drawView(b, v); if (v !== miss) given[v] = views[v]; });
-    var res = search(given, b.W, b.H, b.D);
+    var bs = band ? bandSearch(given, b.W, b.H, b.D, miss) : null, res = bs ? bs.res : search(given, b.W, b.H, b.D);
     stats.nodes += res.nodes;
     if (res.over) { stats.over++; return null; }
-    var poss = possibleViews(res, b.W, b.H, b.D, miss), keyG = views[miss], keyCode = codeOf(keyG);
+    var poss = bs ? bs.poss : possibleViews(res, b.W, b.H, b.D, miss), keyG = views[miss], keyCode = codeOf(keyG);
     if (!poss[keyCode]) return null;
+    if (band && counts(keyG).dotted) return null; // the band's key has no dotted line
     var pool = [], seen = {};
     seen[keyCode] = 1;
     function admit(g, src) {
@@ -629,13 +737,29 @@
       seen[c] = 1;
       pool.push({ g: g, code: c, kind: kindOf(keyG, g), src: src, d: gdist(keyG, g) });
     }
-    [b0].concat(fam, neighbours(rng, b)).forEach(function (nb) { if (nb !== b) admit(drawView(nb, miss), 'neighbour'); });
-    if (miss !== 'top') flips(keyG).forEach(function (g) { admit(g, 'flip'); });
+    if (band) { // solid lines only; the level's kind; the 40 nearest to the key before the costlier tests
+      var wantOutline = FOILS[p.foil] === 'outline', near = [];
+      bandDrawings(b.W, b.D, miss).forEach(function (x) {
+        if (x.dotted || x.code === keyCode || poss[x.code]) return;
+        if ((kindOf(keyG, x.g) === 'outline') !== wantOutline) return;
+        near.push({ x: x, d: gdist(keyG, x.g) });
+      });
+      near.sort(function (u, v) { return u.d - v.d; }).slice(0, 40).forEach(function (u) { admit(u.x.g, 'box'); });
+    }
+    else [b0].concat(fam, neighbours(rng, b)).forEach(function (nb) { if (nb !== b) admit(drawView(nb, miss), 'neighbour'); });
+    if (miss !== 'top' && !band) flips(keyG).forEach(function (g) { admit(g, 'flip'); });
     var level = FOILS[p.foil], cands, need = null;
     // At the dashes level a "lines" foil can come with its own flip, so the key's line layout is not
     // the only one shared by two options (the "lines only" solvers).
     if (level === 'dashes' && miss !== 'top') rshuffle(rng, pool.filter(function (o) { return o.kind === 'lines'; })).slice(0, 6).forEach(function (o) { flips(o.g).forEach(function (g) { admit(g, 'flip2'); }); });
+    // The band: no foil that only the exhaustive search rejects (each fails the hull or the line test).
+    // No option on the band has a dotted line (the key never does), so dotted lines are no cue there.
+    if (band) pool = pool.filter(function (o) { var t = Object.assign({}, views); t[miss] = o.g; return !counts(o.g).dotted && (hullFails(t.top, t.front, t.end, b.W, b.H, b.D) || alignFails(t.top, t.front, t.end)); });
     if (level === 'outline') cands = pool.filter(function (o) { return o.kind === 'outline'; });
+    else if (band) { // same outline, other lines; the subtlest level takes the closest of them
+      cands = pool.filter(function (o) { return o.kind !== 'outline' && (level === 'lines' || o.d <= 3); });
+      if (level === 'lines') need = function (s) { return s.filter(function (o) { return o.kind === 'lines'; }).length >= 2; };
+    }
     else {
       cands = pool.filter(function (o) { return o.kind !== 'outline'; });
       if (level === 'lines') need = function (s) { return s.filter(function (o) { return o.kind === 'lines'; }).length >= 2; };
@@ -647,9 +771,15 @@
       };
       else cands = cands.filter(function (o) { return o.d <= 3; });
     }
-    if (cands.length < 3) return null;
-    var set = chooseFoils(rng, keyG, cands, need, Object.keys(given).map(function (v) { return given[v]; }));
-    if (!set) return null;
+    if (cands.length < 3) { stats.fewCands++; return null; }
+    // The band's pool holds every drawing of the box, mostly far from the key, which would leave the
+    // key the odd one out: the chooser sees the nearest eight and five others.
+    if (band && cands.length > 13) {
+      var near = cands.slice().sort(function (x, y) { return x.d - y.d; });
+      cands = near.slice(0, 8).concat(rshuffle(rng, near.slice(8)).slice(0, 5));
+    }
+    var set = chooseFoils(rng, keyG, cands, need, Object.keys(given).map(function (v) { return given[v]; }), band && !relaxed);
+    if (!set) { stats.noSet++; return null; }
     var perm = rshuffle(rng, [0, 1, 2, 3]), givenPub = {};
     Object.keys(given).forEach(function (v) { givenPub[v] = pub(given[v]); });
     var options = perm.map(function (i) {
@@ -665,9 +795,9 @@
   }
 
   /* ------------------------------------------------------------ validate (independent) */
-  function okRows(item) {
+  function okRows(item, band) {
     var W = item.W, H = item.H, D = item.D, r = item.heights;
-    if (![W, H, D].every(function (n) { return Number.isInteger(n) && n >= 1; }) || W > 4 || D > 4 || H > HMAX || W < 2 || D < 2) return 'bad box';
+    if (![W, H, D].every(function (n) { return Number.isInteger(n) && n >= 1; }) || W > 4 || D > 4 || H > HMAX || (!band && (W < 2 || D < 2))) return 'bad box';
     if (!Array.isArray(r) || r.length !== D) return 'heights must have D rows';
     var hm = new Int8Array(W * D);
     for (var z = 0; z < D; z++) {
@@ -682,8 +812,11 @@
   function validate(item) {
     try {
       if (!item || MISSING.indexOf(item.missing) < 0) return 'unknown missing view';
-      var b = okRows(item);
+      var pp = cleanParams(item.params), band = pp.cubes === 0, b = okRows(item, band);
       if (typeof b === 'string') return b;
+      var nc = cubeCount(b), win = CUBES[pp.cubes];
+      if (nc < win[0] || nc > win[1]) return 'the structure has ' + nc + ' cubes, outside its level\'s ' + win.join('–');
+      if (band && !bandBox(b, item.missing === 'front' ? 1 : pp.grid)) return 'starter: at most two high, in a box of at most ' + (pp.grid || item.missing === 'front' ? '3 × 3' : '2 × 3');
       var W = b.W, H = b.H, D = b.D, miss = item.missing, rows = item.heights, true3 = {}, given = {};
       VIEWS.forEach(function (v) { true3[v] = drawRay(rows, W, H, D, v); });
       var gv = VIEWS.filter(function (v) { return v !== miss; });
@@ -720,23 +853,27 @@
         t[miss] = og[i];
         var why = hullFails(t.top, t.front, t.end, W, H, D) ? 'hull' : alignFails(t.top, t.front, t.end) ? 'align' : 'search';
         if (o.why !== why) return 'option ' + i + ' gives the wrong reason (' + o.why + ', not ' + why + ')';
+        if (band && why === 'search') return 'starter: option ' + i + ' is ruled out by the exhaustive search alone';
       }
+      if (band && counts(true3[miss]).dotted) return 'starter: the key has a dotted line';
       return true;
     } catch (e) { return 'validate threw: ' + (e && e.message); }
   }
   function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
 
-  function attempt(rng, p) {
+  function attempt(rng, p, relaxed) {
     stats.tries++;
     var item;
-    try { item = build(rng, p); } catch (e) { stats.errors++; stats.lastError = String(e && e.stack || e); return null; }
+    try { item = build(rng, p, relaxed); } catch (e) { stats.errors++; stats.lastError = String(e && e.stack || e); return null; }
     if (!item) { stats.nulls++; return null; }
     item.ex = 'patviews';
     return item;
   }
   function generate(rng, params) {
-    var p = cleanParams(params), item = null;
-    for (var i = 0; i < 50 && !item; i++) item = attempt(i === 0 ? rng : rng.fork('retry' + i), p);
+    // The starter band rejects lopsided foil sets outright (chooseFoils, strict), so it gets more tries,
+    // the last 50 without that rule (a few band settings rarely find a balanced set).
+    var p = cleanParams(params), item = null, tries = p.cubes === 0 ? 150 : 50;
+    for (var i = 0; i < tries && !item; i++) item = attempt(i === 0 ? rng : rng.fork('retry' + i), p, i >= 100);
     if (!item) item = fallback(p);
     item.seed = rng.seed;
     item.params = params ? PX.util.deepCopy(params) : p;
@@ -744,10 +881,11 @@
   }
   function fallback(p) {
     stats.fallbacks++;
-    var tries = [p, { cubes: p.cubes, grid: 1, missing: p.missing, foil: 0 }, { cubes: 1, grid: 1, missing: 0, foil: 0 }];
+    var tries = [p, { cubes: p.cubes, grid: 1, missing: p.missing, foil: 0 }, { cubes: 2, grid: 1, missing: 0, foil: 0 }];
     for (var t = 0; t < tries.length; t++) {
       for (var k = 0; k < 400; k++) {
         var item = attempt(PX.rng(PX.rng.hash('patviews-fallback', tries[t].cubes, tries[t].grid, tries[t].missing, tries[t].foil, k)), tries[t]);
+        if (item) item.params = tries[t]; // validate reads the level (cube count, the starter band)
         if (item && validate(item) === true) { item.fallback = true; return item; }
       }
     }
@@ -761,12 +899,18 @@
   // Yolcu 2013 for counting errors growing with cubes), 4 × 4 grid +0.5, missing view front +0.4 and
   // top +0.8 (two side views carry no direct footprint), foils +0.6 per level (same outline, then a
   // solid/dotted difference: the DAT's subtlest option type, R3 §3.2). Range 4.0 logits.
+  // v1.2 (version 2; note D2 §3.7, §3.8): a starter level in front of 'cubes' (3–4 cubes at most two
+  // high, the structure drawn beside the views, no dotted line in the key, no foil that only the
+  // exhaustive search rejects), Δ = −1.6 against today's level 0 (hand-set, to be refitted from pooled
+  // exports): the floor moves from −2.2 to −3.8; older combinations keep their exact difficulty. The
+  // cube counts now hold for the shown structure. Range 5.6.
   PX.ex.define({
-    id: 'patviews', version: 1, code: 'EX-15', name: 'Missing View', short: 'Missing View',
+    id: 'patviews', version: 2, code: 'EX-15', name: 'Missing View', short: 'Missing View',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4, pat: true,
     requires: ['views'],
+    starter: { dim: 'cubes', levels: 1 },
     dims: [
-      { key: 'cubes', label: 'Cubes', levels: ['4–5', '6–7', '8–9', '10–12'], step: 0.5 },
+      { key: 'cubes', label: 'Cubes', levels: CUBE_LABELS.slice(), step: 0.5, at: [-1.6, 0, 0.5, 1.0, 1.5] },
       { key: 'grid', label: 'Grid', levels: ['3 × 3', '4 × 4'], step: 0.5 },
       { key: 'missing', label: 'Missing view', levels: MISSING.slice(), step: 0.4 },
       { key: 'foil', label: 'Foils', levels: ['outline', 'same outline', 'solid or dotted'], step: 0.6 },
@@ -779,6 +923,7 @@
       sameGrid: sameGrid, pub: pub, grid: grid, counts: counts, gdist: gdist, kindOf: kindOf, hullFails: hullFails, alignFails: alignFails,
       lineSet: lineSet, crossStyles: crossStyles, pairV: pairV, search: search, searchRay: searchRay, possibleViews: possibleViews, neighbours: neighbours,
       flips: flips, shares: shares, pickShare: pickShare, gdistLines: gdistLines, build: build, fallback: fallback, cleanParams: cleanParams,
+      cubeCount: cubeCount, bandBox: bandBox, bandStructure: bandStructure,
     },
   });
 })(window.PX);

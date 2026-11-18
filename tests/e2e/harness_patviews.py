@@ -24,9 +24,10 @@ EX, DEPS, DIR = 'patviews', ('views',), OUT / 'patviews'
 DIR.mkdir(parents=True, exist_ok=True)
 STEM = '.pv-stage'
 CASES = {  # name: (params, seed)
-    'end': ('cubes:1,grid:0,missing:0,foil:0', 3),
-    'front': ('cubes:2,grid:1,missing:1,foil:2', 5),
-    'top': ('cubes:3,grid:1,missing:2,foil:1', 7),
+    'band': ('cubes:0,grid:0,missing:0,foil:0', 13),  # v1.2: the starter band
+    'end': ('cubes:2,grid:0,missing:0,foil:0', 3),
+    'front': ('cubes:3,grid:1,missing:1,foil:2', 5),
+    'top': ('cubes:4,grid:1,missing:2,foil:1', 7),
 }
 DONE = """() => {
     const it = __harness.item, cells = document.querySelectorAll('.hx-grid .px-choice'), wrong = !__harness.last.result.correct;
@@ -119,7 +120,7 @@ def normal_speed(b, cons):
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=120000)
     pl = page.evaluate('() => __harness.played')
     C.ok(6000 <= pl['plannedMs'] <= 22000, f'show me plans 6-22 s at normal speed ({pl})')
-    open_item(page, EX, {'seed': 11, 'p': 'cubes:0,grid:0,missing:0,foil:0', 'fast': True}, DEPS, 'demo')
+    open_item(page, EX, {'seed': 13, 'p': 'cubes:0,grid:0,missing:0,foil:0', 'fast': True}, DEPS, 'demo')
     before = page.evaluate('() => __harness.played.finished')
     page.evaluate('() => { __harness.demo(); }')
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=40000)
