@@ -11,7 +11,20 @@
    (lib.view of the same height map) is traced over the picture line by line, the cubes fade, and
    the drawing flies onto the right option (toview) or onto each stem drawing (toobject, for the
    key structure and for a wrongly chosen one); count highlights the columns one by one with their
-   heights and ends on the top view. Every step's enter() sets the full state of its start. */
+   heights and ends on the top view. Every step's enter() sets the full state of its start.
+   v1.2 (docs/research/v1.2/D2-first-band.md §3.1; CONTRACT-v1.2 D):
+   - the starter level's scaffold: the faces seen from the asked side are shaded on the structure
+     (hatched quads in the target tone over the cubes' outlined faces: shape as well as colour);
+   - Try 1's step 2 done (ctx.assist = { outline: true }): the size of the asked view's outline, a
+     dashed box of w × h cells with its cell grid, under the stage's label (not its shape, which
+     would match the key alone);
+   - show me (toview) carries out the "Outline first, then inner lines" card, its captions numbered
+     by the card's steps: the camera turns to the asked side with its faces shaded, the outline is
+     drawn and the drawings of another size are crossed out, then the inner lines are traced and the
+     drawing lands on the key; after a wrong pick, a direction foil is shown from its own side, a
+     mirror foil as the key's drawing flipping in place, a neighbour's differing lines marked on both
+     drawings;
+   - rule figures (drawRule): the front and the arrow, lines only at steps, the top view's front. */
 (function (PX) {
   'use strict';
 
@@ -136,12 +149,28 @@
     a.userData.head.position.set(hp[0], hp[1], hp[2]);
   }
 
+  // A hatch for the shaded faces (white with grey diagonal stripes, tinted by the material).
+  function hatchTexture() {
+    var c = doc.createElement('canvas');
+    c.width = c.height = 32;
+    var x = c.getContext('2d');
+    if (!x) return null;
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, 32, 32);
+    x.strokeStyle = '#8a8a8a'; x.lineWidth = 4;
+    x.beginPath();
+    for (var k = -32; k <= 32; k += 11) { x.moveTo(k, 32); x.lineTo(k + 32, 0); }
+    x.stroke();
+    var t = new T.CanvasTexture(c);
+    if (T.SRGBColorSpace) t.colorSpace = T.SRGBColorSpace;
+    return t;
+  }
   function makeMaterials() {
     return {
       plate: new T.MeshBasicMaterial(),
       grid: new T.LineBasicMaterial(),
       edge: new T.MeshBasicMaterial(),
       arrow: new T.MeshLambertMaterial(),
+      tint: new T.MeshBasicMaterial({ map: hatchTexture(), transparent: true, opacity: 0.6, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     };
   }
   function tintMaterials(M) {
@@ -151,7 +180,41 @@
     M.edge.color.copy(c.edge);
     M.arrow.color.copy(c.target);
     M.arrow.emissive.copy(c.target).multiplyScalar(0.35);
+    M.tint.color.copy(c.target).lerp(c.ground, dark ? 0.2 : 0.35);
   }
+
+  // The faces the asked view is made of (v1.2): the top of every column; from the front (right),
+  // for each column (row) and height the nearest cube's front (right) face. Centres in world units.
+  function seenFaces(hm, dir) {
+    var G = hm.length, o = (G - 1) / 2, H = maxH(hm), out = [], x, y, z;
+    if (dir === 'top') {
+      for (z = 0; z < G; z++) for (x = 0; x < G; x++) if (hm[z][x] > 0) out.push({ p: [x - o, hm[z][x], z - o], n: 'y' });
+    } else if (dir === 'front') {
+      for (x = 0; x < G; x++) for (y = 0; y < H; y++) for (z = G - 1; z >= 0; z--) if (hm[z][x] > y) { out.push({ p: [x - o, y + 0.5, z - o + 0.5], n: 'z' }); break; }
+    } else if (dir === 'right') {
+      for (z = 0; z < G; z++) for (y = 0; y < H; y++) for (x = G - 1; x >= 0; x--) if (hm[z][x] > y) { out.push({ p: [x - o + 0.5, y + 0.5, z - o], n: 'x' }); break; }
+    }
+    return out;
+  }
+  function makeTint(hm, dir) {
+    var g = new T.Group(), geo = new T.PlaneGeometry(0.94, 0.94), E = 0.004;
+    seenFaces(hm, dir).forEach(function (f) {
+      var m = new T.Mesh(geo, st.mats.tint);
+      if (f.n === 'y') { m.rotation.x = -Math.PI / 2; m.position.set(f.p[0], f.p[1] + E, f.p[2]); }
+      else if (f.n === 'z') m.position.set(f.p[0], f.p[1], f.p[2] + E);
+      else { m.rotation.y = Math.PI / 2; m.position.set(f.p[0] + E, f.p[1], f.p[2]); }
+      g.add(m);
+    });
+    return g;
+  }
+  function tintOff() { if (st && st.tint) { dropTree(st.tint); st.tint = null; } }
+  function tintOn(hm, dir) {
+    tintOff();
+    if (!st.v3 || !dir || !DIRS[dir]) return;
+    st.tint = makeTint(hm, dir);
+    st.scene.add(st.tint);
+  }
+  function isBandItem(item) { return !!(item && item.variant === 'toview' && item.params && lib.isBand && lib.isBand(lib.cleanParams(item.params))); }
 
   // Points that a frame must contain: the plate, the structure's box, the arrow.
   function framePoints(G, H, ends) {
@@ -356,7 +419,7 @@
 
   function describe(item) {
     var n = lib.total(item.heights);
-    if (item.variant === 'toview') return 'A structure of ' + n + ' cubes on a ' + item.grid + ' by ' + item.grid + ' grid, seen from the front right corner, with an arrow from the ' + item.view + '. Which of four line drawings is its ' + item.view + ' view?';
+    if (item.variant === 'toview') return 'A structure of ' + n + ' cubes on a ' + item.grid + ' by ' + item.grid + ' grid, seen from the front right corner, with an arrow from the ' + item.view + '. ' + (isBandItem(item) ? cap('tint', { view: item.view }) + ' ' : '') + 'Which of four line drawings is its ' + item.view + ' view?';
     if (item.variant === 'toobject') return 'The top, front and right views of a structure. Which of four structures, seen from the front right corner, has exactly these views?';
     return 'A structure of cubes on a ' + item.grid + ' by ' + item.grid + ' grid, seen from the front right corner; every cube shows at least one face. How many cubes are there?';
   }
@@ -386,7 +449,7 @@
     ctx.host.appendChild(root);
     st = { ctx: ctx, root: root, stage: stage, d3: d3, drawSvg: drawSvg, ink: ink, label: label, tags: tags, caption: caption,
       verdict: verdict, hint: hint, desc: desc, v3: null, scene: null, cam: null, mats: null, group: null, plate: null, arrow: null,
-      item: null, optItem: null, opts: [], offs: [], cur: null, mode: 'iso', colTags: [], fly: null, opt: null };
+      item: null, optItem: null, opts: [], offs: [], cur: null, mode: 'iso', colTags: [], fly: null, opt: null, tint: null, assistEl: null, assist: false };
     if (!S3.available()) {
       stage.appendChild(h('p.ex-unavailable', { role: 'alert' }, 'This exercise needs 3D graphics, which are not available here: ' + S3.reason() + '.'));
       return;
@@ -408,11 +471,14 @@
     os.background = S3.colors().ground.clone();
     S3.lights(os);
     st.opt = { scene: os, cam: new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 2 * CAM_D), group: null, plate: null };
-    // Warm-up: compile the shaders and touch the snapshot path now, not in the first trial.
+    // Warm-up: compile the shaders (the shaded-face tint too) and touch the snapshot path now, not
+    // in the first trial.
     showStructure([[1, 0], [0, 0]], 'top');
+    tintOn([[1, 0], [0, 0]], 'top');
     st.cur = isoState([[1, 0], [0, 0]]);
     placeCam(st.cam, st.cur.b, st.cur.fr, 1, 1);
     S3.compile(st.scene, st.cam);
+    tintOff();
     st.cur = null;
   }
 
@@ -494,24 +560,47 @@
     st.hint.hidden = item.variant !== 'toobject';
     clearInk();
     clearColTags();
+    assistFrame(item, ctx && ctx.assist);
     if (!st.v3) return timing.nextPaint();
     trialState();
     return timing.nextPaint();
   }
-  // The trial picture (also the start of show me and demo).
-  function trialState() {
-    var item = st.item;
-    clearInk();
-    if (isoLike(item)) {
-      setMode('iso');
-      showStructure(item.heights, item.variant === 'toview' ? item.view : null);
-      st.cur = isoState(item.heights);
-      render();
-    } else {
-      setMode('draw');
-      st.cur = null;
-      Object.keys(st.tags).forEach(function (k) { st.tags[k].hidden = true; });
-    }
+
+  /* ---------- Try 1's first step done: the asked view's outline (v1.2) ---------- */
+
+  // The outline (silhouette) of a set of filled cells as unit segments [x0, y0, x1, y1] (cells, y up).
+  function outlineEdges(cells) {
+    var on = {}, out = [];
+    cells.forEach(function (c) { on[c[0] + ',' + c[1]] = true; });
+    cells.forEach(function (c) {
+      var x = c[0], y = c[1];
+      if (!on[(x - 1) + ',' + y]) out.push([x, y, x, y + 1]);
+      if (!on[(x + 1) + ',' + y]) out.push([x + 1, y, x + 1, y + 1]);
+      if (!on[x + ',' + (y - 1)]) out.push([x, y, x + 1, y]);
+      if (!on[x + ',' + (y + 1)]) out.push([x, y + 1, x + 1, y + 1]);
+    });
+    return out;
+  }
+  // ctx.assist = { outline: true } on a toview item: the strategy card's step 2 done, the size of the
+  // asked view's outline: a dashed box of w × h cells with its cell grid, under the stage's label.
+  // Only the size: the outline's own shape would match the key alone and leave nothing to do.
+  function assistFrame(item, assist) {
+    if (st.assistEl && st.assistEl.parentNode) st.assistEl.parentNode.removeChild(st.assistEl);
+    st.assistEl = null;
+    st.assist = !!(assist && assist.outline && item.variant === 'toview');
+    if (!st.assist) return;
+    var d = item.options[item.key].drawing;
+    var pad = 0.3, svg = SV.el('svg', { viewBox: [-pad, -pad, d.w + 2 * pad, d.h + 2 * pad], class: 'ex-views-assist-svg', 'aria-hidden': 'true', focusable: 'false' });
+    svg.style.width = (d.w + 2 * pad) + 'em';
+    var grid = [], i;
+    for (i = 1; i < d.w; i++) grid.push([i, 0, i, d.h]);
+    for (i = 1; i < d.h; i++) grid.push([0, i, d.w, i]);
+    svg.appendChild(SV.el('path', { d: linesPath({ lines: grid }, 0, d.h, 1), class: 'ex-views-assist-grid' }));
+    svg.appendChild(SV.el('path', { d: linesPath({ lines: [[0, 0, d.w, 0], [d.w, 0, d.w, d.h], [d.w, d.h, 0, d.h], [0, d.h, 0, 0]] }, 0, d.h, 1), class: 'ex-views-assist-line' }));
+    st.assistEl = h('div.ex-views-assist', h('span.ex-views-assist-label', cap('assistLabel', { w: d.w, h: d.h })), svg);
+    st.stage.appendChild(st.assistEl);
+    st.caption.textContent = cap('assist', { w: d.w, h: d.h });
+    st.desc.textContent += ' ' + cap('assist', { w: d.w, h: d.h });
   }
 
   /* ---------- reveal: what every option is, ≤ 700 ms ---------- */
@@ -574,6 +663,8 @@
       var I = a + vc.i0, J = b + vc.j0;
       if (v === 'top') return [I - o - 0.5, top, G - 0.5 - J - o];
       if (v === 'front') return [I - o - 0.5, J, G / 2];
+      if (v === 'back') return [G - 0.5 - I - o, J, -G / 2];   // seen from −z: the drawing's x runs along −x
+      if (v === 'left') return [-G / 2, J, I - o - 0.5];       // seen from −x: the drawing's x runs along +z
       return [G / 2, J, G - 0.5 - I - o];
     }
     var cur = viewState(hm, v), r = rect3(), p0 = toScreen(world(0, 0), cur.b, cur.fr, r), p1 = toScreen(world(1, 0), cur.b, cur.fr, r);
@@ -690,28 +781,98 @@
 
   function pickedOf(item, response) { return typeof response === 'number' && response >= 0 && response < item.options.length ? response : -1; }
 
+  // Options crossed out (greyed with a diagonal stroke; a shape as well as a tone): out[i] for option i.
+  function crossOut(out) {
+    st.opts.forEach(function (o, i) {
+      if (!o) return;
+      var b = o.el.closest ? o.el.closest('.px-choice') : null;
+      if (b) b.classList.toggle('ex-views-out', !!(out && out[i]));
+    });
+  }
+  // The outline of a view over the straight-on picture (dashed, thick), the cubes faded by cover.
+  function inkOutline(hm, v, cover) {
+    clearInk();
+    var o = stageOrigin(), A = drawingMap(hm, v), cells = viewCells(hm, v, false).cells;
+    if (cover > 0) st.ink.appendChild(SV.el('rect', { x: st.d3.offsetLeft, y: st.d3.offsetTop, width: st.v3.width, height: st.v3.height, class: 'ex-views-cover', style: 'opacity:' + cover.toFixed(3) }));
+    st.ink.appendChild(SV.el('path', { d: mapPath({ lines: outlineEdges(cells) }, A, undefined, o[0], o[1]), class: 'ex-views-trace ex-views-trace--outline' }));
+  }
+  // A drawing laid on option i (inside its own picture), as a group that can be flipped about its centre.
+  function overlayOption(i, d, cls) {
+    var o = st.opts[i];
+    if (!o || !o.pic) return null;
+    var g = SV.el('g', { class: 'ex-views-overlay-g' });
+    g.appendChild(SV.el('path', { d: linesPath(d, o.pic.ox, o.pic.oy, 1), class: cls || 'ex-views-ghost' }));
+    o.pic.g.appendChild(g);
+    o.marks = (o.marks || []).concat([g]);
+    return { g: g, cx: o.pic.ox + d.w / 2 };
+  }
+  function clearOptionMarks() {
+    st.opts.forEach(function (o) { if (o && o.marks) { o.marks.forEach(function (g) { if (g.parentNode) g.parentNode.removeChild(g); }); o.marks = []; } });
+  }
+
+  // toview: the "Outline first, then inner lines" card, step by step (note D2 §3.1).
   function toviewSteps(item, response) {
     var v = item.view, hm = item.heights, d = lib.view(hm, v), key = item.key, picked = pickedOf(item, response);
-    var n = d.lines.length;
+    var n = d.lines.length, kd = item.options[key].drawing;
+    var sameSize = item.options.map(function (o, i) { return i === key || (o.drawing.w === kd.w && o.drawing.h === kd.h); });
+    var others = sameSize.filter(function (x, i) { return x && i !== key; }).length;
+    var drop = sameSize.map(function (x) { return !x; });
     var traced = function () { moveCam(hm, v, 1); inkDraw(d, drawingMap(hm, v), n, 0.86); };
+    function begin(tint) { reset(); clearOptionMarks(); crossOut(null); trialState(); if (tint) tintOn(hm, v); }
     var list = [
-      { ms: 1600, caption: cap('look', { view: v }), enter: function () { reset(); trialState(); st.tags.ask.classList.add('is-pointed'); }, exit: function () { st.tags.ask.classList.remove('is-pointed'); } },
-      { ms: 1900, caption: cap('move', { view: v }), enter: function () { reset(); trialState(); }, update: function (k) { moveCam(hm, v, ease(k)); } },
+      { ms: 1600, caption: cap('look', { view: v }), enter: function () { begin(isBandItem(item)); st.tags.ask.classList.add('is-pointed'); }, exit: function () { st.tags.ask.classList.remove('is-pointed'); } },
+      { ms: 2100, caption: cap('move', { view: v }), enter: function () { begin(true); }, update: function (k) { moveCam(hm, v, ease(k)); } },
       {
-        ms: 1300 + 90 * n, caption: cap('trace'),
-        enter: function () { reset(); trialState(); moveCam(hm, v, 1); },
+        ms: 2400, caption: cap(others ? 'outlineAll' : 'outline', { w: kd.w, h: kd.h }),
+        enter: function () { begin(false); moveCam(hm, v, 1); crossOut(drop); },
+        update: function (k) { inkOutline(hm, v, 0.5 * Math.min(1, k * 2)); },
+      },
+      {
+        ms: 1300 + 90 * n, caption: cap('inner', { what: cap(v === 'top' ? 'innerTop' : 'innerSide') }),
+        enter: function () { begin(false); moveCam(hm, v, 1); crossOut(drop); },
         update: function (k) { inkDraw(d, drawingMap(hm, v), Math.ceil(Math.min(1, k * 1.15) * n), 0.86 * Math.max(0, (k - 0.55) / 0.45)); },
       },
       {
         ms: 1400, caption: cap('land', { n: key + 1 }),
-        enter: function () { reset(); trialState(); traced(); flyBegin(d, drawingMap(hm, v), optionMap(key)); },
+        enter: function () { begin(false); crossOut(drop); traced(); flyBegin(d, drawingMap(hm, v), optionMap(key)); },
         update: function (k) { flyAt(ease(k)); },
         exit: function () { landedOption(key, d); focusOption(key); },
       },
     ];
     if (picked >= 0 && picked !== key) {
-      var o = item.options[picked], why = o.kind === 'direction' ? 'whyDirection' : o.kind === 'mirror' ? 'whyMirror' : 'whyNeighbour';
-      list.push({ ms: 2400, caption: cap(why, { n: picked + 1, from: o.from || '' }), enter: function () { reset(); trialState(); traced(); landedOption(key, d); focusOption(picked); } });
+      var o = item.options[picked];
+      if (o.kind === 'direction' && o.from && DIRS[o.from]) {
+        // the foil seen from its own side: the camera turns there, its drawing is traced and laid on it
+        var df = lib.view(hm, o.from), nf = df.lines.length;
+        list.push({ ms: 2200, caption: cap('whyDirectionTurn', { n: picked + 1, from: o.from }), enter: function () { begin(false); landedOption(key, d); focusOption(picked); }, update: function (k) { moveCam(hm, o.from, ease(k)); } });
+        list.push({
+          ms: 1200 + 60 * nf, caption: cap('whyDirectionTurn', { n: picked + 1, from: o.from }),
+          enter: function () { begin(false); landedOption(key, d); moveCam(hm, o.from, 1); focusOption(picked); },
+          update: function (k) { inkDraw(df, drawingMap(hm, o.from), Math.ceil(Math.min(1, k * 1.2) * nf), 0.86 * Math.max(0, (k - 0.5) / 0.5)); },
+          exit: function () { overlayOption(picked, df); },
+        });
+      } else if (o.kind === 'mirror') {
+        // the key's drawing laid on the picked one, flipping left to right in place
+        var flip = null;
+        list.push({
+          ms: 2400, caption: cap('whyMirrorFlip', { n: picked + 1 }),
+          enter: function () { begin(false); traced(); landedOption(key, d); focusOption(picked); flip = overlayOption(picked, d); },
+          update: function (k) { if (flip) flip.g.setAttribute('transform', 'translate(' + flip.cx + ' 0) scale(' + (1 - 2 * ease(k)).toFixed(3) + ' 1) translate(' + (-flip.cx) + ' 0)'); },
+        });
+      } else {
+        // a neighbouring structure: the unit edges each drawing has and the other lacks, on both
+        var pd = o.drawing, a = unitEdges(kd), b = unitEdges(pd), onKey = [], onPicked = [];
+        Object.keys(a).forEach(function (k2) { if (!b[k2]) onKey.push(a[k2]); });
+        Object.keys(b).forEach(function (k2) { if (!a[k2]) onPicked.push(b[k2]); });
+        list.push({
+          ms: 2600, caption: cap('whyNeighbourLines', { n: picked + 1 }),
+          enter: function () {
+            begin(false); traced(); landedOption(key, d); focusOption(picked);
+            overlayOption(key, { lines: onKey, w: kd.w }, 'ex-views-diff');
+            overlayOption(picked, { lines: onPicked, w: pd.w }, 'ex-views-diff');
+          },
+        });
+      }
     }
     return list;
   }
@@ -840,18 +1001,20 @@
   function showMe(item, response, ctx) {
     if (!st || !st.v3 || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    return play(steps(item, response), ctx, { name: 'show-me' });
+    return play(steps(item, response), ctx, { name: 'show-me' }).then(cleanUp, cleanUp);
   }
+  // After show me or a demo: no crossed-out options, the starter level's tint as in the trial.
+  function cleanUp() { if (st) { crossOut(null); if (st.item && isBandItem(st.item)) tintOn(st.item.heights, st.item.view); else tintOff(); render(); } }
 
   // Tutorial: the parts first, then the same solution.
   function demo(item, ctx, caption) {
     if (!st || !st.v3 || st.item !== item) return Promise.resolve();
-    function part(fn) { return function () { reset(); trialState(); if (fn) fn(); }; }
+    function part(fn) { return function () { reset(); clearOptionMarks(); crossOut(null); trialState(); if (fn) fn(); }; }
     var intro = [{ ms: 1800, caption: cap(item.variant === 'toobject' ? 'threeViews' : 'structure'), enter: part(function () { st.label.classList.add('is-pointed'); }) }];
     if (item.variant === 'toview') intro.push({ ms: 2000, caption: cap('arrow'), enter: part(function () { st.tags.ask.classList.add('is-pointed'); }) });
     intro.push({ ms: 1800, caption: cap('options' + upper(item.variant)), enter: part(null) });
     revealStage(ctx);
-    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null });
+    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null }).then(cleanUp, cleanUp);
   }
 
   function unmount() {
@@ -860,11 +1023,67 @@
     clearColTags();
     st.offs.forEach(function (off) { off(); });
     [st.group, st.opt && st.opt.group].forEach(function (g) { if (g) S3.disposeTree(g); });
-    [st.plate, st.arrow, st.opt && st.opt.plate].forEach(dropTree);
+    [st.plate, st.arrow, st.opt && st.opt.plate, st.tint].forEach(dropTree);
+    if (st.mats && st.mats.tint && st.mats.tint.map) st.mats.tint.map.dispose();
     Object.keys(st.mats || {}).forEach(function (k) { st.mats[k].dispose(); });
     if (st.v3) st.v3.detach();
     if (st.root.parentNode) st.root.parentNode.removeChild(st.root);
     st = null;
+  }
+
+  /* ---------- rule figures (the rules card; CONTRACT-v1.2 D) ---------- */
+
+  // A small isometric sketch in SVG (the 3D stage is for the item): x to the lower right, z to the
+  // lower left, y up, as the trial camera sees the structure from the front-right corner.
+  function iso(P) { return [(P[0] - P[2]) * 0.866, -P[1] + (P[0] + P[2]) * 0.5]; }
+  function isoCube(g, x, y, z) {
+    var F = function (pts, cls) { g.appendChild(SV.el('path', { d: SV.pathData(pts.map(iso), true), class: 'ex-views-rf ex-views-rf--' + cls })); };
+    F([[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]], 'top');
+    F([[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]], 'front');
+    F([[x + 1, y, z], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x + 1, y + 1, z]], 'right');
+  }
+  function fitSvg(g, pts) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    pts.forEach(function (p) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); });
+    var m = 0.25, svg = SV.el('svg', { viewBox: [x0 - m, y0 - m, x1 - x0 + 2 * m, y1 - y0 + 2 * m], class: 'ex-views-rule-svg', 'aria-hidden': 'true', focusable: 'false' });
+    svg.appendChild(g);
+    return svg;
+  }
+  function drawRule(el, fig) {
+    if (!el) return;
+    var g = SV.el('g'), pts = [], svg;
+    if (fig === 'front') {
+      // a base with its thick front edge, one cube on it, the arrow from the front
+      var base = [[0, 0, 0], [2, 0, 0], [2, 0, 2], [0, 0, 2]];
+      g.appendChild(SV.el('path', { d: SV.pathData(base.map(iso), true), class: 'ex-views-rf ex-views-rf--base' }));
+      g.appendChild(SV.el('path', { d: SV.pathData([[0, 0, 2], [2, 0, 2]].map(iso)), class: 'ex-views-rf-thick' }));
+      isoCube(g, 0.5, 0, 0.5);
+      var a0 = iso([1, 0.5, 3.6]), a1 = iso([1, 0.5, 2.15]);
+      g.appendChild(SV.el('path', { d: 'M' + a0[0] + ' ' + a0[1] + 'L' + a1[0] + ' ' + a1[1], class: 'ex-views-rf-arrow' }));
+      g.appendChild(SV.el('path', { d: SV.pathData([iso([0.75, 0.5, 2.55]), a1, iso([1.25, 0.5, 2.55])]), class: 'ex-views-rf-arrow' }));
+      pts = base.map(iso).concat([a0, iso([0.5, 1, 0.5])]);
+      svg = fitSvg(g, pts);
+    } else if (fig === 'flat') {
+      // a column of two in front, one cube behind to its right; below, its front view: a line where
+      // the surface steps farther, none between faces at the same depth
+      isoCube(g, 1, 0, 0); isoCube(g, 0, 0, 1); isoCube(g, 0, 1, 1);
+      var ox = -1, oy = 4.4, d = { w: 2, h: 2, lines: [[0, 0, 0, 2], [0, 2, 1, 2], [1, 2, 1, 1], [1, 1, 2, 1], [2, 1, 2, 0], [0, 0, 2, 0]] };
+      g.appendChild(SV.el('path', { d: cellsPath([[0, 0], [0, 1], [1, 0]], ox, oy, 1), class: 'ex-views-fill' }));
+      g.appendChild(SV.el('path', { d: linesPath(d, ox, oy, 1), class: 'ex-views-rf-line' }));
+      g.appendChild(SV.el('path', { d: linesPath({ lines: [[1, 0, 1, 1]] }, ox, oy, 1), class: 'ex-views-rf-step' }));
+      pts = [iso([0, 2, 1]), iso([0, 0, 2]), iso([2, 0, 1]), iso([1, 1, 0]), [ox, oy], [ox + 2, oy - 2]];
+      svg = fitSvg(g, pts);
+    } else if (fig === 'top') {
+      // a top view: the front (thick) at the bottom of the drawing
+      var t = { w: 2, h: 2, lines: [[0, 0, 0, 2], [0, 2, 1, 2], [1, 2, 1, 1], [1, 1, 2, 1], [2, 1, 2, 0], [0, 0, 2, 0], [1, 0, 1, 1]] };
+      g.appendChild(SV.el('path', { d: cellsPath([[0, 0], [1, 0], [0, 1]], 0, 2, 1), class: 'ex-views-fill' }));
+      g.appendChild(SV.el('path', { d: linesPath(t, 0, 2, 1), class: 'ex-views-rf-line' }));
+      g.appendChild(SV.el('path', { d: 'M-0.15 2L2.15 2', class: 'ex-views-rf-thick' }));
+      g.appendChild(SV.text(1, 2.45, 'front', { class: 'ex-views-rf-text' }));
+      pts = [[-0.2, 0], [2.2, 2.7]];
+      svg = fitSvg(g, pts);
+    } else return;
+    el.appendChild(h('div.ex-views.ex-views-rulefig', svg));
   }
 
   PX.ex.view('views', {
@@ -880,6 +1099,7 @@
     showMe: showMe,
     demo: demo,
     unmount: unmount,
+    drawRule: drawRule,
     // for tests: the steps show-me would play (same model as the key)
     steps: function (item, response) { return st && st.item === item ? steps(item, response) : []; },
   });

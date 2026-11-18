@@ -387,7 +387,7 @@ function testLearn(t, PX, def) {
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
   const caps = ['structure', 'threeViews', 'arrow', 'optionsToview', 'optionsToobject', 'optionsCount', 'look', 'move', 'trace', 'land',
     'whyDirection', 'whyMirror', 'whyNeighbour', 'objIntro', 'objMove', 'objTrace', 'objMatch', 'objWrong', 'objDiffer', 'countIntro', 'countCol', 'countTop', 'countKey',
-    'tint', 'outline', 'outlineAll', 'inner', 'innerTop', 'innerSide', 'whyDirectionTurn', 'whyMirrorFlip', 'whyNeighbourLines', 'assist'];
+    'tint', 'outline', 'outlineAll', 'inner', 'innerTop', 'innerSide', 'whyDirectionTurn', 'whyMirrorFlip', 'whyNeighbourLines', 'assist', 'assistLabel'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   t.ok(typeof L.bridge === 'string' && /has not been shown to improve grades or job performance/.test(L.bridge), 'a "where it is used" line with its limitation beside it');
   const o = L.offscreen || {};
