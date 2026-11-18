@@ -99,6 +99,10 @@ export async function run(t) {
   t.ok(rep.iterations <= 3 && Math.abs(rep.gain.comp.mean - a.gain.comp.mean) < 1e-3 * a.gain.comp.sd && Math.abs(rep.gain.comp.sd - a.gain.comp.sd) < 1e-3 * a.gain.comp.sd,
     `a warm start at the mode stays there (${rep.iterations} iterations; readouts within 0.001 SD)`);
   t.eq(T.fit({ occasions: sim }).beta, a.beta, 'deterministic');
+  const withRt = sim.map((o) => ({ ...o, blocks: o.blocks.map((bl) => ({ ...bl, items: bl.items.map((x) => [x[0], x[1], x[2], 4500]) })) }));
+  t.eq(T.fit({ occasions: withRt }).beta, a.beta, 'a stored response time (the 4th element, as rec.assess keeps it) changes nothing');
+  const steep = sim.map((o) => ({ ...o, blocks: o.blocks.map((bl) => ({ ...bl, items: bl.items.map((x) => [x[0], x[1], x[2], null, 1.5]) })) }));
+  t.ok(T.fit({ occasions: steep }).gain.comp.sd < a.gain.comp.sd, 'a steeper item slope (the 5th element) carries more information');
 
   t.section('a block on the guessing floor');
   const floor = simulateItems(PX, 8);

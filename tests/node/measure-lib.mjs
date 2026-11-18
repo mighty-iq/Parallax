@@ -222,7 +222,7 @@ export function simulateLearner(T, spec, seed) {
         // and spec.shift(strand, day, h) adds that strand's own change (a layer's effect, strand deviations)
         if (spec.strands && id === spec.strands.probe) { strand = (e.seen + k) % spec.strands.n; th += spec.shift(strand, o.day, hT); }
         const ok = r.u() < pRight(th, bT, g, a) ? 1 : 0;
-        items.push(strand >= 0 ? [b, g, ok, a, strand] : [b, g, ok, a]);
+        items.push(strand >= 0 ? [b, g, ok, null, a, strand] : [b, g, ok, null, a]); // [b, g, ok, rtMs, a(, strand)]
         for (let i = 0; i < GRID.length; i++) { const p = pRight(GRID[i], b, g, a), l = Math.log(ok ? p : 1 - p); lw[i] += l; ll[i] += l; }
       }
       e.n += m; e.nt += m; e.seen += m; out.items += m;
@@ -245,9 +245,9 @@ export function simulateLearner(T, spec, seed) {
     let isMilestone = false;
     if (ms && ms.index > doneM && f.segment.runInDone && ms.day <= spec.lastMilestone) {
       doneM = ms.index; isMilestone = true;
-      const v = {};
-      for (const rd of Object.keys(f.gain)) v[rd] = T.verdict(f, ms, rd);
-      out.verdicts[ms.day] = { day: o.day, words: v };
+      const v = {}, pv = {};
+      for (const rd of Object.keys(f.gain)) { v[rd] = T.verdict(f, ms, rd); pv[rd] = f.gain[rd].p; }
+      out.verdicts[ms.day] = { day: o.day, words: v, p: pv };
     }
     if (!isMilestone && f.day <= spec.horizon && f.gain.comp) out.meterMax = Math.max(out.meterMax, f.gain.comp.p);
     if (reportSet.has(o.day)) {

@@ -20,3 +20,29 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   4. docs/dev/v1.2/measure-sim.md with every number and its settings.
 - Known snag: tests/node/run.mjs's load check fails any js/engine/*.js missing from its MANIFEST (W1-core's file),
   so trend.js lands together with a request line for the MANIFEST.
+
+## 2026-11-18 20:14 UTC: trend model done, battery running
+- Done: js/engine/trend.js (603f0c2, e4ab154) with tests/node/trend.test.mjs (52 checks, 0.2 s); the simulation
+  (tests/node/measure-sim.mjs, measure-lib.mjs, measure-cross.mjs). Request filed for the MANIFEST line (20:00 UTC).
+- Found and fixed in the trend model: (1) plain linearised iteration can cycle when a block sits on the guessing floor
+  and a flat level prior lets the level drift (a control level of −82 logits): now Fisher scoring with step halving on
+  the joint log posterior, and a weak level prior (3 SD); (2) with a flat gain prior a one-probe rung's gain runs off
+  on early blocks (separation) and the next items are aimed at the runaway: weak gain prior N(0, 5²) per rung; the
+  simulation also keeps item targets within ±3 population SD, as the app's item pool does.
+- Cross-check with the M1 spike passes (its block summaries reproduce its detectable gains within 3 %).
+- Results so far: classic and ladder designs pass the false-rate and coverage lines at central values; the block mix
+  barely moves the composite; the near rung needs a bigger baseline (chosen mix N14). Remaining: misspecified runs on
+  N14, sessions a week, breaks, the crossover; then docs/dev/v1.2/measure-sim.md and DECISIONS lines.
+
+## 2026-11-18 20:34 UTC: simulation phase done
+- Results in docs/dev/v1.2/measure-sim.md (every number from a run listed in its §11; 1,000 learners per arm, seed 1,
+  N14 also seeds 2 and 3; crossover 1,500 players per layer and effect). DECISIONS: six W2-measure lines (f10e92d).
+- Milestone 6 acceptance on the chosen mix N14 (central): false "likely gain" 1.9 / 3.2 / 3.2 % at days 14 / 28 / 56,
+  ever 5.9 % (seeds 2, 3: 5.5, 5.3 %); misspecified familiarity ≤ 6.6 % at every report; coverage 93.6–95.3 % (one cell
+  of seed 2 at 91.8 %); detectable gain 1.64 / 1.27 SD_comp at weeks 4 / 8 (optimistic 1.26 / 0.97); near rung 1.53 /
+  1.27 at weeks 4 / 6; rotation costs nothing at equal block length.
+- Milestone 4: comparison rounds and bridge sets detect a 0.29 SD strand effect with 200 players (80 % power); the draw
+  is balanced (49.8–50.1 % per unit over 99,844 draws).
+- Late fix: items are [b, g, ok, rtMs?, a?] so the rows the wave-2 contract stores in rec.assess pass straight in
+  (a stored response time was being read as the item slope); results checked unchanged (classic-opt and the crossover).
+- Open for the build: the MANIFEST line (requested 20:00 UTC; W2-core inherits it), index.html, ENGINE.md §21.

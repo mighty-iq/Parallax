@@ -79,6 +79,11 @@ const SCEN = {
   stateWrong: { truth: { stateU: 0.7 / Math.SQRT2, stateS: 0.7 / Math.SQRT2 } }, // state 0.7, model 0.5
   perWeek2: { perWeek: 2 }, perWeek6: { perWeek: 6 },
   hLinearModel: { hModel: 'linear' },                                     // truth follows the curve, model assumes linear days
+  // a wider tail prior (SD 0.04 instead of 0.02) lets the model learn a person's tail from the data (a lever)
+  wideTail: { model: { tail: { sd: 0.04 } } },
+  tail9wide: { truth: { tail: 0.09, tailC: 0.054 }, model: { tail: { sd: 0.04 } } },
+  tail15wide: { truth: { tail: 0.15, tailC: 0.09 }, model: { tail: { sd: 0.04 } } },
+  famBigWide: { truth: { famMu: 0.8 }, model: { tail: { sd: 0.04 } } },
   break45: { breakFrom: 28, breakTo: 91, horizon: 147 },                  // 9-week break after week 4; truth loses 45 %
   break25: { breakFrom: 28, breakTo: 91, horizon: 147, truth: { breakLoss: 0.25 } },
   break65: { breakFrom: 28, breakTo: 91, horizon: 147, truth: { breakLoss: 0.65 } },
@@ -114,6 +119,10 @@ const RUNS = [
   R('N14-perWeek2', 'N14', 'perWeek2', { check: 'false' }),
   R('N14-perWeek6', 'N14', 'perWeek6', { check: 'false' }),
   R('N14-hLinear', 'N14', 'hLinearModel'),
+  R('N14-wideTail', 'N14', 'wideTail', { arms: ['none', 'gain', 'ladder'], check: 'false' }),
+  R('N14-tail9-wide', 'N14', 'tail9wide', { check: 'misspec' }),
+  R('N14-tail15-wide', 'N14', 'tail15wide'),
+  R('N14-famBig-wide', 'N14', 'famBigWide', { check: 'misspec' }),
   R('N14-break45', 'N14', 'break45', { arms: ['none', 'gain'], reports: [14, 28, 98, 112, 140] }),
   R('N14-break25', 'N14', 'break25', { arms: ['none'], reports: [14, 28, 98, 112, 140] }),
   R('N14-break65', 'N14', 'break65', { arms: ['none'], reports: [14, 28, 98, 112, 140] }),
@@ -173,6 +182,16 @@ function aggregate(results, spec) {
     everSoFar.compNear = everSoFar.compNear || results.map(() => false);
     results.forEach((r, i) => { if (r.verdicts[md] && (r.verdicts[md].words.comp === 'likely gain' || r.verdicts[md].words.near === 'likely gain')) everSoFar.compNear[i] = true; });
     e.compNear = pct(everSoFar.compNear.filter(Boolean).length, n);
+    // a stricter bar for the near rung's words (0.975 at every milestone), alone and with the composite's usual bar
+    if (results[0].verdicts[md] && results[0].verdicts[md].p && results[0].verdicts[md].p.near !== undefined) {
+      const bar = md === 14 ? 0.975 : 0.95, ok = (r) => r.verdicts[md] && r.verdicts[md].p;
+      const nearS = (r) => ok(r) && r.verdicts[md].p.near >= 0.975, cnS = (r) => ok(r) && (r.verdicts[md].p.comp >= bar || r.verdicts[md].p.near >= 0.975);
+      everSoFar.nearStrict = everSoFar.nearStrict || results.map(() => false);
+      everSoFar.cnStrict = everSoFar.cnStrict || results.map(() => false);
+      results.forEach((r, i) => { if (nearS(r)) everSoFar.nearStrict[i] = true; if (cnS(r)) everSoFar.cnStrict[i] = true; });
+      v.nearStrict = { gain: pct(results.filter(nearS).length, n) }; e.nearStrict = pct(everSoFar.nearStrict.filter(Boolean).length, n);
+      v.cnStrict = { gain: pct(results.filter(cnS).length, n) }; e.cnStrict = pct(everSoFar.cnStrict.filter(Boolean).length, n);
+    }
     out.verdicts[md] = v; out.ever[md] = e;
   }
   out.meter95 = pct(results.filter((r) => r.meterMax >= 0.95).length, n);
@@ -224,8 +243,9 @@ function fmtRun(res) {
   for (const [arm, a] of Object.entries(res.arms)) {
     L.push(`  arm ${arm}: ${a.minutesPerWeek.toFixed(1)} min/week (to day 28: ${a.minutes4.toFixed(0)} min, day 56: ${a.minutes8.toFixed(0)} min; longest block ${a.blockMinutes.toFixed(2)} min); items stored ${a.items}; fits ${a.fitsPerLearner}, ${a.itersPerFit.toFixed(1)} iterations each, ${a.unconverged} unconverged; meter ≥ 0.95 between milestones ${a.meter95.toFixed(1)} %`);
     for (const [d, v] of Object.entries(a.verdicts)) {
-      L.push(`    milestone day ${d}: ` + Object.entries(v).filter(([k]) => k !== 'any' && k !== 'compNear').map(([k, x]) => `${k} likely gain ${x.gain.toFixed(1)} % (ever ${a.ever[d][k].toFixed(1)}) no change ${x.none.toFixed(1)} %`).join(' | ') +
-        ` | any readout ${v.any.gain.toFixed(1)} %` + (v.compNear ? ` | composite or near ${v.compNear.gain.toFixed(1)} % (ever ${a.ever[d].compNear.toFixed(1)})` : ''));
+      L.push(`    milestone day ${d}: ` + Object.entries(v).filter(([k]) => !['any', 'compNear', 'nearStrict', 'cnStrict'].includes(k)).map(([k, x]) => `${k} likely gain ${x.gain.toFixed(1)} % (ever ${a.ever[d][k].toFixed(1)}) no change ${x.none.toFixed(1)} %`).join(' | ') +
+        ` | any readout ${v.any.gain.toFixed(1)} %` + (v.compNear ? ` | composite or near ${v.compNear.gain.toFixed(1)} % (ever ${a.ever[d].compNear.toFixed(1)})` : '') +
+        (v.cnStrict ? ` | near at 0.975 ${v.nearStrict.gain.toFixed(1)} % (ever ${a.ever[d].nearStrict.toFixed(1)}), composite or near at 0.975 ${v.cnStrict.gain.toFixed(1)} % (ever ${a.ever[d].cnStrict.toFixed(1)})` : ''));
     }
     for (const [d, v] of Object.entries(a.reports)) {
       L.push(`    report day ${d}: ` + Object.entries(v).map(([k, x]) => `${k} MDG ${x.mdg.toFixed(2)} cover ${x.cover.toFixed(1)} z ${x.zMean.toFixed(2)}/${x.zSd.toFixed(2)} P≥.95 ${x.p95.toFixed(1)} % truth ${x.truth.toFixed(2)}`).join(' | '));
