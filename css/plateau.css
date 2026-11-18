@@ -1,0 +1,16 @@
+/* Plateau-breaking (js/ui/plateau.js; PLAN milestone 3): the card on the session summary and Today, the
+   line under Today's plan, the exercise page's line and the Progress history. Shown between items only;
+   a "clearly up" verdict is marked in ink and green, never in the accent (the stimulus target colour). */
+.pt-panel .pt-head { font-weight: 600; margin-bottom: 0.25rem; }
+.pt-panel .pt-item + .pt-item { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); }
+.pt-panel .pt-item p { max-width: var(--measure); }
+.pt-panel .pt-item.pt-up { border-left: 3px solid var(--right); padding-left: 0.625rem; }
+.pt-panel .pt-item.pt-up .pt-head { color: var(--ink); }
+.pt-panel .pt-drawn { font-size: var(--fs-sm); }
+.pt-panel .pt-progress { margin-top: 0.25rem; }
+.pt-panel .px-slot-foot { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.pt-panel .px-slot-foot .px-btn { min-height: var(--tap); }
+.pt-today-line { margin-top: 0.25rem; }
+.pt-ex-line b { font-weight: 600; }
+.pt-history li + li { margin-top: 0.25rem; }
+@media (prefers-reduced-motion: reduce) { .pt-panel * { transition: none; } }
