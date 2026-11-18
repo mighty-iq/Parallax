@@ -1,0 +1,99 @@
+/* PR-6 Other Way Round (js/ex/otherway/view.js). Every rule under .ex-otherway; tokens from css/base.css with
+   fallbacks. Face colours carry letters too (colour is never the only cue); nothing animates but the time bar. */
+.ex-otherway .ow-stage {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  padding: 1.6rem 0.75rem 0.6rem; text-align: center;
+}
+.ex-otherway .ow-prompt {
+  margin: 0; max-width: 38rem; font-size: var(--fs-md, 1rem); line-height: 1.4; color: var(--ink, #1A1D21);
+}
+.ex-otherway .ow-pic { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem 1.25rem; width: 100%; }
+.ex-otherway .ow-pic svg { display: block; height: clamp(7.5rem, 26vh, 12.5rem); width: auto; max-width: 100%; }
+.ex-otherway .ex-otherway-stem[data-strand="netback"] .ow-pic svg { height: clamp(5.5rem, 18vh, 8.5rem); }
+.ex-otherway .ex-otherway-stem[data-strand="viewfrom"] .ow-pic svg.ow-flat { height: clamp(4rem, 12vh, 6.5rem); }
+.ex-otherway .ex-otherway-stem[data-strand="whereami"] .ow-pic svg.ow-map { height: clamp(10rem, 30vh, 15rem); }
+.ex-otherway .ex-otherway-stem[data-strand="whereami"] .ow-pic svg.ow-circle { height: clamp(7.5rem, 20vh, 9.5rem); }
+.ex-otherway .ex-otherway-stem[data-strand="cutback"] .ow-pic svg { height: auto; max-height: clamp(6rem, 22vh, 10rem); }
+.ex-otherway .ow-verdict { margin-top: 0.4rem; max-width: 38rem; text-align: left; }
+
+.ex-otherway .ow-answer { display: flex; align-items: center; justify-content: center; min-height: 2.75rem; width: 100%; }
+.ex-otherway .ow-answer svg { display: block; height: clamp(4.75rem, 15vh, 7.5rem); width: auto; max-width: 100%; }
+.ex-otherway .ow-answer.ow-text { gap: 0.5rem; }
+.ex-otherway .ow-answer.ow-text svg { height: 1.75rem; }
+.ex-otherway .ow-spotname { font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: var(--fs-lg, 1.125rem); font-weight: 600; }
+
+/* cubes: one light, one mid, one dark face, neutral */
+.ex-otherway .ow-face { stroke: var(--ink, #1A1D21); stroke-width: 0.04; stroke-linejoin: round; }
+.ex-otherway .ow-top { fill: var(--surface, #FBFCFB); }
+.ex-otherway .ow-left { fill: var(--surface-3, #DDE1DE); }
+.ex-otherway .ow-right { fill: var(--ink-3, #5D646C); }
+.ex-otherway .ow-axis { stroke: var(--ink, #1A1D21); stroke-width: 0.06; stroke-dasharray: 0.18 0.12; }
+.ex-otherway .ow-arc { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 0.08; stroke-linecap: round; }
+.ex-otherway .ow-arrowhead { fill: var(--ink, #1A1D21); }
+.ex-otherway .ow-angle { font-size: 0.55px; font-weight: 600; fill: var(--ink, #1A1D21); font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); }
+.ex-otherway .ow-side { font-size: 0.7px; fill: var(--ink-2, #454B52); }
+
+/* sheets and plans */
+.ex-otherway .ow-paper { fill: var(--surface, #FBFCFB); stroke: var(--ink, #1A1D21); stroke-width: 0.06; }
+.ex-otherway .ow-grid { stroke: var(--rule, #C9CFCB); stroke-width: 0.02; }
+.ex-otherway .ow-hole { fill: var(--ink, #1A1D21); }
+.ex-otherway .ow-outline { fill: none; stroke: var(--rule-strong, #7B838A); stroke-width: 0.05; stroke-dasharray: 0.15 0.12; }
+.ex-otherway .ow-folded { fill: var(--surface-3, #DDE1DE); stroke: var(--ink, #1A1D21); stroke-width: 0.06; }
+.ex-otherway .ow-crease { stroke: var(--ink, #1A1D21); stroke-width: 0.07; stroke-dasharray: 0.22 0.14; }
+.ex-otherway .ow-flap { stroke: var(--ink, #1A1D21); stroke-width: 0.1; }
+.ex-otherway .ow-stepdot { fill: var(--ink, #1A1D21); }
+.ex-otherway .ow-punch { fill: var(--ink, #1A1D21); stroke: var(--surface, #FBFCFB); stroke-width: 0.06; }
+
+/* solids and cuts */
+.ex-otherway .ow-edge { stroke: var(--ink, #1A1D21); stroke-width: 0.045; }
+.ex-otherway .ow-cut { fill: var(--surface-3, #DDE1DE); fill-opacity: 0.9; stroke: var(--ink, #1A1D21); stroke-width: 0.07; stroke-linejoin: round; }
+.ex-otherway .ow-face2d .ow-cut { fill: var(--surface-3, #DDE1DE); }
+
+/* nets and lettered faces */
+.ex-otherway .ow-sq { stroke: var(--ink, #1A1D21); stroke-width: 0.035; }
+.ex-otherway .ow-lab { font-size: 0.74px; font-weight: 700; fill: #1A1D21; font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); }
+.ex-otherway .ow-c0 { fill: #EDC35A; }
+.ex-otherway .ow-c1 { fill: #8CC27A; }
+.ex-otherway .ow-c2 { fill: #8DB3E2; }
+.ex-otherway .ow-c3 { fill: #E59A86; }
+.ex-otherway .ow-c4 { fill: #BBA2E4; }
+.ex-otherway .ow-c5 { fill: #D6D9D7; }
+
+/* view from */
+.ex-otherway .ow-sqflat { fill: var(--surface-3, #DDE1DE); stroke: var(--ink, #1A1D21); stroke-width: 0.04; }
+.ex-otherway .ow-ground { stroke: var(--ink, #1A1D21); stroke-width: 0.06; }
+.ex-otherway .ow-foot { fill: var(--surface-3, #DDE1DE); stroke: var(--ink, #1A1D21); stroke-width: 0.1; }
+.ex-otherway .ow-sidearrow { stroke: var(--ink, #1A1D21); stroke-width: 0.16; }
+
+/* where am I */
+.ex-otherway .ow-ground2 { fill: var(--surface, #FBFCFB); stroke: var(--rule-strong, #7B838A); stroke-width: 0.6; }
+.ex-otherway .ow-north { font-size: 7.5px; font-weight: 700; fill: var(--ink-2, #454B52); }
+.ex-otherway .ow-mark { fill: var(--surface-3, #DDE1DE); stroke: var(--ink, #1A1D21); stroke-width: 0.6; }
+.ex-otherway .ow-marklab { font-weight: 700; fill: var(--ink, #1A1D21); }
+.ex-otherway .ow-circle .ow-mark { stroke-width: 1; }
+.ex-otherway .ow-spot { fill: var(--surface, #FBFCFB); stroke: var(--ink, #1A1D21); stroke-width: 0.8; stroke-dasharray: 1.4 0.9; }
+.ex-otherway .ow-spotlab { font-size: 7.6px; font-weight: 700; fill: var(--ink, #1A1D21); font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); }
+.ex-otherway .ow-ring { fill: none; stroke: var(--rule-strong, #7B838A); stroke-width: 1; }
+.ex-otherway .ow-ray { stroke: var(--rule, #C9CFCB); stroke-width: 0.8; }
+.ex-otherway .ow-ahead { fill: var(--ink, #1A1D21); }
+.ex-otherway .ow-aheadlab { font-size: 13px; fill: var(--ink-2, #454B52); }
+.ex-otherway .ow-you { fill: var(--ink, #1A1D21); }
+
+/* short screens (phones on their side): the drawings are smaller, so their labels are drawn larger (13 px or more) */
+@media (max-height: 480px) {
+  .ex-otherway .ow-lab { font-size: 0.9px; }
+  .ex-otherway .ow-side { font-size: 0.82px; }
+  .ex-otherway .ow-north { font-size: 8.8px; }
+  .ex-otherway .ow-map .ow-marklab { font-size: 8.6px; }
+  .ex-otherway .ow-circle .ow-marklab { font-size: 13.6px; }
+  .ex-otherway .ow-spotlab { font-size: 8.8px; }
+}
+
+/* The item's time limit: one slow linear sweep (no ticks, no colour change). */
+.ex-otherway .pr-timer { height: 4px; margin-top: 0.4rem; overflow: hidden; background: var(--surface-3, #DDE1DE); border-radius: 2px; }
+.ex-otherway .pr-timer-fill { width: 100%; height: 100%; transform-origin: left center; transform: scaleX(1); background: var(--ink-3, #5D646C); }
+.ex-otherway .pr-timer.is-running .pr-timer-fill { animation-name: ow-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
+.ex-otherway .pr-timer.is-stopped .pr-timer-fill,
+html[data-hx-state="paused"] .ex-otherway .pr-timer-fill,
+[data-paused] .ex-otherway .pr-timer-fill { animation-play-state: paused; }
+@keyframes ow-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
