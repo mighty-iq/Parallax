@@ -694,8 +694,11 @@ STUBS_JS = """() => {
   const view = (id, motion) => ({ layout: 'stem+options', motion,
     present: (item, ctx) => { ctx.host.textContent = id + ' item'; if (motion && ctx.addMotion) ctx.addMotion(100000); return PX.core.timing.nextPaint(); },
     drawOption: (el, item, i) => { el.textContent = 'ABCD'[i]; } });
+  PX.ex.define(Object.assign({ id: 'dtest', code: 'EX-95', name: 'Deadline stub', generate: (rng, params) => ({ ex: 'dtest', seed: rng.seed, params, key: rng.seed % 4, deadlineMs: 3000 }) }, base));
   PX.ex.view('qtest', view('qtest', false));
   PX.ex.view('mtest', view('mtest', true));
+  PX.ex.view('dtest', view('dtest', false));
+  PX.ex.learn('dtest', { goal: 'Pick the letter.', practice: [{ a: 0 }] });
   ['qtest', 'mtest'].forEach((id) => { PX.core.store.state.tour.seen[id] = true; });
   window.__ev = { trial: 0, screen: [], summary: 0, slot: false, session: 0 };
   PX.bus.on('play:trial', () => { __ev.trial++; });
@@ -763,6 +766,9 @@ def run_v12(b, C):
     C.ok(page.evaluate('(() => { const s = PX.core.store.state.sessions; return s[s.length - 1].gentle === true; })()'), f'{tag} F: the session notes the gentle profile')
     # D: the teaching template on an exercise with learn.rules (Angles): rules card, Watch, strategy card, Try 1
     page.evaluate('PX.core.store.state.settings.gentleMotion = "auto"')
+    # a worked example before Angles' second Try item (checked below)
+    page.evaluate('''() => { const L = PX.ex.learn('angles'), p = L.practice[1];
+      L.practice[1] = Object.assign({}, p && p.params ? p : { params: p }, { example: { seed: 77 } }); }''')
     page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "angles" }, { force: true })')
     page.wait_for_selector('[data-card-box="wtg-rules"]', timeout=8000)
     n_rules = page.locator('[data-card-box="wtg-rules"] .pl-rule').count()
@@ -785,6 +791,20 @@ def run_v12(b, C):
     page.keyboard.press('Escape')
     wait_state(page, 'respond')
     C.ok('wtg-rules' in page.evaluate('__ev.screen') and 'wtg-try' in page.evaluate('__ev.screen'), f'{tag} G: screen events for the tutorial {page.evaluate("__ev.screen")[-6:]}')
+    # D: a worked example before a Try item (practice entry `example`), Angles' second Try item
+    page.evaluate('__play.answer(true)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    page.evaluate('PX.ui.play.current().goNext()')
+    page.wait_for_function('(document.querySelector(".pl-wtg-text") || {}).textContent.startsWith("Try: first one more item")', timeout=8000)
+    C.ok(True, f'{tag} D: a worked example plays before the Try item it belongs to')
+    page.wait_for_selector('[data-turn-skip]', timeout=20000)
+    page.locator('[data-turn-skip]').click()
+    wait_state(page, 'respond')
+    C.ok(page.evaluate('(document.querySelector(".pl-wtg-text") || {}).textContent').startswith('Try: practice item 2'), f'{tag} D: then the Try item comes ({page.evaluate("(document.querySelector(\".pl-wtg-text\") || {}).textContent")!r})')
+    # D: a Try item with its own deadline runs with the countdown
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "dtest" }, { force: true })')
+    wait_state(page, 'respond')
+    C.ok(page.evaluate('!document.querySelector(".pl-limit").hidden && PX.ui.play.current().cfg.limitMs === 3000'), f'{tag} D: a Try item with item.deadlineMs runs with that deadline')
     C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
     # D on a phone (360 × 640): the rules card and the strategy card are on screen, with 44 px buttons

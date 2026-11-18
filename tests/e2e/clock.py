@@ -252,8 +252,14 @@ def same_minutes(page, run, mode):
     REPORT['runs'][mode]['shown'] = {'fmt': fmt, 'summary': meta, 'share': shared, 'log': log_len, 'progress': prog, 'today': today}
 
 
+# clock.py full path speed: only these modes of the realtime part, and no repro part
+ONLY = [m for m in sys.argv[2:] if m in ('train', 'path', 'speed')]
+
+
 def realtime(b):
     for mode in PLAN['modes']:
+        if ONLY and mode not in ONLY:
+            continue
         ctx = b.new_context(viewport={'width': 1280, 'height': 800})
         page = ctx.new_page()
         con = Console(page)
@@ -491,7 +497,7 @@ def repro(b):
 def main():
     with sync_playwright() as p:
         b = launch(p)
-        parts = [repro] if ARG == 'repro' else [realtime, repro]
+        parts = [repro] if ARG == 'repro' else [realtime] if ONLY else [realtime, repro]
         for fn in parts:
             try:
                 fn(b)
