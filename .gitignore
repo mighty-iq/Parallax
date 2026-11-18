@@ -1,5 +1,7 @@
 node_modules/
 tests/e2e/out/
+# Private test-build previews (tools/build-preview.mjs)
+dist/preview/
 .DS_Store
 __pycache__/
 
