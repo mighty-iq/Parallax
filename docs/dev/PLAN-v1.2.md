@@ -27,6 +27,12 @@ It also:
   - Nothing in Parallax trains analogies. The only analogy-format task is Word Links (PR-0), the Spatial Check's control: "A is to B as C is to ?" with words, no feedback, a few minutes per check. v1.1 already says so in About and in the "Taking a test soon?" helper.
   - Word Links stays verbal. Abstract-symbol analogies are figure analogies, close to matrices, which the overlap table relates to Rotate, Spin and Hidden. Spatial practice could move them, so the control would stop working, and they would overlap matrix tests instead.
   - v1.2 adds one line to the helper's analogies entry and to About: if an analogy test is your yardstick, take it before your first Spatial Check (milestone 1).
+- **One release** (the owner, 18 Nov): the whole plan ships as v1.2, in one release, weeks from now. There will be no quick interim update. "If v1.2 has to be smaller" at the end stays only as a fallback.
+- **DAT-style stays opt-in** (the owner, 18 Nov, confirming D2). Train leaves the DAT-style exercises out unless the DAT-style focus is on, and they are always open in the Library.
+- **New, from the owner and from player feedback (18 Nov):**
+  - the Central Point exercise (milestone 8);
+  - an easier and better-taught start for the DAT-style exercises and Views (milestone 1);
+  - the real PAT formats (milestone 8).
 
 ## Waiting on the owner
 1. **Three forks for the v1.2 plan message.** The recommendations come from the audit (§7), and Phase 1 research will check them.
@@ -76,6 +82,17 @@ Acceptance:
 - The owner's go.
 
 ### 1. Fix first: what players hit in 1.1 (S–M each)
+- **An easier, better-taught start for the DAT-style exercises and Views (player feedback, 18 Nov).** Players found most DAT-style exercises too hard, and Painted Cubes slow to understand. One player stayed at level 1 of Views. The engine already starts everyone at the easiest items, so the easiest items themselves are too hard to read for some players.
+  - **A lower floor:** a new first band below today's easiest level, in all six DAT-style exercises and in Views. Examples:
+    - 2–3 cubes in a row;
+    - one view to match, with the 3D shape beside it;
+    - angle gaps of 10–15°;
+    - a figure of 4–6 cubes with one kind of question.
+  - **Teaching before the first item:** a worked example and a strategy card in the test's own terms.
+    - Painted Cubes: count by position. A corner cube on top shows 3 painted sides.
+    - The view tasks: match the outline first, then the inner and dotted edges.
+  - **Show me:** it turns the 3D shape to the view being asked.
+  - **Acceptance:** simulated beginners reach about 80 % at the new floor, and a fresh-player test passes on every one of these exercises.
 - **Pause and End during feedback (O4).** Both are disabled there today, so ending a session early takes Next, Pause, End.
 - **Motion comfort in Homing and Reckon (O36):**
   - a one-time "stop if you feel unwell" notice before the first route;
@@ -216,12 +233,33 @@ Acceptance: targeting per dimension in sim.mjs stays inside the stated band, and
 - **Knots:**
   - the mirror variant ("same knot or its mirror?") with 3D tubes, and the 3D "pull tight" demo (O46);
   - R2's later ideas: a rope through a ring, three rings, Tuck, Hang, a tube look and a colour gradient (O47).
-- **DAT-style:**
-  - Missing View phase B: slopes, notches and through-holes (O49);
-  - Openings: quarter-circle notches, interaction outlines, "face, not outline" and strict-superset foils, and a 15 % proportion level (O50);
-  - Form: L-, T- and U-prisms, a net-distance dimension, a net-adjacency foil, and a show-me that animates the fold (O51);
-  - Painted Cubes: decide on the visible-only strategy, which is right on about 61 % of items, and test "column tops only" (M, O57);
-  - Angles: a 1.5° level on large screens, or a DECISIONS line for the 2° floor (S–M, O58);
+- **Central Point (new exercise, EX-20; the owner's request, 18 Nov, after a community member's idea).** Find the spot with the smallest total distance to all the targets (the geometric median). Most people aim for the average position, which far-off targets drag too far; the skill is balancing the pulls from every direction.
+  - **Design:** Parallax's own, not a copy of the subtest's screens or items.
+    - A field of dots: 7×7 on phones (every dot ≥ 44 px), up to 12×12 on larger screens, with 3–9 targets.
+    - Tap to pick, drag to adjust, then confirm.
+  - **Scoring:** partial credit from how close the pick's total distance is to the best one. The item counts as right inside the current credit band.
+  - **Feedback:**
+    - a quality heat map;
+    - the lines to each target, with their lengths;
+    - the best spot;
+    - a short why: at the best spot the pulls cancel, and outliers pull less than the average suggests.
+  - **Dims:** number of targets, grid density, credit band, and an outlier trap (how far the average sits from the best spot). A speed variant can follow.
+  - **Checks:**
+    - an independent solver, exhaustive over grid points;
+    - shortcut solvers bounded per level by the outlier-trap dim: average position, middle of the bounding box, coordinate-wise median, and the target nearest the centre.
+  - **Tutorial and tag:** Watch-Try-Go with three targets. The transfer tag is spatial estimation and optimisation, the new or under-tested bet the standing rules ask for.
+  - **Overlap:** the format comes from a test's subtest, so it joins the overlap table and the "Taking a test soon?" helper. The helper names the test if the owner learns its name.
+  - **Size:** L (generator, validator, view, tutorial, tests, guide section).
+- **DAT-style, rebuilt to the real PAT formats (owner and player feedback, 18 Nov; required in v1.2).** Matching a test's format is allowed. Only the ADA's actual questions, instructions and drawings, and its name, are off-limits.
+  - **Look:** a plain line-drawing style close to the test's, for all six (generic drawings, never copies), with numbered options as on the test.
+  - **Painted Cubes:** several questions per figure (2–5, as on the test), each answered "1 cube" to "5 cubes".
+  - **Missing View phase B:** slopes, notches and through-holes (O49), the solids the real test uses instead of cube stacks.
+  - **Openings:** quarter-circle notches, interaction outlines, "face, not outline" and strict-superset foils, and a 15 % proportion level (O50).
+  - **Form:** L-, T- and U-prisms, a net-distance dimension, a net-adjacency foil, and a show-me that animates the fold (O51).
+  - **Angles and Hole Punch** already match; they get the new look only.
+- **DAT-style depth (beyond the rebuild):**
+  - Painted Cubes: decide on the visible-only strategy, which is right on about 61 % of items, and test "column tops only" (M, O57).
+  - Angles: a 1.5° level on large screens, or a DECISIONS line for the 2° floor (S–M, O58).
   - Section practice: an optional tally pad for Painted Cubes (M, O12).
 - **Older backlog:**
   - Orient as a 3D tabletop (O60);
