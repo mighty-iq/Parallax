@@ -381,12 +381,13 @@
     return out;
   }
 
-  // The last n rated answers of an exercise in this plan (its latest block).
+  // The last n rated answers of an exercise in this plan (its latest block). Fluency items (milestone 7)
+  // run on the timed rating, so they are not part of a block (W2-progress's request, conflict 2).
   function lastRated(plan, exId, n) {
     var out = [];
     for (var i = plan.log.length - 1; i >= 0 && out.length < n; i--) {
       var x = plan.log[i];
-      if (x.exId === exId && (x.oc === 0 || x.oc === 1)) out.unshift(x);
+      if (x.exId === exId && (x.oc === 0 || x.oc === 1) && x.kind !== 'fluency') out.unshift(x);
     }
     return out;
   }
@@ -813,10 +814,13 @@
     return t;
   }
 
-  // Median correct response time on untimed trials (Train, Path, Free) of this exercise.
+  // Median correct response time on untimed trials (Train, Path, Free) of this exercise. Rows of fluency
+  // items or with a Speed deadline (trial columns 14 and 18) are timed, so they stay out (milestone 7).
   function untimedRt(rec, def) {
     var rts = [], rows = isArray(rec.trials) ? rec.trials : [];
+    var KF = E.log.KINDS.indexOf('fluency'), DS = E.log.DEADLINES.indexOf('speed');
     E.log.scan(rec, function (r, id, mode) {
+      if (r.length > 13 && (r[13] === KF || r[17] === DS)) return;
       if (id === def.id && r[5] === 1 && isNum(r[6]) && (mode === 'train' || mode === 'path' || mode === 'free')) rts.push(r[6]);
     }, Math.max(0, rows.length - 5000));
     rts = rts.slice(-50);
@@ -861,6 +865,9 @@
       kind: 'target', k: (fk + 1 - C.lapse) / 2, policy: plan.policy, recent: E.select.recent(rec, def), rng: plan.rng,
       filter: function (c) { return (!same || same(c)) && M.pExp(u.mu, u.sd, c.b, c.g) >= M.target(c.g, fk); },
     };
+    // the player's own difficulties (milestone 7, W2-progress's request): the fluent zone on that pool's b
+    var own = E.dims && typeof E.dims.pool === 'function' ? E.dims.pool(rec, def, plan.display) : null;
+    if (own) o.pool = own;
     var r = E.select.pick(def, u, o);
     if (!r) { o.filter = same; o.k = 1; r = E.select.pick(def, u, o); }
     if (!r && same) { o.filter = null; r = E.select.pick(def, u, o); }

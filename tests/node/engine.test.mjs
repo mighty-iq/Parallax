@@ -555,8 +555,10 @@ function testTrain(t) {
   const kinds = {};
   r2.steps.forEach((s) => { kinds[s.step.kind] = (kinds[s.step.kind] || 0) + 1; });
   const mixN = r2.steps.length - 3;
-  t.ok(Math.abs(kinds.target / mixN - 0.8) < 0.04 && Math.abs(kinds.easy / mixN - 0.1) < 0.03 && Math.abs(kinds.stretch / mixN - 0.1) < 0.03,
-    'item mix: 80 % target, 10 % easier, 10 % stretch (' + [kinds.target, kinds.easy, kinds.stretch].join('/') + ')');
+  // v1.2 wave 2 (milestone 7): some dealt target items run as 'lead' (or 'weak'), the deck's easy item as 'fluency'
+  const T = kinds.target + (kinds.lead || 0) + (kinds.weak || 0), Ez = kinds.easy + (kinds.fluency || 0);
+  t.ok(Math.abs(T / mixN - 0.8) < 0.04 && Math.abs(Ez / mixN - 0.1) < 0.03 && Math.abs(kinds.stretch / mixN - 0.1) < 0.03,
+    'item mix: 80 % target, 10 % easier, 10 % stretch (' + [T, Ez, kinds.stretch].join('/') + ')');
   t.ok(r2.steps.every((s) => s.step.g === PX.ex.get(s.step.exId).chance(s.step.params) && Math.abs(s.step.target - M.kindTarget(s.step.kind, r2.plan.k, s.step.g)) < 1e-12), 'every item carries def.chance(params) and aims at its own target');
 
   // Spin and Rotate guess at different rates per variant: each rating update uses the item's own.
