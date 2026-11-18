@@ -50,15 +50,15 @@
 
   /* ---------- Design A (docs/dev/v1.2/measure-sim.md; DECISIONS 18 Nov, W2-measure) ---------- */
 
-  var MX = E.defaults('measure', {
+  E.defaults('measure', {
     rungs: { near: ['otherway'], mid: ['cubematch', 'viewmatch', 'patterns'], far: ['mechanisms', 'motiongraphs'] },
     control: 'wordlinks',
     alone: ['level'],                                   // optional probes, reported alone (full checks only)
     // [probes of the rung in each block (rotating), items for each]; the control's items
     block: { near: [1, 6], mid: [2, 2], far: [1, 2], control: 2 },
     week: { near: [1, 6], mid: [2, 6], far: [1, 6], control: 4 },
-    // items per probe in a full check (B1, B2, the 4-weekly check, a delayed check)
-    full: { near: 16, mid: 16, far: 16, control: 16, alone: 16 },
+    // items per probe in a full check (B1, B2, the 4-weekly check, a delayed check): 46 items, 11.5 minutes
+    full: { near: 16, mid: 5, far: 5, control: 5, alone: 8 },
     blocksPerWeek: 4,      // at most four blocks in any 7 days
     gapHours: 8,           // occasions at least 8 hours apart (one state per occasion)
     b2Hours: 12,           // B2 from 12 hours after B1
@@ -68,7 +68,7 @@
     k: 0.6, easyFirst: 2, easyK: 0.85,
     curveMinutes: 240,     // h = 1 − exp(−training minutes since the first occasion / 240): the training-gain curve
     secPerItem: 15,        // for the minutes Today shows
-    formRandom: false,     // the record's first form drawn at B1 (O16); false keeps 1.1's A, B, C from A
+    formRandom: true,      // the record's first form drawn at B1 (O16); false keeps 1.1's A, B, C from A
   });
 
   /* ---------- the grid posterior of one probe ---------- */
@@ -123,7 +123,7 @@
   // The record's first form, drawn once at B1 from the record's own engine seed (O16: forms counterbalanced across
   // players), or 'A' while config.measure.formRandom is off.
   function drawForm0(rec) {
-    return MX.formRandom ? E.select.rng(rec, 'measure:form0').pick(FORMS) : 'A';
+    return C.measure.formRandom ? E.select.rng(rec, 'measure:form0').pick(FORMS) : 'A';
   }
 
   function composite(results) {
@@ -134,14 +134,20 @@
     return { theta: th / xs.length, se: Math.sqrt(v) / xs.length, probes: xs };
   }
 
-  // A third baseline when B1 and B2 differ by more than 2 combined standard errors (composite; 1.1).
+  // 1.1 added a third baseline when B1 and B2 differed by more than 2 combined standard errors (composite). Design A
+  // never does (the trend model weighs every occasion by its precision); records from 1.1 keep their B3.
   function needB3(list) {
     if (list.length < 2) return false;
     var a = composite(list[0].results), b = composite(list[1].results);
     if (!a || !b) return false;
     return Math.abs(b.theta - a.theta) > C.assess.b3Se * Math.sqrt(a.se * a.se + b.se * b.se);
   }
-  function baselineCount(list) { return list.length < 2 ? list.length : needB3(list) ? Math.min(3, list.length) : 2; }
+  // The starting checks among the full checks: B1, B2 (and a B3 from 1.1); entries without a kind (1.0): the first two.
+  function baselineCount(list) {
+    var n = 0, kinds = 0;
+    list.forEach(function (a) { if (typeof a.kind === 'string') kinds++; if (a.kind === 'B1' || a.kind === 'B2' || a.kind === 'B3') n++; });
+    return kinds ? n : mmin(2, list.length);
+  }
 
   // A training session counts by the same rule as the weekly goal (streak.counts: at least 10 answers or
   // 5 minutes), in a training mode.
@@ -170,7 +176,7 @@
     return false;
   }
 
-  /* ---------- the full checks' schedule (1.1) ---------- */
+  /* ---------- the full checks ---------- */
 
   // A delayed check: at least 4 counted sessions after the baselines, then training stopped (none for
   // assess.delayedDays) or slowed (at most one session in the last 28 days after 4 or more in the 28 before), the
@@ -185,41 +191,29 @@
     return trainedSince && (stopped || slowed) && now - lastAt >= 21 * DAY && lastAt < (lt === null ? now : lt) + 21 * DAY;
   }
 
+  // The next full check (or measurement-week block), for the screens that show "the next check" and for a check
+  // started without a kind: nextMeasure's answer when it is one; between them, the next 4-weekly mark (or the start
+  // of the week before it, when the measurement week is on). { due, kind, why, next (ms), when, minutes }
   function due(rec, now) {
-    var A = C.assess, list = checks(rec), n = list.length;
-    var lastAt = n ? timeOf(list[n - 1]) : null;
-    if (n === 0) return { due: true, kind: 'B1', why: 'Measure your starting point: about 15 minutes, no feedback.', next: now };
-    if (n === 1) {
-      var at = lastAt + DAY / 2;
-      return { due: now >= at, kind: 'B2', why: 'A second starting check: the first one also measured getting used to the tasks.', next: at };
-    }
-    if (n === 2 && needB3(list)) {
-      var at3 = lastAt + DAY / 2;
-      return { due: now >= at3, kind: 'B3', why: 'Your two starting checks differ more than expected, so a third one makes the baseline steadier.', next: at3 };
-    }
-    if (delayedDue(rec, now, list, baselineCount(list))) {
-      return { due: true, kind: 'delayed', why: 'A delayed check about four weeks after training slowed shows what lasts.', next: now };
-    }
-    var days = (now - lastAt) / DAY, since = sessionsAfter(rec, lastAt);
-    var nextAt = lastAt + A.everyDays * DAY;
-    var ok = days >= A.everyDays && since >= A.everySessions;
+    var n = nextMeasure(rec, now);
+    if (FULL[n.kind] || n.kind === 'week') return { due: n.due, kind: n.kind, why: n.why, next: n.at, when: n.when, minutes: n.minutes };
+    var occ = occasions(rec), first = timeOf(occ[0]), step = C.measure.everyDays * DAY;
+    var weekOn = isObj(rec.settings) && rec.settings.measureWeek === true, kind = weekOn ? 'week' : 'regular';
+    var mark = first + (Math.floor((now - first) / step) + 1) * step, at = weekOn ? mark - C.measure.weekDays * DAY : mark;
+    if (at <= now) at = now + 20 * HOUR; // inside the measurement week, today's block done: tomorrow's
     return {
-      due: ok, kind: 'regular', next: nextAt, sessionsSince: since,
-      why: ok ? 'Two weeks and ' + A.everySessions + ' sessions since your last check.' :
-        'Next check after ' + A.everyDays + ' days and ' + A.everySessions + ' sessions (' + Math.floor(days) + ' days, ' + since + ' sessions so far).',
+      due: false, kind: kind, next: at, when: weekOn ? 'check' : 'session-start', minutes: minutesOf(mixOf(kind, rec, null, null)),
+      why: (weekOn ? 'Your measurement week continues or starts ' : 'Your 4-weekly check comes ') + U.fmtDate(at, 'short') + '; until then a short block opens a session now and then.',
     };
   }
 
   // The one answer to "when is my next check?" for every screen: { ready, kind, dueAt (ms), dueDate (local day),
-  // daysLeft, sessionsLeft, why }.
+  // daysLeft, sessionsLeft (always 0 since Design A: checks follow days, not sessions), why, when, minutes }.
   function nextCheck(rec, now) {
-    var d = due(rec, now), A = C.assess;
-    var at = isNum(d.next) ? d.next : now;
-    var daysLeft = d.due ? 0 : Math.max(0, Math.ceil((at - now) / DAY));
-    var sessionsLeft = d.kind === 'regular' ? Math.max(0, A.everySessions - (d.sessionsSince || 0)) : 0;
+    var d = due(rec, now), at = isNum(d.next) ? d.next : now;
     return {
       ready: d.due === true, kind: d.kind, dueAt: at, dueDate: E.day(at),
-      daysLeft: daysLeft, sessionsLeft: d.due ? 0 : sessionsLeft, why: d.why,
+      daysLeft: d.due ? 0 : Math.max(0, Math.ceil((at - now) / DAY)), sessionsLeft: 0, why: d.why, when: d.when, minutes: d.minutes,
     };
   }
 
@@ -229,22 +223,22 @@
     var def = PX.ex.get(id);
     return !!def && def.role === 'probe' && (!can || can(def));
   }
-  function rungIds(r, can) { return (MX.rungs[r] || []).filter(function (id) { return probeOk(id, can); }); }
+  function rungIds(r, can) { return (C.measure.rungs[r] || []).filter(function (id) { return probeOk(id, can); }); }
 
   // A full check: every probe of every rung (1.1's composite order kept among the mid and far probes), the
   // control, and the optional probes when asked.
   function fullMix(opts, can) {
-    var out = [], F = MX.full, seen = {};
+    var out = [], F = C.measure.full, seen = {};
     function add(id, n) { if (!seen[id] && probeOk(id, can) && n > 0) { seen[id] = true; out.push({ id: id, items: n }); } }
     rungIds('near', can).forEach(function (id) { add(id, F.near); });
-    C.assess.composite.forEach(function (id) { add(id, MX.rungs.far.indexOf(id) >= 0 ? F.far : F.mid); });
+    C.assess.composite.forEach(function (id) { add(id, C.measure.rungs.far.indexOf(id) >= 0 ? F.far : F.mid); });
     rungIds('mid', can).forEach(function (id) { add(id, F.mid); });
     rungIds('far', can).forEach(function (id) { add(id, F.far); });
-    add(MX.control, F.control);
-    if (opts && opts.optional) MX.alone.forEach(function (id) { add(id, F.alone); });
+    add(C.measure.control, F.control);
+    if (opts && opts.optional) C.measure.alone.forEach(function (id) { add(id, F.alone); });
     return out;
   }
-  // A block (spec MX.block or MX.week) number `index`: k of a rung's n probes, starting at index·k mod n.
+  // A block (spec C.measure.block or C.measure.week) number `index`: k of a rung's n probes, starting at index·k mod n.
   function blockMix(spec, index, can) {
     var out = [];
     ['near', 'mid', 'far'].forEach(function (r) {
@@ -253,12 +247,12 @@
       var k = mmin(sp[0], ids.length);
       for (var x = 0; x < k; x++) out.push({ id: ids[(index * k + x) % ids.length], items: sp[1] });
     });
-    if (probeOk(MX.control, can) && spec.control > 0) out.push({ id: MX.control, items: spec.control });
+    if (probeOk(C.measure.control, can) && spec.control > 0) out.push({ id: C.measure.control, items: spec.control });
     return out;
   }
   function blockIndex(rec) { return occasions(rec).filter(isBlock).length; }
   function mixOf(kind, rec, opts, can) {
-    return FULL[kind] ? fullMix(opts, can) : blockMix(kind === 'week' ? MX.week : MX.block, blockIndex(rec), can);
+    return FULL[kind] ? fullMix(opts, can) : blockMix(kind === 'week' ? C.measure.week : C.measure.block, blockIndex(rec), can);
   }
   function itemsOfMix(mix) { var n = 0; mix.forEach(function (m) { n += m.items; }); return n; }
 
@@ -276,7 +270,7 @@
     });
     return ms / 60000;
   }
-  function hAt(rec, t0, t) { return 1 - mexp(-trainingMinutes(rec, t0, t) / MX.curveMinutes); }
+  function hAt(rec, t0, t) { return 1 - mexp(-trainingMinutes(rec, t0, t) / C.measure.curveMinutes); }
 
   // The centre of a probe version's range: the definition's own, or for an earlier version the range its upgrade
   // recorded (def.past: { <version>: { min, max } }); null when unknown.
@@ -324,7 +318,7 @@
   var CACHE = { key: null, fit: null, input: null };
   function cacheKey(rec) {
     var occ = occasions(rec), s = isArray(rec.sessions) ? rec.sessions : [], last = occ.length ? occ[occ.length - 1] : null;
-    var cfg = E.trend ? JSON.stringify([E.trend.config.fam, E.trend.config.tail, E.trend.config.state, E.trend.config.sd, MX.curveMinutes]) : '';
+    var cfg = E.trend ? JSON.stringify([E.trend.config.fam, E.trend.config.tail, E.trend.config.state, E.trend.config.sd, C.measure.curveMinutes]) : '';
     return [isNum(rec.created) ? rec.created : 0, occ.length, last ? last.date : '', s.length, s.length ? s[s.length - 1].end : 0, cfg].join('|');
   }
   function fit(rec) {
@@ -351,7 +345,7 @@
 
   /* ---------- Design A's schedule: what comes next, and when ---------- */
 
-  function minutesOf(mix) { return mround(itemsOfMix(mix) * MX.secPerItem / 60 * 2) / 2; }
+  function minutesOf(mix) { return mround(itemsOfMix(mix) * C.measure.secPerItem / 60 * 2) / 2; }
 
   // nextMeasure(rec, now, opts) → the one answer for the session hooks and Today: { due, kind, when, minutes,
   // why, optional, late, at (when it becomes due) }. opts.can: the device's probe filter; opts.optional: Level.
@@ -379,11 +373,11 @@
     }
     var last = occ[occ.length - 1], lastAt = timeOf(last), first = timeOf(occ[0]);
     if (!has('B2') && full.length < 2) {
-      var at2 = timeOf(full[0]) + MX.b2Hours * HOUR;
+      var at2 = timeOf(full[0]) + C.measure.b2Hours * HOUR;
       return out('B2', 'session-start', now >= at2, at2, 'Your second starting point at the start of the session: the first one also measured getting used to the tasks.');
     }
     // Training stopped or slowed after the baselines: a full check at the next visit shows what lasts.
-    if (delayedDue(rec, now, full, mmin(2, full.length))) {
+    if (delayedDue(rec, now, full, baselineCount(full))) {
       return out('delayed', 'session-start', true, now, 'A delayed check, about ' + minutesOf(mixOf('delayed', rec, opts, can)) + ' minutes: some weeks after training slowed, it shows what lasts.');
     }
     // After a break of more than breakDays the run-in restarts: two full checks at the next two session starts.
@@ -391,30 +385,42 @@
     var gapAt = -1;
     for (var i = 1; i < occ.length; i++) if (timeOf(occ[i]) - timeOf(occ[i - 1]) > bd * DAY) gapAt = i;
     if (now - lastAt > bd * DAY) return out('regular', 'session-start', true, now, 'Welcome back. After a long break the measurement starts again with a full check, about ' + minutesOf(mixOf('regular', rec, opts, can)) + ' minutes.');
-    if (gapAt > 0 && occ.length - gapAt < 2) return out('regular', 'session-start', now - lastAt >= MX.gapHours * HOUR, lastAt + MX.gapHours * HOUR, 'One more full check after your break steadies the new start.');
+    if (gapAt > 0 && occ.length - gapAt < 2) return out('regular', 'session-start', now - lastAt >= C.measure.gapHours * HOUR, lastAt + C.measure.gapHours * HOUR, 'One more full check after your break steadies the new start.');
+    // The Lab's crossover (E.lab): a full check opens it and closes each of its two phases.
+    var lab = isObj(rec.lab) && rec.lab.order && isNum(rec.lab.start) && !isNum(rec.lab.left) ? rec.lab : null;
+    if (lab) {
+      var W = C.lab.weeks * 7 * DAY, pts = [lab.start, lab.start + W, lab.start + 2 * W];
+      for (var q = 0; q < pts.length; q++) {
+        var pt = pts[q];
+        if (now < pt || now > pt + 7 * DAY || full.some(function (a) { return Math.abs(timeOf(a) - pt) <= 7 * DAY; })) continue;
+        return out('regular', 'session-start', now - lastAt >= C.measure.gapHours * HOUR, mmax(pt, lastAt + C.measure.gapHours * HOUR),
+          q === 0 ? 'Your Lab experiment opens with a full check, about ' + minutesOf(mixOf('regular', rec, opts, can)) + ' minutes.' :
+            'A full check closes phase ' + q + ' of your Lab experiment, about ' + minutesOf(mixOf('regular', rec, opts, can)) + ' minutes.');
+      }
+    }
     // The 4-weekly check (replaced by the measurement week when that is on).
-    var mark = first + Math.floor((now - first) / (MX.everyDays * DAY)) * MX.everyDays * DAY;
+    var mark = first + Math.floor((now - first) / (C.measure.everyDays * DAY)) * C.measure.everyDays * DAY;
     var weekOn = settings.measureWeek === true;
-    if (!weekOn && now - first >= MX.everyDays * DAY && !full.some(function (a) { return timeOf(a) >= mark; })) {
-      return out('regular', 'session-start', now - lastAt >= MX.gapHours * HOUR, mmax(mark, lastAt + MX.gapHours * HOUR), 'Your 4-weekly check replaces this session’s block: about ' + minutesOf(mixOf('regular', rec, opts, can)) + ' minutes.');
+    if (!weekOn && now - first >= C.measure.everyDays * DAY && !full.some(function (a) { return timeOf(a) >= mark; })) {
+      return out('regular', 'session-start', now - lastAt >= C.measure.gapHours * HOUR, mmax(mark, lastAt + C.measure.gapHours * HOUR), 'Your 4-weekly check replaces this session’s block: about ' + minutesOf(mixOf('regular', rec, opts, can)) + ' minutes.');
     }
     // The opt-in measurement week: the 4 days ending at each 4-weekly mark, one session a day.
     if (weekOn) {
-      var nextMark = first + Math.ceil(mmax(now - first, 1) / (MX.everyDays * DAY)) * MX.everyDays * DAY;
-      var inWeek = nextMark - now <= MX.weekDays * DAY && now - first >= (MX.everyDays - MX.weekDays) * DAY;
+      var nextMark = first + Math.ceil(mmax(now - first, 1) / (C.measure.everyDays * DAY)) * C.measure.everyDays * DAY;
+      var inWeek = nextMark - now <= C.measure.weekDays * DAY && now - first >= (C.measure.everyDays - C.measure.weekDays) * DAY;
       if (inWeek) {
         var today = occ.filter(function (a) { return a.kind === 'week' && now - timeOf(a) < 20 * HOUR; }).length;
-        if (!today) return out('week', 'check', now - lastAt >= MX.gapHours * HOUR, lastAt + MX.gapHours * HOUR, 'Measurement week: one short session a day for four days gives your 4-weekly verdict its sharpest reading.');
+        if (!today) return out('week', 'check', now - lastAt >= C.measure.gapHours * HOUR, lastAt + C.measure.gapHours * HOUR, 'Measurement week: one short session a day for four days gives your 4-weekly verdict its sharpest reading.');
       }
     }
     // An embedded block at the start of a training session: at most four in any 7 days, 8 hours apart.
     var week7 = occ.filter(function (a) { return isBlock(a) && now - timeOf(a) < 7 * DAY; });
-    var gapOk = now - lastAt >= MX.gapHours * HOUR;
-    if (week7.length >= MX.blocksPerWeek) {
+    var gapOk = now - lastAt >= C.measure.gapHours * HOUR;
+    if (week7.length >= C.measure.blocksPerWeek) {
       var free = timeOf(week7[0]) + 7 * DAY;
       return out('block', 'session-start', false, free, 'Four blocks this week already: the next one comes with a session after ' + U.fmtDate(free, 'short') + '.');
     }
-    return out('block', 'session-start', gapOk, lastAt + MX.gapHours * HOUR, 'A ' + minutesOf(mixOf('block', rec, opts, can)) + '-minute block without feedback opens the session: it keeps your probe trend moving.');
+    return out('block', 'session-start', gapOk, lastAt + C.measure.gapHours * HOUR, 'A ' + minutesOf(mixOf('block', rec, opts, can)) + '-minute block without feedback opens the session: it keeps your probe trend moving.');
   }
 
   /* ---------- the check session (called by modes) ---------- */
@@ -435,10 +441,10 @@
     occ.forEach(function (a) { Object.keys(a.results).forEach(function (id) { seen[keyOf(id, isObj(a.pv) ? a.pv[id] : 1)] = true; }); });
     var probes = mix.map(function (m) {
       var def = PX.ex.get(m.id), fresh = !seen[keyOf(m.id, def.version)];
-      // full checks keep 1.1's targeting (the standard prior) until the Design A switch; blocks aim at the prediction
-      var lwT = block ? newPost(def, centerOf(rec, def, f, now), MX.targetSd) : newPost(def);
-      return { id: m.id, v: def.version, n: 0, items: m.items, lw: lwT, lwS: block ? newPost(def) : null, right: 0, rts: [], recent: [], voids: 0, log: [],
-        fresh: fresh, easy: block ? (fresh ? MX.easyFirst : 0) : C.assess.easyFirst };
+      // items aim at the trend model's prediction for the probe (B1: the middle of its range); the stored posterior
+      // keeps the standard prior N(middle, 1.5²), so every entry stays comparable
+      return { id: m.id, v: def.version, n: 0, items: m.items, lw: newPost(def, centerOf(rec, def, f, now), C.measure.targetSd), lwS: newPost(def), right: 0, rts: [], recent: [], voids: 0, log: [],
+        fresh: fresh, easy: fresh ? C.measure.easyFirst : 0 };
     });
     plan.exs = probes.map(function (p) { return p.id; });
     // a B1 after rated training began is marked late (its baseline already holds some training)
@@ -465,9 +471,9 @@
     var pr = current(plan);
     if (!pr) return null;
     var def = PX.ex.get(pr.id), post = summary(pr.lw), pc = plan.check;
-    // The first items of a probe met for the first time are easy (g + (1 − g)·0.85), so a newcomer meets an easy
-    // item right after the worked example; then the usual g + (1 − g)·0.6.
-    var k = pr.n < pr.easy ? (pc.block ? MX.easyK : C.assess.easyK) : (pc.block ? MX.k : C.assess.k);
+    // The first items of a probe (version) met for the first time are easy (g + (1 − g)·0.85), so a newcomer meets
+    // an easy item right after the worked example; then the usual g + (1 − g)·0.6.
+    var k = pr.n < pr.easy ? C.measure.easyK : C.measure.k;
     var r = E.select.pick(def, post, { kind: 'target', k: k, recent: { keys: pr.recent }, rng: plan.rng, policy: 'high' });
     if (!r) return null;
     pr.recent.push(r.key);
@@ -604,57 +610,7 @@
     return { day: last + k * cfg.every, at: t0 + (last + k * cfg.every) * DAY };
   }
 
-  /* ---------- the change report (1.1, on full checks) ---------- */
-
-  var RETEST = [0, 1, 1.5]; // retest gain at tests 1, 2, 3 in units of G = B2 − B1; flat after
-
-  function change(base, last, id) {
-    var bs = base.map(function (c) { return c.results[id]; }).filter(function (r) { return r && isNum(r.theta) && isNum(r.se); });
-    var L = last.results[id];
-    if (!bs.length || !L || !isNum(L.theta) || !isNum(L.se)) return { ok: false };
-    var k = bs.length, bm = U.mean(bs.map(function (r) { return r.theta; }));
-    var bse = Math.sqrt(U.sum(bs.map(function (r) { return r.se * r.se; }))) / k;
-    var d = L.theta - bm, se = Math.sqrt(L.se * L.se + bse * bse);
-    var G = k >= 2 ? bs[1].theta - bs[0].theta : null, share = 1.5 - U.mean(RETEST.slice(0, k));
-    var retest = G === null ? null : Math.max(0, G) * share;
-    // The familiarity estimate is measured too: G has the standard error √(se_B1² + se_B2²), so r = 0.5·max(0, G)
-    // has half of it and the part compared here (share·G) share of it; none when B2 ≤ B1, where the estimate is 0.
-    var seG = G !== null && G > 0 ? Math.sqrt(bs[0].se * bs[0].se + bs[1].se * bs[1].se) : 0;
-    var acc = function (rs) { var n = U.sum(rs.map(function (r) { return r.n; })); return n ? U.sum(rs.map(function (r) { return r.right; })) / n : null; };
-    var rtb = bs.map(function (r) { return r.rtMed; }).filter(isNum);
-    return {
-      ok: true, change: d, se: se, lo: d - C.z * se, hi: d + C.z * se, baseline: bm, baselineSe: bse, baselines: k,
-      latest: L.theta, latestSe: L.se, gain12: G, retestRemaining: G === null ? null : 0.5 * Math.max(0, G), retest: retest,
-      retestRemainingSe: G === null ? null : 0.5 * seG, retestSe: G === null ? null : share * seG,
-      accuracy: { baseline: acc(bs), latest: L.n ? L.right / L.n : null },
-      rtMed: { baseline: rtb.length ? U.median(rtb) : null, latest: isNum(L.rtMed) ? L.rtMed : null },
-    };
-  }
-
-  var TEXT = {
-    'beyond familiarity': 'Larger than familiarity with the tasks and the word task would predict.',
-    'unclear yet': 'At least one comparison (with familiarity or with the word task) still includes zero. This is the usual result and not the same as no progress; a change shows once it is larger than this range.',
-    'no change': 'No change beyond what familiarity predicts, at this precision.',
-  };
-
-  // Both conditions, with 95 % intervals: the change clears the control's change, and it clears the expected retest
-  // gain (that interval also carries the retest estimate's own standard error). Otherwise 'unclear yet', or 'no
-  // change' when even the upper end of the change beyond familiarity is small.
-  function decide(x, ctl) {
-    var z = C.z, retest = isNum(x.retest) ? x.retest : 0;
-    var vr = x.change - retest, sr = Math.sqrt(x.se * x.se + (isNum(x.retestSe) ? x.retestSe * x.retestSe : 0));
-    x.vsRetest = { diff: vr, se: sr, lo: vr - z * sr, hi: vr + z * sr, known: isNum(x.retest) };
-    x.vsControl = null;
-    if (ctl && ctl.ok) {
-      var vc = x.change - ctl.change, sc = Math.sqrt(x.se * x.se + ctl.se * ctl.se);
-      x.vsControl = { diff: vc, lo: vc - z * sc, hi: vc + z * sc };
-    }
-    if (x.vsRetest.known && x.vsRetest.lo > 0 && x.vsControl && x.vsControl.lo > 0) x.outcome = 'beyond familiarity';
-    else if (x.vsRetest.known && x.vsRetest.hi < C.assess.noChange) x.outcome = 'no change';
-    else x.outcome = 'unclear yet';
-    x.text = TEXT[x.outcome];
-    return x;
-  }
+  /* ---------- the report (Design A: the meter, and the trend model's words at milestones) ---------- */
 
   // Level change on trained exercises since the end of the baseline (near transfer, for context).
   function near(rec, since, now) {
@@ -672,39 +628,31 @@
     return out;
   }
 
+  // report(rec, now) → { status: 'none' | 'baseline' | 'baseline-done' | 'trend', checks (full checks), baselines,
+  //   occasions, latest: { date, form, kind }, meter (meter()), verdict (the latest stored: { day, at, words, p, mean,
+  //   lo, hi }), verdicts, composite: { outcome (the latest verdict's words, or null before the first milestone), p,
+  //   mean, lo, hi, probes }, rungs: { near, mid, far, … : { p, mean, lo, hi } }, near (trained exercises' levels since
+  //   the baselines), lines }. Words only at milestones; between them the meter (CLAUDE.md rules 2 and 10).
   function report(rec, now) {
-    var A = C.assess, list = checks(rec);
-    var out = { status: 'none', checks: list.length, baselines: 0, probes: {}, composite: null, control: null, near: null, lines: [] };
+    var list = checks(rec), occ = occasions(rec), nb = baselineCount(list);
+    var out = { status: 'none', checks: list.length, baselines: nb, occasions: occ.length, latest: null, meter: null, verdict: null, verdicts: [],
+      composite: null, rungs: null, probes: {}, control: null, near: null, lines: [] };
     if (!list.length) { out.lines.push('No Spatial Check yet.'); return out; }
-    var nb = baselineCount(list);
-    out.baselines = nb;
-    if (list.length < 2) { out.status = 'baseline'; out.lines.push('One more starting check, then changes can be shown.'); return out; }
-    if (list.length <= nb) {
-      out.status = needB3(list) && list.length < 3 ? 'baseline' : 'baseline-done';
-      out.lines.push(out.status === 'baseline' ? 'A third starting check will steady the baseline.' : 'Starting point measured. Changes appear after your next check.');
-      return out;
-    }
-    var base = list.slice(0, nb), last = list[list.length - 1];
-    out.status = 'change';
-    out.latest = { date: last.date, form: last.form };
-    Object.keys(last.results).forEach(function (id) { out.probes[id] = change(base, last, id); });
-    out.control = out.probes[A.control] && out.probes[A.control].ok ? out.probes[A.control] : null;
-    Object.keys(out.probes).forEach(function (id) { if (id !== A.control && out.probes[id].ok) decide(out.probes[id], out.control); });
-    var cp = A.composite.filter(function (id) { return out.probes[id] && out.probes[id].ok; });
-    if (cp.length) {
-      var d = U.mean(cp.map(function (id) { return out.probes[id].change; }));
-      var se = Math.sqrt(U.sum(cp.map(function (id) { return out.probes[id].se * out.probes[id].se; }))) / cp.length;
-      var rts = cp.map(function (id) { return out.probes[id].retest; });
-      var known = rts.every(isNum);
-      out.composite = decide({
-        ok: true, probes: cp, change: d, se: se, lo: d - C.z * se, hi: d + C.z * se,
-        retest: known ? U.mean(rts) : null,
-        retestSe: known ? Math.sqrt(U.sum(cp.map(function (id) { var s = out.probes[id].retestSe; return s * s; }))) / cp.length : null,
-      }, out.control);
-    }
-    out.near = near(rec, timeOf(base[nb - 1]), now);
-    out.lines.push('Change is measured from the average of your starting checks. Familiarity with the tasks raises scores on its own (the retest gain), so it is counted before a change is called real.');
-    if (out.composite) out.lines.push('Spatial probes combined: ' + out.composite.text);
+    var last = occ[occ.length - 1];
+    out.latest = { date: last.date, form: last.form, kind: last.kind };
+    if (nb < 2) { out.status = 'baseline'; out.lines.push('One more starting point, then the meter starts with your training.'); return out; }
+    var m = meter(rec, now);
+    if (m.p === null) { out.status = 'baseline-done'; out.lines.push('Starting point measured. The meter starts once you train, and moves with every block.'); return out; }
+    var v = latestVerdict(rec), f = fit(rec);
+    out.status = 'trend';
+    out.meter = m;
+    out.verdict = v ? U.deepCopy(v) : null;
+    out.verdicts = isObj(rec.measure) && isArray(rec.measure.verdicts) ? U.deepCopy(rec.measure.verdicts) : [];
+    out.composite = { outcome: v ? v.words : null, p: m.p, mean: m.mean, lo: m.lo, hi: m.hi, probes: f && f.gain.comp ? f.gain.comp.probes.slice() : [] };
+    out.rungs = m.rungs;
+    out.near = near(rec, timeOf(list[nb - 1]), now);
+    out.lines.push(m.line);
+    out.lines.push('Familiarity with the tasks raises probe scores on its own, so the meter counts only the rise beyond what familiarity predicts; Word Links, a word task that spatial training should leave alone, steadies the reading against good and bad days.');
     return out;
   }
 

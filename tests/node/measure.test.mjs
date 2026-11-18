@@ -76,13 +76,13 @@ function mixes(t) {
   const week = A.mix('week', newRecord(PX, T0)).map((m) => m.id + '×' + m.items);
   t.eq(week, ['otherway×6', 'cubematch×6', 'viewmatch×6', 'mechanisms×6', 'wordlinks×4'], 'a measurement-week block: 6 items per probe, the control 4');
   const full = A.mix('B1', rec).map((m) => m.id + '×' + m.items);
-  t.eq(full, ['otherway×16', 'cubematch×16', 'viewmatch×16', 'mechanisms×16', 'patterns×16', 'motiongraphs×16', 'wordlinks×16'], 'a full check: the near probe, 1.1’s four in their order, the new far probe, the control');
-  t.eq(A.mix('regular', rec, { optional: true }).slice(-1)[0].id, 'level', 'Level only when asked for, last');
+  t.eq(full, ['otherway×16', 'cubematch×5', 'viewmatch×5', 'mechanisms×5', 'patterns×5', 'motiongraphs×5', 'wordlinks×5'], 'a full check: the near probe × 16, every other probe × 5 (1.1’s four in their order), the control × 5: 46 items');
+  t.eq(A.mix('regular', rec, { optional: true }).slice(-1)[0].id + '×' + A.mix('regular', rec, { optional: true }).slice(-1)[0].items, 'level×8', 'Level only when asked for, last, 8 items');
   const can = (def) => def.id !== 'patterns';
   t.ok(A.mix('block', rec, {}, can).every((m) => m.id !== 'patterns') && A.mix('B1', rec, {}, can).length === 6, 'a probe the device cannot run is left out');
 
   const P0 = t.mk({ ladder: false }), r0 = newRecord(P0, T0);
-  t.eq(P0.engine.assess.mix('B1', r0).map((m) => m.id), ['cubematch', 'viewmatch', 'mechanisms', 'patterns', 'wordlinks'], 'without the new probes a full check is 1.1’s');
+  t.eq(P0.engine.assess.mix('B1', r0).map((m) => m.id + '×' + m.items), ['cubematch×5', 'viewmatch×5', 'mechanisms×5', 'patterns×5', 'wordlinks×5'], 'without the new probes a full check holds 1.1’s probes, 25 items');
   t.eq(P0.engine.assess.mix('block', r0).map((m) => m.id + '×' + m.items), ['cubematch×2', 'viewmatch×2', 'mechanisms×2', 'wordlinks×2'], 'and a block keeps the places it can fill');
 }
 
@@ -93,7 +93,7 @@ function schedule(t) {
   const PX = t.mk(), E = PX.engine, A = E.assess, L = new Learner(PX, 5);
   let rec = newRecord(PX, T0);
   let n = A.nextMeasure(rec, T0);
-  t.eq([n.kind, n.when, n.due, n.late, n.items, n.minutes], ['B1', 'after-tutorial', true, false, 112, 28], 'a newcomer: B1 right after the first tutorial (7 probes × 16 items, 28 minutes at 15 s an item)');
+  t.eq([n.kind, n.when, n.due, n.late, n.items, n.minutes], ['B1', 'after-tutorial', true, false, 46, 11.5], 'a newcomer: B1 right after the first tutorial (46 items, 11.5 minutes at 15 s an item)');
   t.ok(typeof n.why === 'string' && /starting point/.test(n.why) && !/IQ|percentile|index|norm/i.test(n.why), 'with its why-now line');
   A.later(rec, 'B1', T0 + 60000);
   n = A.nextMeasure(rec, T0 + 2 * HOUR);
@@ -161,7 +161,24 @@ function schedule(t) {
   for (let i = 0; i < 6; i++) train(rd, T0 + (2 + i) * DAY);
   n = A.nextMeasure(rd, T0 + 40 * DAY);
   t.eq([n.kind, n.when, n.due], ['delayed', 'session-start', true], 'training stopped four weeks ago: a delayed check');
-  if (!A.needB3(A.checks(rd))) t.eq(A.due(rd, T0 + 40 * DAY).kind, 'delayed', 'the same rule as the full checks’ schedule');
+  t.eq(A.due(rd, T0 + 40 * DAY).kind, 'delayed', 'due() gives the same full check');
+  const nc = A.nextCheck(rec, Date.parse(rec.assess[rec.assess.length - 1].date) + 2 * DAY);
+  t.ok(!nc.ready && nc.kind === 'regular' && nc.sessionsLeft === 0 && nc.when === 'session-start', 'between blocks the next check is the 4-weekly one (days, never sessions)');
+  t.ok(['B1', 'B2', 'B3'].every((k) => A.nextMeasure(newRecord(PX, T0), T0).kind !== 'B3'), 'no B3');
+
+  // the Lab crossover: a full check opens it and closes each phase
+  const rl = newRecord(PX, T0);
+  measure(PX, rl, L, 'B1', T0);
+  measure(PX, rl, L, 'B2', T0 + DAY);
+  E.lab.enroll(rl, T0 + 20 * DAY);
+  n = A.nextMeasure(rl, T0 + 20 * DAY + HOUR);
+  t.eq([n.kind, n.when, n.due], ['regular', 'session-start', true], 'Lab: a full check opens the experiment');
+  measure(PX, rl, L, 'regular', T0 + 20 * DAY + HOUR);
+  t.eq(A.nextMeasure(rl, T0 + 22 * DAY).kind, 'block', 'then blocks');
+  const W = E.config.lab.weeks * 7 * DAY;
+  n = A.nextMeasure(rl, T0 + 20 * DAY + W + HOUR);
+  t.eq([n.kind, n.due], ['regular', true], 'and a full check closes phase 1');
+  t.ok(/phase 1/.test(n.why), 'saying so');
 }
 
 /* ---------- sessions and entries ---------- */
@@ -172,7 +189,10 @@ function sessions(t) {
   const rec = newRecord(PX, T0);
   const b1 = measure(PX, rec, L, 'B1', T0);
   const e1 = rec.assess[0];
-  t.eq([e1.kind, e1.form, rec.measure.form0], ['B1', 'A', 'A'], 'B1 on form A while the random first form is off (formRandom: the Design A switch)');
+  t.ok(e1.kind === 'B1' && ['A', 'B', 'C'].includes(rec.measure.form0) && e1.form === rec.measure.form0, 'B1 on the record’s first form, drawn at B1');
+  const drawn = new Set();
+  for (let i = 0; i < 30; i++) { const r = newRecord(PX, T0 + i * 7919); const pl = E.modes.start(r, 'check', { now: T0, kind: 'B1' }); drawn.add(pl.check.form); }
+  t.eq([...drawn].sort(), ['A', 'B', 'C'], 'the first form differs between records (O16)');
   t.ok(Object.keys(e1.results).length === 7 && Object.keys(e1.items).every((id) => e1.items[id].length === e1.results[id].n), 'items kept per probe, one row per scored answer');
   t.ok(Object.values(e1.items).flat().every((r) => r.length === 4 && Number.isFinite(r[0]) && r[1] >= 0 && r[1] < 1 && (r[2] === 0 || r[2] === 1) && (r[3] === null || Number.isInteger(r[3]))), 'rows [b, g, ok, rtMs]');
   t.eq(e1.pv, { otherway: 1, cubematch: 1, viewmatch: 1, mechanisms: 1, patterns: 1, motiongraphs: 1, wordlinks: 1 }, 'probe versions kept');
@@ -182,7 +202,11 @@ function sessions(t) {
   t.eq(rec.sessions.map((s) => s.kind), ['baseline'], 'the check session is marked baseline');
   t.ok(b1.steps.every((x) => x.step.feedback === false && x.step.seed >= 2 ** 31 && x.step.kind === 'probe'), 'no feedback, shared seeds, probe rows');
 
-  measure(PX, rec, L, 'B2', T0 + 13 * HOUR);
+  const b2 = measure(PX, rec, L, 'B2', T0 + 13 * HOUR);
+  const F = ['A', 'B', 'C'];
+  t.eq(rec.assess[1].form, F[(F.indexOf(rec.measure.form0) + 1) % 3], 'B2 on the next form');
+  t.ok(b2.steps.every((x) => Math.abs(x.step.target - M.target(x.step.g, 0.6)) < 1e-12), 'probes met before: every item at g + (1 − g)·0.6');
+  t.ok(b1.steps.filter((x) => x.step.probe.index < 2).every((x) => Math.abs(x.step.target - M.target(x.step.g, 0.85)) < 1e-12), 'B1: the first two items of each probe at 0.85');
   train(rec, T0 + 20 * HOUR, 30);
   const p = E.modes.start(rec, 'check', { now: T0 + 30 * HOUR, kind: 'block' });
   const f = A.fit(rec), input = A.trendInput(rec);
@@ -285,6 +309,22 @@ function meterAndVerdicts(t) {
   t.ok(m.milestone && m.milestone.day === 28 && /Likely gain|Unclear yet|Likely no change/.test(m.line) && m.next.day === 56, 'within a week of a verdict the line gives its words; the next comes at day 56');
   const later = A.meter(rec, now + 10 * DAY);
   t.ok(/Chance that your probe results rose/.test(later.line) && /day 56/.test(later.line), 'between milestones: the chance and the next milestone');
+
+  t.section('measure: the report');
+  const rp = A.report(rec, now + 2 * HOUR);
+  t.eq([rp.status, rp.baselines, rp.composite.outcome, rp.verdict.day], ['trend', 2, vs[1].words, 28], 'report: the latest verdict’s words, the meter beside them');
+  t.ok(rp.composite.p === m.p && rp.lines[0] === m.line && rp.rungs.near && rp.composite.probes.length >= 5, 'the same meter and line as meter()');
+  t.ok(!/IQ|percentile|index|norm|brain age|beyond familiarity/i.test(JSON.stringify(rp)), 'no 1.1 words, no IQ, index, percentile, norm or brain age');
+  const r0 = newRecord(PX, T0);
+  t.eq(A.report(r0, T0).status, 'none', 'no check: none');
+  measure(PX, r0, L, 'B1', T0);
+  t.eq(A.report(r0, T0 + HOUR).status, 'baseline', 'one starting point: baseline');
+  measure(PX, r0, L, 'B2', T0 + 13 * HOUR);
+  t.eq(A.report(r0, T0 + 14 * HOUR).status, 'baseline-done', 'two, no training yet: baseline-done');
+  train(r0, T0 + 15 * HOUR, 20);
+  measure(PX, r0, L, 'block', T0 + 24 * HOUR);
+  const rr = A.report(r0, T0 + 25 * HOUR);
+  t.ok(rr.status === 'trend' && rr.composite.outcome === null && rr.verdict === null, 'training began: the meter, and no words before day 14');
 }
 
 /* ---------- the container, merge, events, session kinds ---------- */

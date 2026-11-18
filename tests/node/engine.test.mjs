@@ -946,6 +946,10 @@ function trainSessions(rec, from, n, step = DAY) {
 function testAssess(t) {
   t.section('assess');
   const PX = t.mk(), E = PX.engine, A = E.assess, M = E.model, cm = PX.ex.get('cubematch');
+  // 16 items per probe, as in 1.1, so the posterior checks below have items enough (Design A's full check holds
+  // 5 per probe and Other Way Round's 16: tests/node/measure.test.mjs)
+  const full16 = (P) => { P.engine.config.measure.full = { near: 16, mid: 16, far: 16, control: 16, alone: 16 }; return P; };
+  full16(PX);
   const lw = A._.newPost(cm), rng = PX.rng(31), resp = [];
   for (let i = 0; i < 16; i++) { const b = rng.float(-2, 2), ok = rng.chance(0.6); resp.push([b, ok]); A._.updatePost(lw, b, 0.5, ok); }
   const s = A._.summary(lw);
@@ -981,6 +985,7 @@ function testAssess(t) {
 
   // Worked examples (learn.js demo) come first, are never scored, and their seeds are never used.
   const runCheck = (P) => {
+    full16(P);
     const rc = newRecord(P, T0), pl = P.engine.modes.start(rc, 'check', { now: T0 }), out = [];
     for (let i = 0; i < 200; i++) {
       const x = P.engine.modes.next(pl, rc, T0 + i * 9000);
@@ -1006,24 +1011,20 @@ function testAssess(t) {
   t.ok(ot.outcome === 0 && pr0.n === 1 && pr0.right === 0 && Math.abs(A._.summary(pr0.lw).mu - A._.summary(lt).mu) < 1e-12, 'a timed-out probe item is scored wrong');
   t.ok(!A.due(rec, T0 + 3600e3).due && A.due(rec, T0 + 13 * 3600e3).due && A.due(rec, T0 + 13 * 3600e3).kind === 'B2', 'B2 is offered from about 12 hours later');
   const r2 = playSession(PX, rec, L, 'check', { now: T0 + DAY }, 1);
-  t.ok(r2.steps[0].step.probe.form === 'B' && r2.steps[0].step.seed !== r.steps[0].step.seed, 'the second check uses form B');
+  const FORMS = ['A', 'B', 'C'], f0 = rec.measure.form0;
+  t.ok(r.steps[0].step.probe.form === f0 && r2.steps[0].step.probe.form === FORMS[(FORMS.indexOf(f0) + 1) % 3] && r2.steps[0].step.seed !== r.steps[0].step.seed, 'the second check uses the next form after the record’s first');
   t.ok(['baseline-done', 'baseline'].includes(A.report(rec, T0 + DAY).status), 'after the baselines: no change shown yet');
 
-  // Schedule after the baselines: every 14 days and 8 sessions, whichever is later.
+  // Schedule after the baselines (Design A): the 4-weekly check, 28 days after the first; no B3; the delayed check.
   const rs = newRecord(PX, T0);
   rs.assess.push(mkCheck(T0, 0, 0.3), mkCheck(T0 + DAY, 0.1, 0.3));
   trainSessions(rs, T0 + 2 * DAY, 10);
-  t.ok(!A.due(rs, T0 + 12 * DAY).due, 'not before 14 days');
-  const rs2 = newRecord(PX, T0);
-  rs2.assess.push(mkCheck(T0, 0, 0.3), mkCheck(T0 + DAY, 0.1, 0.3));
-  trainSessions(rs2, T0 + 2 * DAY, 5);
-  t.ok(!A.due(rs2, T0 + 16 * DAY).due, 'not before 8 sessions');
-  trainSessions(rs2, T0 + 8 * DAY, 4, 3600e3);
-  const dd = A.due(rs2, T0 + 16 * DAY);
-  t.ok(dd.due && dd.kind === 'regular', 'due once both hold');
+  t.ok(!A.due(rs, T0 + 12 * DAY).due && A.due(rs, T0 + 12 * DAY).next === T0 + 28 * DAY, 'not before day 28');
+  const dd = A.due(rs, T0 + 28 * DAY + 3600e3);
+  t.ok(dd.due && dd.kind === 'regular' && dd.when === 'session-start', 'due at day 28, at the start of a session');
   const rb = newRecord(PX, T0);
   rb.assess.push(mkCheck(T0, 0, 0.2), mkCheck(T0 + DAY, 1.0, 0.2));
-  t.eq(A.due(rb, T0 + 2 * DAY).kind, 'B3', 'B3 when B1 and B2 differ by more than 2 combined SE');
+  t.ok(A.needB3(A.checks(rb)) && A.due(rb, T0 + 2 * DAY).kind !== 'B3', 'no B3, however much B1 and B2 differ (the trend model weighs every occasion)');
   const rd = newRecord(PX, T0);
   rd.assess.push(mkCheck(T0, 0, 0.3), mkCheck(T0 + DAY, 0.1, 0.3));
   trainSessions(rd, T0 + 2 * DAY, 8);
@@ -1037,43 +1038,20 @@ function testAssess(t) {
   t.ok(!n2.ready && n2.kind === 'B2' && n2.dueAt === T0 + DAY / 2 && n2.sessionsLeft === 0 && n2.daysLeft === 1, 'nextCheck: B2 about 12 hours after B1');
   rn.assess.push(mkCheck(T0 + DAY, 0.1, 0.3));
   trainSessions(rn, T0 + 2 * DAY, 3);
-  rn.sessions.push({ id: 'short', start: T0 + 6 * DAY, end: T0 + 6 * DAY + 120000, mode: 'train', trials: 8, right: 6, practiceMs: 120000, summary: null });
-  rn.sessions.push({ id: 'daily', start: T0 + 6 * DAY + 5e5, end: T0 + 6 * DAY + 9e5, mode: 'daily', trials: 8, right: 6, practiceMs: 400000, summary: null });
   const nr = A.nextCheck(rn, T0 + 5 * DAY);
-  t.ok(!nr.ready && nr.kind === 'regular' && nr.sessionsLeft === 5 && nr.daysLeft === 10 && nr.dueDate === PX.engine.day(T0 + 15 * DAY), 'nextCheck: 14 days and 8 sessions after the last check (5 more sessions, 10 more days)');
-  t.eq(A.nextCheck(rn, T0 + 7 * DAY).sessionsLeft, 5, 'only training sessions that count for the weekly goal count (≥ 10 answers or 5 minutes): not a short one, not the Daily');
-  t.eq(A.nextCheck(rn, T0 + 7 * DAY).sessionsLeft, 8 - rn.sessions.filter((x) => PX.engine.streak.counts(x) && x.mode === 'train' && x.start > T0 + DAY).length, 'the same rule as streak.counts');
+  t.ok(!nr.ready && nr.kind === 'regular' && nr.sessionsLeft === 0 && nr.daysLeft === 23 && nr.dueDate === PX.engine.day(T0 + 28 * DAY), 'nextCheck: the 4-weekly check, 28 days after the first (23 more days; days only, never a session count)');
   trainSessions(rn, T0 + 7 * DAY, 5);
-  const nd = A.nextCheck(rn, T0 + 16 * DAY);
-  t.ok(nd.ready && nd.daysLeft === 0 && nd.sessionsLeft === 0 && A.due(rn, T0 + 16 * DAY).due, 'nextCheck agrees with due() once both hold');
+  const nd = A.nextCheck(rn, T0 + 28 * DAY + 3600e3);
+  t.ok(nd.ready && nd.daysLeft === 0 && nd.sessionsLeft === 0 && A.due(rn, T0 + 28 * DAY + 3600e3).due, 'nextCheck agrees with due()');
 
-  // Change report and the three outcome words.
-  const word = (latest, se, b2, ctl) => {
-    const x = newRecord(PX, T0);
-    x.assess.push(mkCheck(T0, 0, se), mkCheck(T0 + DAY, b2, se), mkCheck(T0 + 20 * DAY, latest, se, { wordlinks: ctl }));
-    return A.report(x, T0 + 21 * DAY);
-  };
-  const big = word(2.0, 0.3, 0.3, 0.3);
-  t.eq([big.status, big.composite.outcome, big.probes.cubematch.outcome], ['change', 'beyond familiarity', 'beyond familiarity'], '"beyond familiarity" when the change clears the control and the retest gain');
-  t.near(big.probes.cubematch.retest, 0.3, 1e-9, 'retest still expected vs the baseline average = max(0, B2 − B1) after two baselines');
-  t.near(big.probes.cubematch.retestRemaining, 0.15, 1e-9, '… of which 0.5 × (B2 − B1) after B2');
-  t.near(big.probes.cubematch.change, 2.0 - 0.15, 1e-9, 'change is measured from the baseline average');
-  const bx = big.probes.cubematch, sG = Math.sqrt(0.3 * 0.3 + 0.3 * 0.3);
-  t.near(bx.retestRemainingSe, 0.5 * sG, 1e-9, 'the remaining retest gain has its own standard error, 0.5·√(se_B1² + se_B2²)');
-  t.near(bx.retestSe, sG, 1e-9, '… and the familiarity estimate compared after two baselines, max(0, B2 − B1), has √(se_B1² + se_B2²)');
-  t.near((bx.vsRetest.hi - bx.vsRetest.lo) / 2, 1.96 * Math.sqrt(bx.se * bx.se + bx.retestSe * bx.retestSe), 1e-9, 'the familiarity comparison’s 95 % range includes the uncertainty of the familiarity estimate');
-  t.near((big.composite.vsRetest.hi - big.composite.vsRetest.lo) / 2, 1.96 * Math.sqrt(big.composite.se ** 2 + (Math.sqrt(4 * sG * sG) / 4) ** 2), 1e-9, '… for the combined probes too');
-  t.eq(word(0.9, 0.3, 0.3, 0).composite.outcome, 'unclear yet', 'a change that clears familiarity only if the familiarity estimate were exact stays "unclear yet"');
-  const dn = word(2.0, 0.3, -0.2, 0.3).probes.cubematch;
-  t.ok(dn.retest === 0 && dn.retestSe === 0 && dn.retestRemainingSe === 0, 'no familiarity estimate and no extra uncertainty when B2 ≤ B1');
-  const r3 = newRecord(PX, T0);
-  r3.assess.push(mkCheck(T0, 0, 0.2), mkCheck(T0 + DAY, 1.0, 0.2), mkCheck(T0 + 2 * DAY, 1.2, 0.2), mkCheck(T0 + 20 * DAY, 3.0, 0.2));
-  const p3 = A.report(r3, T0 + 21 * DAY).probes.cubematch;
-  t.ok(p3.baselines === 3 && Math.abs(p3.retest - 2 / 3) < 1e-9 && Math.abs(p3.retestSe - (2 / 3) * Math.sqrt(0.08)) < 1e-9, 'after three baselines the familiarity estimate and its standard error are both 2/3 of the first-to-second gain’s');
-  t.eq(word(0.6, 0.3, 0.3, 0.3).composite.outcome, 'unclear yet', '"unclear yet" when the interval still includes familiarity');
-  t.eq(word(0.15, 0.05, 0.05, 0.15).composite.outcome, 'no change', '"no change" when even the upper end beyond familiarity is small');
-  t.eq(word(2.0, 0.3, 0.3, 2.0).composite.outcome, 'unclear yet', 'a change matched by the control is not called beyond familiarity');
-  t.ok(big.probes.wordlinks.outcome === undefined && big.control, 'the control is reported, not judged');
+  // The report (Design A): the trend model's meter, and its words only at milestones (tests/node/measure.test.mjs).
+  const rr = newRecord(PX, T0);
+  rr.assess.push(mkCheck(T0, 0, 0.5), mkCheck(T0 + DAY, 0.2, 0.5));
+  t.eq(A.report(rr, T0 + DAY).status, 'baseline-done', 'two starting checks, no training yet: baseline-done');
+  trainSessions(rr, T0 + 2 * DAY, 3);
+  rr.assess.push(mkCheck(T0 + 5 * DAY, 0.6, 0.5));
+  const big = A.report(rr, T0 + 6 * DAY);
+  t.ok(big.status === 'trend' && big.composite.outcome === null && big.meter.p > 0 && big.meter.p < 1 && big.meter.lo < big.meter.hi, 'after training: the meter with its range, no words before day 14');
   t.ok(/familiar/.test(big.lines.join(' ')) && !/IQ|percentile|brain age/i.test(JSON.stringify(big)), 'the report names familiarity and never IQ, percentiles or brain age');
   const ex = newRecord(PX, T0);
   t.ok(A.expect(ex, 4, T0) && !A.expect(ex, 2, T0) && ex.spatial.expect.value === 4, 'expectations are asked once');
