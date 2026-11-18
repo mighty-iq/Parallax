@@ -32,7 +32,7 @@ DONE = """() => {
     const netTags = document.querySelectorAll('.fm-svg .fm-tag').length, keyTags = cells[it.key].querySelectorAll('.fm-tag').length;
     const bad = document.querySelectorAll('.fm-tag--bad').length, pk = __harness.last.response, kind = typeof pk === 'number' ? it.options[pk].kind : '';
     const edges = document.querySelectorAll('.fm-edge-hl').length;
-    const fold = document.querySelector('.fm-fold'), folded = !!fold && fold.style.display !== 'none' && fold.querySelectorAll('path.px-fig-face').length >= 3;
+    const fold = document.querySelector('svg.fm-foldup'), folded = !!fold && fold.style.display !== 'none' && fold.querySelectorAll('path.px-fig-face').length >= 3;
     const ok = wrong ? (kind === 'shape' ? cells[pk].classList.contains('ex-focus') && edges >= 2 : bad >= 1) : (folded && cells[it.key].classList.contains('ex-focus')) || (netTags >= 1 && keyTags >= 1);
     return { ok, netTags, keyTags, bad, edges, wrong, kind, folded }; }"""
 
@@ -117,7 +117,9 @@ def normal_speed(b, cons):
     page.screenshot(path=str(DIR / 'form_showme_mid.png'))
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=120000)
     pl = page.evaluate('() => __harness.played')
-    C.ok(6000 <= pl['plannedMs'] <= 16000, f'show me plans 6-16 s at normal speed ({pl})')
+    # v1.2: the card's steps, a half mark's corner, the fold-up (O51) and why the pick is wrong: 2-4 s a
+    # movement (EXERCISE-GUIDE), so up to about 21 s; the player can pause, step or close it
+    C.ok(6000 <= pl['plannedMs'] <= 24000, f'show me plans 6-24 s at normal speed ({pl})')
     go(page, 'box')
     before = page.evaluate('() => __harness.played.finished')
     page.evaluate('() => { __harness.demo(); }')
