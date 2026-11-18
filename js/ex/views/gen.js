@@ -948,6 +948,7 @@
   PX.ex.define({
     id: 'views', version: 2, code: 'EX-07', name: 'Orthographic views', short: 'Views',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4,
+    bet: 'produce', format: { toview: 'views:object-to-view', toobject: 'views:views-to-object', count: 'views:count-cubes' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     dims: [
       { key: 'cubes', label: 'Cubes', levels: LEVELS.slice(), step: DIFF.cubes },
       { key: 'grid', label: 'Grid', levels: ['3 × 3', '4 × 4'], step: DIFF.grid },

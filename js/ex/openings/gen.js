@@ -1086,6 +1086,7 @@
   PX.ex.define({
     id: 'openings', version: 2, code: 'EX-14', name: 'Openings', short: 'Openings',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 5, pat: true,
+    bet: 'format', format: 'openings:solid-through-opening', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     starter: { dim: 'features', levels: 1 },
     dims: [
       { key: 'features', label: 'Features', levels: FEATURE_LABELS.slice(), step: 0.6, at: [-1.6, 0, 0.6, 1.2, 1.8] },

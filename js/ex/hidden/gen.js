@@ -738,6 +738,7 @@
   PX.ex.define({
     id: 'hidden', version: 1, code: 'EX-10', name: 'Hidden Shapes', short: 'Hidden',
     abilities: ['CF'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: NOPT,
+    bet: 'variety', format: 'hidden:shape-in-figure', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     dims: [
       { key: 'extra', label: 'Extra lines', levels: EXTRAS.slice(), step: DIFF.extra },
       { key: 'sim', label: 'Candidate similarity', levels: SIMS.slice(), step: DIFF.sim },

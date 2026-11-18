@@ -1307,6 +1307,7 @@
   PX.ex.define({
     id: 'fold', version: 1, code: 'EX-04', name: 'Paper folding', short: 'Fold',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train',
+    bet: 'variety', format: 'fold:fold-punch-unfold', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     answer: 'choice', nOptions: 5, // 4 options below 4 folds, 5 from 4 folds up: use item.options.length
     dims: [
       { key: 'folds', label: 'Folds', levels: FOLDS, step: 0.6 },

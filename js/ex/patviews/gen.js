@@ -920,6 +920,7 @@
   PX.ex.define({
     id: 'patviews', version: 2, code: 'EX-15', name: 'Missing View', short: 'Missing View',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4, pat: true,
+    bet: 'format', format: 'patviews:missing-third-view', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     requires: ['views'],
     starter: { dim: 'cubes', levels: 1 },
     dims: [

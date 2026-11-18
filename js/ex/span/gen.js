@@ -570,6 +570,7 @@
   PX.ex.define({
     id: 'span', version: 1, code: 'EX-09', name: 'Block Span', short: 'Span',
     abilities: ['MV', 'WM'], cell: null, role: 'train', answer: 'sequence',
+    bet: 'load', format: { forward: 'span:sequence-forward', backward: 'span:sequence-backward' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     // step values are the average costs, for display; difficulty() below is what counts.
     dims: [
       { key: 'len', label: 'Length', levels: LENS.slice(), step: 0.71 },

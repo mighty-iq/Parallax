@@ -905,6 +905,7 @@
   PX.ex.define({
     id: 'rotate', version: 1, code: 'EX-02', name: 'Mental Rotation', short: 'Rotate',
     abilities: ['Vz', 'SR'], cell: 'intrinsic-dynamic', role: 'train',
+    bet: 'strategy', format: { samediff: 'rotate:same-or-mirror-3d', pick: 'rotate:pick-two-turned-3d' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     // Variants answer differently (ARCHITECTURE §6): the main answer is 'pick'; every item
     // carries item.answer, and players use item.answer || def.answer.
     answer: 'multi', nOptions: 4, nCorrect: 2,

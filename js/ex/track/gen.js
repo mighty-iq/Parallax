@@ -788,6 +788,7 @@
     id: 'track', version: 1, code: 'EX-01', name: 'Track', short: 'Track',
     practice: 'attention', // shown as attention practice (multiple-object tracking), not visuospatial training
     abilities: ['AT'], cell: null, role: 'train', answer: 'targets', perDisplay: true, extraParams: ['speedValue'],
+    bet: 'attention', format: 'track:mot-pick-targets', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     dims: [
       { key: 'speed', label: 'Speed', unit: ' cw/s', levels: SPEEDS, step: DIFF.speed }, // cube widths per second
       { key: 'targets', label: 'Targets', levels: TARGETS, step: DIFF.targets },

@@ -1526,6 +1526,7 @@
   PX.ex.define({
     id: 'slice', version: 1, code: 'EX-06', name: 'Cross-sections', short: 'Slice',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 4,
+    bet: 'bridge', format: 'slice:plane-to-section', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     // Steps document the main effects; difficulty() below adds the interactions (see DIFF).
     dims: [
       { key: 'structure', label: 'Structure', levels: ['simple', 'joined', 'embedded'], step: 0.4 },

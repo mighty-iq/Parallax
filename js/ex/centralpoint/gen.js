@@ -816,6 +816,7 @@
     // Extrinsic-static: a place relative to several others, nothing moves.
     abilities: ['LE', 'Vz'], cell: 'extrinsic-static', role: 'train', answer: 'point',
     bet: 'calibrate', // docs/research/v1.2/T1-transfer-portfolio.md §3.3
+    format: { quick: 'centralpoint:least-total-quick', exact: 'centralpoint:least-total-exact' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     variants: VARIANTS.slice(), trainVariants: ['quick'], pace: PACE, roundScore: roundScore, extraParams: ['task'],
     dims: [
       // +0.25 logit per extra target: more pulls to balance (no human data; the simulated observers

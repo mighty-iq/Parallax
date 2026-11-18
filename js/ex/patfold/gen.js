@@ -336,6 +336,7 @@
   PX.ex.define({
     id: 'patfold', version: 2, code: 'EX-17', name: 'Hole punch', short: 'Hole Punch',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', pat: true,
+    bet: 'format', format: 'patfold:fold-punch-unfold-4x4', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     starter: { dim: 'folds', levels: 1 },
     requires: ['fold'], // Fold's paper model (lib.sheet), read at generate time
     answer: 'choice', nOptions: NOPT,

@@ -794,6 +794,7 @@
   PX.ex.define({
     id: 'form', version: 2, code: 'EX-19', name: 'Form', short: 'Form',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 4, pat: true,
+    bet: 'format', format: 'form:pattern-to-solid', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     starter: { dim: 'marks', levels: 1 },
     dims: [
       { key: 'solid', label: 'Solid', levels: ['boxes and prisms', 'wedges and pyramids', 'frusta and five-sided'], step: 0.5 },
