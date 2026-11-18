@@ -31,7 +31,7 @@ PDF = ROOT / 'docs' / 'Parallax-Guide.pdf'
 PAGES_OK = (44, 56)
 META = {
     '/Title': 'Parallax: user guide',
-    '/Author': 'Parallax contributors and the Chimera community (discord.gg/chmr)',
+    '/Author': 'the Chimera community (https://discord.gg/chmr)',
     '/Subject': 'What Parallax does, how to use it, and the research behind it. Version 1.1.0.',
     '/Keywords': 'Parallax, visuospatial, spatial ability, mental rotation, training, transfer, Chimera',
     '/Creator': 'tools/build-pdf.py (Chromium via Playwright)',
