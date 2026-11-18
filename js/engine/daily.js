@@ -48,7 +48,8 @@
     var order = rng.shuffle(defs), out = [], used = {};
     for (var i = 0; i < C.daily.items; i++) {
       var def = order[i % order.length], r = M.range(def), mid = (r.min + r.max) / 2;
-      var v = def.variants ? def.variants[rng.int(0, def.variants.length - 1)] : undefined;
+      var vs = def.variants ? (isArray(def.trainVariants) && def.trainVariants.length ? def.trainVariants : def.variants) : null; // v1.2: trainVariants
+      var v = vs ? vs[rng.int(0, vs.length - 1)] : undefined;
       var c = M.nearest(def, mid, v === undefined ? null : function (x) { return x.params.variant === v; }) || M.nearest(def, mid);
       var seed = E.select.sharedSeed(PX.rng.hash('px-daily-seed', key, i));
       while (used[seed]) seed = E.select.sharedSeed(PX.rng.hash('px-daily-seed', key, i, seed));

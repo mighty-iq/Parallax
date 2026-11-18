@@ -2,7 +2,8 @@
    ARCHITECTURE §7, PLAN §5; formulas and sources in docs/dev/ENGINE.md.
 
    State: { mu, sd, n, nRight, last }  (last = ms of the last rated trial, or null)
-     prior(def)                    { mu: easiest item + 1.0, sd: 1.0 }: the first items are easy
+     prior(def)                    { mu: easiest item + 1.0, sd: 1.5 (1.0 before v1.2) }: the first items are easy
+     starter(def, st)              null above level 1; else { toNext, needOf5, nowOf5 } towards level 2
      drift(st, trials, days)       variance + 0.002 per trial + 0.01 per idle day (capped at 1.0)
      post(mu, sd, b, g, correct)   moment matching on a grid (μ ± 6σ inside −8..+8 logits)
      update(st, b, g, correct)     post() plus counters; no drift (rate() adds it)
@@ -199,6 +200,24 @@
     };
   }
 
+  // Level 1 that does not read as stuck (v1.2, note D2 §3.0 B3): null when the shown level is above
+  // 1; else how far the rating has come towards level 2, read as the predicted success on the
+  // easiest (starter) items above chance against the success level 2 asks for there:
+  //   toNext  0 at chance … 1 at level 2;  needOf5  right answers out of 5 on starter items at level 2;
+  //   nowOf5  the same prediction for the rating now (rounded).
+  function starter(def, st) {
+    var s = clean(st, def), lv = level(def, s, { settings: false });
+    if (lv.level > 1) return null;
+    var r = M.range(def), g = M.refChance(def);
+    var th2 = bOfLevel(def, 1.5) + (0 - M.bAt(0, M.target(g, C.levelRef), g)); // the ability at which level 2 shows
+    var p2 = M.pExp(th2, 0, r.min, g), pNow = M.pExp(s.mu, 0, r.min, g);
+    return {
+      toNext: p2 - g > 1e-9 ? U.clamp((pNow - g) / (p2 - g), 0, 1) : 1,
+      needOf5: Math.min(5, Math.max(1, Math.round(5 * p2))),
+      nowOf5: Math.min(5, Math.max(0, Math.round(5 * pNow))),
+    };
+  }
+
   function displayClass(w, h) {
     var s = Math.min(isNum(w) ? w : 1024, isNum(h) ? h : 768);
     return s < 600 ? 'small' : 'large';
@@ -314,6 +333,6 @@
     prior: prior, fresh: fresh, clean: clean, drift: drift, post: post, update: update,
     predict: predict, level: level, levelOf: levelOf, bOfLevel: bOfLevel, bRef: bRef,
     settingsAt: settingsAt, displayClass: displayClass, slot: slot, peek: peek, get: get, shown: shown, rate: rate,
-    exEntry: exEntry,
+    exEntry: exEntry, starter: starter,
   };
 })(window.PX);

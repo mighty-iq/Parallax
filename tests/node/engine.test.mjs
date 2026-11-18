@@ -131,7 +131,7 @@ function testEstimator(t) {
   const PX = t.mk(), E = PX.engine, est = E.est, M = E.model, fold = PX.ex.get('fold');
   const pr = est.prior(fold);
   t.near(pr.mu, PX.ex.minDifficulty(fold) + 1.0, 1e-12, 'prior μ0 = easiest item + 1.0');
-  t.eq(pr.sd, 1, 'prior σ0 = 1.0');
+  t.eq(pr.sd, 1.5, 'prior σ0 = 1.5 (v1.2; 1.0 before)');
   const first = E.select.pick(fold, est.fresh(fold), { kind: 'target', k: 0.7 });
   t.ok(first.b <= PX.ex.minDifficulty(fold) + 0.7, 'the first item comes from the easy end');
   for (const [mu, sd, b, g, ok] of [[0, 1, 0, 0.25, true], [0, 1, 0, 0.25, false], [1.5, 0.4, 0, 0.5, true], [-1, 0.6, 1, 0, false], [0, 0.3, -2, 1 / 6, true], [2, 1, 2, 0.1, false]]) {

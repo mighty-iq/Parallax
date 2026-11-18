@@ -483,6 +483,8 @@
     var ok = v.order === 'AB' || v.order === 'BA';
     return { order: ok ? v.order : null, start: ok && E.fix.time(v.start) !== undefined ? v.start : null, left: E.fix.time(v.left) !== undefined ? v.left : null };
   });
+  E.pooled('spatial', function (v) { return v; }); // expectation ratings with epoch ms (v1.2)
+  E.pooled('lab', function (v) { return v; });
   void hasOwn;
 
   E.assess = {
