@@ -208,6 +208,17 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     C.ok(played == rungs + 1, f'{name}: with Sound on, one rising tone per rung cleared and a reward for the personal best ({played} sounds, {rungs} rungs)')
     page.evaluate('PX.core.store.state.settings.sound = false; PX.core.store.save()')
     page.screenshot(path=str(OUT / f'{name}-climb-end.png'), full_page=False)
+    # the share card draws (the existing share sheet, with the Chimera line in its text)
+    page.locator('[data-gm-share="climb"]').first.click()
+    try:
+        page.wait_for_function('(() => { const i = document.querySelector(".px-share-img"); return !!(i && i.getAttribute("src")); })()', timeout=10000)
+        alt = page.evaluate('document.querySelector(".px-share-img").getAttribute("alt")')
+        C.ok('height' in alt.lower() and 'discord.gg/chmr' in alt, f'{name}: the Climb card draws, with its text and the Chimera line ({alt[:120]!r})')
+        if name == 'phone390':
+            page.screenshot(path=str(OUT / f'{name}-climb-card.png'), full_page=False)
+    except Exception as e:  # noqa: BLE001
+        C.ok(False, f'{name}: the Climb card draws ({e})')
+    dismiss(page)
     fits(page, C, name, '.gm-panel', vw)
 
     # attempt B left part-way (two rungs, then a reload) goes on at rung 3
