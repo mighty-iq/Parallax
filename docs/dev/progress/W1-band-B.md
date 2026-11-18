@@ -49,10 +49,30 @@ Design source: docs/research/v1.2/D2-first-band.md §3.0, §3.4–3.9, §4. Requ
   a turn plus a hold, was 0.9 s); Missing View's browser check reads the v1.2 step order (the dotted step
   after the turn and the laid drawing).
 
+## Fix round after the fresh-player tests (lead's nine findings and W1-core's requests)
+- 20:45 UTC: resumed. Form's Watch: 14 captions to 3 (each waits for a tap), its worked example 15 to 3, show me
+  from the card's first step. Openings: any face may go in first (rules, card, Watch's first caption), the
+  Watch goes in side first, 9 captions to 5, ends on the answer. Missing View 9 to 5; Hole Punch 9 to 7, its
+  wrong sheets before the right one. Every demo ends on the answer with the view's caption cleared.
+- Reveals on phones: the verdict line read out only, a tag strip under each drawing, Openings, Form and
+  Missing View sized to the screen less the reading strip outside the tutorial; Openings three a row on
+  phones up to 700 px tall. Probe (Free play, band, 390 × 844 and 360 × 640): tiles move 0 px, no scroll,
+  no tag over a drawing, the last tile above the strip.
+- Tutorial items (params.task 'tutorial') never come back as rated items: before, 14.6 % of Missing View's and
+  6.1 % of Hole Punch's items at the tutorial's settings repeated a tutorial stem; now 0.
+- 21:00 UTC: the session server restarted mid-work; background runs rerun.
+- 21:13 UTC: Form committed (d2dbb54) and the lead told, for its fresh-player rerun. Decisions f2ebd64;
+  request to W2-core for Openings' starter level in the summary line (4d1e983).
+- 21:14 UTC: the other three exercises' browser checks and fit.py running.
+- 21:19 UTC: Hole Punch (06d0d32), Missing View (e168611), Openings (2759bd1) committed; W1-core's four lines
+  answered. Node 635/635 (my four suites, ≥ 10 000 items each, the tutorial-repeat checks included);
+  harness_starter_b 66/0 (the app's Watch, Try, Go for all four), harness_form 138, openings 154, patviews
+  145, patfold 228; fit.py 360 × 640 and 390 × 844 for my four 20/20. Watch lengths (captions, each a tap;
+  timed pace with Auto-play): Form 3 / 14.6 s, Openings 5 / 16.3 s, Missing View 5 / 17.4 s, Hole Punch
+  7 / 22.7 s.
+
 ## Next
-- Commit Openings' view and the browser checks once harness_openings and harness_patviews pass.
-- The fresh-player check, if the lead starts it: fix what it finds once.
+- Form's fresh-player rerun (the lead's); fix what it finds once.
 
 ## Open problems
-- The fresh-player check (note D2 §4) is not run: no subagent tool in this session. Brief and driver are
-  ready outside the repository (named in the handback).
+- none
