@@ -1547,10 +1547,14 @@
     // The labelled parts: listed in full on a wide screen; on a phone folded behind "Parts", so the
     // demo item stays on the screen (css/play.css).
     var parts = h('ul.pl-parts', { id: 'pl-parts-' + exId });
-    var partsBtn = ui.button('Parts', { kind: 'ghost', small: true, ariaLabel: 'What the parts of the item are', onClick: function () {
-      var open = !head.classList.contains('is-parts-open');
+    function setParts(open) {
       head.classList.toggle('is-parts-open', open);
       partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      partsBtn.firstChild.textContent = open ? 'Hide parts' : 'Parts'; // the open list has a visible way out (fresh-player test)
+    }
+    var partsBtn = ui.button('Parts', { kind: 'ghost', small: true, ariaLabel: 'What the parts of the item are', onClick: function () {
+      var open = !head.classList.contains('is-parts-open');
+      setParts(open);
       // O8: on a phone the list sits above the item, so a playing demo waits while it is open
       if (open && isPhone() && P.state === 'showme' && !P.showmePaused()) { P.showmeCmd('pause'); partsPaused = true; }
       else if (!open && partsPaused) { partsPaused = false; if (P.state === 'showme' && P.showmePaused()) P.showmeCmd('pause'); }
@@ -1582,6 +1586,11 @@
       (learn.parts || []).filter(function (pt) { return !pt.variant || pt.variant === v; }).forEach(function (pt) {
         parts.appendChild(h('li', h('b', pt.label), h('span', pt.text)));
       });
+      if (parts.firstChild) { // phones: a Close button at the end of the open list (desktop shows the list anyway)
+        var pc = ui.button('Close the parts', { kind: 'secondary', small: true, onClick: function () { setParts(false); if (partsPaused) { partsPaused = false; if (P.state === 'showme' && P.showmePaused()) P.showmeCmd('pause'); } } });
+        pc.setAttribute('data-parts-close', '');
+        parts.appendChild(h('li.pl-parts-close', pc));
+      }
       partsOn(!!parts.firstChild);
     }
     // The header above the item can push it down: just before an item plays (its first frame comes

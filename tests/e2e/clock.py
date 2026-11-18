@@ -282,7 +282,8 @@ def realtime(b):
         tol = max(run['maxLast'], 1500) + 1500
         C.ok(abs(a - b_ms) <= tol, f'{mode}: ends within one item of {PLAN["min"]}:00 active ({a / 1000:.1f} s; last items up to {run["maxLast"] / 1000:.1f} s; {run["items"]} items; wall {run["wall"]} s)')
         C.ok(run['ended'] == 'complete', f'{mode}: the session ran to its end ({run["ended"]})')
-        C.ok(round(run['activeMs']) == a and run['summaryMs'] == a, f'{mode}: one number: the clock {run["activeMs"]:.0f}, stored {a}, summary {run["summaryMs"]}')
+        C.ok(int(run['activeMs'] + 0.5) == a and run['summaryMs'] == a,  # JS Math.round (Python's round() goes to even on .5)
+             f'{mode}: one number: the clock {run["activeMs"]:.0f}, stored {a}, summary {run["summaryMs"]}')
         ev = run['ev']
         if 'pause' in ev:
             C.ok(abs(ev['pause']['delta']) < 600, f'{mode}: the pause sheet stops the clock ({ev["pause"]["delta"]} ms in {PLAN["pause"]} s)')
