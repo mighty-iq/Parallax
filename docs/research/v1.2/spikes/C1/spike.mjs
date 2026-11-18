@@ -2,7 +2,7 @@
 // C1 spike: Central Point (the geometric median restricted to a lattice of answer points).
 // Plain Node (>= 18), no dependencies, deterministic (string-seeded sfc32). Reads and writes no app file.
 //
-//   node docs/research/v1.2/spikes/C1/spike.mjs            full run (about 8-10 minutes on one core)
+//   node docs/research/v1.2/spikes/C1/spike.mjs            full run (about 7 minutes on one core)
 //   node docs/research/v1.2/spikes/C1/spike.mjs --quick    smaller samples (about 1-2 minutes)
 //
 // Writes results.md (the tables) and results.json (every number) next to this file; prints the tables too.
