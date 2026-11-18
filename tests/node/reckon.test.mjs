@@ -427,6 +427,7 @@ export async function run(t) {
     const ret = items.filter((x) => x.p.variant === 'return').slice(0, 3000);
     for (const x of ret) {
       const it = x.it, d = it.distance, K = at(it.keyDeg, d);
+      if (typeof L.feedback !== 'function') { exact = sides = drift = false; firstBad = 'lib.feedback is missing'; break; }
       const f0 = L.feedback(it, def.score(it, K));
       if (!f0.dist || f0.dist.word !== 'even' || f0.dist.pct !== 0) exact = false;
       const r1 = def.score(it, at(it.keyDeg + 10, d * 0.8)), f1 = L.feedback(it, r1), f2 = L.feedback(it, def.score(it, at(it.keyDeg, d * 1.07)));
@@ -444,8 +445,9 @@ export async function run(t) {
     t.ok(sides, 'short and too far are named with whole percentages (80 % of the way → 20 % short, 107 % → 7 % too far)');
     t.ok(drift, 'the drift: metres off after the route plus the walk back, cm per metre, and the item\'s limit τ·d over the same metres' + (firstBad ? ` (${firstBad})` : ''));
     t.ok(rule, 'the limit restates the scoring rule: right exactly when the drift per metre is within it');
-    const pt = items.find((x) => x.p.variant === 'point').it, fp = L.feedback(pt, def.score(pt, pt.key));
-    const dItem = def.generate(PX.rng(5), { variant: 'return', task: 'distance' }), fd = L.feedback(dItem, def.score(dItem, { x: 0, z: dItem.legs[0] }));
+    const fbk = typeof L.feedback === 'function' ? L.feedback : () => ({ dist: undefined, drift: undefined });
+    const pt = items.find((x) => x.p.variant === 'point').it, fp = fbk(pt, def.score(pt, pt.key));
+    const dItem = def.generate(PX.rng(5), { variant: 'return', task: 'distance' }), fd = fbk(dItem, def.score(dItem, { x: 0, z: dItem.legs[0] }));
     t.ok(fp.dist === null && fp.drift === null && fd.dist && fd.dist.word === 'even' && fd.drift === null, 'point items have no distance words; the distance task walked exactly reads "under 1 % off" and has no drift line');
     const C = (X.learn('reckon') || {}).captions || {};
     t.ok(C.distEven === 'under 1 % off' && /\{dist\}/.test(C.distanceWas) && /\{dist\}/.test(C.walkedWas) && !/\{dpct\}/.test(C.distanceWas + C.walkedWas) && /\{dpct\} % \{dword\}/.test(C.distOff),
