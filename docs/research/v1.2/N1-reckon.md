@@ -742,3 +742,140 @@ js/ex/reckon/gen.js, learn.js, view.js; js/ex/homing/gen.js (route model, consta
 | elifesciences.org/articles/63405; pmc.ncbi.nlm.nih.gov/articles/PMC6190923; doi.org redirects | Browser check; reCAPTCHA; redirect blocked | Stavropoulos and Lakshminarasimhan full texts | Read through PMC8856658 and the BioC service |
 | MDN DeviceOrientationEvent.requestPermission; W3C WCAG 2.3.3 Understanding page | Permission request not answered (provenance) | iOS permission and secure-context rules for the gyroscope (O44); the reduced-motion guidance | General knowledge, unverified; nothing here depends on it |
 | Web search | The 200-search budget, shared by all agents in this turn, ran out after this agent's 17th search | The Q1 search; the leads above; desktop and phone sickness studies | Stated wherever it matters (1, 5.3, 7) |
+
+## Addendum 2026-11-18: Wiener & Mallot 2006 and Klatzky et al. 1998 (full texts read)
+
+Both papers were read **[full]**: every page and figure, from copies kept outside the repository. "Fig." marks my
+readings of bar charts and plots. This addendum answers what §2.1 and §2.4 list as "Not obtained", resolves the two
+papers' rows under "Could not open", and updates the §2 summary table; §7 #9 now reads "three of the seven" (Wiener
+2011, Fernandes & Feiner 2016 and Cao 2018 remain).
+
+### A1. Wiener & Mallot 2006 (Found)
+**Procedure.**
+- 18 adults (9 women, 9 men), mostly students, seated before a back-projection screen filling 90° × 60°, about
+  100 Hz. The scene was a textured ground plane only, made so that no pattern could serve as a landmark.
+- Passive transport. Translations and rotations came one after the other, each with a trapezoid speed profile:
+  up to 2 m/s and 25°/s, reached in 0.67 s, with a full stop between segments.
+- The answer: at a "point now" message, point to the start with a joystick, as fast and as accurately as
+  possible. Direction and response time were recorded.
+- Three phases: 6 introduction paths (2–5 segments) with an arrow always showing the start; 8 training paths
+  with the arrow shown for 3 s after each answer; 48 test paths without feedback.
+- Test paths: overall turning of 40, 60, 80, 100, 120 or 140°; for each, two paths each of 2, 3, 4 and 5
+  segments, one turning only right and one only left (answers mirrored for analysis). Every path 18 m long,
+  segments 3–12 m, turns between segments 10–140°. A 2-segment path is therefore one turn of the full angle.
+
+**Results.**
+- **Absolute pointing error.** Main effects of segment count and of turning, and an interaction; no overall
+  correlation with segment count (r = −.10). 2-segment paths 31.1° against 25.1° for 3–5 segments (t(17) = 2.95,
+  p < .01); by count about 31, 23, 27 and 24° (Fig. 4). By overall turning about 22–27° from 40° to 120°, and about
+  35° at 140° (Fig. 4).
+- **One cell drove it:** 2 segments with 140° of turning, i.e. a single 140° turn, roughly 60° of error (Fig. 3,
+  a 3-D bar chart read roughly) against roughly 15–40° in the other cells. Without that cell neither segment count
+  (p = .15) nor turning (p = .45) had a main effect; the interaction stayed (p = .02).
+- **Response time fell with complexity:** 2.59 s for 2–3 segments against 2.17 s for 4–5 (t(17) = 3.6,
+  p < .001), also without the 140° cell. Turning did not affect time, and time and accuracy were unrelated.
+- **Signed error:** no effect of segment count; a strong effect of overall turning, from about −10° at 40° to
+  about +27° at 140° (Fig. 6). Answers were pulled toward a middling angle, which the authors call "compression of
+  response range".
+- **The authors' reading.** Neither continuous updating nor the encoding-error model explains both results. They
+  suggest a strategy shift, backed only by informal interviews: on paths with few segments people remember the
+  path and work out the answer at the end; on complex ones they keep track while moving, which is faster.
+  Conclusion: at fixed length and turning, more segments do not impair visual path integration.
+
+### A2. Klatzky, Loomis, Beall, Chance & Golledge 1998 (Found)
+**Procedure.**
+- 50 students, 10 per condition: **describe** (blindfolded; a spoken description with lengths in metres and turns
+  in degrees, after a demonstration of six turns), **watch** (watched the experimenter walk the legs, then closed
+  their eyes), **walk** (blindfolded, led along the path), **real turn** and **visual turn** (seated on a swivel
+  stool in a head-mounted display, 44° × 33°, binocular, showing a field of irregularly spaced posts about 1.5 m
+  apart on a ground plane). In real turn the experimenter rotated the stool through the turn at about 90°/s while
+  the display showed the matching rotation; in visual turn the rotation was only shown. The display went dark at
+  the end of leg 2.
+- Paths: leg 1 = 3 m, a leftward turn of 10, 50, 90, 130 or 170°, leg 2 = 2 m; five trials per person in random
+  order. Earphones removed sound-direction cues.
+- **The answer:** turn the body at once to face the origin, as someone who had walked the path would; the
+  heading was read with an electronic compass. Fast answers and few trials were chosen on purpose, to measure
+  perceived heading rather than a worked-out answer.
+- **The measure:** signed heading error against turn size, fitted per person (a circular method settled the
+  ±180° ambiguity). Slope 1 = heading not updated (overturning by the whole turn); slope 0 = updated.
+
+**Results.**
+- Slopes near 1 for describe, watch and visual turn (about 0.94, 0.86 and 1.05, Fig. 3; each above 0 at p < .01);
+  near 0 for walk (about 0.2) and real turn (about 0.05). F(4, 45) = 7.30, p < .0001. Intercepts did not differ
+  (p > .25).
+- In visual turn the error grew with the turn, from about +20° at 10° to about +205° at 170° (Fig. 2). In real turn
+  it stayed at about +20–40° and in walk at about −5 to +38°, at every turn size.
+- Ten more people, disoriented before a describe block: slope 1.2. The failure was not interference from
+  remembering the room.
+- A footnote reports disoriented versions of the two display conditions: visual-turn slope 0.39 (against 1.05),
+  real-turn 0.44 (against 0.05).
+- **The authors' reading.** Without body cues to the rotation, people encode the path's layout but do not update
+  their perceived heading, and optic flow at this field of view did not do it. With time and experience a
+  worked-out representation might guide the answer; their fast, few-trial design was meant to exclude that.
+
+### A3. What changes for Reckon (Inference; "my calculation" marks my arithmetic)
+1. **Leg count (§2.4, the 0.55-logit step).** Confirmed with numbers: at 18 m and fixed overall turning, 3–5
+   segments were no harder than 2 and were answered faster. The step cannot be a cost of legs as such. In Reckon
+   each extra leg adds path (mean 16.8, 23.0 and 24.5 m for 2, 3 and 4 legs; gen.js `MEAN_PATH`) and one more
+   turn, so the step stands in for length and turning. This study held length at 18 m, so the cost of length is
+   still R1 §3.6's assumption. **No new value now:** keep 0.55 as a placeholder; the O16 refit should fit path
+   length, total turning and the largest single rotation instead of legs, and expect the leg count's own
+   coefficient near 0.
+2. **Large single turns.** Overall turning of 40–120° changed the absolute error little; one turn of 140° made it
+   much worse. As hit rates (my calculation, Gaussian errors with mean absolute errors of 25° and 60°): 66 against
+   31 % at a 30° tolerance; about 1.2, 1.5 and 1.8 logits apart at 20, 30 and 40°, against the 0.4 logit Reckon's
+   model adds per turn-size level. Reckon's large band is 120–160° per turn (Homing's `TURNS`, shared), so route 2
+   (2 legs, one large turn; cost 0.8, third in the ladder) and routes 5 and 7 hold turns of that size. Caveats: one
+   cell of 36 answers (18 people × 2 paths), rotations at 25°/s on a 90° screen, joystick answers. **For the
+   later wave:** (a) the sim.mjs check with a misspecified step (PLAN milestone 8 acceptance) should include items
+   about 1.5 logits harder than hand-set when a single rotation is 140° or more; (b) the refit should check route
+   2's place in the ladder first.
+3. **Final on-the-spot rotations (±30–150°).** The top of that range is the turn size this study found hardest,
+   and Klatzky's visual-turn condition is the same component in its purest form. Narrowing to ±30–120° would
+   concentrate the keys again: for a route whose key would otherwise be fixed, a fixed answer could hit up to 44 %
+   at 40° (80° of one 90° arc, half the items) instead of 33 % (my arithmetic), and §3.3(c) was already at 33 %
+   against 32 % with ±30–150°. **Keep ±30–150°**, which rule 5 needs. The rotation is stored in the item, so the
+   pooled refit can test whether errors jump above 120–140°. Keep the heading Try item before any rated item
+   with a final rotation (§7 #4).
+4. **The heading check (§2.1).** The failure was **complete, not partial**: with visual-only turns and a
+   body-turn answer, people overturned by the whole turn at every size from 10° to 170°. The not-updated answer in
+   gen.js, key + Σ turns (with the final rotation counted, §3.4), has exactly that error's shape. **Keep it
+   unchanged; no new values.** No visual-only condition updated heading, except partly after disorientation
+   (slope 0.39).
+5. **How answers are given matters.** Klatzky's answers were fast body turns, five per person, without feedback.
+   Reckon's are untimed dial or drag turns of the view, over many items with feedback. The two set-ups nearer
+   Reckon showed no wholesale failure: Wiener & Mallot (joystick pointing after 8 training paths with feedback;
+   mean signed errors of −10° to +27°, far from the 40–140° overturn the not-updated answer would give) and
+   Avraamides et al. 2004 (spoken answers; abstract). So expect the not-updated error as a beginner's error that
+   the Try item and feedback address; how often it occurs on phones is unknown.
+6. **Field of view.** Visual turns failed in a 44° display; Reckon's view fills about 12–25° of a phone user's
+   field (§2.6). A narrow-field visual rotation is a weak heading cue, which strengthens §7 #4.
+7. **Optional, the heading Try item.** Its turn (`HEADING_TURN`) is 70–150°. Stopping at 120° would keep the first
+   heading update a player meets inside the range that worked in Wiener & Mallot.
+8. **Strategy cards ("card wording matched to the studies").** Wiener & Mallot is the only one of the seven run on
+   a screen without landmarks, the set-up nearest Reckon. Its strategy-shift account is informal, but it supports
+   the continuous card on routes with many turns: there people answered faster and no less accurately, and some
+   said they switched to keeping track as they went. A possible `when` line: "Quicker on routes with many turns;
+   in one screen study it was no less accurate there." The configural card's "longer routes" stays on Wiener
+   2011 (walking).
+9. **Typical answers.** The compressed signed errors in a screen study support §3.2: people fall back on typical
+   answers, so fixed and turn-only answers stay bounded.
+
+### A4. The Reckon bullet of PLAN milestone 8, after the full texts
+| Planned change | Verdict |
+|---|---|
+| Final rotations ±30–150° | Holds (rule 5 needs the spread); refit on the stored rotation; heading Try item first |
+| Two-key construction, turn-only answers ≤ 50 % | Unaffected |
+| `legs` dim (hand-set 0.4) | Unaffected; the misspecified-step check gains a +1.5-logit case for single rotations ≥ 140° |
+| 0.55 logit per extra leg | No support as a cost of legs; placeholder until the refit fits length, total turning and the largest single rotation |
+| Return distances 3–20 m, τ = 0.2 | Unaffected |
+| Walk-back control law fixed | Unaffected |
+| Card wording | One screen study now backs the continuous card on routes with many turns (informal) |
+| Heading-not-updated check | Holds unchanged: the error it guards against is the whole turn |
+
+### References (addendum)
+- Klatzky, R. L., Loomis, J. M., Beall, A. C., Chance, S. S., & Golledge, R. G. (1998). Spatial updating of
+  self-position and orientation during real, imagined, and virtual locomotion. *Psychological Science, 9*(4),
+  293–298. https://doi.org/10.1111/1467-9280.00058 [full]
+- Wiener, J. M., & Mallot, H. A. (2006). Path complexity does not impair visual path integration. *Spatial
+  Cognition and Computation, 6*(4), 333–346. https://doi.org/10.1207/s15427633scc0604_3 [full]

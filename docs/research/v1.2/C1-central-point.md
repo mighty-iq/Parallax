@@ -873,3 +873,115 @@ Citation details in this table (volumes, pages, the one DOI) are from memory and
 | Szafir, D. A., Haroz, S., Gleicher, M., & Franconeri, S. (2016). Four types of ensemble coding in data visualizations. *Journal of Vision, 16*(5):11 | evidence for the chart-reading bridge and the mean-interference risk (§6) | the risk is stated as a hypothesis to test, not a finding |
 | Lee, J., & Bednarz, R. (2012). Components of spatial thinking: Evidence from a spatial thinking ability test. *Journal of Geography, 111*(1), 15–26 | whether its site-selection items are a usable far probe and a far-overlap row | the far row in §7 says "could not open" and claims nothing about the items |
 | Esri help, "Median Center" (the web-search budget ran out before I found its page) | confirmation that it minimises total Euclidean distance | GRASS `v.centerpoint`'s "median" is the geometric median [WP]; the bridge text names the concept, not a product |
+
+## Addendum 2026-11-18: Morgan & Glennerster 1991 (full text read)
+
+Morgan, M. J., & Glennerster, A. (1991). Efficiency of locating centres of dot-clusters by human observers.
+*Vision Research, 31*(12), 2075–2083. Read: **[FT]**, the full text, every page and figure, read directly (not
+through the fetch tool) from a copy kept outside the repository. The article prints no DOI, so the one under
+"Could not open" stays unchecked; this addendum resolves that row otherwise. "Fig." marks my readings of
+log-scale plots (good to about ±15 %). "My simulation" and "my measurement" are scratch scripts run outside the
+repository on items from js/ex/centralpoint/gen.js (`build`, 2026-11-18), loaded through tests/node/run.mjs
+`createContext`; not committed.
+
+### A1. The study (Found)
+- **Task.** Two clusters, each made by scattering n small squares (2 × 2 arcmin, 15 % contrast, seen from 3.5 m,
+  no two touching) at random inside an invisible circle of radius r, shown for 1 s; 0.5 s of grey; then two single
+  squares for 1 s. Were the clusters' centres nearer together or farther apart than the two squares? Mean
+  separation 100 arcmin, jittered by up to ±20; positions randomised on the screen; a beep after each error.
+- **Levels.** n from 1 to 64 in doublings (some observers only 1, 4, 16 and 64); r = 4, 8, 16 and 32 arcmin.
+  Threshold = the SD of the fitted psychometric function (adaptive probit, 64-trial runs, 3–4 runs per
+  condition). Five observers: the two authors, one experienced and two naive.
+- **Yardstick.** An ideal observer that averages the dots' positions: its error for the separation is r/√(2n)
+  (a uniform disc has a per-axis SD of r/2), combined with each observer's error for a plain two-point
+  separation, measured with single dots at the true centres (the "Weber error"). Efficiency = (ideal
+  threshold / observed threshold)².
+- **Extras.** A 50-arcmin separation (two observers); filled discs instead of clusters; Experiment 2: clusters
+  of r = 12 arcmin with half bright and half dark squares (the two authors).
+
+### A2. Results (Found)
+- **Thresholds** fell with the number of dots and rose with the radius, as averaging predicts. The single-point
+  floor was about 3, 3.3, 4.8, 5.1 and 5.6 % of the separation for the five observers (Fig. 2).
+- **Efficiency.** The best observers came close to 100 % in many conditions (some readings above it). Across all
+  five, radii up to 16 arcmin and 4–8 dots, readings run from about 20 to 120 % (median about 57 %; Fig. 2).
+- **Not every dot counts fully.** Efficiency tended to fall as dots were added. With one dot it did not depend on
+  the radius; with more dots it fell beyond about 16 arcmin, and at 32 arcmin it fell for every observer (about
+  12–40 % in 10 of the 11 readings at 16–64 dots).
+- **Large individual differences.** One naive observer hardly improved with more dots (efficiency down to about
+  10–25 %), as if judging from one point inside the cluster. The authors place all five on a continuum and leave
+  the cause open.
+- **Not a blur.** Clusters of mixed bright and dark squares were located as well as same-contrast ones, which
+  rules out pooling by a low-pass filter. Filled discs were located about as well as dense clusters.
+- **The authors' account.** Large integration units, at least 1° across in near-foveal vision, compute a
+  cluster's centroid automatically; efficiency drops once a stimulus outgrows them. The price of automatic
+  centroids is a bias when judging the parts (illusions of the Müller-Lyer type).
+- **What it cannot tell.** The clusters were uniform discs, where the mean, the median and the circle's centre
+  coincide on average, and the yardstick is the mean. Readings above 100 % show that observers could beat a pure
+  average (an edge-based rule can, for discs of known size; my note). So the study shows efficient pooling of
+  positions, not which centre rule people use, and it measured no per-dot weights. That adults use the mean
+  specifically still rests on Jones & Dekker 2017 and Juni et al. 2010 (§2.1–2.2); read §2.1's line on this paper
+  in that light.
+
+### A3. Central Point's scale and noise (Inference; my calculations)
+- **Scale.** The 7 × 7 board at 44 CSS px per dot (the phone minimum, §5.5) is about 4–5 cm across and spans
+  about 6–10° at 30–40 cm. On rated items the targets' per-axis spread averages 2.07 dots (2.0–2.1 per cell; my
+  measurement on 6,000 items), about 2–3°: some 8–12 times the per-axis spread of the largest clusters tested
+  (16 arcmin at r = 32). Central Point lies beyond the range where pooling was found efficient.
+- **Pooling noise as a share of the spread.** From each efficiency E: added error per cluster =
+  √(T_ideal² (1/E − 1) / 2), divided by the per-axis spread r/2. At r = 32 arcmin, the regime nearest the board
+  (a spread that is large against the single-point floor), the median over all observers and 4–64 dots is
+  **0.34** of the spread (range 0–0.97). On compact clusters (r ≤ 16, 4–16 dots) the two most efficient
+  observers' median is about 0.1 (0–0.6); the other three's readings, mostly 0.35–2.5, are inflated by the small
+  spread against their floor.
+- **On the board** 0.34 of the spread is about **0.7 dots**. C1's model observers, 0.3 and 0.5 dots, are 0.15 and
+  0.24 of the spread: between the best observers on compact clusters and the median at the largest clusters.
+- **Hit rates by scatter (my simulation):** the continuous best spot plus Gaussian scatter, rounded to the answer
+  lattice; 400 items per cell × 25 draws; ranges over 4–8 targets. The 0.3 and 0.5 rows reproduce §3.2.
+
+  | Scatter (dots) | Share of the spread | Right at 1 % (%) | 0.5 % | 0.25 % |
+  |---|---|---|---|---|
+  | 0.2 | 0.10 | 74–80 | 62–66 | 55–58 |
+  | 0.3 | 0.15 | 53–60 | 40–47 | 34–40 |
+  | 0.5 | 0.24 | 28–33 | 19–24 | 16–20 |
+  | 0.7 | 0.34 | 16–20 | 11–15 | 9–11 |
+  | 1.0 | 0.48 | 9–11 | 5–7 | 5–6 |
+
+  - These observers already aim at the best spot. Aiming at the average with the same scatter is right 3–6 % of
+    the time at 1 % (0.3–1.0 dots): the one-dot trap holds with realistic noise.
+  - Mean credit at the 1 % band: 0.82–0.85, 0.57–0.59, 0.39–0.41 and 0.23–0.24 at 0.3, 0.5, 0.7 and 1.0 dots, so
+    Quick's round score still pays for near misses.
+  - Judged at 2 % on the same items (a stand-in for a 2 % cell): 78–83, 52–55, 34–36 and 19–21 % right.
+- **Band sizes.** Round the best spot (quadratic approximation, 1,500 items per band) the band's equivalent
+  radius is 0.43, 0.31 and 0.22 dots at 1, 0.5 and 0.25 %; its half-widths run 0.36–0.51, 0.25–0.37 and
+  0.17–0.27 dots (steep to flat direction). The best spot lies about 2.7 dots from the targets on average, so the
+  paper's single-point floor of 3–5.6 %, taken as an analogue for placing a point, is about 0.08–0.15 dots.
+
+### A4. Verdicts on §3 and §9
+- **The floor: the 0.3-dot observer is optimistic.** The board is far larger than any cluster tested, and the
+  anchor from the largest clusters is about 0.7 dots. Read the easiest rated cell (4 targets, 1 %) as about 60 %
+  right for an expert (0.3 dots), about 33 % (0.5) and about 20 % (0.7) for players who know the rule but pool like
+  the paper's typical observers; players still drawn to the average do worse. §9 risk 3 is stronger than stated:
+  many players may sit at the floor with a third or less right for a while, and partial credit (0.4–0.6) and the
+  round score carry the feel. A rated 2 % cell would lift the 0.5- and 0.7-dot observers to about 52 and 34 %, but
+  §4.4 found it at the shortcut bound (ring 2 at +9.9 points) and only for 4 targets: a decision for the lead,
+  not a builder change.
+- **Targets 4–8: keep.** Nothing here argues for other counts. The paper's thresholds fell with n because the
+  stimulus itself became less noisy, while efficiency fell, so it cannot say whether more targets make the board
+  harder for people; the +0.25 logit step stays a guess.
+- **Bands 1, 0.5 and 0.25 %: keep; do not add 0.125 %.** The two wider bands are several times the single-point
+  analogue. The 0.25 % band's half-width is only about 1.5–3 times it, and with the half-step lattice even a
+  0.2-dot observer is right only 55–58 % there: a mastery level near the ceiling. §3.2's optional fourth band at
+  0.125 % (half-widths about 0.12–0.19 dots) would sit at the analogue and reward acuity and lattice luck more
+  than the rule.
+- **Trap ≥ 1 dot: keep** (aiming at the average stays at 3–6 % with 0.3–1.0 dots of scatter).
+- **Correction ratio (value2).** Its per-item noise is about scatter ÷ trap: 0.7 / 1.3 ≈ 0.5 at the rated items'
+  mean trap of 1.2–1.4 dots (my measurement). Read it over blocks of 20 or more items (standard error about 0.1),
+  not per item.
+- **The bet (§6).** If centroids are computed automatically, as the paper argues, training adds a learned
+  correction on top of that default rather than replacing it. That makes harm to mean estimation less likely,
+  not ruled out; the Balance check stays.
+
+### A5. Request filed
+docs/dev/v1.2/requests.md, to W1-central: print a 0.7-dot observer beside the 0.3- and 0.5-dot ones in
+tests/node/centralpoint.test.mjs, and state the floor in gen.js's difficulty comment as a range (about 60, 33
+and 20 % at the easiest cell for 0.3, 0.5 and 0.7 dots) rather than 61 % alone.
