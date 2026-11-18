@@ -53,9 +53,12 @@
   // display/viewport/input/ended, json settings. 3 (Parallax 1.2): `scales` (the range each
   // exercise's stored levels were written on; js/engine/rebase.js converts 1.1 levels once through
   // the upgrade hooks below), folded days count answers per exercise (`a`), settings nickname,
-  // exportDevice and gentleMotion. Older records load and are written back in the current format;
+  // exportDevice and gentleMotion. 4 (Parallax 1.2, wave 2; docs/dev/CONTRACT-v1.2.md M): the events
+  // table, the containers plateau, bets, measure and game (milestone 5, reserved), trial columns 14-19,
+  // sessions' kind and ext; js/engine/record.js's upgrade hook stamps measure.form0 and the probe
+  // versions of earlier checks. Older records load and are written back in the current format;
   // an older Parallax tab that meets a newer record runs from memory instead of overwriting it.
-  var VERSION = 3;
+  var VERSION = 4;
   var TRIAL_CAP = 20000;
   var DEBOUNCE_MS = 1000;
   var MAX_WAIT_MS = 5000;
@@ -66,10 +69,23 @@
   // beside value, the signed angle error), present only when finite.
   var DISPLAYS = ['', 'small', 'large'];                  // 0 unknown (matches est.displayClass)
   var INPUTS = ['', 'mouse', 'touch', 'pen', 'key'];      // 0 unknown
+  // v1.2 wave 2 (docs/dev/CONTRACT-v1.2.md N): columns 14-18 (indexes 13-17) are codes into these
+  // append-only lists, the same as PX.engine.log's (0 unknown or none): the item's kind, its add-on
+  // layer, the control the answer came through, the window's orientation and the deadline it ran
+  // with; column 19 (index 18) is the person-specific difficulty offset in milli-logits, only when
+  // not 0. Rows that carry them always hold column 13 (value2), null when absent.
+  var KINDS = ['', 'warmup', 'target', 'easy', 'stretch', 'stretch1', 'last', 'weak', 'recheck', 'lead', 'fluency', 'drill', 'fixed', 'timed', 'threshold', 'probe', 'daily', 'climb'];
+  var LAYERS = ['', 'compare-apply', 'produce', 'calib-detail', 'bridge'];
+  var AMODES = ['', 'option', 'drag', 'dial', 'fine', 'keys', 'place', 'draw'];
+  var ORIENTS = ['', 'portrait', 'landscape'];
+  var DEADLINES = ['', 'pace', 'speed', 'limit'];
+  var TAG_LISTS = [KINDS, LAYERS, AMODES, ORIENTS, DEADLINES]; // columns 14-18, in order
   // The one trial CSV (Settings, the Log and the Lab's research export all write it); js/ui/log.js
-  // registers store.csv to fill the session column.
+  // registers store.csv to fill the session column. v1.2 wave 2: eight columns after value2 (26 in
+  // all): the five codes as words, the offset in logits, and the exercise's bet and format.
   var CSV_HEADER = ['time_iso', 't_sec', 'exercise', 'version', 'mode', 'session', 'params_code', 'params', 'seed',
-    'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage', 'display', 'input', 'value2'];
+    'outcome', 'outcome_label', 'rt_ms', 'value', 'p_pred', 'stage', 'display', 'input', 'value2',
+    'kind', 'layer', 'answer_mode', 'orientation', 'deadline', 'b_offset', 'bet', 'format'];
 
   var DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
   var ID_RE = /^[a-z][a-z0-9-]{0,39}$/;          // exercise ids (same rule as the registry)
@@ -314,13 +330,24 @@
       if (rs && Object.keys(rs).length) out.rounds = rs;
     }
     if (x.gentle === true) out.gentle = true;
+    // Optional (v1.2 wave 2, CONTRACT-v1.2 M): a kind (a token: W2-measure marks its check sessions
+    // block, week, baseline or check) and ext, one small open object per owner (at most 4 KB)
+    if (typeof x.kind === 'string' && /^[a-z0-9-]{1,16}$/.test(x.kind)) out.kind = x.kind;
+    if (plain(x.ext)) {
+      var ext = jsonSafe(x.ext), size = -1;
+      try { size = JSON.stringify(ext).length; } catch (e) { size = -1; }
+      if (plain(ext) && size > 2 && size <= 4096) out.ext = ext;
+    }
     return out;
   }
 
   // Trial row: [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli?, stage?,
-  // display?, input?, value2?] (the engine adds the predicted success × 1000 and the interleaving
-  // stage; the player the display class 0-2 and the input 0-4 of DISPLAYS / INPUTS and an exercise's
-  // second number; all optional, value2 only when finite).
+  // display?, input?, value2?, kind?, layer?, amode?, orient?, dl?, bOff?] (the engine adds the
+  // predicted success × 1000 and the interleaving stage; the player the display class 0-2 and the
+  // input 0-4 of DISPLAYS / INPUTS and an exercise's second number; v1.2 wave 2 the five codes of
+  // TAG_LISTS and the offset). All optional. A 1.1 row ends at value2, which it holds only when finite;
+  // a later row keeps value2 as null when absent, so the codes stay in their columns; a code outside
+  // its list becomes 0; bOff is an integer of at most ±10000 and not 0, else dropped.
   function fixTrial(r) {
     if (!Array.isArray(r) || r.length < 7) return undefined;
     if (!isNum(r[0]) || r[0] < 0 || r[0] > 8.64e12) return undefined; // seconds within the Date range
@@ -334,7 +361,11 @@
       if (r.length > 9) row.push(isIntIn(r[9], 0, 99) ? r[9] : null);
       if (r.length > 10) row.push(isIntIn(r[10], 0, DISPLAYS.length - 1) ? r[10] : null);
       if (r.length > 11) row.push(isIntIn(r[11], 0, INPUTS.length - 1) ? r[11] : null);
-      if (r.length > 12 && isNum(r[12])) row.push(r[12]); // value2: a finite number, else dropped
+      if (r.length > 13) {
+        row.push(isNum(r[12]) ? r[12] : null); // value2 holds its column: the codes follow
+        for (var c = 0; c < TAG_LISTS.length && 13 + c < r.length; c++) row.push(isIntIn(r[13 + c], 0, TAG_LISTS[c].length - 1) ? r[13 + c] : 0);
+        if (r.length > 18 && isIntIn(r[18], -10000, 10000) && r[18] !== 0) row.push(r[18]);
+      } else if (r.length > 12 && isNum(r[12])) row.push(r[12]); // a 1.1 row: value2 when finite, else dropped
     }
     return row;
   }
@@ -904,11 +935,37 @@
     scales: function (v) { return v; },
   };
 
+  /* The pooled export's header (v1.2 wave 2, CONTRACT-v1.2 T): header(key, fn(ctx) → value) adds a
+     top-level key that describes the data rather than holding it (the trial columns and their codes
+     here; bets and formats per exercise from W2-bets; probe rungs from W2-measure). fn gets
+     { rec (a deep copy), opts } and returns a JSON value or undefined (left out); its key may not
+     shadow a field or a key of the export itself. */
+  var HEADERS = {};
+  var RESERVED_HEAD = ['format', 'formatVersion', 'app', 'record', 'exported', 'nickname', 'device'];
+  function header(key, fn) {
+    if (typeof key !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(key) || typeof fn !== 'function') throw new Error('PX.core.store.header: needs a key and a function');
+    if (RESERVED_HEAD.indexOf(key) >= 0 || hasOwn.call(HEADERS, key)) throw new Error('PX.core.store.header: "' + key + '" is taken');
+    for (var i = 0; i < FIELDS.length; i++) if (FIELDS[i].key === key) throw new Error('PX.core.store.header: "' + key + '" is a record field');
+    HEADERS[key] = fn;
+  }
+  var TRIAL_COLUMNS = ['tSec', 'exIndex', 'modeIndex', 'paramsCode', 'seed', 'outcome', 'rtMs', 'value', 'pPredMilli', 'stage', 'display', 'input', 'value2', 'kind', 'layer', 'amode', 'orient', 'dl', 'bOff'];
+  header('trialColumns', function () { return TRIAL_COLUMNS.slice(); });
+  header('codes', function () {
+    return { outcome: OUTCOMES.slice(), display: DISPLAYS.slice(), input: INPUTS.slice(), kind: KINDS.slice(), layer: LAYERS.slice(),
+      amode: AMODES.slice(), orient: ORIENTS.slice(), dl: DEADLINES.slice(), units: { tSec: 'UTC seconds', pPredMilli: 'probability × 1000', bOff: 'milli-logits' } };
+  });
+
   // The pooled (community) export: a plain object. opts: { nickname: true (adds the typed nickname),
-  // device: true | false (overrides the setting) }.
+  // device: true | false (overrides the setting) }. formatVersion 2 (v1.2 wave 2): the header keys above.
   function pooled(opts) {
     opts = opts || {};
-    var s = ensure(), out = { format: 'parallax-pooled', formatVersion: 1, app: PX.version || null, record: VERSION, exported: new Date().toISOString() };
+    var s = ensure(), out = { format: 'parallax-pooled', formatVersion: 2, app: PX.version || null, record: VERSION, exported: new Date().toISOString() };
+    var hctx = { rec: U.deepCopy(s), opts: opts };
+    Object.keys(HEADERS).forEach(function (k) {
+      var v;
+      try { v = HEADERS[k](hctx); } catch (e) { v = undefined; if (win.console) console.error('PX.core.store.pooled: the header "' + k + '" failed', e); }
+      if (v !== undefined) out[k] = jsonSafe(v);
+    });
     var ctx = { utcDay: utcDay, dayless: dayless, opts: opts };
     for (var i = 0; i < FIELDS.length; i++) {
       var k = FIELDS[i].key, rule = hasOwn.call(RULES, k) ? RULES[k].pooled : CORE_POOLED[k];
@@ -1003,6 +1060,32 @@
     }
   }
 
+  // v1.2 wave 2: the exercise's bet and format for the CSV (the definition's `bet`, and its `format`:
+  // a token, or one per variant with '*' as the default), '' when unknown.
+  function betOf(exId) {
+    var def = PX.ex && typeof PX.ex.get === 'function' ? PX.ex.get(exId) : null;
+    return def && typeof def.bet === 'string' ? def.bet : '';
+  }
+  function formatOf(name, code) {
+    var reg = PX.ex, at = String(name).indexOf('@'), exId = at < 0 ? name : String(name).slice(0, at);
+    var def = reg && typeof reg.get === 'function' ? reg.get(exId) : null, f = def ? def.format : null;
+    if (typeof f === 'string') return f;
+    if (!plain(f)) return '';
+    var variant = null;
+    try {
+      if (def.variants && typeof reg.decodeParams === 'function' && !(at >= 0 && String(def.version || 1) !== String(name).slice(at + 1))) variant = reg.decodeParams(def, code).variant;
+    } catch (e) { variant = null; }
+    var v = variant && typeof f[variant] === 'string' ? f[variant] : f['*'];
+    return typeof v === 'string' ? v : '';
+  }
+  // The eight v1.2 wave 2 cells of a row: the codes as words, the offset in logits, bet and format.
+  function tagCells(r, name, exId) {
+    var out = [];
+    for (var c = 0; c < TAG_LISTS.length; c++) out.push(TAG_LISTS[c][r[13 + c]] || '');
+    out.push(isNum(r[18]) ? Math.round(r[18]) / 1000 : 0, betOf(exId), formatOf(name, r[3]));
+    return out;
+  }
+
   // Trials as CSV (RFC 4180, CRLF): a header row and one row per kept trial, in the one format of
   // CSV_HEADER. js/ui/log.js registers store.csv(state) → text, which also fills the session
   // column; without it (tests, a build without the Log) the session column stays empty.
@@ -1021,7 +1104,7 @@
         isFinite(d.getTime()) ? d.toISOString() : '', r[0], exId, name ? ver : '', mode, '', r[3], paramsText(name, r[3]),
         r[4], r[5], OUTCOMES[r[5]], r[6], r[7], isNum(r[8]) ? Math.round(r[8]) / 1000 : null, r[9],
         DISPLAYS[r[10]] || '', INPUTS[r[11]] || '', isNum(r[12]) ? r[12] : null,
-      ].map(csvCell).join(','));
+      ].concat(tagCells(r, name, exId)).map(csvCell).join(','));
     }
     return lines.join('\r\n') + '\r\n';
   }
@@ -1046,6 +1129,8 @@
     return s.ex[id] || (s.ex[id] = api.exDefaults());
   }
 
+  // The code of a v1.2 wave 2 tag column from a name or a code (unknown: 0).
+  function tagCode(list, v) { var i = typeof v === 'number' ? v : typeof v === 'string' ? list.indexOf(v) : -1; return isIntIn(i, 1, list.length - 1) ? i : 0; }
   // The codes of trial columns 11-12 from a name or a code (unknown: 0).
   function displayCode(v) { var i = typeof v === 'number' ? v : DISPLAYS.indexOf(v); return isIntIn(i, 1, DISPLAYS.length - 1) ? i : 0; }
   function inputCode(v) {
@@ -1058,8 +1143,10 @@
   // Appends a trial. Accepts a row [tSec, exIndex, modeIndex, paramsCode, seed, outcome,
   // rtMs, value, …] or { t (ms, default now), ex (id), mode (name), code, seed, outcome, rt, value,
   // p (predicted success 0-1), stage, display ('small' | 'large'), input ('mouse' | 'touch' | 'pen' |
-  // 'key'), value2 (a second number) }. Returns false (and stores nothing) for an invalid row; an
-  // invalid ex id or mode name throws. Does not save: call save() when the trial is logged.
+  // 'key'), value2 (a second number), and since v1.2 wave 2 kind, layer, amode, orient, dl (names of
+  // KINDS, LAYERS, AMODES, ORIENTS, DEADLINES, or codes) and bOff (milli-logits) }. Returns false (and
+  // stores nothing) for an invalid row; an invalid ex id or mode name throws. Does not save: call
+  // save() when the trial is logged.
   function addTrial(t) {
     var s = ensure(), row = t;
     if (plain(t)) {
@@ -1067,10 +1154,15 @@
         Math.floor((isNum(t.t) ? t.t : Date.now()) / 1000), exIndex(t.ex), modeIndex(t.mode || 'free'),
         t.code, t.seed, t.outcome, isNum(t.rt) ? Math.round(t.rt) : null, isNum(t.value) ? t.value : null,
       ];
-      if (t.p !== undefined || t.stage !== undefined || t.display !== undefined || t.input !== undefined || isNum(t.value2)) {
+      var tags = t.kind !== undefined || t.layer !== undefined || t.amode !== undefined || t.orient !== undefined || t.dl !== undefined || isNum(t.bOff);
+      if (tags || t.p !== undefined || t.stage !== undefined || t.display !== undefined || t.input !== undefined || isNum(t.value2)) {
         row.push(isNum(t.p) ? Math.round(clampN(t.p, 0, 1) * 1000) : null, isIntIn(t.stage, 0, 99) ? t.stage : null,
           displayCode(t.display), inputCode(t.input));
-        if (isNum(t.value2)) row.push(t.value2);
+        if (tags) {
+          row.push(isNum(t.value2) ? t.value2 : null, tagCode(KINDS, t.kind), tagCode(LAYERS, t.layer), tagCode(AMODES, t.amode),
+            tagCode(ORIENTS, t.orient), tagCode(DEADLINES, t.dl));
+          if (isNum(t.bOff) && Math.round(t.bOff) !== 0) row.push(Math.round(clampN(t.bOff, -10000, 10000)));
+        } else if (isNum(t.value2)) row.push(t.value2);
       }
     }
     var r = fixTrial(row);
@@ -1096,6 +1188,7 @@
   var api = {
     KEY: KEY, VERSION: VERSION, TRIAL_CAP: TRIAL_CAP, OUTCOMES: OUTCOMES, MESSAGE: MESSAGE,
     DISPLAYS: DISPLAYS, INPUTS: INPUTS, CSV_HEADER: CSV_HEADER, csvCell: csvCell,
+    KINDS: KINDS, LAYERS: LAYERS, AMODES: AMODES, ORIENTS: ORIENTS, DEADLINES: DEADLINES, tagCells: tagCells, // v1.2 wave 2
     get state() { return ensure(); },
     get volatile() { ensure(); return memoryOnly || failing; },
     get volatileReason() { ensure(); return volatileReason; },
@@ -1112,7 +1205,7 @@
     exIndex: exIndex, modeIndex: modeIndex, exId: exId, modeName: modeName,
     exState: exState, addTrial: addTrial, capTrials: capTrials, displayCode: displayCode, inputCode: inputCode,
     field: field, setting: setting, settingsSpec: SETTINGS,
-    upgrade: upgrade, exportRule: exportRule, pooled: pooled, deviceFacts: deviceFacts, utcDay: utcDay,
+    upgrade: upgrade, exportRule: exportRule, pooled: pooled, deviceFacts: deviceFacts, utcDay: utcDay, header: header,
     merge: null, // optional fn(theirs, mine) → record, used when a save meets a newer rev
     csv: null,   // optional fn(state) → the trial CSV (js/ui/log.js), used by exportCSV()
   };

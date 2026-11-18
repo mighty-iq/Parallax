@@ -66,7 +66,7 @@ export async function run(t) {
     const conv = E.rebase.conv([-2.4, 1.9], [r.min, r.max]);
     const raw = save11(), log = [];
     const g = S.guard(JSON.parse(JSON.stringify(raw)), log);
-    t.eq(g.v, 3, 'the record is written in format 3');
+    t.eq(g.v, 4, 'the record is written in the current format (4 since v1.2 wave 2)');
     t.eq([g.ex.views.mu, g.ex.views.sd, g.ex.views.n], [-0.9, 0.5, 120], 'the rating (logits) is unchanged');
     t.eq(g.ex.views.best.block.level, conv(30), 'the personal best is converted: ' + 30 + ' → ' + conv(30));
     t.ok(g.ex.views.best.block.level > 30, 'a best on the wider range reads higher');

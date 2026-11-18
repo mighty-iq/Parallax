@@ -19,7 +19,9 @@
      nearest(def, b, filter?)    the pool entry whose difficulty is closest to b
    PX.engine.fields()            engine-owned record fields: [{ key, def(), fix(value) }] for
                                  store.field(key, def, fix); registered by the engine files
-   PX.engine.log                 reading trial rows: scan(rec, fn), COL, outcome(result), OUT
+   PX.engine.log                 reading trial rows: scan(rec, fn), COL, outcome(result), OUT; v1.2 wave 2:
+                                 read(rec, row) (names), bUsed(def, row, ver), KINDS, LAYERS, AMODES, ORIENTS,
+                                 DEADLINES (columns 14-19; docs/dev/CONTRACT-v1.2.md N)
    PX.engine.day(ms) / days(a, b) local day key; fractional days between two times
    PX.engine.fix                 small repair helpers used by the field fixers */
 (function (PX) {
@@ -320,10 +322,22 @@
   // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage, display,
   // input] (§8; display and input since v1.1: codes into DISPLAYS and INPUTS, 0 = unknown, the
   // same lists as PX.core.store.DISPLAYS / INPUTS)
-  // value2 (column 13, since v1.1): a second number an exercise reports, only when finite
-  var COL = { t: 0, ex: 1, mode: 2, code: 3, seed: 4, outcome: 5, rt: 6, value: 7, pp: 8, stage: 9, display: 10, input: 11, value2: 12 };
+  // value2 (column 13, since v1.1): a second number an exercise reports; null when absent (1.1 left
+  // the column out; from v1.2 wave 2 later columns follow, so it stays as null)
+  // v1.2 wave 2 (docs/dev/CONTRACT-v1.2.md N): columns 14-18 kind, layer, amode (the control the
+  // answer came through), orient and dl (the deadline the item ran with), always written; column 19
+  // bOff, the person-specific difficulty offset (step.b − def.difficulty(params)) in milli-logits,
+  // only when not 0. Codes index the append-only lists below (0 = unknown or none); the store keeps
+  // the same lists (a test checks them).
+  var COL = { t: 0, ex: 1, mode: 2, code: 3, seed: 4, outcome: 5, rt: 6, value: 7, pp: 8, stage: 9, display: 10, input: 11, value2: 12,
+    kind: 13, layer: 14, amode: 15, orient: 16, dl: 17, bOff: 18 };
   var DISPLAYS = ['', 'small', 'large'];
   var INPUTS = ['', 'mouse', 'touch', 'pen', 'key'];
+  var KINDS = ['', 'warmup', 'target', 'easy', 'stretch', 'stretch1', 'last', 'weak', 'recheck', 'lead', 'fluency', 'drill', 'fixed', 'timed', 'threshold', 'probe', 'daily', 'climb'];
+  var LAYERS = ['', 'compare-apply', 'produce', 'calib-detail', 'bridge'];
+  var AMODES = ['', 'option', 'drag', 'dial', 'fine', 'keys', 'place', 'draw'];
+  var ORIENTS = ['', 'portrait', 'landscape'];
+  var DEADLINES = ['', 'pace', 'speed', 'limit'];
   // A name ('small', 'touch'; 'pointer' is a click of unknown type: mouse) or a code → the code.
   function codeOf(list, v) {
     if (typeof v === 'number') return v >= 1 && v < list.length && mfloor(v) === v ? v : 0;
@@ -394,9 +408,45 @@
     return i >= 0 ? i : list.push(mode) - 1;
   }
 
+  function isN(x) { return typeof x === 'number' && isFin(x); }
+  // The kind a row logs: the step's, with Path rechecks and select.pick's weak-spot items named.
+  function rowKind(step) {
+    if (step.recheck) return 'recheck';
+    var k = typeof step.kind === 'string' ? step.kind : '';
+    return k === 'target' && step.weak ? 'weak' : k;
+  }
+  // The layer: the step's (set by a hook), else 'produce' for an exercise's draw-the-answer variant.
+  function rowLayer(def, step) {
+    if (typeof step.layer === 'string' && step.layer) return step.layer;
+    var lp = def && def.layers && typeof def.layers.produce === 'string' ? def.layers.produce : null;
+    return lp && step.params && step.params.variant === lp ? 'produce' : '';
+  }
+  // The deadline an item ran with: an exercise's Quick deadline (pace), a Speed deadline (Speed mode,
+  // fluency items, the Spin deadline protocol) or another set limit (Free play's, def.timeLimit).
+  function rowDeadline(def, mode, step) {
+    if (step.paced) return 'pace';
+    var dl = isN(step.deadlineMs) && step.deadlineMs > 0;
+    if (mode === 'speed' || step.kind === 'fluency' || step.kind === 'timed' || (mode === 'threshold' && dl)) return 'speed';
+    if (dl) return 'limit';
+    var tl = null;
+    try { tl = def && typeof def.timeLimit === 'function' && step.params ? def.timeLimit(step.params) : null; } catch (e) { tl = null; }
+    return isN(tl) && tl > 0 ? 'limit' : '';
+  }
+  // b_used − b of the params, in milli-logits (milestone 7's person-specific offset), or 0.
+  function rowOffset(def, step) {
+    if (!def || !isN(step.b) || !step.params || typeof def.difficulty !== 'function') return 0;
+    var b0;
+    try { b0 = def.difficulty(step.params); } catch (e) { return 0; }
+    if (!isN(b0)) return 0;
+    var d = mround((step.b - b0) * 1000);
+    return d > 10000 ? 10000 : d < -10000 ? -10000 : d;
+  }
+
   // [tSec, exIndex, modeIndex, paramsCode, seed, outcome, rtMs, value, pPredMilli, stage, display,
-  // input, value2?]: result.display ('small' | 'large'), result.input ('mouse' | 'touch' | 'pen' |
-  // 'key') and result.value2 (a finite number; the column is left out otherwise)
+  // input, value2, kind, layer, amode, orient, dl, bOff?]: result.display ('small' | 'large'),
+  // result.input ('mouse' | 'touch' | 'pen' | 'key'), result.value2 (a finite number, else null),
+  // result.amode (AMODES: 'option', 'drag', …) and result.orient ('portrait' | 'landscape') from the
+  // player; kind, layer, the deadline and the offset from the step (CONTRACT-v1.2 N)
   function makeRow(rec, def, mode, step, oc, result, now) {
     var rt = result && typeof result.rt === 'number' && isFin(result.rt) && result.rt >= 0 ? mround(result.rt) : null;
     var value = result && typeof result.value === 'number' && isFin(result.value) ? result.value : null;
@@ -404,8 +454,37 @@
     var stage = typeof step.stage === 'number' && isFin(step.stage) ? step.stage : null;
     var dc = codeOf(DISPLAYS, result ? result.display : null), ic = codeOf(INPUTS, result ? result.input : null);
     var row = [mfloor(now / 1000), exIndex(rec, def), modeIndex(rec, mode), step.code, step.seed, oc, rt, value, pp, stage, dc, ic];
-    if (result && typeof result.value2 === 'number' && isFin(result.value2)) row.push(result.value2);
+    row.push(result && typeof result.value2 === 'number' && isFin(result.value2) ? result.value2 : null,
+      codeOf(KINDS, rowKind(step)), codeOf(LAYERS, rowLayer(def, step)), codeOf(AMODES, result ? result.amode : null),
+      codeOf(ORIENTS, result ? result.orient : null), codeOf(DEADLINES, rowDeadline(def, mode, step)));
+    var off = rowOffset(def, step);
+    if (off !== 0) row.push(off);
     return row;
+  }
+
+  // A row by name (CONTRACT-v1.2 N): codes become names, missing columns their defaults (value2 null,
+  // bOff 0); ex is the exercise id, ver its version (from rec.idx).
+  function readRow(rec, row) {
+    if (!isArray(row) || row.length < 7) return null;
+    var nm = idxNames(rec), C2 = COL;
+    function name(list, i) { var c = row.length > i ? row[i] : 0; return isN(c) && c >= 0 && c < list.length && mfloor(c) === c ? list[c] : ''; }
+    return {
+      t: row[C2.t], ex: nm.ex[row[C2.ex]] || null, ver: nm.ver[row[C2.ex]] || 1, mode: nm.mode[row[C2.mode]] || null, code: row[C2.code], seed: row[C2.seed],
+      outcome: row[C2.outcome], rt: isN(row[C2.rt]) ? row[C2.rt] : null, value: isN(row[C2.value]) ? row[C2.value] : null,
+      pp: isN(row[C2.pp]) ? row[C2.pp] / 1000 : null, stage: isN(row[C2.stage]) ? row[C2.stage] : null,
+      display: name(DISPLAYS, C2.display), input: name(INPUTS, C2.input), value2: isN(row[C2.value2]) ? row[C2.value2] : null,
+      kind: name(KINDS, C2.kind), layer: name(LAYERS, C2.layer), amode: name(AMODES, C2.amode), orient: name(ORIENTS, C2.orient), dl: name(DEADLINES, C2.dl),
+      bOff: isN(row[C2.bOff]) ? row[C2.bOff] : 0,
+    };
+  }
+  // The difficulty an answer was rated on: b of the row's params plus its offset; null when the row's
+  // version is not the definition's (its params code means other settings).
+  function bUsed(def, row, version) {
+    var p = rowParams(def, row, version);
+    if (!p) return null;
+    var b0;
+    try { b0 = def.difficulty(p); } catch (e) { return null; }
+    return isN(b0) ? b0 + (isN(row[COL.bOff]) ? row[COL.bOff] / 1000 : 0) : null;
   }
   function append(rec, row) {
     if (!isArray(rec.trials)) rec.trials = [];
@@ -442,6 +521,8 @@
   E.log = {
     COL: COL, OUT: OUT, DISPLAYS: DISPLAYS, INPUTS: INPUTS, codeOf: codeOf, outcome: outcome, scan: scan, names: idxNames, rowParams: rowParams,
     exIndex: exIndex, modeIndex: modeIndex, row: makeRow, append: append,
+    // v1.2 wave 2 (CONTRACT-v1.2 N)
+    KINDS: KINDS, LAYERS: LAYERS, AMODES: AMODES, ORIENTS: ORIENTS, DEADLINES: DEADLINES, read: readRow, bUsed: bUsed,
   };
   E.day = day;
   E.days = days;

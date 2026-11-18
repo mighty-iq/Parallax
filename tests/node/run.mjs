@@ -32,7 +32,10 @@ export const ROOT = path.resolve(HERE, '../..');
 // in the ENGINE block in load order (§2 lists model, estimator, select, staircase, bandit,
 // schedule, modes, assess, xp, achievements, streak, daily, stats). bus.js is DOM-free and
 // loaded so that engine code may emit events. Exercise files are discovered, not listed.
-export const MANIFEST = [
+// v1.2 wave 2 (docs/dev/CONTRACT-v1.2.md V): engine files that other builders are still writing
+// (ENGINE_PENDING) are in the list only once they exist, so nobody waits for this file.
+const ENGINE_PENDING = new Set(['js/engine/dims.js', 'js/engine/plateau.js', 'js/engine/bets.js']);
+const MANIFEST_ALL = [
   'js/core/px.js',
   'js/core/util.js',
   'js/core/rng.js',
@@ -55,9 +58,15 @@ export const MANIFEST = [
   'js/engine/rebase.js',
   'js/engine/pace.js',
   'js/engine/trend.js',
+  'js/engine/events.js',
+  'js/engine/record.js',
+  'js/engine/dims.js',
+  'js/engine/plateau.js',
+  'js/engine/bets.js',
   // ENGINE end
   'js/ex/registry.js',
 ];
+export const MANIFEST = MANIFEST_ALL.filter((rel) => !ENGINE_PENDING.has(rel) || fs.existsSync(path.join(ROOT, rel)));
 
 // Loaded only by t.env() / createContext({ store: true }), right after bus.js.
 export const STORE_FILE = 'js/core/store.js';
