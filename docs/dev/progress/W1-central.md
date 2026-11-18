@@ -56,3 +56,21 @@ base 0; +0.25 logit per extra target; +0.6 per band level; exact -0.6. Span 2.2 
 - Overlap row and helper line (request to W1-rules); guide section (request to W1-rules, milestone 10/11).
 - For the lead: commit 6a0c3d0 wrote my request lines with a wrong time (the container's local clock, not UTC); 837fc5a fixes it.
   Neither is pushed; folding the two before a push keeps the wrong stamps out of the history.
+
+## Fix round after the fresh-player test (2026-11-18 21:18 UTC)
+- Watch: count, row, pulls (the fan now starts outside the marker), "Line the pulls up end to end" (the line is laid with no gap
+  drawn), then the gap as its own still step, the move, the balance point, and a new step onto the best answer point beside it
+  (a small cross stays at the balance point); then the average once; "head to tail" is gone from every caption.
+- Why?: the same order; after a time-out (no answer) it starts by counting to the first guess (medians of the columns and rows,
+  always an answer point) instead of the plate's centre; it ends on the best answer point when the balance point lies between
+  answer points; a start already balanced gets "they cancel here" instead of a gap.
+- Reveal: one "you · best" label when the spot is the best; the band's other answer points show only with Map; labels are boxes
+  that never cross their own line, avoid dots, rings and each other (names first; lengths first when a crowded corner leaves a
+  length no room); 90 reveals at 360 x 640: 688 labels, no overlaps, 2 touching a ring or the plate's edge.
+- Tips: the four-target tip says "join each one to the target across from it"; it holds on every rated four-target item (a node
+  check of 1,200 items); every Try item names its tip (Try 3: the clock tip), and tutorial params name their true target counts.
+- Try 3's deadline 30 s (the pace's longest). R-reader's request: a 0.7-dot observer in the node table (60 / 33 / 20 % at the
+  easiest cell for 0.3 / 0.5 / 0.7 dots) and gen.js's difficulty comment states the range.
+- Verified: node centralpoint 10 000 items per cell, 154 checks; harness_centralpoint.py 202/0 (new: Why? step by step with and
+  without an answer, the Watch tapped through with pictures of the line, the gap and the step to the answer point, 45 reveals'
+  labels).

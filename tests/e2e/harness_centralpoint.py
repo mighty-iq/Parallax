@@ -7,13 +7,18 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_centralpoint.py   (two brows
 2. quick form: a tap places the marker on the nearest answer point, a second tap on it answers (right at
    the key); a tap far away and Confirm answers wrong; exact form: the arrow keys move the marker half a
    dot and Enter answers; atDeadline hands in a placed marker
-3. reveal: a line and a length label per target, the best answer point ringed and labelled, totals, the
-   band's other points; Map draws labelled level lines (the band bold); nothing marks the average
+3. reveal: a line and a length label per target, the best answer point ringed and labelled ("you · best"
+   when they are one point), totals; the band's other points only with Map, which draws labelled level
+   lines (the band bold); nothing marks the average; over 45 reveals at 360 x 640 no two labels overlap,
+   and labels on a ring or past the plate stay under 1 % (fresh-player test, 18 Nov)
 4. Why? (show me) runs to the end, its last frames balance the pulls (a closed chain at the best spot)
-   and it leaves the reveal as it was; the Watch demo runs to the end and leaves the item answerable,
-   with no average mark left; Try 1's assist draws the kite's two diagonals
+   and it leaves the reveal as it was; step by step: with no answer it starts by counting to the first
+   guess, the fan starts outside the marker, the line of pulls is laid before its gap shows, and it ends
+   on the best answer point; the Watch demo runs to the end and leaves the item answerable, with no
+   average mark left; Try 1's assist draws the kite's two diagonals
 5. the harness inlined into a sandboxed srcdoc iframe renders and plays by keyboard; no console errors
-6. the app at 360 x 640: the rules card with pictures, the Watch (captions, the average once), the strategy
+6. the app at 360 x 640: the rules card with pictures, the Watch (each caption tapped on with Next; the
+   line of pulls, its gap and the step to the answer point pictured; the average once), the strategy
    card, Try 1 with the diagonals, three Try items answered by taps with a round score in the verdict;
    a quick item in Free play whose deadline passes with the marker placed (a late time-out, a quarter round)
 Screenshots: tests/e2e/out/centralpoint/cp_<viewport>_<theme>[_reveal|_map|_exact|_why|_assist].png """
@@ -83,12 +88,56 @@ def reveal_ok(page, tag, k):
     r = page.evaluate("""() => ({ lines: document.querySelectorAll('.ex-cp-lines line').length, lens: document.querySelectorAll('.ex-cp-labels .ex-cp-len').length,
         best: document.querySelectorAll('.ex-cp-bestring').length, bestLabel: (document.querySelector('.ex-cp-bestlabel') || {}).textContent || '',
         totals: (document.querySelector('.ex-cp-totals') || {}).textContent || '', note: (document.querySelector('.ex-cp-note') || {}).textContent || '',
-        avg: document.querySelectorAll('.ex-cp-avgmark, .ex-cp-avgline, .ex-cp-avglabel').length, result: !document.querySelector('.ex-cp-result').hidden })""")
+        avg: document.querySelectorAll('.ex-cp-avgmark, .ex-cp-avgline, .ex-cp-avglabel').length, result: !document.querySelector('.ex-cp-result').hidden,
+        bandPts: document.querySelectorAll('.ex-cp-band .ex-cp-bandpt').length })""")
     C.ok(r['lines'] >= k - 1 and r['lens'] == r['lines'], f"{tag}: a line and a length label per target ({r['lines']} lines, {r['lens']} labels)")
-    C.ok(r['best'] == 1 and r['bestLabel'] == 'best', f"{tag}: the best answer point ringed and labelled")
+    C.ok(r['best'] == 1 and r['bestLabel'] in ('best', 'you · best'), f"{tag}: the best answer point ringed and labelled ({r['bestLabel']!r}; one label when your spot is the best)")
+    C.ok(r['bandPts'] == 0, f"{tag}: the band's other answer points wait for the map ({r['bandPts']})")
     C.ok(len(r['totals']) > 8 and r['result'], f"{tag}: totals shown ({r['totals']!r}; {r['note']!r})")
     C.ok(r['avg'] == 0, f'{tag}: nothing marks the average position')
     return r
+
+
+WHY_STEPS = """async (resp) => {
+    const v = PX.ex.view('centralpoint'), out = [];
+    const where = () => { const m = document.querySelector('.ex-cp-marker .ex-cp-mark'); if (!m) return null;
+      const t = /translate\\(([-\\d.e]+)[ ,]+([-\\d.e]+)\\)/.exec(m.getAttribute('transform') || ''); return t ? [+t[1], +t[2]] : null; };
+    const fan = () => Array.from(document.querySelectorAll('.ex-cp-over .ex-cp-pull')).map((a) => { const d = /^M([-\\d.e]+) ([-\\d.e]+)/.exec(a.getAttribute('d') || ''); return d ? [+d[1], +d[2]] : null; });
+    await v.showMe(__harness.item, resp, { play: (steps) => { steps.forEach((s) => {
+      if (s.enter) s.enter(); if (s.update) s.update(1);
+      out.push({ cap: s.caption || '', count: document.querySelectorAll('.ex-cp-over .ex-cp-countline').length, at: where(), starts: fan(),
+        leftover: document.querySelectorAll('.ex-cp-over .ex-cp-leftover').length, closed: document.querySelectorAll('.ex-cp-over .ex-cp-closed').length });
+      if (s.exit) s.exit(); }); return Promise.resolve(); } });
+    return out; }"""
+
+
+def median(v):
+    s = sorted(v)
+    n = len(s)
+    return s[(n - 1) // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
+
+
+def why_steps_ok(page, tag):
+    """Why? step by step (a recording runner): with no answer it starts from the counted first guess, the
+    fan starts outside the marker, the line of pulls is laid before its gap shows, and it ends on the key."""
+    item = page.evaluate('() => __harness.item')
+    T, key = item['targets'], item['key']
+    c = [median([t[0] for t in T]), median([t[1] for t in T])]
+    for resp in (None, page.evaluate('() => __harness.last.response')):
+        st = page.evaluate(WHY_STEPS, resp)
+        start = c if resp is None else [resp['x'], resp['y']]
+        first = st[0]
+        if resp is None:
+            C.ok(first['count'] == 2 and first['at'] == start and 'first guess' in first['cap'], f'{tag}: Why? with no answer starts by counting to the first guess {start} ({first})')
+        fan = next((x for x in st if x['starts'] and x['leftover'] == 0 and x['count'] == 0), None)
+        d = min(((p[0] - start[0]) ** 2 + (p[1] - start[1]) ** 2) ** 0.5 for p in fan['starts']) if fan else 0
+        C.ok(fan is not None and d >= 0.6, f'{tag}: the fan of pulls starts outside the marker ({d:.2f} half-steps)')
+        laid = [i for i, x in enumerate(st) if x['cap'].startswith('Line the pulls')]
+        C.ok(len(laid) == 1 and st[laid[0]]['leftover'] == 0 and st[laid[0]]['closed'] == 0, f'{tag}: the pulls are laid end to end before any gap shows')
+        gap = [i for i, x in enumerate(st) if x['leftover'] or x['closed']]
+        C.ok(gap and gap[0] > laid[0], f'{tag}: the gap (or the closed line) comes after the line is laid')
+        between = abs(item['gm'][0] - key['x']) + abs(item['gm'][1] - key['y']) > 0.08
+        C.ok(st[-1]['at'] == [key['x'], key['y']] if between else True, f"{tag}: Why? ends on the best answer point beside the balance point ({st[-1]['at']} vs {key}; {st[-1]['cap'][:40]!r})")
 
 
 def run_viewport(b, name, vp, touch, themes):
@@ -114,6 +163,8 @@ def run_viewport(b, name, vp, touch, themes):
         mp = page.evaluate("() => ({ n: document.querySelectorAll('.ex-cp-map path').length, band: document.querySelectorAll('.ex-cp-map path.is-band').length, labels: Array.from(document.querySelectorAll('.ex-cp-maplabel')).map((t) => t.textContent) })")
         C.ok(mp['n'] >= 3 and mp['band'] == 1 and 'band' in mp['labels'], f'{tag}: Map draws labelled level lines with the band bold ({mp})')
         shot(page, f'cp_{name}_{theme}_map.png')
+        if theme == themes[0]:
+            why_steps_ok(page, tag)
         # Why? (show me): fast mode runs it in a few frames
         before = page.evaluate('() => __harness.played.finished')
         page.evaluate('() => __harness.showMe()')
@@ -177,6 +228,46 @@ def run_viewport(b, name, vp, touch, themes):
         errs = con.errors()
         C.ok(not errs, f'{tag}: no console errors ({errs[:3]})')
         ctx.close()
+
+
+LABELS = """() => {
+  const svg = document.querySelector('.ex-cp-board').getBoundingClientRect(), s = 1.5;
+  const labs = Array.from(document.querySelectorAll('.ex-cp-labels text')).filter((t) => getComputedStyle(t).display !== 'none').map((t) => { const r = t.getBoundingClientRect(); return { x0: r.left, x1: r.right, y0: r.top, y1: r.bottom, s: t.textContent }; });
+  const rings = Array.from(document.querySelectorAll('.ex-cp-targets .ex-cp-ring, .ex-cp-bestring, .ex-cp-marker .ex-cp-disc')).map((c) => { const r = c.getBoundingClientRect(); return { cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, r: r.width / 2 }; });
+  let ll = 0, lr = 0, out = 0;
+  labs.forEach((a, i) => {
+    if (a.x0 < svg.left - 0.5 || a.x1 > svg.right + 0.5 || a.y0 < svg.top - 0.5 || a.y1 > svg.bottom + 0.5) out++;
+    labs.slice(i + 1).forEach((b) => { if (Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > s && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > s) ll++; });
+    rings.forEach((c) => { const dx = Math.max(a.x0 + s - c.cx, 0, c.cx - (a.x1 - s)), dy = Math.max(a.y0 + s - c.cy, 0, c.cy - (a.y1 - s)); if (dx * dx + dy * dy < c.r * c.r) lr++; });
+  });
+  return { n: labs.length, ll, lr, out };
+}"""
+
+
+def run_labels(b):
+    """45 reveals at 360 x 640 over all 15 rated cells, answered at the key, beside it and anywhere:
+    no label covers another; labels on a ring or past the plate stay rare (a crowded corner)."""
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    page.goto(file_url('tests/dev/harness.html', ex='centralpoint', seed=11, p='targets:2,band:0', v='quick', fast=1, theme='light'))
+    page.wait_for_function(READY, timeout=20000)
+    tot = {'n': 0, 'll': 0, 'lr': 0, 'out': 0}
+    for i in range(45):
+        page.evaluate('([p, s]) => __harness.next(p, s)', [{'variant': 'quick', 'targets': i % 5, 'band': (i // 5) % 3}, 900 + i])
+        page.wait_for_function(READY, timeout=20000)
+        k = page.evaluate('() => __harness.key')
+        x, y = [(k['x'], k['y']), ((k['x'] + 1) % 13, k['y']), ((i * 5) % 13, (i * 7) % 13)][i % 3]
+        tap(page, True, x, y)
+        tap(page, True, x, y)
+        page.wait_for_function(STATE, arg='reveal', timeout=10000)
+        m = page.evaluate(LABELS)
+        for key in tot:
+            tot[key] += m[key]
+    C.ok(tot['ll'] == 0, f"360x640 labels: no label covers another over 45 reveals ({tot})")
+    C.ok(tot['lr'] + tot['out'] <= max(1, tot['n'] // 100), f"360x640 labels: on a ring or past the plate at most 1 % ({tot['lr'] + tot['out']} of {tot['n']})")
+    C.ok(not con.errors(), f'360x640 labels: no console errors ({con.errors()[:3]})')
+    ctx.close()
 
 
 def run_slow_why(b):
@@ -243,10 +334,14 @@ def run_app_wtg(b):
     shot(page, 'app_360_rules.png')
     page.locator(sel).click()
     page.wait_for_function("() => window.__play && __play.state === 'showme'", timeout=20000)
-    saw_avg, caps, t_avg = False, set(), None
-    for _ in range(300):
+    # each Watch caption waits for Next (tap mode): tap it once the caption's steps have played, and keep
+    # pictures of the line laid end to end, the gap, and the step to the answer point
+    saw_avg, caps, taken = False, set(), set()
+    pics = (('Line the pulls', 'app_360_watch_line.png'), ('They do not come back', 'app_360_watch_gap.png'), ('Answers sit on dots', 'app_360_watch_snap.png'))
+    for _ in range(400):
         s = page.evaluate("""() => ({ st: __play.state, cap: (document.querySelector('.pl-caption') || {}).textContent || '',
-            avg: document.querySelectorAll('.ex-cp-avgmark').length, turn: ((document.querySelector('.pl-wtg-text') || {}).textContent || '').startsWith('Your turn') })""")
+            avg: document.querySelectorAll('.ex-cp-avgmark').length, turn: ((document.querySelector('.pl-wtg-text') || {}).textContent || '').startsWith('Your turn'),
+            waiting: !!document.querySelector('[data-showme-next].is-waiting:not([hidden])') })""")
         if s['cap']:
             caps.add(s['cap'][:40])
         if s['avg'] and not saw_avg:
@@ -255,7 +350,16 @@ def run_app_wtg(b):
             shot(page, 'app_360_watch_average.png')
         if s['st'] == 'respond' and s['turn']:
             break
+        if s['waiting']:
+            for pre, name in pics:
+                if s['cap'].startswith(pre) and name not in taken:
+                    taken.add(name)
+                    shot(page, name)
+            page.locator('[data-showme-next]').click()
+            page.wait_for_timeout(120)
+            continue
         page.wait_for_timeout(150)
+    C.ok(len(taken) == 3, f'app 360x640: the Watch lays the pulls end to end, shows the gap, then steps to the answer point ({sorted(taken)})')
     C.ok(len(caps) >= 7, f'app 360x640: the Watch shows its captions one by one ({len(caps)} seen)')
     C.ok(saw_avg, 'app 360x640: the Watch shows the average position once (its declared exception)')
     st = page.evaluate("() => ({ st: __play.state, avg: document.querySelectorAll('.ex-cp-avgmark').length, marker: PX.ex.view('centralpoint').marker() })")
@@ -363,6 +467,7 @@ with sync_playwright() as p:
     run_viewport(b, 'desktop', {'width': 1366, 'height': 768}, False, ['light', 'dark'])
     run_viewport(b, '360x640', {'width': 360, 'height': 640}, True, ['light', 'dark'])
     run_viewport(b, '412x880', {'width': 412, 'height': 880}, True, ['light'])
+    run_labels(b)
     run_slow_why(b)
     run_app_wtg(b)
     run_app_deadline(b)
