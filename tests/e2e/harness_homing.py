@@ -553,6 +553,36 @@ def gentle(b, cons):
     ctx.close()
 
 
+# The Watch (v1.2, after the fresh-player retest): every caption step at least 3 s, the phase line saying the demo
+# plays, then the answer phase back. Records the steps the view hands to ctx.play (fast mode keeps the run short).
+DEMO_STEPS = '''(id) => { const v = PX.ex.view(id), d = v.demo; window.__steps = null; window.__phaseDuring = null;
+    v.demo = function (item, ctx) { const pl = ctx.play; ctx.play = function (list, o) { window.__steps = list.map((x) => [x.ms, x.caption || '']);
+        window.__phaseDuring = document.querySelector('.ex-fp-phase').textContent; return pl.apply(this, arguments); }; return d.apply(this, arguments); }; }'''
+
+
+def demo_steps(page, ex):
+    page.evaluate(DEMO_STEPS, ex)
+    before = page.evaluate('() => __harness.played.finished')
+    page.evaluate('() => { __harness.demo(); }')
+    page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=90000)
+    page.wait_for_timeout(150)
+    return page.evaluate("() => ({ steps: window.__steps, during: window.__phaseDuring, after: document.querySelector('.ex-fp-phase').textContent })")
+
+
+def v12_demo(b, cons):
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto(file_url('tests/dev/harness.html', ex='homing', seed=3, p=PARAMS, fast=1))
+    page.wait_for_function(READY, timeout=60000)
+    r = demo_steps(page, 'homing')
+    short = [x for x in (r['steps'] or []) if x[1] and x[0] < 3000]
+    C.ok(r['steps'] and not short, f'the Watch: every caption step lasts at least 3 s ({len(r["steps"] or [])} steps; shorter: {short[:3]})')
+    C.ok(r['during'] and r['during'].startswith('Watch the demo') and r['after'] == 'Turn to face the start, then confirm.',
+         f'the phase line says the demo plays, then asks for the answer ({r["during"]!r} → {r["after"]!r})')
+    ctx.close()
+
+
 def main():
     cons = []
     only = set(sys.argv[1:])
@@ -561,6 +591,8 @@ def main():
         if only:
             if 'gentle' in only:
                 gentle(b, cons)
+            if 'demo' in only:
+                v12_demo(b, cons)
             b.close()
             errors = [e for c in cons for e in c.errors()]
             C.ok(not errors, f'no console errors ({errors[:5]})')
@@ -572,6 +604,7 @@ def main():
         throttled(b, cons)
         sandboxed(b, cons)
         gentle(b, cons)
+        v12_demo(b, cons)
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')

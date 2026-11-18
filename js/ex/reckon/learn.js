@@ -13,7 +13,7 @@
     goals: {
       point: 'Watch a walk with nothing to steer by, then turn to face where you started.',
       return: 'Watch a walk with nothing to steer by, then turn and walk back to where you started.',
-      heading: 'Watch yourself turn on the spot, then turn back to the way you faced at the start.',
+      heading: 'Watch yourself turn on the spot, then turn back until you face the same way as at the start.',
       distance: 'Watch a straight walk, then walk the same distance again at another speed.',
     },
     parts: [
@@ -46,7 +46,7 @@
     tips: [
       { id: 'headingTurn', when: { dim: 'task', levels: ['heading'] }, text: 'Watch the ground slide past as you turn: it shows how far round you go, even with nothing else to see.' },
       { id: 'distanceFlow', when: { dim: 'task', levels: ['distance'] }, text: 'The second walk goes at another speed: judge the distance by how much ground slides past, not by counting seconds.' },
-      { id: 'walkback', when: { variant: 'return' }, text: 'Turn first, then hold Walk. The ground slides past at your walking speed, which changes from item to item: judge the distance by the ground, not by counting.' },
+      { id: 'walkback', when: { variant: 'return' }, text: 'Turn first, then hold Walk. Your speed changes from item to item, so judge the distance by the ground, not by counting.' },
       { id: 'update', when: { dim: 'route', levels: [0, 1, 2] }, text: 'After each turn, say to yourself where the start is now: behind, behind-left, left…' },
       { id: 'speeds', when: { dim: 'speed', levels: [1] }, text: 'Speeds change from leg to leg now: watch the ground flow, not the seconds.' },
       { id: 'speedsWithin', when: { dim: 'speed', levels: [2] }, text: 'Speeds may now change within a leg too: watch the ground flow, not the seconds.' },
@@ -124,18 +124,19 @@
       voidLost: 'The 3D view was interrupted, so this answer will not count.',
       describe: 'A first-person view of a walk across an empty plain with nothing to steer by: {legs} straight legs with turns between them. Then turn to face where you started with the left and right arrow keys (5°, with Shift 1°){walk}, and confirm with Enter. The top of the circle is the way you face.',
       describeWalk: ', walk back by holding the up arrow (the down arrow steps back)',
-      describeHeading: 'A first-person view: you stand in a ring and turn on the spot. Then turn back to the way you faced at the start with the left and right arrow keys, and confirm with Enter.',
+      describeHeading: 'A first-person view: you stand in a ring and turn on the spot. Then turn back until you face the same way as at the start, with the left and right arrow keys, and confirm with Enter.',
       describeDistance: 'A first-person view: you walk straight across an empty plain. Then walk the same distance again by holding the up arrow, and confirm with Enter.',
       // phases
       phaseWatch: 'You start in the ring. Watch the walk: nothing out there marks the way.',
       phaseTurn: 'Turn to face the start, then confirm.',
       phaseReturnTurn: 'Turn to face the start, then hold Walk to walk back to it.',
       phaseWalk: 'Hold Walk to go on, Back to step back. Tap Here where the start is.',
-      phaseHeading: 'Turn back to the way you faced at the start, then confirm.',
+      phaseHeading: 'Turn back until you face the same way as at the start, then confirm.',
+      phaseDemo: 'Watch the demo: it walks this route and finds the way back. Then it is your turn.',
       phaseDistance: 'Hold Walk: walk the same distance again, then tap Here.',
       phaseReveal: 'The flag marks the start.',
       phaseRevealDistance: 'The flag marks the end of the same distance.',
-      phaseRevealHeading: 'The view turns to the way you faced at the start.',
+      phaseRevealHeading: 'The view turns back to the way you faced at the start.',
       // after the answer
       noAnswer: 'No answer',
       verdictRight: '{err}° off: within {tol}°',
@@ -151,7 +152,7 @@
       drift: 'Drift: {ep} m off after {path} m walked in all (the route and your walk back), {per}; the limit for this item was about {lim} cm per metre.',
       perMetre: 'about {cm} cm per metre',
       perMetreUnder: 'under 1 cm per metre',
-      headingWas: 'You turned {deg}° {side} in all; turning back by as much faces the way you started.',
+      headingWas: 'You turned {deg}° {side} in all; turning back by as much faces the same way as at the start.',
       distanceWas: 'The first walk was {L} m; you walked {r} m ({dist}).',
       // a distance off by less than 1 % reads "under 1 % off", never "0 % too far" (v1.2 O40)
       distOff: '{dpct} % {dword}',
@@ -200,7 +201,7 @@
       demoWalk: 'Watch the walk: straight legs with turns on the spot between them. The ground shows every metre and every degree.',
       demoEnd: 'The walk ends here. The start is somewhere off the screen, and nothing points to it.',
       demoTurn: 'Turn {deg}° to the {side}: now you face the start.',
-      demoTurnHeading: 'Turn {deg}° to the {side}: now you face the way you faced at the start.',
+      demoTurnHeading: 'Turn {deg}° to the {side}: now you face the same way as at the start.',
       demoAnswer: 'To answer, drag the view or the circle, or use ◀ ▶ (keys ← →). Then Confirm (Enter).',
     },
     bridge: 'Pilots and sailors use dead reckoning to stay oriented between fixes. Practising here improves this task; whether it helps real wayfinding has not been tested in any study we found, and walking adds body senses that a screen cannot give.',

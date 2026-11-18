@@ -22,7 +22,8 @@
    return (+0.5 logit). Initial steps (hand-set, R1 §8.4; to be refitted from pooled exports): 0.55 per
    extra leg, 0.4 per turn size, 0.35 per flow level, 0.3 per speed level, 0.9 per tolerance level.
    extraParams.task: 'heading' (turn on the spot, then face the way you started) and 'distance' (walk,
-   then walk the same distance again at another speed): tutorial items only, never chosen by the engine.
+   then walk the same distance again at another speed): tutorial items only, never chosen by the engine;
+   v1.2: they move slower than rated items (TASK_RATE 30°/s, TASK_SPEED 1.2 m/s ± 10 %) and keep params.task.
 
    Generation reuses Homing's route model (PX.ex.get('homing').lib: route, steer, drawTarget, search,
    routeOk, checkRoute, checkMotion, the motion pieces), with Reckon's own rules on top (R1 §6.4, §8.4):
@@ -85,6 +86,10 @@
   var MARGIN = H.MARGIN, TARGET_WIN = H.TARGET_WIN, STRICT = 16; // on-target attempts where answers can spread (Homing: 8; more keeps a fixed angle under chance + 10 at route 7)
   var HEADING_TURN = [70, 150];          // the heading task's one turn (deg)
   var DIST_LEG = [6, 10];                // the distance task's walk (m)
+  // The two tutorial rungs move slower than any rated item, so a first-timer has time to watch the ground flow
+  // (v1.2: the fresh-player retest found 3–5 s walks too short to read): the turn on the spot at TASK_RATE, the
+  // first walk at TASK_SPEED ± JITTER (the second walk still ≥ 0.4 m/s apart from it). Never rated.
+  var TASK_RATE = 30, TASK_SPEED = 1.2;
 
   function clampInt(x, n) { x = Number.isInteger(x) ? x : 0; return x < 0 ? 0 : x >= n ? n - 1 : x; }
   function normParams(params) {
@@ -243,7 +248,7 @@
   // distance again at another speed (key { x: 0, z: L }: L ahead of where the first walk ended).
   function taskItem(r, p) {
     var h0 = rnd(r.float(0, 360), 100), L = p.task === 'distance' ? rnd(r.float(DIST_LEG[0], DIST_LEG[1]), 10) : 0;
-    var sp = drawSpeeds(r.fork('speeds'), p.speed, p.task === 'distance' ? [L] : [], p.task === 'heading' ? 1 : 0);
+    var sr = r.fork('speeds'), sp = { speeds: p.task === 'distance' ? [[rnd(TASK_SPEED * (1 + sr.float(-JITTER, JITTER)), 100)]] : [], splits: p.task === 'distance' ? [null] : [], rates: p.task === 'heading' ? [TASK_RATE] : [] };
     if (p.task === 'heading') {
       var T = rnd((r.chance(0.5) ? 1 : -1) * r.float(HEADING_TURN[0], HEADING_TURN[1]), 10), key = rnd(norm360(-T), 100) % 360;
       return base(r, { variant: 'point', route: p.route, flow: p.flow, speed: p.speed, tolerance: p.tolerance }, {
@@ -329,6 +334,21 @@
     if (f.life ? !(Array.isArray(g.life) && g.life[0] === f.life[0] && g.life[1] === f.life[1]) : g.life !== undefined) return 'the ground marks\' lifetime does not match the flow level';
     return true;
   }
+  // The tutorial rungs' motion (taskItem): their own slow speeds, at every speed level.
+  function checkTaskSpeeds(item) {
+    var n = item.legs.length, i;
+    if (!Array.isArray(item.speeds) || item.speeds.length !== n || !Array.isArray(item.splits) || item.splits.length !== n || !Array.isArray(item.turnRates) || item.turnRates.length !== item.turns.length) {
+      return 'speeds, splits and turnRates need one entry per leg or turn';
+    }
+    for (i = 0; i < n; i++) {
+      var v = item.speeds[i];
+      if (!Array.isArray(v) || v.length !== 1 || !within(v[0], TASK_SPEED * (1 - JITTER), TASK_SPEED * (1 + JITTER)) || item.splits[i] !== null) return 'a tutorial walk goes at one speed of ' + TASK_SPEED + ' m/s ± 10 %';
+    }
+    for (i = 0; i < item.turnRates.length; i++) if (item.turnRates[i] !== TASK_RATE) return 'a tutorial turn goes at ' + TASK_RATE + '°/s';
+    if (item.ramp !== H.RAMP || item.blend !== BLEND) return 'ramp and blend must be the model\'s';
+    if (!within(item.walkSpeed, WALK[0], WALK[1])) return 'walkSpeed outside ' + WALK.join('–') + ' m/s';
+    return H.checkMotion(item);
+  }
   function checkTask(item, p) {
     var ok;
     if (item.task === 'heading') {
@@ -343,7 +363,7 @@
       if (!within(L, DIST_LEG[0], DIST_LEG[1]) || !item.key || item.key.x !== 0 || item.key.z !== L || item.distance !== L) return 'the distance item\'s key is L straight ahead';
       if (item.tolerance !== TOL_RETURN[p.tolerance]) return 'tolerance does not match the level';
     } else return 'unknown task';
-    ok = checkSpeeds(item, p.speed);
+    ok = checkTaskSpeeds(item);
     if (ok !== true) return ok;
     if (item.task === 'distance' && Math.abs(item.walkSpeed - item.speeds[0][0]) < 0.4 - 1e-9) return 'the second walk needs another speed';
     return checkGround(item, p.flow);
@@ -497,6 +517,7 @@
       VARIANTS: VARIANTS, TASKS: TASKS, ROUTES: ROUTES, TURNS: TURNS, FLOWS: FLOWS, SPEEDS: SPEEDS, TOL_POINT: TOL_POINT, TOL_RETURN: TOL_RETURN,
       MODEL: MODEL, STEADY: STEADY, JITTER: JITTER, V: V, V_GAP: V_GAP, W: W, BLEND: BLEND, SPLIT: SPLIT, WALK: WALK, D_MAX: D_MAX,
       LEAD_MS: LEAD_MS, MAX_MOTION: MAX_MOTION, RESPONSE_MS: RESPONSE_MS, STOP_MS: STOP_MS, MEAN_PATH: MEAN_PATH, MEAN_D: MEAN_D, HEADING_TURN: HEADING_TURN, DIST_LEG: DIST_LEG,
+      TASK_RATE: TASK_RATE, TASK_SPEED: TASK_SPEED,
       MARGIN: MARGIN, SAFE: SAFE, HIST_N: HIST_N, stats: stats, homing: H,
       normParams: normParams, routeCost: routeCost, tolDeg: tolDeg, axisGap: axisGap, shortcuts: shortcuts, shortcutsMiss: shortcutsMiss, spreads: spreads,
       build: build, assemble: assemble, speedPlan: speedPlan, drawSpeeds: drawSpeeds, taskItem: taskItem, fallback: fallback, keyXZ: keyXZ,

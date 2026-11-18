@@ -683,15 +683,22 @@ def throttled(b, cons):
 
 
 def demo_bias_srcdoc(b, cons):
+    from harness_homing import DEMO_STEPS
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})
     page = ctx.new_page()
     cons.append(Console(page))
     page.goto(url('demo', seed=34, p='route:0,flow:0,speed:0,tolerance:0', v='point', fast=True))
     page.wait_for_function(READY, timeout=90000)
+    page.evaluate(DEMO_STEPS, 'reckon')
     before = page.evaluate('() => __harness.played.finished')
     page.evaluate('() => { __harness.demo(); }')
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=90000)
     page.wait_for_timeout(200)
+    r = page.evaluate("() => ({ steps: window.__steps, during: window.__phaseDuring, after: document.querySelector('.ex-fp-phase').textContent })")
+    short = [x for x in (r['steps'] or []) if x[1] and x[0] < 3000]
+    C.ok(r['steps'] and not short, f'the Watch: every caption step lasts at least 3 s ({len(r["steps"] or [])} steps; shorter: {short[:3]})')
+    C.ok(r['during'] and r['during'].startswith('Watch the demo') and r['after'] == 'Turn to face the start, then confirm.',
+         f'the phase line says the demo plays, then asks for the answer ({r["during"]!r} → {r["after"]!r})')
     d = page.evaluate("""() => { const s = PX.ex.view('reckon').state(), p = PX.ex.view('reckon').pose(), it = __harness.item;
         return { flag: s.flag, map: s.map, value: s.value, dist: s.dist, dh: Math.abs(((p.h - it.heading) % 360 + 540) % 360 - 180), confirm: document.querySelector('.ex-fp-confirm').disabled, sub: document.querySelector('.ex-fp-sub').textContent }; }""")
     C.ok(not d['flag'] and not d['map'] and d['value'] is None and d['dist'] == 0 and d['dh'] < 1e-6 and d['confirm'] and d['sub'] == '', f'the demo plays to the end and leaves the item in its answer state ({d})')
@@ -872,6 +879,8 @@ def main():
         if only:
             if 'v12' in only:
                 v12(b, cons)
+            if 'demo' in only:
+                demo_bias_srcdoc(b, cons)
             b.close()
             errors = [e for c in cons for e in c.errors()]
             C.ok(not errors, f'no console errors ({errors[:5]})')
