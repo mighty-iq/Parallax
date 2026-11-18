@@ -4,7 +4,10 @@
 import { MANIFEST, deepDiff } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/cubes/gen.js', 'js/ex/cubes/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 24 level combinations × 420
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 40 level combinations × 252
+// The starter band (v1.2, note D2 §3.3): flat figures (height level 0) and 4–6 cubes (cubes level 0).
+const inBand = (p) => p.cubes === 0 || p.height === 0;
+const OLD_FLOOR = -2.3, NEW_FLOOR = -4.15;
 const procMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
 
 export async function run(t) {
@@ -15,14 +18,31 @@ export async function run(t) {
   if (!def) return;
   const L = def.lib;
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat, def.extraParams],
-    ['cubes', 1, 'EX-18', ['Vz'], 'train', 'choice', 5, true, ['ask']], 'id, version, code, Vz, choice of 5, pat, extra param ask');
+    ['cubes', 2, 'EX-18', ['Vz'], 'train', 'choice', 5, true, ['ask']], 'id, version 2 (starter band), code, Vz, choice of 5, pat, extra param ask');
+  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 5], ['height', 4], ['asked', 2]], 'dims: a starter level in front of cubes and of tallest column');
+  t.eq([def.dims[0].levels[0], def.dims[1].levels[0]], ['4–6', 1], 'the starter levels: 4–6 cubes, flat (one cube high)');
+  t.eq(def.starter, { dim: 'height', levels: 1 }, 'starter: the flat level');
   const all = PX.ex.enumerate(def);
-  t.eq(all.length, 24, 'every level combination is enumerated');
+  t.eq(all.length, 40, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${lo.toFixed(2)} … ${hi.toFixed(2)})`);
-  const easiest = all.reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
-  const pBeginner = 0.2 + (1 - 0.2 - 0.03) / (1 + Math.exp(def.difficulty(easiest)));
-  t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the easiest item is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
+  t.near(lo, NEW_FLOOR, 1e-9, 'the new floor is −4.15 (flat, 4–6 cubes)');
+  t.near(hi, 1.7, 1e-9, 'the top of the range is the 1.1 top');
+  // Every 1.1 combination keeps its 1.1 difficulty: −2.3 + 0.85 · size + 0.3 · height + 0.85 · asked.
+  let same11 = 0, n11 = 0;
+  for (const p of all) if (!inBand(p)) { n11++; if (Math.abs(def.difficulty(p) - (OLD_FLOOR + 0.85 * (p.cubes - 1) + 0.3 * (p.height - 1) + 0.85 * p.asked)) < 1e-9) same11++; }
+  t.eq(same11, n11, `every 1.1 combination keeps its 1.1 difficulty (${n11})`);
+  t.near(def.difficulty({ cubes: 1, height: 0, asked: 0 }), OLD_FLOOR - 1.0, 1e-9, 'flat: Δ −1.0');
+  t.near(def.difficulty({ cubes: 0, height: 1, asked: 0 }), OLD_FLOOR - 0.85, 1e-9, '4–6 cubes: Δ −0.85');
+  // At 4–6 cubes the question is always about 3 or 4 sides and columns stand at most 3 high: those
+  // combinations are priced as what is built.
+  t.ok([0, 1, 2, 3].every((h) => def.difficulty({ cubes: 0, height: h, asked: 1 }) === def.difficulty({ cubes: 0, height: h, asked: 0 })) &&
+    def.difficulty({ cubes: 0, height: 3, asked: 0 }) === def.difficulty({ cubes: 0, height: 2, asked: 0 }), '4–6 cubes: unbuildable settings are priced as what is built');
+  const easiest11 = all.filter((p) => !inBand(p)).reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
+  const pBeginner = 0.2 + (1 - 0.2 - 0.03) / (1 + Math.exp(def.difficulty(easiest11)));
+  t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the pre-1.2 floor is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
+  const pBand = 0.2 + (1 - 0.2 - 0.03) / (1 + Math.exp(lo));
+  t.ok(pBand > pBeginner + 0.05, `the starter floor is easier still (${(100 * pBand).toFixed(1)} % at θ = 0)`);
 
   t.section('cubes: camera');
   const unit = (v) => Math.hypot(...v);
@@ -40,8 +60,8 @@ export async function run(t) {
   t.section('cubes: items');
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, fallbacks = 0, firstBad = null, n = 0, hiddenItems = 0;
-  const keyHist = [0, 0, 0, 0, 0], perN = {}, items = [], acc = {}, laterN = {}, cellKeys = [], asksLen = [0, 0, 0, 0, 0, 0];
-  let asksBad = 0, rayOff = 0, minTopRay = 1;
+  const keyHist = [0, 0, 0, 0, 0], perN = {}, items = [], acc = {}, accBand = {}, laterN = {}, cellKeys = [], asksLen = [0, 0, 0, 0, 0, 0];
+  let asksBad = 0, rayOff = 0, minTopRay = 1, nOld = 0, flatBad = 0, nBand = 0;
   for (let ci = 0; ci < all.length; ci++) {
     for (let s = 0; s < per; s++) {
       const params = all[ci], seed = PX.rng.hash('cubes-test', ci, s);
@@ -57,14 +77,17 @@ export async function run(t) {
       if (n % 8 === 0) items.push({ seed, params, item });
       keyHist[item.key]++;
       (perN[item.ask] = perN[item.ask] || [0, 0, 0, 0, 0])[item.key]++;
-      if (item.hidden > 0) hiddenItems++;
+      if (!inBand(params)) { nOld++; if (item.hidden > 0) hiddenItems++; }
       shortcuts(L, item, acc);
+      if (inBand(params)) { nBand++; shortcuts(L, item, accBand); }
+      // Flat figures: no cube hidden, and every cube's count is 5 minus the cubes it touches.
+      if (params.height === 0 && (item.hidden !== 0 || L.cubesOf(item.heights).some((q) => q.painted !== 5 - [1, 2, 3, 4].filter((s2) => !q.sides[s2]).length))) flatBad++;
       // Section mode's later questions: N in KRANGE at this size (never 5), each count in its range.
-      const hist = L.histogram(item.heights), KR = L.KRANGE[params.cubes];
-      asksLen[Math.min(5, item.asks.length)]++;
+      const hist = L.histogram(item.heights), KR = L.krange(params);
+      if (!inBand(params)) asksLen[Math.min(5, item.asks.length)]++; // Section practice draws from above the band
       if (item.asks[0] !== item.ask || new Set(item.asks).size !== item.asks.length || item.asks.some((m) => !KR[m] || hist[m] < KR[m][0] || hist[m] > KR[m][1])) asksBad++;
       item.asks.slice(1).forEach((m) => { (laterN[m] = laterN[m] || [0, 0, 0, 0, 0, 0])[hist[m]]++; });
-      cellKeys.push([`${params.cubes},${params.height},${item.ask}`, item.count, s % 2]);
+      cellKeys.push([`${params.cubes},${params.height},${item.ask}`, item.count, s % 2, inBand(params)]);
       // The validator's ray cast against the generator's z-buffer.
       const rv = L.rayView(item.heights), zv = L.sight(item.heights);
       if (rv.hidden !== zv.hidden || (rv.minTop < 0.5) !== (zv.minTop < 0.5)) rayOff++;
@@ -82,15 +105,21 @@ export async function run(t) {
   t.ok(!perN[5] && !perN[0], 'never asks for 0 or 5 painted sides');
   const bestPerN = Object.values(perN).reduce((s, h) => s + Math.max(...h), 0) / n;
   t.ok(bestPerN <= 0.3, `"the most common answer for the asked N" ≤ chance + 10 (${(100 * bestPerN).toFixed(1)} %)`);
-  t.ok(hiddenItems / n > 0.5, `most figures hide supports the solver must count (${(100 * hiddenItems / n).toFixed(0)} %)`);
+  t.ok(hiddenItems / nOld > 0.5, `above the starter band most figures hide supports the solver must count (${(100 * hiddenItems / nOld).toFixed(0)} %)`);
+  t.eq(flatBad, 0, 'flat figures hide no cube, and every cube has 5 minus its neighbours painted sides');
   // RV-dat-style-A §12: the most common answer per level and N, learned on half the items and
-  // tried on the other half (N and k are kept across the figure search's retries).
-  const prior = {};
-  cellKeys.filter((c) => c[2] === 0).forEach(([cell, k]) => { (prior[cell] = prior[cell] || [0, 0, 0, 0, 0, 0])[k]++; });
-  const test = cellKeys.filter((c) => c[2] === 1), guess = (cell) => { const h = prior[cell] || [0, 1, 0, 0, 0, 0]; return h.indexOf(Math.max(...h)); };
-  const priorHit = test.filter(([cell, k]) => guess(cell) === k).length / test.length;
-  const priorSlack = test.length < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / test.length) : 0;
-  t.ok(priorHit <= 0.3 + priorSlack, `"the most common answer for the level and N" (learned on half the items) ≤ chance + 10 (${(100 * priorHit).toFixed(1)} %${priorSlack ? '; quick run, noise allowed' : ''})`);
+  // tried on the other half (N and k are kept across the figure search's retries); all items, then
+  // the starter band's own pool.
+  const priorRate = (keys) => {
+    const prior = {};
+    keys.filter((c) => c[2] === 0).forEach(([cell, k]) => { (prior[cell] = prior[cell] || [0, 0, 0, 0, 0, 0])[k]++; });
+    const test = keys.filter((c) => c[2] === 1), guess = (cell) => { const h = prior[cell] || [0, 1, 0, 0, 0, 0]; return h.indexOf(Math.max(...h)); };
+    return { hit: test.filter(([cell, k]) => guess(cell) === k).length / test.length, n: test.length };
+  };
+  for (const [name, keys] of [['all items', cellKeys], ['starter band', cellKeys.filter((c) => c[3])]]) {
+    const pr = priorRate(keys), slack = pr.n < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / pr.n) : 0;
+    t.ok(pr.hit <= 0.3 + slack, `"the most common answer for the level and N" (learned on half the items, ${name}) ≤ chance + 10 (${(100 * pr.hit).toFixed(1)} %${slack ? '; quick run, noise allowed' : ''})`);
+  }
   t.eq(rayOff, 0, `the validator's ray cast and the generator's z-buffer agree on every figure (smallest column top in view ${minTopRay.toFixed(3)})`);
 
   t.section('cubes: later questions (Section mode)');
@@ -101,8 +130,8 @@ export async function run(t) {
     const tot = h.reduce((x, y) => x + y, 0), top = Math.max(...h), slack = tot < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / tot) : 0;
     t.ok(top / tot <= 0.3 + slack, `later questions for ${m} painted side${m === '1' ? '' : 's'}: the most common answer ≤ chance + 10 (${(100 * top / tot).toFixed(1)} % of ${tot}: ${h.slice(1).join('/')}${slack ? '; quick run, noise allowed' : ''})`);
   }
-  const meanAsks = asksLen.reduce((x, c, i) => x + c * i, 0) / n;
-  t.ok(meanAsks >= 2, `about two or more questions per figure for Section mode (mean ${meanAsks.toFixed(2)}; 1/2/3/4: ${asksLen.slice(1, 5).join('/')})`);
+  const meanAsks = asksLen.reduce((x, c, i) => x + c * i, 0) / nOld;
+  t.ok(meanAsks >= 2, `about two or more questions per figure for Section mode, above the starter band (mean ${meanAsks.toFixed(2)}; 1/2/3/4: ${asksLen.slice(1, 5).join('/')})`);
 
   t.section('cubes: validator catches broken items');
   const base = items.find((x) => x.item.hidden > 0).item;
@@ -174,16 +203,23 @@ export async function run(t) {
   }
   t.ok(p95 < 20, `generation p95 at the hardest level under 20 ms (CPU ${p95.toFixed(1)} ms, max ${Math.max(...worst).toFixed(1)} ms)`);
 
-  t.section('cubes: shortcut solvers');
+  t.section('cubes: shortcut solvers (all items, then the starter band\'s own pool)');
   const bound = 0.2 + 0.10, pct = (x) => (100 * x).toFixed(1) + ' %';
   for (const [k, v] of Object.entries(acc)) {
     if (k.startsWith('info:')) continue;
     t.ok(v.hit / v.n <= bound, `"${k}" ≤ chance + 10 (${pct(v.hit / v.n)})`);
   }
+  t.ok(nBand >= Math.min(2000, N_ITEMS / 3), `the starter band's pool holds ${nBand} items`);
+  for (const [k, v] of Object.entries(accBand)) {
+    if (k.startsWith('info:')) continue;
+    const slack = v.n < 2000 ? 3 * Math.sqrt(0.2 * 0.8 / v.n) : 0;
+    t.ok(v.hit / v.n <= bound + slack, `starter band: "${k}" ≤ chance + 10 (${pct(v.hit / v.n)}${slack ? ', quick run' : ''})`);
+  }
   if (process.env.PX_REPORT) {
     console.log('       cubes: ' + Object.entries(acc).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
-    console.log(`       keys ${keyHist.join(',')}; per N ${JSON.stringify(perN)}; hidden in ${(100 * hiddenItems / n).toFixed(0)} %; CPU p95 ${p95.toFixed(1)} ms`);
-    console.log(`       later questions by N (counts 0–5) ${JSON.stringify(laterN)}; questions per figure 1/2/3/4 ${asksLen.slice(1, 5).join('/')} (mean ${meanAsks.toFixed(2)}); level prior ${(100 * priorHit).toFixed(1)} %; ray cast: smallest top ${minTopRay.toFixed(3)}`);
+    console.log('       cubes, starter band: ' + Object.entries(accBand).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
+    console.log(`       keys ${keyHist.join(',')}; per N ${JSON.stringify(perN)}; hidden in ${(100 * hiddenItems / nOld).toFixed(0)} % above the band; CPU p95 ${p95.toFixed(1)} ms`);
+    console.log(`       later questions by N (counts 0–5) ${JSON.stringify(laterN)}; questions per figure 1/2/3/4 ${asksLen.slice(1, 5).join('/')} (mean ${meanAsks.toFixed(2)}); ray cast: smallest top ${minTopRay.toFixed(3)}`);
   }
   testLearn(t, PX, def);
 }
@@ -220,17 +256,30 @@ function testLearn(t, PX, def) {
   t.ok(typeof L.goal === 'string' && L.goal.length > 10 && L.goal.length <= 120, `a one-line goal (${(L.goal || '').length} characters)`);
   t.ok(Array.isArray(L.parts) && L.parts.length >= 3 && L.parts.every((p) => p.id && p.label && p.text), 'labelled parts');
   const valid = (p) => PX.ex.validParams(def, p) === true;
+  const floor = PX.ex.minDifficulty(def);
   t.ok(Array.isArray(L.demo) && L.demo.length >= 1 && L.demo.every((d) => valid(d.params) && Number.isInteger(d.seed)), 'demo items with valid params');
-  t.ok(L.demo.every((d) => def.difficulty(d.params) <= PX.ex.minDifficulty(def) + 1e-9), 'demos are at the easiest level');
-  // RV-play-dat: every tip is about hidden cubes, so the Watch item hides one that the tally counts.
-  for (const d of L.demo) {
-    const item = def.generate(PX.rng(d.seed), d.params), rr = def.lib.render(item.heights);
-    const hiddenCounted = rr.cubes.filter((q, i) => q.painted === item.ask && rr.perCube[i].any === 0).length;
-    t.ok(!item.fallback && item.hidden >= 1 && hiddenCounted >= 1 && d.kind === 'hidden', `demo seed ${d.seed}: ${item.hidden} hidden cube(s), ${hiddenCounted} of them among the ${item.count} counted`);
-  }
-  t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
-  const diffs = L.practice.map((p) => def.difficulty(p));
-  t.ok(diffs[0] === Math.min(...diffs), 'practice starts at the easiest of its levels');
+  t.ok(L.demo.every((d) => def.difficulty(d.params) <= floor + 1e-9), 'the Watch is at the starter floor (note D2 §3.0 C 2)');
+  // The teaching template (CONTRACT-v1.2 D; note D2 §3.0 C, §3.3).
+  t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => (typeof r === 'string' && r.length > 10) || (r && typeof r.text === 'string' && r.text.length > 10 && typeof r.fig === 'string' && r.fig)), 'a rules card: 2–4 rules, each a text or { text, fig }');
+  const ruleText = L.rules.map((r) => (typeof r === 'string' ? r : r.text)).join(' ');
+  t.ok(/touch/.test(ruleText) && /under/.test(ruleText) && /hold up/.test(ruleText), 'the three rules of note D2 §3.3: touching faces, a cube under another, hidden supports');
+  const first = (L.strategies || []).find((x) => x.id === L.strategyFirst);
+  t.ok(first && first.steps.length === 3 && /Count by position/.test(first.title), 'strategyFirst names the "Count by position" card, three steps');
+  t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((x) => x && valid(x.params) && Number.isInteger(x.seed)), 'four Try items as objects { params, seed, … }');
+  const P = L.practice;
+  t.ok(P[0].assist && P[0].assist.numbers === 2 && !P[1].assist && !P[2].assist && !P[3].assist, 'Try 1 alone has its first step done (every number but two)');
+  t.ok(def.difficulty(P[0].params) <= floor + 1e-9 && def.difficulty(P[1].params) <= floor + 1e-9, 'Try 1 and Try 2 at the starter floor');
+  t.ok(Math.abs(def.difficulty(P[2].params) - OLD_FLOOR) < 1e-9 && P[2].tip === 'hidden', 'Try 3 at the pre-1.2 floor, with the hidden-cube tip');
+  t.ok(def.difficulty(P[3].params) > def.difficulty(P[2].params) && P[3].params.height === 2 && P[3].tip === 'tall', 'Try 4: three-high columns, with their tip');
+  t.ok(P.every((x) => !x.tip || (L.tips || []).some((tip) => tip.id === x.tip)), 'forced tips exist');
+  const gen = (x) => def.generate(PX.rng(x.seed), x.params);
+  const demoItem = gen(L.demo[0]), tryItems = P.map(gen);
+  t.ok([demoItem, ...tryItems].every((it) => !it.fallback && def.validate(it) === true), 'the Watch and Try seeds give valid items, none a fallback');
+  const keys = [demoItem, ...tryItems].map((it) => it.key);
+  t.ok(keys.every((k, i) => i === 0 || k !== keys[i - 1]), `answers vary their slot from item to item (${keys.map((k) => k + 1).join(', ')})`);
+  t.ok(demoItem.hidden === 0 && tryItems[0].hidden === 0 && tryItems[1].hidden === 0, 'the Watch and the first two Try items are flat: nothing hidden');
+  const rr3 = def.lib.render(tryItems[2].heights);
+  t.ok(rr3.cubes.some((q, i) => q.painted === tryItems[2].ask && rr3.perCube[i].any === 0), 'Try 3 hides a cube that the count includes');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
     const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).length && tr.levels.every((l) => l >= 0 && l < d.levels.length));
@@ -239,7 +288,7 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['figure', 'hidden', 'question', 'options', 'tally', 'tallyHidden', 'skip', 'done', 'chosen'];
+  const caps = ['figure', 'hidden', 'question', 'options', 'explode', 'numbers', 'numbersFlat', 'tally', 'tallyHidden', 'skip', 'done', 'chosen', 'assist'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   t.ok(typeof L.bridge === 'string' && /not been shown/.test(L.bridge), 'a "where it is used" card with its limitation line');
   const ADA = 'DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.';

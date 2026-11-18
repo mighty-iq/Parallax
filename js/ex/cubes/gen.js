@@ -30,13 +30,23 @@
    key is redrawn three times in four; counting visible cubes only, or counting the bottom of
    ground cubes as painted, are redrawn more than half the time.
 
-   Dims (hand-set; refit from pooled exports): cubes 6–9, 10–13, 14–17, 18–22 (0.85: accuracy
+   Dims (hand-set; refit from pooled exports): cubes 4–6, 6–9, 10–13, 14–17, 18–22 (0.85: accuracy
    falls with more cubes and more hidden faces, Kurtuluş & Yolcu 2013; hidden supports come with
    size, since a figure whose every top shows hides only cubes under taller back columns, so they
-   are not a separate dim: a "no hidden cube" level is out of reach above about ten cubes);
-   tallest column 2, 3, 4 (0.3); asked N 3–4 or 1–2 (0.85: cubes with few painted sides sit inside
-   the figure or under others, R3 §8.4). Base −2.3: the easiest item is about 90 % right at θ = 0
-   with 5 options; the range is 4.0 logits.
+   are not a separate dim); tallest column 1 ("flat"), 2, 3, 4 (0.3); asked N 3–4 or 1–2 (0.85:
+   cubes with few painted sides sit inside the figure or under others, R3 §8.4). Base −2.3: the
+   pre-1.2 floor (6–9 cubes, 2 high, N 3–4) is about 90 % right at θ = 0 with 5 options.
+
+   The starter band (v1.2, version 2; docs/research/v1.2/D2-first-band.md §3.3): two levels in
+   front. Flat figures (every column one cube high: no cube is hidden and no top is covered, so a
+   cube's painted sides are 5 minus the cubes it touches), Δ −1.0; and 4–6 cubes on a 3 × 3 grid,
+   Δ −0.85 (the note's 4–5, widened to 6 so that every question there has four possible counts).
+   Old combinations keep their exact difficulty, so the floor moves from −2.3 to −4.15. Two
+   combinations cannot be built at 4–6 cubes, and the generator builds the nearest one that can,
+   priced the same (eff(), difficulty()): a question about 1 or 2 painted sides (at most two such
+   cubes exist, so the key would be guessable: 4–6 cubes always ask about 3 or 4), and a 4-high
+   column (a tower whose counts are nearly fixed: 4–6 cubes stand at most 3 high). Flat figures
+   and 4–6 cubes have their own count ranges (KRANGE_FLAT, KRANGE_SMALL, measured like KRANGE).
 
    Section mode asks several questions about one figure: params.ask (an extra param, not a dim)
    picks the i-th question of item.asks about the figure the seed draws, which does not depend on
@@ -44,40 +54,75 @@
    size (never 5) whose count lies in its range, in a seeded order, each kept with a probability
    that evens out the later answers (NAT, KEEP below).
 
-   Item: { ex: 'cubes', v: 1, seed, params, key, grid, heights, ask: N, count, asks, options:
+   Item: { ex: 'cubes', v: 2, seed, params, key, grid, heights, ask: N, count, asks, options:
    [1, 2, 3, 4, 5], hidden (cubes with no visible pixel) }. key = count − 1. */
 (function (PX) {
   'use strict';
 
   var Mth = Math, floor = Mth.floor, abs = Mth.abs, sqrt = Mth.sqrt, isArray = Array.isArray, isInt = Number.isInteger;
 
-  var CUBES = [[6, 9], [10, 13], [14, 17], [18, 22]];
-  var HEIGHT = [2, 3, 4];
+  var CUBES = [[4, 6], [6, 9], [10, 13], [14, 17], [18, 22]];
+  var HEIGHT = [1, 2, 3, 4];
   var ASKED = ['many', 'few'];
   var ASK_OF = { many: [3, 4], few: [1, 2] };
+  // Difficulty contributions per level (logits): the starter levels in front (Δ, note D2 §3.3),
+  // then the 1.1 steps, so every 1.1 combination keeps its difficulty.
+  var BASE = -2.3, CUBES_AT = [-0.85, 0, 0.85, 1.7, 2.55], HEIGHT_AT = [-1.0, 0, 0.3, 0.6], ASK_STEP = 0.85;
   // The counts each question can have at each size (measured over random valid figures: every k in
   // the range turns up in at least 3 % of them). The key is drawn evenly from N's range, so the
   // question alone never points to an answer; N without a range of three or more is not asked.
   // N = 5 (all five sides painted) needs a column taller than all four neighbours, and figures
   // rarely hold more than two, so asking it would give the answer away: it is never asked.
-  var KRANGE = [
+  var KRANGE = [                                          // columns 2–4 high
+    null,                                                 // 4–6 cubes: KRANGE_SMALL, by height
     { 2: [1, 4], 3: [1, 5], 4: [1, 4] },                  // 6–9 cubes (one painted side: almost never)
     { 1: [1, 3], 2: [1, 5], 3: [1, 5], 4: [1, 5] },       // 10–13
     { 1: [1, 5], 2: [2, 5], 3: [2, 5], 4: [1, 5] },       // 14–17
     { 1: [1, 5], 2: [3, 5], 3: [3, 5], 4: [1, 5] },       // 18–22
   ];
+  // 4–6 cubes 2 or 3 high (v1.2 spike, 20,000 random figures each): one question, the one whose
+  // count has an even range of four there (2 high: 4 painted sides; 3 high: 3). With 4–5 cubes no
+  // question reaches four counts, so the starter level holds up to 6 (the starter band's own pool
+  // keeps "the most common answer for the level and N" at chance + 10 that way).
+  var KRANGE_SMALL = { 2: { 4: [1, 4] }, 3: { 3: [1, 4] } };
+  // Flat figures (v1.2 spike, 20,000 random flat figures per size): ends (4 painted sides) rarely
+  // number four or more, a cube touching four others (1 painted side) needs ten cubes or so, and
+  // from about fourteen cubes up most cubes touch three others, so N = 2 has no even range there.
+  var KRANGE_FLAT = [
+    { 3: [1, 4] },                                        // 4–6 (4 painted sides: at most three)
+    { 2: [1, 4], 3: [2, 5], 4: [1, 3] },                  // 6–9
+    { 1: [1, 3], 2: [2, 5], 3: [2, 5], 4: [1, 3] },       // 10–13
+    { 1: [1, 5], 3: [2, 5], 4: [1, 3] },                  // 14–17
+    { 1: [3, 5], 3: [3, 5], 4: [1, 3] },                  // 18–22
+  ];
+  // What an item really is: at 4–6 cubes the question is always about 3 or 4 painted sides and the
+  // tallest column at most 3 (see the header); everywhere else the params themselves.
+  function eff(p) {
+    var h = p.height, a = p.asked;
+    if (p.cubes === 0) { if (h > 2) h = 2; a = 0; }
+    return { cubes: p.cubes, height: h, asked: a, flat: HEIGHT[h] === 1 };
+  }
+  function krange(p) { var e = eff(p); return e.flat ? KRANGE_FLAT[e.cubes] : e.cubes === 0 ? KRANGE_SMALL[HEIGHT[e.height]] : KRANGE[e.cubes]; }
   // Later questions about the same figure (Section mode, params.ask ≥ 1). NAT: how often each
   // count 1–5 turns up for a later question N at each size (per mille of the generator's figures,
-  // all heights and classes pooled; measured over 19,200 items, B5.md). Only N in KRANGE at that
-  // size with a count in its range is asked later, and it is kept with probability KEEP[size][N]
-  // [count], which flattens the counts so that none is more than 26 % of that question's later
-  // answers (a range of three counts is made even). So neither "1 cube" nor any other answer is
-  // a safe guess for a later question (RV-dat-style-A §5).
+  // all heights and classes pooled; measured over 19,200 items, B5.md; NAT_FLAT in v1.2 the same
+  // way). Only N in KRANGE at that size with a count in its range is asked later, and
+  // it is kept with probability KEEP[size][N][count], which flattens the counts so that none is
+  // more than 26 % of that question's later answers (a range of three counts is made even). So
+  // neither "1 cube" nor any other answer is a safe guess for a later question (RV-dat-style-A §5).
   var NAT = [
+    null,                                                     // 4–6: one question per figure
     { 2: [358, 226, 130, 42, 2], 3: [187, 285, 265, 169, 64], 4: [84, 343, 400, 121, 1] },
     { 1: [381, 194, 47, 3, 0], 2: [109, 207, 258, 217, 125], 3: [31, 107, 200, 308, 204], 4: [95, 203, 343, 263, 73] },
     { 1: [204, 286, 248, 141, 30], 2: [24, 57, 118, 162, 231], 3: [5, 29, 103, 223, 257], 4: [88, 199, 273, 271, 127] },
     { 1: [45, 121, 182, 228, 220], 2: [1, 10, 19, 56, 115], 3: [1, 10, 45, 114, 215], 4: [93, 183, 244, 247, 151] },
+  ];
+  var NAT_FLAT = [ // the same for flat figures (v1.2: 2,000 items per size)
+    null,                                                     // 4–6: one question per figure
+    { 2: [258, 289, 222, 133, 34], 3: [33, 249, 281, 315, 107], 4: [369, 288, 79, 4, 0] },
+    { 1: [396, 340, 119, 12, 0], 2: [10, 47, 137, 264, 324], 3: [17, 70, 169, 308, 256], 4: [422, 262, 59, 7, 1] },
+    { 1: [87, 239, 387, 247, 30], 3: [1, 42, 108, 310, 272], 4: [247, 288, 117, 22, 4] },
+    { 1: [5, 30, 58, 180, 281], 3: [1, 44, 136, 254, 305], 4: [391, 347, 101, 18, 2] },
   ];
   var LATER_MAX = 0.26;
   // The largest cap t with max(min(nat, t)) / Σ min(nat, t) ≤ smax (bisection; the share grows with t).
@@ -88,17 +133,21 @@
     for (var i = 0; i < 50; i++) { var mid = (lo + hi) / 2; if (share(mid) <= smax + 1e-12) lo = mid; else hi = mid; }
     return lo;
   }
-  var KEEP = KRANGE.map(function (KR, c) {
-    var out = {};
-    Object.keys(KR).forEach(function (key) {
-      var n = +key, lo = KR[n][0], hi = KR[n][1], nat = NAT[c][n].slice(lo - 1, hi), keep = [0, 0, 0, 0, 0, 0];
-      var cap = capFor(nat, Mth.max(LATER_MAX, 1 / nat.length));
-      for (var j = lo; j <= hi; j++) keep[j] = Mth.min(1, cap / NAT[c][n][j - 1]);
-      out[n] = keep;
+  function keepTables(KR, NT) {
+    return KR.map(function (kr, c) {
+      var out = {};
+      if (!kr || !NT[c]) return out;
+      Object.keys(kr).forEach(function (key) {
+        var n = +key, lo = kr[n][0], hi = kr[n][1], nat = NT[c][n].slice(lo - 1, hi), keep = [0, 0, 0, 0, 0, 0];
+        var cap = capFor(nat, Mth.max(LATER_MAX, 1 / nat.length));
+        for (var j = lo; j <= hi; j++) keep[j] = NT[c][n][j - 1] > 0 ? Mth.min(1, cap / NT[c][n][j - 1]) : 1;
+        out[n] = keep;
+      });
+      return out;
     });
-    return out;
-  });
-  var GRIDS = [[3, 4], [4], [4, 5], [5]];
+  }
+  var KEEP = keepTables(KRANGE, NAT), KEEP_FLAT = keepTables(KRANGE_FLAT, NAT_FLAT);
+  var GRIDS = [[3], [3, 4], [4], [4, 5], [5]];
   var OPTIONS = [1, 2, 3, 4, 5];
   var TOP_SHOW = 0.5, CLEAR = 0.2;
   var AZ = 31, EL = 33.5;
@@ -270,19 +319,19 @@
 
   function figureOk(H, p) {
     var n = total(H), cr = CUBES[p.cubes];
-    return n >= cr[0] && n <= cr[1] && maxH(H) === HEIGHT[p.height] && connected(H);
+    return n >= cr[0] && n <= cr[1] && maxH(H) === HEIGHT[eff(p).height] && connected(H);
   }
   // Cubes that show exactly N painted faces in the picture (the novice error).
   function shownCount(s, N) { var c = 0; s.showN.forEach(function (v) { if (v === N) c++; }); return c; }
 
   // The question: N from the level's class, the count k evenly from N's range at this size.
   function question(r, p) {
-    var KR = KRANGE[p.cubes], asks0 = ASK_OF[ASKED[p.asked]].filter(function (n) { return KR[n]; });
+    var KR = krange(p), asks0 = ASK_OF[ASKED[eff(p).asked]].filter(function (n) { return KR[n]; });
     var N = asks0[rint(r, asks0.length)], kr = KR[N];
     return [N, kr[0] + rint(r, kr[1] - kr[0] + 1)];
   }
   function build(r, p, N, k) {
-    var Gs = GRIDS[p.cubes], cr = CUBES[p.cubes], hMax = HEIGHT[p.height];
+    var Gs = GRIDS[p.cubes], cr = CUBES[p.cubes], e = eff(p), hMax = HEIGHT[e.height];
     for (var t = 0; t < 400; t++) {
       var G = Gs[rint(r, Gs.length)];
       var H = randomFigure(r, G, cr[0], cr[1], hMax);
@@ -296,7 +345,8 @@
       // hidden supports missed) and counting the bottom of ground cubes as painted.
       var visOnly = 0, bottom = 0;
       s.cubes.forEach(function (q, i) { if (q.painted === N && !s.hid[i]) visOnly++; if (q.painted + (q.y === 0 ? 1 : 0) === N) bottom++; });
-      if (visOnly === k && r.next() < 0.6) continue;
+      // (Flat figures hide no cube, so there the visible count is the true count by construction.)
+      if (!e.flat && visOnly === k && r.next() < 0.6) continue;
       if (bottom === k && r.next() < 0.5) continue;
       return finish(r, p, H, N, hist, s.hidden);
     }
@@ -305,14 +355,14 @@
   // The question list (Section mode) and the item; ask (params.ask) re-asks about the same figure.
   // Later questions: N in KRANGE at this size with a count in its range, kept by KEEP (see NAT).
   function finish(r, p, H, N, hist, hidden) {
-    var KR = KRANGE[p.cubes], keep = KEEP[p.cubes], asks = [N];
+    var KR = krange(p), keep = (eff(p).flat ? KEEP_FLAT : KEEP)[p.cubes], asks = [N];
     shuffle(r, Object.keys(KR).map(Number)).forEach(function (n) {
       var c = hist[n];
       if (n !== N && c >= KR[n][0] && c <= KR[n][1] && r.next() < keep[n][c]) asks.push(n);
     });
     var ask = isInt(p.ask) ? asks[p.ask % asks.length] : N;
     return {
-      ex: 'cubes', v: 1, seed: 0, params: p, key: hist[ask] - 1, grid: H.length, heights: H.map(function (row) { return row.slice(); }),
+      ex: 'cubes', v: 2, seed: 0, params: p, key: hist[ask] - 1, grid: H.length, heights: H.map(function (row) { return row.slice(); }),
       ask: ask, count: hist[ask], asks: asks, options: OPTIONS.slice(), hidden: hidden,
     };
   }
@@ -403,7 +453,8 @@
     }
     var n = total(H), cr = CUBES[p.cubes];
     if (n < cr[0] || n > cr[1]) return n + ' cubes, expected ' + cr[0] + '–' + cr[1];
-    if (maxH(H) !== HEIGHT[p.height]) return 'tallest column ' + maxH(H) + ', expected ' + HEIGHT[p.height];
+    var e = eff(p);
+    if (maxH(H) !== HEIGHT[e.height]) return 'tallest column ' + maxH(H) + ', expected ' + HEIGHT[e.height];
     if (!connected(H)) return 'the footprint is not one piece';
     // Painted sides, recounted cube by cube from the voxels with neighbour tests.
     var counts = [0, 0, 0, 0, 0, 0];
@@ -424,9 +475,9 @@
     if (!isArray(item.options) || item.options.join() !== '1,2,3,4,5') return 'options must be 1–5 cubes';
     // The questions: the first from the level's class, later ones (Section mode) any N in KRANGE
     // at this size with a count in its range; all different, never N = 5.
-    var KR = KRANGE[p.cubes], asks = item.asks, seenN = {};
+    var KR = e.flat ? KRANGE_FLAT[p.cubes] : p.cubes === 0 ? KRANGE_SMALL[HEIGHT[e.height]] : KRANGE[p.cubes], asks = item.asks, seenN = {};
     if (!isArray(asks) || !asks.length) return 'asks';
-    if (ASK_OF[ASKED[p.asked]].indexOf(asks[0]) < 0 || !KR[asks[0]]) return 'N ' + asks[0] + ' not asked at this level';
+    if (ASK_OF[ASKED[e.asked]].indexOf(asks[0]) < 0 || !KR[asks[0]]) return 'N ' + asks[0] + ' not asked at this level';
     for (var a = 0; a < asks.length; a++) {
       var na = asks[a];
       if (!isInt(na) || seenN[na] || !KR[na] || counts[na] < KR[na][0] || counts[na] > KR[na][1]) return 'asks: N ' + na;
@@ -438,22 +489,31 @@
     var s = rayView(H);
     if (s.minTop < TOP_SHOW) return 'a column top is only ' + (100 * s.minTop).toFixed(0) + ' % visible (ray cast)';
     if (item.hidden !== s.hidden) return 'stated hidden count differs from the ray cast (' + s.hidden + ')';
+    if (e.flat && s.hidden !== 0) return 'a flat figure hides a cube';
     return true;
   }
 
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
 
+  // Custom only because the starter band's unbuildable combinations are priced as what is built.
+  function difficulty(params) {
+    var e = eff(normParams(params));
+    return BASE + CUBES_AT[e.cubes] + HEIGHT_AT[e.height] + ASK_STEP * e.asked;
+  }
+
   PX.ex.define({
-    id: 'cubes', version: 1, code: 'EX-18', name: 'Painted cubes', short: 'Painted Cubes',
+    id: 'cubes', version: 2, code: 'EX-18', name: 'Painted cubes', short: 'Painted Cubes',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', pat: true,
     answer: 'choice', nOptions: 5,
     extraParams: ['ask'],
     dims: [
-      { key: 'cubes', label: 'Cubes', levels: ['6–9', '10–13', '14–17', '18–22'], step: 0.85 },
-      { key: 'height', label: 'Tallest column', levels: HEIGHT, step: 0.3 },
-      { key: 'asked', label: 'Painted sides asked', levels: ['3–4', '1–2'], step: 0.85 },
+      { key: 'cubes', label: 'Cubes', levels: ['4–6', '6–9', '10–13', '14–17', '18–22'], step: 0.85, at: CUBES_AT.slice() },
+      { key: 'height', label: 'Tallest column', levels: HEIGHT, step: 0.3, at: HEIGHT_AT.slice() },
+      { key: 'asked', label: 'Painted sides asked', levels: ['3–4', '1–2'], step: ASK_STEP },
     ],
-    base: -2.3,
+    base: BASE,
+    starter: { dim: 'height', levels: 1 },
+    difficulty: difficulty,
     chance: 0.2,
     generate: generate,
     validate: validate,
@@ -462,6 +522,8 @@
       CUBES: CUBES, HEIGHT: HEIGHT, ASKED: ASKED, ASK_OF: ASK_OF, KRANGE: KRANGE, GRIDS: GRIDS, AZ: AZ, EL: EL, D: D, R: R, U: U,
       cubesOf: cubesOf, histogram: histogram, total: total, connected: connected, proj: proj, depth: depth, facesOf: facesOf,
       render: render, sight: sight, rayView: rayView, shownCount: shownCount, norm: normParams, fallback: fallbackFor, KEEP: KEEP, NAT: NAT,
+      KRANGE_FLAT: KRANGE_FLAT, KRANGE_SMALL: KRANGE_SMALL, NAT_FLAT: NAT_FLAT, KEEP_FLAT: KEEP_FLAT, CUBES_AT: CUBES_AT, HEIGHT_AT: HEIGHT_AT, eff: eff, krange: krange,
+      randomFigure: randomFigure,
     },
   });
 })(window.PX);
