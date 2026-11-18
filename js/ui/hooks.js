@@ -15,7 +15,8 @@
                                           screen: after or in place of a part named by data-slot,
                                           data-section or title; the rest at the end (opts.before)
      screen(point, container, ctx, opts)  collect, then place (the screens' call sites)
-     mute(fn | true | false)              a test knob: only handlers whose id fn accepts run
+     mute(fn | true | false)              a test knob: only handlers whose id fn accepts run; a preview
+                                          build sets window.PX_HOOKS_MUTE before the app loads for mute(true)
    A handler that throws, rejects or (async) returns something that is not a promise or a value is
    skipped and reported as 'play:error' on PX.bus (playtest mode shows it). Points:
      session:start (async), item:before (async), item:notes, summary:panels, today:slots,
@@ -144,6 +145,10 @@
     try { res = collect(name, ctx); } catch (e) { report(name, { id: '(collect)' }, e); res = []; }
     return place(container, res, opts);
   }
+
+  // A preview build may switch the builders' hooks off from the first screen: a script that runs before
+  // the app sets window.PX_HOOKS_MUTE (truthy), the same as mute(true). Without it nothing changes.
+  try { if (window.PX_HOOKS_MUTE) mute(true); } catch (e) { /* no window flag */ }
 
   PX.ui.hooks = { on: on, run: run, collect: collect, list: list, place: place, screen: screen, mute: mute, POINTS: POINTS };
 })(window.PX);
