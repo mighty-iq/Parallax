@@ -2781,7 +2781,8 @@
         .map(function (x) {
           var def = PX.ex.get(x.exId), ps = r.path && r.path[x.exId];
           var onPath = isObj(ps) && ((ps.items || 0) > 0 || Object.keys(ps.passed || {}).length > 0 || (ps.stage || 1) > 1);
-          return { ex: x.exId, n: x.n, last: x.last, level: x.level, lo: x.lo, hi: x.hi, settings: def ? settingsText(def, x.settings) : '', stage: onPath ? x.path : null };
+          return { ex: x.exId, n: x.n, last: x.last, level: x.level, lo: x.lo, hi: x.hi, settings: def ? settingsText(def, x.settings) : '', stage: onPath ? x.path : null,
+            text: levelText(x) }; // v1.2: 'level 1 · starter items' (CONTRACT-v1.2 C)
         });
     } catch (e) { log('Today’s levels failed', e); return null; }
   }
