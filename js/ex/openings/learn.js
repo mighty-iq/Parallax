@@ -12,18 +12,28 @@
       { id: 'solid', label: 'Solid', text: 'A block with notches, steps and slanted cuts. Every cut runs straight through it, so what you see on one face continues to the opposite face.' },
       { id: 'rules', label: 'Rules', text: 'The solid may be turned any way before it goes in. Then it slides straight through without turning, so the opening is its outline seen along that direction.' },
       { id: 'fit', label: 'Exact fit', text: 'An opening must match the outline exactly. The openings are drawn at the same scale as the solid, so one that is too large or too small is wrong.' },
-      { id: 'options', label: 'Openings', text: 'Five openings, each shown turned or flipped at random. Exactly one fits. Tap it or press its key (1–5).' },
+      { id: 'options', label: 'Openings', text: 'Five openings, each shown turned or flipped at random (starter items: drawn the way their face is seen). Exactly one fits. Tap it or press its key (1–5).' },
     ],
-    // The easiest level: one feature on each face, straight edges, the front outline (sometimes the
-    // side), upright, feature foils.
-    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 7, kind: 'front' }],
+    // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.4): the rules card first, the
+    // Watch at the starter band (one feature, openings drawn as the face is seen), the strategy card
+    // "Pick a face, trace, then turn" before Try 1, Try 1 with the key face's outline already traced.
+    rules: [
+      'Every cut runs straight through the solid: what shows on one face carries on to the opposite face.',
+      'The solid may be turned any way before it goes in. Then it slides straight through without turning.',
+      'An exact fit: the opening is the solid\'s outline seen along that direction, at the same size.',
+    ],
+    strategyFirst: 'analytic',
+    minutes: 2,
+    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 4, kind: 'front' }],
     practice: [
-      { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 },
-      { features: 0, edges: 0, keyview: 1, pose: 0, foils: 0 },
-      { features: 1, edges: 0, keyview: 2, pose: 0, foils: 0 },
-      { features: 1, edges: 1, keyview: 0, pose: 1, foils: 1 },
+      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, assist: { trace: true }, seed: 104 },
+      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }, seed: 239 },
+      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }, tip: 'turned', seed: 301 },
+      { params: { features: 1, edges: 0, keyview: 1, pose: 0, foils: 0 }, tip: 'side', seed: 400 },
     ],
     tips: [
+      { id: 'one', when: { dim: 'features', levels: [0] }, text: 'Starter items: one notch, step or cut, on one face. Find that face, then the opening with its outline; the openings are drawn the way that face is seen.' },
+      { id: 'turned', when: { dim: 'features', levels: [1] }, text: 'From here the openings are turned or flipped at random, and every face has a feature. Turn the outline in your mind, not the opening: same corners in the same order.' },
       { id: 'front', when: { dim: 'keyview', levels: [0] }, text: 'Start with the face nearest you: push the solid in face first and trace that face\'s outline. No fit? Try the side.' },
       { id: 'side', when: { dim: 'keyview', levels: [1] }, text: 'Any face can fit now: check the front, the side and the top outline in turn.' },
       { id: 'top', when: { dim: 'keyview', levels: [2] }, text: 'Mostly the top now: the solid can go in upright, and the opening is then the outline seen from above.' },
@@ -45,14 +55,16 @@
         when: 'Quick when the features are few and easy to see.',
       },
       {
-        id: 'analytic', title: 'Three outlines, then sizes',
-        text: 'The solid has only three outlines (front, side, top). Check each opening against them.',
+        // The analytic card in the format's own terms (note D2 §3.4; prep courses, R3 §3.1): shown before
+        // Try 1 and as "How to solve" through the first session; show-me carries out its steps.
+        id: 'analytic', title: 'Pick a face, trace, then turn',
+        text: 'Each opening is the outline of one face of the solid, seen straight on. Trace a face, then look for its outline.',
         steps: [
-          'For each opening, which two sides of the solid do its width and height match? None: drop it.',
-          'Count the notches, steps and slanted edges, and where they sit along each side.',
-          'Compare lengths last: the right outline at the wrong size is still wrong.',
+          'Pick a face (front, side or top) and trace its outline with your eye. No opening has it? Pick the next face.',
+          'Find the openings with the same corners in the same order; turned or flipped is fine.',
+          'Check the sizes last: the right shape at the wrong size is wrong.',
         ],
-        when: 'Steady when the openings look alike.',
+        when: 'From the first item on; steady when the openings look alike.',
       },
       {
         id: 'switch', title: 'When to switch',
@@ -68,10 +80,14 @@
       solid: 'The solid. Every cut runs straight through it.',
       openings: 'Five openings: one fits exactly.',
       rules: 'Turn it first if needed, then slide it straight through.',
-      turn: 'Turn the solid so its {face} faces you.',
-      outline: 'Seen straight on, its outline is the opening it needs.',
-      land: 'Turned to match: that is opening {n}.',
+      turn: 'Pick a face: turn the solid so its {face} faces you.',
+      outline: 'Trace its outline: that is the opening it needs.',
+      spin: 'Turn and flip the outline until it lies as the openings do: same corners in the same order.',
+      straight: 'The openings are drawn the way this face is seen, so the outline needs no turn.',
+      land: 'Same corners in the same order, same size: opening {n}.',
+      assist: 'The {face} face\'s outline is traced for you. Which opening has this outline?',
       whyFeature: 'Opening {n}: its notches, steps or cuts differ from every outline of the solid.',
+      whyFace: 'Opening {n}: it has the size of another face, but that face is plain, so no face has this outline.',
       whyProportion: 'Opening {n}: the wrong size, too long or too short along one side.',
     },
     bridge: 'Matching an object to an opening means finding its outline along each axis, as in reading a part\'s views. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,

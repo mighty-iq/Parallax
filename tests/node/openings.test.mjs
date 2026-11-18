@@ -5,7 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/openings/gen.js', 'js/ex/openings/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 105 per combination
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 84 per combination (120 with the starter band)
 const CHANCE = 0.2, LIMIT = CHANCE + 0.10;
 
 export async function run(t) {
@@ -28,14 +28,19 @@ export async function run(t) {
 const sig = (x) => 1 / (1 + Math.exp(-x));
 const pRight = (theta, b, g = CHANCE) => g + (1 - g - 0.03) * sig(theta - b);
 const pk = (p) => `${p.features}${p.edges}${p.keyview}${p.pose}${p.foils}`;
+const BAND_DELTA = -1.5, OLD_FLOOR = -2.3; // note D2 §3.4, §3.8: the starter level's offset; the pre-1.2 floor
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat],
-    ['openings', 1, 'EX-14', ['Vz'], 'train', 'choice', 5, true], 'definition fields (a PAT-format exercise, five options)');
-  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['features', 4], ['edges', 2], ['keyview', 3], ['pose', 2], ['foils', 2]], 'dims');
+    ['openings', 2, 'EX-14', ['Vz'], 'train', 'choice', 5, true], 'definition fields (a PAT-format exercise, five options; version 2: the starter band)');
+  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['features', 5], ['edges', 2], ['keyview', 3], ['pose', 2], ['foils', 2]], 'dims');
+  t.eq(def.starter, { dim: 'features', levels: 1 }, 'the starter band is the first level of features');
+  t.eq(def.dims[0].at, [BAND_DELTA, 0, 0.6, 1.2, 1.8], 'features: the band offset in front, older levels at their 1.1 difficulty (step 0.6)');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
+  t.ok(Math.abs(lo - (OLD_FLOOR + BAND_DELTA)) < 1e-9, `the floor moves to ${OLD_FLOOR + BAND_DELTA} (${lo.toFixed(2)})`);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${(hi - lo).toFixed(2)})`);
-  t.ok(pRight(0, lo) >= 0.88 && pRight(0, lo) <= 0.93, `a beginner gets the easiest items about 90 % right (${pRight(0, lo).toFixed(3)})`);
+  const old0 = PX.ex.difficulty(def, { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 });
+  t.ok(Math.abs(old0 - OLD_FLOOR) < 1e-9 && pRight(0, old0) >= 0.88 && pRight(0, old0) <= 0.93, `a beginner at θ = 0 gets the pre-1.2 floor about 90 % right (${pRight(0, old0).toFixed(3)}), the starter band ${pRight(0, lo).toFixed(3)}`);
 }
 
 /* ------------------------------------------------------------------ the model */
@@ -96,7 +101,7 @@ function testModel(t, PX, L) {
 function testPool(t, PX, def, L) {
   t.section('openings: pool');
   const combos = PX.ex.enumerate(def);
-  t.eq(combos.length, 96, '96 combinations (4 × 2 × 3 × 2 × 2)');
+  t.eq(combos.length, 120, '120 combinations (5 × 2 × 3 × 2 × 2)');
   const per = Math.ceil(N_ITEMS / combos.length), items = [];
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, malformed = 0, json = 0, first = null;
   const before = { ...L.stats };
@@ -140,38 +145,61 @@ function testPool(t, PX, def, L) {
 function testItems(t, PX, def, L, pool) {
   t.section('openings: items');
   const ranks = [0, 0, 0, 0, 0], tfs = Array(8).fill(0), keyTf = Array(8).fill(0), axes = {}, kinds = {};
-  let lvlOk = 0, propOk = 0, nProp = 0, axisOk = 0, featOk = 0, chamOk = 0, nCham = 0, sizeOk = 0;
-  const face = { 2: 0, 0: 0, 1: 0 }, keyMost = [[0, 0], [0, 0], [0, 0], [0, 0]];
+  let lvlOk = 0, propOk = 0, nProp = 0, axisOk = 0, featOk = 0, chamOk = 0, nCham = 0, sizeOk = 0, nOld = 0;
+  let nBand = 0, bandOne = 0, bandSeen = 0, bandCorners = 0, bandSame = 0, bandRead = 0;
+  const face = { 2: 0, 0: 0, 1: 0 }, keyMost = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
+  const dimsOf = (it, n) => (n === 'F' ? [it.W, it.H] : n === 'T' ? [it.W, it.D] : [it.D, it.H]);
   for (const { p, it } of pool) {
     ranks[it.key]++;
     axes[it.keyAxis] = (axes[it.keyAxis] || 0) + 1;
-    it.options.forEach((o, i) => { tfs[o.tf]++; if (i === it.key) keyTf[o.tf]++; else kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
+    it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
     const wf = [2, 0, 1].find((w) => L.axisFacing(L.POSES[it.pose], w) === it.keyAxis); // the picture's face of the key
     face[wf]++;
     if (L.KEYVIEW_SETS[p.keyview].includes(wf) && L.POSE_SETS[p.pose].includes(it.pose)) axisOk++;
     const nf = ['F', 'T', 'S'].map((n) => it.feats[n].length);
     if (JSON.stringify(nf.slice().sort()) === JSON.stringify(L.FEATURES[p.features].slice().sort())) featOk++;
-    // the key's face is the most featured one (ties shared) about as often as any face: a third
-    const mx = Math.max(...nf), top = ['F', 'T', 'S'].filter((n, i) => nf[i] === mx);
-    keyMost[p.features][0] += top.includes(L.PROF_OF[it.keyAxis]) ? 1 / top.length : 0; keyMost[p.features][1]++;
     if (it.options.every((o) => Math.max(o.w, o.h) <= L.MAXEXT)) sizeOk++;
     if (p.edges === 1) { nCham++; if (['F', 'T', 'S'].some((n) => it.feats[n].includes('cham'))) chamOk++; }
     const np = it.options.filter((o) => o.kind === 'proportion').length;
     if (p.foils === 1) { nProp++; if (np === 1) propOk++; } else if (np === 0) lvlOk++;
+    if (p.features === 0) { // the starter band (note D2 §3.4)
+      nBand++;
+      const kp = L.PROF_OF[it.keyAxis], kf = it.feats[kp];
+      if (kf.length === 1 && ['F', 'T', 'S'].every((n) => n === kp || it.feats[n].length === 0)) bandOne++;
+      if (it.options.every((o) => o.tf === L.seenTf(it.pose, o.axis))) bandSeen++;
+      const kc = it.options[it.key].poly.length;
+      if (it.options.every((o) => o.kind === 'proportion' || o.poly.length === kc)) bandCorners++;
+      if (it.options.filter((o) => o.kind === 'feature').length >= (kf[0] === 'cham' ? 1 : 2)) bandSame++;
+      // every straight edge of the key's feature is at least two steps long (one unit): readable on a phone
+      const runs = L.featureRuns(it.prof[kp], ...dimsOf(it, kp));
+      if (runs.length === 1 && runs[0].every(([a, b]) => { const dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]); return dx === dy || dx + dy >= 2; })) bandRead++;
+      continue;
+    }
+    // the key's face is the most featured one (ties shared) about as often as any face: a third
+    nOld++;
+    it.options.forEach((o, i) => { tfs[o.tf]++; if (i === it.key) keyTf[o.tf]++; });
+    const mx = Math.max(...nf), top = ['F', 'T', 'S'].filter((n, i) => nf[i] === mx);
+    keyMost[p.features][0] += top.includes(L.PROF_OF[it.keyAxis]) ? 1 / top.length : 0; keyMost[p.features][1]++;
   }
   const N = pool.length;
   t.eq(axisOk, N, 'the key is the outline of a face the level allows, in a pose of the level');
   t.ok([2, 0, 1].every((w) => face[w] / N > 0.29 && face[w] / N < 0.38), `over all levels each face of the picture holds the key about a third of the time (front ${(face[2] / N * 100).toFixed(0)} %, side ${(face[0] / N * 100).toFixed(0)} %, top ${(face[1] / N * 100).toFixed(0)} %)`);
-  t.eq(featOk, N, 'features on all three profiles, in the level\'s counts (1+1+1, 2+1+1, 2+2+1, 2+2+2)');
-  const km = keyMost.map(([a, b]) => a / b);
-  t.ok(km.every((x) => x < 0.42), `the key's face is the most featured one (ties shared) near a third of the time, as any face (${km.map((x) => (x * 100).toFixed(1) + '%').join(' ')} by features level)`);
+  t.eq(featOk, N, 'features in the level\'s counts (starter 1 in all, then 1+1+1, 2+1+1, 2+2+1, 2+2+2)');
+  const km = keyMost.slice(1).map(([a, b]) => a / b);
+  t.ok(km.every((x) => x < 0.42), `above the starter band the key's face is the most featured one (ties shared) near a third of the time, as any face (${km.map((x) => (x * 100).toFixed(1) + '%').join(' ')} by features level)`);
   t.eq(sizeOk, N, `no option is longer than ${L.MAXEXT} steps (11 px a step at the solid's scale on a 360 px phone)`);
   t.eq(chamOk, nCham, 'chamfer levels have a chamfer');
   t.eq(propOk, nProp, 'foil level 1: exactly one proportion foil');
   t.eq(lvlOk, N - nProp, 'foil level 0: no proportion foil');
   t.ok(ranks.every((r) => r / N > 0.17 && r / N < 0.23), `the key's place is spread (${ranks.map((r) => (r / N * 100).toFixed(0) + '%').join(' ')})`);
-  t.ok(keyTf.every((x) => x / N > 0.09 && x / N < 0.16), `the key is shown under every turn and flip (${keyTf.map((x) => (x / N * 100).toFixed(0) + '%').join(' ')})`);
+  t.ok(keyTf.every((x) => x / nOld > 0.09 && x / nOld < 0.16), `above the starter band the key is shown under every turn and flip (${keyTf.map((x) => (x / nOld * 100).toFixed(0) + '%').join(' ')})`);
   t.ok(['x', 'y', 'z'].every((a) => axes[a] / N > 0.2), `keys along every axis ${JSON.stringify(axes)}`);
+  t.ok(nBand >= 2000, `starter band items (${nBand})`);
+  t.eq(bandOne, nBand, 'starter band: one feature in all, on the key\'s face (the other two outlines plain)');
+  t.eq(bandSeen, nBand, 'starter band: every opening drawn the way its face is seen straight on (the key needs no turn)');
+  t.eq(bandCorners, nBand, 'starter band: every foil but a proportion foil has the key\'s corner count');
+  t.eq(bandSame, nBand, 'starter band: at least two foils on the key\'s box (one for a chamfer)');
+  t.eq(bandRead, nBand, 'starter band: every straight edge of the key\'s feature is at least a unit (two steps) long');
   console.log(`       openings foil kinds ${JSON.stringify(kinds)}`);
 }
 
@@ -182,12 +210,21 @@ const shareOf = (scores, key, high) => {
   return scores[key] === best ? 1 / scores.filter((x) => x === best).length : 0;
 };
 
+// Two pools, each about 2 000 items: the starter band's own (every band item) and the levels above it
+// (every fourth item). On the band one face carries the only feature by construction, so "checks the
+// most featured face only" is the method there (reported); above it, it stays bounded at 50 %.
 function testShortcuts(t, PX, def, L, pool) {
-  t.section('openings: shortcut solvers');
+  t.section('openings: shortcut solvers, starter band');
+  shortcutPool(t, L, pool.filter((x) => x.p.features === 0), true);
+  t.section('openings: shortcut solvers, levels above the band');
+  shortcutPool(t, L, pool.filter((x) => x.p.features > 0).filter((_, i) => i % 4 === 0), false);
+}
+function shortcutPool(t, L, items, band) {
   const acc = {}, cnt = {}, req = {};
   const add = (name, v, required) => { acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; req[name] = required; };
-  const mfBy = [[0, 0], [0, 0], [0, 0], [0, 0]];
-  for (const { it, p } of pool.filter((_, i) => i % 5 === 0)) { // 2 016 items
+  const mfBy = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
+  t.ok(items.length >= 2000, `${items.length} items`);
+  for (const { it, p } of items) {
     const R = it.options.map((o) => L.polyRaster(o.poly)), key = it.key;
     const area = R.map((x) => x.r.reduce((s, v) => s + v, 0)), corners = it.options.map((o) => o.poly.length);
     const dims = it.options.map((o) => [o.w, o.h]);
@@ -248,17 +285,22 @@ function testShortcuts(t, PX, def, L, pool) {
       add(`checks the ${nm} face only (reported)`, shareOf(it.options.map((o) => (L.rcompare(o.poly, pr) === 'match' ? 1 : 0)), key, true), false);
     }
     const mf = top.reduce((s, q) => { const pm = L.polyRaster(it.prof[q.n]); return s + shareOf(it.options.map((o) => (L.rcompare(o.poly, pm) === 'match' ? 1 : 0)), key, true); }, 0) / top.length;
-    add('checks the most featured face only', mf, 'half');
+    add(band ? 'checks the one featured face (the band\'s method, reported)' : 'checks the most featured face only', mf, band ? false : 'half');
     mfBy[p.features][0] += mf; mfBy[p.features][1]++;
+    if (band) { // the openings are unturned on the band: the same solvers on the drawings as they stand
+      const sum0 = R.map((a, i) => R.reduce((s, b, j) => { if (i === j) return s; if (a.w !== b.w || a.h !== b.h) return s + a.r.length + b.r.length; let d = 0; for (let n = 0; n < a.r.length; n++) if (a.r[n] !== b.r[n]) d++; return s + d; }, 0));
+      add('like the others, as drawn', shareOf(sum0, key, false), true);
+      add('odd one out, as drawn', shareOf(sum0, key, true), true);
+    }
   }
   const line = [];
   for (const name of Object.keys(acc)) {
     const a = acc[name] / cnt[name];
     line.push(`${name} ${(a * 100).toFixed(1)}%`);
-    if (req[name] === 'half') t.ok(a <= 0.5, `partial strategy "${name}" ${(a * 100).toFixed(1)} % ≤ 50 % (by features level: ${mfBy.map(([x, y]) => (x / y * 100).toFixed(1) + '%').join(' ')})`);
+    if (req[name] === 'half') t.ok(a <= 0.5, `partial strategy "${name}" ${(a * 100).toFixed(1)} % ≤ 50 % (by features level: ${mfBy.filter(([, y]) => y).map(([x, y]) => (x / y * 100).toFixed(1) + '%').join(' ')})`);
     else if (req[name]) t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
-  console.log('       openings shortcuts: ' + line.join(', '));
+  console.log(`       openings shortcuts${band ? ' (starter band)' : ''}: ` + line.join(', '));
 }
 
 /* ------------------------------------------------------------------ tampering, fallback, timing */
@@ -298,7 +340,7 @@ const cpuMs = typeof process.threadCpuUsage === 'function'
   : () => performance.now();
 function testTiming(t, PX, def) {
   t.section('openings: timing');
-  for (const hard of [{ features: 3, edges: 1, keyview: 2, pose: 1, foils: 1 }, { features: 3, edges: 1, keyview: 0, pose: 0, foils: 0 }]) {
+  for (const hard of [{ features: 4, edges: 1, keyview: 2, pose: 1, foils: 1 }, { features: 4, edges: 1, keyview: 0, pose: 0, foils: 0 }, { features: 0, edges: 1, keyview: 2, pose: 1, foils: 1 }]) {
     let best = Infinity; const text = [];
     for (let r = 0; r < 3 && best >= 20; r++) {
       const cpu = [], wall = [];
@@ -321,17 +363,40 @@ const ADA = 'DAT® and Dental Admission Test are marks of the American Dental As
 
 function testLearn(t, PX, def) {
   t.section('openings: learn');
-  const L = PX.ex.learn('openings');
+  const L = PX.ex.learn('openings'), lib = def.lib;
   t.ok(L && typeof L === 'object', 'learn data is registered');
   if (!L) return;
   t.ok(typeof L.goal === 'string' && L.goal.length > 10 && L.goal.length <= 120, 'a one-line goal');
   t.ok(Array.isArray(L.parts) && L.parts.length >= 3 && L.parts.every((p) => p.id && p.label && p.text), 'labelled parts');
+  // the teaching template (CONTRACT-v1.2 D; note D2 §3.0 C, §3.9 item 1)
+  t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => typeof r === 'string' && r.length > 20 && r.length <= 140), 'a rules card of 2–4 short rules');
+  t.ok((L.strategies || []).some((x) => x.id === L.strategyFirst), `the strategy card before Try 1 exists (${L.strategyFirst})`);
+  t.eq(L.minutes, 2, 'the offer card says about two minutes');
   const valid = (p) => PX.ex.validParams(def, p) === true;
   t.ok(Array.isArray(L.demo) && L.demo.length >= 1 && L.demo.every((d) => valid(d.params) && Number.isInteger(d.seed)), 'demo items with valid params');
-  for (const d of L.demo) { const item = def.generate(PX.rng(d.seed), d.params); t.ok(def.validate(item) === true && !item.fallback, `demo seed ${d.seed} gives a valid item`); }
-  t.ok(PX.ex.difficulty(def, L.demo[0].params) === PX.ex.minDifficulty(def), 'the demo is at the easiest level');
-  t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
-  const ds = L.practice.map((p) => PX.ex.difficulty(def, p));
+  const demoItem = def.generate(PX.rng(L.demo[0].seed), L.demo[0].params);
+  t.ok(def.validate(demoItem) === true && !demoItem.fallback, `demo seed ${L.demo[0].seed} gives a valid item`);
+  t.ok(PX.ex.difficulty(def, L.demo[0].params) === PX.ex.minDifficulty(def), 'the Watch is at the starter band (the easiest level)');
+  t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
+  if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
+  const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
+  t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
+  t.ok(P[0].features === 0 && P[1].features === 0, 'Try 1 and Try 2 are at the starter band');
+  t.eq(P[2], { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0 }, 'Try 3 is the pre-1.2 floor (openings turned)');
+  t.ok(P[3].features === 1 && P[3].keyview === 1, 'Try 4: the first hard feature the early rated items use (any face can fit)');
+  t.eq(L.practice[0].assist, { trace: true }, 'Try 1 has its first step done (the key face traced)');
+  t.ok(L.practice.slice(1).every((e) => e.assist === undefined), 'only Try 1 is assisted');
+  const tips = new Set((L.tips || []).map((x) => x.id));
+  t.ok(L.practice.every((e) => e.tip === undefined || tips.has(e.tip)), 'forced tips exist');
+  const face = (it) => [2, 0, 1].find((w) => lib.axisFacing(lib.POSES[it.pose], w) === it.keyAxis);
+  t.ok(face(items[0]) === 2 && face(items[1]) === 0, 'Try 1 fits front first, Try 2 side first');
+  t.ok(items[2].options[items[2].key].tf !== lib.seenTf(items[2].pose, items[2].keyAxis), 'Try 3\'s key opening is turned or flipped (the new feature, with its tip)');
+  t.eq(new Set(items.map((it) => it.key)).size, 4, `the Try answers sit in four different places (${items.map((it) => it.key + 1).join(', ')})`);
+  // every foil kind the Try items use appears in the Watch item
+  const kindsOf = (it) => new Set(it.options.filter((o, i) => i !== it.key).map((o) => o.kind));
+  const dk = kindsOf(demoItem), tk = new Set(items.flatMap((it) => [...kindsOf(it)]));
+  t.ok([...tk].every((k) => dk.has(k)), `every foil kind in Try (${[...tk].join(', ')}) is in the Watch item (${[...dk].join(', ')})`);
+  const ds = P.map((p) => PX.ex.difficulty(def, p));
   t.ok(ds.every((x, i) => i === 0 || x >= ds[i - 1]), `practice goes from easy to harder (${ds.map((x) => x.toFixed(2)).join(', ')})`);
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
@@ -340,7 +405,8 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['solid', 'openings', 'rules', 'turn', 'outline', 'land', 'whyFeature', 'whyProportion'];
+  t.eq(L.strategies.find((x) => x.id === L.strategyFirst).steps.length, 3, 'the first card has three steps');
+  const caps = ['solid', 'openings', 'rules', 'turn', 'outline', 'spin', 'straight', 'land', 'assist', 'whyFeature', 'whyFace', 'whyProportion'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
