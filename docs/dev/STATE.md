@@ -42,7 +42,7 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
 Intent: a contract and shared hooks first, then parallel builders in their own files; then integration and the first playable build for the owner (playtest mode on).
 - W1-core → docs/dev/CONTRACT-v1.2.md (wave-1 ownership and interfaces), docs/dev/v1.2/requests.md (append-only requests between owners), shared hooks in the player/app/store/engine (σ0 1.5, no early stretch, starter-level display, teaching template, Quick deadline support, playtest and Chimera hooks) with node tests.
 - W1-central → js/ex/centralpoint/, css/ex/centralpoint.css, its node tests (Quick + Exact forms; validator; strict shortcut policy; generator speed); shared needs go to requests.md.
-- Next, once the contract is in: W1-band-A (views, angles, cubes), W1-band-B (openings, form, patfold, patviews), W1-fixes (O4, O8–O11, O15, O52, texts, D3 line, motion comfort O36), W1-rules (milestone 2).
+- Contract committed 15:19 UTC (docs/dev/CONTRACT-v1.2.md). Running since ~15:35 UTC, each with a log in docs/dev/progress/: W1-band-A (views, angles, cubes), W1-band-B (openings, form, patfold, patviews), W1-fixes (motion comfort O36, Section O9–O11, Reckon texts), W1-rules (milestone 2, playtest mode, CLAUDE.md rewrite).
 - Builders commit only their own files with explicit paths (`TZ=UTC`, the Co-Authored-By line, no session line); the lead pushes.
 
 ## Next three steps
