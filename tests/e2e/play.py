@@ -523,9 +523,9 @@ def run_review(b, C):
     page.wait_for_function(READY, timeout=20000)
     page.wait_for_timeout(1200)
     st = page.evaluate('__play.state')
-    # v1.2 (gap C2): a later launch shows the one-tap Chimera card (not a modal) instead of the full welcome
-    shown = page.evaluate('PX.ui.modalOpen() >= 1 || !!document.querySelector("[data-chimera-card]:not([hidden])")')
-    C.ok(shown and st not in ('present', 'respond'), f'{tag} 3: after a reload the Chimera welcome or card shows and no item runs ({st})')
+    # v1.2 (gap C2): a later launch shows the one-tap Chimera card (not a modal), and on a play route it waits
+    # until the person leaves it; either way nothing starts by itself
+    C.ok(st not in ('present', 'respond') and page.evaluate('!document.querySelector(".px-modal[data-welcome]")'), f'{tag} 3: after a reload no item runs and the full welcome stays closed ({st})')
     page.keyboard.press('Escape')
     page.wait_for_timeout(300)
     # the session the reload cut shows its kept summary; nothing starts by itself
