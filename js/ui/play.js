@@ -330,8 +330,10 @@
         }
         // Next: go on from a wait; while a caption's steps still play, finish them and wait there
         // (a tap never skips a caption unseen); in motion, finish the motion and wait.
+        var lastCmd = -1e9; // a tap on the figure that a view already turned into a step is not a second Next
         function next() {
           if (done) return;
+          lastCmd = timing.now();
           if (answered) { P.goNext(); return; } // after an answer: the item after this one
           if (waiting) { waiting = false; paused = false; label(); return; }
           paused = false;
@@ -363,7 +365,7 @@
           },
           next: next,
           // a tap on the figure: Next, while a caption waits
-          tap: function () { if (waiting && tapMode()) next(); },
+          tap: function () { if (waiting && tapMode() && timing.now() - lastCmd > 250) next(); },
           replay: function () { paused = false; waited = -1; enter(0); label(); },
           close: function () { while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
           auto: function () {
