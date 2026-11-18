@@ -513,9 +513,3 @@
   .pl-player[data-state="showme"] .pl-feedback .pl-actions:has([data-next]:not([hidden])) { display: none; }
 }
 @media (min-width: 720px) and (min-height: 501px) { .pl-showme-buttons [data-showme-next][data-answered] { display: none; } }
-/* Watch, Try, Go on a portrait phone: room under the player from the start, so the stepper can
-   scroll away above the Pause row before a Try item plays (play.js stageIntoView keeps the strip's
-   room free), and the reveal then moves nothing */
-@media (max-width: 719px) and (min-height: 501px) {
-  body.px-item .is-wtg > .pl-player { padding-bottom: 8rem; }
-}
