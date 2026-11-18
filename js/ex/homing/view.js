@@ -21,6 +21,11 @@
      face up; Reckon adds the believed home vector.
    - layout(ctx, opts): the shared DOM: view on top (phones) or left (wide screens), captions as
      subtitles over the view, a one-row turn control (◀5° ◀1° circle 1°▶ 5°▶), the actions.
+   - v1.2 motion comfort (O36; docs/research/v1.2/N1-reckon.md §5.4; CONTRACT-v1.2 F): gentleOn(ctx) and
+     shownItem(item, ctx) play gen's lib.gentle (2/3 of the speeds, 0.6 s ramps, one speed per leg, at most
+     40 s) when ctx.gentleMotion is on, with the stage's fixation dot (S.setFix); reportMotion(ctx, ms) and
+     motionMeter() hand every stretch of first-person motion shown (the route, the walk back, the Watch demo)
+     to ctx.addMotion, which the player counts for its notice and check-in cards. Both views declare motion.
 
    Homing's view: present → the start ring, then the route (the answer clock starts at the first answer
    frame); collect → turn (drag, circle, buttons, ← → with Shift for 1°), Confirm (Enter); reveal → the

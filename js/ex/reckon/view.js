@@ -19,7 +19,9 @@
      own bias over the last 20 routes, with a small chart of the last angle errors.
    - show me: the map from above (the kit's mapper) with the believed home vector against the true one.
    The player's own errors are kept in the record field 'reckon' ({ v: 1, hist }, the last HIST_N
-   answers; registered here with store.field), read by gen's lib.bias(). */
+   answers; registered here with store.field), read by gen's lib.bias().
+   v1.2: gentle motion through the kit (the route, the demo and the walk back at 2/3 speed, the fixation dot),
+   the motion shown reported to ctx.addMotion (O36); the feedback words come from gen's lib.feedback (O40). */
 (function (PX) {
   'use strict';
 
