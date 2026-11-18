@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 11:25 UTC.
+Updated 2026-11-18 13:10 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -39,33 +39,15 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
-## In progress (Phase 1)
-Eight research subagents, each writing one note (they do not commit; the lead commits):
-- G1 game layer → docs/research/v1.2/G1-game-layer.md
-- M1 measurement → docs/research/v1.2/M1-measurement.md (+ spikes/M1/); a simulation spike follows and decides whether milestone 6 stays in v1.2
-- P1 plateaus and faster progress → docs/research/v1.2/P1-plateaus-progress.md
-- T1 transfer portfolio and probes → docs/research/v1.2/T1-transfer-portfolio.md
-- C1 Central Point (source test, human performance, items, shortcut spike) → docs/research/v1.2/C1-central-point.md (+ spikes/C1/)
-- D1 real PAT formats, legal limits, prep products → docs/research/v1.2/D1-pat-formats.md
-- D2 easier first band and teaching (six DAT-style + Views) → docs/research/v1.2/D2-first-band.md
-- N1 Reckon follow-ups (O35–O38, O44, O45) → docs/research/v1.2/N1-reckon.md
-
-## History rewrite (17 Nov, done; owner's yes, scope "everything private")
-- git-filter-repo over all 134 commits:
-  - the 6 Nov initial commit now carries the owner's GitHub noreply address;
-  - every commit time is in UTC;
-  - no message carries a session-link line;
-  - every file version is free of private-page links, home-folder and session paths, and owner or community wording.
-- The whole new history passes `tools/privacy_check.py --history` (also a six-word quote scan). The new tips differ from the old ones in docs only; no app file changed.
-- Force-pushed: `main` b5ead08, `build` e5bed2a. This clone was reset and the old objects were pruned.
-- Commit IDs in notes written before the rewrite (for example 224228f, bcf1b83, f10f7db) name the old history.
-- GitHub still serves old commits by their IDs (cached views), and the Actions run list shows the old IDs. Only GitHub Support (first changed commit 4753b4b7c95713c5cd0219eb5c7aa693dac192a6) or deleting and recreating the repository removes them; that is the owner's call.
-- Other clones made before 17 Nov 22:00 UTC must be deleted and cloned again. A push from an old clone brings the old history back.
+## In progress (Phase 1, last steps)
+- Done: the eight research notes (docs/research/v1.2/, spikes kept), docs/research/ACCESS.md (all unopened sources, ranked v1.2 top 10), PLAN-v1.2.md rewritten from the notes, PLAN-v1.3.md backlog started, DECISIONS logged.
+- Running: an independent review of the plan's claims and O-item coverage → docs/dev/reviews/RV-plan-v1.2.md; the private decision board (outside the repository) gets its real content and the Central Point sketch in the planned design.
+- Then: publish the board (private), send the plan message, save brief and status to the project, and stop at the plan gate.
 
 ## Next three steps
-1. Collect the eight notes; run the measurement simulation spike; merge ACCESS lists into docs/research/ACCESS.md (R5).
-2. Rewrite PLAN-v1.2.md from the notes (milestones, acceptance checks, decisions for the owner); build and publish the private decision board (exercise cards, decisions with recommendations, playable sketches, ranking, unread papers, device probe, Accept all, Copy my answers).
-3. Send the plan message; save brief and status to the project; wait for the owner's go. After approval: PLAN-v1.2.md becomes PLAN.md (PLAN.md → PLAN-v1.1.md), CLAUDE.md is rewritten for the standing rules.
+1. Fix the plan from the review; publish the decision board and declare its db; send the plan message.
+2. Wait for the owner's go and answers (board db document answers/owner, or pasted "Copy my answers"); save them to BRIEF.md word for word.
+3. On the go: PLAN-v1.2.md becomes PLAN.md (PLAN.md → PLAN-v1.1.md), CONTRACT-v1.2.md, CLAUDE.md rewritten for the standing rules, then milestone 1, 2 and Central Point builders; the first playable build goes to the owner with playtest mode on.
 
 Open owner items carried over: CC BY-SA for prose (L1), the C13 Chimera lines, the history-cleanup finish (Support / recreate / leave), optionally the name of the test Central Point comes from.
 
