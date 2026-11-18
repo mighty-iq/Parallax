@@ -45,6 +45,24 @@
     if (vars) for (var k in vars) s = s.split('{' + k + '}').join(String(vars[k]));
     return s;
   }
+  // The Watch and worked examples (v1.2, fresh-player check: at the 3-s floor a 20-word caption was
+  // gone before it was read): a caption stays up for 1 s plus 0.27 s a word (about 220 words a
+  // minute), at most 8 s; a step that moves keeps its pace and holds its last frame. Show me keeps
+  // its pace: it replays steps already read, with Pause and Step.
+  function readMs(text) {
+    var n = String(text || '').split(/\s+/).filter(function (w) { return /[0-9A-Za-z]/.test(w); }).length;
+    return Math.min(8000, 1000 + 270 * n);
+  }
+  function readable(list) {
+    list.forEach(function (s) {
+      if (!s || !s.caption) return;
+      var m = s.ms || 0, need = readMs(s.read || s.caption), u = s.update;
+      if (m >= need) return;
+      s.ms = need;
+      if (u && m > 0) s.update = function (k) { u(Math.min(1, k * need / m)); };
+    });
+    return list;
+  }
   function ease(k) { return k * k * (3 - 2 * k); }
   function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
   function add(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
@@ -565,6 +583,25 @@
     trialState();
     return timing.nextPaint();
   }
+  // The trial picture (also the start of show me and demo). At the starter level the faces the asked
+  // view is made of are shaded (the tint), in the trial and wherever show me starts again from it;
+  // tint true shades them on any toview item, false never.
+  function trialState(tint) {
+    var item = st.item;
+    clearInk();
+    tintOff();
+    if (isoLike(item)) {
+      setMode('iso');
+      showStructure(item.heights, item.variant === 'toview' ? item.view : null);
+      st.cur = isoState(item.heights);
+      if ((tint === undefined ? isBandItem(item) : tint) && item.variant === 'toview') tintOn(item.heights, item.view);
+      render();
+    } else {
+      setMode('draw');
+      st.cur = null;
+      Object.keys(st.tags).forEach(function (k) { st.tags[k].hidden = true; });
+    }
+  }
 
   /* ---------- Try 1's first step done: the asked view's outline (v1.2) ---------- */
 
@@ -818,7 +855,7 @@
     var others = sameSize.filter(function (x, i) { return x && i !== key; }).length;
     var drop = sameSize.map(function (x) { return !x; });
     var traced = function () { moveCam(hm, v, 1); inkDraw(d, drawingMap(hm, v), n, 0.86); };
-    function begin(tint) { reset(); clearOptionMarks(); crossOut(null); trialState(); if (tint) tintOn(hm, v); }
+    function begin(tint) { reset(); clearOptionMarks(); crossOut(null); trialState(!!tint); }
     var list = [
       { ms: 1600, caption: cap('look', { view: v }), enter: function () { begin(isBandItem(item)); st.tags.ask.classList.add('is-pointed'); }, exit: function () { st.tags.ask.classList.remove('is-pointed'); } },
       { ms: 2100, caption: cap('move', { view: v }), enter: function () { begin(true); }, update: function (k) { moveCam(hm, v, ease(k)); } },
@@ -1014,7 +1051,7 @@
     if (item.variant === 'toview') intro.push({ ms: 2000, caption: cap('arrow'), enter: part(function () { st.tags.ask.classList.add('is-pointed'); }) });
     intro.push({ ms: 1800, caption: cap('options' + upper(item.variant)), enter: part(null) });
     revealStage(ctx);
-    return play(intro.concat(steps(item, null)), ctx, { name: 'demo', caption: caption || null }).then(cleanUp, cleanUp);
+    return play(readable(intro.concat(steps(item, null))), ctx, { name: 'demo', caption: caption || null }).then(cleanUp, cleanUp);
   }
 
   function unmount() {
