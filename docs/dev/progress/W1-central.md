@@ -1,6 +1,6 @@
 # W1-central progress: Central Point (EX-20, id `centralpoint`; PLAN.md milestone 8, first bullet)
 
-Updated 2026-11-18 16:13 UTC.
+Updated 2026-11-18 16:38 UTC.
 
 Owns: js/ex/centralpoint/ (gen.js, learn.js, view.js), css/ex/centralpoint.css, tests/node/centralpoint.test.mjs,
 tests/e2e/harness_centralpoint.py. Shared needs: docs/dev/v1.2/requests.md. Design source: docs/research/v1.2/C1-central-point.md
@@ -41,8 +41,18 @@ D (rules, strategyFirst, practice objects with assist and seed, drawRule), E (at
 ## Difficulty steps (provisional; refit from pooled exports)
 base 0; +0.25 logit per extra target; +0.6 per band level; exact -0.6. Span 2.2 per form (the guide asks for 4).
 
+## Verified (final)
+- Node: `node tests/node/run.mjs centralpoint` with 10 000 items per rated cell: 150 checks pass (same rates as above; slowest cell
+  p95 3.5 ms CPU under a load of about 14, about 14 ms on a phone 4x slower). Shared tests with Central Point loaded: core, engine,
+  engine-v11, engine-v12, overlap, playtest, pooled, rebase, section pass.
+- Browser: tests/e2e/harness_centralpoint.py 166 checks (harness at 1366 x 768, 360 x 640, 412 x 880, light and dark; srcdoc; Why?
+  frames; the app at 360 x 640: rules card, Watch with the average once, strategy card, three Try items, round score in the verdict;
+  a quick item timing out with the marker placed). tests/e2e/fit.py --ex centralpoint: every Free play item fits 360 x 640 and
+  844 x 390 (its Watch, Try, Go rows need the rules-card click: request to W1-core).
+
 ## Open
-- fit.py at 360 x 640 and 844 x 390 (running).
 - The player hooks for "a tap skips" (ctx.playCmd) and the Try deadline are requests; until then Step / -> and no Try clock.
+- fit.py's Watch, Try, Go check does not click the rules and strategy cards yet (request to W1-core).
+- Overlap row and helper line (request to W1-rules); guide section (request to W1-rules, milestone 10/11).
 - For the lead: commit 6a0c3d0 wrote my request lines with a wrong time (the container's local clock, not UTC); 837fc5a fixes it.
   Neither is pushed; folding the two before a push keeps the wrong stamps out of the history.
