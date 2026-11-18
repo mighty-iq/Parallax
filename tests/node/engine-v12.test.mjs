@@ -106,28 +106,52 @@ function play(PX, rec, mode, opts, correct = () => true) {
   return { steps, now };
 }
 
+// The settings two items of one exercise differ in (dims and variant).
+function moved(def, a, b) {
+  let n = 0;
+  def.dims.forEach((d) => { if (a[d.key] !== b[d.key]) n++; });
+  if (def.variants && a.variant !== b.variant) n++;
+  return n;
+}
+
 function noEarlyStretch(t, mk) {
-  t.section('engine: no stretch item among an exercise\'s first 10 rated answers (note D2 §3.0 B2)');
-  let early = 0, later = 0, firstN = 0;
+  t.section('engine: among an exercise\'s first 10 rated answers a stretch item moves one setting only (note D2 §3.0 B2)');
+  let early = 0, bad = 0, later = 0, firstN = 0;
   for (let k = 0; k < 40; k++) {
-    const PX = mk(), rec = newRecord(PX, T0 - DAY);
+    const PX = mk(), rec = newRecord(PX, T0 - DAY), def = PX.ex.get('bandx');
     const { steps } = play(PX, rec, 'train', { now: T0 + k * 997 * 60000, pin: 'bandx', minutes: 20 }, (s, i) => i % 5 !== 3);
-    const mine = steps.filter((x) => x.s.exId === 'bandx' && x.out.rated);
-    mine.slice(0, 10).forEach((x) => { firstN++; if (x.s.kind === 'stretch') early++; });
+    const all = steps.filter((x) => x.s.exId === 'bandx'), mine = all.filter((x) => x.out.rated);
+    mine.slice(0, 10).forEach((x) => {
+      firstN++;
+      if (x.s.kind === 'stretch') bad++; // a full stretch never comes early
+      if (x.s.kind !== 'stretch1') return;
+      early++;
+      const prev = all[all.indexOf(x) - 1];
+      if (!prev || moved(def, x.s.params, prev.s.params) > 1 || x.s.b < prev.s.b + 0.5 - 1e-9) bad++;
+    });
     mine.slice(10).forEach((x) => { if (x.s.kind === 'stretch') later++; });
   }
   t.ok(firstN >= 300, 'the pinned exercise got its first 10 rated answers (' + firstN + ')');
-  t.eq(early, 0, 'Train: no stretch among the first 10 rated answers');
+  t.eq(bad, 0, 'Train: every early stretch moves one setting from the item before, at least 0.5 logit up (' + early + ' early stretches)');
   t.ok(later > 0, 'Train: stretch items come later (' + later + ')');
-  let pEarly = 0;
+  let pBad = 0, pEarly = 0;
   for (let k = 0; k < 20; k++) {
-    const PX = mk(), rec = newRecord(PX, T0 - DAY);
+    const PX = mk(), rec = newRecord(PX, T0 - DAY), def = PX.ex.get('bandx');
     const { steps } = play(PX, rec, 'path', { now: T0 + k * 991 * 60000, exId: 'bandx', minutes: 10 });
-    steps.filter((x) => x.out.rated).slice(0, 10).forEach((x) => { if (x.s.kind === 'stretch') pEarly++; });
+    const rated = steps.filter((x) => x.out.rated);
+    rated.slice(0, 10).forEach((x, i) => {
+      if (x.s.kind === 'stretch') pBad++; // a full stretch never comes early
+      if (x.s.kind !== 'stretch1') return;
+      pEarly++;
+      const prev = steps[steps.indexOf(x) - 1];
+      if (!prev || moved(def, x.s.params, prev.s.params) > 1) pBad++;
+    });
   }
-  t.eq(pEarly, 0, 'Path: no stretch among the first 10 rated answers');
-  const PX = mk(), E = PX.engine;
+  t.eq(pBad, 0, 'Path: every early stretch moves one setting only (' + pEarly + ' early stretches)');
+  const PX = mk(), E = PX.engine, def = PX.ex.get('bandx');
   t.eq([E.modes._.earlyKind('stretch', { n: 9 }), E.modes._.earlyKind('stretch', { n: 10 }), E.modes._.earlyKind('easy', { n: 0 })], ['target', 'stretch', 'easy'], 'earlyKind');
+  const f = E.modes._.oneStep(def, { size: 1, turn: 0 });
+  t.eq([f({ params: { size: 2, turn: 0 } }), f({ params: { size: 1, turn: 2 } }), f({ params: { size: 2, turn: 1 } })], [true, true, false], 'oneStep: one setting moved');
 }
 
 function starter(t, mk) {

@@ -6,7 +6,8 @@
          first 10 rated items;
      (b) Angles and Hole Punch: at least 66 %;
      (c) A = +1.75 reaches the pre-1.2 floor by its 10th rated item (median);
-     (d) no stretch item among an exercise's first 10 rated answers (CONTRACT-v1.2, engine).
+     (d) among an exercise's first 10 rated answers a stretch item moves one setting only from the
+         item before it (note D2 §3.0 B2's alternative: each new feature arrives alone).
    An exercise whose band has not landed yet (no def.starters) is reported as pending for (a)–(c). */
 import { Learner, newRecord, playSession } from './fixtures/learner.mjs';
 
@@ -21,7 +22,7 @@ function median(a) { const s = a.slice().sort((x, y) => x - y); return s.length 
 // One cell: `n` learners at A above the pre-1.2 floor, one pinned session each.
 function cell(PX, def, A, n, salt) {
   const E = PX.engine, old = E.rebase.V11[def.id], floorNow = PX.ex.minDifficulty(def);
-  let right = 0, items = 0, stretch = 0;
+  let right = 0, items = 0, stretch = 0, badStretch = 0;
   const reach = [];
   for (let i = 0; i < n; i++) {
     const L = new Learner(PX, PX.rng.hash('firstband', def.id, salt, i), { aboveFloor: A + (old[0] - floorNow) });
@@ -29,12 +30,22 @@ function cell(PX, def, A, n, salt) {
     rec.settings.patFocus = true;
     const now = T0 + i * 7919 * 1000; // vary the deck order between learners (note D2 §3.9)
     const r = playSession(PX, rec, L, 'train', { now, pin: def.id, minutes: 10 }, 0);
-    const mine = r.steps.filter((x) => x.step.exId === def.id && x.out.rated).slice(0, 10);
-    mine.forEach((x) => { items++; if (x.res.correct) right++; if (x.step.kind === 'stretch') stretch++; });
+    const all = r.steps.filter((x) => x.step.exId === def.id), mine = all.filter((x) => x.out.rated).slice(0, 10);
+    mine.forEach((x) => {
+      items++;
+      if (x.res.correct) right++;
+      if (x.step.kind === 'stretch') { badStretch++; return; } // a full stretch never comes early
+      if (x.step.kind !== 'stretch1') return;
+      stretch++;
+      const prev = all[all.indexOf(x) - 1];
+      let moved = 0;
+      if (prev) { def.dims.forEach((d) => { if (prev.step.params[d.key] !== x.step.params[d.key]) moved++; }); if (def.variants && prev.step.params.variant !== x.step.params.variant) moved++; }
+      if (!prev || moved > 1) badStretch++;
+    });
     const at = mine.findIndex((x) => x.step.b >= old[0] - 1e-9);
     reach.push(at < 0 ? Infinity : at + 1);
   }
-  return { acc: items ? right / items : NaN, items, stretch, reachMedian: median(reach) };
+  return { acc: items ? right / items : NaN, items, stretch, badStretch, reachMedian: median(reach) };
 }
 
 export async function run(t) {
@@ -47,7 +58,7 @@ export async function run(t) {
     const old = E.rebase.V11[id];
     const band = def.starters && def.starters.length > 0 && PX.ex.minDifficulty(def) < old[0] - 0.1;
     const c0 = cell(PX, def, 0, band ? N0 : 40, 'a0');
-    t.eq(c0.stretch, 0, id + ': no stretch among the first 10 rated answers (d)');
+    t.eq(c0.badStretch, 0, id + ': early stretch items move one setting only (d; ' + c0.stretch + ' early stretches)');
     if (!band) {
       report.push(id + ': band pending (floor ' + PX.ex.minDifficulty(def).toFixed(2) + ', 1.1 floor ' + old[0] + '); A=0 ' + (100 * c0.acc).toFixed(1) + ' % today');
       t.ok(true, id + ': band pending');

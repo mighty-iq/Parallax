@@ -11,7 +11,8 @@
      bAt(theta, p, g, ...)       the difficulty answered right with probability p
      target(g, k)                g + (1 − g) · k   (k is success above chance, 0..1)
      styleK(style)               0.85 comfortable / 0.70 balanced / 0.55 stretch
-     kindTarget(kind, k, g)      raw target of an item kind: target, easy (warmup, last), stretch
+     kindTarget(kind, k, g)      raw target of an item kind: target, easy (warmup, last), stretch, stretch1
+                                 (v1.2: an exercise's early stretch, one setting moved from the item before)
      pool(def)                   every params combination: { params, key, code, b, g, lv, v } (cached)
      range(def) → {min, max}     refChance(def): median guessing rate over the pool
      nearest(def, b, filter?)    the pool entry whose difficulty is closest to b
@@ -45,8 +46,9 @@
     style: 'balanced',
     levelRef: 0.75,                                // level = difficulty answered right at g + (1 − g)·0.75
     z: 1.96,                                       // 95 % ranges
-    // noStretchBefore (v1.2, note D2 §3.0 B2): no stretch item among an exercise's first 10 rated answers
-    mix: { easy: 0.10, stretch: 0.10, easyUp: 0.10, easyCap: 0.95, stretchK: 0.50, noStretchBefore: 10 },
+    // noStretchBefore (v1.2, note D2 §3.0 B2): among an exercise's first 10 rated answers a stretch item
+    // moves one setting only from the item before (modes.js earlyStretch), aimed at g + (1 − g)·earlyStretchK
+    mix: { easy: 0.10, stretch: 0.10, easyUp: 0.10, easyCap: 0.95, stretchK: 0.50, noStretchBefore: 10, earlyStretchK: 0.65 },
     prior: { offset: 1.0, sd: 1.5 },               // μ0 = easiest item + 1.0 logit, σ0 = 1.5 (v1.2, note D2 §3.0 B1; 1.0 before)
     noise: { trial: 0.002, day: 0.01, maxVar: 1.0 }, // process noise (variance) per trial, per day; cap
     grid: { lo: -8, hi: 8, points: 121, width: 6 },  // moment matching on μ ± 6σ inside −8..+8
@@ -179,6 +181,7 @@
     var m = config.mix, ps = target(g, k);
     if (kind === 'easy' || kind === 'warmup' || kind === 'last') return mmin(ps + m.easyUp, target(g, m.easyCap));
     if (kind === 'stretch') return target(g, m.stretchK);
+    if (kind === 'stretch1') return target(g, typeof m.earlyStretchK === 'number' ? m.earlyStretchK : m.stretchK); // v1.2: an early stretch, one setting moved
     return ps;
   }
 
