@@ -252,6 +252,7 @@
       for (i = 0; i < nE; i++) d.push('easy');
       for (i = 0; i < nS; i++) d.push('stretch');
       plan.deck = plan.rng.shuffle(d);
+      plan.deckChanged = 0; // v1.2 wave 2 (conflict 10): this deck's target items dealt as another kind
     }
     return plan.deck.pop();
   }
@@ -472,7 +473,7 @@
         if (end === 'over') return null;
         if (!plan.run || plan.run.left <= 0 || plan.exs.indexOf(plan.run.exId) < 0) E.schedule.nextRun(plan, rec);
         var run = plan.run, def = defOf(run.exId);
-        var kind = end === 'last' ? 'last' : kindFor(plan);
+        var kind = end === 'last' ? 'last' : kindFor(plan), dealt = kind;
         var r = null, extra = null;
         if (def) {
           var st = E.est.get(rec, def, { display: plan.display }, now);
@@ -496,7 +497,12 @@
           plan.run = null;
           continue;
         }
+        // v1.2 wave 2 (conflict 10): a target item dealt as another kind (lead, fluency, drill) uses up
+        // room in its deck (E.dims.room: at most 3 of a deck's 8)
+        if (dealt === 'target' && kind !== 'target') plan.deckChanged = (plan.deckChanged || 0) + 1;
         var step = makeStep(plan, rec, def, r, kind, Object.assign({ stage: run.stage, banner: run.fresh ? run.banner : false, newRun: run.fresh }, extraFields(extra)));
+        // a fluency item (PLAN milestone 7) runs on the timed rating: its timed difficulty, prediction and target
+        if (kind === 'fluency' && E.dims) E.dims.timedStep(plan, rec, def, step, now);
         run.fresh = false;
         run.left -= 1;
         if (kind === 'last') plan.lastServed = true;
@@ -506,6 +512,9 @@
     },
     answer: function (plan, rec, step, ok, result, now, out) {
       var def = defOf(step.exId);
+      // v1.2 wave 2 (PLAN milestone 7, conflict 2): a fluency item updates the timed rating and the Speed
+      // deadline only; the untimed rating, weak spots, the switch note and blocks of 10 leave it out
+      if (step.kind === 'fluency' && E.dims && step.deadlineMs > 0) { E.dims.fluencyAnswer(plan, rec, step, ok, result, now, out); return; }
       out.rating = E.est.rate(rec, def, step.params, ok, now, { display: plan.display, b: step.b, g: step.g });
       out.rated = true;
       var c = M.byKey(def, step.key);
@@ -556,7 +565,8 @@
       var def = defOf(plan.exs[0]);
       var st = E.est.get(rec, def, { display: plan.display }, now);
       var r, extra = null, kind = plan.fixed ? 'fixed' : 'target';
-      if (plan.fixed) r = E.select.fixed(def, st, plan.fixed);
+      // fixed settings: predicted on the player's own difficulty (v1.2 wave 2, PLAN milestone 7)
+      if (plan.fixed) r = E.select.fixed(def, st, plan.fixed, E.dims ? E.dims.pool(rec, def, plan.display) : null);
       else { // adaptive items: the pick hooks run here too (v1.2 wave 2, CONTRACT-v1.2 Q)
         var o = { kind: 'target', k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), rng: plan.rng };
         extra = pickHooks(plan, rec, def, o, { kind: kind, st: st, now: now, run: null, runFilter: null, share: shareOf(plan, def.id) });
@@ -708,6 +718,8 @@
         filter = kind === 'warmup' || kind === 'easy' || kind === 'last' ? upTo(def, s) : kind === 'stretch' ? stretchOf(def, s) : inStage(def, s);
       }
       var o = { kind: kind, k: plan.k, policy: plan.policy, recent: recent, filter: autoFilter(def, filter), rng: plan.rng }, r = null;
+      // a recheck (no pick hooks) is rated on the player's own difficulty too (v1.2 wave 2, PLAN milestone 7)
+      if (rc && E.dims) o.pool = E.dims.pool(rec, def, plan.display);
       if (!rc) {
         extra = pickHooks(plan, rec, def, o, { kind: kind, st: st, now: now, run: null, runFilter: filter, share: share });
         if (extra && typeof extra.kind === 'string' && extra.kind) kind = o.kind = extra.kind;
