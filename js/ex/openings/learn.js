@@ -85,7 +85,7 @@
       spin: '2/3 · Same corners in the same order: the outline turns and flips until it lies the way the openings are drawn.',
       straight: '2/3 · Same corners in the same order: the openings are drawn the way this face is seen, so no turn is needed.',
       land: '3/3 · Sizes last: the same shape at the same size is opening {n}.',
-      assist: 'The {face} outline is traced for you: which opening has it?',
+      assist: 'The {face} outline is traced for you.',
       whyFeature: 'Opening {n}: its notches, steps or cuts differ from every outline of the solid.',
       whyFace: 'Opening {n}: it has the size of another face, but that face is plain, so no face has this outline.',
       whyProportion: 'Opening {n}: the wrong size, too long or too short along one side.',

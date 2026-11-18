@@ -95,7 +95,7 @@
       foldTilt: 'Now fold the pattern itself:',
       foldUp: 'Every face turns up about its dashed line.',
       foldTurn: 'Turned to match, the folded pattern is solid {n}.',
-      assist: 'The faces that meet the shaded face once folded are lettered for you. Which solid has the shaded face with those neighbours, at the right size?',
+      assist: 'Lettered for you: the faces that meet the shaded face once folded.',
       assistHalf: 'New: a half-shaded face. Its shaded corner is dotted: that corner must touch the same faces once folded.',
     },
     bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
