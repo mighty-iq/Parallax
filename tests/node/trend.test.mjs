@@ -133,6 +133,19 @@ export async function run(t) {
   t.eq(T.fit({ occasions: [{ t: 0, blocks: [{ probe: 'cubematch', items: [[0, 1.2, 1]] }] }] }).ok, false, 'invalid items are dropped');
   const one = T.fit({ occasions: [{ t: 0, h: 0, blocks: [{ probe: 'cubematch', items: [[0, 0.5, 1], [0.3, 0.5, 0]] }] }] });
   t.ok(one.ok && one.gain.comp.p === 0.5, 'before any training the meter reads 0.5');
+
+  t.section('probe versions: each its own probe, one member of the composite');
+  t.eq([T.baseId('cubematch@2'), T.baseId('cubematch'), T.baseId('@x')], ['cubematch', 'cubematch', '@x'], 'baseId strips the version');
+  // the same learner with cubematch upgraded halfway: the later blocks say 'cubematch@2'
+  const ver = sim.map((o, j) => ({ t: o.t, h: o.h, blocks: o.blocks.map((b) => (b.probe === 'cubematch' && j >= 6 ? { probe: 'cubematch@2', items: b.items } : b)) }));
+  const fv = T.fit({ occasions: ver });
+  t.ok(fv.ok && fv.probes.includes('cubematch') && fv.probes.includes('cubematch@2'), 'the two versions are two probes of the fit (own level and familiarity)');
+  t.eq(fv.gain.comp.probes.slice().sort(), ['cubematch', 'mechanisms', 'otherway', 'viewmatch'], 'the composite counts cubematch once');
+  t.eq(fv.gain.mid.probes, ['cubematch', 'viewmatch'], 'and so does its rung');
+  t.ok(fv.gain.comp.sd > a.gain.comp.sd, 'a version change costs precision (the new version starts its own level)');
+  const pv = T.predict(fv, 'cubematch@2');
+  t.ok(pv && Number.isFinite(pv.mean) && T.predict(fv, 'cubematch@3') === null, 'predict knows the versions the fit saw');
+  t.ok(['mean', 'sd', 'lo', 'hi'].every((k) => Number.isFinite(fv.gain.comp.pts[k])) && fv.gain.comp.pts.hi > fv.gain.comp.pts.lo, 'the readout in probe points has a range');
 }
 
 /* ---------- helpers ---------- */
