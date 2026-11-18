@@ -196,8 +196,10 @@ def library_checks(page, tag, w, phone):
     page.wait_for_selector('.px-practise-sheet')
     ids = page.evaluate("[...document.querySelectorAll('.px-practise-sheet [data-practise]')].map(b => b.dataset.practise)")
     C.ok(all(x in ids for x in ['train', 'path', 'speed', 'free', 'challenge']), f'{tag}: practise options {ids}')
+    prim = page.evaluate("[...document.querySelectorAll('.px-practise-sheet .px-practise-item.is-primary')].map(b => b.dataset.practise)")
+    C.ok(ids[0] == 'watch' and prim == ['train'], f'{tag}: Watch, Try, Go comes first; Train is the default once Rotate has been played {ids[:2]} {prim}')
     when = page.evaluate("Object.fromEntries([...document.querySelectorAll('.px-practise-sheet [data-practise]')].map(b => [b.dataset.practise, (b.querySelector('.px-practise-when') || {}).textContent || '']))")
-    C.ok(all(when[x].startswith('Right when ') for x in ['train', 'path', 'speed', 'free']) and when['challenge'] == '', f'{tag}: each mode says when it is the right one (gap M3)')
+    C.ok(all(when[x].startswith('Right when ') for x in ['watch', 'train', 'path', 'speed', 'free']) and when['challenge'] == '', f'{tag}: each mode says when it is the right one (gap M3)')
     page.click('.px-practise-sheet [data-practise="train"]')
     page.wait_for_timeout(100)
     cur = page.evaluate('PX.core.router.current()')
@@ -256,6 +258,55 @@ def exercise_checks(page, tag, w):
     C.ok('never trained' in page.locator('main').inner_text(), f'{tag}: a probe has no exercise page')
 
 
+def run_tutorial_entry(b):
+    """Fresh-player tests (v1.2): for every training exercise on a 360 × 640 phone with a new record,
+    the Library's Practise sheet opens on Watch, Try, Go (first, the default, marked "start here",
+    on the screen), and it starts the tutorial; How to play keeps its Watch, Try, Go on the screen."""
+    tag = 'tutorial 360'
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    logs = attach_console(page)
+    page.goto(INDEX.as_uri()); ready(page); dismiss(page)
+    ids = page.evaluate("PX.ex.list('train').map(d => d.id)")
+    C.ok(len(ids) == 20, f'{tag}: twenty training exercises {len(ids)}')
+    bad, started = [], []
+    for i, ex in enumerate(ids):
+        go(page, 'library')
+        page.locator(f'.px-excard[data-ex="{ex}"] [data-card="practise"]').click()
+        page.wait_for_selector('.px-practise-sheet')
+        info = page.evaluate('''() => { const first = document.querySelector('.px-practise-sheet [data-practise]'), r = first.getBoundingClientRect();
+          return { id: first.dataset.practise, primary: first.classList.contains('is-primary'), tag: (first.querySelector('.px-practise-tag') || {}).textContent || '',
+                   focus: document.activeElement === first, top: r.top, bottom: r.bottom, vh: innerHeight }; }''')
+        if not (info['id'] == 'watch' and info['primary'] and info['tag'] == 'start here' and info['focus'] and info['top'] >= 0 and info['bottom'] <= info['vh']):
+            bad.append((ex, info))
+        if i in (0, 11, 17):
+            page.wait_for_timeout(350)  # the sheet's rise has ended
+            page.screenshot(path=str(OUT / f'practise_sheet_{ex}_360.png'))
+        page.locator('.px-practise-sheet [data-practise="watch"]').click()
+        try:
+            page.wait_for_selector(f'[data-wtg="{ex}"]', timeout=8000)
+            cur = page.evaluate('PX.core.router.current()')
+            if cur['name'] == 'play' and cur['params'].get('mode') == 'watch' and cur['params'].get('exId') == ex:
+                started.append(ex)
+            if i in (11, 17):
+                page.screenshot(path=str(OUT / f'wtg_start_{ex}_360.png'))
+        except Exception as e:
+            bad.append((ex, 'no tutorial: ' + str(e)[:80]))
+    C.ok(not bad, f'{tag}: every Practise sheet opens on Watch, Try, Go {bad[:3]}')
+    C.ok(started == ids, f'{tag}: Watch, Try, Go starts the tutorial for every exercise ({len(started)} of {len(ids)})')
+    go(page, 'library')
+    page.locator('.px-excard[data-ex="reckon"] [data-card="howto"]').click()
+    page.wait_for_selector('.px-modal.pl-howto')
+    page.wait_for_timeout(200)
+    hw = page.evaluate('''() => { const b = [...document.querySelectorAll('.px-modal.pl-howto .px-modal-actions button')].find(x => /Watch, Try, Go/.test(x.textContent));
+      if (!b) return null; const r = b.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, vh: innerHeight, primary: b.classList.contains('px-btn--primary') }; }''')
+    C.ok(bool(hw) and hw['primary'] and hw['top'] >= 0 and hw['bottom'] <= hw['vh'], f'{tag}: How to play shows its primary Watch, Try, Go without scrolling {hw}')
+    page.screenshot(path=str(OUT / 'howto_reckon_360.png'))
+    page.keyboard.press('Escape')
+    C.ok(not problems(logs), f'{tag}: no console errors {problems(logs)[:3]}')
+    ctx.close()
+
+
 def suggest_checks(page, tag):
     """Today's mode suggestion (v1.2, gap M3; CONTRACT-v1.2 J): the engine's one suggestion with its
     reason and the mode's line; Not now hides it for 14 days."""
@@ -290,12 +341,15 @@ def challenge_checks(page, tag):
     C.ok(d2['ok'] and d2['code'] == code, f'{tag}: a code pasted in a sentence, in lower case, still reads')
     seeds = page.evaluate(f'[0, 1, 0].map(i => PX.ui.share.challenge.seedAt({json.dumps(code)}, i))')
     C.ok(seeds[0] == seeds[2] and seeds[0] != seeds[1] and min(seeds) >= 2 ** 31, f'{tag}: challenge seeds are fixed and shared-range {seeds}')
-    parts = code.split('-')
+    # A typo in the seed: the one check character catches it unless the changed body happens to share
+    # it (one time in 32), so the code here has a fixed seed (a random one made this check flaky).
+    fixed = page.evaluate("PX.ui.share.challenge.encode({ exId: 'rotate', params: { angle: 2, axis: 1, cubes: 0, variant: 'pick' }, seed: 123456789, n: 8 })")
+    parts = fixed.split('-')
     bad = parts[3]
     bad = ('Z' if bad[0] != 'Z' else 'Y') + bad[1:]
     typo = '-'.join(parts[:3] + [bad] + parts[4:])
     e = page.evaluate(f'PX.ui.share.challenge.decode({json.dumps(typo)})')
-    C.ok(not e['ok'] and 'typo' in e['error'], f'{tag}: a typo is caught {e}')
+    C.ok(page.evaluate(f'PX.ui.share.challenge.decode({json.dumps(fixed)}).ok') and not e['ok'] and 'typo' in e['error'], f'{tag}: a typo is caught {e}')
     go(page, 'library')
     page.fill('.px-challenge-input', 'hello')
     page.click('[data-challenge="play"]')
@@ -650,6 +704,7 @@ def main():
     with sync_playwright() as p:
         b = p.chromium.launch(headless=True, args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
         run_file(b)
+        run_tutorial_entry(b)
         run_sandbox(b)
         shots = run_shots(b)
         b.close()

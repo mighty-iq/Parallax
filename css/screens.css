@@ -473,6 +473,19 @@
 .px-nickname-msg:empty { display: none; }
 .px-practise-item .px-practise-when { display: block; margin-top: var(--s1); font-size: var(--fs-sm); color: var(--ink-3); }
 .px-mode-when { display: block; margin-top: var(--s1); color: var(--ink-3); }
+/* How to play (the player's sheet, opened from the Library): its Watch, Try, Go stays on the screen
+   at the sheet's foot; fresh-player tests found the tutorial only after scrolling past the text. */
+.px-modal.pl-howto > .px-modal-actions {
+  position: sticky; bottom: calc(-1 * var(--s5)); z-index: 1;
+  margin: var(--s4) calc(-1 * var(--s5)) calc(-1 * var(--s5));
+  padding: var(--s3) var(--s5) var(--s4);
+  background: var(--surface); border-top: 1px solid var(--rule);
+}
+@media (max-width: 599px) {
+  .px-modal.pl-howto > .px-modal-actions { bottom: calc(-1 * var(--s4)); margin: var(--s4) calc(-1 * var(--s4)) calc(-1 * var(--s4)); padding: var(--s3) var(--s4); }
+}
+/* the practise sheet's tutorial choice: "start here" while the exercise was never played */
+.px-practise-item .px-practise-tag { margin-left: var(--s2); vertical-align: 0.1em; font-size: var(--fs-xs); color: var(--signal); border-color: var(--signal); }
 /* Today: one mode suggestion at a time (a slot of its own) */
 .px-slot--suggest .px-suggest-why { color: var(--ink-2); max-width: var(--measure); }
 .px-slot--suggest .px-slot-foot { padding-top: var(--s3); }
