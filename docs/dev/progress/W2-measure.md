@@ -66,3 +66,19 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   count two 'check' replacements: request to follow if so).
 - Next: Other Way Round (six strands), Motion Graphs, the probe upgrades as new versions, Balance and the Lab checks,
   ENGINE.md §21.
+
+## 2026-11-18 23:55 UTC: build phase, second half
+- Probes: Other Way Round (near, six strands as variants with `cycle: 'variant'`, per-format worked examples; 1244c7a,
+  a1a49c4, 5a8a22b; tests/node/otherway.test.mjs 109 checks) and Motion Graphs (far; a870b06 gen with 91 checks,
+  3f1cdf7 view and learn; strobe pictures in HTML so their numbers keep 13 px). Background question on Motion Graphs'
+  first card (940eb02). ENGINE.md §21 (ee33fff). DECISIONS lines committed alone.
+- Race found: W2-plateau's 7474995 (22:14 UTC, the same minute as 725abae) put css/measure.css and js/ui/measure.js
+  back into their PENDING blocks, so the committed tree had check.js calling PX.ui.measure without it until 3f1cdf7
+  switched them on again. The working tree always had them, which is why no browser test saw it.
+- Verified: fit.py --ex motiongraphs,cubematch at 360 x 640, 390 x 844, 412 x 915 and 844 x 390 (no overflow, no text
+  under 13 px; the lead's Cube Match report did not reproduce on this tree); check.py 36/0; node motiongraphs,
+  formats, measure, section, events, hooks 710/710; sim.mjs --learners 200: hard checks pass, false "likely gain"
+  without transfer 9 of 1,600 (at most 1.0 % per run).
+- Not built yet: the probe upgrades as new versions (Cube Match 4 options, Mechanisms 4 natural options, Pattern
+  Memory by cells), Balance and the Lab checks (Central Point's negative-transfer check, learning speed on new
+  exercises).
