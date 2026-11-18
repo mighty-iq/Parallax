@@ -227,6 +227,10 @@ ctx.play([
   | 'draw' })` (trial column 16; the answer grid is 'option'). After an answer, a walkthrough waits
   for Next at each caption as Watch does; taps on the board reach it through `ctx.playCmd('step')`
   only after its first 1.5 s.
+- **A draw-the-answer item (1.2 wave 2):** a stem+options view gives one item its own input with
+  `layoutFor(item) → 'custom'` (e.g. the produce variant's items); the player then draws no answer
+  grid and runs the view's `collect` and `reveal` for that item, with its answer type from
+  `item.answer`; the other items keep the grid (CONTRACT-v1.2 S).
 - **Keyboard:** stem+options needs nothing more (the grid takes 1–9). Custom layouts register
   keys through `ctx.keys.push(map, { through: true })` and show key hints.
 - **Accessibility:** canvases are `aria-hidden`; describe the task in text (`.px-sr`), give

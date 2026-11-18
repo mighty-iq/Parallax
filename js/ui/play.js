@@ -111,6 +111,19 @@
 
   /* ---------- items ---------- */
 
+  // v1.2 wave 2 (CONTRACT-v1.2 S; W2-bets' request): a stem+options view may give one item its own input
+  // (a draw-the-answer variant): view.layoutFor(item) → 'custom' runs that item with the view's collect()
+  // and no answer grid, its answer type from item.answer or def.answers; every other item keeps the
+  // view's layout. The timing rules are the same for both: the answer clock runs from the painted frame.
+  function layoutOf(view, item) {
+    if (!view) return null;
+    if (view.layout === 'stem+options' && typeof view.layoutFor === 'function' && typeof view.collect === 'function') {
+      var l = null;
+      try { l = view.layoutFor(item); } catch (e) { log('layoutFor failed', e); l = null; }
+      if (l === 'custom') return 'custom';
+    }
+    return view.layout;
+  }
   function answerType(def, item) {
     return (item && item.answer) || (def.answers && item && item.params && def.answers[item.params.variant]) || def.answer;
   }
@@ -795,8 +808,9 @@
         el.trial.style.visibility = 'hidden';
         destroyGrid();
         var type = answerType(def, item), n = nOptions(def, item);
+        P.layout = layoutOf(view, item); // the item's own layout (a draw-the-answer item: 'custom')
         try {
-          if (view.layout === 'stem+options') {
+          if (P.layout === 'stem+options') {
             P.grid = ui.choiceGrid(n, {
               cols: view.gridCols ? view.gridCols(item) : undefined, multi: type === 'multi', label: 'Answer options',
               labels: function (i) { return view.optionLabel ? view.optionLabel(item, i) : 'Option ' + (i + 1); },
@@ -806,11 +820,12 @@
             P.offGrid = P.grid.onPick(onPick);
           }
         } catch (e) { log('drawing the options failed (' + P.exId + ')', e); el.trial.style.visibility = ''; failTrial(token); return; }
-        el.confirmRow.hidden = type !== 'multi';
+        el.confirmRow.hidden = type !== 'multi' || P.layout !== 'stem+options'; // an item with its own input confirms there
         el.confirm.disabled = true;
         el.confirmText.textContent = type === 'multi' ? 'Pick ' + nCorrect(def, item) + ', then confirm.' : '';
         // Never under a modal (the Chimera pop-up after a reload, the keys sheet): the item
         // waits, hidden, until the last one closes (the 'modal:close' handler below).
+        el.trial.setAttribute('data-item-layout', P.layout || ''); // css: a draw-the-answer item has no grid
         if (ui.modalOpen()) P.presentLater = presentNow; else presentNow();
         function presentNow() {
           P.presentLater = null;
@@ -832,7 +847,7 @@
             P.paintTs = isNum(paint) ? paint : timing.now();
             // A custom view takes its answer from now on, but never while paused: its key layer
             // would sit above the pause layer and its answer would be dropped; resume() calls it.
-            if (P.state === 'paused') { if (!P.pauseStart) P.pauseStart = P.paintTs; P.collectLater = view.layout === 'custom'; }
+            if (P.state === 'paused') { if (!P.pauseStart) P.pauseStart = P.paintTs; P.collectLater = P.layout === 'custom'; }
             else { setState('respond'); collect(); }
             if (P.state === 'respond') startLimit();
             focusTrial();
@@ -850,7 +865,7 @@
 
     function collect() {
       P.collectLater = false;
-      if (!P.view || P.view.layout !== 'custom') return;
+      if (!P.view || P.layout !== 'custom') return;
       try { P.view.collect(P.item, P.ctx, function (r, meta) { return respond(r, 'view', meta); }); } catch (e) { log('collect failed (' + P.exId + ')', e); }
     }
 
@@ -963,7 +978,7 @@
       else {
         setState('done');
         if (cfg.hideItem !== false) el.trial.style.visibility = 'hidden';
-        if (P.view.layout === 'custom' && timeout) use(P.exId, true); // its input may still be live
+        if (P.layout === 'custom' && timeout) use(P.exId, true); // its input may still be live
       }
       finishTrial(tr);
       return true;
@@ -1276,7 +1291,7 @@
       stopActive();
       P.last = tr;
       setState('done');
-      if (P.exId && P.view && P.view.layout === 'custom') use(P.exId, true); // stops its stimulus and input
+      if (P.exId && P.view && P.layout === 'custom') use(P.exId, true); // stops its stimulus and input
       finishTrial(tr);
       return true;
     }
@@ -1305,7 +1320,7 @@
       stopActive();
       if (pending) {
         finishTrial({ item: P.item, response: null, result: { correct: false }, outcome: 'aborted', exId: P.exId });
-        if (P.exId && P.view && P.view.layout === 'custom') use(P.exId, true);
+        if (P.exId && P.view && P.layout === 'custom') use(P.exId, true);
       }
       if (P.nextWaiter) { var w = P.nextWaiter; P.nextWaiter = null; w('abort'); }
       if (P.state !== 'idle' && P.state !== 'unavailable') setState('done');
@@ -1365,7 +1380,7 @@
     }
 
     function help() {
-      var custom = P.view && P.view.layout === 'custom';
+      var custom = P.view && P.layout === 'custom';
       function row(k, t) { return h('li', h('kbd.px-kbd', k), h('span', t)); }
       ui.modal({
         title: 'Keys',

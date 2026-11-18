@@ -1207,12 +1207,68 @@ def run_round3(b, C):
     ctx.close()
 
 
+PRODUCE_JS = """() => {
+  if (PX.ex.get('ptest')) return true;
+  PX.ex.define({ id: 'ptest', code: 'EX-93', name: 'Produce stub', abilities: ['Vz'], role: 'train', answer: 'choice', nOptions: 4,
+    variants: ['pick', 'draw'], trainVariants: ['pick'], layers: { produce: 'draw' }, dims: [{ key: 'a', levels: [0, 1], step: 0.5 }], base: -1,
+    validate: () => true,
+    generate: (rng, params) => (params.variant === 'draw' ? { ex: 'ptest', seed: rng.seed, params, answer: 'sequence', key: [rng.seed % 3, 3] }
+      : { ex: 'ptest', seed: rng.seed, params, key: rng.seed % 4 }),
+    score: (item, r) => ({ correct: Array.isArray(item.key) ? Array.isArray(r) && r.join() === item.key.join() : r === item.key }) });
+  PX.ex.view('ptest', { layout: 'stem+options',
+    present: (item, ctx) => { ctx.host.textContent = 'ptest ' + item.params.variant; return PX.core.timing.nextPaint(); },
+    drawOption: (el, item, i) => { el.textContent = 'ABCD'[i]; },
+    layoutFor: (item) => (item.params.variant === 'draw' ? 'custom' : 'stem+options'),
+    collect: (item, ctx, respond) => { const b = document.createElement('button'); b.setAttribute('data-draw', ''); b.className = 'px-btn';
+      b.textContent = 'Draw it'; b.onclick = () => respond(item.key.slice(), { amode: 'draw' }); ctx.host.appendChild(b); },
+    reveal: () => null });
+  PX.core.store.state.tour.seen.ptest = true;
+  return true;
+}"""
+
+
+def run_produce(b, C):
+    """A draw-the-answer item of a stem+options exercise (CONTRACT-v1.2 S, W2-bets' request): view.layoutFor
+    gives it its own input in place of the answer grid; its answer type is the item's; the row logs 'draw'."""
+    tag = 'produce'
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate(PRODUCE_JS)
+    go(page, {'mode': 'free', 'exId': 'ptest', 'params': {'a': 0, 'variant': 'draw'}, 'trials': 3})
+    wait_state(page, 'respond')
+    st = page.evaluate("({ choices: document.querySelectorAll('.pl-grid .px-choice').length, draw: !!document.querySelector('[data-draw]'), layout: document.querySelector('.pl-trial').getAttribute('data-item-layout'), confirm: document.querySelector('.pl-confirm').hidden })")
+    C.ok(st == {'choices': 0, 'draw': True, 'layout': 'custom', 'confirm': True}, f'{tag}: a draw item gets the view\'s own input, no answer grid ({st})')
+    page.locator('[data-draw]').click()
+    wait_state(page, 'reveal')
+    row = last_row(page)
+    C.ok(row[5] == 1 and isinstance(row[6], int) and row[6] >= 0 and row[15] == 7, f'{tag}: its answer is scored as the item\'s own type, timed from the painted frame, and logged as drawn (answer mode 7): {row}')
+    page.evaluate('__play.next()')
+    wait_state(page, 'respond')
+    page.evaluate('__play.answer(false)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    C.ok(last_row(page)[5] == 0, f'{tag}: the test answer path gives a draw item a wrong answer of its own type')
+    page.evaluate('__play.end()')
+    page.wait_for_selector('.pl-summary', timeout=8000)
+    go(page, {'mode': 'free', 'exId': 'ptest', 'params': {'a': 0, 'variant': 'pick'}, 'trials': 2})
+    wait_state(page, 'respond')
+    st2 = page.evaluate("({ choices: document.querySelectorAll('.pl-grid .px-choice').length, draw: !!document.querySelector('[data-draw]'), layout: document.querySelector('.pl-trial').getAttribute('data-item-layout') })")
+    C.ok(st2 == {'choices': 4, 'draw': False, 'layout': 'stem+options'}, f'{tag}: the exercise\'s other items keep the answer grid ({st2})')
+    page.locator('.pl-grid .px-choice').first.click()
+    wait_state(page, 'reveal')
+    C.ok(last_row(page)[15] == 1, f'{tag}: and log the option answer mode (1)')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue
