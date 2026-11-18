@@ -12,8 +12,9 @@
      parts(opts) → [{ id, def, ok, why }]            opts.can(def): this device can run it; opts.why(def): the reason when not
      shape(size, opts) → { size, parts: [id], missing: [{ id, why }], perPart, items, budgetMs }
    Alternate forms: form k of a size is the same for everyone with the same exercise versions. Its
-   items sit in the middle band of each exercise's difficulty range (35–65 %), stratified across the
-   band, with shared seeds from hash('px-section', size, k, exId, j).
+   items sit in the middle band of each exercise's difficulty range (35–65 %; v1.2: the range without
+   the exercise's starter levels), stratified across the band, with shared seeds from
+   hash('px-section', size, k, exId, j).
      nextForm(rec, size) → k         formItems(size, k, exId, n) → [{ params, seed, code, b, g }]
    A run is plain JSON, kept in rec.section.live between items so that a reload can resume it:
      start(rec, { size, form, now, display, can }) → run, or { unavailable: text }
@@ -117,10 +118,20 @@
   // cube-counting part does (R3 §2.2): the questions share the figure's seed, differ in `ask`, and
   // stay together.
   var PER_FIGURE = 3;
+  // The band is taken from the range the exercise spans without its starter levels (v1.2: a first band in
+  // front, note D2 §3.0 A, must not make test-conditions practice easier; W1-band-A's request). For an
+  // exercise without starter levels this is M.range(def), so its forms are unchanged.
   function band(def) {
-    var r = M.range(def), lo = r.min + BAND[0] * (r.max - r.min), hi = r.min + BAND[1] * (r.max - r.min);
-    var cands = M.pool(def).filter(function (c) { return c.b >= lo - 1e-9 && c.b <= hi + 1e-9; });
-    if (!cands.length) cands = [M.nearest(def, (r.min + r.max) / 2)].filter(Boolean);
+    var starters = isArray(def.starters) ? def.starters : def.starter ? [def.starter] : [];
+    var all = M.pool(def), list = all.filter(function (c) {
+      return starters.every(function (st) { return !(c.params[st.dim] < st.levels); });
+    });
+    if (!list.length) list = all;
+    var min = Infinity, max = -Infinity, inList = {};
+    list.forEach(function (c) { if (c.b < min) min = c.b; if (c.b > max) max = c.b; inList[c.key] = true; });
+    var lo = min + BAND[0] * (max - min), hi = min + BAND[1] * (max - min);
+    var cands = list.filter(function (c) { return c.b >= lo - 1e-9 && c.b <= hi + 1e-9; });
+    if (!cands.length) cands = [M.nearest(def, (min + max) / 2, function (c) { return inList[c.key] === true; })].filter(Boolean);
     return cands.slice().sort(function (a, b) { return a.b - b.b || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0); });
   }
   function asks(def) { return isArray(def.extraParams) && def.extraParams.indexOf('ask') >= 0; }

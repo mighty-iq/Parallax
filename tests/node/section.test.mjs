@@ -59,6 +59,7 @@ export async function run(t) {
   testAchievement(t);
   testNumbers(t);
   testKeep(t);
+  testStarter(t);
   testReal(t);
 }
 
@@ -446,6 +447,30 @@ function testKeep(t) {
   const r2 = S.start(rec, { size: 'mini', now: T0 + 1e6 });
   S.finish(r2, rec, T0 + 2e6, { usedMs: 1000, ended: 'user' });
   t.eq(rec.section.last.id, r2.id, 'the next finished run replaces it');
+}
+
+// v1.2: an exercise with a starter band in front (note D2 §3.0 A) keeps its section forms at the old
+// difficulty: the band is taken from the range without the starter levels (W1-band-A's request).
+function testStarter(t) {
+  t.section('section: forms leave starter levels out (v1.2)');
+  const c = t.context({ files: MANIFEST.includes(SECTION) ? MANIFEST : [...MANIFEST, SECTION], exercises: false }), PX = c.PX;
+  define(PX, PAT.filter((id) => id !== 'angles'));
+  const stub = (id, starter) => ({
+    id, code: 'PAT-9', name: id, short: id, abilities: ['Vz'], cell: null, role: 'train', pat: true, answer: 'choice', nOptions: 4, base: -2,
+    dims: [{ key: 'a', label: 'A', levels: [0, 1, 2, 3, 4], step: 0.5 }, { key: 'b', label: 'B', levels: [0, 1, 2], step: 0.4 }],
+    starter, chance() { return 0.25; }, generate(rng, params) { return { ex: id, seed: rng.seed, params, key: rng.int(0, 3) }; },
+    validate() { return true; }, score(item, r) { return { correct: r === item.key }; },
+  });
+  let ok = true;
+  try { PX.ex.define(stub('angles', { dim: 'a', levels: 1 })); } catch (e) { ok = false; }
+  if (!t.ok(ok && PX.ex.get('angles').starters && PX.ex.get('angles').starters.length === 1, 'a stub with one starter level (the registry knows starter)')) return;
+  const S = PX.engine.section, M = PX.engine.model, def = PX.ex.get('angles');
+  const items = S.formItems('full', 1, 'angles', 15).concat(S.formItems('full', 2, 'angles', 15), S.formItems('mini', 1, 'angles', 5));
+  t.ok(items.every((x) => x.params.a >= 1), 'no form item comes from the starter level');
+  const rest = M.pool(def).filter((x) => x.params.a >= 1), lo = Math.min(...rest.map((x) => x.b)), hi = Math.max(...rest.map((x) => x.b));
+  t.ok(items.every((x) => x.b >= lo + 0.35 * (hi - lo) - 1e-9 && x.b <= lo + 0.65 * (hi - lo) + 1e-9), `items in 35–65 % of the range without the starter level (${lo.toFixed(2)} … ${hi.toFixed(2)})`);
+  const plain = PX.ex.get('openings'), r = M.range(plain);
+  t.ok(S.formItems('full', 1, 'openings', 15).every((x) => x.b >= r.min + 0.35 * (r.max - r.min) - 1e-9 && x.b <= r.min + 0.65 * (r.max - r.min) + 1e-9), 'an exercise without starter levels keeps its band (M.range)');
 }
 
 // Active script lines of index.html (outside the PENDING blocks): what the app ships.
