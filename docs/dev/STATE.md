@@ -1,17 +1,15 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-17 22:15 UTC.
+Updated 2026-11-18 11:25 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
   - `main` = b5ead08 on GitHub: the v1.1.0 release commit, with a new ID since the history rewrite of 17 Nov.
   - Pages deploy succeeded, and https://mighty-iq.github.io/Parallax/js/core/px.js reads `PX.version = '1.1.0'`.
   - CI tests passed on the release commit; after the rewrite, Pages and CI run again on b5ead08.
-- **v1.2: backlog written, not started.** docs/dev/PLAN-v1.2.md holds every known item, built from two sweeps:
-  - docs/dev/v1.2/deferred-sweep.md: 61 open items;
-  - docs/dev/v1.2/standing-rules-gap.md: 32 gaps against the standing rules.
-  
-  v1.2 begins with Phase 1 research once the owner says go.
+- **v1.2: Phase 1 (research and plan) STARTED** on the owner's go (18 Nov 11:08 UTC, new chat).
+  - Backlog: docs/dev/PLAN-v1.2.md (61 sweep items O1–O61, 32 standing-rules gaps; inputs in docs/dev/v1.2/).
+  - Research notes go to docs/research/v1.2/; then PLAN-v1.2.md is rewritten from them, the decision board page is published (private), and the plan message goes out. Then the plan gate: wait for the owner's go.
 
 Owner decisions:
 - D1: Parallax keeps its own rules in v1.1; the switch to the standing rules and the game layer come in v1.2.
@@ -41,8 +39,16 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
-## In progress
-Nothing. No subagents are running.
+## In progress (Phase 1)
+Eight research subagents, each writing one note (they do not commit; the lead commits):
+- G1 game layer → docs/research/v1.2/G1-game-layer.md
+- M1 measurement → docs/research/v1.2/M1-measurement.md (+ spikes/M1/); a simulation spike follows and decides whether milestone 6 stays in v1.2
+- P1 plateaus and faster progress → docs/research/v1.2/P1-plateaus-progress.md
+- T1 transfer portfolio and probes → docs/research/v1.2/T1-transfer-portfolio.md
+- C1 Central Point (source test, human performance, items, shortcut spike) → docs/research/v1.2/C1-central-point.md (+ spikes/C1/)
+- D1 real PAT formats, legal limits, prep products → docs/research/v1.2/D1-pat-formats.md
+- D2 easier first band and teaching (six DAT-style + Views) → docs/research/v1.2/D2-first-band.md
+- N1 Reckon follow-ups (O35–O38, O44, O45) → docs/research/v1.2/N1-reckon.md
 
 ## History rewrite (17 Nov, done; owner's yes, scope "everything private")
 - git-filter-repo over all 134 commits:
@@ -57,15 +63,11 @@ Nothing. No subagents are running.
 - Other clones made before 17 Nov 22:00 UTC must be deleted and cloned again. A push from an old clone brings the old history back.
 
 ## Next three steps
-1. Wait for the owner's go for v1.2, and his answers:
-   - three forks: how much game, how much time measurement takes, and baseline first or play first;
-   - the prose licence (CC BY-SA) and the C13 Chimera lines.
-2. On the go, start Phase 1:
-   - parallel research notes in docs/research/v1.2/: the game layer, measurement, plateaus, the transfer portfolio, and the Reckon papers (O45);
-   - then the plan message.
-3. After approval:
-   - PLAN-v1.2.md becomes PLAN.md, and the current PLAN.md moves to PLAN-v1.1.md;
-   - CLAUDE.md is rewritten for the standing rules.
+1. Collect the eight notes; run the measurement simulation spike; merge ACCESS lists into docs/research/ACCESS.md (R5).
+2. Rewrite PLAN-v1.2.md from the notes (milestones, acceptance checks, decisions for the owner); build and publish the private decision board (exercise cards, decisions with recommendations, playable sketches, ranking, unread papers, device probe, Accept all, Copy my answers).
+3. Send the plan message; save brief and status to the project; wait for the owner's go. After approval: PLAN-v1.2.md becomes PLAN.md (PLAN.md → PLAN-v1.1.md), CLAUDE.md is rewritten for the standing rules.
+
+Open owner items carried over: CC BY-SA for prose (L1), the C13 Chimera lines, the history-cleanup finish (Support / recreate / leave), optionally the name of the test Central Point comes from.
 
 ## Last verified
 - **Live site** serves 1.1.0: px.js fetched on 14 Nov. The Pages build and CI passed on the release commit, and they rerun on b5ead08 after the rewrite.

@@ -73,3 +73,4 @@
   - the Central Point exercise (the owner's request, after a community member's idea; Parallax's own design of the geometric-median task, with an overlap note);
   - from player feedback: an easier, better-taught first band for the DAT-style exercises and Views, and the real PAT formats (profile solids for Missing View, the missing Openings and Form shapes, several questions per Painted Cubes figure, a test-like line-drawing look).
   Matching a test's format is allowed; its items, drawings and name are not.
+- 2026-11-18: The owner gave the go for v1.2 (new chat). Phase 1 runs eight parallel research notes in docs/research/v1.2/ (game layer, measurement, plateaus and progress, transfer portfolio, Central Point, real PAT formats and legal limits, easier first band, Reckon follow-ups); the measurement design must pass a simulation spike in Phase 1 or milestone 6 moves to v1.3.
