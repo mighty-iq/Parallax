@@ -151,8 +151,9 @@
   function arrowEnds(view, G, H) {
     var y = Math.max(0.8, Math.min(H, 2) / 2 + 0.3), s = G / 2 + PAD;
     if (view === 'top') return { tail: [0, H + 2.3, 0], tip: [0, H + 0.45, 0] };
-    if (view === 'front') return { tail: [0, y, s + 1.9], tip: [0, y, s + 0.15] };
-    return { tail: [s + 1.9, y, 0], tip: [s + 0.15, y, 0] };
+    // the tip stops short of the plate's edge, so the head never covers the faces it points at
+    if (view === 'front') return { tail: [0, y, s + 2.05], tip: [0, y, s + 0.85] };
+    return { tail: [s + 2.05, y, 0], tip: [s + 0.85, y, 0] };
   }
   function placeArrow(a, ends) {
     var tail = ends.tail, tip = ends.tip, d = [tip[0] - tail[0], tip[1] - tail[1], tip[2] - tail[2]];
@@ -174,9 +175,10 @@
     var x = c.getContext('2d');
     if (!x) return null;
     x.fillStyle = '#ffffff'; x.fillRect(0, 0, 32, 32);
-    x.strokeStyle = '#8a8a8a'; x.lineWidth = 4;
+    x.strokeStyle = '#8a8a8a'; x.lineWidth = 3;
     x.beginPath();
-    for (var k = -32; k <= 32; k += 11) { x.moveTo(k, 32); x.lineTo(k + 32, 0); }
+    // stripes 8 px apart, so 32 px tile without a seam and the faces side by side read as one area
+    for (var k = -40; k <= 40; k += 8) { x.moveTo(k, 32); x.lineTo(k + 32, 0); }
     x.stroke();
     var t = new T.CanvasTexture(c);
     if (T.SRGBColorSpace) t.colorSpace = T.SRGBColorSpace;
@@ -215,7 +217,7 @@
     return out;
   }
   function makeTint(hm, dir) {
-    var g = new T.Group(), geo = new T.PlaneGeometry(0.94, 0.94), E = 0.004;
+    var g = new T.Group(), geo = new T.PlaneGeometry(1, 1), E = 0.004; // whole faces: no gaps that read as lines
     seenFaces(hm, dir).forEach(function (f) {
       var m = new T.Mesh(geo, st.mats.tint);
       if (f.n === 'y') { m.rotation.x = -Math.PI / 2; m.position.set(f.p[0], f.p[1] + E, f.p[2]); }
@@ -233,6 +235,14 @@
     st.scene.add(st.tint);
   }
   function isBandItem(item) { return !!(item && item.variant === 'toview' && item.params && lib.isBand && lib.isBand(lib.cleanParams(item.params))); }
+  // The shaded faces in the trial: at the starter level, and on every Try item (practice) as a
+  // scaffold that scored items above the starter level drop (Views fresh test: Try 3 without the
+  // hatching made the stacks hard to read).
+  function tintDefault(item) { return !!(item && item.variant === 'toview' && (isBandItem(item) || (st && st.practice))); }
+  // From straight on, the cubes' outline bars draw a line between every two cells, which reads as
+  // the inner lines of a drawing (Views fresh test). The steps that trace the drawing hide them, so
+  // the traced lines are the only ones. (S3.cubeGroup's children: faces, highlighted faces, bars.)
+  function plainFaces() { var g = st && st.group; if (g && g.children && g.children.length === 3) g.children[2].visible = false; }
 
   // Points that a frame must contain: the plate, the structure's box, the arrow.
   function framePoints(G, H, ends) {
@@ -342,8 +352,8 @@
   function local(p) { return [p[0] + st.d3.offsetLeft, p[1] + st.d3.offsetTop]; }
   // Keeps a tag wholly inside the 3D picture (W × H), its size estimated from its text (mono,
   // upper case, 0.75 rem, letter-spaced), so the stage edge never cuts it.
-  function inside(p, text, W, H) {
-    var w = String(text || '').length * 8 + 14, hh = 20, ox = st.d3.offsetLeft, oy = st.d3.offsetTop;
+  function inside(p, text, W, H) { // text: the tag's text, or its width in pixels
+    var w = typeof text === 'number' ? text : String(text || '').length * 8 + 14, hh = 20, ox = st.d3.offsetLeft, oy = st.d3.offsetTop;
     return [U.clamp(p[0], ox + w / 2 + 2, ox + Math.max(w / 2 + 2, W - w / 2 - 2)), U.clamp(p[1], oy + hh / 2 + 2, oy + Math.max(hh / 2 + 2, H - hh / 2 - 2))];
   }
   // Removes an object made here (geometry freed; the view's own materials are kept for reuse).
@@ -353,6 +363,41 @@
     obj.traverse(function (x) { if (x.geometry && !(x.geometry.userData && x.geometry.userData.shared)) x.geometry.dispose(); });
   }
 
+  // Where the asked view's tag goes (centre, stage pixels): the first of a few spots around the
+  // arrow's tail (ta) that, kept inside the picture, covers neither the arrow (tail to tip, ta–tp)
+  // nor a box in avoid ([x0, y0, x1, y1]).
+  // A first pass also keeps it off the structure (soft: dropped when no spot is free of it).
+  function askSpot(ta, tp, w, hh, W, H, avoid, soft) {
+    var ux = ta[0] - tp[0], uy = ta[1] - tp[1], L = Math.sqrt(ux * ux + uy * uy) || 1;
+    ux /= L; uy /= L;
+    var reach = Math.abs(ux) * w / 2 + Math.abs(uy) * hh / 2 + 6, up = hh / 2 + 8, top = Math.min(ta[1], tp[1]);
+    var side = ux < 0 ? -1 : 1;
+    var cands = [
+      [ta[0] + ux * reach, ta[1] + uy * reach],
+      [ta[0], top - up],
+      [ta[0] + ux * reach, top - up],
+      [ta[0] + side * (w / 2 - 4), top - up],
+      [ta[0] + side * (w / 2 - 4), ta[1] + up],
+      [(ta[0] + tp[0]) / 2, top - up - 6],
+    ];
+    if (soft && soft.length) {
+      var p0 = pick(avoid.concat(soft));
+      if (p0) return p0;
+    }
+    return pick(avoid) || inside(cands[0], w, W, H);
+    function pick(boxes) {
+      for (var i = 0; i < cands.length; i++) {
+        var p = inside(cands[i], w, W, H), b = box(p), hit = false;
+        for (var k = 0; k <= 12 && !hit; k++) hit = inBox(b, ta[0] + (tp[0] - ta[0]) * k / 12, ta[1] + (tp[1] - ta[1]) * k / 12);
+        for (var j = 0; j < boxes.length && !hit; j++) hit = meets(b, boxes[j]);
+        if (!hit) return p;
+      }
+      return null;
+    }
+    function box(p) { return [p[0] - w / 2 - 2, p[1] - hh / 2 - 2, p[0] + w / 2 + 2, p[1] + hh / 2 + 2]; }
+    function inBox(b, x, y) { return x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]; }
+    function meets(a, b) { return a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]; }
+  }
   // Draws the 3D picture for the current camera state and moves the labels along.
   function render() {
     if (!st || !st.v3 || !st.cur || !st.cur.b) return;
@@ -363,11 +408,30 @@
     v.render(st.scene, st.cam);
     var item = st.item, G = item.grid, rect = { left: 0, top: 0, width: W, height: H };
     var show = !!c.labels, ends = st.arrowEnds, asking = !!(ends && st.arrow.visible && show);
-    // The asked view's tag names its side, so that side's floor label steps aside (no overlap).
-    setTag(st.tags.front, local(toScreen([0, 0, G / 2 + PAD + 0.45], c.b, c.fr, rect)), show && c.b.dir[2] > -0.2 && !(asking && st.askView === 'front'));
-    setTag(st.tags.right, local(toScreen([G / 2 + PAD + 0.45, 0, 0], c.b, c.fr, rect)), show && c.b.dir[0] > -0.2 && !(asking && st.askView === 'right'));
-    var pa = ends ? local(toScreen(add(ends.tail, mul(st.askDir, 0.45)), c.b, c.fr, rect)) : [0, 0];
-    setTag(st.tags.ask, asking ? inside(pa, st.tags.ask.textContent, W, H) : pa, asking);
+    // The floor labels stay in every item (Views fresh test: a "FRONT VIEW" tag in place of FRONT
+    // hid where the front is); the asked view's tag goes where it covers neither the arrow nor a
+    // floor label: past the arrow's tail, else above the tail, else above the shaft.
+    var pf = local(toScreen([0, 0, G / 2 + PAD + 0.45], c.b, c.fr, rect)), pr = local(toScreen([G / 2 + PAD + 0.45, 0, 0], c.b, c.fr, rect));
+    var onF = show && c.b.dir[2] > -0.2, onR = show && c.b.dir[0] > -0.2;
+    setTag(st.tags.front, pf, onF);
+    setTag(st.tags.right, pr, onR);
+    var pa = [0, 0];
+    if (asking) {
+      var ta = local(toScreen(ends.tail, c.b, c.fr, rect)), tp = local(toScreen(ends.tip, c.b, c.fr, rect));
+      var wa = String(st.tags.ask.textContent || '').length * 8 + 14, ha = 20;
+      var avoid = [[pf, onF, 'Front'], [pr, onR, 'Right']].filter(function (L) { return L[1]; }).map(function (L) { var w = L[2].length * 8 + 14; return [L[0][0] - w / 2, L[0][1] - 10, L[0][0] + w / 2, L[0][1] + 10]; });
+      // the structure's own outline on screen (each cube's corners), for the first pass
+      var sb = [Infinity, Infinity, -Infinity, -Infinity], hm = item.heights, o = (G - 1) / 2;
+      for (var zz = 0; zz < G; zz++) for (var xx = 0; xx < G; xx++) if (hm[zz][xx] > 0) {
+        [[xx - o - 0.5, 0, zz - o - 0.5], [xx - o + 0.5, hm[zz][xx], zz - o + 0.5], [xx - o - 0.5, hm[zz][xx], zz - o + 0.5], [xx - o + 0.5, 0, zz - o - 0.5],
+          [xx - o - 0.5, hm[zz][xx], zz - o - 0.5], [xx - o + 0.5, hm[zz][xx], zz - o - 0.5], [xx - o - 0.5, 0, zz - o + 0.5], [xx - o + 0.5, 0, zz - o + 0.5]].forEach(function (q) {
+          var sp = local(toScreen(q, c.b, c.fr, rect));
+          sb = [Math.min(sb[0], sp[0]), Math.min(sb[1], sp[1]), Math.max(sb[2], sp[0]), Math.max(sb[3], sp[1])];
+        });
+      }
+      pa = askSpot(ta, tp, wa, ha, W, H, avoid, isFinite(sb[0]) ? [sb] : null);
+    }
+    setTag(st.tags.ask, pa, asking);
     (st.colTags || []).forEach(function (t) { setTag(t.el, local(toScreen(t.p, c.b, c.fr, rect)), t.on); });
   }
 
@@ -538,7 +602,8 @@
   function drawOption(el, item, i, ctx) {
     if (!st) mount(ctx);
     newItem(item);
-    var tag = h('span.ex-tag', { hidden: true }), o = item.options[i];
+    // The tag keeps its line from the start, invisible until the reveal (no answer grows then).
+    var tag = h('span.ex-tag.is-pending', { 'aria-hidden': 'true' }, '\u00a0'), o = item.options[i];
     if (item.variant === 'count') {
       el.appendChild(h('span.ex-answer.ex-views-count', h('span.ex-answer-text', String(o)), h('span.ex-views-unit', 'cubes')));
       st.opts[i] = { el: el, tag: null };
@@ -569,6 +634,7 @@
     if (!st) mount(ctx);
     newItem(item);
     st.item = item;
+    st.practice = !!(ctx && ctx.practice);
     st.root.setAttribute('data-variant', item.variant);
     st.root.classList.remove('is-revealed');
     st.verdict.hidden = true;
@@ -594,7 +660,7 @@
       setMode('iso');
       showStructure(item.heights, item.variant === 'toview' ? item.view : null);
       st.cur = isoState(item.heights);
-      if ((tint === undefined ? isBandItem(item) : tint) && item.variant === 'toview') tintOn(item.heights, item.view);
+      if ((tint === undefined ? tintDefault(item) : tint) && item.variant === 'toview') tintOn(item.heights, item.view);
       render();
     } else {
       setMode('draw');
@@ -660,7 +726,8 @@
         else text = 'Differs: ' + ['top', 'front', 'right'].filter(function (v) { return (op.matches || []).indexOf(v) < 0; }).join(', ');
         o.tag.textContent = text;
         o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
-        o.tag.hidden = false;
+        o.tag.classList.remove('is-pending');
+        o.tag.removeAttribute('aria-hidden');
       });
     }
     return timing.wait(ctx && ctx.fast ? 0 : 250);
@@ -856,10 +923,10 @@
     var sameSize = item.options.map(function (o, i) { return i === key || (o.drawing.w === kd.w && o.drawing.h === kd.h); });
     var others = sameSize.filter(function (x, i) { return x && i !== key; }).length;
     var drop = sameSize.map(function (x) { return !x; });
-    var traced = function () { moveCam(hm, v, 1); inkDraw(d, drawingMap(hm, v), n, 0.86); };
+    var traced = function () { plainFaces(); moveCam(hm, v, 1); inkDraw(d, drawingMap(hm, v), n, 0.86); };
     function begin(tint) { reset(); clearOptionMarks(); crossOut(null); trialState(!!tint); }
     var list = [
-      { ms: 1600, caption: cap('look', { view: v }), enter: function () { begin(isBandItem(item)); st.tags.ask.classList.add('is-pointed'); }, exit: function () { st.tags.ask.classList.remove('is-pointed'); } },
+      { ms: 1600, caption: cap('look', { view: v }), enter: function () { begin(tintDefault(item)); st.tags.ask.classList.add('is-pointed'); }, exit: function () { st.tags.ask.classList.remove('is-pointed'); } },
       { ms: 2100, caption: cap('move', { view: v }), enter: function () { begin(true); }, update: function (k) { moveCam(hm, v, ease(k)); } },
       {
         ms: 2400, caption: cap(others ? 'outlineAll' : 'outline', { w: kd.w, h: kd.h }),
@@ -868,7 +935,7 @@
       },
       {
         ms: 1300 + 90 * n, caption: cap('inner', { what: cap(v === 'top' ? 'innerTop' : 'innerSide') }),
-        enter: function () { begin(false); moveCam(hm, v, 1); crossOut(drop); },
+        enter: function () { begin(false); plainFaces(); moveCam(hm, v, 1); crossOut(drop); },
         update: function (k) { inkDraw(d, drawingMap(hm, v), Math.ceil(Math.min(1, k * 1.15) * n), 0.86 * Math.max(0, (k - 0.55) / 0.45)); },
       },
       {
@@ -1043,7 +1110,8 @@
     return play(steps(item, response), ctx, { name: 'show-me' }).then(cleanUp, cleanUp);
   }
   // After show me or a demo: no crossed-out options, the starter level's tint as in the trial.
-  function cleanUp() { if (st) { crossOut(null); if (st.item && isBandItem(st.item)) tintOn(st.item.heights, st.item.view); else tintOff(); render(); } }
+  // (and the last caption goes, so the stem returns to the room it keeps: nothing below moves)
+  function cleanUp() { if (st) { st.caption.textContent = ''; crossOut(null); if (st.item && tintDefault(st.item)) tintOn(st.item.heights, st.item.view); else tintOff(); render(); } }
 
   // Tutorial: the parts first, then the same solution.
   function demo(item, ctx, caption) {

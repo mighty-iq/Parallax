@@ -47,6 +47,15 @@
 .ex-angles .ex-angles-big .ex-angles-svg { width: auto; max-width: 100%; height: min(18rem, 40vh); }
 .ex-angles .ex-angles-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
 .ex-angles .ex-angles-under .ex-caption { flex: 1 1 16rem; }
+/* The verdict's room is kept from the start (one line, 2.375rem with its margin), so the reveal
+   moves no answer; the In order / Out of order tags sit in the answer's top row, between its number
+   and the player's mark, so no answer grows. */
+.ex-angles .ex-angles-under { min-height: 2.375rem; align-content: flex-start; }
+.ex-angles .ex-angles-under .ex-verdict { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.ex-angles .ex-angles-opt .ex-tag {
+  position: absolute; top: 2px; left: 50%; transform: translateX(-50%); z-index: 1;
+  padding: 0 0.3rem; font-size: 0.6875rem; line-height: 1.3; white-space: nowrap;
+}
 .ex-angles .ex-angles-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
 .ex-angles .ex-verdict[data-kind="key"], .ex-angles .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
 .ex-angles .ex-tag[data-kind="foil"] { color: var(--ink, #1A1D21); border-style: dashed; }
@@ -74,7 +83,7 @@
    cells' colour is --ang-cell) take what the two rows of answers leave, so the item never scrolls. */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-angles {
-    --ang-size: min(calc((var(--pl-w) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 2 * 3.5rem - 3 * var(--s2, 0.5rem) - 3 * var(--s1, 0.25rem) - 4px) / 2));
+    --ang-size: min(calc((var(--pl-w) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 2 * 3.5rem - 2.375rem - 3 * var(--s2, 0.5rem) - 3 * var(--s1, 0.25rem) - 4px) / 2));
   }
   .pl-trial.ex-angles .ex-angles-cells { grid-template-columns: repeat(2, var(--ang-size)); justify-content: center; max-width: none; }
   /* Narrow answer buttons: a smaller size (as Rotate's answers on phones) and tighter spaces, so a
@@ -83,7 +92,7 @@
   .pl-trial.ex-angles .ex-angles-opt .ex-answer-text { margin-top: 0.25rem; font-size: var(--fs-md, 1rem); letter-spacing: 0; word-spacing: -0.12em; }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-angles { --ang-size: min(calc((var(--pl-col) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 3 * var(--s1, 0.25rem) - 1rem) / 2)); }
+  .pl-trial.ex-angles { --ang-size: min(calc((var(--pl-col) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 3 * var(--s1, 0.25rem) - 1rem - 2.375rem) / 2)); }
 }
 
 /* v1.2: Try 1's first step done (the smallest angle marked) and show me's crossed-out answers:

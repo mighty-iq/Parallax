@@ -296,8 +296,11 @@
     // After Try 1 every number shows (the two left blank filled in); otherwise the counted cubes,
     // and after Try 3 the hidden cube that was drawn for the player too, with its number.
     numbers(item, { counted: list.length, only: !st.assist, also: st.assistHidden ? hiddenCubes(item).map(function (c) { return c.i; }) : null });
-    st.verdict.textContent = '✓ ' + plural(item.count, 'cube has', 'cubes have') + ' exactly ' + plural(item.ask, 'painted side', 'painted sides') +
-      (hid ? ' (' + hid + ' hidden, dashed)' : '') + '.';
+    // One line at 360 px, in the room the stem keeps for it from the start (the answers never move);
+    // the help caption of a Try item gives way to it.
+    st.caption.textContent = '';
+    st.verdict.textContent = '✓ ' + plural(item.count, 'cube', 'cubes') + ' with ' + plural(item.ask, 'painted side', 'painted sides') +
+      (hid ? ', ' + hid + ' hidden' : '') + '.';
     st.verdict.setAttribute('data-kind', 'key');
     st.verdict.hidden = false;
     return timing.wait(ctx && ctx.fast ? 0 : 250);
@@ -378,7 +381,8 @@
     if (ctx && typeof ctx.play === 'function') return ctx.play(list, o);
     return runSteps(list, ctx, o);
   }
-  function done() { if (st) { normal(); focusOption(-1); } }
+  // After show me or a demo the last caption goes, so the stem returns to the room it keeps.
+  function done() { if (st) { normal(); focusOption(-1); st.caption.textContent = ''; } }
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
     return play(steps(item, response), ctx, { name: 'show-me' }).then(done, done);

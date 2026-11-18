@@ -204,3 +204,71 @@ def wtg_checks(b, cons, C, ex, out_dir, assist_selector, n_rated=5, try_marks=No
     page.wait_for_timeout(500)
     C.ok(not con.errors(), f'{tag}: no console errors ({con.errors()[:3]})')
     ctx.close()
+
+
+TILE_GEOM = """(ex) => {
+    // positions relative to the top of the trial (the exercise's own layout; what moves the trial
+    // itself is the player's)
+    const tr = document.querySelector('.pl-trial'), t0 = tr ? tr.getBoundingClientRect().top : 0, y = -t0;
+    const r = (e) => { const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top + y), Math.round(b.right), Math.round(b.bottom + y)]; };
+    const tiles = Array.from(document.querySelectorAll('.pl-trial .px-choice')).map(r);
+    const stage = document.querySelector('.pl-trial .ex-' + ex + '-stage, .pl-trial .ex-angles-cells');
+    const cover = [];
+    document.querySelectorAll('.pl-trial .px-choice').forEach((c, i) => {
+        const t = c.querySelector('.ex-tag:not([hidden]):not(.is-pending)'), d = c.querySelector('.ex-views-svg, .ex-thumb');
+        if (!t || !d) return;
+        const a = t.getBoundingClientRect(), b = d.getBoundingClientRect();
+        // the drawn part of a drawing: its svg's content box (the drawing is centred in it)
+        const ov = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+        if (ov > 4) cover.push([i, Math.round(ov)]);
+    });
+    return { tiles, stage: stage ? r(stage) : null, scrollY: Math.round(scrollY), trialTop: Math.round(t0 + scrollY), cover };
+}"""
+
+
+def reveal_stable(b, cons, C, ex, out_dir, sizes=((360, 640), (390, 844), (1366, 768))):
+    """The reveal reserves its room from the start (W1-core's 18:15 requests, the Views fresh test): in
+    the app's Train, after a right and after a wrong answer, every answer tile keeps its top and
+    bottom (page coordinates, ±1 px) and no tag covers a drawing."""
+    from common import ROOT
+    for w, hgt in sizes:
+        phone = w < 720
+        ctx = b.new_context(viewport={'width': w, 'height': hgt}, **(PHONE if phone else {}))
+        page = ctx.new_page()
+        con = Console(page)
+        cons.append(con)
+        page.goto((ROOT / 'index.html').as_uri())
+        page.wait_for_function(INDEX_READY, timeout=30000)
+        for _ in range(4):
+            if not page.evaluate('PX.ui.modalOpen()'):
+                break
+            page.keyboard.press('Escape')
+            page.wait_for_timeout(150)
+        page.evaluate('PX.core.store.state.settings.patFocus = true')
+        page.evaluate('PX.debug.fast(true)')
+        page.evaluate(f'void PX.core.router.go("play", {{ mode: "train", exId: "{ex}" }}, {{ force: true }})')
+        page.wait_for_timeout(600)
+        if page.locator('[data-card="skip"]').count() and page.locator('[data-card="skip"]').first.is_visible():
+            page.locator('[data-card="skip"]').first.click()  # a new player is offered the tutorial first
+        for k, right in enumerate((True, False, True)):
+            page.wait_for_function('window.__play && __play.state === "respond"', timeout=30000)
+            page.wait_for_timeout(250)
+            before = page.evaluate(TILE_GEOM, ex)
+            page.evaluate(f'__play.answer({"true" if right else "false"})')
+            page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=10000)
+            page.wait_for_timeout(300)
+            after = page.evaluate(TILE_GEOM, ex)
+            tag = f'{ex} at {w}×{hgt}, item {k + 1} ({"right" if right else "wrong"} answer)'
+            moved = [(i, a, z) for i, (a, z) in enumerate(zip(before['tiles'], after['tiles'])) if abs(a[1] - z[1]) > 1 or abs(a[3] - z[3]) > 1]
+            C.ok(len(before['tiles']) > 0 and not moved, f'{tag}: the reveal keeps every answer tile in place in the trial ({moved[:2] or "same"}; the trial itself {before["trialTop"]}→{after["trialTop"]}, scroll {before["scrollY"]}→{after["scrollY"]})')
+            if before['trialTop'] != after['trialTop']:
+                print(f'  note: {tag}: the trial itself moved {before["trialTop"]}→{after["trialTop"]} (the player)', flush=True)
+            C.ok(not after['cover'], f'{tag}: no tag covers a drawing ({after["cover"]})')
+            if k == 1:
+                page.screenshot(path=str(out_dir / f'{ex}_reveal_{w}x{hgt}.png'))
+            page.evaluate('PX.ui.play.current() && PX.ui.play.current().goNext()')
+            page.wait_for_timeout(300)
+        page.evaluate('__play.end()')
+        page.wait_for_timeout(300)
+        C.ok(not con.errors(), f'{ex} reveal checks at {w}×{hgt}: no console errors ({con.errors()[:3]})')
+        ctx.close()

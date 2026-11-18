@@ -9,7 +9,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-from band_a import band_checks, wtg_checks
+from band_a import band_checks, reveal_stable, wtg_checks
 from common import launch
 from pat_harness import Pat
 
@@ -68,6 +68,7 @@ class Band(Pat):
                         [('right', 'gap:0,size:0,resolve:0,pose:0', 16), ('middle', 'gap:0,size:2,resolve:1,pose:1', 7)],
                         assist_check=assist, try1=('gap:0,size:0,resolve:0,pose:0', 28))
             wtg_checks(b, cons, self.C, 'angles', self.dir, '.ex-angles-cell.is-assist .ex-angles-flag')
+            reveal_stable(b, cons, self.C, 'angles', self.dir)
             b.close()
         errors = [e for c in cons for e in c.errors()]
         self.C.ok(not errors, f'no console errors ({errors[:5]})')

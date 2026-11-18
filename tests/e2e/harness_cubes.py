@@ -10,7 +10,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-from band_a import band_checks, wtg_checks
+from band_a import band_checks, reveal_stable, wtg_checks
 from common import launch
 from pat_harness import Pat
 
@@ -92,6 +92,7 @@ class Band(Pat):
                         assist_check=assist, try1=('cubes:0,height:0,asked:0', 13),
                         assists=[('try3', 'cubes:0,height:1,asked:0', 18, '{"hidden":true}', hidden_before, hidden_after)])
             wtg_checks(b, cons, self.C, 'cubes', self.dir, '.ex-cubes-marks .ex-cubes-badge--unknown', try_marks={3: '.ex-cubes-marks .ex-cubes-ghost'})
+            reveal_stable(b, cons, self.C, 'cubes', self.dir)
             b.close()
         errors = [e for c in cons for e in c.errors()]
         self.C.ok(not errors, f'no console errors ({errors[:5]})')

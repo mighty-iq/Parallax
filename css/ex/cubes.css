@@ -53,6 +53,10 @@
 .ex-cubes .ex-cubes-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
 .ex-cubes .ex-cubes-under .ex-caption { flex: 1 1 16rem; }
 .ex-cubes .ex-cubes-verdict { margin-top: var(--s2, 0.5rem); margin-left: auto; }
+/* The verdict's room is kept from the start (one line, 2.375rem with its margin), so the reveal
+   moves no answer; the verdict stays on one line (the text is written to fit 360 px). */
+.ex-cubes .ex-cubes-under { min-height: 2.375rem; align-content: flex-start; }
+.ex-cubes .ex-cubes-verdict { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .ex-cubes .ex-verdict[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
 /* Options: a count and its unit. */
 .ex-cubes .ex-cubes-opt { flex-direction: column; gap: 0; }
@@ -75,9 +79,10 @@
    question line and the row of answers leave; held sideways it fills the left column. */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-cubes .ex-cubes-figure-box { width: 100%; }
-  .pl-trial.ex-cubes .ex-cubes-svg { max-height: min(22rem, calc(var(--pl-avail) - 3.5rem - 4.25rem - 3 * var(--s2, 0.5rem))); }
+  .pl-trial.ex-cubes .ex-cubes-svg { max-height: min(22rem, calc(var(--pl-avail) - 3.5rem - 4.25rem - 2.375rem - 3 * var(--s2, 0.5rem))); }
+  .pl-trial.ex-cubes .ex-cubes-verdict { font-size: 0.8125rem; }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-cubes .ex-cubes-svg { max-height: calc(var(--pl-avail) - 3rem - 2 * var(--s1, 0.25rem)); }
+  .pl-trial.ex-cubes .ex-cubes-svg { max-height: calc(var(--pl-avail) - 3rem - 2.375rem - 2 * var(--s1, 0.25rem)); }
   .pl-trial.ex-cubes .ex-cubes-q { margin-top: var(--s1, 0.25rem); font-size: var(--fs-sm, 0.875rem); }
 }
