@@ -31,11 +31,11 @@ Owns: see docs/dev/CONTRACT-v1.2.md "File ownership". Requests: docs/dev/v1.2/re
   (fit.py at 360 × 640); a view's own board tap is not a second Next; a backup's missing private field (the playtest
   log) is no repair on import (the long run's re-import check).
 
-- 19:50 UTC: on a short phone (≤ 700 px tall) the Your turn strip has two rows (word, buttons): fit.py 360 × 640 for
+- 19:45 UTC: on a short phone (≤ 700 px tall) the Your turn strip has two rows (word, buttons): fit.py 360 × 640 for
   Homing, Reckon, Openings, Cubes, Angles, Views, Form, Missing View, Rotate 21/22 (Hole Punch's worked example
   item is 590 px tall: request to band-B).
 
-## Verified (final round, 18:28–19:50 UTC)
+## Verified (final round, 18:28–19:45 UTC)
 - node: full suite 4760/4760 (38 files, 18:28 code); after c7cff8b pooled, core, store, rebase, engine 1258/1258.
 - browser: play.py 138/0 (incl. run_captions 11/11; rerun 19:38 138/0), flows 73/0, clock.py full 74/0, twotabs
   10/0, fit.py all sizes 217/5 (19:36, before the two-row strip; the 5 at 360 × 640 then re-checked); the Go screen,
