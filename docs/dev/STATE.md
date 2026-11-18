@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 20:15 UTC.
+Updated 2026-11-18 21:32 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -39,17 +39,16 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
 ## In progress (Phase 2)
-- **Wave 1 (milestones 1, 2, Central Point): DONE.** Logs in docs/dev/progress/W1-*.md. Test build 1.2.0-test.1 (playtest mode on) went to the owner as a private preview at 20:00 UTC; it saves playtest reports to the preview's database (tools/build-preview.mjs, tools/preview-adapter.js).
-  - Node: full suite 4760/4760 before W1-core's last commits (current run by the lead in progress). Browser: play 138/0, flows 73/0, clock 74/0, twotabs 10/0, single 17/0, preview adapter 10/0; fit.py at 360 × 640: Hole Punch's worked example still too tall (request to band-B).
-  - Open from W1-core (requests.md): reveal lines push the answer tiles about 30 px (Cubes, Form, Hole Punch, Missing View) and Angles' order tags; Openings' options end under the strip at 390 × 844; the guide needs a line on Watch pacing (Next, Auto-play).
-- **The owed history rewrite: DONE** at 19:58 UTC (117 commits; only the four stamps changed, verified per commit; old IDs in the project status note).
-- **Fresh-player tests (note D2 §4) running:** Views, Central Point (driver /tmp/w1a/fp), Form, Openings, Missing View, Hole Punch (driver /tmp/bandB/fp). Findings go to band-A and band-B (resumed) with W1-core's requests.
-- **Wave 2 started:** W2-measure (milestone 6 simulation; new files js/engine/trend.js, tests/node/trend.test.mjs, tests/node/measure-*.mjs, docs/dev/v1.2/measure-sim.md); W2-core (the wave-2 section of docs/dev/CONTRACT-v1.2.md, then shared hooks: record fields and migration, events table, trial-row fields, player and Today hook points). No app code changes while the fresh tests run.
+- **Wave 1: DONE**; test build 1.2.0-test.1 (playtest mode on) with the owner since 20:00 UTC; the preview saves playtest reports to its database.
+- **Fresh-player round 1 (20:35 UTC)** and fixes: Views 4/4 Try and 5/5 scored; Central Point 3/4 and 4/5 (two time-outs); Openings, Missing View and Hole Punch met the two-minute start; Form did not (its Watch had about 14 captions). Fixed: the player (d1a5579: the answer bar hides under a pause, a short session's weekly-goal reason, "Skip ahead" and "Your turn" on the Watch button, the labelled time bar and the timed-Try line, the strip stays on Try, Next in a solution player means next caption, a top-corner Pause after an answer scroll), Central Point (56fd419: pulls end to end, the best answer point, labels that never collide, the tips, Why? from the first guess, Try 3 at 30 s), band-B (Form's Watch in 3 captions, any face may lead in Openings, no tutorial item repeats as a scored one, reveals reserve their room). Band-A's round (Views, Cubes, Angles) is running.
+- **Reruns** of Form and Central Point run on a committed snapshot (a git worktree outside the repository), so builders' uncommitted edits cannot touch them; Views reruns after band-A commits.
+- **Wave 2:** W2-core's hooks are in (a84cc94 engine hooks, 7ab13ab PX.ui.hooks, 4dd8b51 record format 4, events, trial columns); it is wiring the call sites in play.js and home.js. Running on them: W2-progress (milestone 7), W2-plateau (3), W2-measure (6, build phase; its simulation passed, docs/dev/v1.2/measure-sim.md), W2-bets (4).
+- **The owed history rewrite: DONE** at 19:58 UTC.
 
 ## Next three steps
-1. Fresh-test findings and W1-core's open requests → band-A and band-B fixes; a second test build when they land.
-2. W2-core's contract → its hooks → builders W2-progress (7), W2-plateau (3), W2-measure build (6), W2-bets (4).
-3. Read the owner's playtest reports from the preview's database (playtest/<device>) and fold them in.
+1. Band-A's report → a Views rerun; then test build 2 from a committed snapshot (republish the same private preview).
+2. Settle the four DAT-style tutorials' "about N minutes" from the reruns (DECISIONS: the Form line).
+3. Wave 2 builders' reports → integration, longruns, a review by agents that did not build; then wave 3 (game layer 5, exercise depth 8, 9, 10).
 
 Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from.
 
