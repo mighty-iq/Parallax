@@ -505,6 +505,16 @@ function guide(t) {
     t.ok(sec.includes(B.INFO[id].line), 'the guide quotes the ' + id + ' line');
     t.ok(sec.includes(B.INFO[id].label), 'and names it ' + B.INFO[id].label);
   }
+  // the add-ons of this build, in the words js/ui/bets.js's addonsLine() uses
+  const PX = real(t).PX || null; void PX;
+  const R = t.context().PX, BB = R.engine.bets;
+  const WORDS = { compare: 'comparison rounds', bridge: 'bridge sets', produce: 'draw-the-answer items', calib: 'detailed feedback on your estimates' };
+  const and = (l) => (l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1]);
+  const parts = BB.LAYERS.map((l) => { const ids = BB.hostsOf(l); return ids.length ? WORDS[l] + ' for ' + and(ids.map((id) => R.ex.get(id).short)) : null; }).filter(Boolean);
+  const line = 'In this version: ' + parts.join('; ') + '.';
+  t.ok(sec.includes(line), 'the guide lists the add-ons of this build as the app does (' + line + ')');
+  const off = R.ex.list('train').filter((d) => (BB.content(d.id) && BB.content(d.id).offscreen) || (R.ex.learn(d.id) && R.ex.learn(d.id).offscreen)).map((d) => d.short);
+  t.ok(off.every((n) => sec.includes(n)) && off.length === 7, 'and the seven exercises with an off-screen challenge (' + off.join(', ') + ')');
 }
 
 function wholeTimes(t) {
