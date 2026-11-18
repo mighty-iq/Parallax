@@ -31,7 +31,7 @@
     practice: [
       { params: { solid: 0, marks: 0, view: 0, foil: 0 }, assist: { letters: true }, seed: 12 },
       { params: { solid: 0, marks: 0, view: 0, foil: 0 }, seed: 207 },
-      { params: { solid: 0, marks: 1, view: 0, foil: 0 }, assist: { half: true }, tip: 'half', seed: 303, example: { seed: 8 } },
+      { params: { solid: 0, marks: 1, view: 0, foil: 0 }, assist: { half: true }, tip: 'half', seed: 303, example: { seed: 54 } },
       { params: { solid: 0, marks: 2, view: 0, foil: 0 }, tip: 'two', seed: 406 },
     ],
     tips: [

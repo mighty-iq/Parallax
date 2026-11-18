@@ -360,9 +360,11 @@ function testLearn(t, PX, def) {
   if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
   const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
   // a worked example before the Try item that brings the first hard feature (note D2 addendum C change 4)
+  // the right solid shows its half mark clearly (the face turned at least 0.5 toward the viewer)
+  const halfSeen = (it) => { const k = it.options[it.key], g = k.marks.findIndex((m) => m && typeof m === 'object'); return g >= 0 && def.lib.facing(k.solid, k.view)[g] >= 0.5; };
   const exE = L.practice[2].example, xe = exE && def.generate(PX.rng(exE.seed), L.practice[2].params);
-  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[2].seed && def.validate(xe) === true && !xe.fallback && xe.marks.some((m) => m && typeof m === 'object') && xe.options.some((o) => o.kind === 'mirror') && xe.key !== items[2].key && L.practice.every((e, i) => i === 2 || e.example === undefined),
-    `Try 3 (the half mark) comes after a worked example of a half mark on a sister item, with a mirror image among its solids (seed ${exE && exE.seed})`);
+  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[2].seed && def.validate(xe) === true && !xe.fallback && xe.marks.some((m) => m && typeof m === 'object') && xe.options.some((o) => o.kind === 'mirror') && xe.key !== items[2].key && halfSeen(xe) && L.practice.every((e, i) => i === 2 || e.example === undefined),
+    `Try 3 (the half mark) comes after a worked example of a half mark on a sister item, with a mirror image among its solids and the half mark clearly seen on the right one (seed ${exE && exE.seed})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].marks === 0 && P[1].marks === 0 && items[0].solid.kind === 'box' && items[1].solid.kind !== 'box', 'Try 1 (a box) and Try 2 (a prism) are at the starter band');
   t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0 }, 'Try 3 is the pre-1.2 floor (a half mark)');
