@@ -7,8 +7,10 @@
    map): a landmark face (a mark the right solid shows) is numbered in the pattern and in the solid,
    then its neighbours; after a wrong pick, the face that cannot be marked so (or the mirror image)
    is marked in that solid and in the pattern, or, for a wrong size, the edge that differs is marked
-   in both. The Watch adds both kinds of wrong solid (foilTour). Every step's enter() sets its full
-   state.
+   in both. Every step's enter() sets its full state. The Watch (v1.2) runs the card's three steps
+   with three captions (each waits for a tap in the player): sizes, the shaded face and its
+   neighbours, then the check, with the other wrong solids crossed out, the fold-up and the answer;
+   a worked example of a half mark shows its corner, the mirror image and the solid that keeps it.
    Fold-up (O51, v1.2): after the landmark steps the pattern itself folds up about its hinges
    (lib.fold with a fold fraction, the validator's own folding), seen at a slant, then turns to the
    right solid's pose and size, so it lands on the picture of that solid. Drawn in its own SVG
@@ -324,28 +326,14 @@
   function markSizes(item) {
     item.options.forEach(function (o, i) { if (i !== item.key && o.kind === 'shape') { var e = changedEdge(item, i); if (e) markEdge(item, i, e); } });
   }
-  // The Watch also shows why two wrong ones are wrong: the wrong-size solid and the mirror image (or,
-  // without a mirror image, marks in the wrong place).
-  function foilTour(item) {
-    var shape = -1, other = -1;
-    item.options.forEach(function (o, i) {
-      if (i === item.key) return;
-      if (o.kind === 'shape' && shape < 0) shape = i;
-      if (o.kind === 'mirror') other = i;
-    });
-    if (other < 0) item.options.forEach(function (o, i) { if (i !== item.key && o.kind === 'marks' && other < 0) other = i; });
-    var list = [];
-    if (shape >= 0 || other >= 0) list.push({ ms: 1600, caption: cap('foils'), enter: function () { clearMarks(); } });
-    if (shape >= 0) list.push(whyStep(item, shape, 3400));
-    if (other >= 0) list.push(whyStep(item, other, 3400));
-    return list;
-  }
-  // The Watch: the landmark method and the fold-up, then both kinds of wrong solid, then back to the
-  // right one so the Watch ends on the answer.
+  // The Watch (v1.2, fresh-player tests: every caption waits for a tap, so few of them): the card's
+  // three steps on the starter item, the third ending in the fold-up and back on the answer. A
+  // worked example of a half mark (any item that has one) shows only what is new: the half mark's
+  // corner, the mirror image it rules out, and the solid that keeps it.
   function demoList(item) {
-    var base = steps(item, null, true), tour = foilTour(item);
-    return tour.length ? base.concat(tour, [base.landStep]) : base;
+    return hasHalf(item) ? steps(item, null, 'example') : steps(item, null, 'watch');
   }
+  function hasHalf(item) { return item.marks.some(function (m) { return m && typeof m === 'object'; }); }
 
   /* ---------- the fold-up (O51) ---------- */
   function sub3(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
@@ -432,19 +420,22 @@
     var fm = foldModel(item), key = item.key;
     if (!fm) return [];
     function ease(x) { return x * x * (3 - 2 * x); }
+    // no captions of their own: the fold-up plays under the caption of the step before it
     return [
-      { ms: 1000, caption: cap('foldTilt'), enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 0, fm.C0, fm.netC); },
+      { ms: 900, enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 0, fm.C0, fm.netC); },
         update: function (x) { drawFold(item, fm, 0, slerpM(fm.C0, fm.C1, ease(x)), fm.netC); } },
-      { ms: 2600, caption: cap('foldUp'), enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 0, fm.C1, fm.netC); },
+      { ms: 2400, enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 0, fm.C1, fm.netC); },
         update: function (x) { drawFold(item, fm, ease(x), fm.C1, fm.netC); } },
-      { ms: 2000, caption: cap('foldTurn', { n: key + 1 }), enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 1, fm.C1, fm.netC); },
+      { ms: 1900, enter: function () { clearMarks(); showFold(true); drawFold(item, fm, 1, fm.C1, fm.netC); },
         update: function (x) { var e = ease(x); drawFold(item, fm, 1, slerpM(fm.C1, fm.C2, e), lerp3(fm.netC, fm.solidC, e)); },
         exit: function () { focusOption(key); } },
     ];
   }
-  // watch: the Watch's orientation steps (the pattern, the solids, where the answer lands) come too;
-  // show me starts at the card's first step, since the player has looked at the item already.
-  function steps(item, response, watch) {
+  // The card's steps on an item. mode 'watch': the Watch (three captions); 'example': the worked
+  // example of a half mark (three captions); otherwise show me after an answer, at its own pace, ending
+  // on why the picked solid is wrong. Uncaptioned steps play under the caption before them.
+  function andList(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+  function steps(item, response, mode) {
     var key = item.key, picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
     var km = bestMap(item, key), S = item.solid, seenS = km ? km.seen.map(function (g) { return km.back[g]; }) : [];
     var land = seenS.filter(function (f) { return item.marks[f]; })[0];
@@ -452,33 +443,45 @@
     var nb = [];
     lib.adjacency(S).forEach(function (e) { var o = e.f === land ? e.g : e.g === land ? e.f : -1; if (o >= 0 && seenS.indexOf(o) >= 0 && nb.indexOf(o) < 0) nb.push(o); });
     var letters = 'ABCDEFG', tags = [{ f: land, t: 'A' }].concat(nb.slice(0, 3).map(function (f, j) { return { f: f, t: letters[j + 1] }; }));
+    var names = andList(tags.slice(1).map(function (x) { return x.t; }));
     // a half mark (from the pre-1.2 floor on): its shaded corner, dotted in the pattern, and the face
-    // pointed in the pattern and in the right solid (note D2 §3.5's mini-demo, also in show me)
+    // pointed in the pattern and in the right solid (note D2 §3.5's mini-demo)
     var half = -1;
     item.marks.forEach(function (m, f) { if (half < 0 && m && typeof m === 'object') half = f; });
     var halfSeen = km && half >= 0 ? km.seen.filter(function (g) { return km.back[g] === half; })[0] : undefined;
-    var halfStep = half < 0 ? null : { ms: 2800, caption: cap('halfCorner'), enter: function () {
-      clearMarks(); focusOption(key); dotHalfCorner(item);
+    function pointHalf() {
+      dotHalfCorner(item);
       if (st.netG[half]) st.netG[half].g.classList.add('is-pointed');
       var of = halfSeen !== undefined && st.opts[key] ? st.opts[key].faces[halfSeen] : null;
       if (of) of.g.classList.add('is-pointed');
-    } };
-    var landStep = { ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } };
-    var list = [
-      watch ? { ms: 1500, caption: cap('pattern'), enter: function () { clearMarks(); st.label.classList.add('is-pointed'); }, exit: function () { st.label.classList.remove('is-pointed'); } } : null,
-      watch ? { ms: 1400, caption: cap('solids'), enter: function () { clearMarks(); } } : null,
-      // the card's steps in its order and words (note D2 addendum C): each caption marks what it names
-      { ms: 2600, caption: cap('sizes'), enter: function () { clearMarks(); markSizes(item); } },
-      { ms: 2200, caption: cap('landmark', { f: 'A' }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags.slice(0, 1)); } },
-      halfStep,
-      { ms: 2400, caption: cap('neighbours', { list: tags.slice(1).map(function (x) { return x.t; }).join(', ') || '—' }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags); } },
-      { ms: 2400, caption: cap('match', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); } },
-      watch ? landStep : null,
-    ];
-    list = list.filter(Boolean).concat(foldSteps(item));
-    if (picked >= 0) list.push(whyStep(item, picked, 3000));
-    list.landStep = landStep;
-    return list;
+    }
+    // every wrong solid of the right size, with the face that cannot look like that crossed out
+    function crossOthers() {
+      item.options.forEach(function (o, i) {
+        if (i === key || o.kind === 'shape') return;
+        var pm = bestMap(item, i), g = pm && pm.bad.length ? pm.bad[0] : -1, of = g >= 0 ? st.opts[i].faces[g] : null;
+        if (of) { label(st.opts[i].labels, of.pts, '✗', 15 * optUnit(i), 'bad'); of.g.classList.add('is-pointed'); }
+      });
+    }
+    var sizes = { ms: 2600, caption: cap('sizes'), enter: function () { clearMarks(); markSizes(item); } };
+    var landmark = { ms: 2600, caption: cap(names ? 'landmark' : 'landmarkAlone', { list: names }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags); } };
+    var halfStep = half < 0 ? null : { ms: 2800, caption: cap('halfCorner'), enter: function () { clearMarks(); focusOption(key); pointHalf(); } };
+    var match = { ms: 2600, caption: cap(names ? 'match' : 'matchAlone', { n: key + 1, list: names }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); crossOthers(); } };
+    var matchHalf = { ms: 2600, caption: cap('matchHalf', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); pointHalf(); } };
+    // the end of a Watch or worked example: the pattern back, the answer in focus (no wrong solid marked)
+    var rest = { ms: 700, enter: function () { clearMarks(); focusOption(key); if (mode === 'example') pointHalf(); else if (km) tagFaces(item, key, km, tags); } };
+    var list;
+    if (mode === 'example') {
+      var mirror = -1;
+      item.options.forEach(function (o, i) { if (i !== key && o.kind === 'mirror' && mirror < 0) mirror = i; });
+      list = [halfStep, mirror >= 0 ? whyStep(item, mirror, 2800) : null, matchHalf].concat(foldSteps(item), [rest]);
+    } else if (mode === 'watch') {
+      list = [sizes, landmark, halfStep, match].concat(foldSteps(item), [rest]);
+    } else {
+      list = [sizes, landmark, halfStep, match].concat(foldSteps(item));
+      if (picked >= 0) list.push(whyStep(item, picked, 3000));
+    }
+    return list.filter(Boolean);
   }
 
   function runSteps(list, ctx, opts) {
@@ -523,7 +526,7 @@
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    return play(demoList(item), ctx, { name: 'demo', caption: caption || null });
+    return play(demoList(item), ctx, { name: 'demo', caption: caption || null }).then(function () { if (st) st.caption.textContent = ''; });
   }
   function unmount() {
     if (!st) return;
