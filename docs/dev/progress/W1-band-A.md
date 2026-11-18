@@ -33,9 +33,21 @@ stays non-breaking for Missing View. Design source: docs/research/v1.2/D2-first-
   wrong-pick explanations per foil kind); waiting for a browser slot to look at it. E2E: tests/e2e/band_a.py
   (shared band checks) wired into harness_{views,angles,cubes}.py, not run yet.
 
+- 16:52 UTC: Views view committed (65c0dda). That commit lost the trial-picture function (trialState): every
+  Views item threw on present until c6b3903 (17:37 UTC), so the Views Watch was skipped and Try ended the
+  session in the fresh-player run. Lesson: run the harness before committing a view, not only node tests.
+- 17:00–17:30 UTC: fresh-player checks (testers run by the lead, my scratch driver): Painted Cubes
+  practice 4/4, scored 5/5; Angles practice 3/4 (a mis-tap), scored 5/5 at 5–7 s; Views stopped
+  (the broken Watch, then the driver's 30-minute cap). Driver now takes a browser slot per action,
+  no cap (17:39 UTC).
+- 17:30–17:45 UTC: fixes from the testers: Watch captions timed for reading in all three (1 s + 0.27 s a
+  word, ≤ 8 s); Painted Cubes Try 3 draws its hidden cube dashed (faded step), its reveal numbers it;
+  Angles' Watch without degrees, a method in the turned-angles tip; one-line help captions; four
+  player items filed to W1-core (requests 17:39 UTC). DECISIONS cdfcf9c.
+
 ## Next
-- Views screenshots, then commit; run the three harness_*.py through pwslot; fresh-player check through the app
-  (driver in scratch: one phone browser, screenshots and taps only), fix what it finds once.
+- Browser checks (harness_cubes, harness_angles, harness_views with the app's Watch, Try, Go) running;
+  then commit the view changes for Angles and Painted Cubes and the e2e files; Views retest by the lead.
 
 ## Open problems
 - none
