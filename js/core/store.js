@@ -553,7 +553,8 @@
         var f = FIELDS[i], v;
         known[f.key] = 1;
         try { v = hasOwn.call(raw, f.key) ? f.fix(raw[f.key], log, f.key) : undefined; } catch (e) { v = undefined; }
-        if (v === undefined) { note(log, f.key); v = f.def(); }
+        // a private field (exportRule) is left out of a backup on purpose: its absence is no repair
+        if (v === undefined) { if (hasOwn.call(raw, f.key) || !(hasOwn.call(RULES, f.key) && RULES[f.key].private)) note(log, f.key); v = f.def(); }
         out[f.key] = v;
       }
       var keys = Object.keys(raw);
