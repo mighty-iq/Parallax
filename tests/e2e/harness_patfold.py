@@ -43,6 +43,7 @@ def showme(C, frame, tag):
 
 
 if __name__ == '__main__':
-    P = Pat('patfold', [('easy', 'idle:1', 3), ('three', 'folds:1,type:3', 6), ('corner', 'folds:1,type:1,idle:1', 11)], deps=['js/ex/fold/gen.js'],
+    # v1.2: folds level 0 is the starter band (one fold); 2 and 3 folds are levels 1 and 2
+    P = Pat('patfold', [('band', 'folds:0', 1), ('easy', 'folds:1,idle:1', 3), ('three', 'folds:2,type:3', 6), ('corner', 'folds:2,type:1,idle:1', 11)], deps=['js/ex/fold/gen.js'],
             stem_check=stem, option_check=options, showme_check=showme)
-    sys.exit(P.run(demo=('idle:1', 3), sandbox=('folds:1,type:2', 21)))
+    sys.exit(P.run(demo=('folds:0', 14), sandbox=('folds:2,type:2', 21)))

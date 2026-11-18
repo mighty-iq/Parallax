@@ -8,7 +8,13 @@
    lines appear on them, solid first, then dotted → the structure itself (an isometric drawing of
    item.heights) → the drawing lands on its option; after a wrong pick, that drawing is laid over the
    slot and the lines that differ are marked, with the validator's reason (hull, align, search).
-   Every step's enter() redraws the overlay from scratch, so Replay and Step work from anywhere. */
+   Every step's enter() redraws the overlay from scratch, so Replay and Step work from anywhere.
+   v1.2 (note D2 §3.7): show-me turns the structure in sight from the corner view to the missing side
+   (an SVG camera on the cubes, far faces first), fades the cubes to the drawing (seen edges solid,
+   hidden ones dotted) and lays that drawing in the slot; its captions carry the strategy card's
+   steps ("1/3 · Outline first: …"). The Watch holds on the dotted-line step until a tap (O52). On
+   the starter band the structure is drawn beside the views, labelled; Try 1 (ctx.assist = { proj:
+   true }) has the projection lines already drawn into the slot. */
 (function (PX) {
   'use strict';
 
@@ -89,6 +95,14 @@
     // The mitre line between top and end (used by the projection lines of show me).
     var m = Lo.mitre, k = Math.min(item.D + 0.4, item.D + GAP) * c;
     svg.appendChild(SV.el('path', { d: 'M' + SV.pathData([[m[0] - 0.2 * c, m[1] + 0.2 * c], [m[0] + k, m[1] - k]]).slice(1), class: 'pv-mitre' }));
+    if (lib.cleanParams(item.params).cubes === 0) { // the starter band: the structure, drawn and labelled
+      var fr = Lo.free, sg = SV.el('g', { class: 'pv-shown' });
+      sg.appendChild(isoGroup(item, { x: fr.x, y: fr.y + 16, w: fr.w, h: fr.h - 20 }));
+      sg.appendChild(SV.text(fr.x + fr.w / 2, fr.y + 8, cap('shown'), { class: 'pv-label pv-label--shown' }));
+      svg.appendChild(sg);
+      st.shown = sg;
+    } else st.shown = null;
+    if (st.assist && st.assist.proj) svg.appendChild(SV.el('path', { d: projectors(item).join(''), class: 'pv-proj pv-proj--assist' }));
     st.over = SV.el('g', { class: 'pv-over' });
     svg.appendChild(st.over);
   }
@@ -151,7 +165,9 @@
     st.verdict.hidden = true;
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
+    st.assist = ctx && ctx.assist && ctx.assist.proj ? ctx.assist : null;
     drawStem(item);
+    if (st.assist) st.caption.textContent = cap('assist', { view: item.missing });
     return timing.nextPaint();
   }
 
@@ -220,6 +236,44 @@
     return g;
   }
 
+  /* ---------- the structure turned to the missing side (v1.2) ---------- */
+  // Camera at azimuth az (degrees, from the front towards the right side) and elevation el: d toward
+  // the viewer, r right, u up (x right, y up, z towards the front, as the item's model).
+  var DEG = Math.PI / 180, ISO = { az: 45, el: 35.264 };
+  var AIM = { front: { az: 0, el: 0 }, end: { az: 90, el: 0 }, top: { az: 0, el: 90 } };
+  function cam(az, el) {
+    var a = az * DEG, e = el * DEG, sa = Math.sin(a), ca = Math.cos(a), se = Math.sin(e), ce = Math.cos(e);
+    return { d: [sa * ce, se, ca * ce], r: [ca, 0, -sa], u: [-sa * se, ce, -ca * se] };
+  }
+  function dot3(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  // The fixed frame of the turn: the free corner's centre and one scale for every angle.
+  function turnFrame(item) {
+    var fr = st.L.free, diag = Math.sqrt(item.W * item.W + item.H * item.H + item.D * item.D) * 1.08;
+    return { cx: fr.x + fr.w / 2, cy: fr.y + 16 + (fr.h - 20) / 2, k: Math.min(fr.w, fr.h - 20) / diag };
+  }
+  // The cubes seen through camera C, shaded faces far first, at opacity alpha.
+  function cubesGroup(item, C, F, alpha) {
+    var rows = item.heights, cubes = [], z, x, y, c0 = [item.W / 2, item.H / 2, item.D / 2];
+    for (z = 0; z < item.D; z++) for (x = 0; x < item.W; x++) for (y = 0; y < rows[z][x]; y++) cubes.push([x, y, z]);
+    cubes.sort(function (p, q) { return dot3([p[0] + 0.5, p[1] + 0.5, p[2] + 0.5], C.d) - dot3([q[0] + 0.5, q[1] + 0.5, q[2] + 0.5], C.d); });
+    var g = SV.el('g', { class: 'pv-turn', style: 'opacity:' + alpha.toFixed(3) });
+    function P(p) { var v = [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]]; return [F.cx + F.k * dot3(v, C.r), F.cy - F.k * dot3(v, C.u)]; }
+    var FACES = [ // normal, corners, tone
+      [[0, 1, 0], [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]], 'px-fig-top'],
+      [[1, 0, 0], [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]], 'px-fig-side'],
+      [[0, 0, 1], [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], 'px-fig-far'],
+    ];
+    cubes.forEach(function (q) {
+      FACES.forEach(function (f) {
+        if (dot3(f[0], C.d) <= 1e-6) return;
+        g.appendChild(SV.el('path', { d: SV.pathData(f[1].map(function (o) { return P([q[0] + o[0], q[1] + o[1], q[2] + o[2]]); }), true), class: 'px-fig-face ' + f[2] }));
+      });
+    });
+    return g;
+  }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function ease(t) { return t * t * (3 - 2 * t); }
+
   function focusOption(i) {
     st.opts.forEach(function (o, j) {
       if (!o) return;
@@ -242,6 +296,18 @@
     if (s.object) {
       ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
       ov.appendChild(isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
+    }
+    if (s.turn) { // { t: 0 → 1 from the corner view to the missing side, cubes: opacity }
+      var A = AIM[item.missing], F = turnFrame(item), e = ease(U.clamp(s.turn.t, 0, 1));
+      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y, width: Lo.free.w + 8, height: Lo.free.h, class: 'pv-cover' }));
+      ov.appendChild(cubesGroup(item, cam(lerp(ISO.az, A.az, e), lerp(ISO.el, A.el, e)), F, s.turn.cubes === undefined ? 1 : s.turn.cubes));
+    }
+    if (s.keyAt) { // the key's drawing at the turned structure (t 0) or in the slot (t 1), at opacity alpha
+      var kd = item.options[item.key].drawing, F2 = turnFrame(item), tt = ease(U.clamp(s.keyAt.t || 0, 0, 1));
+      var k0 = F2.k, ox0 = F2.cx - k0 * kd.w / 2, oy0 = F2.cy + k0 * kd.h / 2;
+      var kg = drawingGroup(kd, lerp(ox0, at.x, tt), lerp(oy0, at.y, tt), lerp(k0, c, tt), 'pv-landing');
+      kg.setAttribute('style', 'opacity:' + (s.keyAt.alpha === undefined ? 1 : s.keyAt.alpha).toFixed(3));
+      ov.appendChild(kg);
     }
     if (s.built) {
       var segs = keySegs(item).slice(0, s.built);
@@ -320,16 +386,23 @@
     var picked = typeof response === 'number' && response >= 0 && response < 4 && response !== key ? response : -1;
     var all = segs.length;
     function S(extra) { var o = { picked: -1 }; for (var k in extra) o[k] = extra[k]; return o; }
+    var side = { end: 'right', front: 'front', top: 'top' }[miss];
     var list = [
       { ms: 1500, caption: cap('views'), enter: function () { draw(item, S({ pointed: true })); } },
       { ms: 1100, caption: cap('slot'), enter: function () { draw(item, S({ slot: true })); } },
-      { ms: 1400 + 110 * projectors(item).length, caption: cap('project'), enter: function () { draw(item, S({ proj: 0.001 })); }, update: function (k) { draw(item, S({ proj: Math.max(0.001, k) })); } },
-      { ms: 900 + 140 * all, caption: cap('build', { view: miss }), enter: function () { draw(item, S({ proj: 1, built: 0 })); }, update: function (k) { draw(item, S({ proj: 1, built: Math.ceil(Math.min(1, k * 1.15) * all) })); } },
+      { ms: 1400 + 110 * projectors(item).length, caption: cap('project', { view: miss }), enter: function () { draw(item, S({ proj: 0.001, slot: true })); }, update: function (k) { draw(item, S({ proj: Math.max(0.001, k), slot: true })); } },
+      // 2/3: the structure turns in sight to the missing side (Keehner et al. 2008: the informative view)
+      { ms: 2600, caption: cap('turn', { view: miss, side: side }), enter: function () { draw(item, S({ proj: 1, turn: { t: 0 } })); }, update: function (k) { draw(item, S({ proj: 1, turn: { t: k } })); } },
+      // 3/3: the cubes fade to the drawing: seen edges solid, hidden ones dotted
+      { ms: 2400, caption: cap(nd ? 'fade' : 'fadeNone', { view: miss }), enter: function () { draw(item, S({ proj: 1, turn: { t: 1 }, keyAt: { t: 0, alpha: 0 } })); },
+        update: function (k) { draw(item, S({ proj: 1, turn: { t: 1, cubes: 1 - 0.8 * k }, keyAt: { t: 0, alpha: k } })); } },
+      { ms: 1500, caption: cap('lay', { view: miss }), enter: function () { draw(item, S({ proj: 1, keyAt: { t: 0 } })); }, update: function (k) { draw(item, S({ proj: 1, keyAt: { t: k } })); },
+        exit: function () { draw(item, S({ built: all })); } },
     ];
-    list.push({ ms: 2000, caption: cap('object'), enter: function () { draw(item, S({ built: all, object: true })); } });
-    // Dotted lines often decide the item: a long step, the structure in view, every dotted line marked.
+    // Dotted lines often decide the item: a long step, the structure in view, every dotted line marked
+    // (the Watch waits there for a tap: O52).
     var ndAll = nd + Object.keys(item.given).reduce(function (a, v) { return a + item.given[v].segs.filter(function (q) { return q[4] === 2; }).length; }, 0);
-    if (ndAll) list.push({ ms: 4200, caption: cap('dotted'), enter: function () { draw(item, S({ built: all, object: true, dotted: true })); } });
+    if (ndAll) list.push({ ms: 4200, caption: cap('dotted'), dotted: true, enter: function () { draw(item, S({ built: all, object: true, dotted: true })); } });
     list.push({ ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
     if (picked >= 0) {
       var why = item.options[picked].why;
@@ -380,8 +453,9 @@
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    var intro = [{ ms: 1700, caption: cap('options'), enter: function () { draw(item, { picked: -1 }); } }];
-    return play(steps(item, null).slice(0, 2).concat(intro, steps(item, null).slice(2)), ctx, { name: 'demo', caption: caption || null });
+    var intro = [{ ms: 1700, caption: cap('options'), enter: function () { draw(item, { picked: -1 }); } }], list = steps(item, null);
+    list.forEach(function (x) { if (x.dotted) x.hold = true; }); // O52: the runner waits for "Continue"
+    return play(list.slice(0, 2).concat(intro, list.slice(2)), ctx, { name: 'demo', caption: caption || null });
   }
   function unmount() {
     if (!st) return;

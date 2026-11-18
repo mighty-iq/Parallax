@@ -90,3 +90,9 @@
 
 /* The key digit (1–5) stays above the drawing in its cell. */
 .ex-patviews .px-choice-key { z-index: 1; }
+
+/* v1.2: the starter band shows the structure beside the views (labelled); Try 1's projection lines drawn
+   into the slot; show-me's turned cubes and the drawing that lands in the slot. */
+.ex-patviews .pv-label--shown { font-weight: 600; }
+.ex-patviews .pv-proj--assist { stroke-opacity: 0.55; }
+.ex-patviews .pv-landing .pv-line { stroke: var(--stim-target, #0B6A86); }

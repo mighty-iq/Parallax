@@ -21,9 +21,10 @@ C = Checks('harness_openings')
 EX, DIR, STEM = 'openings', OUT / 'openings', '.op-stage'
 DIR.mkdir(parents=True, exist_ok=True)
 CASES = {  # name: (params, seed)
-    'easy': ('features:0,edges:0,keyview:0,pose:0,foils:0', 7),
-    'side': ('features:2,edges:1,keyview:1,pose:0,foils:0', 4),
-    'lying': ('features:3,edges:1,keyview:2,pose:1,foils:1', 9),
+    'band': ('features:0,edges:0,keyview:0,pose:0,foils:0', 4),  # v1.2: the starter band
+    'easy': ('features:1,edges:0,keyview:0,pose:0,foils:0', 7),
+    'side': ('features:3,edges:1,keyview:1,pose:0,foils:0', 4),
+    'lying': ('features:4,edges:1,keyview:2,pose:1,foils:1', 9),
 }
 DONE = """() => {
     const it = __harness.item, cells = document.querySelectorAll('.hx-grid .px-choice'), wrong = !__harness.last.result.correct;

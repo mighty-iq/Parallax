@@ -22,17 +22,19 @@ C = Checks('harness_form')
 EX, DIR, STEM = 'form', OUT / 'form', '.fm-stage'
 DIR.mkdir(parents=True, exist_ok=True)
 CASES = {  # name: (params, seed)
-    'box': ('solid:0,marks:0,view:0,foil:0', 5),
-    'pyramid': ('solid:1,marks:1,view:1,foil:1', 6),
-    'half': ('solid:2,marks:2,view:2,foil:1', 8),
+    'band': ('solid:0,marks:0,view:0,foil:0', 12),  # v1.2: the starter band
+    'box': ('solid:0,marks:1,view:0,foil:0', 5),
+    'pyramid': ('solid:1,marks:2,view:1,foil:1', 6),
+    'half': ('solid:2,marks:3,view:2,foil:1', 8),
 }
 DONE = """() => {
     const it = __harness.item, cells = document.querySelectorAll('.hx-grid .px-choice'), wrong = !__harness.last.result.correct;
     const netTags = document.querySelectorAll('.fm-svg .fm-tag').length, keyTags = cells[it.key].querySelectorAll('.fm-tag').length;
     const bad = document.querySelectorAll('.fm-tag--bad').length, pk = __harness.last.response, kind = typeof pk === 'number' ? it.options[pk].kind : '';
     const edges = document.querySelectorAll('.fm-edge-hl').length;
-    const ok = wrong ? (kind === 'shape' ? cells[pk].classList.contains('ex-focus') && edges >= 2 : bad >= 1) : (netTags >= 1 && keyTags >= 1);
-    return { ok, netTags, keyTags, bad, edges, wrong, kind }; }"""
+    const fold = document.querySelector('.fm-fold'), folded = !!fold && fold.style.display !== 'none' && fold.querySelectorAll('path.px-fig-face').length >= 3;
+    const ok = wrong ? (kind === 'shape' ? cells[pk].classList.contains('ex-focus') && edges >= 2 : bad >= 1) : (folded && cells[it.key].classList.contains('ex-focus')) || (netTags >= 1 && keyTags >= 1);
+    return { ok, netTags, keyTags, bad, edges, wrong, kind, folded }; }"""
 
 
 def go(page, case, theme='light', fast=True, seed_add=0):
@@ -122,21 +124,22 @@ def normal_speed(b, cons):
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=40000)
     cap = page.locator('.hx-caption').inner_text()
     C.ok(len(cap) > 10, f'the demo plays to the end with captions ({cap!r})')
-    # The Watch item (learn.js demo) shows both kinds of wrong solid: the wrong size, with the edge that
-    # differs marked in the solid and in the pattern, and the mirror image, with its face marked; it ends
-    # back on the right solid.
-    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=8, p='solid:0,marks:0,view:0,foil:0', fast=1))
+    # The Watch item (learn.js demo, the starter band) shows both kinds of wrong solid it has: the wrong
+    # size, with the edge that differs marked in the solid and in the pattern, and the shade on a face of
+    # another shape, with that face marked; it ends back on the right solid. (The mirror image needs a
+    # half mark: Try 3 brings it with its tip and its dotted corner.)
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=5, p='solid:0,marks:0,view:0,foil:0', fast=1))
     page.wait_for_function(READY, timeout=60000)
-    w = page.evaluate("""() => { const it = __harness.item, L = PX.ex.learn('form'), list = PX.ex.view('form').demoSteps(it), out = {};
+    w = page.evaluate("""() => { const it = __harness.item, list = PX.ex.view('form').demoSteps(it), out = {};
         list.forEach((s, i) => { s.enter(); const t = s.caption || '';
           if (t.indexOf('marked edge') >= 0) out.edge = document.querySelectorAll('.fm-edge-hl').length;
-          if (/mirror image/.test(t)) out.mirror = document.querySelectorAll('.fm-tag--bad').length; });
+          if (/cannot look like that/.test(t)) out.marks = document.querySelectorAll('.fm-tag--bad').length; });
         const last = list[list.length - 1]; last.enter();
         const cells = document.querySelectorAll('.hx-grid .px-choice');
-        return { n: list.length, edge: out.edge || 0, mirror: out.mirror || 0, endsOnKey: cells[it.key].classList.contains('ex-focus') }; }""")
-    C.ok(w['edge'] >= 2 and w['mirror'] >= 1 and w['endsOnKey'], f'the Watch shows a wrong-size solid (edge marked in solid and pattern) and a mirror image, then ends on the answer ({w})')
+        return { n: list.length, edge: out.edge || 0, marks: out.marks || 0, endsOnKey: cells[it.key].classList.contains('ex-focus') }; }""")
+    C.ok(w['edge'] >= 2 and w['marks'] >= 1 and w['endsOnKey'], f'the Watch shows a wrong-size solid (edge marked in solid and pattern) and a shade on the wrong face, then ends on the answer ({w})')
     page.screenshot(path=str(DIR / 'form_demo_end.png'))
-    for name, pat in (('wrongsize', 'marked edge'), ('mirror', 'mirror image')):
+    for name, pat in (('wrongsize', 'marked edge'), ('marks', 'cannot look like that')):
         page.evaluate("""(pat) => { const list = PX.ex.view('form').demoSteps(__harness.item), s = list.find((x) => (x.caption || '').indexOf(pat) >= 0); if (s) s.enter(); }""", pat)
         page.screenshot(path=str(DIR / f'form_demo_{name}.png'))
     ctx.close()

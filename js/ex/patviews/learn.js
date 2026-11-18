@@ -17,21 +17,34 @@
       { id: 'blocks', label: 'The structure', text: 'Unit cubes on a grid; every cube stands on the ground or on another cube. Nothing hangs in the air.' },
       { id: 'answer', label: 'Answer', text: 'Four drawings of the missing view: exactly one fits both given views. Tap it or press its key (1–4).' },
     ],
-    // The easiest level (4–5 cubes, 3 × 3 grid, end view missing, outline foils).
-    demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, seed: 11, kind: 'end' }],
-    // Easiest first; each view is missing once; the item that only dotted lines decide comes last,
-    // after the Watch's dotted-line step and with the dotted-line tip.
+    // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.7): the rules card first, the
+    // Watch at the starter band (the structure drawn beside the views, no dotted line in the answer, no
+    // foil that only a full search rules out), the card "Line it up" before Try 1, Try 1 with the
+    // projection lines already drawn into the slot; Try 3 hides the structure and brings a dotted line
+    // (with its tip), Try 4 a foil that only building the structure rules out.
+    rules: [
+      'Top view upper left, front view lower left, end view lower right, all at one scale.',
+      'The end view looks at the right side of the structure, so the front is on its left.',
+      'Solid lines are edges you can see; dotted lines are edges hidden behind nearer cubes.',
+      'Every cube stands on the ground or on another cube: nothing hangs in the air.',
+    ],
+    strategyFirst: 'analytic',
+    minutes: 2,
+    demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, seed: 13, kind: 'end' }],
     practice: [
-      { cubes: 0, grid: 0, missing: 0, foil: 0 },
-      { cubes: 0, grid: 0, missing: 1, foil: 0 },
-      { cubes: 0, grid: 0, missing: 2, foil: 0 },
-      { cubes: 0, grid: 0, missing: 0, foil: 2 },
+      { params: { cubes: 0, grid: 0, missing: 0, foil: 0 }, assist: { proj: true }, seed: 100 },
+      { params: { cubes: 0, grid: 0, missing: 1, foil: 0 }, seed: 202 },
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0 }, tip: 'hidden', seed: 300 },
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0 }, tip: 'search', seed: 401 },
     ],
     tips: [
+      { id: 'shown', when: { dim: 'cubes', levels: [0] }, text: 'Starter items: the structure is drawn beside the views. Look at it from the missing side, then check the lines against the given views.' },
+      { id: 'hidden', when: { dim: 'cubes', levels: [1] }, text: 'From here the structure is not drawn: build it from the two views. A dotted line is an edge hidden behind nearer cubes.' },
       { id: 'end', when: { dim: 'missing', levels: [0] }, text: 'Missing end view: its height comes from the front view, its width from the depth of the top view. The front is on its left.' },
       { id: 'front', when: { dim: 'missing', levels: [1] }, text: 'Missing front view: its width comes from the top view, its height from the end view. Lines line up straight down from the top view.' },
       { id: 'top', when: { dim: 'missing', levels: [2] }, text: 'Missing top view: picture the roofs. Columns line up with the front view; the end view tells how deep each step goes.' },
       { id: 'outline', when: { dim: 'foil', levels: [0] }, text: 'Check the outline first: every edge of the missing view must line up with the given views.' },
+      { id: 'search', when: { dim: 'foil', levels: [0] }, text: 'Some drawings line up with every line and still fit no stack of cubes: build the structure from the two views and look from the missing side.' },
       { id: 'lines', when: { dim: 'foil', levels: [1] }, text: 'Same outlines now. Follow one line across the views: where does it start, and which cube makes it?' },
       { id: 'dashes', when: { dim: 'foil', levels: [2] }, text: 'Watch solid against dotted: an edge is dotted only when something nearer covers it all the way.' },
     ],
@@ -49,14 +62,16 @@
         when: 'Quick for small structures.',
       },
       {
-        id: 'analytic', title: 'Line up and eliminate',
-        text: 'Every line of the missing view lines up with lines in the given views: check them one by one.',
+        // The analytic card in the format's own terms (note D2 §3.7; prep sources, R3 §3.2; drafting
+        // practice): shown before Try 1 and as "How to solve"; show-me carries out its steps in its words.
+        id: 'analytic', title: 'Line it up',
+        text: 'Every line of the missing view lines up with lines in the given views: use them to build it.',
         steps: [
-          'Pick one distinctive feature, such as a step or a notch, and find it in both given views.',
-          'Drop every option whose lines do not line up with it.',
-          'Compare what is left line by line; check solid against dotted last.',
+          'Outline first: the width and height come from the given views (for the end view: the height from the front, the width from the top\'s depth).',
+          'Every line must line up with a line or corner in a given view; drop the drawings that break this.',
+          'Dotted last: a line is dotted only where nearer cubes hide that edge.',
         ],
-        when: 'Steady when the outlines all fit.',
+        when: 'From the first item on; steady when the outlines all fit.',
       },
       {
         id: 'switch', title: 'When to switch',
@@ -72,11 +87,17 @@
       views: 'Two views are given; the third slot is empty.',
       slot: 'The missing view goes here, at the same scale.',
       options: 'Four drawings: exactly one fits both views.',
-      project: 'Every line of the missing view lines up with lines in the given views.',
+      project: '1/3 · Outline first: the {view} view takes its width and height from the given views, along these lines.',
+      turn: '2/3 · Line it up: turned to its {side} side, every edge of the structure lines up with the given views.',
+      fade: '3/3 · Dotted last: edges you can see are solid; edges behind nearer cubes are dotted.',
+      fadeNone: '3/3 · Dotted last: from this side every edge can be seen, so every line is solid.',
+      lay: 'That is the {view} view: it goes in the slot.',
       build: 'Line by line, the {view} view appears.',
       dotted: 'Dotted lines are edges hidden behind nearer cubes. Check every one: they often decide which drawing fits.',
       object: 'One structure with these views.',
       land: 'That is drawing {n}.',
+      shown: 'The structure',
+      assist: 'The lines from the given views are drawn into the slot for you. Which drawing fits them?',
       whyHull: 'Drawing {n}: its outline cannot sit with the two given outlines.',
       whyAlign: 'Drawing {n}: its lines do not line up with the lines of the given views.',
       whySearch: 'Drawing {n}: no stack of cubes gives the two views and this one.',
