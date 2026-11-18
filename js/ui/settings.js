@@ -4,6 +4,9 @@
    Data, all through PX.core.store: Back up now (JSON; sets settings.lastBackup), Export trials
    (CSV), Import (a file or pasted text; undoable once), Undo, Reset (settings stay; undoable
    once). Every export also offers Copy, because downloads are blocked in sandboxed previews.
+   v1.2: gentle motion (Homing and Reckon), Sharing and privacy (the nickname, the only name a card
+   or an export may carry; device details in exports, off by default) and Playtest mode (its
+   switch, Copy playtest report, Clear the log).
    Test hooks: [data-setting="<key>"] on each control, [data-action="…"] on each data button. */
 (function (PX) {
   'use strict';
@@ -93,6 +96,81 @@
       hint: 'Reduce shortens animations around the exercises. Moving stimuli, such as the spheres in Track, still move.',
       onChange: set('reducedMotion'),
     }));
+    // v1.2 (CONTRACT-v1.2 F): the gentle motion profile of the walking exercises
+    if (s.gentleMotion !== undefined) {
+      p.body.appendChild(K.segmented({
+        key: 'gentleMotion', legend: 'Gentle motion in Homing and Reckon', value: s.gentleMotion,
+        options: [{ value: 'auto', label: 'Follow Motion' }, { value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
+        hint: 'Slower walks and turns, smooth starts and stops, and a fixed dot to rest your eyes on, for anyone who feels queasy watching the walks. Follow Motion turns it on when Motion is set to reduce (or your device asks for it).',
+        onChange: set('gentleMotion'),
+      }));
+    }
+    return p.el;
+  }
+
+  /* ---------- v1.2: what exports carry (CONTRACT-v1.2 I; the owner's standing rules, Privacy) ---------- */
+
+  function privacy(s) {
+    var K = PX.ui.kit, store = PX.core.store;
+    var p = K.panel({ title: 'Sharing and privacy', className: 'px-settings-section' });
+    p.el.setAttribute('data-section', 'privacy');
+    var id = 'px-nickname', hintId = id + '-hint';
+    var input = h('input.px-input.px-nickname', {
+      id: id, type: 'text', maxlength: '24', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false',
+      placeholder: 'No nickname', 'aria-describedby': hintId,
+    });
+    input.value = typeof s.nickname === 'string' ? s.nickname : '';
+    input.setAttribute('data-setting-input', 'nickname');
+    var msg = h('span.px-field-hint.px-nickname-msg', { role: 'status', 'aria-live': 'polite' });
+    function commit() {
+      var v = String(input.value || '').replace(/\s+/g, ' ').trim().slice(0, 24);
+      if (v === (store.state.settings.nickname || '')) return;
+      set('nickname')(v);
+      msg.textContent = v ? 'Saved: your cards show “' + v + '”.' : 'Saved: no nickname.';
+    }
+    input.addEventListener('change', commit);
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+    p.body.appendChild(h('div.px-setting', { 'data-setting': 'nickname' },
+      h('label.px-setting-label', { for: id }, 'Nickname'),
+      input,
+      h('p.px-field-hint', { id: hintId }, 'Up to 24 characters, shown on your share cards and, only when you tick it there, in the Lab’s community export. Leave it empty to stay anonymous: Parallax never puts any other name in a card or a file.'),
+      msg));
+    p.body.appendChild(K.toggle({
+      key: 'exportDevice', label: 'Device details in exports', checked: s.exportDevice === true,
+      hint: 'Adds this browser’s name and version, its language, your time zone and the screen size to the Lab’s community export, and keeps the playtest log in backups. Off by default: exports then carry none of these.',
+      onChange: set('exportDevice'),
+    }));
+    return p.el;
+  }
+
+  /* ---------- v1.2: playtest mode (js/ui/playtest.js) ---------- */
+
+  function playtestPanel() {
+    var K = PX.ui.kit, T = PX.ui.playtest;
+    if (!T) return null;
+    var p = K.panel({ title: 'Playtest mode', className: 'px-settings-section', aside: T.BUILD === 'test' ? 'test build' : null });
+    p.el.setAttribute('data-section', 'playtest');
+    var count = h('p.px-field-hint.px-playtest-count');
+    function showCount() {
+      var c = T.counts();
+      count.textContent = c.ratings + (c.ratings === 1 ? ' rating, ' : ' ratings, ') + c.notes + (c.notes === 1 ? ' note, ' : ' notes, ') + c.errors + (c.errors === 1 ? ' error' : ' errors') + ' and ' + c.visits + (c.visits === 1 ? ' visit' : ' visits') + ' in the log.';
+    }
+    p.body.appendChild(K.toggle({
+      key: 'playtest', label: 'Playtest mode', checked: T.on(),
+      hint: 'For testing a build: three taps after each exercise (fun, clarity, difficulty), a Note button on every screen, and a report to copy with your ratings and notes, this device, frame timings, errors, your results, time played and where you stopped. ' +
+        (T.BUILD === 'test' ? 'On by default in this test build.' : 'Off by default.') + ' The log stays on this device: it is never in the community export, and in backups only with device details on.',
+      onChange: function (v) { T.set(v); showCount(); },
+    }));
+    var copy = ui.button('Copy playtest report', { kind: 'primary', onClick: function () { T.copyReport(); } });
+    copy.setAttribute('data-action', 'playtest-copy');
+    var clear = ui.button('Clear the playtest log', { kind: 'secondary', onClick: function () {
+      ui.confirm('This removes the ratings, notes, errors and timings of playtest mode. Your progress stays.', { title: 'Clear the playtest log?', ok: 'Clear the log', cancel: 'Keep it' })
+        .then(function (yes) { if (yes) { T.clear(); showCount(); ui.toast('The playtest log is empty.', { kind: 'ok' }); } });
+    } });
+    clear.setAttribute('data-action', 'playtest-clear');
+    showCount();
+    p.body.appendChild(h('div.px-setting', h('div.px-data-row', copy, clear), count));
     return p.el;
   }
 
@@ -225,7 +303,7 @@
       appearance(s), training(s),
       typeof patFocusSection === 'function' ? patFocusSection(s) : null, // B7's (v1.1)
       typeof testSoonSection === 'function' ? testSoonSection(s) : null, // B7's (v1.1)
-      soundKeys(s), dataPanel(),
+      soundKeys(s), privacy(s), dataPanel(), playtestPanel(),
       h('p.px-settings-foot', 'Parallax ', h('span.px-num', 'v' + PX.version), '. Your data stays in this browser; nothing is sent anywhere. ',
         ui.button('About Parallax', { kind: 'ghost', small: true, go: 'about' }))));
   }

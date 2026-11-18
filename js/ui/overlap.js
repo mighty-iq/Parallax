@@ -58,6 +58,11 @@
   NEAR.forEach(function (x) { NEAR_BY[x.id] = x; NOTES[x.id] = x.note; });
   var PAT_NOTE = 'this format follows one of the six parts of the Perceptual Ability Test in the Dental Admission Test, on purpose. Practice on a format usually raises scores on that format; Parallax has not measured its effect on DAT scores.';
 
+  // Decision D3 (DECISIONS 17 Nov): someone who keeps an analogy test as an outside yardstick takes it
+  // before the Spatial Check's word task has shown them any analogies. The helper and About say it.
+  var ANALOGY_SAY = 'If an analogy test is your own yardstick, take it before your first Spatial Check.';
+  var ANALOGY = 'Analogy tests (“A is to B as C is to …”) are not trained here; the Spatial Check’s word task uses that format for a few minutes per check, without feedback. ' + ANALOGY_SAY;
+
   /* ---------- what a test can contain (the helper's ticks) ---------- */
   // same: practice here is practice with that format (near: NEAR or DAT-style only, which match()
   // enforces); related: a small or unknown effect; untrained: what Parallax says when nothing here
@@ -76,7 +81,7 @@
     { id: 'tapping', label: 'Remembering positions in order (block tapping)', same: ['span'], related: [] },
     { id: 'knots', label: 'Whether a rope forms a knot when pulled', same: ['knots'], related: [] },
     { id: 'analogies', label: 'Word analogies (“A is to B as C is to …”)', same: [], related: [],
-      untrained: 'Not trained here. Only the Spatial Check’s word task uses this format, for a few minutes per check and without feedback.' },
+      untrained: 'Not trained here. Only the Spatial Check’s word task uses this format, for a few minutes per check and without feedback. ' + ANALOGY_SAY },
     { id: 'matrices', label: 'Figure analogies or matrices', same: [], related: ['rotate', 'spin', 'hidden'],
       untrained: 'No exercise here teaches their rules. Turning, mirroring and hidden shapes appear inside some of them.' },
     // Fold is near for the PAT's paper folding (R3 §5.2 "High: Fold is a superset"; R4 §6.2 near)
@@ -180,12 +185,28 @@
   }
   function hygieneDefault() { return { tests: [], focus: [] }; }
 
+  // The community export (v1.2; CONTRACT-v1.2 I): a noted test keeps its kinds, what it paused and
+  // how many days after the note it falls, never its calendar day; focus switches stay epoch seconds.
+  function pooledHygiene(v) {
+    var h = fixHygiene(v);
+    if (!h) return undefined;
+    return {
+      tests: h.tests.map(function (t) {
+        var days = null;
+        try { if (t.date) days = PX.util.dayNum(t.date) - PX.util.dayNum(PX.util.dayKey(t.at)); } catch (e) { days = null; }
+        return { at: t.at, inDays: typeof days === 'number' && isFinite(days) ? days : null, kinds: t.kinds, paused: t.paused };
+      }),
+      focus: h.focus,
+    };
+  }
+
   var registered = { patFocus: false, testPause: false, hygiene: false };
   if (store) {
     try { store.setting('patFocus', { def: false, type: 'bool' }); registered.patFocus = true; } catch (e) { warn('patFocus', e); }
     // testPause holds an object or null: it needs store.js's JSON setting type (REQUESTS-v1.1).
     try { store.setting('testPause', { def: null, type: 'json', fix: fixPause }); registered.testPause = true; } catch (e) { warn('testPause', e); }
     try { store.field('hygiene', hygieneDefault, fixHygiene); registered.hygiene = true; } catch (e) { warn('hygiene', e); }
+    try { if (typeof store.exportRule === 'function') store.exportRule('hygiene', { pooled: pooledHygiene }); } catch (e) { warn('hygiene export rule', e); }
   }
   function warn(what, e) { if (typeof console !== 'undefined') console.warn('PX.ui.overlap: ' + what + ' not registered: ' + (e && e.message)); }
 
@@ -246,7 +267,7 @@
     noteFor: noteFor, noteNode: noteNode, patIds: patIds, isPat: isPat, near: near, shared: shared, match: match,
     setFocus: setFocus, pause: pause, clearPause: clearPause, pauseState: pauseState,
     noteTest: noteTest, removeTest: removeTest, today: today,
-    fix: { pause: fixPause, hygiene: fixHygiene },
+    fix: { pause: fixPause, hygiene: fixHygiene }, pooled: { hygiene: pooledHygiene }, ANALOGY: ANALOGY,
     kind: function (id) { return KIND_BY[id] || null; },
   };
 })(window.PX);

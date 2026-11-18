@@ -732,7 +732,7 @@
       dl.setAttribute('data-download', '');
       dl.setAttribute('data-autofocus', '');
       dl.addEventListener('click', function () {
-        if (download(o.text, o.filename, o.type)) {
+        if (download(field.textarea.value, o.filename, o.type)) { // the text as shown (a dialog may update it)
           status.textContent = 'Downloading ' + o.filename + '. Check your downloads folder.';
           success('download');
         } else status.textContent = 'The download was refused here. Copy the text below instead.';
