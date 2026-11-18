@@ -772,6 +772,7 @@
   PX.ex.define({
     id: 'mechanisms', version: 1, code: 'PR-3', name: 'Mechanisms', short: 'Mechanisms',
     abilities: ['MA'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 3,
+    format: 'mechanisms:gears-belts-pulleys', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
     dims: [
       { key: 'gears', label: 'Axles on the route', levels: PATH, step: 0.35 },
       { key: 'structure', label: 'Structure', levels: STRUCT, step: 0.75 },

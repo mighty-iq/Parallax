@@ -543,6 +543,7 @@
   PX.ex.define({
     id: 'wordlinks', version: 1, code: 'PR-0', name: 'Word Links', short: 'Words',
     abilities: ['VB'], cell: null, role: 'probe', answer: 'choice', nOptions: 4,
+    format: 'wordlinks:word-analogy', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
     dims: [
       { key: 'relation', label: 'Relation', levels: TIERS, step: 0.8 },
       { key: 'words', label: 'Words', levels: WORDS, step: 0.6 },

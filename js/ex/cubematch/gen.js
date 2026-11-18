@@ -408,6 +408,7 @@
   PX.ex.define({
     id: 'cubematch', version: 1, code: 'PR-1', name: 'Cube Match', short: 'Cube Match',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'yesno',
+    format: 'cubematch:symbol-cubes-same-different', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
     // Hand-set item model (DJ, no pilot yet): base + Σ step × level, 4.2 logits wide.
     dims: [
       { key: 'rotation', label: 'Rotation', levels: ['spin, 3 faces shared', 'quarter turn, 2 shared', 'edge flip, 2 shared', 'two-step turn, 1 shared'], step: 0.7 },
