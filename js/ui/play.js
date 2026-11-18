@@ -95,6 +95,9 @@
   function tourRec() { var r = rec(); if (!isObj(r.tour)) r.tour = { done: false, seen: {} }; if (!isObj(r.tour.seen)) r.tour.seen = {}; return r.tour; }
   function wtgSeen(exId) { return tourRec().seen[exId] === true; }
   function markWtg(exId) { var t = tourRec(); if (t.seen[exId] !== true) { t.seen[exId] = true; save(); } }
+  // Watch demos wait for a tap at each caption; Auto-play (the player's choice, kept) plays them at the timed pace
+  function autoplay() { return uiRec().autoplay === true; }
+  function setAutoplay(on) { uiRec().autoplay = !!on; save(); }
   function counter(name, exId) { var u = uiRec(); if (!isObj(u[name])) u[name] = {}; return u[name][exId] || 0; }
   function bump(name, exId) { var u = uiRec(); if (!isObj(u[name])) u[name] = {}; u[name][exId] = (u[name][exId] || 0) + 1; }
   function tipsShown(exId) { var u = uiRec(); if (!isObj(u.tips)) u.tips = {}; if (!Array.isArray(u.tips[exId])) u.tips[exId] = []; return u.tips[exId]; }
@@ -152,6 +155,14 @@
   }
   function fmtRt(ms) { return U.fmtSecs(ms); } // the one answer-time format (v1.2, O5)
   // The level as every screen names it (v1.2, note D2 §3.0 B3; CONTRACT-v1.2 C).
+  // Shorter forms of a session's title-row meta, for a narrow row: "Train · 19 min left", then
+  // "19 min left"; "Train · 3 of 12", then "3 of 12".
+  function shortMeta(t) {
+    var a = String(t || '').replace(/ · item (\d)/, ' · $1').replace(/\babout (\d)/, '$1').replace(/less than 1 min/, 'under 1 min');
+    var out = a !== t ? [a] : [], parts = a.split(' · ');
+    if (parts.length > 1) out.push(parts[parts.length - 1]);
+    return out;
+  }
   function levelText(lv) {
     var n = isObj(lv) ? lv.level : lv;
     if (!isNum(n)) return 'level –';
@@ -220,11 +231,34 @@
         // A Watch demo plays slowly: at least DEMO_MS in all (PLAN §8), unless motion is reduced.
         var total = steps.reduce(function (a, st) { return a + Math.max(0, (st && st.ms) || 0); }, 0);
         if (P.demoing && !FAST && !rm && total > 0 && total < DEMO_MS) scale = DEMO_MS / total;
-        // ...and every caption of a Watch demo stays up at least DEMO_CAPTION_MS (RV-play-dat: about
-        // 1.7 s a caption was too fast to read): a hold at the end of the caption's last step, after
-        // its motion, also with reduced motion (reading is not motion). Show-me keeps its pace.
+        // v1.2 (fresh-player tests, three of four Angles testers missed a caption): a Watch caption
+        // waits for a tap. Groups: a captioned step and the steps after it up to the next caption.
+        // A group ends with a wait for Next (or a tap on the figure), unless it moves (a step with
+        // motion: true, or one that animates in a view that moves on its own: Reckon, Homing,
+        // Track) and the group after it moves too: during motion the captions keep the timed pace,
+        // and the motion ends with a Next. Auto-play (rec.ui.autoplay) brings back the timed pace
+        // everywhere. Show-me after an answer keeps its pace; fast mode never waits.
+        var demo = !!P.demoing && !FAST;
+        var moving = !!(P.view && P.view.motion === true) || !!(P.def && P.def.practice === 'attention');
+        var group = [], g = -1;
+        steps.forEach(function (st, a) { if (a === 0 || (st && st.caption)) g++; group.push(g); });
+        var gMove = [];
+        steps.forEach(function (st, a) {
+          var m = st && (typeof st.motion === 'boolean' ? st.motion : moving && typeof st.update === 'function');
+          if (m) gMove[group[a]] = true;
+        });
+        function lastOf(a) { return a + 1 >= steps.length || group[a + 1] !== group[a]; }
+        function tapMode() { return demo && !autoplay(); }
+        function waitsAt(a) {
+          if (!tapMode() || !lastOf(a)) return false;
+          var gg = group[a];
+          return !gMove[gg] || a + 1 >= steps.length || !gMove[gg + 1];
+        }
+        // ...and with the timed pace every caption of a Watch demo stays up at least DEMO_CAPTION_MS
+        // (RV-play-dat: about 1.7 s a caption was too fast to read): a hold at the end of the
+        // caption's last step, after its motion, also with reduced motion (reading is not motion).
         var holds = steps.map(function () { return 0; });
-        if (P.demoing && !FAST) {
+        if (demo) {
           for (var a = 0; a < steps.length; a++) {
             if (!steps[a] || !steps[a].caption) continue;
             var b = a, sum = 0;
@@ -232,6 +266,7 @@
             if (sum < DEMO_CAPTION_MS) holds[b - 1] += DEMO_CAPTION_MS - sum;
           }
         }
+        function hold(a) { return tapMode() && !gMove[group[a]] ? 0 : holds[a]; } // a tap ends a still caption
         // A demo plays before any answer, when the feedback area is hidden: its controls show anyway.
         var fbHidden = P.el.feedback.hidden;
         if (fbHidden) { P.el.feedback.hidden = false; P.el.actions.hidden = true; }
@@ -246,7 +281,20 @@
           safe(s.enter); safe(s.update, 0);
         }
         function finish() { var s = steps[i]; safe(s.update, 1); safe(s.exit); }
-        function label(on) { P.el.pPause.firstChild.textContent = waiting ? 'Continue' : on ? 'Resume' : 'Pause'; }
+        function label() {
+          var tap = tapMode();
+          P.el.pPause.firstChild.textContent = waiting && !tap ? 'Continue' : paused && !waiting ? 'Resume' : 'Pause';
+          P.el.pPause.disabled = !!(tap && waiting); // nothing moves while a caption waits
+          P.el.pNext.hidden = !demo; P.el.pStep.hidden = demo;
+          P.el.pNext.classList.toggle('is-waiting', !!waiting);
+          P.el.pAuto.hidden = !demo;
+          P.el.pAuto.setAttribute('aria-pressed', autoplay() ? 'true' : 'false');
+          P.el.player.toggleAttribute('data-waiting', !!waiting);
+        }
+        function wait() {
+          waited = i; waiting = true; paused = true; label();
+          try { P.el[tapMode() ? 'pNext' : 'pPause'].focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+        }
         function end() {
           if (done) return;
           done = true;
@@ -256,7 +304,8 @@
           cur = null;
           P.el.player.hidden = true;
           if (fbHidden) { P.el.actions.hidden = false; if (prev !== 'reveal' && prev !== 'showme') P.el.feedback.hidden = true; }
-          label(false);
+          waiting = false; paused = false; label();
+          P.el.pNext.hidden = true; P.el.pAuto.hidden = true; P.el.pStep.hidden = false;
           if (P.state === 'showme') P.setState(prev === 'showme' ? 'reveal' : prev);
           resolve();
         }
@@ -268,28 +317,58 @@
           if (rm && k < 1) { var nk = Math.max(1, Math.round(d / 400)); k = Math.floor(k * nk) / nk; }
           if (steps[i].update && k !== lastK) safe(steps[i].update, k);
           lastK = k;
-          if (t >= d + holds[i]) {
-            // a step that waits for a tap (O52): hold here once, until Continue
-            if (steps[i].hold && !FAST && waited !== i) {
-              waited = i; waiting = true; paused = true; label(true);
-              try { P.el.pPause.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
-              return true;
-            }
+          if (t >= d + hold(i)) {
+            // a step that waits for a tap (O52 hold, or the end of a caption in a Watch demo)
+            if (((steps[i].hold && !FAST) || waitsAt(i)) && waited !== i) { wait(); return true; }
             finish();
             if (i + 1 < steps.length) enter(i + 1); else { end(); return false; }
           }
           return true;
         }
+        // Next: go on from a wait; while a caption's steps still play, finish them and wait there
+        // (a tap never skips a caption unseen); in motion, finish the motion and wait.
+        function next() {
+          if (done) return;
+          if (waiting) { waiting = false; paused = false; label(); return; }
+          paused = false;
+          while (!done) {
+            if ((steps[i].hold && !FAST) || waitsAt(i)) {
+              if (lastK !== 1) { safe(steps[i].update, 1); lastK = 1; }
+              t = dur() + hold(i);
+              wait();
+              return;
+            }
+            finish();
+            if (i + 1 < steps.length) enter(i + 1); else end();
+          }
+        }
         cur = {
-          pause: function () { if (waiting) { waiting = false; paused = false; label(false); return; } paused = !paused; label(paused); },
-          step: function () { finish(); if (i + 1 < steps.length) { enter(i + 1); paused = true; label(true); } else end(); },
-          replay: function () { paused = false; waited = -1; enter(0); label(false); },
+          pause: function () {
+            if (waiting) { if (tapMode()) return; waiting = false; paused = false; label(); return; }
+            paused = !paused; label();
+          },
+          step: function () {
+            if (tapMode()) { next(); return; }
+            finish(); if (i + 1 < steps.length) { enter(i + 1); paused = true; label(); } else end();
+          },
+          next: next,
+          // a tap on the figure: Next, while a caption waits
+          tap: function () { if (waiting && tapMode()) next(); },
+          replay: function () { paused = false; waited = -1; enter(0); label(); },
           close: function () { while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
+          auto: function () {
+            setAutoplay(!autoplay());
+            if (!tapMode() && waiting && !steps[i].hold) { waiting = false; paused = false; } // the timed pace goes on from here
+            label();
+          },
+          isPaused: function () { return paused; },
+          tapMode: tapMode,
         };
         P.played.started++;
         P.played.plannedMs = Math.round(steps.reduce(function (a, st, k) { return a + Math.max(1, (st.ms || 0) * scale) + holds[k]; }, 0));
         if (!steps.length) { end(); return; }
         if (prev !== 'showme') P.setState('showme');
+        label();
         P.el.player.hidden = false;
         enter(0);
         // Phones pin the caption and the show-me bar to the bottom (css/play.css): keep the stage
@@ -300,6 +379,8 @@
     }
     play.cmd = cmd;
     play.running = function () { return !!cur; };
+    play.paused = function () { return !!(cur && cur.isPaused()); };
+    play.tapMode = function () { return !!(cur && cur.tapMode()); };
     return play;
   }
 
@@ -364,8 +445,25 @@
     el.guide = h('div.pl-guide', { id: P.guideId }, el.goal, el.tip);
     el.notice = h('div.pl-notice-slot');
     el.host = h('div.pl-host');
+    // a tap on the figure is Next while a Watch caption waits for one
+    el.host.addEventListener('click', function () { if (P.state === 'showme' && runner.tapMode()) runner.cmd('tap'); });
     el.grid = h('div.pl-grid');
-    el.grid.addEventListener('pointerdown', function (e) { P.lastPointer = e.pointerType || 'mouse'; }, true);
+    // A tap in the gap between two answer tiles answers nothing (Angles fresh test: a tap at the middle
+    // of a 390-px phone answered with the right-hand tile). Phones move a tap that lands near a button
+    // onto it (touch adjustment, which a wider gap does not stop), so a tile's click is checked against
+    // where the finger came down: pointerdown keeps that point, the click has the moved one.
+    el.grid.addEventListener('pointerdown', function (e) {
+      P.lastPointer = e.pointerType || 'mouse';
+      // the event goes to the adjusted tile, but its coordinates are where the finger came down
+      var tile = e.target && e.target.closest ? e.target.closest('.px-choice') : null, r = tile ? tile.getBoundingClientRect() : null;
+      P.lastDown = { t: timing.now(), touch: e.pointerType === 'touch', onTile: !!(r && e.clientX >= r.left - 0.5 && e.clientX <= r.right + 0.5 && e.clientY >= r.top - 0.5 && e.clientY <= r.bottom + 0.5) };
+    }, true);
+    el.grid.addEventListener('click', function (e) {
+      var d = P.lastDown;
+      if (!d || !d.touch || d.onTile || timing.now() - d.t > 1500) return;
+      if (!(e.target && e.target.closest && e.target.closest('.px-choice'))) return;
+      e.preventDefault(); e.stopPropagation(); // the finger was in the gap
+    }, true);
     el.confirm = ui.button('Confirm', { kind: 'primary', key: 'Enter', onClick: function () { confirmMulti('pointer'); } });
     el.confirm.setAttribute('data-confirm', '');
     el.confirmText = h('span.pl-confirm-text');
@@ -400,8 +498,16 @@
     el.pStep = ui.button('Step', { kind: 'secondary', small: true, key: '→', onClick: function () { runner.cmd('step'); } });
     el.pReplay = ui.button('Replay', { kind: 'secondary', small: true, key: 'r', onClick: function () { runner.cmd('replay'); } });
     el.pClose = ui.button('Close', { kind: 'ghost', small: true, key: 'Escape', onClick: function () { runner.cmd('close'); } });
+    // a Watch demo's own two: Next (each caption waits for it, or for a tap on the figure) and Auto-play
+    el.pNext = ui.button('Next', { kind: 'primary', small: true, key: 'Enter', onClick: function () { runner.cmd('next'); } });
+    el.pNext.setAttribute('data-showme-next', '');
+    el.pNext.hidden = true;
+    el.pAuto = ui.button('Auto-play', { kind: 'ghost', small: true, ariaLabel: 'Auto-play: the captions go on by themselves', onClick: function () { runner.cmd('auto'); } });
+    el.pAuto.setAttribute('data-showme-auto', '');
+    el.pAuto.setAttribute('aria-pressed', 'false');
+    el.pAuto.hidden = true;
     el.player = h('div.pl-showme', { hidden: true, role: 'group', 'aria-label': 'Show me controls' }, el.caption,
-      h('div.pl-showme-buttons', el.pPause, el.pStep, el.pReplay, el.pClose));
+      h('div.pl-showme-buttons', el.pPause, el.pStep, el.pReplay, el.pClose, el.pAuto, el.pNext));
     el.showBtn = ui.button('Show me', { kind: 'secondary', key: 's', onClick: function () { showMe(false); } });
     el.showBtn.setAttribute('data-showme', '');
     el.nextBtn = ui.button('Next', { kind: 'primary', key: 'Space', onClick: function () { goNext(); } });
@@ -889,7 +995,7 @@
     P.showMe = showMe;
     // The show-me runner from outside (Watch, Try, Go's Parts on phones: O8)
     P.showmeCmd = function (name) { runner.cmd(name); };
-    P.showmePaused = function () { return /Resume|Continue/.test(el.pPause.firstChild.textContent); };
+    P.showmePaused = function () { return runner.paused(); };
 
     // Resolves 'next', 'abort' or 'end' (End chosen on a pause between items: O4).
     function waitNext(o) {
@@ -1012,7 +1118,7 @@
     // session from the Next waiter (waitNext resolves 'end').
     function pauseFeedback() {
       var running = P.state === 'showme' && runner.running && runner.running();
-      var toggled = running && !/Resume|Continue/.test(P.el.pPause.firstChild.textContent);
+      var toggled = running && !runner.paused();
       if (toggled) runner.cmd('pause'); // freeze the show-me under the sheet
       P.fbPause = { prev: P.state, runner: toggled };
       setState('paused');
@@ -1127,7 +1233,15 @@
       } else if (text) el.label.appendChild(h('span.pl-hud-text', text));
     }
     // (aria-live: the text is replaced only when it changes, so the countdown's ticks are quiet)
-    function setMeta(text) { text = text || ''; if (el.meta.textContent !== text) el.meta.textContent = text; }
+    // The title row's meta keeps to its line (Angles fresh test: "Train · about 19 mi…" on a phone
+    // with three tools): the full text, else the first shorter form given that fits.
+    function setMeta(text, alts) {
+      var list = [text || ''].concat(Array.isArray(alts) ? alts : []);
+      for (var k = 0; k < list.length; k++) {
+        if (el.meta.textContent !== list[k]) el.meta.textContent = list[k];
+        if (k === list.length - 1 || !(el.meta.scrollWidth > el.meta.clientWidth + 1)) return;
+      }
+    }
     function setProgress(v, max) { el.bar.set(v, Math.max(1, max)); el.bar.setAttribute('aria-valuetext', Math.min(v, max) + ' of ' + max); }
     function setGoal(text) { el.goal.textContent = text || ''; el.goal.hidden = !text; syncGuide(); }
     function setTip(t) {
@@ -1187,7 +1301,7 @@
       Enter: function () {
         if (P.state === 'respond') return confirmMulti('key') ? undefined : false;
         if (P.state === 'reveal') { goNext(); return undefined; }
-        if (P.state === 'showme') return undefined; // Next waits until show me ends or is closed
+        if (P.state === 'showme') { if (runner.tapMode()) runner.cmd('next'); return undefined; } // a demo's Next; after an answer, Next waits until show me ends or is closed
         return false;
       },
       Space: function () {
@@ -1668,7 +1782,7 @@
       emit('play:screen', { screen: 'wtg-watch', mode: P.mode, exId: exId });
       var item;
       try { item = def.generate(PX.rng(demoSpec.seed >>> 0), fillParams(def, demoSpec.params)); } catch (e) { log('demo item failed', e); return Promise.resolve(); }
-      stage(0, 'Watch: one item solved slowly, with captions. You can pause, step or replay it.');
+      stage(0, 'Watch: one item solved step by step. Tap Next, or the figure, for each caption.');
       showParts(item);
       P.setMeta('Watch');
       P.setProgress(0, practice.length + 1);
@@ -1858,7 +1972,7 @@
         txt = MODE_NAMES[mode] + ' · ' + (pl.lastServed ? 'last item' : CK.fmtLeft(pl.budgetMs - act));
         P.setProgress(Math.round(Math.min(act, pl.budgetMs) / 1000), Math.round(pl.budgetMs / 1000));
         P.el.bar.setAttribute('aria-valuetext', CK.fmtMinutes(act) + ' of ' + CK.fmtMinutes(pl.budgetMs) + ' practised');
-        P.setMeta(txt);
+        P.setMeta(txt, shortMeta(txt));
         return;
       } else if (mode === 'threshold') {
         total = pl.total; done = pl.sc ? pl.sc.n : S.answered;
@@ -1867,7 +1981,7 @@
         total = Math.max(1, pl.total + Math.min(pl.extra || 0, Math.ceil(pl.total * 0.25))); done = S.answered;
         txt = MODE_NAMES[mode] + ' · item ' + Math.min(total, S.itemNo) + ' of ' + total;
       }
-      P.setMeta(txt);
+      P.setMeta(txt, shortMeta(txt));
       P.setProgress(done, total);
     }
     function hud(step, def, item) {
@@ -2736,16 +2850,27 @@
       P.destroy();
       setChrome(false);
       ui.clear(wrap);
-      wrap.appendChild(screenHead('Watch, Try, Go', (def.short || def.name) + ': ready', r === 'skipped' || r === 'end' ? 'Skipped. How to play stays in the Library.' : 'That was the tutorial; nothing was logged. The next items in a session count.'));
-      wrap.appendChild(slot);
-      var iv = invite('tutorial', { host: wrap, exId: exId }); // the tutorial's end (gap C6)
-      if (iv) wrap.appendChild(iv);
+      var name = def.short || def.name, done = r !== 'skipped' && r !== 'end';
+      // The third step is a step of its own (Angles fresh test: "Go" seemed to skip it): the
+      // stepper stays, with 3 Go current, and the screen opens at its top.
+      if (done) {
+        wrap.appendChild(h('ol.pl-wtg-steps.pl-go-steps', { 'aria-label': 'Watch, Try, Go: step 3 of 3' }, ['Watch', 'Try', 'Go'].map(function (n, i) {
+          return h('li.pl-wtg-step' + (i < 2 ? '.is-done' : '.is-current'), i === 2 ? { 'aria-current': 'step' } : null, h('span.pl-wtg-n.px-num', String(i + 1)), h('span.pl-wtg-name', n));
+        })));
+      }
+      wrap.appendChild(done
+        ? screenHead('Watch, Try, Go · step 3', 'Go: ' + name + ' for real', 'That was the tutorial; nothing was logged. In Go the items count: a session starts with easier ' + name + ' items, then follows your level.')
+        : screenHead('Watch, Try, Go', name + ': ready', 'Skipped. How to play stays in the Library.'));
       emit('play:screen', { screen: 'watch-end', mode: 'watch', exId: exId });
-      var start = ui.button('Start a session with ' + (def.short || def.name), { kind: 'primary', onClick: function () { router.go('play', { mode: 'train', exId: exId }, { force: true }); } });
+      var start = ui.button(done ? 'Go: start a session with ' + name : 'Start a session with ' + name, { kind: 'primary', onClick: function () { router.go('play', { mode: 'train', exId: exId }, { force: true }); } });
       start.setAttribute('data-card', 'session');
       wrap.appendChild(h('div.pl-summary-actions', start,
         ui.button('Free play', { kind: 'secondary', onClick: function () { router.go('play', { mode: 'free', exId: exId }, { force: true }); } }),
         ui.button('Back to the Library', { kind: 'ghost', go: 'library' })));
+      wrap.appendChild(slot);
+      var iv = invite('tutorial', { host: wrap, exId: exId }); // the tutorial's end (gap C6)
+      if (iv) wrap.appendChild(iv);
+      try { win.scrollTo(0, 0); } catch (e) { /* ignore */ }
       var hd = wrap.querySelector('h1');
       if (hd) { hd.setAttribute('tabindex', '-1'); try { hd.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
     });

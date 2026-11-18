@@ -834,12 +834,88 @@ def run_v12(b, C):
     ctx.close()
 
 
+def run_captions(b, C):
+    """v1.2 decision (fresh-player tests): a Watch caption waits for a tap (Next, Enter or a tap on the
+    figure); captions during motion keep the timed pace (at least 3 s) and the motion ends with a
+    Next; Auto-play brings back the timed pace. Driven on the runner with steps of known shape."""
+    tag = 'captions'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    go(page, {'mode': 'free', 'exId': 'rotate', 'params': {'angle': 0, 'axis': 0, 'cubes': 0, 'variant': 'pick'}, 'trials': 3})
+    wait_state(page, 'respond')
+    page.evaluate('PX.debug.fast(false); PX.core.store.state.ui.autoplay = false')
+    start = """(steps) => { const P = PX.ui.play.current(); P.demoing = true; window.__log = []; window.__done = false;
+      const mk = (s) => Object.assign({ ms: s.ms || 300, enter() { __log.push(s.name); } }, s.cap ? { caption: s.cap } : {},
+        s.motion !== undefined ? { motion: s.motion } : {}, s.anim ? { update() {} } : {});
+      P.ctx.play(steps.map(mk)).then(() => { __done = true; P.demoing = false; }); }"""
+    probe = """() => ({ cap: document.querySelector('.pl-caption').textContent, waiting: document.querySelector('.pl-showme').hasAttribute('data-waiting'),
+      log: __log.join(' '), done: __done, next: !document.querySelector('[data-showme-next]').hidden, step: !document.querySelector('.pl-showme-buttons .px-btn:nth-child(2)').hidden,
+      auto: document.querySelector('[data-showme-auto]').getAttribute('aria-pressed'), pause: document.querySelector('.pl-showme-buttons .px-btn').disabled })"""
+    page.evaluate(start, [{'name': 'a', 'cap': 'A'}, {'name': 'a2', 'anim': True}, {'name': 'b', 'cap': 'B', 'motion': True}, {'name': 'c', 'cap': 'C', 'motion': True}, {'name': 'd', 'cap': 'D'}])
+    page.wait_for_timeout(4200)
+    s1 = page.evaluate(probe)
+    C.ok(s1['cap'] == 'A' and s1['waiting'] and s1['log'] == 'a a2' and s1['next'] and not s1['step'] and s1['pause'], f'{tag}: a still caption waits for Next after its steps, Pause rests meanwhile ({s1})')
+    page.locator('[data-showme-next]').tap()
+    page.wait_for_timeout(1500)
+    s2 = page.evaluate(probe)
+    C.ok(s2['cap'] == 'B' and not s2['waiting'], f'{tag}: Next goes on; a caption during motion plays on its own ({s2})')
+    page.wait_for_timeout(2300)
+    s3 = page.evaluate(probe)
+    C.ok(s3['cap'] in ('B', 'C') and not s3['waiting'], f'{tag}: the motion goes on from caption to caption without a tap ({s3})')
+    page.wait_for_function('document.querySelector(".pl-showme").hasAttribute("data-waiting")', timeout=12000)
+    s4 = page.evaluate(probe)
+    C.ok(s4['cap'] == 'C' and s4['log'] == 'a a2 b c', f'{tag}: the motion ends with a wait for Next ({s4})')
+    page.locator('.pl-host').tap()
+    page.wait_for_timeout(600)
+    s5 = page.evaluate(probe)
+    C.ok(s5['cap'] == 'D' and s5['log'] == 'a a2 b c d', f'{tag}: a tap on the figure is Next while a caption waits ({s5})')
+    page.wait_for_function('document.querySelector(".pl-showme").hasAttribute("data-waiting")', timeout=8000)
+    page.keyboard.press('Enter')
+    page.wait_for_function('__done === true', timeout=5000)
+    C.ok(True, f'{tag}: Enter is Next, and the last caption ends the demo')
+    # Next while a caption's steps still play: they finish, and the caption waits (nothing skipped)
+    page.evaluate(start, [{'name': 'e', 'cap': 'E', 'ms': 4000, 'anim': True}, {'name': 'f', 'cap': 'F'}])
+    page.wait_for_timeout(500)
+    page.locator('[data-showme-next]').tap()
+    page.wait_for_timeout(300)
+    s6 = page.evaluate(probe)
+    C.ok(s6['cap'] == 'E' and s6['waiting'], f'{tag}: Next during the animation of a caption finishes it and waits there ({s6})')
+    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
+    page.wait_for_function('__done === true', timeout=5000)
+    # Auto-play: the timed pace, kept as the player's choice
+    page.evaluate(start, [{'name': 'g', 'cap': 'G'}, {'name': 'h', 'cap': 'H'}])
+    page.wait_for_timeout(500)
+    page.locator('[data-showme-auto]').tap()
+    t0 = page.evaluate('performance.now()')
+    page.wait_for_function('__done === true', timeout=12000)
+    s7 = page.evaluate(probe)
+    dt = page.evaluate('performance.now()') - t0
+    C.ok(s7['log'] == 'g h' and page.evaluate('PX.core.store.state.ui.autoplay === true'), f'{tag}: Auto-play plays the captions without taps, and is kept ({s7}, {dt:.0f} ms)')
+    page.evaluate(start, [{'name': 'i', 'cap': 'I'}, {'name': 'j', 'cap': 'J'}])
+    page.wait_for_timeout(2000)
+    s8 = page.evaluate(probe)
+    C.ok(s8['cap'] == 'I' and not s8['waiting'] and s8['auto'] == 'true', f'{tag}: with Auto-play each caption still stays at least 3 s ({s8})')
+    page.locator('[data-showme-auto]').tap()  # back to taps: the caption now waits
+    page.wait_for_timeout(1500)
+    s9 = page.evaluate(probe)
+    C.ok(s9['waiting'] and s9['auto'] == 'false' and page.evaluate('PX.core.store.state.ui.autoplay === false'), f'{tag}: Auto-play off makes the current caption wait ({s9})')
+    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()
+    page.wait_for_function('__done === true', timeout=5000)
+    # show-me after an answer keeps its own pace and its Step button
+    page.evaluate('PX.ui.play.current().demoing = false')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue
