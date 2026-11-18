@@ -475,6 +475,13 @@
   .pl-verdict[data-kind="turn"] .pl-verdict-word { font-size: var(--fs-lg); }
   .pl-verdict[data-kind="turn"] .pl-verdict-text { font-size: var(--fs-sm); }
 }
+/* a short phone (360 × 640) keeps the strip to two rows, the word and its buttons: the line above
+   the item and the title row already say what to do (fit.py: the strip covered Homing's and Reckon's
+   controls, and a worked example's figure scrolled away above it) */
+@media (max-width: 719px) and (max-height: 700px) {
+  .pl-verdict[data-kind="turn"] { grid-template-areas: "icon word word" "acts acts acts"; }
+  .pl-verdict[data-kind="turn"]:has(.pl-turn-actions) .pl-verdict-text { display: none; }
+}
 /* Watch, Try, Go's tools (Parts, Skip, End the tour) are full 44 px targets with room between
    them (rule 8; fresh-player test); the parts list's own Close button shows only on phones. */
 .pl-wtg-tools .px-btn { min-height: var(--tap); min-width: var(--tap); }

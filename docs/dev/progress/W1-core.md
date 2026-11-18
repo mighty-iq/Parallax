@@ -27,7 +27,23 @@ Owns: see docs/dev/CONTRACT-v1.2.md "File ownership". Requests: docs/dev/v1.2/re
   reveal's verdict line and tags move the tiles 30–47 px; Openings' options end under the strip at 390 × 844.
 - ENGINE.md §18; DECISIONS lines; requests answered (band-A, band-B, W1-rules, W1-central, R-reader).
 
-## Verified
+- c4fc1a2, 2eab603, c7cff8b (18:45–19:30 UTC): Try items keep the strip's room without scrolling the stepper away first
+  (fit.py at 360 × 640); a view's own board tap is not a second Next; a backup's missing private field (the playtest
+  log) is no repair on import (the long run's re-import check).
+
+- 19:50 UTC: on a short phone (≤ 700 px tall) the Your turn strip has two rows (word, buttons): fit.py 360 × 640 for
+  Homing, Reckon, Openings, Cubes, Angles, Views, Form, Missing View, Rotate 21/22 (Hole Punch's worked example
+  item is 590 px tall: request to band-B).
+
+## Verified (final round, 18:28–19:50 UTC)
+- node: full suite 4760/4760 (38 files, 18:28 code); after c7cff8b pooled, core, store, rebase, engine 1258/1258.
+- browser: play.py 138/0 (incl. run_captions 11/11; rerun 19:38 138/0), flows 73/0, clock.py full 74/0, twotabs
+  10/0, fit.py all sizes 217/5 (19:36, before the two-row strip; the 5 at 360 × 640 then re-checked); the Go screen,
+  the answer-gap taps, real Watch demos tapped through (Angles, Cubes, Views: no caption changes without a tap;
+  Reckon: only during motion, ≥ 3.02 s) by probes in /tmp; long run (100 per mode) desktop: train, path, speed,
+  threshold, free, daily, check clean but the backup re-import (fixed in c7cff8b).
+
+## Verified (earlier)
 - node: full suite (16:05 UTC code) 4741/4745: firstband cubes reach (fixed by stretch1 since), knots CPU timing
   under load (22 ms vs 20), patviews learn ×2 (band-B in progress). Latest code: core, engine*, rebase, pooled,
   firstband (all seven bands: A=0 70–80 %, reach by item 4–9), section, chimera, playtest, overlap: 1801/1801.
