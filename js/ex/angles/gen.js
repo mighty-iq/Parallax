@@ -9,7 +9,7 @@
    is true. Letters keep the angles apart from the answers, whose keys are 1–4 (RV-play-dat).
 
    Values. The four sizes sit in one size class: near-right (70–110°), acute (25–72°) or obtuse
-   (108–155°). Adjacent ranks differ by gaps; the closest gap is the level's δ (6, 5, 4, 3 or 2°)
+   (108–155°). Adjacent ranks differ by gaps; the closest gap is the level's δ (9, 6, 5, 4, 3 or 2°)
    and the other two are κ·δ with κ in [1.3, 1.6] (wider spans make tip distance and enclosed
    area follow the angle, see below). The ranks are assigned to the four cells at
    random. The smallest gap on any screen is 2°: R3 asks for a 2° floor on phones (at 90 CSS px a
@@ -45,8 +45,18 @@
    the tip distance up and the vertex-to-midpoint length down as it grows (chord² + mid² =
    2(a1² + a2²), mid² − chord² = 4·a1·a2·cos θ), and within an item the angles differ by up to
    4.2·δ, so at the widest gaps the arms work against that pull; for the same reason the widest
-   closest gap is 6°, not the 8° R3 lists. Degrees sit on a 0.1° grid, so the reveal's labels
-   (rounded to 0.1°) differ by exactly the gaps that show-me states.
+   closest gap in every size class is 6°, not the 8° R3 lists. Degrees sit on a 0.1° grid, so the
+   reveal's labels (rounded to 0.1°) differ by exactly the gaps that show-me states.
+
+   The starter band (v1.2, version 2; docs/research/v1.2/D2-first-band.md §3.2): a 9° level in
+   front of `gap`, near-right angles only. Near 90° both pulls are weakest (the tip distance grows
+   with sin(θ/2), the vertex-to-midpoint length with cos(θ/2)), so 9° items stay within rule 5
+   there, while acute and obtuse 9° items let the tip distance or the vertex-to-midpoint length
+   pick the key 44–56 % of the time (the note's spike); at 12° four near-right angles no longer fit
+   the 40° class. So at the 9° level the generator ignores `size`, and difficulty() prices those
+   combinations as near-right (the trial log keeps the params asked for; refits treat them as one).
+   The decisive outer gaps are then 11.7–14.4°, 2.2–2.7 times the 5.4° group threshold at 90°
+   (Dillon et al. 2019, via R3 §3.3).
    Pose (dim): aligned (one arm horizontal, the "laser" comparison against a shared base: easier)
    or free (any rotation). Each angle's rotation is the best-fitting of a few random tries, and the
    item's scale L is the largest that fits all four cells with a margin.
@@ -56,14 +66,14 @@
    drawn endpoints: the order from cosines (dot products and Math.sqrt, no trigonometry, so it is
    exact) and the gaps from a deterministic atan2.
 
-   Difficulty (hand-set; refit from pooled exports): gap 6 → 2° (0.55 per level: the levels are
-   roughly even steps in log δ, and discrimination scales with the gap; thresholds of 5–11° for
-   single comparisons, Dillon et al. 2019), size near-right → acute → obtuse (0.3; discrimination
-   is best near 90°, Dillon et al. 2019; Chen & Levi 1996), resolve 0 → 2 (0.45), pose aligned →
-   free (0.3). Base −2.2: the easiest item is about 90 % right at θ = 0 with 4 options; the range
-   is 4.0 logits.
+   Difficulty (hand-set; refit from pooled exports): gap 9° Δ −0.95 (the starter band, note D2
+   §3.2), 6 → 2° (0.55 per level: the levels are roughly even steps in log δ, and discrimination
+   scales with the gap; thresholds of 5–11° for single comparisons, Dillon et al. 2019), size
+   near-right → acute → obtuse (0.3; discrimination is best near 90°, Dillon et al. 2019; Chen &
+   Levi 1996), resolve 0 → 2 (0.45), pose aligned → free (0.3). Base −2.2: the pre-1.2 floor (6°)
+   is about 90 % right at θ = 0 with 4 options; the range is 4.95 logits (−3.15 … 1.8).
 
-   Item: { ex: 'angles', v: 1, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
+   Item: { ex: 'angles', v: 2, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
    cell, lettered A–D on screen), deg: [design degrees by cell], order: [cells, smallest first],
    options: [[cells, smallest first] × 4], gaps: [three adjacent gaps by rank], close: index of the
    closest gap, scale }. */
@@ -73,7 +83,11 @@
   var Mth = Math, floor = Mth.floor, abs = Mth.abs, sqrt = Mth.sqrt, isArray = Array.isArray, isInt = Number.isInteger;
   var PI = Mth.PI, DEG = PI / 180, HALF_PI = PI / 2, SQRT3 = sqrt(3);
 
-  var GAPS = [6, 5, 4, 3, 2];
+  var GAPS = [9, 6, 5, 4, 3, 2];
+  // Difficulty contributions of the gap levels: the starter level's Δ, then the 1.1 steps.
+  var GAP_AT = [-0.95, 0, 0.55, 1.1, 1.65, 2.2], BASE = -2.2, SIZE_STEP = 0.3, RESOLVE_STEP = 0.45, POSE_STEP = 0.3;
+  // The size class an item really has: near-right at the starter gap (see the header).
+  function classOf(p) { return p.gap === 0 ? 'right' : SIZES[p.size]; }
   var SIZES = ['right', 'acute', 'obtuse'];
   var RESOLVE = ['extremes', 'middle', 'closest']; // what has to be judged to find the key (see above)
   var POSES = ['aligned', 'free'];
@@ -85,6 +99,9 @@
   // area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint.
   var LONG_MIN = 0.7;
   var CUE_W = [2.5, 1.5, 1, 1, 1, 2];
+  // At the 9° starter gap the angles span up to 38°, so the vertex-to-midpoint pull is stronger:
+  // the search weighs it like the tip distance (v1.2 spike: the worst cue 34.4 % → see the test).
+  var CUE_W_BAND = [3, 1.5, 1, 1, 1, 3];
   var FOIL_SLACK = 0.75, REV_PEN = 0.3;
   var ARM_ROUNDS = 6, ARM_TRIES = 20;
   function armMin() { return ARM[0]; }
@@ -304,14 +321,14 @@
   // (weighted Kendall distance). Each cue then points at a random list, read either way round. The
   // angle itself pulls the tip distance up and the vertex-to-midpoint length down as it grows;
   // unequal arms weaken both pulls, and the search uses that.
-  function chooseArms(r, deg, lo) {
-    var tau = shuffle(r, [0, 1, 2, 3]), NC = CUE_W.length;
+  function chooseArms(r, deg, lo, band) {
+    var tau = shuffle(r, [0, 1, 2, 3]), W = band ? CUE_W_BAND : CUE_W, NC = W.length;
     var cs = deg.map(function (d) { return sincos(d); });
     var arms = [0, 1, 2, 3].map(function () { return armPair(r, lo); });
     var vals = arms.map(function (a, i) { return cueVals(a, cs[i]); });
     function costOf(v) {
       var c = 0;
-      for (var q = 0; q < NC; q++) c += CUE_W[q] * kendall(orderOf([v[0][q], v[1][q], v[2][q], v[3][q]]), tau);
+      for (var q = 0; q < NC; q++) c += W[q] * kendall(orderOf([v[0][q], v[1][q], v[2][q], v[3][q]]), tau);
       return c;
     }
     var cost = costOf(vals);
@@ -354,7 +371,7 @@
   }
 
   function build(r, p) {
-    var delta = GAPS[p.gap], cls = SIZES[p.size], res = p.resolve, aligned = POSES[p.pose] === 'aligned';
+    var delta = GAPS[p.gap], cls = classOf(p), res = p.resolve, aligned = POSES[p.pose] === 'aligned';
     var close = res === 0 ? 1 : res === 1 ? (r.next() < 0.5 ? 0 : 2) : rint(r, 3);
     var gaps = [0, 1, 2].map(function (k) {
       return k === close ? delta : rnd(delta * (KAPPA[0] + r.next() * (KAPPA[1] - KAPPA[0])), 10);
@@ -369,7 +386,7 @@
     var deg = rankOfCell.map(function (k) { return byRank[k]; });
     var foils = chooseFoils(r, res, close);
     if (!foils) return null;
-    var arms = chooseArms(r, deg, armMin(delta));
+    var arms = chooseArms(r, deg, armMin(delta), p.gap === 0);
     var poses = deg.map(function (d, i) { return choosePose(r, arms[i][0], arms[i][1], d, aligned); });
     var L = Mth.min(LMAX, Mth.min.apply(null, poses.map(function (q) { return q.f.fit; })));
     var angles = poses.map(function (q) {
@@ -381,7 +398,7 @@
     var toCells = function (o) { return o.map(function (k) { return cellOfRank[k]; }); };
     var opts = [[0, 1, 2, 3]].concat(foils).map(toCells), perm = shuffle(r, [0, 1, 2, 3]);
     return {
-      ex: 'angles', v: 1, seed: 0, params: p, key: perm.indexOf(0),
+      ex: 'angles', v: 2, seed: 0, params: p, key: perm.indexOf(0),
       angles: angles, deg: deg, order: toCells([0, 1, 2, 3]), options: perm.map(function (i) { return opts[i]; }),
       gaps: gaps, close: close, scale: rnd(L, 1e4),
     };
@@ -430,7 +447,7 @@
       && isInt(p.resolve) && p.resolve >= 0 && p.resolve < RESOLVE.length && isInt(p.pose) && p.pose >= 0 && p.pose < POSES.length)) return 'bad params';
     if (!isArray(item.angles) || item.angles.length !== 4) return 'four angles';
     for (var c = 0; c < 4; c++) { var g = item.angles[c]; if (!g || !isPt(g.v) || !isPt(g.a) || !isPt(g.b)) return 'angle ' + (c + 1) + ' leaves its cell'; }
-    var m = measure(item), delta = GAPS[p.gap], R = RANGE[SIZES[p.size]], L = item.scale, eps = 1e-4;
+    var m = measure(item), delta = GAPS[p.gap], R = RANGE[classOf(p)], L = item.scale, eps = 1e-4;
     if (!(typeof L === 'number' && L > 0 && L <= LMAX)) return 'bad scale';
     var lens = [];
     for (c = 0; c < 4; c++) {
@@ -481,18 +498,26 @@
 
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
 
+  // Custom only because the starter gap ignores the size class (priced as near-right).
+  function difficulty(params) {
+    var p = normParams(params);
+    return BASE + GAP_AT[p.gap] + (p.gap === 0 ? 0 : SIZE_STEP * p.size) + RESOLVE_STEP * p.resolve + POSE_STEP * p.pose;
+  }
+
   PX.ex.define({
-    id: 'angles', version: 1, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
+    id: 'angles', version: 2, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
     abilities: ['LE'], cell: null, role: 'train', pat: true, perDisplay: true,
     practice: 'perception', // shown as perceptual-judgement practice, not visuospatial training
     answer: 'choice', nOptions: 4,
     dims: [
-      { key: 'gap', label: 'Closest gap', levels: GAPS, step: 0.55, unit: '°' },
-      { key: 'size', label: 'Size class', levels: SIZES, step: 0.3 },
-      { key: 'resolve', label: 'Pair that decides', levels: RESOLVE, step: 0.45 },
-      { key: 'pose', label: 'Pose', levels: POSES, step: 0.3 },
+      { key: 'gap', label: 'Closest gap', levels: GAPS, step: 0.55, unit: '°', at: GAP_AT.slice() },
+      { key: 'size', label: 'Size class', levels: SIZES, step: SIZE_STEP },
+      { key: 'resolve', label: 'Pair that decides', levels: RESOLVE, step: RESOLVE_STEP },
+      { key: 'pose', label: 'Pose', levels: POSES, step: POSE_STEP },
     ],
-    base: -2.2,
+    base: BASE,
+    starter: { dim: 'gap', levels: 1 },
+    difficulty: difficulty,
     chance: 0.25,
     generate: generate,
     validate: validate,
@@ -500,7 +525,7 @@
     lib: {
       GAPS: GAPS, SIZES: SIZES, RESOLVE: RESOLVE, POSES: POSES, RANGE: RANGE, ARM: ARM, LONG_MIN: LONG_MIN,
       sincos: sincos, atan2d: atan2d, measure: measure, kendall: kendall, orderOf: orderOf, widestWrong: widestWrong,
-      norm: normParams, fallback: fallbackFor,
+      norm: normParams, fallback: fallbackFor, classOf: classOf, GAP_AT: GAP_AT,
     },
   });
 })(window.PX);

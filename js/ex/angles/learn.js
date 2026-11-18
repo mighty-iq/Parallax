@@ -18,19 +18,26 @@
       { id: 'options', label: 'Answers', text: 'Each answer lists the four letters from the smallest angle to the largest, for example C – A – D – B. Exactly one list is right.' },
       { id: 'answer', label: 'Answer', text: 'Pick a list with keys 1–4, or tap it.' },
     ],
+    // The teaching template (v1.2, docs/research/v1.2/D2-first-band.md §3.0 C, §3.2): the rules card
+    // first, the Watch at the 9° starter level, the "Extremes first" card before Try 1, Try 1 with
+    // the smallest angle marked and the lists that do not start with it greyed, then the band
+    // unaided, the pre-1.2 floor (6°), and turned angles. Angles is where teaching carries the most
+    // (D2 §3.2: the band alone reaches about 73 % for a population at the pre-1.2 floor).
     rules: [
-      'Every angle is less than a straight line (180°).',
-      'Arms of different lengths make no difference: compare the openings only.',
+      { text: 'Only the opening between the two arms counts, not how long the arms are or how the angle is turned.', fig: 'opening' },
+      { text: 'Every angle is less than a straight line (180°).', fig: 'straight' },
+      { text: 'Each answer lists the letters from the smallest angle to the largest.', fig: 'order' },
     ],
+    strategyFirst: 'analytic',
+    // Seeds fixed so the answers vary their slot (Watch 2, Try 3, 1, 4, 3) and no two lists repeat.
     demo: [
-      { params: { gap: 0, size: 0, resolve: 0, pose: 0 }, seed: 5, kind: 'easy' },
+      { params: { gap: 0, size: 0, resolve: 0, pose: 0 }, seed: 16, kind: 'easy' },
     ],
     practice: [
-      { gap: 0, size: 0, resolve: 0, pose: 0 },
-      { gap: 0, size: 0, resolve: 0, pose: 1 },
-      { gap: 1, size: 1, resolve: 0, pose: 0 },
-      { gap: 1, size: 0, resolve: 1, pose: 0 },
-      { gap: 1, size: 2, resolve: 2, pose: 0 },
+      { params: { gap: 0, size: 0, resolve: 0, pose: 0 }, seed: 28, assist: { smallest: true } },
+      { params: { gap: 0, size: 0, resolve: 0, pose: 0 }, seed: 8 },
+      { params: { gap: 1, size: 0, resolve: 0, pose: 0 }, seed: 6 },
+      { params: { gap: 1, size: 0, resolve: 0, pose: 1 }, seed: 1, tip: 'free' },
     ],
     tips: [
       { id: 'free', when: { dim: 'pose', levels: [1] }, text: 'The angles are turned now. Picture each one turned until an arm lies flat, or compare them by fitting one inside another.' },
@@ -55,14 +62,16 @@
         when: 'Best for the close pair, and when the angles are turned different ways.',
       },
       {
-        id: 'analytic', title: 'Settle the extremes first',
-        text: 'Find the smallest and the largest angle first and cross out every list that disagrees. Often the close pair in the middle never has to be judged.',
+        // The card before Try 1 (strategyFirst; D2 §3.2): Kaplan's elimination by the extremes, in
+        // three steps; show-me crosses the lists out in the same order.
+        id: 'analytic', title: 'Extremes first',
+        text: 'Find the smallest and the largest angle first and cross out every list that disagrees. Often the pair in the middle never has to be judged.',
         steps: [
-          'Find the clearly smallest angle: keep only the lists that start with it.',
-          'Find the clearly largest angle: keep only the lists that end with it.',
-          'If two lists are left, compare just the pair they disagree on. Use a right angle (the corner of a page) as a ruler for angles near 90°.',
+          'Find the clearly smallest angle; keep the lists that start with it.',
+          'Find the clearly largest; keep the lists that end with it.',
+          'Compare only the pair the remaining lists disagree on: lay one angle on the other.',
         ],
-        when: 'Quick on most items; it leaves only one pair to judge carefully.',
+        when: 'Quick on most items, and the way to start: it leaves at most one pair to judge carefully.',
       },
       {
         id: 'switch', title: 'When to switch',
@@ -83,6 +92,11 @@
       pair: 'Angle {b} opens {d}° wider than angle {a}.',
       done: 'So the order is {order}: answer {n}.',
       chosen: 'Answer {n} puts angle {b} before angle {a}, but angle {b} is the larger one.',
+      smallest: 'The clearly smallest angle is {a}: keep the lists that start with {a}.',
+      largest: 'The clearly largest angle is {b}: keep the lists that end with {b}.',
+      left: 'One list is left: {order}.',
+      disagree: 'The lists left disagree on {a} and {b}: lay one angle on the other.',
+      assist: 'The smallest angle is marked, and the lists that do not start with it are greyed.',
     },
     checkin: { whole: 'I laid the angles on each other in my mind', parts: 'I settled the smallest and largest first', unsure: 'Not sure, or both' },
     bridge: 'Angle ranking is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). This is perceptual-judgement practice: judging angles by eye improves with practice, but the gains tend to stay with this kind of figure, and an effect of Parallax on DAT scores has not been shown or measured. ' + ADA,
