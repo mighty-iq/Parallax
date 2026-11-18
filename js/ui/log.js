@@ -174,7 +174,7 @@
         h('th', { scope: 'row', 'data-label': 'Exercise' }, exName(r.exId)),
         h('td.px-log-set', { 'data-label': 'Settings' }, def && p ? X().paramsText(def, p) : 'code ' + r.code + (def ? ' (older version)' : '')),
         outcomeCell(r.outcome),
-        h('td.px-num', { 'data-label': 'Response time' }, X().secs(r.rt)),
+        h('td.px-num', { 'data-label': 'Response time' }, PX.util.fmtSecs(r.rt)), // one time format (O5)
         h('td.px-num', { 'data-label': 'Predicted' }, r.p === null ? '–' : Math.round(r.p * 100) + ' %'));
     });
     return h('div.px-table-wrap', h('table.px-table.px-table--stack.px-log-table',

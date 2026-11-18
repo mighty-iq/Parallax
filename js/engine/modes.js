@@ -319,6 +319,13 @@
       var xs = t && isObj(t.session) ? t.session : null;
       if (xs && typeof xs.viewport === 'string') session.viewport = xs.viewport;
       if (xs && typeof xs.input === 'string') session.input = xs.input;
+      // v1.2: Quick round scores per exercise ([rounds, total]) and the gentle motion profile
+      if (xs && isObj(xs.rounds)) {
+        var rs = {};
+        Object.keys(xs.rounds).forEach(function (id) { var v = xs.rounds[id]; if (isArray(v) && isNum(v[0]) && isNum(v[1]) && v[0] > 0) rs[id] = [Math.round(v[0]), Math.round(v[1])]; });
+        if (Object.keys(rs).length) session.rounds = rs;
+      }
+      if (xs && xs.gentle === true) session.gentle = true;
       if (!isArray(rec.sessions)) rec.sessions = [];
       rec.sessions.push(session);
       // a Spatial Check is a measurement, not practice: its time stays out of the practice total

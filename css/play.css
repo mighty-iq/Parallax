@@ -436,3 +436,29 @@
 @media (min-width: 720px) and (min-height: 501px) {
   .pl-hud-guide { display: none; }
 }
+
+/* ===== v1.2 wave 1 (CONTRACT-v1.2 C, D, E, G, H): the teaching template, round scores, level 1 ===== */
+/* The rules card: the format's rules, each with a small picture when the view draws one. */
+.pl-rules { margin: 0; padding: 0; list-style: none; counter-reset: pl-rule; display: grid; gap: var(--s3); }
+.pl-rule { counter-increment: pl-rule; display: flex; align-items: flex-start; gap: var(--s3); color: var(--ink); max-width: var(--measure); }
+.pl-rule::before { content: counter(pl-rule); flex: 0 0 auto; min-width: 1.5rem; font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink-3); padding-top: 0.125rem; }
+.pl-rule-fig { flex: 0 0 auto; width: 6rem; height: 6rem; border: 1px solid var(--rule); background: var(--paper); }
+.pl-rule-fig > svg { display: block; width: 100%; height: 100%; }
+.pl-rule-text { flex: 1 1 auto; min-width: 0; }
+.pl-strategy-steps { margin: var(--s2) 0 0; padding-left: 1.25rem; }
+.pl-strategy-steps li + li { margin-top: var(--s1); }
+.pl-strategy-card .px-panel-body > ol { color: var(--ink); }
+/* "How to solve": a HUD tool like Help */
+.pl-hud-how[hidden] { display: none; }
+/* Round scores (Central Point's Quick form): between items only, in ink, never in the stimulus accent */
+.pl-verdict-round { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--ink); }
+/* Level 1 · starter items, and its way to level 2 */
+.pl-note-starter { color: var(--ink-2); }
+.pl-res-starter { font-size: var(--fs-sm); color: var(--ink-2); }
+/* Playtest mode's slot (empty unless the module fills it) and a Chimera invite on summaries */
+.pl-playtest-slot:empty { display: none; }
+.pl-playtest-slot { margin: var(--s3) 0; }
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-rule-fig { width: 4.5rem; height: 4.5rem; }
+  .pl-rules-card .pl-card-actions .px-btn, .pl-strategy-card .pl-card-actions .px-btn { min-height: 44px; }
+}

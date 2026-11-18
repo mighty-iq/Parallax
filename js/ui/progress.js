@@ -158,7 +158,7 @@
       return h('tr', { 'data-probe': id },
         h('th', { scope: 'row' }, probeName(id), ctl ? h('span.px-meta', ' control') : null),
         td('Right', X().pct(acc.baseline) + ' → ' + X().pct(acc.latest)),
-        td('Median time, right answers', X().secs(rt.baseline) + ' → ' + X().secs(rt.latest)),
+        td('Median time, right answers', PX.util.fmtSecs(rt.baseline) + ' → ' + PX.util.fmtSecs(rt.latest)), // one time format (O5)
         td('Familiarity estimate', ctl ? '–' : signed(x.retest)));
     });
     return h('div.px-table-wrap', h('table.px-table.px-table--stack.px-check-table',
@@ -234,7 +234,7 @@
       return h('tr', h('th', { scope: 'row' }, probeName(id), id === E().config.assess.control ? h('span.px-meta', ' control') : null),
         list.slice(0, 3).map(function (c, i) {
           var r = c.results[id];
-          return td('Check ' + (i + 1), r ? r.right + ' of ' + r.n + ' right, ' + X().secs(r.rtMed) : '–');
+          return td('Check ' + (i + 1), r ? r.right + ' of ' + r.n + ' right, ' + PX.util.fmtSecs(r.rtMed) : '–');
         }));
     });
     var kids = [
@@ -364,11 +364,15 @@
 
   // x.has: answers in the rating shown here (Track and Homing keep one per screen class, so a
   // phone shows the small-screen rating, which may be empty while x.n counts both).
+  // The level as every screen names it ('level 1 · starter items'; js/ui/play.js levelText, v1.2).
+  function lvText(x) { return PX.ui.play && PX.ui.play.levelText ? PX.ui.play.levelText(x) : 'level ' + (x && x.level); }
+
   function levelRow(def, x, now) {
     var e = X().entry(def.id), has = x.has;
     var bar = has ? ui.bar(x.level, 100, { band: [x.lo, x.hi], label: e.name + ' level', kind: 'signal' }) : ui.bar(0, 100, { label: e.name + ' level' });
-    if (has) bar.setAttribute('aria-valuetext', 'level ' + x.level + ', likely between ' + x.lo + ' and ' + x.hi);
+    if (has) bar.setAttribute('aria-valuetext', lvText(x) + ', likely between ' + x.lo + ' and ' + x.hi);
     var set = [];
+    if (has && x.level <= 1) set.push('Level 1 · starter items. '); // v1.2: level 1 does not read as stuck
     if (has && x.settings) set.push('Handles ' + X().settingsText(def, x.settings).replace(/^./, function (c) { return c.toLowerCase(); }) + '.');
     if (has) set.push(' Path stage ' + x.path + ' of 10.');
     if (has && x.due && x.due.due) set.push(' Review due.');
@@ -500,7 +504,7 @@
     p.body.appendChild(h('div.px-curves', items.map(function (it) {
       var lv = nowOf[it.def.id] || it.pts[it.pts.length - 1];
       return h('figure', { class: ['px-curve', it.def.id === focus ? 'is-focus' : null], 'data-ex': it.def.id },
-        h('figcaption', h('b', it.def.short), h('span.px-num', 'level ' + lv.level + ' · ' + lv.lo + '–' + lv.hi)),
+        h('figcaption', h('b', it.def.short), h('span.px-num', lvText(lv) + ' · ' + lv.lo + '–' + lv.hi)),
         curveChart(it.def, it.pts));
     })));
     return p.el;

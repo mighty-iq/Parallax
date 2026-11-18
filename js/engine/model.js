@@ -99,7 +99,7 @@
       composite: ['cubematch', 'viewmatch', 'mechanisms', 'patterns'], control: 'wordlinks', optional: ['level'],
     },
     streak: { goal: 3, min: 2, max: 6, graceWeeks: 4, minTrials: 10, minMs: 300000 },
-    daily: { items: 8, epoch: '2026-11-01', link: 'discord.gg/chmr' },
+    daily: { items: 8, epoch: '2026-11-01', link: 'https://discord.gg/chmr' }, // the full link in every share text (v1.2)
     lab: { A: ['rotate', 'spin', 'fold', 'nets', 'slice'], B: ['views', 'orient', 'span', 'hidden', 'track', 'homing', 'reckon'], weeks: 3 },
   };
 
