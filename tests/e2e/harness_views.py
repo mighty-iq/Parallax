@@ -20,7 +20,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-from band_a import band_checks, wtg_checks
+from band_a import band_checks, reveal_stable, wtg_checks
 from common import OUT, Checks, Console, child_frame, file_url, harness_single, launch, non_blank, srcdoc_host
 
 C = Checks('harness_views')
@@ -297,6 +297,7 @@ def main():
         band_checks(b, cons, C, 'views', DIR, [('top', 'cubes:0,grid:0,view:0', 56), ('front', 'cubes:0,grid:0,view:1', 3), ('right4', 'cubes:0,grid:1,view:2', 7)],
                     assist_check=outline_frame, try1=('cubes:0,grid:0,view:0', 73), extra_q={'v': 'toview'})
         wtg_checks(b, cons, C, 'views', DIR, '.ex-views-assist')
+        reveal_stable(b, cons, C, 'views', DIR)
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')

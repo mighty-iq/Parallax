@@ -221,6 +221,7 @@
       o.tag.setAttribute('data-kind', key ? 'key' : 'foil');
       o.tag.hidden = false;
     });
+    st.caption.textContent = ''; // Try 1's help caption gives way to the verdict, in the room kept for it
     st.verdict.textContent = '✓ Smallest to largest: ' + listText(item.order) + '.';
     st.verdict.setAttribute('data-kind', 'key');
     st.verdict.hidden = false;
@@ -381,7 +382,8 @@
     if (ctx && typeof ctx.play === 'function') return ctx.play(list, o);
     return runSteps(list, ctx, o);
   }
-  function after() { if (st) { focusOption(-1); crossOut(null); point([]); setMode('cells'); } }
+  // After show me or a demo the last caption goes, so the stem returns to the room it keeps.
+  function after() { if (st) { focusOption(-1); crossOut(null); point([]); setMode('cells'); st.caption.textContent = ''; } }
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
     return play(steps(item, response), ctx, { name: 'show-me' }).then(after, after);

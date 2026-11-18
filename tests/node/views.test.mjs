@@ -356,7 +356,8 @@ function testLearn(t, PX, def) {
   t.ok(P.every((x) => x.params.variant === 'toview'), 'Try stays in toview (the variant of Train\'s first run)');
   t.ok(P[0].assist && P[0].assist.outline === true && P.slice(1).every((x) => !x.assist), 'Try 1 alone has its first step done (the outline drawn)');
   t.ok(inBand(P[0].params) && P[0].params.view === 0 && inBand(P[1].params) && P[1].params.view === 1, 'Try 1: the starter level, top view; Try 2: the starter level, front view');
-  t.ok(P[2].params.cubes === 1 && P[2].params.view === 0 && P[3].params.cubes === 1 && P[3].params.view === 1, 'Try 3 and 4: the pre-1.2 floor, top and front views');
+  t.ok(inBand(P[2].params) && P[2].params.view === 2 && P[2].tip === 'right' && P[3].params.cubes === 1 && P[3].params.view === 0,
+    'Try 3: the starter level, right view, with its tip (the right view is taught before Go); Try 4: the pre-1.2 floor, top view');
   const ds = P.map((x) => PX.ex.difficulty(def, x.params));
   t.ok(ds.every((x, i) => i === 0 || x >= ds[i - 1]), `Try goes from easy to harder (${ds.map((x) => x.toFixed(2)).join(', ')})`);
   t.ok(P.every((x) => !x.tip || (L.tips || []).some((tip) => tip.id === x.tip)), 'forced tips exist');

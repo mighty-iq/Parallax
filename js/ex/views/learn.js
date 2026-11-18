@@ -45,8 +45,10 @@
     practice: [
       { params: { cubes: 0, grid: 0, view: 0, variant: 'toview' }, seed: 73, assist: { outline: true } },
       { params: { cubes: 0, grid: 0, view: 1, variant: 'toview' }, seed: 3, tip: 'front' },
+      // Try 3: the right view at the starter level, its tip on where the front is (Views fresh test:
+      // the first right view came in Go); seed 175 has the front view among its drawings.
+      { params: { cubes: 0, grid: 0, view: 2, variant: 'toview' }, seed: 175, tip: 'right' },
       { params: { cubes: 1, grid: 0, view: 0, variant: 'toview' }, seed: 2, tip: 'stacks' },
-      { params: { cubes: 1, grid: 0, view: 1, variant: 'toview' }, seed: 6 },
     ],
     tips: [
       // The view tips only where a view is asked or drawn: when.variant may list several variants,
@@ -139,8 +141,8 @@
       outline: '2/3 · Outline: {w} × {h} cells, and no other drawing has that size.',
       outlineAll: '2/3 · Outline: {w} × {h} cells: drawings of another size drop out, and the inner lines decide the rest.',
       inner: '3/3 · Inner lines: each one is a step between {what}.',
-      innerTop: 'heights',
-      innerSide: 'depths',
+      innerTop: 'heights; cubes of one height leave no line between them',
+      innerSide: 'depths; cubes at one depth leave no line between them',
       whyDirectionTurn: 'Drawing {n} is the view from the {from}: from there it looks like this.',
       whyMirrorFlip: 'Drawing {n} is the correct view flipped left to right.',
       whyNeighbourLines: 'Drawing {n} belongs to another structure: the marked lines differ.',

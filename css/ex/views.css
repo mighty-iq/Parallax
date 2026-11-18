@@ -64,6 +64,10 @@
 .ex-views .ex-views-verdict[data-kind="key"],
 .ex-views .ex-tag[data-kind="key"] { color: var(--right, #2A7239); border-color: var(--right, #2A7239); }
 .ex-views .ex-tag[data-kind="foil"] { color: var(--ink-2, #454B52); border-style: dashed; }
+/* Each answer keeps its tag's room from the start, under the drawing (invisible until the reveal),
+   so the reveal neither covers a drawing nor makes an answer taller (Views fresh test). */
+.ex-views .ex-views-opt .ex-tag.is-pending { display: none; } /* outside the player (dev harness, figures) */
+.pl-trial.ex-views .ex-views-opt .ex-tag.is-pending { display: inline-block; visibility: hidden; }
 
 /* Options: drawings and structures four in a row on wide screens, 2 × 2 on narrow ones; numbers
    stay in one row. */
@@ -87,9 +91,10 @@
   .pl-trial.ex-views .ex-views-stem[data-variant="count"] .ex-views-stage { height: min(20rem, calc(var(--pl-w) * 0.85), calc(var(--pl-avail) - 5.5rem - 2 * var(--s2))); }
   .pl-trial.ex-views .px-choices:has(.ex-views-opt) .px-choice { height: var(--views-cell); padding: var(--s1); }
   .pl-trial.ex-views .px-choice .ex-opt { position: relative; }
-  .pl-trial.ex-views .px-choice .ex-thumb { width: calc(var(--views-cell) - 0.5rem - 2px); max-width: 100%; }
-  .pl-trial.ex-views .px-choice .ex-views-svg { width: calc(var(--views-cell) - 1.25rem); max-width: 100%; }
-  .pl-trial.ex-views .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+  /* the drawing and, under it, the tag's line fill the answer's fixed height */
+  .pl-trial.ex-views .px-choice .ex-thumb { width: calc(var(--views-cell) - 2.75rem); max-width: 100%; }
+  .pl-trial.ex-views .px-choice .ex-views-svg { width: calc(var(--views-cell) - 2.75rem); max-width: 100%; }
+  .pl-trial.ex-views .px-choice .ex-tag { white-space: nowrap; }
 }
 /* sideways: the stage on the left at full height (less the hint), the options right */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
