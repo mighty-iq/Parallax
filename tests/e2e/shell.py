@@ -67,7 +67,10 @@ def welcome_checks(t, tag):
     url = t.locator(f'{w} .px-linkcopy-url')
     R.check(f'{tag}: address shown as text', url.input_value() == DISCORD, url.input_value())
     R.check(f'{tag}: address not clipped', url.evaluate('i => i.scrollWidth <= i.clientWidth + 1'))
-    R.check(f'{tag}: Start training button', t.locator(f'{w} [data-welcome="start"]').inner_text().strip() == 'Start training')
+    R.check(f'{tag}: Continue button', t.locator(f'{w} [data-welcome="start"]').inner_text().strip() == 'Continue to Parallax')
+    vis = t.evaluate('''() => { const m = document.querySelector('.px-modal[data-welcome]'), b = m.querySelector('[data-welcome="start"]').getBoundingClientRect();
+      return { top: Math.round(b.top), bottom: Math.round(b.bottom), vh: innerHeight, w: Math.round(b.width), mw: m.clientWidth }; }''')
+    R.check(f'{tag}: Continue is full width and on the screen without scrolling', vis['top'] >= 0 and vis['bottom'] <= vis['vh'] and vis['w'] >= vis['mw'] - 48, str(vis))
     R.check(f'{tag}: focus starts inside the pop-up', t.evaluate(f'!!document.activeElement.closest("{w}")'))
     plate_checks(t, tag, f'{w} .px-plate-fig')
 
@@ -498,6 +501,8 @@ def run_phones_b2(b):
     page.goto(INDEX.as_uri()); ready(page)
     top = page.evaluate('''() => { const t = document.querySelector('.px-welcome-title'); const r = t.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }''')
     R.check(f'{tag}: the welcome opens at its first line (built by the Chimera community)', top[0] >= 0 and top[1] <= 390, str(top))
+    cont = page.evaluate('''() => { const b = document.querySelector('.px-modal[data-welcome] [data-welcome="start"]').getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom)]; }''')
+    R.check(f'{tag}: Continue stays on the screen held sideways', cont[0] >= 0 and cont[1] <= 390, str(cont))
     page.keyboard.press('Escape'); page.keyboard.press('Escape')
     if overridden:
         for r in ('home', 'library', 'settings'):

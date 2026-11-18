@@ -646,7 +646,7 @@
       !(R.sessions && R.sessions.length) && !(R.trials && R.trials.length);
   }
 
-  // After the pop-ups: Start training puts focus on Today's start button; otherwise the heading.
+  // After the pop-ups: Continue puts focus on Today's start button; otherwise the heading.
   function afterWelcome(reason) {
     var start = reason === 'start' && shell.main.querySelector('[data-primary]');
     if (start) focusEl(start); else focusMain();
