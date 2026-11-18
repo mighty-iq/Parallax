@@ -3,13 +3,25 @@
    probe gain of 0.5 SD by week 4 in >= 60 % of learners, while <= 5 % of learners without a gain
    read "likely gain"? Standalone: no app code is imported; nothing here touches the engine.
 
-     node docs/research/v1.2/spikes/M1/power.mjs [--n 1000] [--seed 1]
+     node docs/research/v1.2/spikes/M1/power.mjs [--n 1000] [--seed 1] [--base m1|addendum]
           [--designs D0,D0m,A,Aplus,B,Bplus,C] [--scenarios central,optimistic,famBig,...] [--quick]
+          [--horizon 56] [--tailprior 0.045]
 
    Designs: D0 today's check and rule; D0m today's schedule + trend model (the notes' Design C);
-   A embedded 3.5-min blocks + monthly check (Design A); Aplus 4.5-min blocks; B bursts of 3 x 7.5
-   min; Bplus bursts of 4 x 9 min (Design B); C a 5-min block every session. Scenarios: see
-   SCENARIOS below. The tables in M1-measurement.md §5 come from the commands listed in §5.1.
+   A embedded 3.5-min blocks + monthly check (Design A); Aplus 4.5-min blocks; Aplus16 the same with
+   16-item baselines; B bursts of 3 x 7.5 min; Bplus bursts of 4 x 9 min (Design B); C a 5-min block
+   every session. Scenarios: see SCENARIOS below. The tables in M1-measurement.md §5 come from the
+   commands listed in §5.1, with the default --base m1 (the parameters of §4.4).
+
+   --base addendum (M1-measurement.md, "Addendum 2026-11-18") replaces three assumptions after the
+   full texts of Sliwinski et al. and Terlecki et al. were read: occasion state 0.5 SD instead of
+   0.25 (truth and model); a slow familiarity tail of 0.03 SD per 16 items of a probe (0.018 for the
+   control), varying between people (SD 0.02), in the truth; and a tail term with that population
+   prior in the trend model (two extra parameters). Part 2c prints the detectable gain at weeks 4,
+   6, 8 and 12 for the active base, Part 2d the near rung of M1 §5.5 (a reconstruction), and Part 3
+   adds an item-level MDG column. The 'ship*' scenarios are the recommended configuration
+   (milestone verdicts, plateau prior 0.65) and its stress tests; --horizon 56 reports at week 8
+   with a third look, and --tailprior sets the model's tail mean (the addendum ships 0.045).
 
    Part 1 prints the Fisher information per item of each probe format at the engine's target.
    Part 2 prints, per design, the analytic posterior SD of the composite gain at day 28 under the
@@ -25,6 +37,8 @@ const argv = process.argv.slice(2);
 const opt = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : d; };
 const N = parseInt(opt('n', argv.includes('--quick') ? '300' : '1000'), 10);
 const SEED = parseInt(opt('seed', '1'), 10);
+const BASE = opt('base', 'm1');
+if (!['m1', 'addendum'].includes(BASE)) throw new Error('--base must be m1 or addendum');
 
 /* ---------- random numbers (seeded) ---------- */
 function mulberry32(a) {
@@ -71,22 +85,37 @@ function sigmaFor(rel) {
 }
 function baseParams() {
   const sigmaPop = sigmaFor(0.75);
-  return {
+  const P = {
     sigmaPop, rho: 0.4,                         // between-probe correlation of true ability
     horizon: 28, itemMult: 1,                   // report day; information multiplier on every probe item
     famMu: 0.5, famSd: 0.2, famLambda: 16,      // plateau (SD units), between-person SD, items to 63 %
     famRFF: 0.5, famRFc: 0.3, famMuC: 0.3,      // familiarity correlations; control plateau
-    famTail: 0,                                 // extra SD per 16 items after the curve (truth only)
+    famTail: 0,                                 // extra SD per 16 items after the curve (truth)
+    famTailSd: 0, famTailC: null,               // its between-person SD; the control's tail (null: = famTail)
     stateU: 0.18, stateS: 0.18,                 // occasion noise (SD units): shared day factor, probe-specific
     itemNoise: 0.3,                             // true item difficulty off the model by N(0, 0.3²)
     aTrue: 1, kTarget: 0.6,
     gainSD: 0.5,                                // real composite gain at day 28, in SD_comp
     gainShape: 'linear',                        // linear in days from day 0 to day 28
     sessionsPerWeek: 3,
-    // the decision model's own assumptions (may differ from the truth in scenarios)
-    model: { famMu: 0.5, famSd: 0.2, famLambda: 16, famRFF: 0.5, famRFc: 0.3, famMuC: 0.3, stateU: 0.18, stateS: 0.18, gainPriorSD: 100 },
+    // the decision model's own assumptions (may differ from the truth in scenarios); tail: whether
+    // the model has the two tail parameters (spatial, control) with prior famTail/famTailC ± famTailSd
+    model: { famMu: 0.5, famSd: 0.2, famLambda: 16, famRFF: 0.5, famRFc: 0.3, famMuC: 0.3, stateU: 0.18, stateS: 0.18, gainPriorSD: 100,
+      tail: false, famTail: 0, famTailC: 0, famTailSd: 0 },
     pGain: 0.95, pNone: 0.90, noneMargin: 0.2,  // verdict thresholds; "no change" margin in SD_comp
   };
+  if (BASE === 'addendum') {
+    // Sliwinski et al. (Table 2 and the within-person reliabilities): systematic occasion SD 0.53–0.88
+    // of the between-person SD for < 1-minute phone tasks; 0.5 taken for self-started sessions.
+    const st = 0.5 / Math.SQRT2;
+    P.stateU = P.stateS = st;
+    // Terlecki et al. (Fig. 1): weekly test-only gains kept rising for 12 weeks; a slow tail beside
+    // the fast curve (0.03 SD per 16 items taken for alternate-form, untimed probes; 0.6 of it for
+    // the verbal control, as for the plateau), varying between people.
+    P.famTail = 0.03; P.famTailC = 0.018; P.famTailSd = 0.02;
+    P.model = { ...P.model, stateU: st, stateS: st, tail: true, famTail: 0.03, famTailC: 0.018, famTailSd: 0.02 };
+  }
+  return P;
 }
 
 const SCENARIOS = {
@@ -114,7 +143,40 @@ const SCENARIOS = {
   // a middle prior (plateau 0.65) against true plateaus of 0.5 and 0.8
   midPrior: (p) => ({ ...p, looksAt: [14, 28], pGainAt: { 14: 0.975, 28: 0.95 }, model: { ...p.model, famMu: 0.65 } }),
   midPriorFamBig: (p) => ({ ...p, famMu: 0.8, looksAt: [14, 28], pGainAt: { 14: 0.975, 28: 0.95 }, model: { ...p.model, famMu: 0.65 } }),
+  // The recommended configuration (verdict words at days 14 and 28, plateau prior 0.65; with --base m1
+  // 'ship' equals 'midPrior') and its stress tests. --horizon 56 adds a verdict at day 56.
+  ship: (p) => SHIP(p),
+  shipOpt: (p) => SHIP({ ...p, betterItems: true, sigmaPop: sigmaFor(0.85) }),
+  shipFamBig: (p) => SHIP({ ...p, famMu: 0.8 }),                                  // plateau 0.8, prior 0.65
+  shipNoTailModel: (p) => SHIP({ ...p, model: { ...p.model, tail: false } }),     // truth's tail, model without it
+  shipTailStress: (p) => SHIP({ ...p, famTail: 0.06, famTailC: 0.036 }),          // tail twice the prior's mean
+  shipTailHigh: (p) => SHIP({ ...p, famTail: 0.15, famTailC: 0.09 }),             // tail of Terlecki's inexperienced group
+  shipStateLow: (p) => SHIP(withState(p, 0.35, 0.35)),                            // occasion state 0.35 (truth and model)
+  shipStateHigh: (p) => SHIP(withState(p, 0.7, 0.7)),                             // occasion state 0.7 (truth and model)
+  shipStateWrong: (p) => SHIP(withState(p, 0.7, null)),                           // truth 0.7, model as the base
+  shipStateOld: (p) => SHIP(withState(p, 0.25, 0.25)),                            // M1's 0.25, truth and model
+  // a cautious tail prior (0.06; control 0.036) against a true tail of 0.03, 0.06 and 0.15
+  shipTailPrior6: (p) => SHIP({ ...p, model: { ...p.model, famTail: 0.06, famTailC: 0.036 } }),
+  shipTailPrior6Stress: (p) => SHIP({ ...p, famTail: 0.06, famTailC: 0.036, model: { ...p.model, famTail: 0.06, famTailC: 0.036 } }),
+  shipTailPrior6High: (p) => SHIP({ ...p, famTail: 0.15, famTailC: 0.09, model: { ...p.model, famTail: 0.06, famTailC: 0.036 } }),
+  // a stricter bar at the 8-week milestone (repeated looks; run with --horizon 56)
+  shipLateBar: (p) => { const q = SHIP(p); q.pGainAt = { ...q.pGainAt, 56: 0.975 }; return q; },
+  shipLateBarOpt: (p) => { const q = SHIP({ ...p, betterItems: true, sigmaPop: sigmaFor(0.85) }); q.pGainAt = { ...q.pGainAt, 56: 0.975 }; return q; },
 };
+function SHIP(p) { return { ...p, looksAt: [14, 28], pGainAt: { 14: 0.975, 28: 0.95 }, model: { ...p.model, famMu: 0.65 } }; }
+// total occasion SD (SD units), half of its variance shared by the session; model null = unchanged
+function withState(p, truth, model) {
+  const t = truth / Math.SQRT2, q = { ...p, stateU: t, stateS: t };
+  if (model !== null) { const m = model / Math.SQRT2; q.model = { ...p.model, stateU: m, stateS: m }; }
+  return q;
+}
+// --horizon H: report at day H; with milestone verdicts, H joins the looks (bar P >= pGain)
+function withHorizon(p, H) {
+  if (!H) return p;
+  const q = { ...p, horizon: H };
+  if (p.looksAt) { q.looksAt = [...new Set([...p.looksAt.filter((d) => d <= H), H])].sort((a, b) => a - b); q.pGainAt = { ...p.pGainAt, [H]: p.pGainAt[H] || p.pGain }; }
+  return q;
+}
 
 /* ---------- schedules ----------
    A schedule is a list of sessions { day, kind, items: [m0, m1, m2, m3], ctrl } (items per probe in
@@ -173,6 +235,17 @@ const DESIGNS = {
     });
     return s;
   } },
+  // A+ with 16-item baselines (2 x 18 minutes; M1 §5.4).
+  Aplus16: { label: 'Embedded blocks, 4 min, 16-item baselines', rule: 'model', sched: (P) => {
+    const days = trainingDays(P.sessionsPerWeek, P.horizon || 28), s = [];
+    days.forEach((d, i) => {
+      if (i === 0) s.push({ day: d, kind: 'B1', ...full(16, 8) });
+      else if (i === 1) s.push({ day: d, kind: 'B2', ...full(16, 8) });
+      else if (d > 0 && d % 28 === 0) s.push({ day: d, kind: 'check', ...full(10, 8) });
+      else s.push({ day: d, kind: 'embed', items: [4, 4, 4, 4], ctrl: 2 });
+    });
+    return s;
+  } },
   // B+: bursts of four sessions with 8 items per probe and 4 control items (9 minutes each).
   Bplus: { label: 'Bursts of 4 x 9 min', rule: 'model', sched: (P) => {
     const out = [];
@@ -213,25 +286,36 @@ function inv(A) { // Gauss–Jordan with partial pivoting
    u_j: the session's shared state (all tasks), s: task-specific state, e: the block's own
    standard error. Priors: α flat; (F_1..F_4, F_c) jointly normal around the population
    familiarity curve; G ~ N(0, gainPriorSD·SD_comp). Linear-Gaussian, so the posterior is exact
-   (generalised least squares; a Kalman filter over sessions gives the same answer). */
-const NP = 11, IA = (i) => i, IAC = 4, IF = (i) => 5 + i, IFC = 9, IG = 10;
+   (generalised least squares; a Kalman filter over sessions gives the same answer).
+   With model.tail (--base addendum) two more terms: T·n̄_ij/16 on the spatial rows and T_c·n̄_cj/16
+   on the control rows (n̄: mean over the block's items of the items seen before), T and T_c the
+   person's slow familiarity tails, with a population prior (famTail, famTailC ± famTailSd,
+   correlation famRFc). */
+const NP = 11, IA = (i) => i, IAC = 4, IF = (i) => 5 + i, IFC = 9, IG = 10, IT = 11, ITC = 12;
+const npOf = (P) => (P.model.tail ? 13 : NP);
 const phiBar = (n, m, lam) => { let s = 0; for (let k = 0; k < m; k++) s += 1 - Math.exp(-(n + k) / lam); return s / m; };
+const nBar = (n, m) => (n + (m - 1) / 2) / 16; // mean items seen before, over a block of m items, per 16
 
 function priorOf(P) {
-  const M = P.model, sp = P.sigmaPop, sdc = sp * Math.sqrt((1 + 3 * P.rho) / 4);
-  const mu = new Array(NP).fill(0), C = Array.from({ length: NP }, () => new Array(NP).fill(0));
+  const M = P.model, sp = P.sigmaPop, sdc = sp * Math.sqrt((1 + 3 * P.rho) / 4), np = npOf(P);
+  const mu = new Array(np).fill(0), C = Array.from({ length: np }, () => new Array(np).fill(0));
   for (let i = 0; i < 5; i++) C[i][i] = 100; // α: flat
   for (let i = 0; i < 4; i++) { mu[IF(i)] = M.famMu * sp; for (let j = 0; j < 4; j++) C[IF(i)][IF(j)] = (M.famSd * sp) ** 2 * (i === j ? 1 : M.famRFF); }
   mu[IFC] = M.famMuC * sp; C[IFC][IFC] = (M.famSd * sp) ** 2;
   for (let i = 0; i < 4; i++) C[IF(i)][IFC] = C[IFC][IF(i)] = M.famRFc * (M.famSd * sp) ** 2;
   C[IG][IG] = (M.gainPriorSD * sdc) ** 2;
+  if (M.tail) { // a spread of 0 pins the tails at their population means
+    const t2 = (Math.max(M.famTailSd, 1e-4) * sp) ** 2;
+    mu[IT] = M.famTail * sp; mu[ITC] = M.famTailC * sp;
+    C[IT][IT] = C[ITC][ITC] = t2; C[IT][ITC] = C[ITC][IT] = M.famRFc * t2;
+  }
   const Pp = inv(C);
   return { mu, Pp, Pmu: Pp.map((r) => r.reduce((a, v, j) => a + v * mu[j], 0)) };
 }
 
 // obs: per session { rows: [{ x (NP), y, v }] } → posterior of G (mean, sd)
 function posteriorG(P, prior, sessions) {
-  const sp = P.sigmaPop, su2 = (P.model.stateU * sp) ** 2, ss2 = (P.model.stateS * sp) ** 2;
+  const sp = P.sigmaPop, su2 = (P.model.stateU * sp) ** 2, ss2 = (P.model.stateS * sp) ** 2, NP = prior.mu.length;
   const Q = prior.Pp.map((r) => r.slice()), b = prior.Pmu.slice();
   for (const S of sessions) {
     const rows = S.rows, m = rows.length;
@@ -274,19 +358,22 @@ function infoMult(P, i) { // v1.2 probe upgrades in the 'betterItems' scenario (
 
 function analytic(P, design) {
   const H = P.horizon || 28, sched = design.sched(P).filter((s) => s.day <= H), prior = priorOf(P), sp = P.sigmaPop;
-  const seen = [0, 0, 0, 0], seenC = [0];
+  const seen = [0, 0, 0, 0], seenC = [0], np = npOf(P), tail = P.model.tail;
   const sessions = sched.map((s) => {
     const rows = [];
     s.items.forEach((m, i) => {
       if (!m) return;
       const v = 1 / (m * infoAtK(PROBES[i].g, P.kTarget) * infoMult(P, i) + 1 / 9);
-      const x = new Array(NP).fill(0);
+      const x = new Array(np).fill(0);
       x[IA(i)] = 1; x[IF(i)] = phiBar(seen[i], m, P.model.famLambda); x[IG] = hOf(P, s.day);
+      if (tail) x[IT] = nBar(seen[i], m);
       rows.push({ x, y: 0, v }); seen[i] += m;
     });
     if (s.ctrl) {
-      const v = 1 / (s.ctrl * infoAtK(CONTROL.g, P.kTarget) + 1 / 9), x = new Array(NP).fill(0);
-      x[IAC] = 1; x[IFC] = phiBar(seenC[0], s.ctrl, P.model.famLambda); rows.push({ x, y: 0, v }); seenC[0] += s.ctrl;
+      const v = 1 / (s.ctrl * infoAtK(CONTROL.g, P.kTarget) + 1 / 9), x = new Array(np).fill(0);
+      x[IAC] = 1; x[IFC] = phiBar(seenC[0], s.ctrl, P.model.famLambda);
+      if (tail) x[ITC] = nBar(seenC[0], s.ctrl);
+      rows.push({ x, y: 0, v }); seenC[0] += s.ctrl;
     }
     return { rows };
   });
@@ -365,8 +452,14 @@ function simulate(P, design, arm, n, seed) {
     const F = PROBES.map(() => sp * (P.famMu + P.famSd * (lf * zf + Math.sqrt(1 - lf * lf) * normal(r))));
     const Fc = sp * (P.famMuC + P.famSd * (lc * zf + Math.sqrt(1 - lc * lc) * normal(r)));
     const G = arm === 'gain' ? P.gainSD * sdc : 0;
-    const fam = (Fx, n0) => Fx * (1 - Math.exp(-n0 / P.famLambda)) + P.famTail * sp * n0 / 16;
-    const seen = [0, 0, 0, 0]; let seenC = 0;
+    // slow tails (logits per 16 items): the spatial probes share one; drawn only when they vary
+    let T = P.famTail * sp, Tc = (P.famTailC === null ? P.famTail : P.famTailC) * sp;
+    if (P.famTailSd > 0) {
+      const zt = normal(r), zc = normal(r), rc = P.famRFc;
+      T += P.famTailSd * sp * zt; Tc += P.famTailSd * sp * (rc * zt + Math.sqrt(1 - rc * rc) * zc);
+    }
+    const fam = (Fx, n0, tl) => Fx * (1 - Math.exp(-n0 / P.famLambda)) + tl * n0 / 16;
+    const seen = [0, 0, 0, 0]; let seenC = 0, np = npOf(P), tail = P.model.tail;
     const est = PROBES.map(() => 0); let estC = 0; // running centres for item targeting
     const sessions = [], checks = []; let ever = false, verdict = 'unclear';
     for (const s of sched) {
@@ -376,19 +469,21 @@ function simulate(P, design, arm, n, seed) {
         if (!m) return;
         const si = P.stateS * sp * normal(r), base = th0[i] + G * h + u + si, n0 = seen[i];
         const engine = design.rule === 'current';
-        const out = block(r, P, PROBES[i].g, infoMult(P, i), (j) => base + fam(F[i], n0 + j), m,
+        const out = block(r, P, PROBES[i].g, infoMult(P, i), (j) => base + fam(F[i], n0 + j, T), m,
           engine ? 0 : est[i], engine ? 1.5 : 1.5, engine ? 2 : 0);
-        const x = new Array(NP).fill(0);
+        const x = new Array(np).fill(0);
         x[IA(i)] = 1; x[IF(i)] = phiBar(n0, m, P.model.famLambda); x[IG] = hOf(P, s.day);
+        if (tail) x[IT] = nBar(n0, m);
         rows.push({ x, y: out.lik.mu, v: out.lik.sd ** 2 });
         chk.results[i] = { theta: out.post.mu, se: out.post.sd };
         seen[i] += m; est[i] = est[i] === 0 && n0 === 0 ? out.lik.mu : 0.5 * est[i] + 0.5 * out.lik.mu;
       });
       if (s.ctrl) {
         const sc = P.stateS * sp * normal(r), base = th0c + u + sc, n0 = seenC, engine = design.rule === 'current';
-        const out = block(r, P, CONTROL.g, 1, (j) => base + fam(Fc, n0 + j), s.ctrl, engine ? 0 : estC, 1.5, engine ? 2 : 0);
-        const x = new Array(NP).fill(0);
+        const out = block(r, P, CONTROL.g, 1, (j) => base + fam(Fc, n0 + j, Tc), s.ctrl, engine ? 0 : estC, 1.5, engine ? 2 : 0);
+        const x = new Array(np).fill(0);
         x[IAC] = 1; x[IFC] = phiBar(n0, s.ctrl, P.model.famLambda);
+        if (tail) x[ITC] = nBar(n0, s.ctrl);
         rows.push({ x, y: out.lik.mu, v: out.lik.sd ** 2 });
         chk.results.c = { theta: out.post.mu, se: out.post.sd };
         seenC += s.ctrl; estC = n0 === 0 ? out.lik.mu : 0.5 * estC + 0.5 * out.lik.mu;
@@ -463,23 +558,82 @@ function part2b() {
   }
 }
 
+// Part 2c: the analytic MDG at weeks 4, 6, 8 and 12 (the gain reaches 0.5 SD_comp at day 28 and then
+// holds, as in M1 §5.4), for the active base; then Design A's sensitivity to the addendum's terms.
+function part2c() {
+  console.log(`\nPart 2c. Analytic MDG (SD_comp) at weeks 4 / 6 / 8 / 12, minutes to week 4 and 8 in brackets (base ${BASE}; flat gain prior, model = truth)`);
+  const flat = (P) => ({ ...P, model: { ...P.model, gainPriorSD: 100 } });
+  const opti = (P) => ({ ...P, betterItems: true, sigmaPop: sigmaFor(0.85) });
+  const line = (P0, id) => {
+    const a = [4, 6, 8, 12].map((w) => analytic(flat({ ...P0, horizon: 7 * w }), DESIGNS[id]));
+    return a.map((x) => (1.898 * x.sdG).toFixed(2)).join(' / ') + `  (${a[0].minutes.toFixed(0)}m, ${a[2].minutes.toFixed(0)}m)`;
+  };
+  for (const [name, f] of [['central', (P) => P], ['optimistic', opti]]) {
+    console.log(`  ${name}:`);
+    for (const id of ['D0m', 'A', 'Aplus', 'Aplus16', 'Bplus']) console.log(`    ${id.padEnd(8)} ${line(f(baseParams()), id)}`);
+  }
+  console.log('  Design A, sensitivity (central | optimistic):');
+  const rows = [
+    ['occasion state 0.25 (M1)', (P) => withState(P, 0.25, 0.25)],
+    ['occasion state 0.35', (P) => withState(P, 0.35, 0.35)],
+    ['occasion state 0.5 (addendum)', (P) => withState(P, 0.5, 0.5)],
+    ['occasion state 0.7', (P) => withState(P, 0.7, 0.7)],
+    ['no tail term (M1 model)', (P) => ({ ...P, model: { ...P.model, tail: false } })],
+    ['tail term, spread 0 (known)', (P) => ({ ...P, model: { ...P.model, tail: true, famTail: 0.03, famTailC: 0.018, famTailSd: 0 } })],
+    ['tail term, spread 0.02', (P) => ({ ...P, model: { ...P.model, tail: true, famTail: 0.03, famTailC: 0.018, famTailSd: 0.02 } })],
+    ['tail term, spread 0.04', (P) => ({ ...P, model: { ...P.model, tail: true, famTail: 0.03, famTailC: 0.018, famTailSd: 0.04 } })],
+  ];
+  for (const [name, f] of rows) console.log(`    ${name.padEnd(30)} ${line(f(baseParams()), 'A')}   |   ${line(f(opti(baseParams())), 'A')}`);
+}
+
+// Part 2d: the near rung of M1 §5.5 option 5: two 4-option probes, 4 items each per block, 8-item
+// baselines and 4-weekly checks, 2 control items per block; MDG in per-probe SD (both probes gain
+// the same). Central: plain items; optimistic: 16-item reliability 0.85 and response times (x1.15).
+function part2d() {
+  console.log(`\nPart 2d. Near rung (two 4-option probes): analytic MDG in per-probe SD at weeks 4 / 6 / 8 (base ${BASE})`);
+  const near = { rule: 'model', sched: (P) => trainingDays(P.sessionsPerWeek, P.horizon || 28).map((d, i) => (
+    i < 2 || (d > 0 && d % 28 === 0) ? { day: d, kind: 'B', items: [8, 8, 0, 0], ctrl: 8 } : { day: d, kind: 'embed', items: [4, 4, 0, 0], ctrl: 2 })) };
+  const g0 = PROBES[0].g;
+  try {
+    for (const [name, f] of [['central', (P) => P], ['optimistic', (P) => ({ ...P, sigmaPop: sigmaFor(0.85), itemMult: 1.15 })]]) {
+      const P0 = f(baseParams()); // sigmaPop is fixed before the override below
+      PROBES[0].g = 0.25;         // Cube Match as a 4-option item
+      const cells = [4, 6, 8].map((w) => {
+        const P = { ...P0, horizon: 7 * w, model: { ...P0.model, gainPriorSD: 100 } }, a = analytic(P, near);
+        const sdc = P.sigmaPop * Math.sqrt((1 + 3 * P.rho) / 4);
+        return `${(1.898 * a.sdG * sdc / P.sigmaPop).toFixed(2)} (${a.minutes.toFixed(0)}m)`;
+      });
+      PROBES[0].g = g0;
+      console.log(`  ${name.padEnd(11)} ${cells.join(' / ')}`);
+    }
+  } finally { PROBES[0].g = g0; }
+}
+
 part1();
 part2();
 part2b();
+part2c();
+part2d();
 const P0 = baseParams();
+const HOR = parseInt(opt('horizon', '0'), 10) || 0;
+const TAILPRIOR = opt('tailprior', null) === null ? null : parseFloat(opt('tailprior', null)); // the model's tail mean (control 0.6 of it)
 const designs = opt('designs', 'D0,D0m,A,Aplus,B,Bplus,C').split(',');
 const scen = opt('scenarios', 'central,simPop,famBig,famSlow,famTail,famSlowRobust,stateBig,twoPerWeek,betterItems').split(',');
-console.log(`\nPart 3. Item-level simulation, ${N} learners per arm; verdict "likely gain" at P(G > 0) >= ${P0.pGain}; ` +
+console.log(`\nPart 3. Item-level simulation (base ${BASE}${HOR ? `, report at day ${HOR}` : ''}${TAILPRIOR !== null ? `, model tail prior ${TAILPRIOR}` : ''}), ${N} learners per arm; verdict "likely gain" at P(G > 0) >= ${P0.pGain}; ` +
   `"likely no change" at P(gain < ${P0.noneMargin} SD_comp) >= ${P0.pNone}`);
-console.log('  scenario          design  minutes  gain arm: likely gain at report (ever) / no change   no-gain arm: likely gain at report (ever) / no change');
+console.log('  scenario          design  minutes  gain arm: likely gain at report (ever) / no change   no-gain arm: likely gain at report (ever) / no change   item-level MDG');
+// item-level MDG (M1 §8.3): 1.898 × the median posterior SD of the gain at the report, gain arm
+const medianSd = (z) => { const s = z.map((v) => v[1]).sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
 for (const sc of scen) {
-  const P = SCENARIOS[sc](baseParams());
+  let P = withHorizon(SCENARIOS[sc](baseParams()), HOR);
+  if (TAILPRIOR !== null) P = { ...P, model: { ...P.model, tail: true, famTail: TAILPRIOR, famTailC: 0.6 * TAILPRIOR } };
   for (const id of designs) {
     const D = DESIGNS[id];
     if (!D) continue;
     const a = simulate(P, D, 'gain', N, SEED * 7919 + 1), b = simulate(P, D, 'none', N, SEED * 7919 + 2);
-    const pc = (x) => (100 * x / N).toFixed(1).padStart(5);
+    const pc = (x) => (100 * x / N).toFixed(1).padStart(5), mdg = 1.898 * medianSd(a.z);
     console.log(`  ${sc.padEnd(17)} ${id.padEnd(6)}  ${minutesTo(D.sched(P), P.horizon || 28).toFixed(0).padStart(5)}    ` +
-      `${pc(a.atEnd.gain)} % (${pc(a.ever)} %) / ${pc(a.atEnd.none)} %              ${pc(b.atEnd.gain)} % (${pc(b.ever)} %) / ${pc(b.atEnd.none)} %`);
+      `${pc(a.atEnd.gain)} % (${pc(a.ever)} %) / ${pc(a.atEnd.none)} %              ${pc(b.atEnd.gain)} % (${pc(b.ever)} %) / ${pc(b.atEnd.none)} %` +
+      `                ${Number.isFinite(mdg) ? mdg.toFixed(2) : '-'}`);
   }
 }

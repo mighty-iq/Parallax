@@ -13,6 +13,8 @@ Read depth per source: *full text*, *abstract only*, or *secondary* (the seconda
 
 Spike: `docs/research/v1.2/spikes/M1/power.mjs` (Node, no dependencies, no app code). Every number marked "spike" below comes from it; §5 lists the commands.
 
+**Addendum 2026-11-18** (at the end of this note): the full texts of Terlecki et al. and Sliwinski et al. were read. They double the day-to-day noise assumed here and add a slow familiarity tail, which raises the detectable gains of §4–§5 and changes parts of §8. Where the addendum and §0–§9 differ, the addendum holds.
+
 ## 0. Summary
 
 1. **The acceptance as written is out of reach: with today's probe formats at any cost tested (up to about 70 minutes a week), and with upgraded formats below about 40 minutes a week.** A real composite gain of 0.5 SD shown as "likely gain" in at least 60 % of learners at week 4, with at most 5 % false "likely gain", needs the posterior SD of the gain to be at most 0.26 SD (0.5 / 1.9). That is the same as pre and post scores each with a reliability of about 0.965 [Inference, standard reliable-change arithmetic, §2.1]. In the spike, designs costing 45–81 minutes over four weeks reach a minimal detectable gain (60 % power) of 0.93–1.29 SD at week 4 with today's formats, and 0.63–0.85 SD with upgraded items and a higher (0.85) probe reliability; item-level simulation gives 13–18 % (central) and 18–32 % (optimistic) "likely gain" for a 0.5 SD gain [spike, §5].
@@ -620,7 +622,7 @@ Read depth in brackets. Links are to the copy that was read where it differs fro
 - Scharfen, J., Peters, J. M., & Holling, H. (2018). Retest effects in cognitive ability tests: A meta-analysis. *Intelligence, 67*, 44–66. https://doi.org/10.1016/j.intell.2018.01.003 [full text, partial: retest effects and moderators; read from a PDF copy]
 - Schönbrodt, F. D., Wagenmakers, E.-J., Zehetleitner, M., & Perugini, M. (2017). Sequential hypothesis testing with Bayes factors: Efficiently testing mean differences. *Psychological Methods, 22*(2), 322–339. https://dare.uva.nl/id/064bbe12-23f8-4bae-b43a-e8007477670e [abstract only]
 - Sliwinski, M. J., Smyth, J. M., Hofer, S. M., & Stawski, R. S. (2006). Intraindividual coupling of daily stress and cognition. *Psychology and Aging, 21*(3), 545–557. https://doi.org/10.1037/0882-7974.21.3.545 (PMC2879634) [full text, partial]
-- Sliwinski, M. J., Mogle, J. A., Hyun, J., Munoz, E., Smyth, J. M., & Lipton, R. B. (2018). Reliability and validity of ambulatory cognitive assessments. *Assessment, 25*(1), 14–30. https://doi.org/10.1177/1073191116643164 (PubMed 27084835) [abstract only]
+- Sliwinski, M. J., Mogle, J. A., Hyun, J., Munoz, E., Smyth, J. M., & Lipton, R. B. (2018). Reliability and validity of ambulatory cognitive assessments. *Assessment, 25*(1), 14–30. https://doi.org/10.1177/1073191116643164 (PubMed 27084835) [abstract only; full text read 2026-11-18, see the Addendum]
 - Smith, A. C., Frank, L. M., Wirth, S., Yanike, M., Hu, D., Kubota, Y., Graybiel, A. M., Suzuki, W. A., & Brown, E. N. (2004). Dynamic analysis of learning in behavioral experiments. *Journal of Neuroscience, 24*(2), 447–461. https://www.academia.edu/18581240/Dynamic_Analysis_of_Learning_in_Behavioral_Experiments [full text]
 - Stafford, T., Pirrone, A., Croucher, M., & Krystalli, A. (2020). Quantifying the benefits of using decision models with response time and accuracy data. *Behavior Research Methods, 52*(5), 2142–2155. https://eprints.whiterose.ac.uk/id/eprint/159747/1/Stafford2020_Article_QuantifyingTheBenefitsOfUsingD.pdf [full text]
 - Tamburri, N., McDowell, C., & MacDonald, S. W. S. (2022). Parameterizing practice in a longitudinal measurement burst design to dissociate retest effects from developmental change: Implications for aging neuroscience. *Frontiers in Aging Neuroscience, 14*, 885621. https://doi.org/10.3389/fnagi.2022.885621 [full text]
@@ -642,11 +644,131 @@ Cited at second hand from this repository's own notes (not re-read here):
 | Chelune, G. J., et al. (1993). *Neuropsychology, 7*(1), 41–52 (no link reached) | The practice-adjusted RCI | The mean practice effect is subtracted before the RCI, as today's check does with a per-person estimate |
 | Duff, K. (2012). Evidence-based indicators of neuropsychological change in the individual patient. *Archives of Clinical Neuropsychology, 27*(3), 248–261. https://pmc.ncbi.nlm.nih.gov/articles/pmid/22382384 (a browser check blocked the page) | A review of RCI and regression-based change methods, and advice for serial testing | Gavett et al. 2015 and Salthouse & Tucker-Drob 2008 cover what this note uses |
 | Calamia, M., Markon, K., & Tranel, D. (2012). Scoring higher the second time around. *The Clinical Neuropsychologist, 26*(4), 543–570. https://doi.org/10.1080/13854046.2012.680913 | Practice effects by test domain (visuospatial) and their moderators | Bracketed by Scharfen et al. 2018, Hausknecht et al. 2007 and Bartels et al. 2010 |
-| Sliwinski et al. (2018), full text. https://doi.org/10.1177/1073191116643164 | The practice curve over its protocol, the sessions per person and the variance components | The burst studies read in full (Brewster 2021; Oravecz 2022; Hakun 2023) describe the same family of protocols |
-| Terlecki, M. S., Newcombe, N. S., & Little, M. (2008). Durable and generalized effects of spatial experience on mental rotation. *Applied Cognitive Psychology, 22*, 996–1013. https://doi.org/10.1002/acp.1420 | How much a test-only group gains over many repeated mental-rotation tests across weeks: the closest analogue to repeated probe blocks | Spatial familiarity may keep growing; covered by the spike's `famTail` and `famBig` scenarios |
+| Sliwinski et al. (2018), full text. https://doi.org/10.1177/1073191116643164 | The practice curve over its protocol, the sessions per person and the variance components | The burst studies read in full (Brewster 2021; Oravecz 2022; Hakun 2023) describe the same family of protocols. **Read in full 2026-11-18: see the Addendum** |
+| Terlecki, M. S., Newcombe, N. S., & Little, M. (2008). Durable and generalized effects of spatial experience on mental rotation. *Applied Cognitive Psychology, 22*, 996–1013. https://doi.org/10.1002/acp.1420 | How much a test-only group gains over many repeated mental-rotation tests across weeks: the closest analogue to repeated probe blocks | Spatial familiarity may keep growing; covered by the spike's `famTail` and `famBig` scenarios. **Read in full 2026-11-18: see the Addendum** |
 | Beglinger, L. J., et al. (2005). Practice effects and the use of alternate forms in serial neuropsychological testing. *Archives of Clinical Neuropsychology, 20*, 517–529 (no link reached) | Alternate forms against practice in serial testing; the dual-baseline evidence | As Scharfen et al. 2018: alternate forms delay familiarity but do not prevent it |
 | Sliwinski, M. J. (2008). Measurement-burst designs for social health research. *Social and Personality Psychology Compass, 2*(1), 245–261 (not reached) | The rationale and planning rules of burst designs | Salthouse 2007 and the ambulatory studies |
 | Maris & van der Maas (2012), full text; and the paper on the discretised signed-residual-time model, https://pmc.ncbi.nlm.nih.gov/articles/PMC8359328 (blocked by a browser check) | Information per item under time-limit scoring, as used in adaptive learning systems | Not used for probes (it changes the construct) |
 | Small-sample equating (synthetic linking, circle-arc) and random-item IRT (not searched: the session's search budget ran out) | Methods for equating forms with little data | Forms are generated from one item model and equated through it; seed-stream or form offsets are estimated later as random effects from pooled data |
 | An N-of-1 trial guide for health research (not searched: search budget) | Practical design rules for individual trials | The WWC single-case standards cover the rules this note needs |
 | Published reliabilities of short spatial tests (mental rotation, perspective-taking, PSVT:R manuals or Rasch analyses; not searched: search budget) | An anchor for the 16-item probe reliability | 0.75 central (range 0.55–0.90), to be replaced by B1–B2 reliabilities from pooled exports |
+
+## Addendum 2026-11-18: Terlecki et al. and Sliwinski et al. (full texts read)
+
+The owner supplied the full texts of two sources listed under "Could not open". Both were read in full, tables and figures included; values taken from figures are read off the plots and are good to about ±0.2 points. This addendum replaces the parameters named in A.3 and the spike numbers listed in A.4; the sections above are left as they were written. Labels as above.
+
+Sources (*full text*):
+- Terlecki, M. S., Newcombe, N. S., & Little, M. (2008). Durable and generalized effects of spatial experience on mental rotation: Gender differences in growth patterns. *Applied Cognitive Psychology, 22*(7), 996–1013 (online 2007). https://doi.org/10.1002/acp.1420
+- Sliwinski, M. J., Mogle, J. A., Hyun, J., Munoz, E., Smyth, J. M., & Lipton, R. B. (2018). Reliability and validity of ambulatory cognitive assessments. *Assessment, 25*(1), 14–30. https://doi.org/10.1177/1073191116643164. The copy read is the 17-page online-first version (2016); the page numbers below are its pages.
+
+### A.1 Terlecki, Newcombe & Little: twelve weeks of weekly test-only practice
+
+[Found]
+- **Design.** 180 undergraduates who completed a 12-week study (61 men, 119 women), recruited from the top and bottom 15 % of a questionnaire on spatial experience (computer, video-game and map use). Each week they took the same 20-item Mental Rotations Test, items reordered, in two timed halves of 3 minutes, scored strictly (a point only when both matching figures are chosen). Beyond sample problems in week 1, no feedback is described. 72 also played Tetris for an hour a week; the other 108 (the test-only group) played Solitaire or nothing. Participants were paid weekly; 39–71 % of those who started dropped out, at similar rates in every group, and the analyses use completers. Growth was modelled with quadratic latent growth curves.
+- **Size.** The test-only group went from about 6.8 points in week 1 to about 12.6 in week 12 (Fig. 3). Over all participants the week-1 to week-12 difference was 6.53 points. The paper labels such differences "d", but they are raw points (6.53 − 2.81 = 3.72). It reports no baseline SD; the standard errors of its week-2 group means imply within-group SDs of about 3.5–4.9 points. With an SD of 4–5 points [Inference], the test-only gain is about 1.2–1.4 SD.
+- **Shape.** By the 4th weekly test the three groups of Fig. 1 had gained about 2.0–3.4 points (about 0.4–0.85 SD), close to the meta-analytic 0.52 by the 4th test (§2.3). Then growth went on to week 12 in every group: from week 6 to week 12 by about 0.3 points a week for experienced men and women, and about 0.9 a week for inexperienced women (Fig. 1). The quadratic terms per two-week unit were −0.16 for experienced men (slowing; SE 0.04), +0.09 for inexperienced women (speeding up; SE 0.04) and −0.03 for experienced women (not significant). Fig. 1 pools the test-only and Tetris participants.
+- **Moderators.** Experience and gender changed level and shape. In week 1 the inexperienced women scored about 4, the experienced women about 8 and the experienced men about 10 (Fig. 1); early growth of the inexperienced women was about a third of the experienced men's (0.58 against 1.92 points per two weeks), yet over 12 weeks they gained the most (about 9 points against about 7). The gap between men and women did not close. Inexperienced men (n = 7) were left out of this analysis.
+- **Training against testing.** The Tetris group grew faster at first (linear slopes 0.94 against 0.63), but its week-12 score was not reliably higher (about 13.7 against 12.6). On two other spatial tests taken only in weeks 1 and 12 and again 2–4 months later, the Tetris group pulled ahead and stayed ahead; those tests had no test-only control.
+- **Durability.** 2–4 months after the last test (79 participants), scores were 2.81 points below week 12 and 3.72 above week 1; the test-only group kept about 55 % of its gain (12.6 → 10.0; Fig. 3).
+- **Fit.** Every growth model had an RMSEA of 0.12–0.25; the authors put this down to unexplained differences between individual trajectories, some of them erratic.
+
+[Inference] For Parallax's probes:
+1. **The fast phase matches the plateau of §2.3; the slow phase after it was missing.** On M1's item clock, Terlecki's late growth is about 0.05–0.06 SD per 16 items for experienced people and about 0.14–0.18 for inexperienced ones (0.3 or 0.9 points per 20 items, SD 4–5 points). An identical, timed test is an upper anchor: the same 20 items return every week, and a time limit rewards speed. Parallax's probe items are generated and untimed, so a smaller tail is likely, but nothing measures it yet. The spike's new central tail is 0.03 SD per 16 items, half the experienced rate, with stress values of 0.06 and 0.15.
+2. **A tail looks like a gain.** For one person a steady tail and a steady gain draw nearly the same line. The trend model therefore needs a tail term with a population prior (now in the spike), and the mean of that prior must come from pooled data on probe exposure without training, ideally the staggered start of §3.4. A.4 shows what happens without it.
+3. **Beginners may become familiar late.** If many players resemble the inexperienced group, much of their familiarity arrives after the run-in, where the model reads it as gain. Adaptive probes avoid the floor that a fixed test puts under low scorers, which may explain part of that group's slow start, so the effect may be smaller in Parallax. Pooled data should fit the familiarity curve by baseline level.
+4. **A probe practised every week can absorb a training effect on itself** (Tetris against testing in week 12), while rarely tested measures kept the difference. This supports the plan's rotation of probes within rungs and the cap of four blocks a week, and it is a reason to log each probe's exposure beside every verdict.
+5. **Familiarity fades over long breaks.** There was no loss while weekly testing went on, but about 45 % of the gain was gone 2–4 months after it stopped. A record that resumes after a break of more than about 8 weeks should restart its run-in, or carry a break term, instead of assuming no decay.
+
+### A.2 Sliwinski et al.: how much brief tasks vary from one occasion to the next
+
+[Found]
+- **Design.** 219 adults aged 25–65 from a community probability sample; 1.5 hours of training on the study phone and two practice days; then 14 days with 5 prompts a day at quasi-random times about 2.5 hours apart. Each prompt held three tasks of under a minute: symbol search (12 trials; median correct response time), dot memory (2 trials; location error) and a 2-back (12 trials; accuracy). 85 % of prompts were answered, and about 56 of 70 assessments per person were completed (80 %).
+- **Variance components** (Table 2; between-person / within-person variance): symbol search 0.44 / 0.36, dot memory 0.77 / 1.19, 2-back 0.02 / 0.01; single-occasion ICCs 0.54, 0.39 and 0.59. Reliability of a person's average: 5 occasions 0.90 / 0.75 / 0.92; 10 occasions 0.95 / 0.86 / 0.95; 15 occasions 0.96 / 0.90 / 0.96; all 14 days 0.98 / 0.97 / 0.99.
+- **Within-person reliability** (p. 10): the share of within-person variance that is systematic from one occasion to the next, rather than trial noise, was 0.53, 0.50 and 0.41; for the two memory tasks it was a little lower at older ages (Table 4). For comparison the authors cite lab studies with 0.50–0.70 for response times and 0.15–0.36 for accuracy.
+- **Age.** ICCs rose with age because older groups differed more from one another; the youngest group's symbol-search ICC was 0.29, yet its 3-day averages still reached 0.86 (Table 3).
+- **Practice.** The paper reports no mean practice curve. Reliabilities stayed stable over the 14 days (SD of the daily between-person reliabilities 0.01–0.02; of the daily within-person reliabilities 0.04, and 0.07 for the 2-back, 0.04 once its first 3 days are left out).
+- **Brief or long.** The authors write that the data cannot yet decide between a few long and many brief, spread-out assessments, and that trials spread over occasions may not be worth the same as the same number in one sitting (p. 13).
+
+[Inference]:
+1. **Day-to-day state is about twice what M1 assumed.** The systematic occasion variance is the within-person reliability times the within-person variance. Relative to the between-person variance that is 0.29–0.78 (using the ICCs), an occasion SD of 0.53–0.88 of the between-person SD. These are brief tasks at random moments of daily life, mostly response times; a probe block at the start of a session the player chose to start should vary less. M1's 0.25 lies below the whole range. The new central value is 0.5 (sensitivity 0.35 and 0.7), still half shared by all tasks of the session; the paper gives no split. Narrower populations raise the ratio, as the youngest group shows.
+2. **Pooled block data can measure it,** with the paper's decomposition: split each record's block scores into within-session and between-session variance (two probes, or two halves of a block). With the familiarity tail, this is the first number to take from pooled exports.
+3. **When pooled B1–B2 data arrive, solve for σ_pop with the state included.** The retest correlation of two checks is σ²/(σ² + SE² + state²). At the new central values a 16-item check has a retest correlation of about 0.63 (about 0.7 on the optimistic set). A higher observed value means less state, more spread, or both, and every detectable gain below then shrinks.
+4. **More occasions, not more items per occasion,** average out state. The paper's variance components imply this, though it does not test it; it supports embedded blocks and bursts over long checks.
+5. **A run-in before measurement** (training and practice days before the measured burst) matches the after-tutorial baseline and the two baselines of §6.2.
+
+### A.3 The parameters of §4.4, checked
+
+| Parameter | Assumed in M1 | What the paper says | New value (`--base addendum`) |
+|---|---|---|---|
+| Occasion state per probe-session | total 0.25 SD (0.15–0.35), half shared | Sliwinski: systematic occasion SD 0.53–0.88 of the between-person SD, for tasks under a minute at random moments (Table 2; p. 10); no shared/specific split | **0.5 SD** (sensitivity 0.35–0.7), half shared; in the truth and in the model |
+| Familiarity plateau per probe | 0.5 SD (0.3–0.8) | Terlecki: about 0.4–0.85 SD by the 4th weekly test (Fig. 1), consistent; but it is the fast phase, not a plateau | 0.5 SD for the fast part (λ = 16 items), unchanged; the shipped prior stays 0.65 |
+| Familiarity tail after the curve | 0 (stress: +0.03 SD per 16 items) | Terlecki: weeks 6–12 still about +0.3 points a week (experienced) and +0.9 (inexperienced) on a 20-item test (Fig. 1): about 0.05–0.06 and 0.14–0.18 SD per 16 items, with identical items and a time limit | **0.03 SD per 16 items** (control 0.018), between-person SD 0.02; stress 0.06 and 0.15. The trend model gets a **tail term** with a population prior, shipped at **0.045** (A.4) |
+| Familiarity rate and shape | one exponential for everyone, λ = 16 items (40) | Terlecki: fast then slowing (experienced men); slow then speeding up (inexperienced women, quadratic +0.09 per two-week unit) | λ = 16 kept for the population curve; pooled data should fit it by baseline level |
+| Between-person SD of the plateau | 0.2 SD (0.1–0.35) | Terlecki: group means only; groups differ in shape, and every growth model misfits from individual heterogeneity | 0.2 kept; the tail's own spread (0.02) adds person-to-person variation |
+| Decay of familiarity | none within 12 weeks | Terlecki: none while weekly testing went on; about 55 % of the gain left 2–4 months after it stopped (Fig. 3) | none in regular play; after a break of more than about 8 weeks the run-in restarts (about 45 % of familiarity assumed lost) |
+| Moderators of familiarity | none | Terlecki: experience and gender shift level and shape; the inexperienced women gained the most over 12 weeks; the gap between men and women did not close | none per person; pooled checks by baseline band |
+| Reliability of averaged brief sessions | .95–.97 (abstract), 10 sessions .95/.86 (secondary) | Sliwinski Table 2: 0.75–0.92 after 5 occasions, 0.86–0.95 after 10, 0.90–0.96 after 15, 0.97–0.99 after 14 days | confirmed (the between-person reliability of a mean, not of a change) |
+| Within-person reliability | .41–.53 (abstract) | confirmed (p. 10; by age, Table 4) | none needed |
+| 16-item probe reliability (σ_pop) | 0.75, item sampling only | Sliwinski's single-occasion ICCs (0.39–0.59) include state | unchanged; a 16-item check's retest correlation is then about 0.63 (optimistic about 0.7) |
+| Practice curve of an ambulatory protocol | wanted from Sliwinski | not reported; reliabilities stable across days | none |
+
+### A.4 The spike, rerun
+
+The spike now takes `--base addendum` (the values above) and keeps `--base m1` as its default; with it, Part 2, the table of §5.4 and the two Design A rows of §5.3 that were checked (central; middle prior) come out exactly as before. Also new: the design `Aplus16` (A+ with 16-item baselines, as in §5.4), Part 2c (the detectable gain by week), Part 2d (the near rung), an item-level MDG column (1.898 × the median posterior SD, as §8.3 defines it), `--horizon`, `--tailprior`, and the `ship*` scenarios: the recommended configuration (verdict words at days 14 and 28, then at the report; plateau prior 0.65) and its stress tests. Commands (1,000 learners per arm):
+
+    node docs/research/v1.2/spikes/M1/power.mjs --base addendum --designs A,Aplus,Bplus --scenarios ship,shipOpt,shipFamBig,shipNoTailModel,shipTailStress,shipTailHigh,shipStateWrong,shipStateOld
+    node docs/research/v1.2/spikes/M1/power.mjs --base addendum --horizon 56 --designs A,Aplus16,Bplus --scenarios ship,shipOpt,shipFamBig,shipNoTailModel,shipTailStress,shipTailHigh,shipLateBar,shipLateBarOpt
+    node docs/research/v1.2/spikes/M1/power.mjs --base addendum [--horizon 56] [--tailprior 0.045] --designs A --scenarios ship,shipTailStress,shipTailHigh
+    node docs/research/v1.2/spikes/M1/power.mjs --base addendum [--horizon 56] --designs A --scenarios shipTailPrior6,shipTailPrior6Stress,shipTailPrior6High
+    node docs/research/v1.2/spikes/M1/power.mjs --base m1 [--horizon 56] --designs A,Aplus,Aplus16,Bplus --scenarios ship,shipOpt,shipFamBig
+
+**Detectable gain** (analytic MDG in SD_comp, Part 2c; the gain reaches 0.5 SD_comp at day 28 and then holds, as in §5.4), old → new:
+
+| Design (minutes to week 4 / week 8) | Week 4, central | Week 4, optimistic | Week 8, central | Week 8, optimistic |
+|---|---|---|---|---|
+| **A, the recommended default, about 12 minutes a week** (65 / 114) | 1.21 → **1.43** | 0.80 → **1.09** | 0.85 → **1.01** | 0.57 → **0.77** |
+| A+ (81 / 143) | 1.11 → 1.35 | 0.75 → 1.06 | 0.78 → 0.96 | 0.53 → 0.76 |
+| A+ with 16-item baselines (93 / 155) | 1.04 → 1.30 | 0.71 → 1.03 | 0.71 → 0.92 | 0.49 → 0.74 |
+| B+ (72 / 108) | 0.93 → 1.15 | 0.63 → 0.91 | 0.79 → 0.98 | 0.54 → 0.78 |
+| Today's checks with the trend model (60 / 100) | 1.79 → 2.36 | 1.28 → 1.95 | 0.93 → 1.23 | 0.67 → 1.02 |
+
+- **Item-level MDG of A** (recommended configuration): week 4 1.52 → 1.73 (central), 1.03 → 1.31 (optimistic); week 8 1.07 → 1.21 and 0.74 → 0.93.
+- **Where the change comes from** (Design A, addendum base): the occasion state accounts for almost all of it. At a state of 0.35 the MDG would be 1.29 / 0.92 at week 4 and 0.92 / 0.67 at week 8 (central / optimistic); at 0.7, 1.65 / 1.34 and 1.15 / 0.93. Against a tail known exactly, the tail term costs 0–0.02 at week 4 and 0.02 at week 8 with a person-to-person spread of 0.02, and 0.08–0.09 at week 8 with a spread of 0.04.
+- **Cost of a smaller MDG** (Part 2b, addendum): at week 4 no schedule tested gets below about 0.8 SD_comp (optimistic) or 0.94 (central), even at 288 minutes, and more probe items per occasion can make it slightly worse, because more items mean more tail. Without the tail term the same schedules reach 0.67 and 0.80 (checked in a scratch copy), so the floor comes from the state and the tail together. Option 4 of §5.5 ("about 40 minutes a week") no longer exists.
+- **Near rung** (Part 2d; per-probe SD at weeks 4 / 6 / 8): 1.31 / 1.01 / 0.92 central, 1.04 / 0.80 / 0.73 optimistic. With M1's parameters the same reconstruction gives 1.16 / 0.89 and 0.85 / 0.65, close to the 1.23 / 0.95 and 0.79 / 0.61 of §5.5 but not identical: that computation was not kept in the spike. A near gain of about 1 SD still shows in about 4–6 weeks: at week 4 on the optimistic set, at week 6 on the central one.
+
+**Item-level simulation, Design A, recommended configuration** ("likely gain" in the gain arm, which gains 0.5 SD_comp; false "likely gain" in the no-gain arm, at the report and, in brackets, at any milestone so far; old = `--base m1`, which has no tail):
+
+| Scenario | Week 4: gain arm | Week 4: false | Week 8: gain arm | Week 8: false |
+|---|---|---|---|---|
+| Central, old → new | 11.0 → 10.5 % | 2.7 (3.5) → 3.8 (4.4) % | 15.1 → 15.2 % | 2.4 (4.6) → 3.4 (6.5) % |
+| Optimistic, old → new | 14.9 → 13.4 % | 1.9 (2.3) → 3.2 (3.6) % | 22.0 → 19.3 % | 1.4 (3.7) → 1.6 (4.9) % |
+| Plateau 0.8 under the 0.65 prior, old → new | 19.6 → 16.4 % | 6.0 (7.0) → 6.8 (8.0) % | 28.2 → 24.0 % | 6.7 (11.7) → 7.6 (12.6) % |
+| Tail 0.03, model without a tail term | 12.3 % | 5.2 (5.9) % | 23.9 % | 6.7 (9.7) % |
+| State 0.7, model 0.5 | 14.0 % | 6.1 (7.1) % | — | — |
+| A stricter week-8 bar (0.975), central / optimistic | — | — | 9.3 / 9.9 % | 1.5 (5.3) / 0.9 (4.5) % |
+
+The tail prior against the true tail (new base, Design A; gain arm %, then false % at the report with "ever" in brackets):
+
+| Model's tail prior | True tail 0.03, week 4 | 0.06, week 4 | 0.15, week 4 | 0.03, week 8 | 0.06, week 8 | 0.15, week 8 |
+|---|---|---|---|---|---|---|
+| 0.03 | 10.5; 3.8 (4.4) | 13.1; 5.1 (5.8) | 20.8; 9.0 (10.1) | 15.2; 3.4 (6.5) | 22.9; 6.3 (9.4) | 46.8; 22.3 (25.4) |
+| **0.045** | 9.3; 3.2 (3.8) | 12.0; 4.3 (4.9) | 19.5; 7.9 (9.0) | 13.3; 2.3 (5.2) | 19.4; 4.7 (7.8) | 42.3; 18.3 (21.5) |
+| 0.06 | 8.6; 2.5 (3.0) | 10.6; 4.0 (4.5) | 17.8; 6.9 (7.8) | 10.5; 1.6 (4.5) | 15.8; 3.2 (6.4) | 37.7; 14.5 (18.5) |
+
+Reading [Inference]:
+- **The recommended design's detectable gain rises by about a fifth (central) to a third (optimistic):** 1.43 / 1.09 SD_comp at week 4 and 1.01 / 0.77 at week 8. The share of real 0.5 SD gainers that the shipped configuration flags barely moves (about 9–11 % at week 4 and 13–15 % at week 8, against 11 % and 15 % before), because the cautious plateau prior, not noise, is what holds it down.
+- **No design tested reaches 0.5 SD_comp by week 8 any more;** the best is 0.74 (A+ with 16-item baselines, optimistic). Option 1 of §5.5 is out of reach at about 15 minutes a week; options 2, 3 and 5 stand with the larger numbers above.
+- **The familiarity tail is now the main false-positive risk, and it grows with time.** Week-4 verdicts are fairly robust (2.5–5.1 % false for true tails up to 0.06). By week 8 a model without a tail term gives 6.7 % with the central tail, and a tail of 0.15, Terlecki's inexperienced rate, gives 14–22 % whatever the prior.
+- **A middle tail prior (0.045), like the middle plateau prior (0.65),** keeps false "likely gain" at 2.3–4.7 % at weeks 4 and 8 for true tails of 0.03–0.06, and "ever" through week 8 at 5.2 % for the central truth, for about an eighth less detection at week 8 than a prior equal to the truth. 0.06 is safer and costs about a third.
+- **The verdict thresholds hold** (0.975 at week 2, 0.95 from week 4): at each report the false rate stays under 5 % for the central truths. "Ever" through week 8 is 6.5 % with a tail prior equal to the truth and 5.2 % with the middle prior; a 0.975 bar at week 8 would cut detection at week 8 by about 40 %, so the middle tail prior is the better lever.
+
+### A.5 Changes to §5.5 and §8
+
+- **§5.5, recommended acceptance for the engine sim:** the MDG target "≤ 0.5 SD_comp at week 8 under the optimistic set" is out of reach; report the MDG at weeks 4 and 8 against A.4's values instead (A: 1.43 / 1.09 at week 4, 1.01 / 0.77 at week 8, analytic). The false-rate checks stay, with the tail runs added.
+- **§8.1, the probe learner model:** add T·n_p/16 to every spatial probe item (T per learner, shared by the spatial probes, N(0.03, 0.02²) SD per 16 items) and T_c·n_c/16 to Word Links (mean 0.018, correlated 0.3 with T); u_day and s_p,day each N(0, (0.354·σ_pop)²), a total of 0.5 SD. After a break of more than about 8 weeks, F_p loses about 45 %.
+- **§8.2, the engine:** two tail parameters in the trend model (spatial and control) with a population prior of 0.045 SD per 16 items (control 0.027) ± 0.02, beside the plateau prior of 0.65; both in `config.assess` until pooled data replace them. The occasion state in the model is 0.5 SD. A record back from a break of more than about 8 weeks restarts its run-in.
+- **§8.3, the runs:** add "tail 0.06 with the prior at 0.045", "tail 0.15", "state 0.7 with the model at 0.5", "a break of 8 weeks or more", and the 8-week report with its three looks.
+- **§8.4, the hard checks:** ≤ 5 % false "likely gain" at each report (central), ≤ 6 % ever through week 8, ≤ 10 % at the report under misspecified familiarity, which now includes the tail-0.06 run. The tail-0.15 run is reported, not checked: no prior holds it at week 8, and only pooled data on the tail can settle it.
+- **§8.6, the cross-check:** with the addendum base and the shipped priors (plateau 0.65, tail 0.045), Design A should land near 9.3 % (gain arm) and 3.2 % (no-gain arm) at week 4, and 13.3 % and 2.3 % (5.2 % ever) at week 8.
+- **§9, open risks:** the day-to-day state and the familiarity tail join the probe reliability as the numbers pooled exports must measure first. Until the tail is measured, verdicts after week 4 rest on its prior.

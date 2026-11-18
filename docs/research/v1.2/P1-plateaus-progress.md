@@ -1,6 +1,6 @@
 # P1: Plateaus, stall detection, stall-breaking, multi-dimensional difficulty, progression modes
 
-Phase 1 research notes for Parallax v1.2, written 2026-11-18 (UTC). Status: complete; a draft for the lead's plan.
+Phase 1 research notes for Parallax v1.2, written 2026-11-18 (UTC). Status: complete; a draft for the lead's plan. **Addendum 2026-11-18** (at the end): the full text of Rijmen & De Boeck (2002) and a rerun of the per-dimension simulation with uneven profiles like theirs.
 
 Labels used throughout:
 - **[Found]**: what a study or source reported (sample, design, effect size where given).
@@ -343,7 +343,7 @@ Read in this session (how much is marked; "C" = cited from `docs/research/v1.0/C
 - Meneghetti, C., Cardillo, R., Mammarella, I. C., Caviola, S., & Borella, E. (2017). The role of practice and strategy in mental rotation training: Transfer and maintenance effects. *Psychological Research* (online 2016). https://doi.org/10.1007/s00426-016-0749-2 — abstract only; volume and pages not checked.
 - Page, E. S. (1954). Continuous inspection schemes. *Biometrika, 41*(1–2), 100–115. https://doi.org/10.1093/biomet/41.1-2.100 — metadata only.
 - Pan, S. C., & Rickard, T. C. (2015). Sleep and motor learning: Is there room for consolidation? *Psychological Bulletin, 141*(4), 812–834. https://doi.org/10.1037/bul0000009 — abstract only.
-- Rijmen, F., & De Boeck, P. (2002). The random weights linear logistic test model. *Applied Psychological Measurement, 26*(3), 271–285. https://doi.org/10.1177/0146621602026003003 — abstract only.
+- Rijmen, F., & De Boeck, P. (2002). The random weights linear logistic test model. *Applied Psychological Measurement, 26*(3), 271–285. https://doi.org/10.1177/0146621602026003003 — abstract only; full text read 2026-11-18 (see the Addendum).
 - Roads, B. D., Xu, B., Robinson, J. K., & Tanaka, J. W. (2018). The easy-to-hard training advantage with real-world medical images. *Cognitive Research: Principles and Implications, 3*, 38. https://doi.org/10.1186/s41235-018-0131-6 — abstract only (open access).
 - Rubin, N., Nakayama, K., & Shapley, R. (1997). Abrupt learning and retinal size specificity in illusory-contour perception. *Current Biology, 7*(7), 461–467. https://doi.org/10.1016/S0960-9822(06)00217-X — abstract only.
 - Smith, A. C., Frank, L. M., Wirth, S., Yanike, M., Hu, D., Kubota, Y., Graybiel, A. M., Suzuki, W. A., & Brown, E. N. (2004). Dynamic analysis of learning in behavioral experiments. *Journal of Neuroscience, 24*(2), 447–461. https://doi.org/10.1523/JNEUROSCI.2908-03.2004 — abstract only.
@@ -351,7 +351,7 @@ Read in this session (how much is marked; "C" = cited from `docs/research/v1.0/C
 - Stafford, T., & Haasnoot, E. (2017). Testing sleep consolidation in skill learning: A field study using an online game. *Topics in Cognitive Science, 9*(2), 485–496. https://doi.org/10.1111/tops.12232 — abstract only.
 - Steiner, S. H., et al. (2000). Monitoring surgical performance using risk-adjusted cumulative sum charts. *Biostatistics, 1*(4), 441–452. https://doi.org/10.1093/biostatistics/1.4.441 — abstract only.
 - Stieff, M., Dixon, B. L., Ryu, M., Kumi, B. C., & Hegarty, M. (2014). Strategy training eliminates sex differences in spatial problem solving in a STEM domain. *Journal of Educational Psychology, 106*(2), 390–402. https://doi.org/10.1037/a0034823 — abstract only.
-- Terlecki, M. S., Newcombe, N. S., & Little, M. (2008). Durable and generalized effects of spatial experience on mental rotation: Gender differences in growth patterns. *Applied Cognitive Psychology, 22*(7), 996–1013. https://doi.org/10.1002/acp.1420 — abstract only.
+- Terlecki, M. S., Newcombe, N. S., & Little, M. (2008). Durable and generalized effects of spatial experience on mental rotation: Gender differences in growth patterns. *Applied Cognitive Psychology, 22*(7), 996–1013. https://doi.org/10.1002/acp.1420 — abstract only; full text read 2026-11-18 for M1 (see the Addendum here and in M1).
 - Wisniewski, M. G., Radell, M. L., Church, B. A., & Mercado, E. (2017). Benefits of fading in perceptual learning are driven by more than dimensional attention. *PLoS ONE, 12*(7), e0180959. https://doi.org/10.1371/journal.pone.0180959 — abstract only.
 - Wulf, G., & Shea, C. H. (2002). Principles derived from the study of simple skills do not generalize to complex skill learning. *Psychonomic Bulletin & Review, 9*(2), 185–211. https://doi.org/10.3758/BF03196276 — abstract only.
 - Yechiam, E., Erev, I., Yehene, V., & Gopher, D. (2003). Melioration and the transition from touch-typing training to everyday use. *Human Factors, 45*(4), 671–684. https://doi.org/10.1518/hfes.45.4.671.27085 — abstract only.
@@ -372,7 +372,7 @@ Process note: the web-search quota for this research ran out part-way; later loo
 | Smith et al. (2004), full text (the PDF link failed at its site) | False-alarm behaviour of their learning-trial criterion | Not needed: the proposed detector is calibrated by simulation |
 | Steiner et al. (2000), full text (open PDF listed, not fetched) | The exact risk-adjusted CUSUM score and thresholds | Not used in the proposal (a windowed slope test instead) |
 | Adams & MacKay (2007), full text | Hazard functions and models, cost per step | Only named as a later option |
-| Rijmen & De Boeck (2002), full text | The size of person-specific weight variances they estimated | f = 0.3–0.5 of a step, to be estimated from pooled exports |
+| Rijmen & De Boeck (2002), full text | The size of person-specific weight variances they estimated | f = 0.3–0.5 of a step, to be estimated from pooled exports. **Read in full 2026-11-18: see the Addendum** |
 | Stieff et al. (2014), Meneghetti et al. (2017), Khooshabeh et al. (2013), full texts | Effect sizes of strategy training and strategy flexibility | Direction only; no effect sizes quoted |
 | Pan & Rickard (2015), full text | Effect sizes after their moderators | The abstract's conclusion only |
 | Lomas et al. (2017), full text | Which of novelty, choice and suspense changed engagement, and by how much | Nothing beyond the abstract |
@@ -383,3 +383,50 @@ Process note: the web-search quota for this research ran out part-way; later loo
 | Ericsson (2008), *Academic Emergency Medicine, 15*, 988–994, https://doi.org/10.1111/j.1553-2712.2008.00227.x (closed) | The "arrested development" account of plateaus in experts | Not used (the abstract does not mention it) |
 | Moè (2016), *Intelligence, 59*, 16–23, https://doi.org/10.1016/j.intell.2016.10.004 (record without abstract) | Whether strategy plus motivation instruction improved mental rotation | Not used |
 | Pelánek's publication list, https://www.fi.muni.cz/~xpelanek/publications/ (the fetch was blocked) | The 2017 learner-modelling overview (AFM, PFA) | AFM and PFA named as options only |
+
+## Addendum 2026-11-18: Rijmen & De Boeck 2002 (full text read)
+
+The owner supplied the full text; it was read in full, tables included. Rijmen, F., & De Boeck, P. (2002). The random weights linear logistic test model. *Applied Psychological Measurement, 26*(3), 271–285. https://doi.org/10.1177/0146621602026003003. This addendum answers what §4 and "Could not open" needed from it; the sections above are left as written.
+
+### What the paper reports [Found]
+
+- **The model.** An LLTM in which chosen feature weights vary over persons: a person's weight for such a feature is the mean weight plus a personal deviation, normally distributed and integrated out by marginal maximum likelihood (EM with Gaussian quadrature). It is a special case of the multidimensional random coefficients multinomial logit model. Estimation needs random effects that are not (nearly) linearly dependent and whose variances are not (nearly) zero; otherwise one random effect is dropped. A likelihood-ratio test between P and P + 1 random effects is not valid, because the null lies on the boundary, so models are compared by BIC.
+- **The data.** 214 secondary-school students aged 16–19 solved 24 propositional-reasoning problems built from four binary features (a modus ponens or a modus tollens; a further modus ponens with a conjunction; a disjunctive syllogism; a false conclusion to reject), plus fillers, with four response options including "I don't know", in 50 minutes. Proportions correct ran from 0.44 to 0.98 (mean 0.72). The four features explained 74 % of the variance of the item logits, with weights of about 1.09, 0.80, −0.86 and −0.64 logits.
+- **Person-specific weight variances** (Table 2, logit scale; mean weights in Table 4):
+  - the plain LLTM: ability variance 0.65;
+  - selected by BIC: random ability plus a random weight for the disjunctive syllogism. Ability variance 0.51 (SD 0.71); weight variance 1.24 (SD 1.11) around a mean weight of −0.70; covariance 0.02; −2 log-likelihood 72 below the LLTM's. The spread of this one feature's effect across persons was larger than the spread of general ability, and unrelated to it;
+  - adding a random weight for the modus-ponens-plus-conjunction feature gave it a variance of 0.63 but lowered −2 log-likelihood by only 0.04, so the data do not support it;
+  - random weights for the first three features: variances 0.73, 0.68 and 1.46, ability 1.05, and ability correlated about −0.65 with the modus ponens/tollens weight; −2 log-likelihood 32 below the selected model for 7 more parameters, rejected by BIC;
+  - a random weight for the false-conclusion feature made the covariance matrix singular: no detectable person-to-person variation;
+  - in the selected model the fixed modus ponens/tollens weight misfit (fit statistic 2.83), a hint that it varies across persons too.
+- **Where the variation sat.** The authors expected person-specific weights only for the features tied to known differences in how people read "or" (inclusive or exclusive) and "if" (one-way or two-way), and the data agreed.
+
+### What it means for §4 [Inference]
+
+1. **In §4's terms.** f is the SD of a person's step weight divided by the size of the step. The selected model gives f ≈ 1.6 (1.11 / 0.70) for one feature and 0 for the others; the three-weight model gives about 0.8, 1.0 and 1.7; the false-conclusion feature about 0. This is one dataset, in another domain, with 24 items in one session, and variances resting on few items per feature are imprecise.
+2. **f = 0.3–0.5 is fair for graded dimensions, not as an upper bound for all.** The paper's pattern is sparse: most features near 0, one or two at f ≈ 1 or more, where a feature lets people read or solve the item in different ways. At f ≈ 1.6 about a quarter of persons find the "harder" level easier. For a graded spatial dimension (more folds, a larger angle, more cubes) that is implausible: a spread of 0.5 keeps about 98 % of persons' steps positive (0.7: about 92 %), so §4's range stays plausible there. Dimensions that switch the method rather than add load (a fold type, a rotation axis, a mirror or a shape change) are where a spread like the paper's is possible. The paper also shows that weight deviations can correlate with ability (about −0.65 in its larger model); §4.2's simulated learners have independent deviations.
+3. **The simulation, rerun with uneven profiles like the paper's.** `docs/research/v1.2/spikes/P1/dims.mjs` now takes `--sdfs` (a spread per dimension), `--cap` and `--tau`, and reports how often true and fitted offsets reach the cap; the defaults keep §4.2's runs. 200 learners × 800 answers each, run against the engine of commit 8124174, for example `node docs/research/v1.2/spikes/P1/dims.mjs --ex fold --n 200 --sdfs 1.6,0,0,0 --cond est --tau 1.0 --cap 1.5` (`--sdf 0.9` for a uniform spread; `--cond cur` or `oracle` for the other columns). Its f = 0.5 rows reproduce §4.2 within half a point (current engine 87.8 % against 87.4 %, estimated offsets 94.1 % against 94.6 %, oracle 98.8 %).
+
+   Target items whose true success is within ±0.10 of the target, with the worst dimension level (points off target, cells with ≥ 200 items) in brackets:
+
+   | Profile | Current engine | Offsets, prior 0.5 × step, cap 0.75 (§4.3) | Prior 0.75 × step, cap 1.1 | Prior 1.0 × step, cap 1.5 | Prior 1.6 × step, cap 2.5 | Oracle |
+   |---|---|---|---|---|---|---|
+   | Fold, even (f = 0) | 98.6 % (2.4) | 98.2 % (3.3) | 97.4 % (5.8) | 96.7 % (7.6) | — | — |
+   | Fold, f = 0.5 on every dimension (§4.2) | 87.8 % (9.7) | 94.1 % (1.1) | 94.1 % (1.5) | 95.1 % (2.3) | — | 98.8 % (1.8) |
+   | Fold, f = 0.9 on every dimension | 69.3 % (13.6) | 84.6 % (3.4) | 88.6 % (2.8) | 90.0 % (1.7) | — | 98.4 % (1.8) |
+   | Fold, sparse: folds f = 1.6, the rest 0 | 57.8 % (32.3) | 75.0 % (9.8) | 77.6 % (11.7) | 80.1 % (9.1) | 83.9 % (6.9) | 98.7 % (1.0) |
+   | Rotate, sparse: angle f = 1.6, the rest 0 | 67.7 % (20.7) | 77.9 % (8.5) | — | 84.7 % (8.1) | — | 98.1 % (2.1) |
+
+   The cap binds often. On Fold's folds dimension (step 0.6 logit, five levels) the true offsets of 23 % of learners lie beyond ±0.75 at f = 0.5, 50 % at f = 0.9 and 67 % in the sparse profile, and with §4.3's settings 11 %, 28 % and 53 % of fitted offsets sit at the cap (Rotate's angle, sparse: 75 % and 32 %). Offset errors grow from 0.40 step (RMS) at f = 0.5 to 0.6–0.9 step in the uneven profiles.
+4. **Do the ridge prior (0.5 × step) and the cap (±0.75 logit) look right?** For even and mildly uneven players, yes: at f = 0.5 all settings tested give 94–95 %, and the tight one keeps even players' worst level at 3.3 points. For profiles like the paper's they are too tight: they recover only a third to a half of what the oracle gains over the current engine (f = 0.9: 84.6 % against 98.4 %; sparse: 75–78 % against 98 %), and widening them helps those players (up to 90 % and 80–85 %) but costs even players, whose worst level drifts to 5.8–7.6 points off, beyond §4.4's 5-point check. No single constant serves both; the paper's model gives the way out: estimate each dimension's spread from the pooled exports and use it as that dimension's prior. Even then, strongly uneven profiles stay well short of the oracle with a session-end fit on 400 answers; the leading-dimension rotation of §4.3 item 3, which this spike does not include, should spread the levels and help, and the engine simulation should test that.
+5. **The acceptance at f = 0.5 has little margin.** §4.3's settings reach 94.1 % on the current engine against a threshold of 94 %.
+
+### Proposals [Proposal]
+
+- **Ship 0.5 × step and ±0.75 logit as the starting values,** since they protect even players and bound what a shortcut can do (§4.4). Log, per dimension, how often fitted offsets sit at the cap; above about a quarter of honest players, that dimension is more uneven than the prior allows.
+- **Fit a random-weights LLTM per exercise on the pooled exports** (each dimension's step random over players, marginal likelihood). Where a dimension's spread comes out near zero, fix it, as the paper does. Elsewhere use the fitted spread as that dimension's ridge prior SD and set its cap to about 2.5 of that spread at the top level, so that it binds for about 1 % of honest players. These spreads are the f this note could only assume.
+- **Milestone 7's simulation:** keep the f = 0.5 acceptance, add an even profile (f = 0: no dimension level more than 5 points off) as a gate, and report the f = 0.9 and sparse profiles (f = 1.6 on one dimension that switches method) without gating them. Let the simulated learners' deviations correlate with ability (about −0.5) in one run.
+
+### Terlecki et al. in §1.1
+
+The full text (read for M1; see M1's Addendum) supports §1.1's summary with two corrections: the later growth belonged to the inexperienced women, while the experienced women grew steadily; and the Tetris group's final score on the rotation test was not reliably higher, rather than the same. Gains were large and still rising after 12 weekly tests, and about 55 % of the test-only gain remained 2–4 months after testing stopped.

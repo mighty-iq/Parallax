@@ -4,10 +4,16 @@
 // Conditions: cur (the engine as it is), oracle (selection and rating know z), est (offsets
 // refitted at every session end by ridge logistic regression on the last 400 answers, with the
 // rating before each answer as the ability offset).
+// Options added 2026-11-18 (P1 addendum; the defaults keep the runs of P1 §4.2): --sdfs f1,f2,...
+// gives each dimension its own spread (in the order of the exercise's dims with more than one
+// level), --cap the largest move of a dimension's top level in logits (0.75), --tau the ridge
+// prior SD in steps (0.5). The output adds the share of fitted offsets that sit at the cap.
 import { createContext } from '../../../../../tests/node/run.mjs';
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, arr) => (x.startsWith('--') ? a.concat([[x.slice(2), arr[i + 1]]]) : a), []));
 const EX = args.ex || 'fold', N = +(args.n || 200), TOTAL = +(args.total || 800), SDF = +(args.sdf || 0.5), COND = args.cond || 'cur';
 const TAU = +(args.tau || 0.5); // ridge prior SD of each offset, as a multiple of |step|
+const CAP = +(args.cap || 0.75); // an offset may move a dimension's top level by at most CAP logits
+const SDFS = args.sdfs ? args.sdfs.split(',').map(Number) : null; // per-dimension spreads
 const { PX } = createContext({});
 const E = PX.engine, M = E.model;
 const base = PX.ex.get(EX);
@@ -36,16 +42,18 @@ function fitOffsets(H, step) { // ridge logistic: logit-scale offsets o_j, eta =
     o = o.map((v, j) => v + Math.max(-0.3, Math.min(0.3, d[j])));
     if (d.every((x) => Math.abs(x) < 1e-5)) break;
   }
-  // hard cap: an offset may move the top level by at most 0.75 logit
-  return o.map((v, j) => Math.max(-0.75 / (dims[j].n - 1 - dims[j].mid), Math.min(0.75 / (dims[j].n - 1 - dims[j].mid), v)));
+  // hard cap: an offset may move the top level by at most CAP logits (0.75 by default)
+  return o.map((v, j) => Math.max(-CAP / (dims[j].n - 1 - dims[j].mid), Math.min(CAP / (dims[j].n - 1 - dims[j].mid), v)));
 }
 const cells = new Map(); // `${j}:${lv}` → {n, x, t}
 let edge = { n: 0, in10: 0, abs: 0 };
+const capOf = (j) => CAP / (dims[j].n - 1 - dims[j].mid), capN = dims.map(() => 0), beyond = dims.map(() => 0), atCap = dims.map(() => 0);
 let tgt = { n: 0, x: 0, t: 0 }, strongLv = 0, weakLv = 0, cntSW = 0, offErr = 0, offN = 0;
 const T0 = Date.UTC(2026, 10, 2, 17, 0, 0), DAY = 86400000;
 for (let li = 0; li < N; li++) {
   const r = PX.rng(PX.rng.hash('dims', EX, SDF, li)); // same learners in every condition
-  const z = dims.map((d) => r.normal(0, SDF * d.step));
+  const z = dims.map((d, j) => r.normal(0, (SDFS ? SDFS[j] : SDF) * d.step));
+  dims.forEach((d, j) => { capN[j]++; if (Math.abs(z[j]) > capOf(j)) beyond[j]++; });
   const L = { t0: M.range(base).min + 1.5 + r.normal(0, 0.4), lapse: r.float(0.01, 0.06) };
   const rr = PX.rng(PX.rng.hash('dims-play', EX, SDF, li, COND));
   const rec = { ex: {}, trials: [], idx: { ex: [], mode: [] }, eng: { seedN: 0, salt: 1 } };
@@ -86,7 +94,10 @@ for (let li = 0; li < N; li++) {
     if (COND === 'est' && H.length >= 100) { off = fitOffsets(H); def = clone(off); }
   }
   if (COND !== 'cur') { off.forEach((o, j) => { offErr += (o - z[j]) ** 2 / dims[j].step ** 2; offN++; }); }
+  if (COND === 'est') off.forEach((o, j) => { if (Math.abs(o) >= capOf(j) - 1e-9) atCap[j]++; });
 }
 let rms = 0, wsum = 0, worst = 0;
 for (const [, c] of cells) { if (c.n < 200) continue; const d = (c.x - c.t) / c.n; rms += c.n * d * d; wsum += c.n; worst = Math.max(worst, Math.abs(d)); }
-console.log(`${EX} ${COND} sdf=${SDF}: target items within ±0.10 of the target in true success ${(100 * edge.in10 / edge.n).toFixed(1)}%, mean |p_true − target| ${(100 * edge.abs / edge.n).toFixed(1)} points; success ${(100 * tgt.x / tgt.n).toFixed(1)} vs target ${(100 * tgt.t / tgt.n).toFixed(1)}; per dimension level (cells with >= 200 target items): RMS gap ${(100 * Math.sqrt(rms / wsum)).toFixed(1)} points, worst ${(100 * worst).toFixed(1)} points; mean level share of the learner's strongest dim ${(strongLv / cntSW).toFixed(2)} vs weakest ${(weakLv / cntSW).toFixed(2)}${offN ? `; offset error RMS ${(Math.sqrt(offErr / offN)).toFixed(2)} steps` : ''}`);
+console.log(`${EX} ${COND} ${SDFS ? 'sdfs=' + SDFS.join('/') : 'sdf=' + SDF} tau=${TAU} cap=${CAP}: target items within ±0.10 of the target in true success ${(100 * edge.in10 / edge.n).toFixed(1)}%, mean |p_true − target| ${(100 * edge.abs / edge.n).toFixed(1)} points; success ${(100 * tgt.x / tgt.n).toFixed(1)} vs target ${(100 * tgt.t / tgt.n).toFixed(1)}; per dimension level (cells with >= 200 target items): RMS gap ${(100 * Math.sqrt(rms / wsum)).toFixed(1)} points, worst ${(100 * worst).toFixed(1)} points; mean level share of the learner's strongest dim ${(strongLv / cntSW).toFixed(2)} vs weakest ${(weakLv / cntSW).toFixed(2)}${offN ? `; offset error RMS ${(Math.sqrt(offErr / offN)).toFixed(2)} steps` : ''}` +
+  `; true offsets beyond the cap ${dims.map((d, j) => `${d.key} ${(100 * beyond[j] / capN[j]).toFixed(0)}%`).join(', ')}` +
+  (COND === 'est' ? `; fitted offsets at the cap ${dims.map((d, j) => `${d.key} ${(100 * atCap[j] / capN[j]).toFixed(0)}%`).join(', ')}` : ''));
