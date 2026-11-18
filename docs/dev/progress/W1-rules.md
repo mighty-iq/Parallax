@@ -31,9 +31,12 @@ Owns: see docs/dev/CONTRACT-v1.2.md "File ownership" (W1-rules row). Requests: d
 - Requests: all answered (band-A phrases, W1-fixes' label, W1-central's overlap row, W1-core's Hole Punch phrase).
   W1-core did the share texts, invite slots, playtest hooks and the pause sheet's note button.
 
+- 16:53 UTC: overlap.py 58 passed; Node: chimera, overlap, playtest, section and the first 12 files of the full suite pass
+  (the full run stops at its 15-minute limit on this shared machine); README counts twenty exercises; Today's
+  suggestion layout checked at 1366 and 900 px (a286e0a). Milestone 2's W1-rules part is done.
+
 ## Next
-1. The full Node suite and tests/e2e/overlap.py after the overlap changes.
-2. Later milestones (not wave 1): the guide's Central Point section (W1-central's request; milestone 10/11).
+1. Later milestones (not wave 1): the guide's Central Point section (W1-central's request; milestone 10/11).
 
 ## Open problems
 - tools/build-pdf.py's /Author metadata (C13) waits on W1-core (unowned file; request 16:13 UTC).
