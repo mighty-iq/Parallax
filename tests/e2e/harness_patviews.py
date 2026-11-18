@@ -127,13 +127,15 @@ def normal_speed(b, cons):
     cap = page.locator('.hx-caption').inner_text()
     C.ok(len(cap) > 10, f'the demo plays to the end with captions ({cap!r})')
     page.screenshot(path=str(DIR / 'patviews_demo_end.png'))
-    # The Watch's dotted-line step: long, after the structure is shown, every dotted line marked.
+    # The Watch's dotted-line step: long, once the drawing lies in the slot (v1.2: after the structure turned
+    # to the missing side and faded into it), the structure in view, every dotted line marked.
     d = page.evaluate("""() => { const v = PX.ex.view('patviews'), L = PX.ex.learn('patviews'), list = v.steps(__harness.item, null);
         const i = list.findIndex((s) => s.caption === L.captions.dotted); if (i < 0) return { found: false };
+        const lay = L.captions.lay.split('{')[0];
         list[i].enter();
         return { found: true, ms: list[i].ms, hl: document.querySelectorAll('.pv-over .pv-hl').length, obj: document.querySelectorAll('.pv-over .pv-cover').length,
-          after: !!(list[i - 1] && list[i - 1].caption === L.captions.object) }; }""")
-    C.ok(d.get('found') and d['ms'] >= 4000 and d['hl'] >= 3 and d['obj'] == 1 and d['after'], f"the Watch's dotted-line step is long, follows the structure and marks every dotted line ({d})")
+          after: !!(list[i - 1] && list[i - 1].caption.startsWith(lay)), turned: list.slice(0, i).some((s) => s.caption.startsWith(L.captions.turn.split('{')[0])) }; }""")
+    C.ok(d.get('found') and d['ms'] >= 4000 and d['hl'] >= 3 and d['obj'] == 1 and d['after'] and d['turned'], f"the Watch's dotted-line step is long, follows the turn and the drawing laid in the slot, shows the structure and marks every dotted line ({d})")
     page.screenshot(path=str(DIR / 'patviews_demo_dotted.png'))
     ctx.close()
     return pl
