@@ -26,7 +26,7 @@
     rules: [
       { text: 'Only the opening between the two arms counts, not how long the arms are or how the angle is turned.', fig: 'opening' },
       { text: 'Every angle is less than a straight line (180°).', fig: 'straight' },
-      { text: 'Each answer lists the letters from the smallest angle to the largest.', fig: 'order' },
+      { text: 'Each answer lists the angles from the smallest to the largest.', fig: 'order' },
     ],
     strategyFirst: 'analytic',
     // Seeds fixed so the answers vary their slot (Watch 2, Try 3, 1, 4, 3) and no two lists repeat.
@@ -65,11 +65,11 @@
         // The card before Try 1 (strategyFirst; D2 §3.2): Kaplan's elimination by the extremes, in
         // three steps; show-me crosses the lists out in the same order.
         id: 'analytic', title: 'Extremes first',
-        text: 'Find the smallest and the largest angle first and cross out every list that disagrees. Often the pair in the middle never has to be judged.',
+        text: 'Find the smallest and the largest angle first and cross out every answer that disagrees. Often the pair in the middle never has to be judged.',
         steps: [
-          'Find the clearly smallest angle; keep the lists that start with it.',
-          'Find the clearly largest; keep the lists that end with it.',
-          'Compare only the pair the remaining lists disagree on: lay one angle on the other.',
+          'Find the clearly smallest angle; keep the answers that start with it.',
+          'Find the clearly largest; keep the answers that end with it.',
+          'Compare only the pair the answers left disagree on: lay one angle on the other.',
         ],
         when: 'Quick on most items, and the way to start: it leaves at most one pair to judge carefully.',
       },
@@ -92,11 +92,11 @@
       pair: 'Angle {b} opens {d}° wider than angle {a}.',
       done: 'So the order is {order}: answer {n}.',
       chosen: 'Answer {n} puts angle {b} before angle {a}, but angle {b} is the larger one.',
-      smallest: 'The clearly smallest angle is {a}: keep the lists that start with {a}.',
-      largest: 'The clearly largest angle is {b}: keep the lists that end with {b}.',
-      left: 'One list is left: {order}.',
-      disagree: 'The lists left disagree on {a} and {b}: lay one angle on the other.',
-      assist: 'The smallest angle is marked, and the lists that do not start with it are greyed.',
+      smallest: 'The clearly smallest angle is {a}: keep the answers that start with {a}.',
+      largest: 'The clearly largest angle is {b}: keep the answers that end with {b}.',
+      left: 'One answer is left: {order}.',
+      disagree: 'The answers left disagree on {a} and {b}: lay one angle on the other.',
+      assist: 'The smallest angle is marked, and the answers that do not start with it are greyed.',
     },
     checkin: { whole: 'I laid the angles on each other in my mind', parts: 'I settled the smallest and largest first', unsure: 'Not sure, or both' },
     bridge: 'Angle ranking is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). This is perceptual-judgement practice: judging angles by eye improves with practice, but the gains tend to stay with this kind of figure, and an effect of Parallax on DAT scores has not been shown or measured. ' + ADA,

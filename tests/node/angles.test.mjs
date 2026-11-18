@@ -281,7 +281,11 @@ function testLearn(t, PX, def) {
   // The teaching template (CONTRACT-v1.2 D; note D2 §3.0 C, §3.2).
   t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => (typeof r === 'string' && r.length > 10) || (r && typeof r.text === 'string' && r.text.length > 10 && typeof r.fig === 'string' && r.fig)), 'a rules card: 2–4 rules, each a text or { text, fig }');
   const ruleText = L.rules.map((r) => (typeof r === 'string' ? r : r.text)).join(' ');
-  t.ok(/opening/.test(ruleText) && /180/.test(ruleText) && /smallest angle to the largest/.test(ruleText), 'the three rules of note D2 §3.2: the opening only, under 180°, lists from smallest to largest');
+  t.ok(/opening/.test(ruleText) && /180/.test(ruleText) && /from the smallest to the largest/.test(ruleText), 'the three rules of note D2 §3.2: the opening only, under 180°, answers from smallest to largest');
+  // Milestone 8 switches to the test's labels (angles numbered, answers lettered): the v1.2 texts
+  // (rules, the first card, the new captions) name neither letters nor numbers as labels.
+  const neutral = [ruleText, ...(L.strategies.find((x) => x.id === L.strategyFirst) || { steps: [] }).steps, ...['smallest', 'largest', 'left', 'disagree', 'assist'].map((k) => L.captions[k])].join(' ');
+  t.ok(!/\bletters?\b|\bnumbers?\b|\b(the|a|two|one) lists?\b/.test(neutral), 'the v1.2 texts are label-neutral (answers, not "lists"; no "letters" or "numbers")');
   const first = (L.strategies || []).find((x) => x.id === L.strategyFirst);
   t.ok(first && first.steps.length === 3 && /Extremes first/.test(first.title), 'strategyFirst names the "Extremes first" card, three steps');
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((x) => x && valid(x.params) && Number.isInteger(x.seed)), 'four Try items as objects { params, seed, … }');
