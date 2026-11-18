@@ -13,6 +13,8 @@ pinned and ends it from the pause sheet after 14 answers; the session's end runs
   - Today shows the card after the session slot with its progress line;
   - Progress shows the history; the Library's Fold page shows its line;
   - no page or console errors.
+Other builders' screen hooks are muted after every load (PX.ui.hooks.mute: only the 'plateau.*' handlers run), so a
+measurement offered at a session's start or a comparison round cannot get in the way; the engine hooks all run.
 Run: tests/e2e/pwslot.sh python3 tests/e2e/plateau.py [--only desktop,phone]
 Report: tests/e2e/out/plateau.json; screenshots in tests/e2e/out/plateau/.
 """
@@ -63,6 +65,9 @@ SEED_JS = r'''() => {
 }'''
 
 
+MUTE = "PX.ui.hooks && PX.ui.hooks.mute(function (id) { return /^plateau\\./.test(id); })"
+
+
 def dismiss(page):
     for _ in range(6):
         if not page.evaluate('PX.ui.modalOpen()'):
@@ -74,6 +79,7 @@ def dismiss(page):
 def boot(page):
     page.goto(INDEX.as_uri())
     page.wait_for_function(READY, timeout=30000)
+    page.evaluate(MUTE)
     dismiss(page)
     page.evaluate('''PX.ex.list('train').forEach(d => { PX.core.store.state.tour.seen[d.id] = true; });
       PX.core.store.state.ui.seen = PX.core.store.state.ui.seen || {}; PX.core.store.state.ui.seen.motionNotice = Date.now();
@@ -112,8 +118,11 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     C.ok(seeded['n'] == 672 and seeded['near'] > 0, f'{name}: a flat history of 672 answers written ({seeded})')
     page.reload()
     page.wait_for_function(READY, timeout=30000)
+    page.evaluate(MUTE)
     dismiss(page)
     cfg = page.evaluate('PX.engine.config.plateau')
+    hooks = page.evaluate("['summary:panels', 'today:slots', 'today:session', 'item:before', 'exercise:lines', 'progress:panels'].map(function (p) { return PX.ui.hooks.list(p).map(function (h) { return h.id; }); })")
+    C.ok(all(any(i.startswith('plateau.') for i in ids) for ids in hooks), f'{name}: the plateau handlers are mounted at all six points ({hooks})')
     page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "train", exId: "fold", pin: "fold" }, { force: true })')
     fold, stim_card = 0, False
     for i in range(14):
