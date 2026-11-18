@@ -29,7 +29,7 @@ Read with docs/dev/PLAN.md (what to build, acceptance), CLAUDE.md (standing rule
 | Item | Owner and part |
 |---|---|
 | First band, Views and the six DAT-style (note D2 §3.1–3.7) | Band levels with Δ (note D2 §3.8), `starter`, version bump, generator and validator changes, shortcut balance on the band's pool, learn.js teaching data, Show-me changes (O53 Openings, Form's fold part of O51), the demo at the band, the tests of note D2 §3.9 item 1: W1-band-A (views, angles, cubes), W1-band-B (openings, form, patfold, patviews) |
-| Engine for the band: σ0 1.5, no early stretch, starter display, re-basing | W1-core |
+| Engine for the band: σ0 1.5, early stretch items that move one setting only (`stretch1`), starter display, re-basing | W1-core |
 | Teaching template in the player (rules card, strategy card before Try 1, faded Try 1, "How to solve" chip, O6 "about two minutes") | W1-core (player); exercise data: band builders |
 | firstband.test.mjs, sim.mjs coverage | W1-core |
 | Motion comfort O36 (note N1 §5.4, §6 #1–5) | W1-fixes: gentle profile in Homing and Reckon (1.2 m/s, 30°/s, 0.6 s ramps, no speed change within a leg, screen-fixed fixation dot, up to 40 s per route), motion reporting, notice text. W1-core: notice, check-in and new-player cards in the player |
@@ -50,7 +50,7 @@ Read with docs/dev/PLAN.md (what to build, acceptance), CLAUDE.md (standing rule
 ### Interfaces
 
 **A. Registry (js/ex/registry.js; W1-core).** New optional definition fields, validated by `PX.ex.check`:
-- `starter: { dim: '<key>', levels: n }`: the first n levels of that dim are the starter band below the pre-1.2 floor (1 ≤ n < levels). Display only (Library tags, "starter items"); the engine needs nothing else.
+- `starter: { dim: '<key>', levels: n }` or a list of them: the first n levels of that dim are the starter band below the pre-1.2 floor (1 ≤ n < levels). Normalised `def.starters` (list, [] when none) and `def.starter` (its first entry or null). Display only (Library tags, "starter items"); the engine needs nothing else.
 - Dim `at: [b0, b1, …]` (length = levels): per-level difficulty contributions used instead of `step × index` by the default difficulty and `range`. A band level in front: `at: [Δ, 0, step, 2·step, …]` with `base` unchanged keeps every old combination's difficulty exact. Custom `difficulty` functions add Δ themselves. Keep `step` (the mean step, for refits).
 - `trainVariants: ['quick']`: the variants that automatic choices use (Train, Path, Today's plan, the Daily). Free play, the Library and Speed may use any variant. Default: all.
 - `pace: { variants: ['quick'], startMs, minMs, maxMs, target: 0.85, step: 0.03 }`: items of these variants (absent: all) carry a deadline in Train, Path, Free play and the Daily; Speed keeps its own. The engine keeps one deadline per exercise in `rec.ex[id].pace = { ms, n }`, a weighted up/down staircase on log10(ms) (step `step` down after an answer given before the deadline, `step·target/(1 − target)` up after a time-out), so about `target` of answers come in time; only rated Train and Path answers move it. "In time" counts any answer before the deadline, right or wrong: the rating handles accuracy.
