@@ -50,8 +50,15 @@ stays non-breaking for Missing View. Design source: docs/research/v1.2/D2-first-
   end screen (fixed; the app flow alone 15/0 for both); node 1009/0 (views, angles, cubes, firstband,
   rebase, engine-v12). Commits 22f636a, 156dad0, DECISIONS cdfcf9c and ca2003b.
 
+- 20:40–21:25 UTC: fix round 2 (Views fresh test 4/4 Try, 5/5 scored; W1-core's reveal lines): reveal room kept
+  from the start in all three (0 tile moves at 360 × 640, 390 × 844, 1366 × 768, right and wrong answers);
+  Views: no cube bars while tracing, seamless whole shaded faces, shading on Try items, Try 3 = right view,
+  floor labels kept, arrow short of the faces, tag clear of arrow and labels. d3e0973, d378972, 9d097c0.
+  Checks: node 910/0; harness_views 180/0, harness_cubes 217/0, harness_angles 219/0 (with reveal_stable).
+  The session restarted at about 21:00 UTC mid-round; edits were intact, checks rerun after it.
+
 ## Next
-- The Views fresh-player retest, run by the lead at integration (driver: /tmp/w1a/fp, slot per action).
+- none of mine; the trial's own shift at the reveal is with W1-core (requests, 21:24 UTC).
 
 ## Open problems
-- none of mine; four player items are with W1-core (requests, 17:39 UTC).
+- On the smallest stages Views' FRONT VIEW tag can touch a corner of the structure (no free spot there).
