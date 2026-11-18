@@ -18,8 +18,19 @@ stays non-breaking for Missing View. Design source: docs/research/v1.2/D2-first-
 - 15:33 UTC: started; read CLAUDE.md, CONTRACT-v1.2, PLAN milestone 1, EXERCISE-GUIDE, note D2 §2–§4, the three
   exercises' code and tests, registry (a5482c2). Requests filed (requests.md 15:34 lines).
 
+- 15:50 UTC: Painted Cubes v2 (3f6524a): flat level and a small level (4–6 cubes, see DECISIONS), measured count
+  ranges (KRANGE_FLAT, KRANGE_SMALL, NAT_FLAT), band-pool shortcuts ≤ 26.3 %; teaching data.
+- 15:52 UTC: Angles v2 (d81b0c3): 9° near-right band, band-weighted arm search, band pool worst cue 31.8 %.
+- 16:04 UTC: Views v2 (f58c9a2): toview starter level (3–4 cubes, ≤ 2 high, no mirror foils), extra stem-blind
+  solvers balanced on the band (worst 31.0 %); teaching data with a fourth card "Outline first".
+- 16:07 UTC: R-reader's requests: Painted Cubes Try 3/4 reordered, Angles texts label-neutral (f21aa95).
+- 16:12 UTC: Painted Cubes offsets flat −0.85 / small −0.7 (floor −3.85): firstband passes for all three
+  (views 78.0 % / item 8, cubes 76.8 % / 8, angles 72.4 % / 6).
+
 ## Next
-- Spikes for the three bands.
+- view.js for the three: drawRule figures, ctx.assist (Try 1's step done), Show-me per note D2 §3.1–3.3 with
+  step-numbered captions (R-reader's request), Views' band tint. Then harness checks at 360 × 640 (pwslot) and
+  the fresh-player check through the app (W1-core: route (b)).
 
 ## Open problems
-- Fresh-player surface: the harness has no Watch–Try–Go (W1-band-B asked W1-core at 15:45; I joined).
+- none
