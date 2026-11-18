@@ -57,6 +57,14 @@ function aroundGap(T) {
   }
   return false;
 }
+// The crossing of the two lines that join opposite corners of four targets (in order round their centre).
+function crossOfOpposites(T) {
+  const c = meanOf(T), H = T.slice().sort((a, b) => Math.atan2(a[1] - c[1], a[0] - c[0]) - Math.atan2(b[1] - c[1], b[0] - c[0]));
+  const [p1, p3, p2, p4] = H, d = (p1[0] - p2[0]) * (p3[1] - p4[1]) - (p1[1] - p2[1]) * (p3[0] - p4[0]);
+  if (Math.abs(d) < 1e-12) return null;
+  const a = p1[0] * p2[1] - p1[1] * p2[0], b = p3[0] * p4[1] - p3[1] * p4[0];
+  return [(a * (p3[0] - p4[0]) - (p1[0] - p2[0]) * b) / d, (a * (p3[1] - p4[1]) - (p1[1] - p2[1]) * b) / d];
+}
 function farthestFromMean(T) { const m = meanOf(T); let f = T[0]; for (const t of T) if (hyp(t, m) > hyp(f, m)) f = t; return f; }
 function oneWeiszfeldStep(T) {
   const m = meanOf(T); let x = 0, z = 0, w = 0;
@@ -98,7 +106,7 @@ export async function run(t) {
   for (const variant of ['quick', 'exact']) for (let b = 0; b < 3; b++) for (let ti = 0; ti < 5; ti++) {
     const p = { variant, targets: ti, band: b }, n = variant === 'quick' ? ITEMS : Math.ceil(ITEMS / 10), band = L.BANDS[b], k = L.TARGETS[ti];
     const z = { chance: 0, bandPts: 0, keyFreq: new Float64Array(NP), nbAvg: 0, ring2: 0, parity: 0, betweenKeys: 0, dense15: 0, dense2: 0,
-      w1: 0, toward: [0, 0, 0, 0], away: [0, 0, 0, 0], obs03: 0, obs05: 0, avgUser: 0, crKey: [], fam: {} };
+      w1: 0, toward: [0, 0, 0, 0], away: [0, 0, 0, 0], obs03: 0, obs05: 0, obs07: 0, avgUser: 0, crKey: [], fam: {} };
     const cpu = [];
     const obsRng = PX.rng(PX.rng.hash('centralpoint-observers', variant, b, ti));
     for (let s = 0; s < n; s++) {
@@ -165,6 +173,9 @@ export async function run(t) {
       if (inB(snap1(g[0] + 0.3 * F * obsRng.normal(), g[1] + 0.3 * F * obsRng.normal()))) z.obs03++;
       if (inB(snap1(g[0] + 0.5 * F * obsRng.normal(), g[1] + 0.5 * F * obsRng.normal()))) z.obs05++;
       if (inB(snap1(m[0] + 0.3 * F * obsRng.normal(), m[1] + 0.3 * F * obsRng.normal()))) z.avgUser++;
+      // a 0.7-dot observer: about the median pooling noise of the largest clusters in Morgan & Glennerster
+      // 1991 (a third of the targets' spread; C1 addendum A3–A4, the R-reader's request)
+      if (inB(snap1(g[0] + 0.7 * F * obsRng.normal(), g[1] + 0.7 * F * obsRng.normal()))) z.obs07++;
       z.fam[it.fam] = (z.fam[it.fam] || 0) + 1;
     }
     cpu.sort((a, c) => a - c);
@@ -174,7 +185,7 @@ export async function run(t) {
     rows.push({
       variant, k, band, n, chance: ch, bandPts: z.bandPts / n, fixed: Math.max(...z.keyFreq) / n, nbAvg: z.nbAvg / n, ring2: z.ring2 / n,
       parity: z.parity / n, between: z.betweenKeys / n, dense15: z.dense15 / n, dense2: z.dense2 / n, w1: z.w1 / n,
-      toward: z.toward.map((c) => c / n), away: z.away.map((c) => c / n), obs03: z.obs03 / n, obs05: z.obs05 / n, avgUser: z.avgUser / n,
+      toward: z.toward.map((c) => c / n), away: z.away.map((c) => c / n), obs03: z.obs03 / n, obs05: z.obs05 / n, obs07: z.obs07 / n, avgUser: z.avgUser / n,
       crKey: z.crKey.sort((a, c) => a - c)[Math.floor(z.crKey.length / 2)], fam: z.fam,
     });
   }
@@ -194,9 +205,9 @@ export async function run(t) {
   t.eq(v2KeyOff, 0, 'value2 at the key lies within 0.3–1.7 (the key sits within a dot of the best spot, the trap is at least a dot)');
 
   t.section('centralpoint: chance and the shortcut table (hit rates in %; bounds asserted from 2 000 items per cell)');
-  console.log('    cell (form targets band) | n | band pts | chance | fixed | next to avg | ring 2 | between dots | dense 1.5 / 2 dots | 1 Weiszfeld step | avg→group 1–4 half-steps | avg away from far 1–4 | observer 0.3 / 0.5 | avg user | value2 at key (median) | keys between dots');
+  console.log('    cell (form targets band) | n | band pts | chance | fixed | next to avg | ring 2 | between dots | dense 1.5 / 2 dots | 1 Weiszfeld step | avg→group 1–4 half-steps | avg away from far 1–4 | observer 0.3 / 0.5 / 0.7 | avg user | value2 at key (median) | keys between dots');
   for (const r of rows) {
-    console.log(`    ${r.variant} ${r.k} ${r.band * 100}% | ${r.n} | ${r.bandPts.toFixed(2)} | ${pct(r.chance, 2)} | ${pct(r.fixed)} | ${pct(r.nbAvg)} | ${pct(r.ring2)} | ${pct(r.parity, 2)} | ${pct(r.dense15)} / ${pct(r.dense2)} | ${pct(r.w1)} | ${r.toward.map((x) => pct(x, 0)).join('/')} | ${r.away.map((x) => pct(x, 0)).join('/')} | ${pct(r.obs03, 0)} / ${pct(r.obs05, 0)} | ${pct(r.avgUser)} | ${r.crKey.toFixed(2)} | ${pct(r.between, 0)}`);
+    console.log(`    ${r.variant} ${r.k} ${r.band * 100}% | ${r.n} | ${r.bandPts.toFixed(2)} | ${pct(r.chance, 2)} | ${pct(r.fixed)} | ${pct(r.nbAvg)} | ${pct(r.ring2)} | ${pct(r.parity, 2)} | ${pct(r.dense15)} / ${pct(r.dense2)} | ${pct(r.w1)} | ${r.toward.map((x) => pct(x, 0)).join('/')} | ${r.away.map((x) => pct(x, 0)).join('/')} | ${pct(r.obs03, 0)} / ${pct(r.obs05, 0)} / ${pct(r.obs07, 0)} | ${pct(r.avgUser)} | ${r.crKey.toFixed(2)} | ${pct(r.between, 0)}`);
   }
   for (const r of rows.filter((x) => x.variant === 'quick')) {
     const lim = r.chance + 0.10, cell = `${r.k} targets, ${r.band * 100} %`;
@@ -216,7 +227,7 @@ export async function run(t) {
   /* ---------------------------------------------------------------- tutorial items */
   t.section('centralpoint: tutorial tasks (2 % band, never rated)');
   for (const task of ['watch', 'kite', 'group', 'loose']) for (const variant of ['quick', 'exact']) {
-    let bad = 0, first = null, kiteOff = 0, trapLow = 0, dl = 0;
+    let bad = 0, first = null, kiteOff = 0, trapLow = 0, dl = 0, dlOff = 0;
     for (let s = 0; s < 400; s++) {
       const it = def.generate(PX.rng(PX.rng.hash('centralpoint-task', task, variant, s)), { variant, task });
       const v = def.validate(it);
@@ -228,12 +239,12 @@ export async function run(t) {
       const m = meanOf(it.targets);
       if ((task === 'watch' || task === 'group') && hyp(m, it.gm) / F < (task === 'watch' ? 0.75 : 1)) trapLow++;
       if ((task === 'watch' || task === 'group') && !aroundGap(it.targets)) trapLow++;
-      if (it.deadlineMs) dl++;
+      if (it.deadlineMs) { dl++; if (it.deadlineMs !== L.PACE.maxMs) dlOff++; }
     }
     t.ok(bad === 0, `${task} (${variant}): 400 valid, regular items${first ? ' (first problem: ' + first + ')' : ''}`);
     if (task === 'kite') t.eq(kiteOff, 0, `kite (${variant}): the best spot is the dot where the diagonals cross`);
     if (task === 'watch' || task === 'group') t.eq(trapLow, 0, `${task} (${variant}): four targets round an empty dot and a far one; the average lies at least ${task === 'watch' ? '¾ dot' : '1 dot'} from the best spot`);
-    t.eq(dl, task === 'loose' && variant === 'quick' ? 400 : 0, `${task} (${variant}): a 20 s deadline only on the last Try item of the quick form`);
+    t.eq([dl, dlOff], [task === 'loose' && variant === 'quick' ? 400 : 0, 0], `${task} (${variant}): a 30 s deadline (the pace's longest) only on the last Try item of the quick form`);
   }
 
   t.section('centralpoint: fallbacks');
@@ -292,6 +303,19 @@ export async function run(t) {
   }
   t.eq(pullOff, 0, 'at the best spot the equal pulls cancel (|sum| < 1e-5), each a unit vector');
   t.eq(contourOff, 0, 'contour points lie on their level line');
+  { // the four-target tip ("join each one to the target across from it; the best spot is where the two
+    // lines cross") holds on every rated 4-target item: no target lies in the band, so the four are in
+    // convex position, and there the best spot is where the lines joining opposite corners cross
+    let off = 0, n4 = 0;
+    for (const variant of ['quick', 'exact']) for (let b = 0; b < 3; b++) for (let s = 0; s < 200; s++) {
+      const it = def.generate(PX.rng(PX.rng.hash('centralpoint-four', variant, b, s)), { variant, targets: 0, band: b });
+      if (it.fallback) continue;
+      n4++;
+      const x = crossOfOpposites(it.targets);
+      if (!x || hyp(x, it.gm) > 1e-4) off++;
+    }
+    t.ok(n4 >= 1000 && off === 0, `4 targets: the best spot is where the lines joining opposite targets cross (${n4 - off} of ${n4} items)`);
+  }
   { // the engine's staircase rule (js/engine/pace.js) with these numbers settles near 85 % in time for a
     // player with a lognormal pace (median 4 s)
     const pc = def.pace, r = PX.rng(5); let x = Math.log10(pc.startMs), inT = 0, n2 = 0;
@@ -346,6 +370,12 @@ function checkLearnCP(t, PX, def) {
     if (x.tip) t.ok((L.tips || []).some((tip) => tip.id === x.tip), `Try ${x.params.task} names an existing tip (${x.tip})`);
   }
   t.eq(L.practice[0].assist, 'diagonals', 'Try 1 comes with its first step done: the diagonals drawn');
+  // the player falls back on the first tip whose trigger fits the item's params (fresh-player test: the
+  // four-target tip showed on the five-target Try 3), so every Try entry names its tip and every
+  // tutorial item's params name its true number of targets
+  t.ok(L.practice.every((x) => typeof x.tip === 'string'), 'every Try item names its own tip');
+  const lb = def.lib, trueCount = (p) => lb.TARGETS[p.targets] === lb.TASKS[p.task].k;
+  t.ok([...L.demo.map((d) => d.params), ...pp].every(trueCount), 'the Watch and Try params name the true number of targets (' + [...L.demo.map((d) => d.params), ...pp].map((p) => p.task + ' ' + lb.TASKS[p.task].k).join(', ') + ')');
   t.ok((L.strategies || []).some((st) => st.id === L.strategyFirst), 'strategyFirst names one of the cards');
   t.ok(Array.isArray(L.rules) && L.rules.length >= 2 && L.rules.length <= 4 && L.rules.every((r) => r.text && r.fig), 'a rules card of 2–4 rules, each with a picture');
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');

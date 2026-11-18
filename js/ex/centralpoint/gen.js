@@ -48,7 +48,9 @@
    where the diagonals cross), 'group' (Try 2: like the Watch, another layout) and 'loose' (Try 3: five
    targets under the strict policy). They use a 2 % band (C1 §3.2: practice cells, outside the rated
    pool); the average lies at least ¾ dot (Watch) or 1 dot (Try 2) from the best spot, Try 3 has the
-   strict policy and a trap of half a dot. The last Try item carries a 20 s deadline in the quick form (item.deadlineMs).
+   strict policy and a trap of half a dot. The last Try item carries a 30 s deadline in the quick form
+   (item.deadlineMs), the pace's longest: a first meeting with the clock, not a test of speed (20 s
+   timed out a fresh tester).
 
    Forms (variants; PLAN.md milestone 8, DECISIONS 18 Nov; CONTRACT-v1.2 A and E): 'quick' (the only
    form automatic choices use, trainVariants; a deadline from the engine's pace staircase that tightens
@@ -60,9 +62,11 @@
    per extra target, +0.6 per band level (the band moves accuracy most in the simulation, 0.3–0.5 per
    level, and human errors are assumed heavier-tailed than a Gaussian), and the exact form 0.6 easier
    (no deadline, fine control): at one rating it gets a band level tighter. The span is 2.2 logits per
-   form, short of the guide's 4 (no human data; pooled exports refit it). The base is 0: a model observer
-   who places the best spot with a 0.3-dot scatter gets about 61 % at the easiest cell (C1 §3.2), so the
-   guide's 90 % at θ = 0 cannot be set honestly.
+   form, short of the guide's 4 (no human data; pooled exports refit it). The base is 0: model observers
+   who place the best spot with a 0.3-, 0.5- or 0.7-dot scatter get about 60 / 33 / 20 % right at the
+   easiest cell (4 targets, 1 %; the node test prints them per cell). 0.3 dots is the level of the best
+   observers on small clusters in Morgan & Glennerster 1991, 0.7 about their median pooling noise at the
+   largest (C1 §3.2, addendum A3–A4), so the guide's 90 % at θ = 0 cannot be set honestly.
 
    Item (JSON): { ex: 'centralpoint', seed, params: { variant, targets, band, task? }, answer: 'point',
      form, targets: [[x, y], …] (half-steps, even), band (share), trapMin (dots), key: { x, y },
@@ -95,7 +99,7 @@
     watch: { k: 5, band: 0.02, trap: 0.75, strict: false, deadlineMs: null },
     kite: { k: 4, band: 0.02, trap: 0, strict: false, deadlineMs: null },
     group: { k: 5, band: 0.02, trap: 1, strict: false, deadlineMs: null },
-    loose: { k: 5, band: 0.02, trap: 0.5, strict: true, deadlineMs: 20000 },
+    loose: { k: 5, band: 0.02, trap: 0.5, strict: true, deadlineMs: 30000 }, // the pace's longest (PACE.maxMs)
   };
   var TASK_NAMES = ['watch', 'kite', 'group', 'loose'];
   // Quick form: the deadline (def.pace; the engine's staircase in js/engine/pace.js runs it). It starts
