@@ -431,7 +431,7 @@
         PX.ui.chimera.linkCopy({ label: 'Chimera Discord address' }),
         discordLink('px-footer-discord')),
       h('div.px-footer-col',
-        h('p', 'Code under the MIT licence; guide text CC BY-SA 4.0; fonts SIL OFL 1.1; three.js MIT.'),
+        h('p', 'Code under the MIT licence; the guide and texts CC BY-SA 4.0; fonts SIL OFL 1.1; three.js MIT.'),
         h('p.px-footer-links', about, set))));
   }
 
