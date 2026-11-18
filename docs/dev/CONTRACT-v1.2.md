@@ -188,8 +188,8 @@ Wave 1's rules above still hold, with the additions below. The interfaces contin
 | kind | data fields | emitted by | when |
 |---|---|---|---|
 | showme | seed, auto, ms, steps, replays, closed | W2-core (play.js) | a show-me after an answer ends (automatic, Show me, Why?) |
-| card | card (strategy id), src (misses, howto, wtg, library, plateau), ms | W2-core (play.js) | a strategy card closes |
-| wtg | result (done, skipped), ms, tries, right | W2-core | Watch, Try, Go ends |
+| card | card (strategy id; 'all' for the sheet of every card the two-miss offer opens), src (misses, howto, wtg, plateau; the Library shows its cards inline, so none from it), ms | W2-core (play.js) | a strategy card closes |
+| wtg | result (done, skipped, end), ms, tries, right | W2-core | Watch, Try, Go ends |
 | suggest | key, mode, act (go, hide) | W2-core (home.js) | a tap on a mode suggestion |
 | checkin | answer | W2-core (source: rec.strategies) | export only |
 | compare | a, aSeed, b, bSeed (exercise keys and seeds of the pair), principle, stage, choice, correct, rt, apply (the apply item's seed, or 0) | W2-bets | a comparison round ends |
@@ -276,6 +276,7 @@ Wave 1's rules above still hold, with the additions below. The interfaces contin
 
 - Today's slot names: session, suggest, goal, daily, levels, check, achievements, data. `replace` takes a slot's place, `after` follows it; several results for one place go by order.
 - One Chimera invite per screen: the summary keeps the highest kind among its own and the panels' requests, best > path > grade > plateau > achievement > check, and W2-core places it (CONTRACT H gains 'plateau').
+- As built (W2-core, Phase B, 22:02 UTC; commits 7ab13ab, 0845f20): the player hooks run in Train, Path, Speed and Free play only (never the Daily, Threshold or a friend challenge); a seed change at item:before is ignored on a recheck, probe, daily or threshold step; the player resumes the clock's 'measure' reason when an async point's run ends; summary:panels also runs for a summary brought back after a reload (ctx.restored true). `PX.ui.hooks.place(container, results, opts)` and `screen(point, container, ctx, opts)` place screen results: after or in place of a part named by its data-slot, data-section or title (a replacement takes the part's data-slot, data-section and id), the rest at the end (opts.before). Today's slots carry data-slot; with no suggestion a hidden placeholder keeps 'suggest'; a slot that replaces another takes its px-slot--<name> class (the wide layout places slots by class: a slot added *after* one brings its grid placement in its owner's CSS). A view sets the answer mode with its respond meta `amode` (Homing's and Reckon's `mode` also count); the answer grid gives 'option'.
 
 **S. Exercise definitions (W2-core validates in `PX.ex.check`; owners fill).**
 - `bet`: required for role 'train' and forbidden for probes once W2-bets has added it to every training exercise (W2-bets asks W2-core to switch the check on; until then bets.test.mjs guards it).

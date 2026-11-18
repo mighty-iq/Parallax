@@ -112,6 +112,12 @@ PX.ex.define({
   returns 0–100 for one item (Central Point Quick: closeness and speed), never a lifetime total.
 - **Answer types (1.1, 1.2):** `position` (`{ x, z }` on the ground plane) and `point` (`{ x, y }`
   on the item's lattice) need `chance(params)`; `score` judges the distance.
+- **Format, layers and atlas (1.2 wave 2; CONTRACT-v1.2 S):** `format` is a token, or one per
+  variant (`{ pick: 'mr-choice', '*': 'mr-other' }`, '*' for the rest); `layers` is
+  `{ compare: [principle ids], produce: '<variant>', bridge: '<set id>', calib: true }`, and a
+  produce variant is appended to `variants`, left out of `trainVariants` and kept out of the level
+  scale (range and reference guessing rate); `atlas: [dimA, dimB]` is reserved for milestone 5.
+  `PX.ex.check` validates and freezes all three.
 
 ## 4. Generator, validator, scorer
 
@@ -215,6 +221,12 @@ ctx.play([
   from anywhere. Show me runs 2–4 s per solution movement and is drawn from the same model as the
   key (Rotate slerps the reference's quaternion to the option's and highlights `item.diff`). If
   `ctx.play` is missing, Rotate falls back to a minimal runner without controls.
+- **1.2 wave 2:** before `present` the player sets `ctx.layer` to the item's add-on layer ('' when
+  none; 'calib-detail' asks for the detailed feedback). A custom view names the control an answer
+  came through in its respond meta, `respond(r, { amode: 'drag' | 'dial' | 'fine' | 'keys' | 'place'
+  | 'draw' })` (trial column 16; the answer grid is 'option'). After an answer, a walkthrough waits
+  for Next at each caption as Watch does; taps on the board reach it through `ctx.playCmd('step')`
+  only after its first 1.5 s.
 - **Keyboard:** stem+options needs nothing more (the grid takes 1–9). Custom layouts register
   keys through `ctx.keys.push(map, { through: true })` and show key hints.
 - **Accessibility:** canvases are `aria-hidden`; describe the task in text (`.px-sr`), give
