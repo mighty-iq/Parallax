@@ -48,6 +48,12 @@ body.px-stim .gm-fx-stamp, body.px-stim .gm-fx-type, body.px-stim .gm-fx-flip, b
 .gm-fx-d9 { animation-delay: 400ms; } .gm-fx-d10 { animation-delay: 440ms; } .gm-fx-d11 { animation-delay: 460ms; }
 @keyframes gm-type { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
 
+/* the level needle sweep (PX.ui.game.sweep on a ui.bar): the fill scales from old/new to its place */
+.gm-fx-sweep .px-bar-fill { transform-origin: left center; animation: gm-sweep 600ms cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes gm-sweep { from { transform: scaleX(var(--gm-from, 1)); } to { transform: none; } }
+body.px-stim .gm-fx-sweep .px-bar-fill { animation: none !important; }
+.gm-told { margin: var(--s2) 0 0; }
+
 /* the verdict's plotter tick and the stretch ring (item:reveal) */
 .gm-tick.gm-fx-tick { animation: gm-tick 200ms ease-out both; }
 @keyframes gm-tick { from { opacity: 0; transform: scale(0.6) rotate(-12deg); } to { opacity: 1; transform: none; } }
@@ -154,6 +160,6 @@ body.px-stim .gm-fx-stamp, body.px-stim .gm-fx-type, body.px-stim .gm-fx-flip, b
 .gm-sound-line { margin: var(--s3) 0 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .gm-fx-stamp .gm-stamp, .gm-fx-stamp .gm-stamp-band, .gm-fx-type, .gm-fx-flip .gm-cell-mark, .gm-fx-step .gm-scale-mark, .gm-fx-step .gm-scale-fill, .gm-fx-ring, .gm-fx-tick { animation: none !important; }
+  .gm-fx-stamp .gm-stamp, .gm-fx-stamp .gm-stamp-band, .gm-fx-type, .gm-fx-flip .gm-cell-mark, .gm-fx-step .gm-scale-mark, .gm-fx-step .gm-scale-fill, .gm-fx-ring, .gm-fx-tick, .gm-fx-sweep .px-bar-fill { animation: none !important; }
 }
 [data-motion="reduce"] .gm-fx-stamp .gm-stamp, [data-motion="reduce"] .gm-fx-type, [data-motion="reduce"] .gm-fx-flip .gm-cell-mark, [data-motion="reduce"] .gm-fx-step .gm-scale-mark, [data-motion="reduce"] .gm-fx-ring { animation: none !important; }

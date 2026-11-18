@@ -162,6 +162,29 @@
     return el;
   }
 
+  // The level needle sweeps from the old value to the new (a block end, the summary's level rows): the bar's
+  // fill scales from old/new to its place in 600 ms (transform only), cut with every other effect under
+  // body.px-stim. For play.js's bars (ui.bar): sweep(bar, before, after).
+  function sweep(bar, from, to) {
+    var fill = bar && bar.querySelector ? bar.querySelector('.px-bar-fill') : null;
+    if (!fill || !isNum(from) || !isNum(to) || from === to || to <= 0) return false;
+    bar.style.setProperty('--gm-from', String(Math.max(0, Math.min(4, from / to))));
+    return fx.run(bar, 'gm-fx-sweep', 600);
+  }
+
+  // One line that explains a new number the first time it appears (note G1 §4 option B's control for
+  // beginners: one tour line per number, never more), remembered in rec.ui.game.told.
+  function firstTime(key, text) {
+    var R = rec();
+    if (!isObj(R.ui)) R.ui = { lastRoute: null };
+    if (!isObj(R.ui.game)) R.ui.game = {};
+    if (!isObj(R.ui.game.told)) R.ui.game.told = {};
+    if (R.ui.game.told[key]) return null;
+    R.ui.game.told[key] = Date.now();
+    save();
+    return h('p.px-meta.gm-told', { 'data-told': key }, text);
+  }
+
   function settingsLine(def, settingsObj) {
     var X = PX.ui.exinfo, P = PX.ui.play;
     try { if (X && X.settingsText) return X.settingsText(def, settingsObj); } catch (e) { /* below */ }
@@ -253,6 +276,8 @@
       if (!def) return;
       var box = h('div.gm-grade', stamp(def, x.to));
       box.appendChild(h('p.gm-line', x.from ? 'Up from grade ' + x.from + ': a whole block at level ' + x.level + '.' : 'Your first grade on ' + nameOf(def) + ': a whole block at level ' + x.level + '.'));
+      var t1 = firstTime('grade', 'A grade is the tenth of the 1–100 range that holds your best whole block of 10 on an exercise: grade 6 is levels 51–60, the band of Path stage 6. It never goes down.');
+      if (t1) box.appendChild(t1);
       box.appendChild(h('div.px-slot-foot', shareButton('Share this grade', gradeCard(def, x.to, x.level), 'grade')));
       p.body.appendChild(box);
     });
@@ -260,6 +285,8 @@
       var num = counter(h('b.px-num.gm-reach-num'), reach.before, reach.after);
       var cause = reach.causes.filter(function (c) { return c.to > c.from; }).map(function (c) { var d = PX.ex.get(c.exId); return nameOf(d) + (c.from ? ', best block ' + c.from + ' → ' + c.to : ', a first best block of ' + c.to); }).join('; ');
       p.body.appendChild(h('p.gm-reach', { 'data-reach': String(reach.after) }, h('span.gm-k', 'Reach '), num, h('span.px-meta', ' (+' + reach.delta + (cause ? ': ' + cause : '') + ')')));
+      var t2 = firstTime('reach', 'Reach is ' + reachWords() + ': each training exercise outside the DAT-style focus adds its best whole-block level. It rises with each new best and never falls.');
+      if (t2) p.body.appendChild(t2);
     }
     if (firsts.length) {
       var lis = firsts.slice(0, 3).map(function (f) { var d = PX.ex.get(f.ex); return h('li', h('span.gm-first-k', 'First'), ' ', cellOfKey(d, f.cell), h('span.px-meta', ' · ' + nameOf(d))); });
@@ -267,6 +294,8 @@
       if (firsts.length > 3) ul.appendChild(h('li.px-meta', 'and ' + plural(firsts.length - 3, 'more first', 'more firsts') + ' in the Atlas'));
       p.body.appendChild(ul);
       lis.forEach(function (li, i) { fx.run(li, 'gm-fx-type gm-fx-d' + i, 300 + 60 * i); });
+      var t3 = firstTime('first', 'A first is a pair of settings you handled for the first time: right answers there that guessing would explain less than one time in ten. The Atlas charts them.');
+      if (t3) p.body.appendChild(t3);
     }
     nearList.forEach(function (x) {
       var d = PX.ex.get(x.exId);
@@ -471,7 +500,7 @@
     Hk.on('item:reveal', function (ctx) { return reveal(ctx); }, { id: 'game.reveal', order: 40 });
   }
 
-  PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, cellText: cellText, share: share, shareButton: shareButton,
+  PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, sweep: sweep, firstTime: firstTime, cellText: cellText, share: share, shareButton: shareButton,
     celebrate: celebrate, reduced: reduced, moving: moving, noteText: noteText, gradeCard: gradeCard, reachWords: reachWords, LINK: LINK,
     _: { summaryPanel: summaryPanel, climbSlot: climbSlot, notesSlot: notesSlot, progressPanel: progressPanel, startNow: startNow } };
 })(window.PX);
