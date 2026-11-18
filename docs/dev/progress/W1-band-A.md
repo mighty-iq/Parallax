@@ -27,10 +27,15 @@ stays non-breaking for Missing View. Design source: docs/research/v1.2/D2-first-
 - 16:12 UTC: Painted Cubes offsets flat −0.85 / small −0.7 (floor −3.85): firstband passes for all three
   (views 78.0 % / item 8, cubes 76.8 % / 8, angles 72.4 % / 6).
 
+- 16:24 UTC: Painted Cubes view (53856ee): rule figures, Try 1 numbers, show me in the card's three steps.
+- 16:40 UTC: Angles view (b38a50e): Try 1 mark and greyed answers, rule figures, elimination show me.
+- 16:45 UTC: Views view written (tint scaffold, Try 1 outline frame, rule figures, show me in the card's steps,
+  wrong-pick explanations per foil kind); waiting for a browser slot to look at it. E2E: tests/e2e/band_a.py
+  (shared band checks) wired into harness_{views,angles,cubes}.py, not run yet.
+
 ## Next
-- view.js for the three: drawRule figures, ctx.assist (Try 1's step done), Show-me per note D2 §3.1–3.3 with
-  step-numbered captions (R-reader's request), Views' band tint. Then harness checks at 360 × 640 (pwslot) and
-  the fresh-player check through the app (W1-core: route (b)).
+- Views screenshots, then commit; run the three harness_*.py through pwslot; fresh-player check through the app
+  (driver in scratch: one phone browser, screenshots and taps only), fix what it finds once.
 
 ## Open problems
 - none
