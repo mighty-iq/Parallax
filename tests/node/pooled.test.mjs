@@ -72,7 +72,7 @@ export async function run(t) {
     const S = X.PX.core.store;
     X.PX.engine.fields().forEach((f) => S.field(f.key, f.def, f.fix));
     S.field('notes', () => ({ list: [] }));
-    S.field('playlog', () => ({ ua: '' }));
+    S.field('playlog', () => ({ ua: '' }), (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : undefined));
     S.field('climb', () => ({ weeks: {} }));
     S.exportRule('playlog', { private: true, pooled: false });
     S.exportRule('climb', { pooled: (v, ctx) => ({ runs: Object.keys(v.weeks).length, at: ctx.utcDay(T0) }) });
@@ -87,6 +87,12 @@ export async function run(t) {
     t.ok(!('playlog' in B) && 'notes' in B && 'climb' in B, 'the backup leaves out private fields only');
     t.ok(JSON.parse(S.exportJSON({ device: true })).playlog.ua === 'UA-SENTINEL/2.0', '…unless device details are on');
     t.ok(S.exportJSON().startsWith('{"v":' + S.VERSION + ',"rev":'), 'the backup keeps its head');
+    // a backup re-imports cleanly: the private field it leaves out is no repair (long run, 18 Nov)
+    const back = S.exportJSON(), imp = S.importJSON(back);
+    t.ok(imp.ok && imp.repairs.length === 0, 'a backup re-imports without repairs (' + JSON.stringify(imp.repairs) + ')');
+    t.ok(S.state.playlog.ua === '' && S.state.notes.list[0] === 'x', '…the private field starts empty, the others come back');
+    const broken = JSON.parse(back); broken.playlog = 'not an object';
+    t.ok(S.importJSON(JSON.stringify(broken)).repairs.indexOf('playlog') >= 0, '…but a private field that is there and broken is still a repair');
     t.throws(() => S.exportRule('x', { pooled: 'yes' }), /pooled must be/, 'a pooled rule must be a function or false');
   }
 }
