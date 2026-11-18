@@ -384,7 +384,7 @@
       : h('div.px-level-num', h('b', r.n ? r.n + ' trials' : 'Not started'));
     var set = [];
     if (has && r.level <= 1 && e.def && e.def.starter) set.push('Starter items. ');
-    if (r.settings) set.push('Handles ' + r.settings + '.');
+    if (r.settings) set.push('Handles ' + r.settings.charAt(0).toLowerCase() + r.settings.slice(1) + '.'); // as the Library says it
     if (r.stage) set.push(' Path stage ' + r.stage + ' of 10.');
     return h('li', { class: ['px-level', has ? null : 'is-new'], 'data-ex': r.ex },
       h('div.px-level-name', h('b', e.name, e.note ? ' ' : null, e.note ? h('span.px-tag', e.note) : null),
