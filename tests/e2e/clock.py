@@ -381,7 +381,7 @@ def repro(b):
     page.wait_for_timeout(300)
 
     # B8 units; B7 a stopped Threshold run earns nothing and is not saved
-    C.ok(page.evaluate('PX.ui.play.thresholdText({ threshold: 6810.06, unit: "ms" })') == '6.81 s' and 'cw/s' in page.evaluate('PX.ui.play.thresholdText({ threshold: 0.34, unit: "speed" })'), 'B8: thresholds in seconds and cw/s')
+    C.ok(page.evaluate('PX.ui.play.thresholdText({ threshold: 6810.06, unit: "ms" })') == '6.8 s' and 'cw/s' in page.evaluate('PX.ui.play.thresholdText({ threshold: 0.34, unit: "speed" })'), 'B8: thresholds in seconds and cw/s')
     go(page, {'mode': 'threshold', 'protocol': 'span-length'})
     handle_card(page)
     answer_n(page, 3)
