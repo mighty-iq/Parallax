@@ -1516,7 +1516,7 @@
   // The offer card's estimate (O6): learn.minutes, else about two minutes with the teaching template.
   function wtgMinutes(learn) {
     var m = learn && isNum(learn.minutes) && learn.minutes > 0 ? Math.round(learn.minutes) : learn && Array.isArray(learn.rules) && learn.rules.length ? 2 : 1;
-    return m === 1 ? 'a minute' : m === 2 ? 'two minutes' : m + ' minutes';
+    return m === 1 ? 'a minute' : m === 2 ? 'two minutes' : m === 3 ? 'three minutes' : m + ' minutes';
   }
   // The Chimera line every share text ends with (the full link; PX.ui.chimera.LINE when present).
   function chimeraLine() {
