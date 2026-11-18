@@ -13,8 +13,10 @@
    In-app navigation: elements with data-go="<route>" (router.js), never href.
 
    Boot: engine fields registered with the store (PX.engine.fields()), record loaded, settings
-   applied, shell built, route from the URL hash or Today, then the Chimera pop-up (every
-   open) and, on the first run, the tour offer.
+   applied, shell built, route from the URL hash or Today, then the Chimera welcome: the full
+   pop-up on the first launch (then the tour offer), the one-tap card under the header on later
+   launches (gap C2, O2). The card waits while the boot route is a session's summary and goes
+   when a session starts.
 
    PX.ui.app
      ready                     true after boot
@@ -26,8 +28,11 @@
      backup()                  the Back up now dialog: download when allowed, Copy always; a
                                success sets settings.lastBackup and emits 'backup' { at }
      exportDialog(opts)        the same dialog for any text: { title, intro, text, filename,
-                               type, onDone(how) }
-     showWelcome()             the Chimera pop-up (shown at boot)
+                               type, onDone(how), invite: 'export' (default) | 'backup' | false,
+                               extra: element (shown above the text) }; it ends with the Chimera
+                               invite (gap C10)
+     showWelcome()             the full Chimera pop-up (shown at the first launch)
+     showCard()                the one-tap Chimera card (shown at later launches)
      offerTour()               the first-run offer; "Watch, Try, Go" calls PX.ui.tour.start()
      openMore()                the More sheet (Lab, Settings, About, the Chimera link)
    Events on PX.bus: 'theme' { dark }, 'settings' { key, value } (settings.js), 'backup' { at },
@@ -455,9 +460,10 @@
     var skip = h('button.px-skip', { type: 'button' }, 'Skip to content');
     skip.addEventListener('click', focusMain);
     shell.banner = h('div.px-banner-slot');
+    shell.card = h('div.px-card-slot');
     shell.main = h('main.px-main#px-main', { tabindex: '-1' });
     shell.root = h('div.px-app',
-      skip, buildHeader(), shell.banner, shell.main, buildFooter(), buildTabbar());
+      skip, buildHeader(), shell.banner, shell.card, shell.main, buildFooter(), buildTabbar());
     doc.body.insertBefore(shell.root, doc.body.firstChild);
     var boot = doc.getElementById('px-boot');
     if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
@@ -619,6 +625,10 @@
   }
 
   function onRoute(cur) {
+    // The one-tap card never shares the screen with a session (gap C12): it goes when one starts,
+    // and one that waited behind a kept summary comes at the first screen after it.
+    if (cur.name === 'play' || cur.name === 'section') { if (PX.ui.welcome.cardShown()) PX.ui.welcome.closeCard('session'); }
+    else if (cardWaiting) { cardWaiting = false; showCard(); }
     render(cur);
     if (!api.ready) return;
     try { window.scrollTo(0, 0); } catch (e) { /* ignore */ }
@@ -649,6 +659,25 @@
         else afterWelcome(reason);
       },
     });
+  }
+
+  // The one-tap card (later launches): in the page's flow under the header, so it covers nothing
+  // and traps nothing; focus stays where it is unless the card itself had it.
+  // At boot it goes in before the first screen renders: inserted above a drawn screen, the
+  // browser's scroll anchoring would move the page down by the card's height, under the header.
+  var cardWaiting = false;
+  function showCard(routeName) {
+    var W = PX.ui.welcome;
+    if (!shell.card || W.cardShown()) return null;
+    var at = routeName || router.current().name;
+    if (at === 'play' || at === 'section') { cardWaiting = true; return null; }
+    var el = W.card({
+      onClose: function (why, hadFocus) { if (hadFocus) focusMain(); bus.emit('chimera:card', { closed: why }); },
+    });
+    ui.clear(shell.card);
+    shell.card.appendChild(el);
+    bus.emit('chimera:card', { shown: true });
+    return el;
   }
 
   function offerTour(reason) {
@@ -694,6 +723,7 @@
     }
     var status = h('p.px-meta', { role: 'status', 'aria-live': 'polite' });
     var parts = [h('p', o.intro)];
+    if (o.extra) parts.push(o.extra);
     var field = copyField(o.text, { rows: 5, ariaLabel: o.title + ': file contents', onCopied: function () { success('copy'); } });
     // In any frame a download can be blocked without an error (a sandbox without allow-downloads),
     // and a blocked file must never count as a backup: there, Copy only.
@@ -713,7 +743,12 @@
       field.button.setAttribute('data-autofocus', ''); // not the text: focusing it selects it all
     }
     parts.push(field);
-    return ui.modal({ title: o.title, body: parts, className: 'px-export', actions: [{ label: 'Done', kind: 'secondary' }] });
+    // gap C10: an export (or a backup) is a natural point to invite the player in
+    var inv = o.invite === false ? null : PX.ui.chimera.invite(o.invite || 'export', { className: 'px-export-invite' });
+    if (inv) parts.push(inv);
+    var close = ui.modal({ title: o.title, body: parts, className: 'px-export', actions: [{ label: 'Done', kind: 'secondary' }] });
+    if (typeof o.onShow === 'function') { try { o.onShow(close, field); } catch (e) { /* cosmetic */ } }
+    return close;
   }
 
   function markBackedUp() {
@@ -731,6 +766,7 @@
       filename: 'parallax-backup-' + U.fmtDate(Date.now()) + '.json',
       type: 'application/json',
       onDone: markBackedUp,
+      invite: 'backup',
     });
   }
 
@@ -763,6 +799,9 @@
 
   function boot() {
     if (api.ready || shell.root) return;
+    // Every screen starts at its top (onRoute), so a reload need not restore the old offset; left
+    // to 'auto', a reload restored it and then shifted the page down by the one-tap card's height.
+    try { if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'; } catch (e) { /* sandboxed: ignore */ }
     registerEngineFields();
     var R = store.state; // first read of the record
     applySettings();
@@ -777,18 +816,22 @@
       try { return PX.ui.play && typeof PX.ui.play.bootRoute === 'function' ? PX.ui.play.bootRoute(rt) : null; } catch (e) { return null; }
     }
     router.guard = playGuard;
+    var full = PX.ui.welcome.fullDue();
     var r = router.fromHash();
     if (r && r.name === 'play') {
       r = playGuard(r);
-      if (!r) { router.go('home', null, { force: true }); r = false; }
+      if (!r) { if (!full) showCard('home'); router.go('home', null, { force: true }); r = false; }
     }
-    if (r !== false) router.go(r ? r.route : 'home', r ? r.params : null, { force: true, mirror: false });
+    if (r !== false) {
+      if (!full) showCard(r ? r.name : 'home');
+      router.go(r ? r.route : 'home', r ? r.params : null, { force: true, mirror: false });
+    }
     renderBanner();
     api.ready = true;
     doc.documentElement.setAttribute('data-px-ready', '1');
     if (store.corrupt) ui.toast('The saved progress could not be read, so Parallax started fresh. A copy of the old data was kept in this browser.', { kind: 'warn', ms: 0 });
     bus.emit('app:ready', { first: firstRun(), sessions: R.sessions.length });
-    showWelcome();
+    if (full) showWelcome();
   }
 
   /* =====================================================================================
@@ -898,6 +941,7 @@
     exportDialog: exportDialog,
     markBackedUp: markBackedUp,
     showWelcome: showWelcome,
+    showCard: showCard,
     offerTour: offerTour,
     openMore: openMore,
     focusMain: focusMain,

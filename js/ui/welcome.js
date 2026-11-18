@@ -1,14 +1,26 @@
-/* PX.ui.welcome, PX.ui.chimera, PX.ui.figures (PLAN.md §9, CLAUDE.md rule 1).
+/* PX.ui.welcome, PX.ui.chimera, PX.ui.figures (PLAN.md §9, CLAUDE.md rule 1; v1.2 milestone 2:
+   gaps C2, C6, C8–C10, O2, O3; docs/dev/CONTRACT-v1.2.md H).
 
-   PX.ui.chimera: the Chimera Discord link, used by the welcome pop-up, the header, the
-   footer, the More sheet and About.
+   PX.ui.chimera: the Chimera Discord link, used by the welcome pop-up, the one-tap card, the
+   header, the footer, the More sheet, About and the invites.
      URL                        'https://discord.gg/chmr'
+     LINE                       'Built by the Chimera community on Discord: https://discord.gg/chmr',
+                                the line every share text ends with (the full address, so apps
+                                that only link full URLs make it clickable)
      joinLink(opts) → <a>       target=_blank rel=noopener, styled as a button.
-                                opts: { label, kind: 'primary' | 'secondary', className, onClick }
+                                opts: { label, kind: 'primary' | 'secondary', className, onClick, small }
      linkCopy(opts) → element   the address as visible, selectable text with a Copy button.
                                 Copy tries the async clipboard and falls back to execCommand
                                 (the async API and new tabs are blocked in sandboxed previews).
                                 opts: { label (aria), className }
+     invite(kind, opts) → element | null   one line in the fixed wording, the link (new tab) and
+                                Copy link; kinds in INVITE_KINDS (tutorial, best, achievement, path,
+                                check, grade, plateau, export, backup, milestone). null for an
+                                unknown kind, while a stimulus is on screen (body.px-stim), or when
+                                opts.host already holds an invite (one per screen; callers pass
+                                their highest kind: best > path > grade > achievement > check).
+                                opts: { host, className }. Never place one inside a block of items.
+     inviteText(kind) → string  the line of a kind ('' for an unknown kind)
    PX.ui.figures: specimen drawings (SVG, decorative, no text that matters).
      polycube(cells, opts) → { g, w, h }   isometric line drawing of unit cubes [[x, y, z], …]:
                                 visible faces only, painter's order, faces .px-fig-top/-side/-far
@@ -18,14 +30,30 @@
                                 drawn as an arc, registration marks at the corners. Every cube
                                 shows a whole face in both drawings (tests/e2e/shell.py checks it).
                                 opts: { className, label }
-   PX.ui.welcome: the pop-up on every app open.
-     show({ onClose(reason) }) → close     reason: 'start' (Start training) or 'dismiss'
-                                           (✕, Esc, backdrop). Focus is trapped (PX.ui.modal);
-                                           app.js decides where focus goes afterwards. On iPhones,
+   PX.ui.welcome: the full welcome on the first launch, the one-tap card on later launches.
+     fullDue() → bool                      true until the full welcome has been seen on this
+                                           record (rec.ui.welcomed), for a record that has not
+                                           practised or been offered the tour (a 1.1 record that
+                                           has practised gets the card)
+     show({ onClose(reason) }) → close     the full welcome. reason: 'start' (Start training) or
+                                           'dismiss' (✕, Esc, backdrop). Focus is trapped
+                                           (PX.ui.modal); app.js decides where focus goes
+                                           afterwards. Closing stamps rec.ui.welcomed. On iPhones,
                                            iPads and recognisable in-app browsers (not from the
-                                           home screen) it ends with the storage hint and, when a
-                                           backup is due, a Back up button. It opens at its top.
-     isOpen()
+                                           home screen) it ends with the storage hint. It opens at
+                                           its top.
+     card({ onClose(reason) }) → element   the one-tap card: the line, Join (new tab) and ✕, in the
+                                           page's flow under the header (it covers nothing and
+                                           traps nothing). One tap on Join or ✕ ends it; Esc does
+                                           too, and so does the start of a session (app.js). When
+                                           no new tab opened (sandboxed previews), it shows the
+                                           address with Copy. reason: 'close', 'join', 'esc',
+                                           'session'. data-chimera-card on its root.
+     closeCard(reason)                     ends the card if it is shown
+     cardShown() → bool
+     isOpen()                              the full welcome is open
+     storageHint() → element | null        where a phone can lose a record, with Back up when a
+                                           backup is due (the welcome, and Today's data slot)
      device() → { ios, standalone, inApp, touch }   where the app runs (the hint, app.js) */
 (function (PX) {
   'use strict';
@@ -35,6 +63,7 @@
   var S = PX.core.svg;
 
   var URL = 'https://discord.gg/chmr';
+  var LINE = 'Built by the Chimera community on Discord: ' + URL;
   var seq = 0;
 
   /* ---------- icons used here (stroke icons on a 24 grid, currentColor) ---------- */
@@ -51,9 +80,9 @@
   function joinLink(opts) {
     opts = opts || {};
     var a = h('a', {
-      class: ['px-btn', 'px-btn--' + (opts.kind || 'primary'), opts.className],
+      class: ['px-btn', 'px-btn--' + (opts.kind || 'primary'), opts.small ? 'px-btn--small' : null, opts.className],
       href: URL, target: '_blank', rel: 'noopener',
-      'data-chimera': 'join',
+      'data-chimera': opts.data || 'join',
     }, h('span', opts.label || 'Join the Chimera Discord'), svgIcon(EXTERNAL));
     a.setAttribute('aria-label', (opts.label || 'Join the Chimera Discord') + ' (opens in a new tab)');
     if (typeof opts.onClick === 'function') a.addEventListener('click', opts.onClick);
@@ -104,6 +133,64 @@
       }
     }, 900);
   }
+
+  /* ---------- invites at natural high points (CONTRACT-v1.2 H; gaps C6, C8–C10; O3) ---------- */
+
+  // The fixed wording: the community built Parallax on Discord, and an invitation in. Nothing else
+  // is said about Chimera (CLAUDE.md rule 1).
+  var WHERE = ' in the Chimera Discord, where Parallax was built.';
+  var INVITE = {
+    tutorial: 'Parallax was built by the Chimera community on Discord. Come and say hi.',
+    best: 'Share your best' + WHERE,
+    path: 'Share the stage you passed' + WHERE,
+    grade: 'Share your new grade' + WHERE,
+    achievement: 'Share it' + WHERE,
+    milestone: 'Share it' + WHERE,
+    check: 'Compare notes' + WHERE,
+    plateau: 'Compare strategies' + WHERE,
+    export: 'To help pool data, share it' + WHERE,
+    backup: 'Parallax was built by the Chimera community on Discord. Come and say hi.',
+  };
+  var INVITE_KINDS = Object.keys(INVITE);
+
+  function inviteText(kind) { return Object.prototype.hasOwnProperty.call(INVITE, kind) ? INVITE[kind] : ''; }
+
+  function stimOn() {
+    try { return !!(document.body && document.body.classList.contains('px-stim')); } catch (e) { return false; }
+  }
+
+  function invite(kind, opts) {
+    opts = opts || {};
+    var text = inviteText(kind);
+    if (!text || stimOn()) return null;
+    if (opts.host && opts.host.querySelector && opts.host.querySelector('[data-invite]')) return null;
+    var status = h('span.px-invite-status', { role: 'status', 'aria-live': 'polite' });
+    var join = joinLink({ kind: 'secondary', small: true, label: 'Chimera Discord', data: 'invite', className: 'px-invite-join' });
+    join.setAttribute('aria-label', 'Chimera Discord, ' + URL + ' (opens in a new tab)');
+    var copy = ui.button('Copy link', { kind: 'ghost', small: true, className: 'px-invite-copy', ariaLabel: 'Copy the Chimera Discord address' });
+    copy.setAttribute('data-invite-copy', '');
+    function say(t, cls) { status.textContent = t; status.className = 'px-invite-status' + (cls ? ' is-' + cls : ''); }
+    copy.addEventListener('click', function () {
+      ui.copyText(URL).then(function (ok) {
+        if (ok) say('Copied ' + URL, 'ok');
+        else say('Copying is blocked here. The address is ' + URL, 'warn');
+      });
+    });
+    join.addEventListener('click', function () {
+      window.setTimeout(function () {
+        var here = false;
+        try { here = document.hasFocus() && document.visibilityState !== 'hidden'; } catch (e) { here = false; }
+        if (here && document.contains(status)) say('No new tab opened? The address is ' + URL, null);
+      }, 900);
+    });
+    return h('div', { class: ['px-invite', opts.className], 'data-invite': kind },
+      svgIcon(CHAT, 'px-invite-icon'),
+      h('p.px-invite-text', text),
+      h('div.px-invite-actions', join, copy),
+      status);
+  }
+  // a speech bubble: the invite's mark (decorative)
+  var CHAT = 'M4.5 5.5h15v10h-8l-4.5 3.5v-3.5h-2.5z';
 
   /* ---------- figures ---------- */
 
@@ -235,7 +322,9 @@
   // of Safari use without a visit; an app's built-in browser keeps its own copy). Shown in the
   // welcome on iPhones and iPads and in recognisable in-app browsers, not from the home screen:
   // before any practice, and later only while a backup is due, with a Back up button.
-  function storageHint() {
+  // opts.dueOnly: only while a backup is due (Today's data slot; the welcome shows it before any
+  // practice too).
+  function storageHint(opts) {
     var d = device(), st = PX.core.store, rec = st && st.state;
     var framed = false;
     try { framed = !!(PX.ui.app && PX.ui.app.env && (PX.ui.app.env.framed || PX.ui.app.env.sandboxed)); } catch (e) { framed = false; }
@@ -245,7 +334,7 @@
     // Once before any practice, then only while a backup is due (none in the last 14 days).
     var last = rec.settings && rec.settings.lastBackup || 0, has = (rec.sessions && rec.sessions.length) || (rec.trials && rec.trials.length);
     var due = has && Date.now() - last > 14 * 864e5;
-    if (has && !due) return null;
+    if ((has || (opts && opts.dueOnly)) && !due) return null;
     var move = has ? ' and move your progress there: Back up here, then Import in Settings there.' : ' and practise there.';
     var text = d.ios
       ? 'Your progress is saved in this browser only. Safari can clear it after seven days of use without a visit, and an app’s built-in browser (Discord’s too) keeps a copy of its own. For a lasting home, add Parallax to your home screen (Share, then Add to Home Screen)' + move
@@ -293,6 +382,7 @@
       label: 'Welcome',
       onClose: function () {
         current = null;
+        stampWelcomed();
         if (typeof opts.onClose === 'function') opts.onClose(reason);
       },
     });
@@ -312,7 +402,97 @@
 
   function isOpen() { return !!(current && !current.closed); }
 
-  PX.ui.chimera = { URL: URL, joinLink: joinLink, linkCopy: linkCopy, nudgeIfBlocked: nudgeIfBlocked, icon: function () { return svgIcon(EXTERNAL); } };
+  /* ---------- first launch or later (gap C2, O2) ---------- */
+
+  function uiOf(rec) {
+    if (!rec.ui || typeof rec.ui !== 'object' || Array.isArray(rec.ui)) rec.ui = { lastRoute: null };
+    return rec.ui;
+  }
+  // The full welcome until it has been seen on this record. A record that has practised, finished
+  // the tour or been offered it (1.1 showed the full welcome on every open, before that offer) has
+  // seen it already.
+  function fullDue() {
+    var st = PX.core.store, R = st && st.state;
+    if (!R) return true;
+    var u = R.ui && typeof R.ui === 'object' ? R.ui : {};
+    if (u.welcomed > 0 || u.tourOffered > 0 || (R.tour && R.tour.done)) return false;
+    return !((R.sessions && R.sessions.length) || (R.trials && R.trials.length));
+  }
+  function stampWelcomed() {
+    try {
+      var st = PX.core.store, u = uiOf(st.state);
+      if (!(u.welcomed > 0)) { u.welcomed = Date.now(); st.save(); }
+    } catch (e) { /* the next open shows the full welcome again: harmless */ }
+  }
+
+  /* ---------- the one-tap card on later launches ---------- */
+
+  var cardEl = null, cardOpts = null, cardKeys = null;
+
+  function closeCard(why) {
+    var el = cardEl, o = cardOpts;
+    if (!el) return false;
+    cardEl = null; cardOpts = null;
+    if (cardKeys) { document.removeEventListener('keydown', cardKeys, true); cardKeys = null; }
+    var had = el.contains(document.activeElement);
+    if (el.parentNode) el.parentNode.removeChild(el);
+    if (o && typeof o.onClose === 'function') o.onClose(why || 'close', had);
+    return true;
+  }
+  function cardShown() { return !!(cardEl && document.contains(cardEl)); }
+
+  function card(opts) {
+    if (cardEl) return cardEl;
+    opts = opts || {};
+    var n = ++seq, textId = 'px-chimera-card-text-' + n;
+    var more = h('div.px-chimera-card-more', { hidden: true });
+    var join = joinLink({ kind: 'secondary', small: true, label: 'Join', data: 'card', className: 'px-chimera-card-join' });
+    join.setAttribute('aria-label', 'Join the Chimera Discord (opens in a new tab)');
+    join.addEventListener('click', function () {
+      // a new tab took over: the card has done its job. Still here (a sandboxed preview blocks new
+      // tabs): show the address with Copy instead.
+      window.setTimeout(function () {
+        var here = false;
+        try { here = document.hasFocus() && document.visibilityState !== 'hidden'; } catch (e) { here = false; }
+        if (!cardEl) return;
+        if (!here) { closeCard('join'); return; }
+        if (more.hidden) {
+          var copy = linkCopy({ label: 'Chimera Discord address' });
+          more.appendChild(h('p.px-chimera-card-hint', 'No new tab opened? Copy the address and open it yourself.'));
+          more.appendChild(copy);
+          more.hidden = false;
+        }
+      }, 900);
+    });
+    var x = ui.button('', { kind: 'ghost', small: true, className: 'px-chimera-card-close', ariaLabel: 'Close the Chimera note' });
+    x.appendChild(svgIcon('M6 6l12 12M18 6 6 18'));
+    x.setAttribute('data-chimera-card-close', '');
+    x.addEventListener('click', function () { closeCard('close'); });
+    cardEl = h('section.px-chimera-card', { 'data-chimera-card': '', 'aria-labelledby': textId },
+      h('div.px-wrap',
+        h('div.px-chimera-card-row',
+          h('p.px-chimera-card-text', { id: textId }, 'Parallax was built by the Chimera community on Discord.'),
+          h('div.px-chimera-card-actions', join, x)),
+        more));
+    cardOpts = opts;
+    // Esc ends it while nothing else is open and no text field has the keys.
+    cardKeys = function (e) {
+      if (e.key !== 'Escape' || !cardEl || ui.modalOpen()) return;
+      var t = e.target, tag = t && t.tagName ? t.tagName.toLowerCase() : '';
+      if ((tag === 'input' || tag === 'textarea' || tag === 'select') && !cardEl.contains(t)) return;
+      closeCard('esc');
+    };
+    document.addEventListener('keydown', cardKeys, true);
+    return cardEl;
+  }
+
+  PX.ui.chimera = {
+    URL: URL, LINE: LINE, joinLink: joinLink, linkCopy: linkCopy, nudgeIfBlocked: nudgeIfBlocked,
+    invite: invite, inviteText: inviteText, INVITE_KINDS: INVITE_KINDS, icon: function () { return svgIcon(EXTERNAL); },
+  };
   PX.ui.figures = { polycube: polycube, plate: plate, turnZ: turnZ, turnAbout: turnAbout, FIGURE: FIGURE, AXIS: AXIS };
-  PX.ui.welcome = { show: show, isOpen: isOpen, device: device };
+  PX.ui.welcome = {
+    show: show, isOpen: isOpen, device: device, fullDue: fullDue, card: card, closeCard: closeCard,
+    cardShown: cardShown, storageHint: storageHint,
+  };
 })(window.PX);

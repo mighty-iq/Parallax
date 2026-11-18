@@ -5,13 +5,19 @@
              size: 'wide' (1200 × 630, default) | 'square' (1080 × 1080), theme: 'light' | 'dark'
              (default: what the app shows), label (replaces the kind's label, e.g. 'Daily #12'),
              marks: [1, 0, …] (a row of right/wrong squares, Daily), ruler: { value, lo, hi } (level) }
-     Every card carries "Parallax" and "Built by the Chimera community · discord.gg/chmr".
+     Every card carries "Parallax" and "Built by the Chimera community · discord.gg/chmr" (CARD_LINE),
+     and the nickname the player typed in Settings, if any: the only name a card ever shows
+     (opts.nickname overrides the setting; false leaves it out).
    open(opts) → close    the share sheet: the card as a picture, the size, Share… (the device's own
      share sheet with the picture and the text, where Web Share with files exists), Download PNG
      (blocked in sandboxed previews, which then say how to save the picture), Copy text, and the Chimera
      Discord link with its address and Copy. opts as card(), plus text (the text to copy; default
      title, lines, footer and the Chimera line) and filename.
    text(opts) → the text a card stands for (cards are pictures; the sheet always offers the text).
+     Every share text ends with CHIMERA_LINE (PX.ui.chimera.LINE, with the full https address): a
+     text given in opts.text that lacks the address gets the line added. The nickname, when there
+     is one, goes in as "Played by <nickname>".
+   nickname() → the trimmed nickname from Settings, or ''
 
    challenge: codes for "play the same items as me" (a seed and the settings, never a score)
      create({ exId, params, n }) → { code, exId, params, seed, n }   n items (4–20, default 8)
@@ -29,7 +35,11 @@
   var ui = PX.ui;
   var h = ui.h;
   var doc = window.document;
-  var CHIMERA_LINE = 'Built by the Chimera community · discord.gg/chmr';
+  var URL = 'https://discord.gg/chmr';
+  // The text line (full address, CLAUDE.md rule 1) and the card's drawn line (short, so it fits
+  // beside the card's footer at 1200 px).
+  var CHIMERA_LINE = (PX.ui.chimera && PX.ui.chimera.LINE) || 'Built by the Chimera community on Discord: ' + URL;
+  var CARD_LINE = 'Built by the Chimera community · discord.gg/chmr';
   var SIZES = { wide: [1200, 630], square: [1080, 1080] };
   var KIND = { session: 'Session', daily: 'Daily Challenge', check: 'Spatial Check', level: 'Level', challenge: 'Challenge' };
 
@@ -168,11 +178,17 @@
       ctx.font = '500 26px ' + MONO; ctx.fillStyle = c.ink3; ctx.textAlign = 'right';
       ctx.fillText(label, W - M, M + 30); ctx.textAlign = 'left';
     }
+    // the nickname the player typed (the only name a card shows), under the label
+    var nick = nickOf(o);
+    if (nick) {
+      ctx.font = '400 24px ' + SANS; ctx.fillStyle = c.ink2; ctx.textAlign = 'right';
+      ctx.fillText(wrap(ctx, nick, maxW * 0.4, 1)[0] || '', W - M, M + 64); ctx.textAlign = 'left';
+    }
     // footer: a hairline, the Chimera line, and the card's own footer
     var footY = H - M;
     ctx.fillStyle = c.ruleStrong; ctx.fillRect(M, footY - (sq ? 92 : 62), maxW, 2);
     ctx.font = '500 ' + (sq ? 30 : 27) + 'px ' + SANS; ctx.fillStyle = c.ink2;
-    ctx.fillText(CHIMERA_LINE, M, footY - (sq ? 44 : 14));
+    ctx.fillText(CARD_LINE, M, footY - (sq ? 44 : 14));
     if (o.footer) {
       ctx.font = '400 24px ' + MONO; ctx.fillStyle = c.ink3;
       if (sq) ctx.fillText(wrap(ctx, o.footer, maxW, 1)[0] || '', M, footY);
@@ -212,11 +228,41 @@
     return fontsReady().then(function () { return draw(doc.createElement('canvas'), o); });
   }
 
+  // The nickname from Settings (≤ 24 characters, store.js), trimmed; '' when none.
+  function nickname() {
+    try {
+      var s = PX.core.store.state.settings, n = s && typeof s.nickname === 'string' ? s.nickname.trim() : '';
+      return n.slice(0, 24);
+    } catch (e) { return ''; }
+  }
+  function nickOf(o) {
+    if (o && o.nickname === false) return '';
+    if (o && typeof o.nickname === 'string') return o.nickname.trim().slice(0, 24);
+    return nickname();
+  }
+
+  // Every share text carries the community link in full (gap C7) and no name but the nickname.
   function text(o) {
-    if (o && typeof o.text === 'string' && o.text) return o.text;
-    var out = [o && o.title ? o.title : 'Parallax'].concat((o && o.lines) || []);
-    if (o && o.footer) out.push(o.footer);
-    out.push(CHIMERA_LINE);
+    o = o || {};
+    var out, nick = nickOf(o);
+    if (typeof o.text === 'string' && o.text) {
+      out = o.text.split('\n');
+    } else {
+      out = [o.title ? o.title : 'Parallax'].concat(o.lines || []);
+      if (o.footer) out.push(o.footer);
+    }
+    var body = out.join('\n');
+    if (nick && body.indexOf(nick) < 0) {
+      // before the Chimera line when the text already ends with one
+      var at = out.length && /discord\.gg\/chmr/.test(out[out.length - 1]) ? out.length - 1 : out.length;
+      out.splice(at, 0, 'Played by ' + nick);
+    }
+    if (out.join('\n').indexOf(URL) < 0) {
+      // a short-form line ("· discord.gg/chmr") becomes the full one; otherwise it is added
+      var last = out.length - 1;
+      if (last >= 0 && /^Built by the Chimera community\b.*discord\.gg\/chmr\s*$/.test(out[last])) out[last] = CHIMERA_LINE;
+      else out.push(CHIMERA_LINE);
+    }
     return out.join('\n');
   }
 
@@ -270,7 +316,7 @@
       fig.setAttribute('aria-busy', 'true');
       fig.setAttribute('data-size', size);
       file = null;
-      return card({ title: o.title, lines: o.lines, footer: o.footer, kind: o.kind, size: size, theme: o.theme, label: o.label, marks: o.marks, ruler: o.ruler })
+      return card({ title: o.title, lines: o.lines, footer: o.footer, kind: o.kind, size: size, theme: o.theme, label: o.label, marks: o.marks, ruler: o.ruler, nickname: o.nickname })
         .then(function (cv) {
           canvas = cv;
           try { img.src = cv.toDataURL('image/png'); } catch (e) { img.removeAttribute('src'); }
@@ -445,13 +491,18 @@
     return def.dims.map(function (d) { return d.label + ' ' + d.levels[params[d.key]]; }).join(', ');
   }
 
+  function challengeText(ch) {
+    var def = PX.ex.get(ch.exId);
+    return 'Parallax challenge: the same ' + ch.n + ' ' + (def ? def.short : ch.exId) + ' items I played. Paste this code into “Play a challenge” in the Library: ' + ch.code + '\n' + CHIMERA_LINE;
+  }
+
   function shareChallenge(o) {
     var ch = create(o), def = PX.ex.get(ch.exId);
     return open({
       kind: 'challenge', label: 'Challenge', sheetTitle: 'Challenge a friend',
       title: 'Same ' + ch.n + ' ' + def.short + ' items, your turn',
       lines: [settingsLine(def, ch.params), 'Code: ' + ch.code, 'Paste it into “Play a challenge” in the Parallax Library.'],
-      text: 'Parallax challenge: the same ' + ch.n + ' ' + def.short + ' items I played. Paste this code into “Play a challenge” in the Library: ' + ch.code + '\n' + CHIMERA_LINE,
+      text: challengeText(ch),
       filename: 'parallax-challenge-' + def.id + '.png',
     });
   }
@@ -479,7 +530,7 @@
   }
 
   PX.ui.share = {
-    card: card, open: open, text: text, CHIMERA_LINE: CHIMERA_LINE, SIZES: SIZES,
-    challenge: { create: create, encode: encode, decode: decode, seedAt: seedAt, route: route, play: play, share: shareChallenge, box: box },
+    card: card, open: open, text: text, nickname: nickname, CHIMERA_LINE: CHIMERA_LINE, CARD_LINE: CARD_LINE, SIZES: SIZES,
+    challenge: { create: create, encode: encode, decode: decode, seedAt: seedAt, route: route, play: play, share: shareChallenge, box: box, text: challengeText },
   };
 })(window.PX);
