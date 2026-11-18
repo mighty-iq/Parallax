@@ -126,22 +126,35 @@ def normal_speed(b, cons):
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=40000)
     cap = page.locator('.hx-caption').inner_text()
     C.ok(len(cap) > 10, f'the demo plays to the end with captions ({cap!r})')
-    # The Watch item (learn.js demo, the starter band) shows both kinds of wrong solid it has: the wrong
-    # size, with the edge that differs marked in the solid and in the pattern, and the shade on a face of
-    # another shape, with that face marked; it ends back on the right solid. (The mirror image needs a
-    # half mark: Try 3 brings it with its tip and its dotted corner.)
+    # The Watch item (learn.js demo, the starter band), v1.2: three captions (each waits for a tap in the
+    # player): the wrong size with the edge that differs marked in the solid and in the pattern; the
+    # shaded face and its neighbours; the check, with the shade on a wrong face crossed out, the fold-up,
+    # and the end back on the right solid with no wrong solid marked. (The mirror image needs a half
+    # mark: Try 3's worked example and tip bring it.)
     page.goto(file_url('tests/dev/harness.html', ex=EX, seed=5, p='solid:0,marks:0,view:0,foil:0', fast=1))
     page.wait_for_function(READY, timeout=60000)
     w = page.evaluate("""() => { const it = __harness.item, list = PX.ex.view('form').demoSteps(it), out = {};
         list.forEach((s, i) => { s.enter(); const t = s.caption || '';
           if (t.indexOf('marked edge') >= 0) out.edge = document.querySelectorAll('.fm-edge-hl').length;
-          if (/cannot look like that/.test(t)) out.marks = document.querySelectorAll('.fm-tag--bad').length; });
+          if (t.indexOf('3/3') === 0) out.marks = document.querySelectorAll('.fm-tag--bad').length; });
         const last = list[list.length - 1]; last.enter();
-        const cells = document.querySelectorAll('.hx-grid .px-choice');
-        return { n: list.length, edge: out.edge || 0, marks: out.marks || 0, endsOnKey: cells[it.key].classList.contains('ex-focus') }; }""")
-    C.ok(w['edge'] >= 2 and w['marks'] >= 1 and w['endsOnKey'], f'the Watch shows a wrong-size solid (edge marked in solid and pattern) and a shade on the wrong face, then ends on the answer ({w})')
+        const cells = document.querySelectorAll('.hx-grid .px-choice'), fold = document.querySelector('svg.fm-foldup');
+        return { n: list.length, captions: list.filter((s) => s.caption).length, edge: out.edge || 0, marks: out.marks || 0, endsOnKey: cells[it.key].classList.contains('ex-focus'),
+          clean: document.querySelectorAll('.fm-tag--bad, .fm-edge-hl').length === 0 && (!fold || fold.style.display === 'none') }; }""")
+    C.ok(w['captions'] == 3 and w['edge'] >= 2 and w['marks'] >= 1 and w['endsOnKey'] and w['clean'], f'the Watch has three captions: a wrong-size solid (edge marked in solid and pattern), the landmark, the check with a shade on the wrong face crossed out; it ends on the answer with nothing wrong marked ({w})')
+    # the worked example of a half mark (Try 3's): three captions, the half mark's corner, the mirror image, the solid that keeps it
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=54, p='solid:0,marks:1,view:0,foil:0', fast=1))
+    page.wait_for_function(READY, timeout=60000)
+    x = page.evaluate("""() => { const it = __harness.item, list = PX.ex.view('form').demoSteps(it), out = { corner: 0, mirror: 0 };
+        list.forEach((s) => { s.enter(); const t = s.caption || '';
+          if (/half-shaded/.test(t)) out.corner = document.querySelectorAll('.fm-corner').length;
+          if (/mirror image/.test(t)) out.mirror = document.querySelectorAll('.fm-tag--bad').length; });
+        return { captions: list.filter((s) => s.caption).length, corner: out.corner, mirror: out.mirror }; }""")
+    C.ok(x['captions'] == 3 and x['corner'] >= 1 and x['mirror'] >= 1, f'the worked example of a half mark has three captions: the dotted corner, the mirror image crossed out, the solid that keeps it ({x})')
     page.screenshot(path=str(DIR / 'form_demo_end.png'))
-    for name, pat in (('wrongsize', 'marked edge'), ('marks', 'cannot look like that')):
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=5, p='solid:0,marks:0,view:0,foil:0', fast=1))
+    page.wait_for_function(READY, timeout=60000)
+    for name, pat in (('wrongsize', 'marked edge'), ('marks', '3/3')):
         page.evaluate("""(pat) => { const list = PX.ex.view('form').demoSteps(__harness.item), s = list.find((x) => (x.caption || '').indexOf(pat) >= 0); if (s) s.enter(); }""", pat)
         page.screenshot(path=str(DIR / f'form_demo_{name}.png'))
     ctx.close()

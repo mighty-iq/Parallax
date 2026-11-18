@@ -24,7 +24,7 @@ SPECS = {  # ex: deps, stem, band params, Try 1 (seed, assist, selector), Try 2 
     'openings': dict(deps=(), stem='.op-stage', band='features:0,edges:0,keyview:0,pose:0,foils:0', try1=(104, {'trace': True}, '.op-ink .op-assist'),
                      try2=('features:0,edges:0,keyview:0,pose:0,foils:0', 239), demo=4, mid=('features:1,edges:0,keyview:0,pose:0,foils:0', 301, 6900)),
     'form': dict(deps=(), stem='.fm-stage', band='solid:0,marks:0,view:0,foil:0', try1=(12, {'letters': True}, '.fm-svg .fm-labels .fm-tag'),
-                 try2=('solid:0,marks:0,view:0,foil:0', 207), demo=5, mid=('solid:0,marks:1,view:0,foil:0', 303, 15200)),
+                 try2=('solid:0,marks:0,view:0,foil:0', 207), demo=5, mid=('solid:0,marks:1,view:0,foil:0', 303, 12800)),
     'patfold': dict(deps=('fold',), stem='.ex-patfold-stage', band='folds:0,type:0,idle:0', try1=(1, {'twin': True}, '.ex-patfold-twin'),
                     try2=('folds:0,type:0,idle:0', 13), demo=14, mid=None),
     'patviews': dict(deps=('views',), stem='.pv-stage', band='cubes:0,grid:0,missing:0,foil:0', try1=(100, {'proj': True}, '.pv-proj--assist'),

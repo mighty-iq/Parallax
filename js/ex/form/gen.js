@@ -768,6 +768,19 @@
     throw new Error('form: no valid item could be built'); // unreachable while the fallback test passes
   }
 
+  // v1.2 (fresh-player test: a scored item was the Watch's own item, answerable from memory): an item of
+  // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
+  // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
+  // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
+  var TUTORIAL = [1543916583, 3094203016, 1597406505, 2449352435, 4114434130, 1387240999];
+  function stemSig(item) { return PX.rng.hash('form-stem', JSON.stringify([item.solid.kind, item.solid.verts, item.net, item.marks])); }
+  function generateFresh(rng, params) {
+    var item = generate(rng, params);
+    if (params && params.task === 'tutorial') return item;
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    return item;
+  }
+
   /* ------------------------------------------------------------ definition */
   // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .25. base −2.2: a box or simple prism, one
   // shaded and one half-shaded face, upright pictures, a proportion foil among the foils: ≈ .90 right at
@@ -789,8 +802,9 @@
       { key: 'foil', label: 'Foils', levels: ['shape and marks', 'marks only'], step: 0.8 },
     ],
     base: -2.2,
-    generate: generate, validate: validate, score: score,
+    generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
       KINDS: KINDS, VIEW: VIEW, VIEWS: VIEWS, YAW: YAW, TILTS: TILTS, TILT_SETS: TILT_SETS, SEEN: SEEN, SOLVERS: SOLVERS, MARKS: MARKS, stats: stats,
       build: build, randomDims: randomDims, stretched: stretched, mirrored: mirrored, adjacency: adjacency, flat: flat, unfold: unfold, overlapping: overlapping,
       viewMatrix: viewMatrix, faceNormal: faceNormal, facing: facing, seenFaces: seenFaces, matchings: matchings, possible: possible, halfSet: halfSet,

@@ -22,6 +22,7 @@ export async function run(t) {
   testFallback(t, PX, def, L);
   testTiming(t, PX, def);
   testLearn(t, PX, def);
+  testTutorialRepeat(t, PX, def, 'form');
 }
 
 const sig = (x) => 1 / (1 + Math.exp(-x));
@@ -367,7 +368,7 @@ function testLearn(t, PX, def) {
     `Try 3 (the half mark) comes after a worked example of a half mark on a sister item, with a mirror image among its solids and the half mark clearly seen on the right one (seed ${exE && exE.seed})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].marks === 0 && P[1].marks === 0 && items[0].solid.kind === 'box' && items[1].solid.kind !== 'box', 'Try 1 (a box) and Try 2 (a prism) are at the starter band');
-  t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0 }, 'Try 3 is the pre-1.2 floor (a half mark)');
+  t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, 'Try 3 is the pre-1.2 floor (a half mark)');
   t.ok(P[3].marks === 2, 'Try 4: a third mark');
   t.eq(L.practice[0].assist, { letters: true }, 'Try 1 has its second step done (the shaded face\'s neighbours lettered)');
   t.ok(L.practice[2].assist && L.practice[2].assist.half && L.practice[2].tip === 'half', 'Try 3 brings the half mark with its tip and its corner dotted');
@@ -390,10 +391,36 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['pattern', 'solids', 'landmark', 'match', 'land', 'foils', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'foldTilt', 'foldUp', 'foldTurn', 'assist', 'assistHalf', 'halfCorner'];
+  const caps = ['sizes', 'landmark', 'landmarkAlone', 'match', 'matchAlone', 'halfCorner', 'matchHalf', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'assist', 'assistHalf'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered|boost|raise your|score gain|predict/i.test(all), 'no IQ, "mastered", score-gain or prediction claims');
   t.ok(typeof L.bridge === 'string' && /has not measured/i.test(L.bridge), 'a "where it is used" line with its limitation beside it');
+}
+
+// v1.2 (fresh-player test): no tutorial item comes back as a rated item. Every learn.js item carries
+// params.task 'tutorial'; lib.TUTORIAL holds exactly their stems' hashes; rated items at the tutorial's
+// settings never have one of those stems, and an item whose first draw is not one is unchanged.
+function testTutorialRepeat(t, PX, def, id) {
+  t.section(id + ': tutorial items do not come back');
+  const L = PX.ex.learn(id), lib = def.lib, entries = [];
+  (L.demo || []).forEach((d) => entries.push([d.params, d.seed]));
+  (L.practice || []).forEach((e) => { entries.push([e.params, e.seed]); if (e.example) entries.push([e.example.params || e.params, e.example.seed]); });
+  t.ok(entries.every(([p]) => p && p.task === 'tutorial'), 'every Watch, Try and worked-example item is marked task: tutorial');
+  t.ok(def.extraParams.indexOf('task') >= 0, 'task is an extra parameter of the definition');
+  const sigs = [...new Set(entries.map(([p, s]) => lib.stemSig(def.generate(PX.rng(s), p))))].sort((a, b) => a - b);
+  t.eq([...lib.TUTORIAL].sort((a, b) => a - b), sigs, `lib.TUTORIAL is the tutorial items' stems (${sigs.length})`);
+  let n = 0, repeats = 0, guarded = 0, changed = 0;
+  const sets = entries.map(([p]) => { const q = Object.assign({}, p); delete q.task; return q; });
+  for (const q of sets) for (let s = 1; s <= 300; s++) {
+    n++;
+    const raw = lib.generateRaw(PX.rng(s), q), it = def.generate(PX.rng(s), q);
+    const hit = lib.TUTORIAL.indexOf(lib.stemSig(raw)) >= 0;
+    if (hit) guarded++;
+    if (lib.TUTORIAL.indexOf(lib.stemSig(it)) >= 0) repeats++;
+    if (!hit && (lib.stemSig(it) !== lib.stemSig(raw) || it.key !== raw.key)) changed++;
+  }
+  t.eq(repeats, 0, `no rated item at the tutorial's settings has a tutorial stem (${n} items; ${guarded} first draws were redrawn)`);
+  t.eq(changed, 0, 'an item whose first draw is not a tutorial stem is the same as before');
 }
