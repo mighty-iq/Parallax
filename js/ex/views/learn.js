@@ -144,7 +144,7 @@
       whyDirectionTurn: 'Drawing {n} is the view from the {from}: from there it looks like this.',
       whyMirrorFlip: 'Drawing {n} is the correct view flipped left to right.',
       whyNeighbourLines: 'Drawing {n} belongs to another structure: the marked lines differ.',
-      assist: 'The size of the view is counted for you: {w} × {h} cells. Drawings of another size drop out.',
+      assist: 'Step 2 done: the view is {w} × {h} cells.',
       assistLabel: 'Outline {w} × {h}',
     },
     bridge: 'Engineers, architects and machinists read three views like these every day. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance.',
