@@ -122,6 +122,8 @@
   font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: var(--fs-xs, 0.75rem); letter-spacing: 0.04em;
   color: var(--signal, #0B6A86); white-space: nowrap;
 }
+.ex-views .ex-views-assist-label { text-align: center; line-height: 1.3; }
+.ex-views .ex-views-assist-step { font-weight: 600; }
 .ex-views .ex-views-assist-svg { display: block; height: auto; font-size: 18px; overflow: visible; }
 .ex-views .ex-views-assist-grid { fill: none; stroke: var(--ink-3, #5D646C); stroke-width: 1px; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
 .ex-views .ex-views-assist-line { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 6 3; stroke-linecap: square; vector-effect: non-scaling-stroke; }

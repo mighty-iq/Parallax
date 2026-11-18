@@ -12,11 +12,15 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_views.py   (two browser slot
    Replay; the tutorial demo plays to the end with captions; a context loss voids the trial
 3. the harness inlined into a sandboxed srcdoc iframe renders and plays by keyboard (every variant)
 4. no console errors anywhere
+5. the v1.2 starter level (tests/e2e/band_a.py): top and front items at 360 x 640, Try 1 with the
+   asked view's outline drawn (w x h cells, as the key), the rules card; show me after a wrong pick
+   of each foil kind ends with the key's drawing laid on it
 Screenshots: tests/e2e/out/views/views_<variant>_<viewport>_<theme>[_reveal|_wrong|_showme].png """
 import sys
 
 from playwright.sync_api import sync_playwright
 
+from band_a import band_checks, wtg_checks
 from common import OUT, Checks, Console, child_frame, file_url, harness_single, launch, non_blank, srcdoc_host
 
 C = Checks('harness_views')
@@ -24,10 +28,10 @@ DIR = OUT / 'views'
 DIR.mkdir(parents=True, exist_ok=True)
 READY = "() => window.__harness && __harness.state === 'respond'"
 STATE = "(s) => window.__harness && __harness.state === s"
-CASES = {  # variant: (params, seed)
-    'toview': ('cubes:2,grid:0,view:1', 1),
-    'toobject': ('cubes:2,grid:1', 2),
-    'count': ('cubes:3,grid:1', 3),
+CASES = {  # variant: (params, seed); cubes level 0 is the v1.2 starter level, so 1.1's levels are one up
+    'toview': ('cubes:3,grid:0,view:1', 1),
+    'toobject': ('cubes:3,grid:1', 2),
+    'count': ('cubes:4,grid:1', 3),
 }
 
 
@@ -174,14 +178,14 @@ def normal_speed(b, cons):
         shot(page, f'views_{variant}_1366_light_showme_end{"_rm" if rm else ""}.png')
         pl = page.evaluate('() => __harness.played')
         times[f'{variant}{"_rm" if rm else ""}'] = {'planned': round(pl['plannedMs'] / 1000, 2), 'wall': round(pl['ms'] / 1000, 2)}
-    # toview: look, move, trace, land (four steps of 1.4-2.5 s); toobject: three views of the key,
-    # each moved to, traced and laid on its drawing; count: one short step per column.
-    C.ok(5.0 <= times['toview']['planned'] <= 10.0, f'show me for a view takes 5-10 s ({times["toview"]})')
+    # toview: look, move, outline, inner lines, land (five steps of 1.4-2.5 s, v1.2); toobject: three
+    # views of the key, each moved to, traced and laid on its drawing; count: one short step per column.
+    C.ok(6.0 <= times['toview']['planned'] <= 12.0, f'show me for a view takes 6-12 s ({times["toview"]})')
     C.ok(times['toview_rm']['planned'] < times['toview']['planned'], f'reduced motion makes show me shorter ({times})')
     C.ok(times['toobject']['planned'] <= 4.0 * 4, f'show me for three views takes at most 4 s per view and the intro ({times["toobject"]})')
     C.ok(times['count']['planned'] <= 14.0, f'show me for a count takes at most 14 s ({times["count"]})')
     # Pause, Step and Replay work and the run still ends.
-    page.goto(file_url('tests/dev/harness.html', ex='views', seed=6, v='toview', p='cubes:1,grid:0,view:2'))
+    page.goto(file_url('tests/dev/harness.html', ex='views', seed=6, v='toview', p='cubes:2,grid:0,view:2'))
     page.wait_for_function(READY, timeout=40000)
     page.evaluate('() => __harness.answer(false)')
     page.wait_for_function(STATE, arg='reveal', timeout=10000)
@@ -205,7 +209,7 @@ def normal_speed(b, cons):
     C.ok(len(cap) > 10, f'the demo plays to the end with captions ({cap!r})')
     shot(page, 'views_demo_end.png')
     # A lost WebGL context voids the trial; the view comes back after the restore.
-    page.goto(file_url('tests/dev/harness.html', ex='views', seed=8, v='count', p='cubes:1,grid:0', fast=1))
+    page.goto(file_url('tests/dev/harness.html', ex='views', seed=8, v='count', p='cubes:2,grid:0', fast=1))
     page.wait_for_function(READY, timeout=40000)
     page.evaluate('() => { const r = PX.core.stage3d.renderer(); r.forceContextLoss(); setTimeout(() => r.forceContextRestore(), 400); }')
     page.wait_for_timeout(1500)
@@ -242,6 +246,46 @@ def sandboxed(b, cons):
         ctx.close()
 
 
+def outline_frame(C, page, tag):
+    d = page.evaluate("""() => {
+        const a = document.querySelector('.ex-views-assist'), it = __harness.item, k = it.options[it.key].drawing;
+        const r = a ? a.getBoundingClientRect() : null, s = document.querySelector('.ex-views-stage').getBoundingClientRect();
+        const t = document.querySelector('.ex-views-tag--ask'), tr = t && !t.hidden ? t.getBoundingClientRect() : null;
+        const clear = !r || !tr || r.right <= tr.left || r.left >= tr.right || r.bottom <= tr.top || r.top >= tr.bottom;
+        return { on: !!a, label: a ? a.textContent : '', want: k.w + ' × ' + k.h + ' cells', clear,
+                 inside: !!r && r.left >= s.left - 1 && r.right <= s.right + 1 && r.top >= s.top - 1 && r.bottom <= s.bottom + 1,
+                 lines: a ? a.querySelectorAll('.ex-views-assist-line').length : 0 };
+    }""")
+    C.ok(d['on'] and d['want'] in d['label'] and 'Step 2 done' in d['label'] and d['inside'] and d['lines'] == 1, f'{tag}: the asked view\'s outline is drawn in the stage, {d["want"]} cells as the key ({d})')
+    C.ok(d['clear'], f'{tag}: the outline box leaves the view\'s tag ("TOP VIEW") clear ({d})')
+
+
+def why_steps(b, cons):
+    """Show me after a wrong pick of each foil kind ends with the key's drawing laid on the key."""
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    cons.append(Console(page))
+    seen = set()
+    for seed in range(50, 120):
+        if len(seen) == 3:
+            break
+        page.goto(file_url('tests/dev/harness.html', ex='views', seed=seed, v='toview', p='cubes:3,grid:1,view:1', fast=1))  # all three foil kinds from seed 50
+        page.wait_for_function(READY, timeout=40000)
+        kinds = page.evaluate('() => __harness.item.options.map((o) => o.kind)')
+        key = page.evaluate('() => __harness.key')
+        todo = [i for i, k in enumerate(kinds) if i != key and k not in seen]
+        if not todo:
+            continue
+        i = todo[0]
+        page.locator('.hx-grid .px-choice').nth(i).click()
+        page.wait_for_function(STATE, arg='reveal', timeout=10000)
+        show_me(page, f'views wrong pick ({kinds[i]}, seed {seed})')
+        shot(page, f'views_why_{kinds[i]}.png')
+        seen.add(kinds[i])
+    C.ok(seen == {'direction', 'mirror', 'neighbour'}, f'show me explained a wrong pick of every foil kind ({sorted(seen)})')
+    ctx.close()
+
+
 def main():
     cons = []
     with sync_playwright() as p:
@@ -249,6 +293,10 @@ def main():
         desktop_and_phone(b, cons)
         times = normal_speed(b, cons)
         sandboxed(b, cons)
+        why_steps(b, cons)
+        band_checks(b, cons, C, 'views', DIR, [('top', 'cubes:0,grid:0,view:0', 56), ('front', 'cubes:0,grid:0,view:1', 3), ('right4', 'cubes:0,grid:1,view:2', 7)],
+                    assist_check=outline_frame, try1=('cubes:0,grid:0,view:0', 73), extra_q={'v': 'toview'})
+        wtg_checks(b, cons, C, 'views', DIR, '.ex-views-assist')
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')
