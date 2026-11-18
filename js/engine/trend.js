@@ -21,7 +21,8 @@
 
    Linear and Gaussian once each block is: the posterior is exact generalised least squares (the same as a
    Kalman smoother over the occasions), with the occasion's state integrated out by Sherman–Morrison.
-   Blocks come either as summaries { y, v } or as items [b, g, ok, a?] under the engine's item model
+   Blocks come either as summaries { y, v } or as items [b, g, ok, rtMs?, a?] (the rows rec.assess stores:
+   the response time is ignored here; a, the item's slope, defaults to 1 as in the engine) under the item model
    P = g + (1 − g − lapse)·σ(a(θ − b)); items are linearised at the block's fitted ability (fixed part plus
    the predicted state) and the fit is iterated to convergence: penalised quasi-likelihood, i.e. the Laplace
    approximation at the joint posterior mode, so blocks of two or three items need no weak per-block prior.
@@ -40,7 +41,7 @@
    population values in minutes.
 
      fit(input, opts?) → { ok, day, gain: { comp, near, mid, far, …per rung }, meter, segment, eta, beta, cov, index }
-       input = { occasions: [{ t (ms), h?, blocks: [{ probe, items: [[b, g, ok, a?], …] } | { probe, n, y, v }] }] }
+       input = { occasions: [{ t (ms), h?, blocks: [{ probe, items: [[b, g, ok, rtMs?, a?], …] } | { probe, n, y, v }] }] }
        gain.x = { mean, sd (SD units of that readout), p = P(D > 0), pNone = P(D < margin), lo, hi (config.range),
                   logits (mean in probe points), sdUnit (logits per readout SD) }
        opts.eta: linearisation points from an earlier fit of a prefix (warm start); opts.hNow: h for "now"
@@ -287,7 +288,7 @@
   function linearise(items, eta) {
     var lapse = config.fit.lapse, S = 0, I = 0;
     for (var k = 0; k < items.length; k++) {
-      var it = items[k], b = it[0], g = it[1], ok = it[2] ? 1 : 0, a = isNum(it[3]) && it[3] > 0 ? it[3] : 1;
+      var it = items[k], b = it[0], g = it[1], ok = it[2] ? 1 : 0, a = isNum(it[4]) && it[4] > 0 ? it[4] : 1;
       var s = sig(a * (eta - b)), top = 1 - g - lapse, p = g + top * s;
       if (p < 1e-9) p = 1e-9; else if (p > 1 - 1e-9) p = 1 - 1e-9;
       var dp = top * a * s * (1 - s), w = dp / (p * (1 - p));
@@ -302,7 +303,7 @@
     for (var it = 0; it < 20; it++) {
       var gr = -(th - center) / sd2, inf = 1 / sd2;
       for (var k = 0; k < items.length; k++) {
-        var x = items[k], g = x[1], a = isNum(x[3]) && x[3] > 0 ? x[3] : 1, ok = x[2] ? 1 : 0;
+        var x = items[k], g = x[1], a = isNum(x[4]) && x[4] > 0 ? x[4] : 1, ok = x[2] ? 1 : 0;
         var s = sig(a * (th - x[0])), top = 1 - g - lapse, p = mmin(1 - 1e-9, mmax(1e-9, g + top * s)), dp = top * a * s * (1 - s);
         gr += (ok - p) * dp / (p * (1 - p)); inf += dp * dp / (p * (1 - p));
       }
@@ -450,7 +451,7 @@
       var bl = B[k], eta = fixedPart(bl, beta) + bl.sd * (u[bl.j] || 0) + (s[k] || 0);
       if (bl.items) {
         for (i = 0; i < bl.items.length; i++) {
-          var it = bl.items[i], a = isNum(it[3]) && it[3] > 0 ? it[3] : 1, p = it[1] + (1 - it[1] - lapse) * sig(a * (eta - it[0]));
+          var it = bl.items[i], a = isNum(it[4]) && it[4] > 0 ? it[4] : 1, p = it[1] + (1 - it[1] - lapse) * sig(a * (eta - it[0]));
           p = mmin(1 - 1e-12, mmax(1e-12, p));
           J += it[2] ? mlog(p) : mlog(1 - p);
         }

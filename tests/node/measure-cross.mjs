@@ -53,7 +53,7 @@ function contrastSlope(points) { // weighted least squares slope of d on tau, wi
 
 // Working residual of one item at the block's fitted ability eta: z = (y − p)/p', weight p'²/(p(1 − p)).
 function work(item, eta) {
-  const [b, g, ok] = item, a = item[3] || 1, s = 1 / (1 + Math.exp(-a * (eta - b))), top = 1 - g - LAPSE;
+  const [b, g, ok] = item, a = item[4] || 1, s = 1 / (1 + Math.exp(-a * (eta - b))), top = 1 - g - LAPSE;
   const p = Math.min(1 - 1e-9, Math.max(1e-9, g + top * s)), dp = top * a * s * (1 - s);
   return { z: (ok - p) / dp, w: dp * dp / (p * (1 - p)) };
 }
@@ -71,7 +71,7 @@ function playerContrasts(res, first, units, mode) {
       if (bl.day < lo || bl.day > hi) continue;
       const acc = { on: [0, 0], off: [0, 0] };
       for (const it of bl.items) {
-        const s = it[4];
+        const s = it[5];
         let arm = null;
         if (mode === 'calib') arm = s === units[0] ? 'on' : 'off';             // the strand against the rest
         else if (first[s] !== undefined) arm = first[s] === period ? 'on' : 'off';
