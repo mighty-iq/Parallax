@@ -19,6 +19,8 @@ inlined harness page with Homing's gen/learn/view.js and both stylesheets (writt
    state; after 5+ answers the bias line and the error chart show; the record field 'reckon' fills
 8. a sandboxed srcdoc page plays by keyboard; no console errors
 9. the real player by touch: the reveal comes and stays, no click reaches Next
+10. v1.2 (`python3 tests/e2e/harness_reckon.py v12` runs only this): gentle motion (O36), the feedback words
+   (O40), the Try tips (O39) and the motion the player hears of
 Screenshots: tests/e2e/out/reckon/reckon_<case>.png """
 import json
 import math
@@ -735,10 +737,145 @@ def demo_bias_srcdoc(b, cons):
     ctx.close()
 
 
+def v12(b, cons):
+    """v1.2 (W1-fixes; `python3 tests/e2e/harness_reckon.py v12` runs only this):
+    O36 gentle motion: the dot, one speed per leg, the walk back at 2/3 of its speed, the motion reported;
+    O40 feedback words: exact walks read "under 1 % off", the drift names the route and the walk back and the
+    item's limit, the chart has axis words, the map labels "your answer";
+    O39 Try tips in the player: no "After each turn" on the straight walk, a walking tip on the first return."""
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, **PHONE)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    tt = Touch(ctx, page)
+    page.goto(url('v12_gentle', seed=33, p='route:0,flow:0,speed:2,tolerance:0', v='return', fast=True, gentle=True))
+    page.wait_for_function(READY, timeout=90000)
+    s = st(page)
+    g = page.evaluate('''() => { const L = PX.ex.get('reckon').lib, it = __harness.item, g = L.gentle(it), tl = PX.ex.view('reckon').timeline(it);
+        return { speeds: g.speeds, ramp: g.ramp, dur: g.duration, tl: tl.motion, walk: g.walkSpeed, walk0: it.walkSpeed, normal: it.duration, two: it.speeds.every((v) => v.length === 2) }; }''')
+    C.ok(s['gentle'] and s['fix'] and g['two'] and all(len(v) == 1 for v in g['speeds']) and g['ramp'] == 0.6 and abs(g['tl'] - g['dur']) < 0.01 and g['dur'] <= 40,
+         f'gentle: a "varied within legs" route plays one speed per leg with 0.6 s ramps, at most 40 s, and the dot shows ({g}; state gentle {s["gentle"]}, dot {s["fix"]})')
+    m0 = page.evaluate('() => __harness.played.motionMs || 0')
+    C.ok(m0 > 0 and s['motionMs'] >= m0 - 1, f'the route\'s motion goes to ctx.addMotion ({m0} ms in fast mode)')
+    shot(page, 'v12_gentle_answer')
+    turn_to(page, page.evaluate('() => __harness.item.keyDeg'), tt)
+    page.locator('.ex-reckon-walk').scroll_into_view_if_needed()
+    page.wait_for_timeout(150)
+    box = page.locator('.ex-reckon-walk').bounding_box()
+    tt.ev('touchStart', box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+    page.wait_for_timeout(1000)
+    v_mid = st(page)['speed']
+    page.wait_for_timeout(300)
+    tt.ev('touchEnd')
+    page.wait_for_timeout(600)
+    m1 = page.evaluate('() => __harness.played.motionMs || 0')
+    C.ok(abs(v_mid - g['walk']) < 0.03 and abs(g['walk'] - round(g['walk0'] * 2 / 3, 2)) < 1e-9, f'gentle: the walk back runs at 2/3 of the item\'s speed ({v_mid:.3f} m/s; item {g["walk0"]}, gentle {g["walk"]})')
+    C.ok(1100 <= m1 - m0 <= 2500, f'the walk back\'s motion goes to ctx.addMotion when it stops ({m1 - m0:.0f} ms for a 1.3 s hold)')
+    meta = page.evaluate("() => PX.ex.view('reckon').answerMeta()")
+    C.ok(meta.get('gentle') is True, f'the answer carries gentle: true ({meta})')
+    ctx.close()
+
+    # O40: the words after exact answers, the drift line, the chart's axes, the map label (phone, fast)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, **PHONE)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto(url('v12_words', seed=33, p='route:0,flow:0,speed:0,tolerance:0', v='return', fast=True))
+    page.wait_for_function(READY, timeout=90000)
+    C.ok(st(page)['fix'] is False, 'without gentle motion there is no dot')
+    page.evaluate('() => __harness.answer(true)')
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    notes = page.locator('.ex-fp-notes').inner_text()
+    C.ok('under 1 % off in distance' in notes and '0 %' not in notes, f'an exact walk back reads "under 1 % off in distance", never "0 %" ({notes[:200]!r})')
+    C.ok('the route and your walk back' in notes and 'the limit for this item was about' in notes and 'cm per metre' in notes, f'the drift says what it counts and gives the item\'s limit ({notes[:400]!r})')
+    page.evaluate("() => __harness.next({ variant: 'return', task: 'distance', route: 0, flow: 0, speed: 0, tolerance: 1 }, 36)")
+    page.wait_for_function(READY, timeout=90000)
+    page.evaluate('() => __harness.answer(true)')
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    dn = page.locator('.ex-fp-notes').inner_text()
+    C.ok('under 1 % off' in dn and '0 %' not in dn, f'the distance task walked exactly reads "under 1 % off" ({dn!r})')
+    for i in range(4):
+        page.evaluate('(s) => __harness.next({ variant: "point", route: 1, flow: 0, speed: 0, tolerance: 0 }, s)', 60 + i)
+        page.wait_for_function(READY, timeout=90000)
+        page.evaluate(f'() => __harness.answer({"true" if i % 2 == 0 else "false"})')
+        page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    page.wait_for_timeout(600)
+    ax = page.evaluate('''() => { const y = document.querySelector('.ex-reckon-yax'), x = document.querySelector('.ex-reckon-xax'), n = document.querySelector('.ex-reckon-chartnote');
+        const cs = [...document.querySelectorAll('.ex-reckon-chart circle')].map((c) => +c.getAttribute('cx'));
+        return { y: y ? y.innerText : '', x: x ? x.innerText : '', note: n ? n.innerText : '', dots: cs.length, lastX: cs.length ? cs[cs.length - 1] : 0,
+          px: y ? parseFloat(getComputedStyle(y).fontSize) : 0 }; }''')
+    C.ok('too far' in ax['y'] and 'too little' in ax['y'] and 'older' in ax['x'] and 'latest' in ax['x'] and 'Solid dots' in ax['note'] and 'Filled: right' not in ax['note'] and ax['dots'] >= 3 and ax['px'] >= 12
+         and ax['lastX'] > 0.9 * 240,
+         f'the habit chart has axis words, says solid and hollow, and ends at the right with the latest route ({ax})')
+    shot(page, 'v12_chart', full=True)
+    page.evaluate("() => { __harness.config.fast = true; PX.debug.fast(true); }")
+    before = page.evaluate('() => __harness.played.finished')
+    page.evaluate('() => { __harness.showMe(); }')
+    page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=60000)
+    page.wait_for_timeout(200)
+    lab = page.evaluate("() => [...document.querySelectorAll('.ex-fp-maplabel--you')].map((e) => e.textContent)")
+    C.ok(lab == ['your answer'], f'the map labels your answer "your answer" ({lab})')
+    ctx.close()
+
+    # O39 and O36 in the player: Watch, Try at 390 × 844 (fast); each Try item's tip; the demo's motion
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, **PHONE)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    open_app(page)
+    page.evaluate('PX.debug.fast(true)')
+    page.evaluate("PX.core.store.state.tour.seen['reckon'] = false")
+    # count what the view hands to ctx.addMotion (the player's own count is internal)
+    page.evaluate('''() => { const v = PX.ex.view('reckon'); window.__motion = 0;
+        const wrap = (ctx) => { if (ctx && !ctx.__w12 && typeof ctx.addMotion === 'function') { const f = ctx.addMotion; ctx.addMotion = (ms) => { window.__motion += ms; return f(ms); }; ctx.__w12 = true; } };
+        ['present', 'demo'].forEach((k) => { const f = v[k]; v[k] = function (item, ctx) { wrap(ctx); return f.apply(this, arguments); }; }); }''')
+    page.evaluate('void PX.core.router.go("play", { mode: "watch", exId: "reckon" }, { force: true })')
+    tips, seen = [], set()
+    for _ in range(2500):
+        stt = page.evaluate('window.__play ? __play.state : null')
+        if stt == 'respond':
+            it = page.evaluate('() => { const i = __play.item; return i ? { seed: i.seed, task: i.task || null, turns: i.turns.length, legs: i.legs.length, ret: i.answer === "position" } : null; }')
+            if it and it['seed'] not in seen:
+                seen.add(it['seed'])
+                tip = page.evaluate("() => { const t = document.querySelector('.pl-tip'); return t && !t.hidden ? t.innerText : ''; }")
+                tips.append(dict(it, tip=tip))
+            page.evaluate('__play.answer(true).catch(() => 0)')
+            page.wait_for_timeout(120)
+        elif stt == 'reveal':
+            page.evaluate('__play.next()')
+            page.wait_for_timeout(120)
+        else:
+            for sel in ('[data-card-box] [data-card="skip"]', '[data-card-box] .px-btn--primary'):
+                loc = page.locator(sel)
+                if loc.count() and loc.first.is_visible():
+                    loc.first.click()
+                    page.wait_for_timeout(150)
+                    break
+        if len(tips) >= 5:
+            break
+        page.wait_for_timeout(40)
+    straight = [t for t in tips if t['task'] == 'distance']
+    C.ok(straight and all('turn' not in t['tip'].lower() for t in straight) and all(t['tip'] for t in straight),
+         f'Try: the straight walk shows a tip about distance, not "After each turn" ({straight})')
+    heading = [t for t in tips if t['task'] == 'heading']
+    C.ok(heading and all(t['tip'] and 'walk' not in t['tip'].lower() for t in heading), f'Try: the turn on the spot shows a tip about turning ({heading})')
+    first_ret = [t for t in tips if t['ret'] and not t['task']]
+    C.ok(first_ret and 'Walk' in first_ret[0]['tip'], f'Try: the first return route explains Walk ({first_ret[:1]})')
+    mot = page.evaluate('() => window.__motion')
+    C.ok(mot and mot > 0, f'the Watch demo and the Try walks report their motion to the player\'s ctx.addMotion ({mot} ms in fast mode)')
+    page.evaluate('void __play.end()')
+    ctx.close()
+
+
 def main():
     cons = []
+    only = set(sys.argv[1:])
     with sync_playwright() as p:
         b = launch(p)
+        if only:
+            if 'v12' in only:
+                v12(b, cons)
+            b.close()
+            errors = [e for c in cons for e in c.errors()]
+            C.ok(not errors, f'no console errors ({errors[:5]})')
+            return C.summary(REPORT)
         phone_play(b, cons)
         app_touch(b, cons)
         reveal_sizes(b, cons)
@@ -748,6 +885,7 @@ def main():
         pauses_and_voids(b, cons)
         throttled(b, cons)
         demo_bias_srcdoc(b, cons)
+        v12(b, cons)
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')

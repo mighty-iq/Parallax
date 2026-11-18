@@ -17,6 +17,8 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_homing.py   (two browser slo
 6. show me ends on the grading geometry; 6–20 s at normal speed, shorter with reduced motion; pause, step,
    replay, close; Hide the map; labels clear of each other; the demo plays to the end and leaves its item
    in the answer state; the sandboxed srcdoc harness plays by keyboard; no console errors
+7. v1.2 gentle motion (O36; `python3 tests/e2e/harness_homing.py gentle` runs only this): the gentle plan in
+   real time, the fixation dot at the view's centre, the motion reported to ctx.addMotion
 Screenshots: tests/e2e/out/homing/homing_<viewport>_<theme>[_reveal|_wrong|_showme|_walk].png """
 import math
 import sys
@@ -510,16 +512,66 @@ def sandboxed(b, cons):
     ctx.close()
 
 
+def gentle(b, cons):
+    """v1.2 O36 (docs/research/v1.2/N1-reckon.md §5.4): with ctx.gentleMotion (harness gentle=1) the view plays
+    lib.gentle's plan in real time (1.2 m/s, 30°/s, 0.6 s ramps), shows the fixation dot at the view's centre
+    and reports the motion it showed to ctx.addMotion; without it, no dot and the normal plan."""
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto(file_url('tests/dev/harness.html', ex='homing', seed=7, p='route:0,landmarks:0,tolerance:0', gentle=1))
+    page.wait_for_function(STATE, arg='ready', timeout=60000)
+    t0 = page.evaluate('() => performance.now()')
+    page.wait_for_timeout(3000)
+    s = page.evaluate("() => PX.ex.view('homing').state()")
+    dot = page.evaluate('''() => { const d = document.querySelector('.ex-fp-fix'), g = document.querySelector('.ex-fp-stage');
+        if (!d || !g) return null; const a = d.getBoundingClientRect(), c = g.getBoundingClientRect();
+        return { shown: getComputedStyle(d).display !== 'none', dx: a.left + a.width / 2 - (c.left + c.width / 2), dy: a.top + a.height / 2 - (c.top + c.height / 2), w: a.width }; }''')
+    shot(page, 'homing_1366_gentle_walk.png')
+    C.ok(s['gentle'] is True and s['fix'] is True and dot and dot['shown'] and abs(dot['dx']) < 1.5 and abs(dot['dy']) < 1.5 and 6 <= dot['w'] <= 12,
+         f'gentle: the fixation dot shows at the centre of the view during the walk ({dot})')
+    plan = page.evaluate('''() => { const L = PX.ex.get('homing').lib, it = __harness.item, g = L.gentle(it), tl = PX.ex.view('homing').timeline(it);
+        return { gentle: 1000 * g.duration, normal: 1000 * it.duration, tl: 1000 * tl.motion, lead: L.LEAD_MS, speed: g.speed, rate: g.turnRate, ramp: g.ramp }; }''')
+    page.wait_for_function(READY, timeout=90000)
+    t1 = page.evaluate('() => performance.now()')
+    want = plan['lead'] + plan['gentle']
+    C.ok(plan['speed'] == 1.2 and plan['rate'] == 30 and plan['ramp'] == 0.6 and abs(plan['tl'] - plan['gentle']) < 6,
+         f'gentle: the view plays the gentle plan (1.2 m/s, 30°/s, 0.6 s ramps; {plan})')
+    C.ok(0.97 * want <= t1 - t0 <= 2.5 * want and t1 - t0 > plan['lead'] + 1.3 * plan['normal'],
+         f'gentle: the walk takes LEAD_MS + the gentle duration ({(t1 - t0) / 1000:.2f} s for {want / 1000:.2f} s; normal {(plan["lead"] + plan["normal"]) / 1000:.2f} s)')
+    mot = page.evaluate('() => __harness.played.motionMs || 0')
+    C.ok(0.9 * plan['gentle'] <= mot <= 1.6 * plan['gentle'], f'the walk reports its motion to ctx.addMotion ({mot:.0f} ms for {plan["gentle"]:.0f} ms of motion)')
+    meta = page.evaluate("() => PX.ex.view('homing').answerMeta()")
+    C.ok(meta and meta.get('gentle') is True, f'the answer carries gentle: true ({meta})')
+    # without gentle motion: no dot, the normal plan
+    page.goto(file_url('tests/dev/harness.html', ex='homing', seed=7, p='route:0,landmarks:0,tolerance:0', fast=1))
+    page.wait_for_function(READY, timeout=60000)
+    s2 = page.evaluate("() => PX.ex.view('homing').state()")
+    tl2 = page.evaluate("() => { const it = __harness.item, tl = PX.ex.view('homing').timeline(it); return [tl.motion, it.duration]; }")
+    C.ok(s2['gentle'] is False and s2['fix'] is False and abs(tl2[0] - tl2[1]) < 0.01 and s2['motionMs'] > 0,
+         f'without gentle motion: no dot, the normal plan, motion still reported ({s2["gentle"]}, {s2["fix"]}, {tl2}, {s2["motionMs"]} ms in fast mode)')
+    ctx.close()
+
+
 def main():
     cons = []
+    only = set(sys.argv[1:])
     with sync_playwright() as p:
         b = launch(p)
+        if only:
+            if 'gentle' in only:
+                gentle(b, cons)
+            b.close()
+            errors = [e for c in cons for e in c.errors()]
+            C.ok(not errors, f'no console errors ({errors[:5]})')
+            return C.summary(REPORT)
         desktop_and_phone(b, cons)
         touch_only(b, cons)
         label_clearance(b, cons)
         times = walk_pause_void(b, cons)
         throttled(b, cons)
         sandboxed(b, cons)
+        gentle(b, cons)
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')
