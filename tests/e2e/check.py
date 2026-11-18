@@ -77,6 +77,9 @@ def desktop(b, C):
     con = Console(page)
     boot(page)
     page.evaluate('PX.ui.hooks.mute(false)')  # play.boot mutes every builder's hooks; this suite tests them
+    # Motion Graphs' background question, whenever its first card shows: tap "A little" (drive then takes the card's primary)
+    page.evaluate('''new MutationObserver(() => { const b = document.querySelector('[data-background-answer="some"][aria-pressed="false"]');
+      if (b && !window.__bgTapped) { window.__bgTapped = 1; b.click(); } }).observe(document.body, { childList: true, subtree: true })''')
     page.evaluate('void PX.core.router.go("home")')
     page.wait_for_selector('.px-today', timeout=8000)
     slot = page.locator('.px-today > [data-measure]')
@@ -137,6 +140,8 @@ def desktop(b, C):
     ok = play_measurement(page)
     e2 = page.evaluate('(() => { const e = PX.core.store.state.assess[1] || {}; return { kind: e.kind, ov: e.overlapAnswer || null }; })()')
     C.ok(ok and e2 == {'kind': 'B2', 'ov': 'no'}, f'{tag}: B2 saved with the answer ({e2})')
+    bg = page.evaluate("PX.engine.events.list(PX.core.store.state, { kind: 'background', exId: 'motiongraphs' }).map((e) => e.data)")
+    C.ok(bg == [{'q': 'motion-graphs', 'a': 'some'}], f'{tag}: Motion Graphs\' background question asked once, its tap kept ({bg})')
     click_card(page, 'go')
     to_item(page)
     page.evaluate('__play.end()')

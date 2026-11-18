@@ -27,3 +27,8 @@
 .px-ms-today .px-meta { margin-top: var(--s1); }
 .px-ms-summary .px-ms-meter { max-width: 32rem; }
 .px-ms-rows .px-fp-end .px-meta { font-family: var(--font-mono); font-size: var(--fs-xs); }
+
+/* the background question in a probe's first card (Motion Graphs): three taps, the chosen one ticked */
+.pl-expect.pl-background-q { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pl-background-q .px-btn[aria-pressed="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
+.pl-background-q .px-btn[aria-pressed="true"]::before { content: "\2713\00a0"; }
