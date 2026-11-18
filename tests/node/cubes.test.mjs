@@ -268,7 +268,9 @@ function testLearn(t, PX, def) {
   t.ok(first && first.steps.length === 3 && /Count by position/.test(first.title), 'strategyFirst names the "Count by position" card, three steps');
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((x) => x && valid(x.params) && Number.isInteger(x.seed)), 'four Try items as objects { params, seed, … }');
   const P = L.practice;
-  t.ok(P[0].assist && P[0].assist.numbers === 2 && !P[1].assist && !P[2].assist && !P[3].assist, 'Try 1 alone has its first step done (every number but two)');
+  t.ok(P[0].assist && P[0].assist.numbers === 2 && !P[1].assist && !P[3].assist, 'Try 1 has its first step done (every number but two); Try 2 and Try 4 have no help');
+  t.ok(P[2].assist && P[2].assist.hidden === true && !P[2].assist.numbers, 'Try 3 draws its hidden support dashed (a faded step between the worked example and Try 4)');
+  t.ok(typeof L.captions.assistHidden === 'string' && /\{what\}/.test(L.captions.assistHidden), 'the caption for the dashed hidden cube');
   t.ok(def.difficulty(P[0].params) <= floor + 1e-9 && def.difficulty(P[1].params) <= floor + 1e-9, 'Try 1 and Try 2 at the starter floor');
   t.ok(P[2].params.cubes === 0 && P[2].params.height === 1 && P[2].tip === 'hidden', 'Try 3: the small figures two high, with the hidden-cube tip (one new feature)');
   t.ok(Math.abs(def.difficulty(P[3].params) - OLD_FLOOR) < 1e-9, 'Try 4 at the pre-1.2 floor');

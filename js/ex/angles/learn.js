@@ -40,7 +40,7 @@
       { params: { gap: 1, size: 0, resolve: 0, pose: 1 }, seed: 1, tip: 'free' },
     ],
     tips: [
-      { id: 'free', when: { dim: 'pose', levels: [1] }, text: 'The angles are turned now. Picture each one turned until an arm lies flat, or compare them by fitting one inside another.' },
+      { id: 'free', when: { dim: 'pose', levels: [1] }, text: 'The angles are turned now; only the opening counts. Turn each one in your mind until one arm lies flat, then compare how far the other arm swings up.' },
       { id: 'acute', when: { dim: 'size', levels: [1] }, text: 'Sharp angles: compare how wide each one opens near its corner, like a knife edge against a slightly open book.' },
       { id: 'obtuse', when: { dim: 'size', levels: [2] }, text: 'Wide angles: look at the gap left to a straight line. The smaller that gap, the larger the angle.' },
       { id: 'close', when: { dim: 'resolve', levels: [2] }, text: 'Two of the angles are very close now. Settle the clear ones first, then spend your time on the close pair.' },
@@ -90,6 +90,7 @@
       order: 'From smallest to largest: {order}.',
       overlay: 'Lay angle {b} on angle {a}, corners and one arm lined up.',
       pair: 'Angle {b} opens {d}° wider than angle {a}.',
+      pairEye: 'Laid on each other, angle {b} opens wider than angle {a}.',
       done: 'So the order is {order}: answer {n}.',
       chosen: 'Answer {n} puts angle {b} before angle {a}, but angle {b} is the larger one.',
       // Show me and the Watch carry out the "Extremes first" card; the solving captions start with
@@ -98,7 +99,7 @@
       largest: '2/3 · Largest next: {b} opens the most, so keep the answers that end with {b}.',
       left: 'One answer is left: {order}.',
       disagree: '3/3 · The pair left: the answers left disagree on {a} and {b}, so lay one on the other.',
-      assist: 'The smallest angle is marked, and the answers that do not start with it are greyed.',
+      assist: 'Step 1 done: the smallest angle is marked.',
     },
     checkin: { whole: 'I laid the angles on each other in my mind', parts: 'I settled the smallest and largest first', unsure: 'Not sure, or both' },
     bridge: 'Angle ranking is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). This is perceptual-judgement practice: judging angles by eye improves with practice, but the gains tend to stay with this kind of figure, and an effect of Parallax on DAT scores has not been shown or measured. ' + ADA,
