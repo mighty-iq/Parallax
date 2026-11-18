@@ -97,7 +97,7 @@ What I tried (WebSearch, 2026-11-18):
   exercises ("best position for a service centre", Euclidean; "best meeting point", city-block) [ST].
 
 So nothing is public that I could report about format, scoring, timing or norms. **Proposal:** ask the
-owner (or, through him, the community member) for the test's name or a link; a description in words is
+owner (or, through the owner, the community member) for the test's name or a link; a description in words is
 enough, and no screenshot or item should enter the repository (standing rule 13 and test hygiene,
 rule 3). Until then the overlap entry in §7 is written for the format, not for a named test.
 
@@ -418,7 +418,7 @@ on a 7 × 7 answer grid (§4, stage B) and rejected: the key then sits next to t
 
 ### 4.1 What was run
 
-- **Command:** `node docs/research/v1.2/spikes/C1/spike.mjs` (full, about 8 minutes on one core;
+- **Command:** `node docs/research/v1.2/spikes/C1/spike.mjs` (full, about 7 minutes on one core;
   `--quick` for smaller samples in about 1–2 minutes). Plain Node 18+, no dependencies; it imports only
   its own `lib.mjs` and writes `results.md` and `results.json` beside itself. Final run: 2026-11-18
   (UTC), Node 22.
@@ -485,18 +485,18 @@ The 15 rated cells are in §3.2. The cells left out, and the tutorial cells (str
 
 | set | targets | trap ≥ | band | accepted | CPU ms per item, mean / p95 | chance | fixed | next to average | ring 2 | observer 0.3 | average user | reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| excluded | 4 | 0.5 | 1 % | 8.60 % | 0.9 / 2.9 | 1.6 | 5 | 9 | 7 | 56 | 7 | within the bound (7.4 over chance); left out so every rated cell has the same trap |
-| excluded | 6 | 0.5 | 1 % | 4.90 % | 1.1 / 3.3 | 1.4 | 4 | 14 | 6 | 53 | 12 | next to average 12.6 points over chance |
-| excluded | 8 | 0.5 | 1 % | 2.77 % | 1.6 / 4.8 | 1.4 | 6 | 14 | 7 | 55 | 11 | next to average 12.6 points over chance |
-| excluded | 4 | 1.5 | 1 % | 1.13 % | 4.4 / 13.4 | 2.1 | 7 | 1 | 6 | 66 | 1 | within the bound, but this trap level cannot extend beyond 5 targets |
-| excluded | 6 | 1.5 | 1 % | 0.12 % | 13.9 / 42.2 | 2.0 | 9 | 2 | 8 | 64 | 1 | too slow to generate |
-| excluded | 8 | 1.5 | 1 % | 0.01 % | 198 / 413 | 2.0 | 19 | 1 | 9 | 69 | 0 | not generable (26 items) |
-| excluded | 4 | 1 | 2 % | 1.59 % | 4.1 / 12.9 | 3.1 | 9 | 11 | 13 | 77 | 8 | ring 2 at 9.9 over chance, at the bound; 2 % cannot extend beyond 4 targets |
-| excluded | 6 | 1 | 2 % | 0.18 % | 14.9 / 45.8 | 2.9 | 10 | 14 | 14 | 76 | 12 | next to average 11 over chance; slow |
-| excluded | 8 | 1 | 2 % | 0.04 % | 51 / 163 | 3.0 | 14 | 14 | 15 | 83 | 8 | 12 over chance (ring 2); not generable |
-| practice | 3 | 0.5 | 2 % | 8.25 % | 0.5 / 1.6 | 2.5 | 6 | 20 | 13 | 70 | 15 | unrated: bound not required |
-| practice | 4 | 0.5 | 2 % | 2.37 % | 3.7 / 11.3 | 2.8 | 7 | 12 | 12 | 73 | 10 | unrated |
-| practice | 5 | 0.5 | 2 % | 1.56 % | 2.8 / 8.3 | 2.4 | 7 | 22 | 10 | 69 | 20 | unrated |
+| excluded | 4 | 0.5 | 1 % | 8.60 % | 0.9 / 2.8 | 1.6 | 5 | 9 | 7 | 56 | 7 | within the bound (7.4 over chance); left out so every rated cell has the same trap |
+| excluded | 6 | 0.5 | 1 % | 4.90 % | 0.9 / 2.8 | 1.4 | 4 | 14 | 6 | 53 | 12 | next to average 12.6 points over chance |
+| excluded | 8 | 0.5 | 1 % | 2.77 % | 1.7 / 5.4 | 1.4 | 6 | 14 | 7 | 55 | 11 | next to average 12.6 points over chance |
+| excluded | 4 | 1.5 | 1 % | 1.13 % | 4.4 / 13.3 | 2.1 | 7 | 1 | 6 | 66 | 1 | within the bound, but this trap level cannot extend beyond 5 targets |
+| excluded | 6 | 1.5 | 1 % | 0.12 % | 14.7 / 45.0 | 2.0 | 9 | 2 | 8 | 64 | 1 | too slow to generate |
+| excluded | 8 | 1.5 | 1 % | 0.01 % | 197 / 404 | 2.0 | 19 | 1 | 9 | 69 | 0 | not generable (26 items) |
+| excluded | 4 | 1 | 2 % | 1.59 % | 3.9 / 12.3 | 3.1 | 9 | 11 | 13 | 77 | 8 | ring 2 at 9.9 over chance, at the bound; 2 % cannot extend beyond 4 targets |
+| excluded | 6 | 1 | 2 % | 0.18 % | 13.5 / 41.2 | 2.9 | 10 | 14 | 14 | 76 | 12 | next to average 11 over chance; slow |
+| excluded | 8 | 1 | 2 % | 0.04 % | 46 / 148 | 3.0 | 14 | 14 | 15 | 83 | 8 | 12 over chance (ring 2); not generable |
+| practice | 3 | 0.5 | 2 % | 8.25 % | 0.5 / 1.5 | 2.5 | 6 | 20 | 13 | 70 | 15 | unrated: bound not required |
+| practice | 4 | 0.5 | 2 % | 2.37 % | 3.3 / 10.2 | 2.8 | 7 | 12 | 12 | 73 | 10 | unrated |
+| practice | 5 | 0.5 | 2 % | 1.56 % | 2.5 / 7.7 | 2.4 | 7 | 22 | 10 | 69 | 20 | unrated |
 
 Also measured on the rated cells (stage C):
 - **Partial skill:** "average moved one dot towards the densest group" hits 48–76 % at 1 %, 38–63 % at
@@ -504,7 +504,7 @@ Also measured on the rated cells (stage C):
   hard policy keeps 7–34 % of strict items, and the 0.3-dot observer scores only a few points less on
   them (47–57 % against 52–61 % at 1 %).
 - **CPU per accepted item** in Node on the build machine (final run; it varies between runs and machines):
-  mean 0.4–3.9 ms, p95 1.1–11.8 ms (worst: 8 targets at 1 %).
+  mean 0.3–3.5 ms, p95 1.0–10.6 ms (worst: 8 targets at 1 %).
 - **Checks:** zero failures of "continuous median no worse than the best lattice point"; best lattice
   point within 0.62 dots of the continuous median; no empty band.
 - **Parity:** 79–95 % of keys between dots against a 71 % base rate.
@@ -626,13 +626,14 @@ All of this section is **Proposal**, built on §2 (findings) and §3.1 (mathemat
 
 ### 5.2 "Why?" (show me, through `ctx.play`, 2–4 s per movement)
 1. From **your spot**, draw one arrow of equal length towards every target; then lay the arrows head to
-   tail. They do not close: the leftover arrow points downhill, towards the best spot. (This is the
-   gradient of S, so it always points the right way; checked by construction.)
-2. Slide the marker along the leftover arrow to the best spot; redraw the arrows: laid head to tail, they
-   now close into a loop: "The pulls cancel."
+   tail. They do not close: the leftover arrow is the direction in which the total falls fastest (minus
+   the gradient of S, §3.1), so a small step along it always shortens the total. It points roughly, not
+   always exactly, at the best spot.
+2. Let the marker follow the leftover arrow, redrawn as it moves, until it reaches the best spot; there
+   the arrows, laid head to tail, close into a loop: "The pulls cancel."
 3. Grab the farthest target and slide it outwards along its line: the best spot does not move, while the
-   average runs after it (stage E: the median moved less than 1e-4 when every target slid by 0.3–3 times).
-   Caption: "A far target pulls no harder than a near one. The average gives it extra pull."
+   average runs after it (stage E: the median moved at most 1.2e-9 when every target slid by 0.3–3
+   times). Caption: "A far target pulls no harder than a near one. The average gives it extra pull."
 Reduced motion: keyframes about 400 ms apart, as the guide requires.
 
 ### 5.3 Strategy cards (two, as in the other exercises)
@@ -664,7 +665,7 @@ an item from the rated pools.
   phone's board height, about 330–360 px after the header, also fits 7. So a lattice of **7 × 7 is the
   largest that fits every phone with a 44 px cell per point** (my calculation).
 - **But a 7 × 7 answer grid fails as a task** (§4, stage B): after the shortcuts are excluded, the key
-  sits next to the average's pick and "one step from the average towards the group" scores 41–80 %.
+  sits next to the average's pick and "one step from the average towards the group" scores 54–80 %.
 - **Proposal: targets on the 7 × 7 dot lattice, answers on the 13 × 13 half-step lattice**, entered as in
   Reckon (`js/ex/reckon/view.js`: drag plus large step buttons plus keys, then Confirm):
   1. tap anywhere on the board: the marker jumps to the nearest answer point (the whole board is the touch
@@ -714,7 +715,7 @@ optimisation" is the same idea.
   points, and reading the centre of scatterplots and maps.
 - *A possible cost to test as well:* training "do not take the average" might shift people's estimates
   of the *mean* (ensemble perception, §2.1) towards the median. That would matter for reading charts,
-  where the mean is often what is wanted. A near probe for this costs little (§6, last bullet).
+  where the mean is often what is wanted. A control probe for this costs little (next bullet).
 - *Proposal for measuring the bet:* (a) log the correction ratio (§3.3) on every item: its trend is the
   concept change; (b) a near probe in another format: four marked candidate spots on a map-like plate,
   "which one is closest to everyone in total?" (multiple choice, no feedback, untrained); (c) a control
@@ -745,7 +746,7 @@ In the format of docs/research/v1.1/R4-test-overlap.md §3 (distances as defined
 
 | Sketch in PLAN-v1.2.md | Proposal | Strongest evidence |
 |---|---|---|
-| 7 × 7 dots on phones, up to 12 × 12 on larger screens | **7 × 7 dots everywhere for targets; answers on the 13 × 13 half-step lattice**; larger screens show the same board bigger | a 7 × 7 answer grid collapses to "which neighbour of the average?" (stage B: "one step from the average towards the group" 41–80 %); 12 × 12 changes nothing in relative terms (the trap and the band both scale with the layout) and does not fit phones |
+| 7 × 7 dots on phones, up to 12 × 12 on larger screens | **7 × 7 dots everywhere for targets; answers on the 13 × 13 half-step lattice**; larger screens show the same board bigger | a 7 × 7 answer grid collapses to "which neighbour of the average?" (stage B: "one step from the average towards the group" 54–80 %); 12 × 12 changes nothing in relative terms (the trap and the band both scale with the layout) and does not fit phones |
 | Tap to pick, drag to adjust, then confirm | kept, with nudge buttons and keys as the non-drag route (Reckon's pattern); no total shown before Confirm | rule 8 and WCAG 2.5.7; §2.3 (a live readout turns the task into search) |
 | Partial credit from the total distance relative to the best; right inside the credit band | kept: right within 1 / 0.5 / 0.25 % of the best total; credit falls to 0 at four times the band; log the correction ratio | §3.3; stage C credit columns |
 | Dims: targets, grid density, credit band, outlier trap | **dims: targets (4–8) × band (1, 0.5, 0.25 %)**; the trap is a fixed minimum of 1 dot on every rated item, not a dim; grid density is dropped | stage C/D: all 15 cells generate and stay within the bound; a trap of 0.5 lets "next to the average" exceed the bound, a trap of 1.5 is not generable beyond 5 targets, and a 2 % band fails from 6 targets on |
@@ -767,19 +768,19 @@ Other numbers for the build:
 ## 9. Open risks
 
 1. **Generation cost.** Acceptance per candidate is 0.5–9.2 % on the rated cells, so the guide's 50
-   forked retries are not enough; in Node on the build machine one item costs about 0.4–3.9 ms CPU on
-   average and up to about 12 ms at p95 (8 targets, 1 % band), and phones are slower. The build needs a
+   forked retries are not enough; in Node on the build machine one item costs about 0.3–3.5 ms CPU on
+   average and up to about 11 ms at p95 (8 targets, 1 % band), and phones are slower. The build needs a
    smarter proposal (choose the key first and place targets around it; pre-filter the trap with the mean
    and a few Weiszfeld steps) or a raised retry limit with a measured CPU budget, plus a fallback item
    per cell. The node test should assert the p95 CPU time at the hardest cell.
 2. **"Nudge the average towards the group" is not bounded.** It is partial skill (it applies the rule
-   crudely), and it scores 33–76 % on the rated cells (stage C). A "hard" policy that also excludes
-   it is possible only at a 1 % band with acceptance 0.04–1.3 % (stage D), and the model observer still
-   scores 40–60 % there. Decide whether a reviewer would call it a shortcut; if so, the hard policy needs
-   the smarter generator of risk 1.
+   crudely), and it scores 33–76 % on the rated cells (stage C). A "hard" policy that also excludes it
+   works at bands of 1 % or less, with acceptance 0.04–4.1 % (stage D), and the 0.3-dot observer still
+   scores 32–57 % on hard items (stage C). Decide whether a reviewer would call it a shortcut; if so,
+   the hard policy needs the smarter generator of risk 1.
 3. **The floor may be too hard.** Even a model observer that places the median with a scatter of 0.3
-   dots gets only 61 % at the easiest rated cell, and 34 % with a scatter of 0.5 dots (stage C), and nothing is known about real
-   players (§2). The tutorial cells (2 % band) and partial credit soften it; a fresh-player test is
+   dots gets only 61 % at the easiest rated cell, and 34 % with a scatter of 0.5 dots (stage C), and
+   nothing is known about real players (§2). The tutorial cells (2 % band) and partial credit soften it; a fresh-player test is
    needed before release (milestone 11), as for the DAT-style exercises (milestone 1).
 4. **The fixed-point guess** sits at 2–6 % against 0.7–1.8 % chance (stage C): within the bound,
    but keys cluster near the board's middle. Choosing the key position first (risk 1) would spread them.
@@ -860,6 +861,8 @@ Reading level after each entry (§0). "Via X" means I know the source only from 
 - docs/research/v1.1/R4-test-overlap.md §1.4 for CORE and CAIT [SR there].
 
 ## Could not open
+
+Citation details in this table (volumes, pages, the one DOI) are from memory and were not checked.
 
 | Source | What I needed | Assumption used meanwhile |
 |---|---|---|
