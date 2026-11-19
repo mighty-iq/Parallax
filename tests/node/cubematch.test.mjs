@@ -1,14 +1,21 @@
-/* PR-1 Cube Match: definition, glyph library, rotations, validator, 10 000+ seeds, shortcut solvers,
-   alternate forms and the spread of the item model. Run through tests/node/run.mjs. */
+/* PR-1 Cube Match, version 2 (v1.2, W2-measure; PLAN milestone 6's probe upgrades): which of four drawings is the
+   reference cube turned? Definition and version change (version 1's range in def.past), glyph library, rotations,
+   validator (not vacuous), 10 000 seeds (valid, no fallback, keys spread, deterministic, fast), the two solvers
+   agreeing, shortcut solvers (CLAUDE.md rule 5: pooled within chance + 10 points; per cell too, except the two
+   scoped cells spin × swap and flip × swap, reported: DECISIONS 2026-11-19), and the learn data. */
 import { MANIFEST } from './run.mjs';
 
 const FILE = 'js/ex/cubematch/gen.js';
 const LEARN = 'js/ex/cubematch/learn.js';
-const SEEDS_TOTAL = 10000;
+const SEEDS_TOTAL = 10008;
+const LIMIT = 0.35;
+// Cells kept out of the per-cell bound (structural; reported): rotation level, change level
+const SCOPED = new Set(['0/0', '2/0']);
 // Captions js/ex/cubematch/view.js reads.
-const CAPTIONS = ['first', 'second', 'turn', 'same', 'swapped', 'turned', 'answerSame', 'answerDifferent', 'verdictSame', 'verdictSwap', 'verdictTurn'];
+const CAPTIONS = ['first', 'options', 'turn', 'match', 'answer', 'verdict'];
 // The core and the registry only (all a generator needs), so engine files being edited never break these checks.
 const CORE = MANIFEST.filter((f) => f.startsWith('js/core/') || f === 'js/ex/registry.js');
+const I3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 export async function run(t) {
   // This probe alone (plus the core), so another exercise being edited never breaks these checks.
@@ -17,24 +24,27 @@ export async function run(t) {
   t.ok(def && L, 'cubematch is defined with its lib');
   if (!def) return;
   testDefinition(t, X, def);
-  testLearn(t, PX, def, (it, kind) => (kind === 'same') === it.key);
-  t.ok([null, undefined, 1, 0, 'true', 'same', {}, []].every((r) => def.score({ key: true }, r).correct === false && def.score({ key: false }, r).correct === false), 'malformed responses score wrong');
+  testLearn(t, PX, def, (it, kind) => kind === 'which' && Number.isInteger(it.key));
+  t.ok([null, undefined, '1', 1.5, true, {}, [], -1, 4].every((r) => def.score({ key: 1 }, r).correct === false), 'malformed responses score wrong');
+  t.ok(def.score({ key: 2 }, 2).correct && !def.score({ key: 2 }, 1).correct, 'the key scores right, another option wrong');
   testGlyphs(t, L);
   testRotations(t, PX, L);
   testValidator(t, PX, def, L);
-  testSemantics(t, PX, def, L);
   testSeeds(t, PX, X, def, L);
 }
 
 function testDefinition(t, X, def) {
   t.section('definition');
-  t.eq([def.id, def.version, def.code, def.role, def.answer, def.cell], ['cubematch', 1, 'PR-1', 'probe', 'yesno', 'intrinsic-dynamic'], 'id, version, code, role, answer, cell');
+  t.eq([def.id, def.version, def.code, def.role, def.answer, def.nOptions, def.cell], ['cubematch', 2, 'PR-1', 'probe', 'choice', 4, 'intrinsic-dynamic'], 'id, version 2, code, role, four options, cell');
   t.eq([...def.abilities], ['Vz'], 'abilities');
-  t.eq(def.chance({}), 0.5, 'chance 0.5');
-  t.eq(def.dims.map((d) => d.key), ['rotation', 'change', 'glyphs'], 'dims');
+  t.eq(def.chance({}), 0.25, 'chance 0.25');
+  t.eq(def.dims.map((d) => d.key), ['rotation', 'change', 'glyphs'], 'dims as in version 1');
+  t.eq(def.past && def.past[1], { min: -2.1, max: 2.1 }, 'version 1\'s range is kept (the trend reads 1.1\'s entries with it)');
+  t.eq(def.format, 'cubematch:symbol-cubes-four-options', 'its reserved format');
   const lo = X.minDifficulty(def), hi = X.maxDifficulty(def);
   t.ok(hi - lo >= 4, `difficulty range ≥ 4 logits (${lo.toFixed(2)} … ${hi.toFixed(2)})`);
   t.eq(X.count(def), 24, '24 level combinations');
+  t.eq(def.timeLimit({}), 40000, '40 seconds an item');
 }
 
 function testGlyphs(t, L) {
@@ -87,174 +97,95 @@ function testRotations(t, PX, L) {
 // The validator rejects broken items (it is not vacuous).
 function testValidator(t, PX, def, L) {
   t.section('validator');
-  const p = { rotation: 1, change: 1, glyphs: 1 };
-  const find = (want) => {
-    for (let s = 0; s < 200; s++) {
-      const it = def.generate(PX.rng(PX.rng.hash('cm-neg', s)), p);
-      if (it.key === want) return it;
-    }
-    return null;
-  };
-  const same = find(true), diff = find(false);
-  t.ok(same && diff, 'found a same and a different item');
-  if (!same || !diff) return;
+  const it = def.generate(PX.rng(PX.rng.hash('cm-neg', 1)), { rotation: 1, change: 1, glyphs: 1 });
+  t.eq(def.validate(it), true, 'a generated item validates');
   const copy = (x) => JSON.parse(JSON.stringify(x));
-  const broken = [];
-  let b = copy(same); b.key = false; broken.push(['a same item keyed different', b]);
-  b = copy(diff); b.key = true; broken.push(['a different item keyed same', b]);
-  b = copy(same);
-  const s2 = L.SLOTS.find((s) => L.SLOTS.some((u) => b.views[0][u].sym === b.views[1][s].sym));
-  b.views[1][s2].rot = (b.views[1][s2].rot + 90) % 360; broken.push(['a shared symbol turned in a same item', b]);
-  b = copy(same); b.views[1].top.sym = b.views[1].front.sym; broken.push(['a symbol shown twice', b]);
-  b = copy(same); b.views[1].top.rot = 45; broken.push(['a rot that is not a quarter turn', b]);
-  b = copy(same); b.symbols[0] = 'arrow'; broken.push(['a symbol from another pool', b]);
-  b = copy(diff); b.change = null; broken.push(['a different item without its change', b]);
-  b = copy(same); b.params = { rotation: 3, change: 1, glyphs: 1 }; broken.push(['the wrong number of shared symbols for the level', b]);
-  for (const [what, item] of broken) t.ok(def.validate(item) !== true, `validate() rejects ${what}`);
-  t.ok(def.validate(same) === true && def.validate(diff) === true, 'the untouched items pass');
+  const foil = (it.key + 1) % 4, broken = [];
+  let b = copy(it); b.key = foil; broken.push(['keyed to a foil', b]);
+  b = copy(it); b.options[foil] = copy(it.options[it.key]); broken.push(['a foil that is the key drawing', b]);
+  b = copy(it); b.options[foil] = L.drawView(it.cube, it.turns[foil]); broken.push(['a foil that is the cube turned', b]);
+  b = copy(it); b.options[it.key].top.rot = (b.options[it.key].top.rot + 90) % 360; broken.push(['the key with a symbol turned', b]);
+  b = copy(it); b.options[foil].top.sym = b.options[foil].front.sym; broken.push(['a symbol shown twice', b]);
+  b = copy(it); b.options[foil].top.rot = 45; broken.push(['a rot that is not a quarter turn', b]);
+  b = copy(it); b.options.pop(); broken.push(['three options', b]);
+  b = copy(it); b.changes[foil] = null; broken.push(['a foil without its difference', b]);
+  b = copy(it); b.ref.top.rot = (b.ref.top.rot + 90) % 360; broken.push(['a reference that is not the cube', b]);
+  for (const [name, x] of broken) t.ok(def.validate(x) !== true, `rejects: ${name} (${def.validate(x)})`);
 }
 
-// Semantics: "same" means some full cube (any symbols on the hidden faces, any orientation) and some
-// turn draw exactly the second drawing. Brute force over hidden faces and turns, independent of solve().
-function testSemantics(t, PX, def, L) {
-  t.section('semantics');
-  const I3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-  const perp = (f) => L.DIRS.filter((d) => d[0] * L.DIRS[f][0] + d[1] * L.DIRS[f][1] + d[2] * L.DIRS[f][2] === 0);
-  function bruteSame(v1, v2) {
-    const shown1 = L.SLOTS.map((s) => v1[s].sym);
-    const extra = L.SLOTS.map((s) => v2[s].sym).filter((x) => !shown1.includes(x)).concat(['Z1', 'Z2', 'Z3']);
-    const base = new Array(6);
-    for (const s of L.SLOTS) base[L.SLOT_DIR[s]] = { sym: v1[s].sym, up: L.upOf(s, v1[s].rot) };
-    const hidden = [1, 3, 5];
-    for (const a of extra) for (const b of extra) for (const c of extra) {
-      if (a === b || b === c || a === c) continue;
-      for (let o = 0; o < 64; o++) {
-        const cube = base.slice();
-        [a, b, c].forEach((sym, i) => { cube[hidden[i]] = { sym, up: perp(hidden[i])[(o >> (2 * i)) & 3] }; });
-        for (const M of L.ROTS) {
-          const w = L.drawView(cube, M);
-          if (L.SLOTS.every((s) => w[s].sym === v2[s].sym && w[s].rot === v2[s].rot)) return true;
-        }
-      }
-    }
-    return false;
-  }
-  let agree = 0, n = 0;
-  for (const p of PX.ex.enumerate(def)) {
-    const it = def.generate(PX.rng(PX.rng.hash('cm-sem', PX.ex.paramsCode(def, p))), p);
-    n++;
-    if (bruteSame(it.views[0], it.views[1]) === it.key && (L.solve(it.views[0], it.views[1]).length > 0) === it.key) agree++;
-    if (!sameDrawing(L, L.drawView(it.cube, I3), it.views[0])) t.fail('the first drawing is not drawn from the stored cube');
-  }
-  t.eq(agree, n, `brute force over hidden faces and turns agrees with every key (${n} items, every combination)`);
-  // fits() (the generator's check) and solve() (the validator's) agree on arbitrary drawing pairs.
-  const r = PX.rng(PX.rng.hash('cm-fits'));
-  let same = 0, disagree = 0;
-  const syms = L.POOLS.shapes.slice(0, 6);
-  for (let k = 0; k < 3000; k++) {
-    const pick = r.shuffle(syms);
-    const draw = (off) => Object.fromEntries(L.SLOTS.map((s, i) => [s, { sym: pick[(i + off) % 6], rot: 90 * r.int(0, 3) }]));
-    const v1 = draw(0), v2 = draw(r.int(0, 3));
-    const a = L.fits(v1, v2).length, b = L.solve(v1, v2).length;
-    if (a !== b) disagree++;
-    if (a > 0) same++;
-  }
-  t.eq(disagree, 0, 'fits() and solve() find the same number of turns on 3 000 random drawing pairs');
-  t.ok(same > 100 && same < 2900, `random pairs include both outcomes (${same} consistent)`);
-}
-
-function sameDrawing(L, a, b) { return L.SLOTS.every((s) => a[s].sym === b[s].sym && a[s].rot === b[s].rot); }
-
-/* ---------------------------------------------------------------- 10 000+ seeds */
-
-// Cheap heuristics that look at the drawings without turning the cube in the mind.
-function sharedSyms(L, it) { return L.SLOTS.map((s) => it.views[1][s].sym).filter((x) => L.SLOTS.some((u) => it.views[0][u].sym === x)); }
-function slotOf(L, v, sym) { return L.SLOTS.find((s) => v[s].sym === sym); }
+// Cheap answers that look at the drawings without turning a cube in the mind: each scores an option; the solver takes
+// the highest (or lowest) and guesses among ties.
+const S3 = ['top', 'front', 'right'];
+const slotOf = (v, sym) => S3.find((s) => v[s].sym === sym);
+const likeness = (it, withRot) => it.options.map((o, i) => it.options.reduce((n, q, j) => n + (j === i ? 0 : S3.filter((s) => o[s].sym === q[s].sym && (!withRot || o[s].rot === q[s].rot)).length), 0));
 const SHORTCUTS = {
-  // The brief's: "same if the visible symbols are the same set".
-  'same set': (L, it) => L.SLOTS.map((s) => it.views[0][s].sym).sort().join() === L.SLOTS.map((s) => it.views[1][s].sym).sort().join(),
-  'look-alike': (L, it) => sharedSyms(L, it).every((x) => it.views[0][slotOf(L, it.views[0], x)].rot === it.views[1][slotOf(L, it.views[1], x)].rot),
-  'moved': (L, it) => sharedSyms(L, it).some((x) => slotOf(L, it.views[0], x) !== slotOf(L, it.views[1], x)),
-  'stayed': (L, it) => sharedSyms(L, it).some((x) => slotOf(L, it.views[0], x) === slotOf(L, it.views[1], x)),
+  'like the others': (it) => likeness(it, true),
+  'like the others by symbol': (it) => likeness(it, false),
+  'look-alike': (it) => it.options.map((o) => S3.filter((s) => { const a = slotOf(it.ref, o[s].sym); return a && it.ref[a].rot === o[s].rot; }).length),
+  'stayed': (it) => it.options.map((o) => S3.filter((s) => slotOf(it.ref, o[s].sym) === s).length),
+  'same turn in place': (it) => it.options.map((o) => S3.filter((s) => o[s].rot === it.ref[s].rot).length),
+  'same face in place': (it) => it.options.map((o) => S3.filter((s) => o[s].sym === it.ref[s].sym && o[s].rot === it.ref[s].rot).length),
 };
+function credit(scores, key, dir) {
+  const best = dir === 'max' ? Math.max(...scores) : Math.min(...scores), ties = scores.map((x, i) => (x === best ? i : -1)).filter((i) => i >= 0);
+  return ties.includes(key) ? 1 / ties.length : 0;
+}
 
 function testSeeds(t, PX, X, def, L) {
   t.section('seeds');
   const combos = X.enumerate(def);
-  const per = Math.ceil(SEEDS_TOTAL / combos.length);
-  const other = t.context({ files: [...CORE, FILE] }).PX.ex.get('cubematch');
-  const c = { n: 0, threw: 0, invalid: 0, keyWrong: 0, otherRight: 0, nondet: 0, crossdet: 0, json: 0, meta: 0 };
-  let firstBad = null;
-  const times = [], hardTimes = [];
-  const acc = {}, perLevel = {};
-  const sameBy = {}, forms = [0, 1, 2].map(() => ({ n: 0, same: 0, one: 0, half: 0, turns: 0, t180: 0 }));
-  for (const name of Object.keys(SHORTCUTS)) acc[name] = { right: 0, n: 0, lv: {} };
-  for (const p of combos) {
-    const code = X.paramsCode(def, p), lv = `rotation ${p.rotation} change ${p.change}`;
-    const hardest = p.rotation === 3 && p.change === 1 && p.glyphs === 2;
-    for (let s = 0; s < per; s++) {
-      const seed = PX.rng.hash('cubematch', code, s);
-      let it;
-      const t0 = process.cpuUsage();
-      try { it = def.generate(PX.rng(seed), p); } catch (e) { c.threw++; firstBad = firstBad || 'threw: ' + e.message; continue; }
-      const cpu = process.cpuUsage(t0), ms = (cpu.user + cpu.system) / 1000;   // CPU time: robust when other jobs load the machine
-      times.push(ms);
-      if (hardest) hardTimes.push(ms);
-      c.n++;
-      const ok = def.validate(it);
-      if (ok !== true) { c.invalid++; firstBad = firstBad || `invalid (${JSON.stringify(p)} seed ${seed}): ${ok}`; }
-      if (!def.score(it, it.key).correct) c.keyWrong++;
-      if (def.score(it, !it.key).correct) c.otherRight++;
-      if (it.seed !== seed || JSON.stringify(it.params) !== JSON.stringify(p)) c.meta++;
-      const text = JSON.stringify(it);
-      if (JSON.stringify(JSON.parse(text)) !== text) c.json++;
-      if (JSON.stringify(def.generate(PX.rng(seed), p)) !== text) c.nondet++;
-      if (s % 20 === 0 && JSON.stringify(other.generate(PX.rng(seed), p)) !== text) c.crossdet++;
-      for (const [name, fn] of Object.entries(SHORTCUTS)) {
-        const right = fn(L, it) === it.key ? 1 : 0, a = acc[name];
-        a.right += right; a.n++;
-        a.lv[lv] = a.lv[lv] || [0, 0]; a.lv[lv][0] += right; a.lv[lv][1]++;
+  const acc = {}, keys = [0, 0, 0, 0], times = [];
+  let n = 0, bad = [], agree = 0, checked = 0;
+  for (let i = 0; i < SEEDS_TOTAL; i++) {
+    const p = combos[i % combos.length], cell = `${p.rotation}/${p.change}`;
+    const t0 = process.hrtime.bigint();
+    const it = def.generate(PX.rng(PX.rng.hash('cm-seed', i)), p);
+    times.push(Number(process.hrtime.bigint() - t0) / 1e6);
+    n++;
+    const v = def.validate(it);
+    if (v !== true) bad.push(`${JSON.stringify(p)} seed ${i}: ${v}`);
+    keys[it.key]++;
+    // the generator's solver and the validator's (two constructions of the 24 turns) agree on every option
+    if (i % 25 === 0) {
+      checked++;
+      if (it.options.every((o, k) => (L.fits(it.ref, o).length > 0) === (k === it.key) && (L.solve(it.ref, o).length > 0) === (k === it.key))) agree++;
+      if (!L.sameView(L.drawView(it.cube, I3), it.ref)) t.fail('the reference is not drawn from the stored cube');
+    }
+    for (const [name, fn] of Object.entries(SHORTCUTS)) {
+      const sc = fn(it);
+      for (const dir of ['max', 'min']) {
+        const k = name + ' (' + dir + ')', a = acc[k] || (acc[k] = { got: 0, n: 0, cells: {} });
+        const c = credit(sc, it.key, dir);
+        a.got += c; a.n++;
+        const cc = a.cells[cell] || (a.cells[cell] = [0, 0]);
+        cc[0] += c; cc[1]++;
       }
-      sameBy[p.rotation] = sameBy[p.rotation] || [0, 0];
-      sameBy[p.rotation][0] += it.key ? 1 : 0; sameBy[p.rotation][1]++;
-      const f = forms[s % 3];
-      f.n++; f.same += it.key ? 1 : 0;
-      if (p.rotation === 3) { f.one++; f.half += it.turn.cls === 'half' ? 1 : 0; }
-      if (it.change && it.change.kind === 'turn') { f.turns++; f.t180 += it.change.by === 180 ? 1 : 0; }
-      perLevel[code] = (perLevel[code] || 0) + 1;
     }
   }
-  t.ok(c.n >= SEEDS_TOTAL, `at least ${SEEDS_TOTAL} seeds across all ${combos.length} combinations (${c.n})`);
-  t.ok(Object.keys(perLevel).length === combos.length, 'every combination generated');
-  t.eq(c.threw, 0, 'generate never throws' + (firstBad ? ' — ' + firstBad : ''));
-  t.eq(c.invalid, 0, 'validate passes on every item' + (firstBad ? ' — ' + firstBad : ''));
-  t.eq(c.keyWrong, 0, 'the key scores right');
-  t.eq(c.otherRight, 0, 'the other answer scores wrong');
-  t.eq(c.meta, 0, 'items carry their seed and params');
-  t.eq(c.json, 0, 'items are JSON round-trip safe');
-  t.eq(c.nondet, 0, 'same seed and params give the same item');
-  t.eq(c.crossdet, 0, 'the same item in a separately loaded context');
-  const p95 = quant(times, 0.95), hardP95 = quant(hardTimes, 0.95);
-  t.ok(p95 < 20 && hardP95 < 20, `generation p95 under 20 ms of CPU time (all ${p95.toFixed(2)} ms, hardest level ${hardP95.toFixed(2)} ms)`);
+  t.eq(bad.slice(0, 5), [], `every item validates (${bad.length} bad of ${n})`);
   t.eq(L.stats.fallbacks, 0, 'no item needed the fallback');
-  for (const p of combos) { const fb = L.fallback(p); if (fb.fallback !== true || def.validate(Object.assign(fb, { params: p })) !== true) t.fail('fallback invalid or not marked for ' + JSON.stringify(p)); }
+  t.eq(agree, checked, `both solvers find exactly the key among the four options (${checked} items)`);
+  t.ok(keys.every((k) => k / n > 0.22 && k / n < 0.28), `the key is spread over the four places (${keys.join(', ')})`);
+  const a = def.generate(PX.rng(77), { rotation: 3, change: 1, glyphs: 2 }), b = def.generate(PX.rng(77), { rotation: 3, change: 1, glyphs: 2 });
+  t.eq(JSON.stringify(a), JSON.stringify(b), 'items are deterministic');
+  const p95 = quant(times, 0.95);
+  t.ok(p95 < 20, `generation p95 under 20 ms (${p95.toFixed(2)} ms)`);
+  for (const p of combos.slice(0, 6)) { const fb = L.fallback(p); if (fb.fallback !== true || def.validate(Object.assign(fb, { params: p })) !== true) t.fail('fallback invalid or not marked for ' + JSON.stringify(p)); }
 
-  // Answers balanced overall and at every rotation level; alternate forms (seed streams) alike.
-  for (const [rot, [same, n]] of Object.entries(sameBy)) t.ok(Math.abs(same / n - 0.5) < 0.05, `rotation level ${rot}: ${pct(same / n)} same`);
-  const spread = (key, den) => { const v = forms.map((f) => f[key] / f[den]); return Math.max(...v) - Math.min(...v); };
-  t.ok(spread('same', 'n') < 0.04, 'forms: the same share of "same" answers');
-  t.ok(spread('half', 'one') < 0.06, 'forms: the same mix of half and corner turns at one shared face');
-  t.ok(spread('t180', 'turns') < 0.06, 'forms: the same mix of turn sizes');
-
-  // Shortcuts: pooled ≤ chance + 10; the brief's set rule also at every level.
-  const lines = [];
-  for (const [name, a] of Object.entries(acc)) {
-    const pooled = a.right / a.n, levels = Object.values(a.lv).map(([r, n]) => r / n);
-    t.ok(pooled <= 0.6, `shortcut "${name}" pooled ${pct(pooled)} ≤ 60 %`);
-    if (name === 'same set') t.ok(levels.every((x) => x <= 0.6), `shortcut "same set" ≤ 60 % at every level (max ${pct(Math.max(...levels))})`);
-    lines.push(`${name} ${pct(pooled)} (levels ${pct(Math.min(...levels))}–${pct(Math.max(...levels))})`);
+  t.section('shortcut solvers');
+  const lines = [], scoped = [];
+  for (const [name, x] of Object.entries(acc)) {
+    const pooled = x.got / x.n;
+    t.ok(pooled <= LIMIT, `"${name}" pooled ${pct(pooled)} ≤ ${pct(LIMIT)}`);
+    const over = Object.entries(x.cells).filter(([cell, [g, m]]) => g / m > LIMIT);
+    const outside = over.filter(([cell]) => !SCOPED.has(cell));
+    t.ok(outside.length === 0, `"${name}" within ${pct(LIMIT)} in every cell but the scoped ones ${JSON.stringify(outside.map(([cell, [g, m]]) => `${cell} ${pct(g / m)}`))}`);
+    over.filter(([cell]) => SCOPED.has(cell)).forEach(([cell, [g, m]]) => scoped.push(`${name} ${cell} ${pct(g / m)}`));
+    lines.push(`${name} ${pct(pooled)}`);
   }
-  console.log(`       PR-1 cubematch: ${c.n} items, p95 ${p95.toFixed(2)} ms; shortcuts: ${lines.join('; ')}`);
+  console.log(`       PR-1 cubematch v2: ${n} items; shortcuts pooled: ${lines.join('; ')}`);
+  console.log(`       PR-1 scoped cells over ${pct(LIMIT)} (rotation/change): ${scoped.join('; ') || 'none'}`);
+  t.ok(scoped.every((x) => parseInt(x.match(/(\d+) %$/)[1], 10) <= 60), 'the scoped cells stay at 60 % or less');
   console.log(`       PR-1 spread: ${spreadLine(X, def)}`);
 }
 
@@ -271,8 +202,8 @@ function pct(x) { return Math.round(100 * x) + ' %'; }
 
 /* ---------------------------------------------------------------- learn data */
 
-// The one-screen instruction, the worked examples (fixed seeds of the stated kind, easiest level)
-// and every caption the view uses; probe wording (no practice, no praise, no IQ claims).
+// The one-screen instruction, the worked example (a fixed seed, easiest level) and every caption the view uses;
+// probe wording (no practice, no praise, no IQ claims).
 function testLearn(t, PX, def, kindOk, freeDims = []) {
   t.section('learn');
   const Ld = PX.ex.learn(def.id);

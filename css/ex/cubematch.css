@@ -4,12 +4,10 @@
 
 .ex-cubematch .ex-cubematch-stem { width: 100%; }
 .ex-cubematch .ex-cubematch-stage { width: 100%; padding: 1.9rem 0.5rem 0.75rem; }
-.ex-cubematch .cm-svg { display: block; width: 100%; height: auto; max-height: min(46vh, 22rem); margin: 0 auto; }
-.ex-cubematch .cm-label--b { left: calc(50% + 0.625rem); }
-.ex-cubematch .cm-divider {
-  position: absolute; top: 0.5rem; bottom: 0.5rem; left: 50%; width: 0;
-  border-left: 1px solid var(--rule, #D3D8D5);
-}
+.ex-cubematch .cm-svg { display: block; width: 100%; height: auto; max-width: 12rem; max-height: min(26vh, 12rem); margin: 0 auto; }
+/* version 2: four drawings in the answer grid, two by two */
+.ex-cubematch .cm-answer { display: flex; justify-content: center; width: 100%; }
+.ex-cubematch .cm-opt { display: block; width: 100%; height: auto; max-width: 10rem; max-height: min(20vh, 9rem); }
 /* The verdict (development only: the Check reveals nothing) sits under the bar, not over the
    drawings, which fill the stage on a phone. */
 .ex-cubematch .cm-verdict { display: flex; width: fit-content; max-width: 100%; margin: var(--s2, 0.5rem) 0 0; }
@@ -46,13 +44,9 @@ html[data-hx-state="paused"] .ex-cubematch .pr-timer-fill,
 @keyframes cm-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 .ex-cubematch .px-choice { min-height: 3.5rem; }
-/* Phones: the icon above the words, so "Different cubes" stays on one line. */
-@media (max-width: 40rem) {
-  .ex-cubematch .ex-answer { flex-direction: column; gap: 0.25rem; }
-  .ex-cubematch .ex-answer-text { font-size: var(--fs-md, 1rem); }
-}
 
-/* Phones held sideways: the two drawings on the left as tall as the screen allows. */
+/* Phones held sideways: the reference on the left as tall as the screen allows, the four drawings beside it. */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   .pl-trial.ex-cubematch .cm-svg { max-height: calc(var(--pl-avail) - 3.5rem); }
+  .pl-trial.ex-cubematch .cm-opt { max-height: calc((var(--pl-avail) - 3rem) / 2 - 1rem); }
 }

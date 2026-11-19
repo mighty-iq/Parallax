@@ -1,11 +1,11 @@
-/* PR-1 Cube Match: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
-   layout 'stem+options': the stem shows the two drawings, each a cube seen from the corner
-   (+x, +y, +z) in an orthographic isometric view; the grid has two answers (yes/no: option 1 =
-   "Same cube" = true, option 2 = "Different cubes").
+/* PR-1 Cube Match: view, version 2 (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
+   layout 'stem+options': the stem shows the reference cube, seen from the corner (+x, +y, +z) in an orthographic
+   isometric view; the grid has four drawings of a cube from the same corner (keys 1 to 4), one of them the reference
+   cube turned.
    - Everything is drawn from the item (def.lib): each drawn face takes its symbol and its top
      direction from lib.upOf(slot, rot), so what is shown is what validate() grades. Show me (for
-     development; the Spatial Check gives no feedback) turns the first cube by item.turn.m, the
-     turn that made the second drawing, and marks the faces that still differ.
+     development; the Spatial Check gives no feedback) turns the reference by item.turn.m, the
+     turn that made the matching drawing.
    - The item's time limit runs as a calm bar under the stem (CSS animation, no ticks, no colour
      change); it pauses while an ancestor has [data-paused] or the harness is paused, and stops
      at reveal.
@@ -57,7 +57,7 @@
   function drawnFaces(view) {
     return lib.SLOTS.map(function (s) { return { n: lib.DIRS[lib.SLOT_DIR[s]], up: lib.upOf(s, view[s].rot), sym: view[s].sym, slot: s }; });
   }
-  // The full first cube turned by q (show me): every face that faces the viewer.
+  // The full reference cube turned by q (show me): every face that faces the viewer.
   function turnedFaces(item, q) {
     return item.cube.map(function (f, i) { return { n: qrot(q, lib.DIRS[i]), up: qrot(q, f.up), sym: f.sym, body: i }; })
       .filter(function (f) { return dot(f.n, VIEW) > 1e-6; });
@@ -96,16 +96,21 @@
     faces.forEach(function (f) { drawFace(g, f, ox, marks && marks.indexOf(f.slot || f.sym) >= 0); });
     return g;
   }
-
-  function redraw(left, right) {
-    var svg = st.svg;
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
-    svg.appendChild(left);
-    svg.appendChild(right);
+  function cubeSvg(cls) {
+    return S.svg(HALF_W, 3.9, { class: cls, viewBox: '0 -1.95 ' + HALF_W + ' 3.9', 'aria-hidden': 'true', focusable: 'false' });
   }
-  function drawItem(item, marks2) {
-    st.cubes = [drawCube(drawnFaces(item.views[0]), HALF_W / 2), drawCube(drawnFaces(item.views[1]), HALF_W * 1.5, marks2)];
-    redraw(st.cubes[0], st.cubes[1]);
+  function setCube(svg, g) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(g);
+  }
+  function drawRef(item) { setCube(st.svg, drawCube(drawnFaces(item.ref), HALF_W / 2)); }
+  // The slots a foil's differences touched (reveal and show me mark them).
+  function changedSlots(item, i) {
+    var out = [];
+    (item.changes && item.changes[i] || []).forEach(function (c) {
+      (c.kind === 'swap' ? c.slots : [c.slot]).forEach(function (s) { if (out.indexOf(s) < 0) out.push(s); });
+    });
+    return out;
   }
 
   /* ---------- the countdown bar (the item's time limit; calm: one slow linear sweep) ---------- */
@@ -125,69 +130,54 @@
 
   function describe(item) {
     var ms = def.timeLimit(item.params);
-    return 'Two drawings of cubes. Every cube has six different symbols, one on each face. Is the second drawing the first cube turned? ' +
-      'Answer Same cube (key 1) or Different cubes (key 2)' + (ms ? '; up to ' + Math.round(ms / 1000) + ' seconds.' : '.');
+    return 'A reference cube and four drawings of cubes. Every cube has six different symbols, one on each face. One drawing is the reference cube turned; ' +
+      'choose it (keys 1 to 4)' + (ms ? '; up to ' + Math.round(ms / 1000) + ' seconds.' : '.');
   }
 
   function mount(ctx) {
     var root = h('div.ex-cubematch-stem');
     var stage = h('div.ex-stage.ex-cubematch-stage');
-    var labels = [h('span.ex-label.cm-label--a', 'Drawing 1'), h('span.ex-label.cm-label--b', 'Drawing 2')];
-    var svg = S.svg(2 * HALF_W, 3.9, { class: 'cm-svg', viewBox: '0 -1.95 ' + 2 * HALF_W + ' 3.9', 'aria-hidden': 'true', focusable: 'false' });
+    var label = h('span.ex-label.cm-label--a', 'Reference');
+    var svg = cubeSvg('cm-svg');
     var verdict = h('div.ex-verdict.cm-verdict', { hidden: true, role: 'status' });
     // px-keep-motion: base.css's reduced-motion rule would empty the bar at once, and the slow
     // sweep is information (the time left), not decoration.
     var timer = h('div.pr-timer.px-keep-motion', { 'aria-hidden': 'true', hidden: true }, h('div.pr-timer-fill'));
-    stage.appendChild(labels[0]); stage.appendChild(labels[1]);
-    stage.appendChild(h('span.cm-divider', { 'aria-hidden': 'true' }));
+    stage.appendChild(label);
     stage.appendChild(svg);
     var caption = h('p.ex-caption', { 'aria-live': 'polite' }), desc = h('p.px-sr');
-    // The verdict goes under the bar, not over the drawings (on a phone they fill the stage).
+    // The verdict goes under the bar, not over the drawing.
     root.appendChild(stage); root.appendChild(timer); root.appendChild(verdict); root.appendChild(caption); root.appendChild(desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, stage: stage, labels: labels, svg: svg, verdict: verdict, caption: caption, desc: desc,
-      timer: timer, timerFill: timer.firstChild, item: null, cubes: [null, null] };
+    st = { ctx: ctx, root: root, stage: stage, label: label, svg: svg, verdict: verdict, caption: caption, desc: desc,
+      timer: timer, timerFill: timer.firstChild, item: null, opts: [] };
   }
 
   function present(item, ctx) {
     if (!st) mount(ctx);
-    st.item = item;
+    if (st.item !== item) { st.item = item; st.opts = []; }
     st.root.classList.remove('is-revealed');
     st.verdict.hidden = true;
     st.verdict.textContent = '';
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
-    st.labels.forEach(function (l) { l.classList.remove('is-pointed'); });
-    drawItem(item);
+    st.label.classList.remove('is-pointed');
+    drawRef(item);
     timerStart(item);
     return timing.nextPaint();
   }
 
-  // Two small cube outlines with "=" or "≠" between them: the meaning is in the shape, not the colour.
-  function answerIcon(different) {
-    var svg = S.svg(40, 20, { width: 40, height: 20, class: 'ex-glyph' });
-    var hex = function (x) { return 'M' + x + ' 4l5 -2.5l5 2.5v6l-5 2.5l-5 -2.5z'; };
-    svg.appendChild(S.el('path', { d: hex(1) + hex(29), class: 'ex-glyph-a' }));
-    svg.appendChild(S.el('path', { d: 'M16 8h8M16 12h8' + (different ? 'M22 5l-4 10' : ''), class: 'ex-glyph-a' }));
-    return svg;
-  }
   function drawOption(el, item, i, ctx) {
     if (!st) mount(ctx);
-    el.appendChild(h('span.ex-answer', answerIcon(i === 1), h('span.ex-answer-text', i === 0 ? 'Same cube' : 'Different cubes')));
+    if (st.item !== item) { st.item = item; st.opts = []; }
+    var svg = cubeSvg('cm-opt');
+    setCube(svg, drawCube(drawnFaces(item.options[i]), HALF_W / 2));
+    var box = h('span.ex-answer.cm-answer', svg);
+    el.appendChild(box);
+    st.opts[i] = svg;
   }
-  function optionLabel(item, i) { return i === 0 ? 'Same cube' : 'Different cubes'; }
+  function optionLabel(item, i) { return 'Drawing ' + (i + 1); }
   function gridCols() { return 2; }
-
-  // Slots of drawing 2 that the turned first cube does not show the same way.
-  function mismatches(item) {
-    var M = item.turn.m, out = [];
-    lib.SLOTS.forEach(function (s) {
-      var dir = lib.DIRS[lib.SLOT_DIR[s]], body = lib.DIRS.findIndex(function (d) { return dot(mv(M, d), dir) > 0.5; });
-      var f = item.cube[body], shown = item.views[1][s], up = mv(M, f.up), want = lib.upOf(s, shown.rot);
-      if (f.sym !== shown.sym || dot(up, want) < 0.5) out.push(s);
-    });
-    return out;
-  }
 
   /* ---------- reveal: the truth in place (development; the Check shows nothing), ≤ 700 ms ---------- */
 
@@ -195,35 +185,26 @@
     if (!st) return Promise.resolve();
     timerStop();
     st.root.classList.add('is-revealed');
-    var marks = item.key ? [] : item.change.kind === 'swap' ? item.change.slots : [item.change.slot];
-    drawItem(item, marks);
-    st.verdict.textContent = item.key ? '✓ ' + cap('verdictSame') : '≠ ' + cap(item.change.kind === 'swap' ? 'verdictSwap' : 'verdictTurn');
-    st.verdict.setAttribute('data-kind', item.key ? 'same' : 'mirror');
+    item.options.forEach(function (o, i) {
+      if (st.opts[i] && i !== item.key) setCube(st.opts[i], drawCube(drawnFaces(o), HALF_W / 2, changedSlots(item, i)));
+    });
+    st.verdict.textContent = '✓ ' + cap('verdict', item.key + 1);
+    st.verdict.setAttribute('data-kind', 'same');
     st.verdict.hidden = false;
     return timing.wait(ctx && ctx.fast ? 0 : 250);
   }
 
-  /* ---------- show me and the worked example: turn the first cube like the second ---------- */
+  /* ---------- show me and the worked example: turn the reference like the matching drawing ---------- */
 
   function ease(k) { return k * k * (3 - 2 * k); }
   function turnMs(q) { return 900 + 1300 * (2 * Math.acos(Math.min(1, Math.abs(q[3]))) * 180 / Math.PI) / 180; }
 
   function turnSteps(item) {
-    var q = quatOf(item.turn.m), marks = mismatches(item);
-    function pose(k, withMarks) {
-      var faces = turnedFaces(item, slerpFromId(q, k));
-      faces.forEach(function (f) { lib.SLOTS.forEach(function (s) { if (dot(f.n, lib.DIRS[lib.SLOT_DIR[s]]) > 0.999) f.slot = s; }); });
-      st.cubes[0] = drawCube(faces, HALF_W / 2, withMarks ? marks : null);
-      if (withMarks) st.cubes[1] = drawCube(drawnFaces(item.views[1]), HALF_W * 1.5, marks);
-      redraw(st.cubes[0], st.cubes[1]);
-    }
+    var q = quatOf(item.turn.m);
+    function pose(k) { setCube(st.svg, drawCube(turnedFaces(item, slerpFromId(q, k)), HALF_W / 2)); }
     return [
-      { ms: turnMs(q), caption: cap('turn'), enter: function () { drawItem(item); }, update: function (k) { pose(ease(k), false); }, exit: function () { pose(1, false); } },
-      {
-        ms: 1800,
-        caption: item.key ? cap('same') : cap(item.change.kind === 'swap' ? 'swapped' : 'turned'),
-        enter: function () { drawItem(item); pose(1, !item.key); },
-      },
+      { ms: turnMs(q), caption: cap('turn'), enter: function () { drawRef(item); }, update: function (k) { pose(ease(k)); }, exit: function () { pose(1); } },
+      { ms: 1800, caption: cap('match', item.key + 1), enter: function () { pose(1); } },
     ];
   }
 
@@ -257,22 +238,21 @@
 
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
-    return play(turnSteps(item), ctx, { name: 'show-me' });
+    return play(turnSteps(item), ctx, { name: 'show-me' }).then(function () { if (st && st.item === item) drawRef(item); });
   }
 
   // The one-screen instruction's worked example (learn.demo, a fixed seed the Check never scores).
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
     timerStop();
-    function point(i) { st.labels.forEach(function (l, j) { l.classList.toggle('is-pointed', j === i); }); }
     var intro = [
-      { ms: 2200, caption: cap('first'), enter: function () { drawItem(item); point(0); } },
-      { ms: 2200, caption: cap('second'), enter: function () { point(1); }, exit: function () { point(-1); } },
+      { ms: 2200, caption: cap('first'), enter: function () { drawRef(item); st.label.classList.add('is-pointed'); } },
+      { ms: 2400, caption: cap('options'), enter: function () { st.label.classList.remove('is-pointed'); } },
     ];
-    var outro = { ms: 1800, caption: item.key ? cap('answerSame') : cap('answerDifferent'), enter: function () {} };
-    // Afterwards both drawings are as they were (the example can be answered or replayed).
+    var outro = { ms: 2000, caption: cap('answer', item.key + 1), enter: function () {} };
+    // Afterwards the reference is as it was (the example can be answered or replayed).
     return play(intro.concat(turnSteps(item), [outro]), ctx, { name: 'demo', caption: caption || null })
-      .then(function () { if (st && st.item === item) drawItem(item); });
+      .then(function () { if (st && st.item === item) drawRef(item); });
   }
 
   function unmount() {
@@ -293,7 +273,7 @@
     showMe: showMe,
     demo: demo,
     unmount: unmount,
-    // for tests: what show me would mark (drawing 2's slots that differ from the turned first cube)
-    mismatches: mismatches,
+    // for tests: the slots each foil's differences touched
+    changedSlots: changedSlots,
   });
 })(window.PX);

@@ -25,7 +25,7 @@ STATE = "(s) => window.__harness && __harness.state === s"
 PHONE = {'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True}
 
 CUBEMATCH = {
-    'ex': 'cubematch', 'stage': '.ex-cubematch-stage', 'options': 'text',
+    'ex': 'cubematch', 'stage': '.ex-cubematch-stage', 'options': 'svg',
     'runs': [('quarter', 'rotation:1,change:0,glyphs:1', 1), ('hardest', 'rotation:3,change:1,glyphs:2', 3)],
     'normal': ('rotation:3,change:1,glyphs:0', 2),
 }
