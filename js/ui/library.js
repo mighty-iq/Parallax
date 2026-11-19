@@ -157,6 +157,8 @@
     'reckon.flow': function (v) { return v === 'textured' || v === 'sparse' ? v + ' ground' : v + ' on the ground'; },
     'reckon.speed': function (v) { return v === 'steady' ? 'steady speed' : 'speed ' + String(v).replace(/^varied/, 'varies'); },
     'reckon.tolerance': function (v) { return 'right within ' + v; },
+    // Reckon version 2's legs dim (PLAN milestone 8): whether the legs' lengths decide the answer
+    'reckon.legs': function (v) { return v === 'the legs decide' ? 'the legs’ lengths decide the answer' : v === 'the turns tell a lot' ? 'the turns tell much of the way' : String(v); },
     'track.time': function (v) { return v + ' s of tracking'; },
     'knots.rope': function (v) { var m = /^(\d+)( slide-over)?$/.exec(String(v)); return m ? m[1] + ' crossings' + (m[2] ? ' with a slide-over move' : '') : String(v); },
     'knots.spacing': function (v) { return v === 'open' ? 'strands far apart' : v === 'close' ? 'strands close together' : v === 'tight' ? 'strands tightly packed' : v + ' spacing'; },
@@ -181,6 +183,32 @@
     }).join(', '));
   }
   function variantName(def, v) { return v === undefined || v === null ? '' : hasOwn.call(VARIANTS, v) ? VARIANTS[v] : String(v); }
+
+  // v1.2 milestone 8 (CONTRACT-v1.2 W3; note D1 §6.0, §6.9 #2): the DAT-style levels against the documented format.
+  // The words describe format features only: never the real test's difficulty, never a score forecast.
+  var RANGE_NAMES = { below: 'below the test', test: 'test range', beyond: 'beyond the test' };
+  var RANGE_NOTE = 'Below the test: starter levels and scaffolds. Test range: the features the official instructions show. ' +
+    'Beyond the test: features they do not show. The tags describe the format, not the real test’s difficulty, and forecast no score.';
+  function rangeName(t) { return hasOwn.call(RANGE_NAMES, t) ? RANGE_NAMES[t] : ''; }
+  // The exercise page's block: per tagged dim its runs of levels, the tagged formats, the notes; null without a range.
+  function rangeBlock(def) {
+    var R = def && def.testRange;
+    if (!R) return null;
+    var rows = [];
+    def.dims.forEach(function (d) {
+      var tags = R.dims[d.key], runs = [];
+      if (!tags) return;
+      tags.forEach(function (t, i) { var r = runs[runs.length - 1]; if (r && r.t === t) r.to = i; else runs.push({ t: t, from: i, to: i }); });
+      rows.push(h('div', { 'data-range-dim': d.key }, h('dt', d.label), h('dd', runs.map(function (r) {
+        var a = valueText(d, d.levels[r.from]), b = valueText(d, d.levels[r.to]);
+        return cap(rangeName(r.t)) + ': ' + (r.from === r.to ? a : r.to === r.from + 1 ? a + ', ' + b : a + ' to ' + b);
+      }).join(' · '))));
+    });
+    var vt = def.variants ? def.variants.filter(function (v) { return hasOwn.call(R.variants, v); }) : [];
+    if (vt.length) rows.push(h('div', { 'data-range-dim': 'variant' }, h('dt', 'Formats'), h('dd', vt.map(function (v) { return cap(variantName(def, v)) + ': ' + rangeName(R.variants[v]); }).join(' · '))));
+    return [h('p.px-setting-label', 'Against the test format'), h('dl.px-facts.px-facts--dims.px-range', rows), h('p.px-meta', RANGE_NOTE)]
+      .concat(Object.keys(R.notes).map(function (k) { return h('p.px-meta', { 'data-range-note': k }, R.notes[k]); }));
+  }
   function paramsText(def, params) {
     if (!def || !params) return '';
     var parts = def.dims.map(function (d) { return dimText(def, d, d.levels[params[d.key] || 0]); });
@@ -666,7 +694,7 @@
       h('dl.px-facts.px-facts--dims', rows),
       def.dims.some(function (d) { return /cw\/s/.test(d.unit || ''); }) ? h('p.px-meta', 'cw/s: widths of the box per second, Parallax’s own unit of speed.') : null,
       fmts ? h('p.px-setting-label', 'Formats') : null, fmts,
-    ], { 'data-section': 'settings' }));
+    ].concat(rangeBlock(def) || []), { 'data-section': 'settings' }));
   }
 
   PX.ui.exinfo = {
@@ -674,6 +702,7 @@
     variantName: variantName, valueText: valueText, dimText: dimText, unavailable: unavailable, explain: explain, start: start, // dimText(def, dim, value): '10 cubes', 'board turned 90°'… (Free play's labels)
     tags: tags, tagEls: tagEls, modeName: modeName, pct: pct, secs: secs, when: when, ago: ago,
     protocolsOf: protocolsOf, PROTOCOL_NAMES: PROTOCOL_NAMES, MODES: MODES, MODE_WHEN: MODE_WHEN, levelText: levelText,
+    rangeName: rangeName, RANGE_NOTE: RANGE_NOTE, rangeBlock: rangeBlock, // v1.2 milestone 8 (CONTRACT-v1.2 W3)
   };
   PX.ui.library = { practiseSheet: practiseSheet, freePlay: freePlay, howTo: howTo, watch: watch, options: practiseOptions };
   PX.ui.screens = PX.ui.screens || {};

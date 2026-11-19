@@ -79,6 +79,9 @@
 
   function viewOf(id) { try { return PX.ex.view(id) || null; } catch (e) { return null; } }
   function needsGL(v) { var n = v && v.needs; return n === 'webgl' || (Array.isArray(n) && n.indexOf('webgl') >= 0); }
+  // v1.2 milestone 8 (CONTRACT-v1.2 W1): a view whose format letters its options (the DAT-style six) declares
+  // optionKeys: 'letters'; its choice grids then show A–E and take keys A–E and 1–5 (at most five options)
+  function lettersOf(v, n) { return !!v && v.optionKeys === 'letters' && !(n > 5); }
   // cheap: true skips creating the WebGL context (Today's preview); the session start checks it.
   function canRun(def, cheap) {
     var v = def && viewOf(def.id);
@@ -667,6 +670,9 @@
           if (name === 'step' || name === 'pause' || name === 'replay' || name === 'close') runner.cmd(name);
         },
         gentleMotion: gentleMotion(),
+        // v1.2 milestone 8 (CONTRACT-v1.2 W1): the options' names on the item at hand ('B' in letter mode, else '2')
+        letters: lettersOf(P.view, 0),
+        optionName: function (i) { return ui.optionName(i, !!(P.ctx && P.ctx.letters)); },
       };
     }
     function unmountView() {
@@ -800,6 +806,8 @@
       if (P.ctx) { P.ctx.practice = !!cfg.practice; P.ctx.demo = !!cfg.demo; P.ctx.assist = cfg.assist !== undefined ? cfg.assist : null; P.ctx.gentleMotion = gentleMotion(); }
       // v1.2 wave 2 (CONTRACT-v1.2 R): the step's add-on layer ('' when none), e.g. calib-detail feedback
       if (P.ctx) P.ctx.layer = typeof cfg.layer === 'string' ? cfg.layer : '';
+      // v1.2 milestone 8 (CONTRACT-v1.2 W4): { i, n } when the item is question i + 1 of a figure set, else null
+      if (P.ctx) P.ctx.set = isObj(cfg.set) ? cfg.set : null;
       return new Promise(function (resolve) {
         var token = ++P.token;
         P.resolve = resolve; P.item = item; P.cfg = cfg; P.last = null;
@@ -819,11 +827,14 @@
         destroyGrid();
         var type = answerType(def, item), n = nOptions(def, item);
         P.layout = layoutOf(view, item); // the item's own layout (a draw-the-answer item: 'custom')
+        P.letters = P.layout === 'stem+options' && lettersOf(view, n); // the format letters its options (A–E)
+        if (P.ctx) P.ctx.letters = P.letters;
         try {
           if (P.layout === 'stem+options') {
             P.grid = ui.choiceGrid(n, {
               cols: view.gridCols ? view.gridCols(item) : undefined, multi: type === 'multi', label: 'Answer options',
-              labels: function (i) { return view.optionLabel ? view.optionLabel(item, i) : 'Option ' + (i + 1); },
+              keyLabels: P.letters ? 'letters' : 'digits',
+              labels: function (i) { return view.optionLabel ? view.optionLabel(item, i) : 'Option ' + ui.optionName(i, P.letters); },
             });
             el.grid.appendChild(P.grid.el);
             for (var i = 0; i < n; i++) view.drawOption(P.grid.cells[i], item, i, P.ctx);
@@ -1405,7 +1416,7 @@
         className: 'pl-keys',
         body: [
           h('ul.pl-keylist',
-            row('1–9', custom ? 'Pick (as shown on the item)' : 'Pick an option'),
+            row(P.letters && !custom ? 'A–E, 1–5' : '1–9', custom ? 'Pick (as shown on the item)' : 'Pick an option'),
             row('Enter', 'Confirm a choice of two, or go on'),
             row('Space', 'Next item'),
             row('Esc', 'Pause; during a moving display the exercise pauses itself'),
@@ -2094,6 +2105,7 @@
     if (p.mode === 'train' && p.exId) o.pin = String(p.exId);
     if (Number(p.count) > 0) o.count = Math.round(Number(p.count)); // Train: how many exercises (1 = the pinned one only)
     if (typeof p.day === 'string') o.day = p.day;
+    if (p.range === 'test') o.range = 'test'; // Free play's "test range only" (v1.2 milestone 8, CONTRACT-v1.2 W3)
     return o;
   }
 
@@ -2251,7 +2263,8 @@
       var learn = PX.ex.learn(def.id), tip = step.feedback !== false && !S.hidden ? tipFor(def.id, learn, item) : null;
       var limit = step.deadlineMs || (def.timeLimit ? def.timeLimit(item.params) : null) || null;
       return { feedback: step.feedback !== false, limitMs: limit, limitBar: !!limit, tip: tip ? tip.text : null,
-        layer: typeof step.layer === 'string' ? step.layer : '', seed: step.seed }; // v1.2 wave 2: the view's layer; the showme event's seed
+        layer: typeof step.layer === 'string' ? step.layer : '', seed: step.seed, // v1.2 wave 2: the view's layer; the showme event's seed
+        set: isObj(step.set) ? { i: step.set.i, n: step.set.n } : null }; // v1.2 milestone 8 (CONTRACT-v1.2 W4): a figure set's place
     }
 
     // v1.2 wave 2 (CONTRACT-v1.2 R): what every player hook gets. card(o) shows a card above the
@@ -2283,7 +2296,7 @@
     }
     // item:before may give the step another seed (the item is generated again) and a layer; never
     // for a step that measures with its own item (a Path recheck, a probe, a Daily or Threshold item)
-    var FIXED_KINDS = { recheck: 1, probe: 1, daily: 1, threshold: 1 };
+    var FIXED_KINDS = { recheck: 1, probe: 1, daily: 1, threshold: 1, set: 1 }; // set: a figure's later question (CONTRACT-v1.2 W4)
     function itemBefore(step, def, item) {
       if (!S.hooks) return Promise.resolve({ item: item });
       var seed0 = step.seed, key = def.id + '|' + (item.params && item.params.variant || ''), first = !S.firstSeen[def.id];
@@ -3099,7 +3112,7 @@
     var defs = PX.ex.list('train').filter(function (d) { return canRun(d, true); });
     host.appendChild(screenHead(null, 'Free play', 'Choose an exercise and how it runs. Everything is logged; your levels do not change.'));
     if (!defs.length) { host.appendChild(h('p', 'No exercise can be shown on this device.')); return null; }
-    var st = { exId: defs.some(function (d) { return d.id === p.exId; }) ? String(p.exId) : defs[0].id, fixed: false, params: null, timer: 0, items: 20 };
+    var st = { exId: defs.some(function (d) { return d.id === p.exId; }) ? String(p.exId) : defs[0].id, fixed: false, params: null, timer: 0, items: 20, range: null, rangeEx: null };
     var form = h('div.pl-free');
     host.appendChild(form);
     // Human labels from the Library's wording (PX.ui.exinfo: '10 cubes', 'board turned 90°',
@@ -3113,10 +3126,34 @@
       if (typeof X.variantName === 'function') { try { return X.variantName(def, v) || v; } catch (e) { /* the name */ } }
       return v;
     }
+    // v1.2 milestone 8 (CONTRACT-v1.2 W3): an exercise with a test range offers "test range only", remembered per
+    // exercise in rec.ex[id].tag; its words come from the Library (PX.ui.exinfo.rangeName, RANGE_NOTE)
+    function rangeName(t) { return typeof X.rangeName === 'function' ? X.rangeName(t) : t; }
+    function tagOfLevel(def, d, i) { var R = def.testRange, a = R && R.dims[d.key]; return a ? a[i] : null; }
+    function tagOfVariant(def, v) { var R = def.testRange; return R && Object.prototype.hasOwnProperty.call(R.variants, v) ? R.variants[v] : null; }
+    function snapToRange(def) { // fixed settings outside the test range move to the nearest test-range level
+      def.dims.forEach(function (d) {
+        var a = def.testRange.dims[d.key], cur = st.params[d.key];
+        if (!a || a[cur] === 'test') return;
+        var best = null;
+        a.forEach(function (t, i) { if (t === 'test' && (best === null || Math.abs(i - cur) < Math.abs(best - cur))) best = i; });
+        if (best !== null) st.params[d.key] = best;
+      });
+      if (def.variants && tagOfVariant(def, st.params.variant) && tagOfVariant(def, st.params.variant) !== 'test') {
+        st.params.variant = def.variants.filter(function (v) { var t = tagOfVariant(def, v); return !t || t === 'test'; })[0] || st.params.variant;
+      }
+    }
     function draw() {
       ui.clear(form);
       var def = PX.ex.get(st.exId);
       if (!st.params || st.params.__ex !== st.exId) { st.params = fillParams(def, {}); st.params.__ex = st.exId; }
+      if (st.rangeEx !== st.exId) { // the exercise's remembered choice
+        var ent = rec().ex && rec().ex[st.exId];
+        st.range = def.testRange && isObj(ent) && ent.tag === 'test' ? 'test' : null;
+        st.rangeEx = st.exId;
+      }
+      if (!def.testRange) st.range = null;
+      if (st.range && st.fixed) snapToRange(def);
       var pnl = K.panel({ title: 'Exercise', className: 'pl-panel' });
       var sel = h('select.px-select', { 'aria-label': 'Exercise', 'data-free': 'exercise' }, defs.map(function (d) {
         return h('option', { value: d.id, selected: d.id === st.exId }, d.code + ' · ' + (d.short || d.name) + (tagOf(d) ? ' (' + tagOf(d) + ')' : ''));
@@ -3131,15 +3168,29 @@
         options: [{ value: 'adaptive', label: 'Adaptive' }, { value: 'fixed', label: 'Fixed settings' }],
         hint: st.fixed ? 'Every item uses the settings below.' : 'Items follow your level, as in Train.',
         onChange: function (v) { st.fixed = v === 'fixed'; draw(); } }));
+      if (def.testRange) {
+        ps.body.appendChild(K.segmented({ key: 'free-range', legend: 'Range', value: st.range ? 'test' : 'all',
+          options: [{ value: 'all', label: 'All levels' }, { value: 'test', label: 'Test range only' }],
+          hint: typeof X.RANGE_NOTE === 'string' ? X.RANGE_NOTE : null,
+          onChange: function (v) { st.range = v === 'test' ? 'test' : null; draw(); } }));
+      }
       if (st.fixed) {
         var grid = h('div.pl-free-dims');
+        // a tagged level outside the test range says so; with "test range only" it cannot be chosen
+        var tagText = function (t) { return t && t !== 'test' ? ' · ' + rangeName(t) : ''; };
         if (def.variants) {
-          var vs = h('select.px-select', { 'aria-label': 'Variant', 'data-free': 'variant' }, def.variants.map(function (v) { return h('option', { value: v, selected: v === st.params.variant }, variantLabel(def, v)); }));
+          var vs = h('select.px-select', { 'aria-label': 'Variant', 'data-free': 'variant' }, def.variants.map(function (v) {
+            var t = tagOfVariant(def, v);
+            return h('option', { value: v, selected: v === st.params.variant, disabled: !!(st.range && t && t !== 'test') }, variantLabel(def, v) + tagText(t));
+          }));
           vs.addEventListener('change', function () { st.params.variant = vs.value; });
           grid.appendChild(h('label.px-field', h('span.px-field-label', 'Variant'), vs));
         }
         def.dims.forEach(function (d) {
-          var s = h('select.px-select', { 'aria-label': d.label, 'data-free': d.key }, d.levels.map(function (v, i) { return h('option', { value: String(i), selected: i === st.params[d.key] }, label(def, d, v)); }));
+          var s = h('select.px-select', { 'aria-label': d.label, 'data-free': d.key }, d.levels.map(function (v, i) {
+            var t = tagOfLevel(def, d, i);
+            return h('option', { value: String(i), selected: i === st.params[d.key], disabled: !!(st.range && t && t !== 'test'), 'data-range': t || null }, label(def, d, v) + tagText(t));
+          }));
           s.addEventListener('change', function () { st.params[d.key] = Number(s.value) || 0; });
           grid.appendChild(h('label.px-field', h('span.px-field-label', d.label), s));
         });
@@ -3155,6 +3206,11 @@
         var prm = { mode: 'free', exId: st.exId, run: '1', trials: st.items };
         if (st.fixed) { var cp = {}; for (var k in st.params) if (hasOwn.call(st.params, k) && k !== '__ex') cp[k] = st.params[k]; prm.params = cp; }
         if (st.timer) prm.deadlineMs = st.timer * 1000;
+        if (def.testRange) { // remembered per exercise (rec.ex[id].tag; CONTRACT-v1.2 W3)
+          var ent = E().est.exEntry(rec(), def.id);
+          if (st.range === 'test') { ent.tag = 'test'; prm.range = 'test'; } else delete ent.tag;
+          save();
+        }
         router.go('play', prm, { force: true });
       } });
       start.setAttribute('data-free-start', '');
@@ -3232,7 +3288,7 @@
       return el0 ? { el: el0, order: isObj(x) && isNum(x.order) ? x.order : 50, i: i } : null;
     }).filter(Boolean).sort(function (a, b) { return a.order - b.order || a.i - b.i; }).forEach(function (x) { body.push(x.el); });
     // The key line is for keyboards: touch screens leave it out (css/play.css).
-    body.push(h('p.px-meta.pl-howto-keys', 'Keys: 1–9 pick · Enter confirm · Space next · Esc pause · S show me the solution.'));
+    body.push(h('p.px-meta.pl-howto-keys', 'Keys: ' + (lettersOf(viewOf(exId), 5) ? 'A–E or 1–5' : '1–9') + ' pick · Enter confirm · Space next · Esc pause · S show me the solution.'));
     if (learn && Array.isArray(learn.strategies) && learn.strategies.length) {
       body.push(h('h3.pl-howto-h', 'Ways to solve it'));
       body.push(h('ul.pl-list', learn.strategies.map(function (s) { return h('li', h('b', s.title), ': ', s.text); })));

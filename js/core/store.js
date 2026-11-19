@@ -74,7 +74,7 @@
   // layer, the control the answer came through, the window's orientation and the deadline it ran
   // with; column 19 (index 18) is the person-specific difficulty offset in milli-logits, only when
   // not 0. Rows that carry them always hold column 13 (value2), null when absent.
-  var KINDS = ['', 'warmup', 'target', 'easy', 'stretch', 'stretch1', 'last', 'weak', 'recheck', 'lead', 'fluency', 'drill', 'fixed', 'timed', 'threshold', 'probe', 'daily', 'climb'];
+  var KINDS = ['', 'warmup', 'target', 'easy', 'stretch', 'stretch1', 'last', 'weak', 'recheck', 'lead', 'fluency', 'drill', 'fixed', 'timed', 'threshold', 'probe', 'daily', 'climb', 'set'];
   var LAYERS = ['', 'compare-apply', 'produce', 'calib-detail', 'bridge'];
   var AMODES = ['', 'option', 'drag', 'dial', 'fine', 'keys', 'place', 'draw'];
   var ORIENTS = ['', 'portrait', 'landscape'];
@@ -295,6 +295,10 @@
         return [day, r[1], r[2]];
       }, log, path + '.hist', 3650);
     }, arr, log, path);
+    // v1.2 milestone 8 (CONTRACT-v1.2 W3): the player's range choice for the exercise, 'test' ("test range only",
+    // Free play's switch, remembered per exercise) or absent (every level); the pooled export keeps it (how the
+    // player practised; no personal data), and backups keep it
+    if (out.tag !== undefined && out.tag !== 'test') { delete out.tag; note(log, path + '.tag'); }
     return out;
   }
 

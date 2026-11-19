@@ -72,6 +72,35 @@
   text-align: center; color: var(--ink-2, #454B52); font-size: var(--fs-sm, 0.875rem);
 }
 
+/* The test look of the DAT-style formats (v1.2 milestone 8; CONTRACT-v1.2 W2; note D1 §6.1, addendum A.1 rows 4, 8,
+   10, 16, 19): black line drawings on a white plate in both themes, faces white, hidden edges as short dashes (the
+   official text calls them dotted), one flat tone for marked faces (Parallax adds a hatch, so a mark is never a tone
+   alone: CLAUDE.md rule 8), holes as filled circles, grey panels behind openings and answer sheets. Drawn from
+   Parallax's own models, never traced. A view adopts it with the classes below (on SVG shapes and on its stem and
+   option boxes), or reads the tokens in its own sheet; face tones, arrows and 3D pictures stay starter scaffolds. */
+:root {
+  --plate: #FFFFFF;            /* the figure plate (the same in the dark theme) */
+  --plate-ink: #16191C;        /* edges, outlines, holes, hatch lines */
+  --plate-frame: #9AA1A7;      /* the frame around a stem or an option */
+  --plate-panel: #E3E6E5;      /* the grey panel behind openings and answer sheets */
+  --plate-mark: #BEC3C7;       /* the one flat tone of a marked face */
+  --plate-edge-w: 1.4px;       /* visible edges (non-scaling strokes) */
+  --plate-thin-w: 1px;         /* hidden edges, hatch and secondary lines */
+  --plate-dash: 4px 3px;       /* hidden edges: short dashes */
+  --plate-hatch-gap: 6px;      /* hatch pitch on screen, for views that size their pattern in pixels */
+}
+.px-plate { background: var(--plate); color: var(--plate-ink); border: 1px solid var(--plate-frame); border-radius: var(--r-plate, 2px); }
+.px-plate--panel { background: var(--plate-panel); }
+.px-plate .px-ln, svg .px-ln { fill: none; stroke: var(--plate-ink); stroke-width: var(--plate-edge-w); stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.px-plate .px-ln-hidden, svg .px-ln-hidden { fill: none; stroke: var(--plate-ink); stroke-width: var(--plate-thin-w); stroke-dasharray: var(--plate-dash); stroke-linecap: butt; vector-effect: non-scaling-stroke; }
+.px-plate .px-face, svg .px-face { fill: var(--plate); stroke: var(--plate-ink); stroke-width: var(--plate-edge-w); stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.px-plate .px-face-mark, svg .px-face-mark { fill: var(--plate-mark); }
+.px-plate .px-hole, svg .px-hole { fill: var(--plate-ink); stroke: none; }
+.px-plate .px-hole-open, svg .px-hole-open { fill: var(--plate); stroke: var(--plate-ink); stroke-width: var(--plate-thin-w); vector-effect: non-scaling-stroke; }
+/* A choice grid in letter mode (CONTRACT-v1.2 W1): the letter is the option's name in the format, not a key hint,
+   so it stays when key hints are switched off, and it is set a little larger. */
+:root .px-choices.px-choices--letters .px-choice-key { display: inline-block; font-weight: 700; font-size: var(--fs-sm, 0.875rem); }
+
 /* ---------- 2. Rotate (EX-02) ---------- */
 
 .ex-rotate .ex-rotate-stem { width: 100%; }

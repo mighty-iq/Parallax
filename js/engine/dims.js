@@ -193,7 +193,7 @@
 
   /* ---------- the fit ---------- */
 
-  var SKIP_KIND = { fluency: true, timed: true, probe: true, daily: true, climb: true, threshold: true, fixed: true };
+  var SKIP_KIND = { fluency: true, timed: true, probe: true, daily: true, climb: true, threshold: true, fixed: true, set: true }; // set: W2-core, CONTRACT-v1.2 W4
   var SKIP_DL = { speed: true, limit: true };
 
   // The rated untimed answers of this exercise version (and screen class, for an exercise rated per

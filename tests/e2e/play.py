@@ -88,6 +88,18 @@ def card(page):
     return box.first.get_attribute('data-card-box') if box.count() else None
 
 
+def past_cards(page, ms=15000):
+    """Goes on to the next item: a card between items (W2-measure: a change of format inside a probe) takes its
+    primary button."""
+    for _ in range(ms // 100):
+        if page.evaluate('__play.state') == 'respond' and not card(page):
+            return
+        if card(page):
+            page.locator('[data-card-box] .px-btn--primary').first.click()
+        page.wait_for_timeout(100)
+    wait_state(page, 'respond')
+
+
 def click_card(page, value):
     page.locator(f'[data-card-box] [data-card="{value}"]').first.click()
     page.wait_for_timeout(100)
@@ -524,6 +536,7 @@ def run_review(b, C):
     page.goto('about:blank')
     page.goto(INDEX.as_uri() + '#/play?mode=free&exId=spin&run=1&trials=5')
     page.wait_for_function(READY, timeout=20000)
+    page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')  # as boot() does: a reload brings every builder's hook back
     page.wait_for_timeout(1200)
     st = page.evaluate('__play.state')
     # v1.2 (gap C2): a later launch shows the one-tap Chimera card (not a modal), and on a play route it waits
@@ -628,12 +641,12 @@ def run_review(b, C):
     wait_state(page, 'paused')
     free_label = page.locator('[data-skip]').inner_text()
     page.locator('[data-skip]').click()
-    wait_state(page, 'respond')
+    past_cards(page)
     page.keyboard.press('Escape')
     wait_state(page, 'paused')
     label2 = page.locator('[data-skip]').inner_text()
     page.locator('[data-skip]').click()
-    wait_state(page, 'respond')
+    past_cards(page)
     rows = page.evaluate(f'PX.core.store.state.trials.slice({rows0}).map(r => r[5])')
     C.ok(free_label.startswith('Skip this item') and label2.startswith('Skip (counts as wrong)'), f'{tag} 15: the skip button says when a skip counts ({free_label!r}, {label2!r})')
     C.ok(rows == [3, 0], f'{tag} 15: the first skip is free, the second is scored wrong (outcomes {rows})')
@@ -1529,12 +1542,110 @@ def run_firstrun(b, C):
     ctx.close()
 
 
+RANGE_CLONE_JS = '''(() => { // a copy of Angles with a test range on its gap levels (CONTRACT-v1.2 W3), for the browser check
+  if (PX.ex.get('anglestr')) return;
+  const a = PX.ex.get('angles');
+  PX.ex.define(Object.assign({}, a, { id: 'anglestr', code: 'EX-99', name: 'Angles (range check)', short: 'Angles RC',
+    testRange: { dims: { gap: ['below', 'test', 'test', 'test', 'test', 'beyond'] }, notes: { gap: 'Gap sizes on the test are not documented officially.' } } }));
+  PX.ex.view('anglestr', PX.ex.view('angles'));
+  PX.ex.learn('anglestr', PX.ex.learn('angles'));
+  PX.core.store.state.tour.seen.anglestr = true;
+})()'''
+
+
+def run_wave3(b, C):
+    """Shared support for PLAN milestone 8 (CONTRACT-v1.2 Wave 3): a view with optionKeys 'letters' shows A–D on
+    its options, a letter key and a digit both answer, the keys sheet and the view context name letters (W1); Free
+    play's "test range only" (W3) disables the levels outside the range in fixed settings, keeps adaptive items
+    inside it, remembers the choice in rec.ex[id].tag, and the Library lists the levels against the test format."""
+    tag = 'letters'
+    ctx, page, con = fresh(b)
+    boot(page)
+    seen_all(page)
+    page.evaluate("PX.ex.view('angles').optionKeys = 'letters'")
+    go(page, {'mode': 'free', 'exId': 'angles', 'params': {'gap': 0, 'size': 0, 'resolve': 0, 'pose': 0}, 'trials': 4})
+    wait_state(page, 'respond')
+    g = page.evaluate("""(() => ({ keys: [...document.querySelectorAll('.pl-grid .px-choice-key')].map((x) => x.textContent),
+      ks: [...document.querySelectorAll('.pl-grid .px-choice')].map((x) => x.getAttribute('aria-keyshortcuts')),
+      grid: document.querySelector('.pl-grid .px-choices').classList.contains('px-choices--letters'),
+      name: PX.ui.play.current().ctx.optionName(2), letters: PX.ui.play.current().ctx.letters }))()""")
+    C.ok(g['keys'] == ['A', 'B', 'C', 'D'] and g['ks'][1] == 'B 2' and g['grid'] and g['name'] == 'C' and g['letters'] is True,
+         f'{tag}: the options are lettered A–D, with keys A and 1 alike; the view context names option C ({g})')
+    page.screenshot(path=str(OUT / 'wave3_letters.png'))
+    k = page.evaluate('__play.key')
+    page.keyboard.press('abcd'[k])
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    C.ok(last_outcome(page) == 'right', f'{tag}: the letter key answers ({"abcd"[k]})')
+    page.evaluate('__play.next()')
+    wait_state(page, 'respond')
+    k = page.evaluate('__play.key')
+    page.keyboard.press(str(k + 1))
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    C.ok(last_outcome(page) == 'right', f'{tag}: a digit still answers ({k + 1})')
+    page.evaluate('__play.next()')
+    wait_state(page, 'respond')
+    page.keyboard.press('?')
+    page.wait_for_selector('.pl-keys', timeout=4000)
+    row = page.locator('.pl-keys .pl-keylist li').first.inner_text()
+    C.ok('A–E, 1–5' in row, f'{tag}: the keys sheet names the letters ({row!r})')
+    page.keyboard.press('Escape')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+    tag = 'test range'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate(RANGE_CLONE_JS)
+    go(page, {'mode': 'free', 'exId': 'anglestr'})
+    page.wait_for_selector('[data-setting="free-range"]', timeout=6000)
+    seg = page.locator('[data-setting="free-range"] .px-seg-item').all_inner_texts()
+    hint = page.locator('[data-setting="free-range"] .px-field-hint').inner_text()
+    C.ok([s.strip() for s in seg] == ['All levels', 'Test range only'] and 'forecast no score' in hint, f'{tag}: Free play offers the range, with what the tags mean ({seg})')
+    page.locator('[data-setting="free-range"] .px-seg-item').nth(1).click()
+    page.locator('[data-setting="free-mode"] .px-seg-item').nth(1).click()
+    page.wait_for_selector('[data-free="gap"]', timeout=4000)
+    opts = page.evaluate("[...document.querySelectorAll('[data-free=gap] option')].map((o) => [o.textContent, o.disabled, o.selected])")
+    sel = [i for i, o in enumerate(opts) if o[2]]
+    C.ok(opts[0][1] and 'below the test' in opts[0][0] and opts[5][1] and 'beyond the test' in opts[5][0] and not any(o[1] for o in opts[1:5]) and sel and 1 <= sel[0] <= 4,
+         f'{tag}: fixed settings outside the range are marked and cannot be chosen; the choice moved inside ({opts})')
+    page.screenshot(path=str(OUT / 'wave3_free_range.png'), full_page=True)
+    page.locator('[data-setting="free-mode"] .px-seg-item').nth(0).click()
+    page.locator('[data-free-start]').click()
+    page.wait_for_timeout(300)
+    rp = page.evaluate('PX.core.router.current().params')
+    tags = []
+    for _ in range(6):
+        wait_state(page, 'respond')
+        tags.append(page.evaluate("PX.ex.rangeTag(PX.ex.get('anglestr'), __play.item.params)"))
+        page.evaluate('__play.answer(Math.random() < 0.8).catch(() => 0)')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+        page.evaluate('__play.next()')
+    C.ok(rp.get('range') == 'test' and page.evaluate("PX.core.store.state.ex.anglestr.tag") == 'test' and tags == ['test'] * 6,
+         f'{tag}: adaptive items stay inside the test range, and the choice is remembered ({rp.get("range")}; {tags})')
+    go(page, {'mode': 'free', 'exId': 'anglestr'})
+    page.wait_for_selector('[data-setting="free-range"]', timeout=6000)
+    chk = page.evaluate("document.querySelector('[data-setting=\"free-range\"] input:checked').value")
+    C.ok(chk == 'test', f'{tag}: the setup opens with the remembered choice ({chk})')
+    page.evaluate('void PX.core.router.go("exercise/anglestr", null, { force: true })')
+    page.wait_for_selector('.px-range', timeout=6000)
+    txt = page.locator('[data-section="settings"]').inner_text()
+    C.ok('Against the test format' in txt and 'Below the test: 9°' in txt and 'Test range: 6° to 3°' in txt and 'Beyond the test: 2°' in txt and 'not documented officially' in txt,
+         f'{tag}: the Library lists the levels against the test format ({txt[-260:]!r})')
+    page.locator('.px-range').scroll_into_view_if_needed()
+    page.screenshot(path=str(OUT / 'wave3_library_range.png'))
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

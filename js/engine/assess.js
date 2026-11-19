@@ -922,7 +922,7 @@
   // Exposure: the rated answers per bet before the exercise's first one. Observational (motivation and order confound
   // it), so pooled exports relate slopes to exposure and the Lab calls it exploratory. Pure: reads rec.trials;
   // opts.keep files finished curves in rec.measure.curves, so they outlive the trial cap.
-  var CURVE_SKIP = { fluency: 1, fixed: 1, timed: 1, threshold: 1, probe: 1, daily: 1, climb: 1 };
+  var CURVE_SKIP = { fluency: 1, fixed: 1, timed: 1, threshold: 1, probe: 1, daily: 1, climb: 1, set: 1 }; // set: W2-core, CONTRACT-v1.2 W4
   var CURVE_MODES = { train: 1, path: 1, speed: 1 };
   function fitCurve(rows, CC) {
     var n = rows.length, bm = 0, lapse = isNum(C.lapse) ? C.lapse : 0.03;

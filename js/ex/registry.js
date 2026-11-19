@@ -32,6 +32,9 @@
    v1.2 wave 2 (CONTRACT-v1.2 S): format (a token, a frozen { variant | '*': token } or null), layers
    (frozen { compare, produce, bridge, calib } or null; the produce variant stays out of trainVariants
    and out of the range) and atlas ([dimA, dimB] or null).
+   v1.2 milestone 8 (CONTRACT-v1.2 W3, W4): testRange (frozen { dims, variants, notes } or null) with
+   rangeTag(def, params) → 'below' | 'test' | 'beyond' | null and RANGE_TAGS; set (frozen { param, size }
+   or null) with setSize(def, params, seed) → 1 … SET_MAX. A view may declare optionKeys 'letters' (W1).
    key(def) → 'id@version' (how trial logs index exercises). Definitions are frozen after define. */
 (function (PX) {
   'use strict';
@@ -238,6 +241,7 @@
 
     var total = count(d);
     if (!(total <= MAX_COMBOS)) fail(id, 'too many level combinations (' + total + ') to encode as integers');
+    checkWave3(d, id);
     return d;
   }
 
@@ -299,6 +303,92 @@
       d.atlas = Object.freeze(d.atlas.slice());
     }
   }
+  // v1.2 milestone 8 (docs/dev/CONTRACT-v1.2.md W3, W4), both optional:
+  //   testRange: { dims: { <dim key>: [a tag per level] }, variants: { <variant>: tag }, notes: { <dim key | variant |
+  //     '*'>: text } }, tags 'below' (the test: starter levels and scaffolds), 'test' (inside the format the official
+  //     instructions document) and 'beyond' (the test). Tags describe format features only: never the real test's
+  //     difficulty, never a score forecast (note D1 §6.0, §6.9 #2). Notes are plain words for the Library, e.g. where
+  //     only test takers' reports exist ("not documented officially", note D1 addendum A.4 row 7).
+  //   set: { param, size(params, seed) → n }: several questions about one figure (Painted Cubes, note D1 §6.3); param
+  //     is one of extraParams (the question's index, 0 first) and size is pure and cheap (n from 1 to SET_MAX).
+  var RANGE_TAGS = ['below', 'test', 'beyond'];
+  var SET_MAX = 5;
+  function checkWave3(d, id) {
+    if (d.testRange === undefined || d.testRange === null) d.testRange = null;
+    else {
+      var R = d.testRange, out = { dims: {}, variants: {}, notes: {} };
+      if (!isPlainObj(R)) fail(id, 'testRange must be { dims, variants, notes }');
+      Object.keys(R).forEach(function (k) { if (['dims', 'variants', 'notes'].indexOf(k) < 0) fail(id, 'testRange.' + k + ' is not part of a test range (dims, variants, notes)'); });
+      if (R.dims !== undefined) {
+        if (!isPlainObj(R.dims)) fail(id, 'testRange.dims must be { <dim key>: [a tag per level] }');
+        Object.keys(R.dims).forEach(function (k) {
+          var dim = d.dims.filter(function (x) { return x.key === k; })[0], a = R.dims[k];
+          if (!dim) fail(id, 'testRange.dims names "' + k + '", which is not a dim of the exercise');
+          if (!Array.isArray(a) || a.length !== dim.levels.length || a.some(function (t) { return RANGE_TAGS.indexOf(t) < 0; })) {
+            fail(id, 'testRange.dims.' + k + ' must give one of ' + RANGE_TAGS.join(', ') + ' for each of its ' + dim.levels.length + ' levels');
+          }
+          out.dims[k] = Object.freeze(a.slice());
+        });
+      }
+      if (R.variants !== undefined) {
+        if (!d.variants || !isPlainObj(R.variants)) fail(id, 'testRange.variants must be { <variant>: tag }, for an exercise with variants');
+        Object.keys(R.variants).forEach(function (v) {
+          if (d.variants.indexOf(v) < 0) fail(id, 'testRange.variants names "' + v + '", which is not a variant of the exercise');
+          if (RANGE_TAGS.indexOf(R.variants[v]) < 0) fail(id, 'testRange.variants.' + v + ' must be one of ' + RANGE_TAGS.join(', '));
+          out.variants[v] = R.variants[v];
+        });
+      }
+      if (!Object.keys(out.dims).length && !Object.keys(out.variants).length) fail(id, 'testRange must tag at least one dim or variant');
+      if (R.notes !== undefined) {
+        if (!isPlainObj(R.notes)) fail(id, 'testRange.notes must be { <dim key | variant | "*">: text }');
+        Object.keys(R.notes).forEach(function (k) {
+          if (k !== '*' && !out.dims[k] && !hasOwn.call(out.variants, k)) fail(id, 'testRange.notes names "' + k + '", which the test range does not tag (a dim key, a variant or "*")');
+          if (!isStr(R.notes[k]) || R.notes[k].length > 240) fail(id, 'testRange.notes.' + k + ' must be plain text of at most 240 characters');
+          out.notes[k] = R.notes[k];
+        });
+      }
+      // at least one combination inside the test range, or "test range only" would have nothing to play: a 'test'
+      // level on every tagged dim and a variant that is not tagged below or beyond
+      var dimsOk = Object.keys(out.dims).every(function (k) { return out.dims[k].indexOf('test') >= 0; });
+      var varOk = !d.variants || d.variants.some(function (v) { return !hasOwn.call(out.variants, v) || out.variants[v] === 'test'; });
+      if (!dimsOk || !varOk) fail(id, 'testRange tags no combination as test (every tagged dim needs a test level, and a variant must be test or untagged)');
+      d.testRange = Object.freeze({ dims: Object.freeze(out.dims), variants: Object.freeze(out.variants), notes: Object.freeze(out.notes) });
+    }
+    if (d.set === undefined || d.set === null) d.set = null;
+    else {
+      if (!isPlainObj(d.set)) fail(id, 'set must be { param, size(params, seed) }');
+      if (typeof d.set.param !== 'string' || d.extraParams.indexOf(d.set.param) < 0) fail(id, 'set.param must name one of extraParams (the question index the generator reads)');
+      if (!isFn(d.set.size)) fail(id, 'set.size(params, seed) must be a function');
+      d.set = Object.freeze({ param: d.set.param, size: d.set.size });
+    }
+  }
+  // rangeTag(def, params) → 'below' | 'test' | 'beyond', or null when the exercise declares no test range: 'beyond'
+  // when a tagged dim level or the variant is beyond the test, else 'below' when one is below it, else 'test'
+  // (untagged dims and variants are neutral).
+  function rangeTag(defOrId, params) {
+    var d = typeof defOrId === 'string' ? defs[defOrId] : defOrId, R = d && d.testRange, below = false, k, t;
+    if (!d || !R || !params || typeof params !== 'object') return null;
+    for (k in R.dims) {
+      if (!hasOwn.call(R.dims, k)) continue;
+      t = R.dims[k][params[k]];
+      if (t === 'beyond') return 'beyond';
+      if (t === 'below') below = true;
+    }
+    if (d.variants && typeof params.variant === 'string' && hasOwn.call(R.variants, params.variant)) {
+      t = R.variants[params.variant];
+      if (t === 'beyond') return 'beyond';
+      if (t === 'below') below = true;
+    }
+    return below ? 'below' : 'test';
+  }
+  // setSize(def, params, seed) → how many questions the figure of this seed has (1 without a set; at most SET_MAX)
+  function setSize(defOrId, params, seed) {
+    var d = typeof defOrId === 'string' ? defs[defOrId] : defOrId, n = 1;
+    if (!d || !d.set) return 1;
+    try { n = d.set.size(params, seed); } catch (e) { n = 1; }
+    return Number.isInteger(n) ? Math.max(1, Math.min(SET_MAX, n)) : 1;
+  }
+
   // The produce variant (layers.produce) never moves the level scale (conflict 12 of CONTRACT-v1.2):
   // the range and, in js/engine/model.js, the reference guessing rate leave it out.
   function produceOf(d) { return d.layers && typeof d.layers.produce === 'string' ? d.layers.produce : null; }
@@ -359,6 +449,14 @@
     if (v.layoutFor !== undefined) {
       if (v.layout !== 'stem+options') throw new Error(where + 'layoutFor is for stem+options views (a custom view collects every item)');
       if (!isFn(v.collect) || !isFn(v.reveal)) throw new Error(where + 'layoutFor needs collect(…) and reveal(…) for the items it gives their own input');
+    }
+    // v1.2 milestone 8 (CONTRACT-v1.2 W1): optionKeys 'letters' letters a stem+options view's options A–E (keys A–E
+    // and 1–5); 'digits' (the default) numbers them
+    if (v.optionKeys !== undefined) {
+      if (v.optionKeys !== 'letters' && v.optionKeys !== 'digits') throw new Error(where + 'optionKeys must be "letters" or "digits"');
+      if (v.layout !== 'stem+options') throw new Error(where + 'optionKeys is for stem+options views (a custom view draws its own input)');
+      var nMax = defs[id].nOptions;
+      if (v.optionKeys === 'letters' && nMax > 5) throw new Error(where + 'optionKeys "letters" holds at most five options (A–E; the exercise has ' + nMax + ')');
     }
     views[id] = v;
     return v;
@@ -554,4 +652,8 @@
   PX.ex.BETS = BETS;
   PX.ex.ENUM_LIMIT = ENUM_LIMIT;
   PX.ex.ENUM_SAMPLE = ENUM_SAMPLE;
+  PX.ex.rangeTag = rangeTag; // v1.2 milestone 8 (CONTRACT-v1.2 W3)
+  PX.ex.RANGE_TAGS = RANGE_TAGS;
+  PX.ex.setSize = setSize;   // v1.2 milestone 8 (CONTRACT-v1.2 W4)
+  PX.ex.SET_MAX = SET_MAX;
 })(window.PX);

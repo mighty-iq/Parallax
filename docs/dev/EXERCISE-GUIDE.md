@@ -118,6 +118,13 @@ PX.ex.define({
   produce variant is appended to `variants`, left out of `trainVariants` and kept out of the level
   scale (range and reference guessing rate); `atlas: [dimA, dimB]` is reserved for milestone 5.
   `PX.ex.check` validates and freezes all three.
+- **Test-range tags and figure sets (1.2, milestone 8; CONTRACT-v1.2 W3, W4):** a DAT-style exercise
+  tags its levels against the documented format with `testRange: { dims: { <dim>: ['below', 'test',
+  …, 'beyond'] }, variants: { <variant>: tag }, notes: { <dim | variant | '*'>: text } }` (format
+  features only; `PX.ex.rangeTag(def, params)`), which gives it the Library's "Against the test
+  format" block and Free play's "test range only" by themselves. `set: { param: 'ask', size(params,
+  seed) → n }` asks n questions about one figure in Train, Path and Free play (later questions are
+  logged with kind 'set' and never rated).
 
 ## 4. Generator, validator, scorer
 
@@ -233,6 +240,10 @@ ctx.play([
   `item.answer`; the other items keep the grid (CONTRACT-v1.2 S).
 - **Keyboard:** stem+options needs nothing more (the grid takes 1–9). Custom layouts register
   keys through `ctx.keys.push(map, { through: true })` and show key hints.
+- **Lettered options (1.2, milestone 8; CONTRACT-v1.2 W1):** `optionKeys: 'letters'` on a
+  stem+options view of at most five options letters them A–E (keys A–E and 1–5); name options in
+  captions with `ctx.optionName(i)`. The DAT-style look has shared tokens and classes in css/ex.css
+  (`--plate`, `--plate-ink`, `.px-ln`, `.px-ln-hidden`, `.px-face`, `.px-face-mark`, `.px-hole`; W2).
 - **Accessibility:** canvases are `aria-hidden`; describe the task in text (`.px-sr`), give
   options accessible names (`optionLabel`), keep targets ≥ 44 px, never flash faster than 3 Hz.
 

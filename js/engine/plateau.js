@@ -98,6 +98,7 @@
   var C_KIND = isNum(COL.kind) ? COL.kind : 13, C_DL = isNum(COL.dl) ? COL.dl : 17, C_BOFF = isNum(COL.bOff) ? COL.bOff : 18;
   function codeIn(list, name, d) { var i = isArray(list) ? list.indexOf(name) : -1; return i > 0 ? i : d; }
   var K_FLUENCY = codeIn(LG.KINDS, 'fluency', 10), K_STRETCH = codeIn(LG.KINDS, 'stretch', 4), K_STRETCH1 = codeIn(LG.KINDS, 'stretch1', 5);
+  var K_SET = codeIn(LG.KINDS, 'set', 18); // a figure set's later question: not rated (W2-core, CONTRACT-v1.2 W4)
   var DL_PACE = codeIn(LG.DEADLINES, 'pace', 1);
 
   // The pool entry of a params code (b and g as the item model gives them), per definition.
@@ -161,7 +162,7 @@
       var dl = r.length > C_DL && isNum(r[C_DL]) ? r[C_DL] : 0;
       if (dl !== 0 && dl !== DL_PACE) continue; // Speed deadlines (fluency items) and set limits stay out
       var kind = r.length > C_KIND && isNum(r[C_KIND]) ? r[C_KIND] : 0;
-      if (kind === K_FLUENCY) continue;
+      if (kind === K_FLUENCY || kind === K_SET) continue;
       if (perD && (r[COL.display] === 1 ? 'small' : 'large') !== disp) continue;
       var c = codes[r[COL.code]];
       if (!c) continue;
