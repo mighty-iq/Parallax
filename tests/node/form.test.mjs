@@ -391,7 +391,7 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['sizes', 'landmark', 'landmarkAlone', 'match', 'matchAlone', 'halfCorner', 'matchHalf', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'assist', 'assistHalf'];
+  const caps = ['sizes', 'landmark', 'landmarkAlone', 'match', 'matchAlone', 'halfCorner', 'matchHalf', 'exHalf', 'exMirror', 'exMatch', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'assist', 'assistHalf'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');

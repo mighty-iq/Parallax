@@ -149,8 +149,9 @@ def normal_speed(b, cons):
         list.forEach((s) => { s.enter(); const t = s.caption || '';
           if (/half-shaded/.test(t)) out.corner = document.querySelectorAll('.fm-corner').length;
           if (/mirror image/.test(t)) out.mirror = document.querySelectorAll('.fm-tag--bad').length; });
-        return { captions: list.filter((s) => s.caption).length, corner: out.corner, mirror: out.mirror }; }""")
-    C.ok(x['captions'] == 3 and x['corner'] >= 1 and x['mirror'] >= 1, f'the worked example of a half mark has three captions: the dotted corner, the mirror image crossed out, the solid that keeps it ({x})')
+        const caps = list.filter((s) => s.caption).map((s) => s.caption.slice(0, 3));
+        return { captions: caps.length, nums: caps.join(','), corner: out.corner, mirror: out.mirror }; }""")
+    C.ok(x['captions'] == 3 and x['nums'] == '1/3,2/3,3/3' and x['corner'] >= 1 and x['mirror'] >= 1, f'the worked example of a half mark has three captions: the dotted corner, the mirror image crossed out, the solid that keeps it ({x})')
     page.screenshot(path=str(DIR / 'form_demo_end.png'))
     page.goto(file_url('tests/dev/harness.html', ex=EX, seed=5, p='solid:0,marks:0,view:0,foil:0', fast=1))
     page.wait_for_function(READY, timeout=60000)

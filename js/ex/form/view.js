@@ -491,7 +491,12 @@
     if (mode === 'example') {
       var mirror = -1;
       item.options.forEach(function (o, i) { if (i !== key && o.kind === 'mirror' && mirror < 0) mirror = i; });
-      list = [halfStep, mirror >= 0 ? whyStep(item, mirror, 2800) : null, matchHalf].concat(foldSteps(item), [rest]);
+      // numbered on their own (1/3 the half mark, 2/3 the mirror image, 3/3 the solid that keeps it), so the
+      // example does not seem to start at the card's second step (fresh-player rerun)
+      var exHalf = halfStep ? Object.assign({}, halfStep, { caption: cap('exHalf') }) : null;
+      var exMirror = mirror >= 0 ? Object.assign({}, whyStep(item, mirror, 2800), { caption: cap('exMirror', { n: mirror + 1, f: '✗' }) }) : null;
+      var exMatch = Object.assign({}, matchHalf, { caption: cap('exMatch', { n: key + 1 }) });
+      list = [exHalf, exMirror, exMatch].concat(foldSteps(item), [rest]);
     } else if (mode === 'watch') {
       list = [sizes, landmark, halfStep, match].concat(foldSteps(item), [rest]);
     } else {
