@@ -12,8 +12,10 @@
      catalog()        the exercises in code order, one entry per id: registry definitions over
                       the list below
      count()          the training exercises the Library lists (registered definitions)
-     plan(rec, now)   hook → { minutes, mode, style, blocks: [{ role, ex, min, why, pat }], patFocus }
-                      or null (nothing to plan: the panel says so); js/ui/play.js homePlan
+     plan(rec, now)   hook → { minutes, mode, style, blocks: [{ role, ex, min, why, pat }], patFocus,
+                      today: { doneMs, full, part, done }, route } or null (nothing to plan: the panel
+                      says so); js/ui/play.js homePlan. today: the day's practice so far against the
+                      session length: part (the plan is what is left), done (another session is extra)
      levels(rec)      hook → [{ ex, n, last, level, lo, hi, settings, stage }] or null (the
                       record's own levels are used then); js/ui/play.js homeLevels */
 (function (PX) {
@@ -81,7 +83,9 @@
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return { id: id, code: '', name: id, kind: '', abilities: [] };
   }
-  function specOf(e) { return PX.ui.kit.spec([e.code, e.kind, e.abilities.join(' ')]); }
+  // What the exercise is, in plain words, under its name (v1.2, first-session fresh test: codes such as "EX-02 ·
+  // Vz SR" meant nothing to a newcomer; the Library keeps them)
+  function specOf(e) { return PX.ui.kit.spec([e.kind && e.kind.toLowerCase() !== String(e.name).toLowerCase() ? e.kind : '']); }
 
   /* ---------- dates ---------- */
 
@@ -124,11 +128,19 @@
   function sessionSlot(rec, now, plan) {
     var K = PX.ui.kit;
     if (!plan || !plan.blocks || !plan.blocks.length) return noSession();
+    // v1.2 (first-session fresh test): what was practised today comes off the day's plan (play.js homePlan):
+    // the rest of it, or the day done, with another session as extra practice
+    var fm = PX.core.clock.fmtMinutes, td = plan.today || {}, part = td.part === true, done = td.done === true;
     var p = K.panel({
       title: 'Today’s session', level: 'h2', className: 'px-slot px-slot--session',
-      aside: h('span.px-num', PX.core.clock.fmtMinutes(plan.minutes * 60000) + ' · ' + plan.mode + ' · ' + plan.style),
+      aside: h('span.px-num', done ? 'Done for today' : fm(plan.minutes * 60000) + (part ? ' left' : '') + ' · ' + plan.mode + ' · ' + plan.style),
     });
     p.head.querySelector('.px-panel-title').classList.add('px-session-title');
+    if (part || done) {
+      p.body.appendChild(h('p.px-slot-text.px-session-today', { 'data-today': done ? 'done' : 'part' }, done
+        ? 'Done for today: ' + fm(td.doneMs) + ' of practice. Another session is extra practice; tomorrow’s plan starts fresh.'
+        : 'Today so far: ' + fm(td.doneMs) + ' of ' + fm(td.full * 60000) + '. The plan below is what is left.'));
+    }
     // the DAT-style focus first, so the first screen shows it (on phones Start sticks above the tab bar)
     var focus = patFocusLine(plan);
     if (focus) p.body.appendChild(focus);
@@ -157,7 +169,8 @@
       var line = typeof x === 'string' ? h('p.px-meta.px-session-note', x) : x && x.nodeType === 1 ? x : null;
       if (line) p.body.appendChild(line);
     });
-    var start = ui.button('Start today’s session', { kind: 'primary', go: 'play?mode=train' });
+    var start = ui.button(done ? 'Another session · ' + fm(plan.minutes * 60000) : part ? 'Go on with today’s session' : 'Start today’s session',
+      { kind: done ? 'secondary' : 'primary', go: plan.route || 'play?mode=train' });
     start.setAttribute('data-primary', '');
     p.body.appendChild(h('div.px-session-actions', start,
       ui.button('Choose exercises', { kind: 'ghost', go: 'library' })));
@@ -403,8 +416,7 @@
     if (r.settings) set.push('Handles ' + r.settings.charAt(0).toLowerCase() + r.settings.slice(1) + '.'); // as the Library says it
     if (r.stage) set.push(' Path stage ' + r.stage + ' of 10.');
     return h('li', { class: ['px-level', has ? null : 'is-new'], 'data-ex': r.ex },
-      h('div.px-level-name', h('b', e.name, e.note ? ' ' : null, e.note ? h('span.px-tag', e.note) : null),
-        PX.ui.kit.spec([e.code, e.abilities.join(' ')])),
+      h('div.px-level-name', h('b', e.name, e.note ? ' ' : null, e.note ? h('span.px-tag', e.note) : null), specOf(e)),
       h('div.px-level-bar', bar), num,
       set.length ? h('div.px-level-set', set.join('')) : null);
   }

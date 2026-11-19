@@ -292,7 +292,10 @@
       var def = PX.ex.get(x.exId);
       if (!def) return;
       var box = h('div.gm-grade', stamp(def, x.to));
-      box.appendChild(h('p.gm-line', x.from ? 'Up from grade ' + x.from + ': a whole block at level ' + x.level + '.' : 'Your first grade on ' + nameOf(def) + ': a whole block at level ' + x.level + '.'));
+      // W2-core for the first-session fresh test (requests.md): the grade line tells which block made it and what the
+      // next grade needs, so it reads as one story with the results' level and the block notes
+      box.appendChild(h('p.gm-line', (x.from ? 'Up from grade ' + x.from + ': your' : 'Your first grade on ' + nameOf(def) + ': your') +
+        ' best block of 10 ended at level ' + x.level + '.' + (x.to < 10 ? ' A best block that ends at level ' + (x.to * 10 + 1) + ' or more brings grade ' + (x.to + 1) + '.' : '')));
       var t1 = firstTime('grade', 'A grade is the tenth of the 1–100 range that holds your best whole block of 10 on an exercise: grade 6 is levels 51–60, the band of Path stage 6. It never goes down.');
       if (t1) box.appendChild(t1);
       box.appendChild(h('div.px-slot-foot', shareButton('Share this grade', gradeCard(def, x.to, x.level), 'grade')));

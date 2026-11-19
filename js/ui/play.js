@@ -109,9 +109,9 @@
   function tourRec() { var r = rec(); if (!isObj(r.tour)) r.tour = { done: false, seen: {} }; if (!isObj(r.tour.seen)) r.tour.seen = {}; return r.tour; }
   function wtgSeen(exId) { return tourRec().seen[exId] === true; }
   function markWtg(exId) { var t = tourRec(); if (t.seen[exId] !== true) { t.seen[exId] = true; save(); } }
-  // Watch demos wait for a tap at each caption; Auto-play (the player's choice, kept) plays them at the timed pace
-  function autoplay() { return uiRec().autoplay === true; }
-  function setAutoplay(on) { uiRec().autoplay = !!on; save(); }
+  // Key hints in views and captions: the Settings switch, and a keyboard (first-session fresh test: "Answer with
+  // the keys 1 to 5" on a phone)
+  function keyHintsOn() { return rec().settings.keyHints !== false && !!(keys.present && keys.present()); }
   function counter(name, exId) { var u = uiRec(); if (!isObj(u[name])) u[name] = {}; return u[name][exId] || 0; }
   function bump(name, exId) { var u = uiRec(); if (!isObj(u[name])) u[name] = {}; u[name][exId] = (u[name][exId] || 0) + 1; }
   function tipsShown(exId) { var u = uiRec(); if (!isObj(u.tips)) u.tips = {}; if (!Array.isArray(u.tips[exId])) u.tips[exId] = []; return u.tips[exId]; }
@@ -197,7 +197,21 @@
   }
   // "1 item", "2 items": counts in sentences.
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many || one + 's'); }
-  function specOf(def) { return PX.ui.kit ? PX.ui.kit.spec([def.code, def.short || def.name, (def.abilities || []).join(' ')]) : h('span', def.code); }
+  // The exercise in plain words: its name and what it is ("Spin · 2D speeded rotation"). v1.2 (first-session fresh
+  // test): codes such as "EX-03 · SR" meant nothing to a newcomer, so the player shows none; the Library keeps them.
+  var kinds = null;
+  function kindOf(def) {
+    if (!kinds) {
+      kinds = {};
+      try { (PX.ui.home && PX.ui.home.catalog ? PX.ui.home.catalog() : []).forEach(function (c) { if (c && c.id) kinds[c.id] = c.kind || ''; }); } catch (e) { kinds = {}; }
+    }
+    var k = kinds[def.id] || '', name = def.short || def.name || '';
+    return k && k.toLowerCase() !== String(name).toLowerCase() ? k : '';
+  }
+  function specOf(def) {
+    var name = def.short || def.name || def.id;
+    return PX.ui.kit ? PX.ui.kit.spec([name, kindOf(def)]) : h('span', name);
+  }
   // The goal line: an item's own task (Reckon's tutorial items), then its variant, then the exercise's goal.
   function goalOf(learn, item) {
     if (!learn) return '';
@@ -248,6 +262,13 @@
   function makeRunner(P) {
     var cur = null;
     function cmd(name) { if (cur && cur[name]) cur[name](); }
+    // Auto-play (the walkthrough's switch) plays the captions at the timed pace. It belongs to the item it was
+    // switched on for: that item's demo, Watch again and the walkthrough after its answer; the next item starts
+    // with taps again (first-session fresh test: switched on in a worked example, it went on playing the
+    // explanations after wrong answers in training). Never saved.
+    var autoTok = null;
+    function autoplay() { return autoTok !== null && autoTok === P.token; }
+    function setAutoplay(on) { autoTok = on ? P.token : null; }
     function play(steps, opts) {
       opts = opts || {};
       if (cur) cur.close();
@@ -264,8 +285,8 @@
         // A group ends with a wait for Next (or a tap on the figure), unless it moves (a step with
         // motion: true, or one that animates in a view that moves on its own: Reckon, Homing,
         // Track) and the group after it moves too: during motion the captions keep the timed pace,
-        // and the motion ends with a Next. Auto-play (rec.ui.autoplay) brings back the timed pace
-        // everywhere. Show-me after an answer keeps its pace; fast mode never waits.
+        // and the motion ends with a Next. Auto-play (autoplay() below: the item's own choice) brings
+        // back the timed pace everywhere. Fast mode never waits.
         var demo = !!P.demoing && !FAST;
         // a show-me after an answer has the reading strip's Next in its bar too (same place as the strip's)
         var answered = !P.demoing && !!P.last && (prev === 'reveal' || prev === 'showme');
@@ -564,7 +585,7 @@
     el.pNext = ui.button('Next', { kind: 'primary', small: true, key: 'Enter', onClick: function () { runner.cmd('next'); } });
     el.pNext.setAttribute('data-showme-next', '');
     el.pNext.hidden = true;
-    el.pAuto = ui.button('Auto-play', { kind: 'ghost', small: true, ariaLabel: 'Auto-play: the captions go on by themselves', onClick: function () { runner.cmd('auto'); } });
+    el.pAuto = ui.button('Auto-play', { kind: 'ghost', small: true, ariaLabel: 'Auto-play: this walkthrough’s captions go on by themselves', onClick: function () { runner.cmd('auto'); } });
     el.pAuto.setAttribute('data-showme-auto', '');
     el.pAuto.setAttribute('aria-pressed', 'false');
     el.pAuto.hidden = true;
@@ -642,7 +663,9 @@
       return {
         host: el.host, stage3d: S3, svg: PX.core.svg, ui: PX.ui, keys: keys, timing: timing,
         theme: dark() ? 'dark' : 'light', fast: FAST, reducedMotion: rm, play: runner,
-        settings: { reducedMotion: rm ? 'on' : 'off', keyHints: rec().settings.keyHints !== false },
+        // keyHints: the setting, and only with a keyboard (PX.core.keys.present(): a mouse-like pointer or a key
+        // pressed); read when a view asks, so a key pressed on a tablet shows them from then on
+        settings: Object.defineProperty({ reducedMotion: rm ? 'on' : 'off' }, 'keyHints', { enumerable: true, get: keyHintsOn }),
         voidTrial: function (reason) { voidNow(reason || 'void'); },
         seen: seenMap(), markSeen: markSeen,
         // v1.2 (CONTRACT-v1.2 D, F): the Try item's first step done by the app; motion the view has
@@ -2844,8 +2867,14 @@
       // A first level (no rated answers before this session) has nothing to compare with.
       // (Speed's level is its own timed rating, kept in rec.timed.)
       var host = timed === true ? rec().timed : rec().ex, st = host && host[r.exId], first = !isObj(st) || !isNum(st.n) || st.n + (isObj(st.small) && isNum(st.small.n) ? st.small.n : 0) <= r.n;
+      var blk = isObj(lv.block) ? lv.block : null;
       if (first) lv = { before: null, after: lv.after, lo: lv.lo, hi: lv.hi, settings: lv.settings };
       var moved = lv.before !== null && lv.before !== undefined && lv.before !== lv.after;
+      // v1.2 (first-session fresh test: "Level 25" beside a block note and a grade at level 13): when answers after
+      // the last block of 10 moved the level, say so, so the note, this level and the grade read as one story
+      var since = blk && isNum(blk.since) && blk.since > 0 && isNum(blk.level) && blk.level !== lv.after && timed !== true
+        ? h('p.px-meta.pl-res-since', { 'data-block': String(blk.level) }, 'Your ' + (blk.n > 1 ? 'last ' : '') + 'block of 10 ended at level ' + blk.level + '; ' +
+          (blk.since === 1 ? 'the answer after it' : 'the ' + blk.since + ' answers after it') + ' moved your level to ' + lv.after + '.') : null;
       var bar = ui.bar(lv.after, 100, { band: [lv.lo, lv.hi], label: (def.short || def.name) + ' level', kind: 'signal' });
       bar.setAttribute('aria-valuetext', levelText(lv.after) + ', likely between ' + lv.lo + ' and ' + lv.hi);
       if (moved && Array.isArray(sweeps)) sweeps.push([bar, lv.before, lv.after]);
@@ -2853,6 +2882,7 @@
         h('p.pl-res-lv', h('span.pl-res-lvk', timed === true ? 'Speed level' : 'Level'), h('b.px-num', moved ? lv.before + ' → ' + lv.after : String(lv.after)),
           lv.after <= 1 ? h('span.pl-res-starter', ' · starter items') : null, h('span.px-num.pl-res-range', 'likely ' + lv.lo + '–' + lv.hi)),
         h('div.pl-res-bar', bar),
+        since,
         h('p.px-meta', lv.before === null || lv.before === undefined ? 'A first level: it narrows as you practise.' :
           r.clear ? 'A clear change: larger than the usual ±' + r.noise + ' between sessions.' : 'Within the usual session-to-session noise (±' + r.noise + ').'),
         lv.settings ? h('p.px-meta', 'Typical at this level: ' + settingsText(def, lv.settings) + '.') : null));
@@ -3329,18 +3359,38 @@
      ===================================================================================== */
 
   var planCache = { key: null, val: null };
+  // Less than this many minutes left of the day's session length: the day's plan is met (no session that short)
+  var TODAY_LEFT_MIN = 3;
+  // The active time of today's sessions (the local day, by start), checks left out: as the weekly goal counts it
+  function todayPracticeMs(r, t) {
+    var day = U.dayKey(t), ms = 0;
+    (Array.isArray(r.sessions) ? r.sessions : []).forEach(function (s) {
+      if (isObj(s) && s.mode !== 'check' && isNum(s.start) && isNum(s.practiceMs) && s.practiceMs > 0 && U.dayKey(s.start) === day) ms += s.practiceMs;
+    });
+    return ms;
+  }
   function styleName(s) { s = String(s || 'balanced'); return s.charAt(0).toUpperCase() + s.slice(1); }
   function homePlan(r, t) {
     r = r || rec();
     t = isNum(t) ? t : now();
+    var doneMs = todayPracticeMs(r, t);
     var key = [r.rev, (r.trials || []).length, (r.sessions || []).length, U.dayKey(t), r.settings.sessionMin, Math.floor(t / 3600000), Object.keys(r.tour && r.tour.seen || {}).length,
-      r.settings.patFocus === true, JSON.stringify(r.settings.testPause || null)].join(':');
+      r.settings.patFocus === true, JSON.stringify(r.settings.testPause || null), Math.round(doneMs / 1000)].join(':');
     if (planCache.key === key) return planCache.val;
     var val = null;
     try {
-      var copy = U.deepCopy(r), plan = E().modes.start(copy, 'train', { now: t, display: display(), can: canCheap });
+      // v1.2 (first-session fresh test: a session ended early, and Today offered a fresh 20 minutes of three new
+      // exercises): the day's plan is the session length; what was practised today comes off it, so Today plans
+      // what is left (fewer exercises for a short rest: about 5 minutes each), and says when the day is done
+      var full = r.settings.sessionMin || 20, left = full - doneMs / 60000;
+      var dayDone = doneMs >= 60000 && left < TODAY_LEFT_MIN, part = doneMs >= 60000 && !dayDone;
+      var minutes = part ? Math.max(TODAY_LEFT_MIN, Math.round(left)) : full;
+      var count = part && minutes < full ? Math.max(1, Math.min(E().config.session.exercises, Math.floor(minutes / 5))) : null;
+      var o = { now: t, display: display(), can: canCheap };
+      if (part) { o.minutes = minutes; if (count) o.count = count; }
+      var copy = U.deepCopy(r), plan = E().modes.start(copy, 'train', o);
       if (!plan.unavailable && plan.exs && plan.exs.length) {
-        var minutes = r.settings.sessionMin || 20, inv = {}, pins = copy.train && Array.isArray(copy.train.pins) ? copy.train.pins : [];
+        var inv = {}, pins = copy.train && Array.isArray(copy.train.pins) ? copy.train.pins : [];
         Object.keys(plan.roles || {}).forEach(function (role) { inv[plan.roles[role]] = role; });
         var blocks = plan.exs.map(function (id) {
           var def = PX.ex.get(id), role = inv[id] || 'extra', tt = E().schedule.totals(copy, def), why;
@@ -3356,7 +3406,11 @@
         });
         var used = blocks.reduce(function (a, b) { return a + b.min; }, 0);
         blocks[0].min = Math.max(1, blocks[0].min + minutes - used);
-        val = { minutes: minutes, mode: 'Train', style: styleName(plan.style), blocks: blocks, patFocus: E().schedule.patFocus(r) };
+        // today: { doneMs, full, part (the plan is the rest of the day's), done (the day's plan is met) }; route:
+        // what Start opens (the rest keeps its minutes and its number of exercises)
+        val = { minutes: minutes, mode: 'Train', style: styleName(plan.style), blocks: blocks, patFocus: E().schedule.patFocus(r),
+          today: { doneMs: doneMs, full: full, part: part, done: dayDone },
+          route: part ? 'play?mode=train&minutes=' + minutes + (count ? '&count=' + count : '') : 'play?mode=train' };
       }
     } catch (e) { log('Today’s plan failed', e); val = null; }
     planCache = { key: key, val: val };
@@ -3445,7 +3499,8 @@
       var S = session.S;
       return S ? { mode: S.mode, answered: S.answered, done: S.done, voidRun: S.voidRun, res: S.res, planDone: !!(S.plan && S.plan.done),
         activeMs: S.clock ? S.clock.activeMs() : null, clock: S.clock ? S.clock.reasons() : null, running: S.clock ? S.clock.running() : false,
-        budgetMs: S.plan ? S.plan.budgetMs : null, lastServed: !!(S.plan && S.plan.lastServed), hud: session.P ? session.P.el.meta.textContent : null } : null;
+        budgetMs: S.plan ? S.plan.budgetMs : null, exs: S.plan && Array.isArray(S.plan.exs) ? S.plan.exs.slice() : null,
+        lastServed: !!(S.plan && S.plan.lastServed), hud: session.P ? session.P.el.meta.textContent : null } : null;
     },
     get sound() { return { ready: sound.ready(), played: sound.played }; },
     answer: function (c) { return current ? current.answer(c) : Promise.reject(new Error('no player')); },
