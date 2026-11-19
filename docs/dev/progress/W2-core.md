@@ -44,6 +44,15 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
   cubematch with W2-measure's timer at 360 × 640).
 - Open: none of the requests to W2-core; Form's worked-example numbering is with W1-band-B.
 
+## 2026-11-19 10:41 UTC: the first session (option A) and wave 3's shared support
+- First run (72990c2, DECISIONS 1da97e3): the tutorial is Spin alone; its end screen offers Baseline 1 (time from
+  W2-measure's minutesOf) with Later, and both open Train with Spin (route param `baseline`; the hook ctx's new `params`;
+  js/ui/measure.js's two B1 hooks read it, noted in requests.md). Guard: play.py `run_firstrun` at 390 × 844 (both
+  answers, every hook on); flows.py tour 12/0; shell.py 274/0. Screenshots out/play/firstrun_*.png looked at.
+- Wave 3 (e8b622b; CONTRACT-v1.2 W1–W4): lettered options, the test look's tokens, test-range tags with Free play's
+  "test range only" and rec.ex[id].tag, figure sets for Painted Cubes (W3-bandA's request). wave3.test.mjs 61/0;
+  play.py run_wave3; flows.py and play.py follow W2-measure's new probe cards.
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with
