@@ -74,6 +74,9 @@ function words(t) {
     t.ok(Object.prototype.hasOwnProperty.call(B.GRADES, x.grade), id + ': its grade (' + x.grade + ') is defined');
     for (const k of ['label', 'line', 'mechanism', 'evidence']) t.ok(!FORBIDDEN.test(x[k]), id + '.' + k + ' makes no promise and names no IQ or mastery');
   }
+  // a line that reaches past the trained task says so as a bet (RV-wave2 finding 9): "we bet" or "may"
+  const past = B.IDS.filter((id) => /other tasks|elsewhere|new problems|where it applies|away from the game/i.test(B.INFO[id].line));
+  t.ok(past.length >= 5 && past.every((id) => /\bwe bet\b|\bmay\b/i.test(B.INFO[id].line)), 'lines about other tasks are worded as bets (' + past.join(', ') + ')');
   t.ok(B.INFO.calibrate.isNew === true && B.INFO.calibrate.grade === 'D', 'calibrate is the new, untested bet (grade D)');
   t.eq(B.IDS.filter((id) => B.INFO[id].isNew), ['calibrate'], 'exactly one bet is marked new');
 }
