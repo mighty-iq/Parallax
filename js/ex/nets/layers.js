@@ -56,22 +56,22 @@
   // Statements about an 'opposite' item (the rounds take that variant only): the claim, wrong rules no
   // item makes true, and facts that some nets make true. Their words overlap the tips as the claim's do.
   var STATEMENTS = [
-    { id: 'z-ends', text: 'The marked square and its opposite end a Z shape of four squares.', test: zEnds },
-    { id: 'touch-opposite', text: 'A square that touches the marked square in the net ends up opposite it.', test: never },
-    { id: 'farthest', text: 'The square farthest from the marked one in the flat net is the opposite one.', test: function (it) {
+    { id: 'z-ends', text: 'The shaded square and its opposite end a Z shape of four squares.', test: zEnds },
+    { id: 'touch-opposite', text: 'A square that touches the shaded square in the net ends up opposite it.', test: never },
+    { id: 'farthest', text: 'The square farthest from the shaded one in the flat net is the opposite one.', test: function (it) {
       if (it.variant !== 'opposite') return false;
       var m = it.squares[it.marked], best = -1, who = [];
       it.options.forEach(function (o) { var q = it.squares[o.sq], d = Math.abs(q.x - m.x) + Math.abs(q.y - m.y); if (d > best) { best = d; who = [o.sq]; } else if (d === best) who.push(o.sq); });
       return who.length === 1 && who[0] === opposite(it);
     } },
-    { id: 'in-line', text: 'The marked square and its opposite lie in one straight row or column of the net.', test: function (it) { return it.variant === 'opposite' && sameRow(it, it.marked, opposite(it)); } },
-    { id: 'shared-touch', text: 'The marked square and its opposite both touch one same square in the net.', test: function (it) {
+    { id: 'in-line', text: 'The shaded square and its opposite lie in one straight row or column of the net.', test: function (it) { return it.variant === 'opposite' && sameRow(it, it.marked, opposite(it)); } },
+    { id: 'shared-touch', text: 'The shaded square and its opposite both touch one same square in the net.', test: function (it) {
       if (it.variant !== 'opposite') return false;
       var a = it.squares[it.marked], d = it.squares[opposite(it)];
       return it.squares.some(function (q) { return adjacent(q, a) && adjacent(q, d); });
     } },
-    { id: 'same-colour', text: 'The marked square and its opposite have the same colour.', test: function (it) { return it.variant === 'opposite' && it.squares[it.marked].colour === it.squares[opposite(it)].colour; } },
-    { id: 'corner-touch', text: 'The marked square and its opposite touch at a corner.', test: function (it) {
+    { id: 'same-colour', text: 'The shaded square and its opposite have the same colour.', test: function (it) { return it.variant === 'opposite' && it.squares[it.marked].colour === it.squares[opposite(it)].colour; } },
+    { id: 'corner-touch', text: 'The shaded square and its opposite touch at a corner.', test: function (it) {
       if (it.variant !== 'opposite') return false;
       var a = it.squares[it.marked], d = it.squares[opposite(it)];
       return Math.abs(a.x - d.x) === 1 && Math.abs(a.y - d.y) === 1;

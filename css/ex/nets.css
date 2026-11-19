@@ -53,10 +53,11 @@
 .ex-nets .ex-nets-cut { fill: none; stroke: var(--stim-edge, #22262A); stroke-width: 0.05; stroke-linecap: square; }
 .ex-nets .ex-nets-hatch { stroke: var(--nets-hatch); stroke-width: 0.035; }
 .ex-nets .ex-nets-base { pointer-events: none; }
-.ex-nets .ex-nets-marked { fill: none; stroke: var(--nets-mark); stroke-width: 0.09; stroke-linejoin: round; }
 .ex-nets .ex-nets-edge { stroke: var(--nets-mark); stroke-width: 0.12; stroke-linecap: round; }
-.ex-nets .ex-nets-marks.is-pointed .ex-nets-marked { stroke-width: 0.14; }
 .ex-nets .ex-nets-marks.is-pointed .ex-nets-edge { stroke-width: 0.17; }
+/* v1.2 (W3-exfix): the shaded square (both variants) gets a frame only while the Watch points at it */
+.ex-nets .ex-nets-baseframe { fill: none; stroke: var(--nets-mark); stroke-width: 0.09; stroke-linejoin: round; visibility: hidden; }
+.ex-nets .ex-nets-marks.is-base .ex-nets-baseframe { visibility: visible; }
 /* Squares of a non-net that cannot all get a side of their own: dashed frames. */
 .ex-nets .ex-nets-clash { fill: none; stroke: var(--wrong, #B33A2F); stroke-width: 0.07; stroke-dasharray: 0.12 0.08; }
 

@@ -9,14 +9,15 @@
   PX.ex.learn('nets', {
     goal: 'Fold the net into a cube in your mind and answer the question about it.',
     goals: {
-      opposite: 'Fold the net into a cube in your mind. Which face ends up opposite the marked face?',
+      opposite: 'Fold the net into a cube in your mind. Which face ends up opposite the shaded square?',
       edges: 'Fold the net into a cube in your mind. Do the two thick edges meet?',
       cube: 'Does this net fold into a closed cube, with every square on a side of its own?',
     },
     parts: [
       { id: 'net', label: 'Net', text: 'Six squares joined at their edges. Dashed lines are folds: the paper bends there.' },
-      { id: 'marked', label: 'Marked face', variant: 'opposite', text: 'The square with the thick frame stays on the table while the others fold up around it.' },
-      { id: 'base', label: 'Shaded square', variant: 'edges', text: 'The shaded square stays on the table while the others fold up around it.' },
+      // v1.2 (W3-exfix, fresh-player test g1): one name and one look for the square that stays down. 'opposite'
+      // drew it with a thick frame and called it the marked face, 'edges' shaded it: How to play listed both.
+      { id: 'base', label: 'Shaded square', text: 'In opposite-face and meeting-edges items one square is shaded: it stays on the table while the others fold up around it.' },
       { id: 'edges', label: 'Thick edges', variant: 'edges', text: 'Two edges drawn thick. They meet when they become the same edge of the cube.' },
       { id: 'options', label: 'Answers', text: 'Four faces to choose from, or Yes and No.' },
       { id: 'answer', label: 'Answer', text: 'Pick with the number keys (1 = Yes, 2 = No), or tap.' },
@@ -35,12 +36,12 @@
       { variant: 'edges', carried: 1, shape: 1, between: 0 },
     ],
     tips: [
-      { id: 'opposite', when: { variant: 'opposite' }, text: 'A square that touches the marked square in the net is never opposite it. Fold the others step by step.' },
+      { id: 'opposite', when: { variant: 'opposite' }, text: 'A square that touches the shaded square in the net is never opposite it. Fold the others step by step.' },
       { id: 'edges', when: { variant: 'edges' }, text: 'Keep the shaded square still and fold the others up one at a time; watch where each thick edge goes.' },
       { id: 'cube', when: { variant: 'cube' }, text: 'A net folds into a cube only when every square gets a side of its own: look for two squares that land on the same side.' },
       { id: 'carried', when: { dim: 'carried', levels: [2, 3, 4] }, text: 'Many squares move together here. Fold one hinge at a time and carry the attached squares along.' },
       { id: 'stairs', when: { dim: 'shape', levels: [2] }, text: 'Staircase nets have no long row, so the row rules do not help: fold one step at a time.' },
-      { id: 'between', when: { dim: 'between', levels: [1] }, text: 'The square farthest from the marked one is not always opposite it. Fold to check.' },
+      { id: 'between', when: { dim: 'between', levels: [1] }, text: 'The square farthest from the shaded one is not always opposite it. Fold to check.' },
     ],
     // Shepard & Feng 1972: the time to decide whether two marked edges meet rises with the
     // number of squares carried during folding, so solvers fold mentally step by step. Burte et al.
@@ -51,7 +52,7 @@
         id: 'imagery', title: 'Fold it in your mind',
         text: 'Keep one square flat on the table and fold the others up around it, one hinge at a time, carrying the squares attached to each one.',
         steps: [
-          'Start from the square that stays down (the marked or shaded one).',
+          'Start from the square that stays down: the shaded one, or any square of a net without one.',
           'Fold its neighbours up one at a time; the squares attached to them come along.',
           'Check where the face or the edges you need end up.',
         ],
@@ -80,14 +81,13 @@
     ],
     captions: {
       net: 'The net: six squares joined at folds (the dashed lines).',
-      marked: 'The marked square stays on the table.',
       base: 'The shaded square stays on the table.',
       edges: 'Two thick edges: do they meet once the net is folded?',
       options: 'Four faces to choose from.',
       question: 'Does it fold into a closed cube?',
       tilt: 'Tilt the view to watch the folds.',
       fold: 'Fold up the next squares ({n} of {m}).',
-      opposite: 'Face {n} ends up on top, opposite the marked face.',
+      opposite: 'Face {n} ends up on top, opposite the shaded square.',
       meet: 'The two thick edges come together: they meet.',
       apart: 'The two thick edges end up on different edges of the cube: they do not meet.',
       closes: 'All six squares close the cube, so it is a net.',

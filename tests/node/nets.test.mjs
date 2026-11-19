@@ -248,8 +248,13 @@ function testLearn(t, PX, def) {
   t.ok(def.variants.every((v) => L.tips.some((x) => (x.when || {}).variant === v)), 'a tip for every variant');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['net', 'marked', 'base', 'edges', 'options', 'question', 'tilt', 'fold', 'opposite', 'meet', 'apart', 'closes', 'overlap', 'block'];
+  const caps = ['net', 'base', 'edges', 'options', 'question', 'tilt', 'fold', 'opposite', 'meet', 'apart', 'closes', 'overlap', 'block'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
+  // v1.2 (W3-exfix, fresh-player test g1): one name for the square that stays down, the same in the parts, the
+  // goals, the tips and the captions ("Marked face" and "Shaded square" were listed side by side in How to play)
+  const words = JSON.stringify([L.parts, L.goals, L.tips, L.captions, L.strategies]);
+  t.ok(!/marked (face|square|one)|thick frame/i.test(words) && (L.parts || []).filter((p) => /square that stays|stays on the table/.test(p.text)).length === 1 && /shaded square/.test(L.goals.opposite),
+    'one name for the square that stays down: "shaded square" (one part; no "marked face" or "thick frame" left)');
   t.ok(typeof L.bridge === 'string' && /not been shown/.test(L.bridge), 'a "where it is used" card with its limitation line');
   const o = L.offscreen || {};
   t.ok(o.title && o.text && Array.isArray(o.steps) && o.steps.length >= 3, 'an off-screen challenge: cut out and fold a net');
