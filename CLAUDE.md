@@ -34,7 +34,7 @@ Read before changing anything: docs/dev/ARCHITECTURE.md (contracts), docs/dev/EX
 16. **Two-minute start and modes**: a newcomer gets every exercise right within two minutes, checked by a fresh agent who knows nothing but the app (times in the VERIFY file); every mode says in the app when it is the right one, and Today suggests one from the log at a time.
 
 ## Working on the code
-- `npm install` once (three.js and esbuild, pinned), then `npm test` (= `node tests/node/run.mjs`; filter with names, e.g. `node tests/node/run.mjs rotate engine chimera`).
+- `npm install` once (three.js and esbuild, pinned), then `npm test` (= `node tests/node/run.mjs`; filter with names, e.g. `node tests/node/run.mjs rotate engine chimera`). `node tests/node/run.mjs --shard k/n` runs one of n balanced shards (the files dealt heaviest first); CI runs four side by side.
 - Browser tests are Python Playwright: `tests/e2e/pwslot.sh python3 tests/e2e/<file>.py` (pwslot allows two browsers at a time); `tests/run_all.sh` runs everything. The dev harness `tests/dev/harness.html?ex=<id>&seed=<n>&p=<dim:level,…>&v=<variant>` mounts one exercise.
 - New script or stylesheet: add it to index.html (PENDING blocks + `python3 tools/sync-index.py`).
 - `node tools/build-single.mjs` writes dist/Parallax.html (everything inlined); `python3 tools/shots.py` and `python3 tools/build-pdf.py` rebuild the guide's figures and PDF; `node tools/vendor-three.mjs` rebuilds the three.js subset.
