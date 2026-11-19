@@ -47,6 +47,6 @@ html[data-hx-state="paused"] .ex-cubematch .pr-timer-fill,
 
 /* Phones held sideways: the reference on the left as tall as the screen allows, the four drawings beside it. */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-cubematch .cm-svg { max-height: calc(var(--pl-avail) - 3.5rem); }
+  .pl-trial.ex-cubematch .cm-svg { max-height: calc(var(--pl-avail) - 3.9rem); } /* room for the measurement's labelled time bar */
   .pl-trial.ex-cubematch .cm-opt { max-height: calc((var(--pl-avail) - 3rem) / 2 - 1rem); }
 }

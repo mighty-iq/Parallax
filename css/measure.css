@@ -45,3 +45,22 @@
 .px-ms-more { margin-top: var(--s2); }
 .px-ms-more > summary { cursor: pointer; color: var(--ink-2); padding: 0.7rem 0; text-decoration: underline; text-underline-offset: 0.2em; }
 .px-ms-more > p { margin: var(--s2) 0 0; }
+
+/* A probe's time bar in a measurement reads as time (fresh-player run, item 7: it looked like a divider): a label on
+   its left and a thicker track, its darker fill shrinking to the left as the item's time runs out. */
+.pl-measuring .pl-trial .pr-timer {
+  position: relative; height: 1rem; overflow: hidden; border-radius: 0;
+  padding-left: 4.75rem; box-sizing: border-box;
+  background: linear-gradient(var(--surface-3, #DDE1DE), var(--surface-3, #DDE1DE)) no-repeat content-box center / 100% 6px;
+}
+.pl-measuring .pl-trial .pr-timer::before {
+  content: "Time left"; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  font-size: 0.8125rem; line-height: 1; color: var(--ink-2, #454B52); white-space: nowrap;
+}
+.pl-measuring .pl-trial .pr-timer-fill { height: 6px; margin-top: calc((1rem - 6px) / 2); border-radius: 3px; background: var(--ink-2, #454B52); }
+/* phones on their side: the same bar in less height, so the item still fits the screen */
+@media (max-height: 500px) {
+  .pl-measuring .pl-trial .pr-timer { height: 13px; margin-top: 0.25rem; padding-left: 4.25rem; background-size: 100% 5px; }
+  .pl-measuring .pl-trial .pr-timer::before { font-size: 0.75rem; }
+  .pl-measuring .pl-trial .pr-timer-fill { height: 5px; margin-top: 4px; }
+}

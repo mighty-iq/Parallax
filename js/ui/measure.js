@@ -105,6 +105,8 @@
     try { plan = E().modes.start(rec(), 'check', { now: now(), display: displayOf(), can: canRun, kind: kind, optional: !!o.optional }); } catch (e) { log('start failed', e); plan = { unavailable: 'The measurement could not start.' }; }
     if (plan.unavailable) return Promise.resolve({ res: null, unavailable: plan.unavailable });
     S.plan = plan;
+    // while it runs, a probe's time bar is drawn to read as time (css/measure.css; fresh-player run, item 7)
+    if (P && P.el && P.el.root) P.el.root.classList.add('pl-measuring');
     if (o.extra) { if (!plan.check.extra || typeof plan.check.extra !== 'object') plan.check.extra = {}; Object.keys(o.extra).forEach(function (k) { plan.check.extra[k] = o.extra[k]; }); }
     var block = !!plan.check.block, probes = plan.check.probes.map(function (x) { return x.id; });
     var device = { display: displayOf(), viewport: Math.round(win.innerWidth || 0) + 'x' + Math.round(win.innerHeight || 0) };
@@ -239,6 +241,7 @@
     return new Promise(function (resolve) {
       resolveRun = resolve;
       function close(out) {
+        if (P && P.el && P.el.root) P.el.root.classList.remove('pl-measuring');
         restore();
         if (o.clock) o.clock.resume('measure');
         resolveRun(out);
