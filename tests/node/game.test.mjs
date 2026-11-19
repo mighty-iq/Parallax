@@ -430,6 +430,63 @@ function testContainer(t) {
   t.eq(G.merge(odd, JSON.parse(JSON.stringify(odd)), { newer: 'mine' }).firsts.length, odd.firsts.length, 'a merge with itself keeps one copy of each first, a first of another shape included');
 }
 
+// Review RV-code-1.2 M1: a two-tab merge drops `seeded` so the merged rows are read again; reading them again must
+// rebuild the counts, never add the rows on top of them (before: Fold 193 → 386 answers, firsts 2 → 9).
+function atlasTotals(rec) {
+  const out = {};
+  Object.keys(rec.game.atlas).forEach((id) => { let n = 0, r = 0, h = 0; Object.values(rec.game.atlas[id].c).forEach((x) => { n += x[0]; r += x[1]; h += x[3]; }); out[id] = [n, r, h]; });
+  return out;
+}
+function firstKeys(rec) { return rec.game.firsts.filter((f) => f.ex).map((f) => f.ex + ':' + f.cell).sort(); }
+function replaceIn(rec, next) { Object.keys(rec).forEach((k) => delete rec[k]); Object.assign(rec, next); } // the store replaces its state in place
+function testMergeAtlas(t) {
+  t.section('the Atlas after a two-tab merge (review RV-code-1.2 M1)');
+  const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 11);
+  for (let d = 0; d < 3; d++) playSession(PX, rec, L, 'train', { now: T0 + d * DAY, pin: 'fold', exId: 'fold', count: 1, minutes: 8 }, d);
+  let rows = 0;
+  E.log.scan(rec, (r, id, mode) => { if (id === 'fold' && G._.atlasMode(mode) && (r[5] === 0 || r[5] === 1)) rows++; });
+  const before = atlasTotals(rec), firsts0 = firstKeys(rec), sum0 = JSON.stringify(G.summary(rec)), fold = PX.ex.get('fold'), at0 = G.atlas(rec, fold);
+  t.ok(before.fold && before.fold[0] === rows, 'the Atlas counts each Fold answer once (' + before.fold[0] + ' of ' + rows + ' rows)');
+  const copy = (x) => JSON.parse(JSON.stringify(x));
+  const merged = E.merge(copy(rec), copy(rec));
+  t.ok(merged.game.seeded === undefined, 'a merge leaves the rows to be read again');
+  E.modes.start(merged, 'train', { now: T0 + 4 * DAY, pin: 'fold', exId: 'fold', count: 1, minutes: 1 });
+  t.eq(atlasTotals(merged), before, 'read again at the next start, every cell keeps its counts and handled mark');
+  t.eq(firstKeys(merged), firsts0, 'no first appears without a new answer');
+  t.eq(JSON.stringify(G.summary(merged)), sum0, 'the pooled export\'s gameSummary is unchanged');
+  const at1 = G.atlas(merged, fold);
+  t.eq([at1.handled, at1.tried, at1.total], [at0.handled, at0.tried, at0.total], 'the Atlas sheet and its card say the same');
+  t.eq(atlasTotals(E.merge(copy(merged), copy(merged))), before, 'a second merge changes nothing either');
+  // short records, where doubled counts made cells handled with no new answer (the reviewer's second script)
+  const grew = [];
+  for (let seed = 1; seed <= 20; seed++) {
+    const r = newRecord(PX, T0), Ls = new Learner(PX, seed);
+    playSession(PX, r, Ls, 'train', { now: T0, minutes: 4 }, 0);
+    const h0 = atlasTotals(r), f0 = firstKeys(r), m = E.merge(copy(r), copy(r));
+    E.modes.start(m, 'train', { now: T0 + DAY, minutes: 1 });
+    if (JSON.stringify(atlasTotals(m)) !== JSON.stringify(h0) || JSON.stringify(firstKeys(m)) !== JSON.stringify(f0)) grew.push(seed);
+  }
+  t.eq(grew, [], '20 short records merged with themselves keep their cells, handled marks and firsts');
+  // a merge in the middle of a session: the finish hook reads the rows again, this session's included, and names as
+  // this session's firsts the ones its answers made, as a session with no merge does
+  const a = copy(rec), b = copy(rec), now = T0 + 5 * DAY, answer = (s) => ({ correct: (s.seed % 7) !== 0, rt: 1500 });
+  const pa = E.modes.start(a, 'train', { now, minutes: 6 }), pb = E.modes.start(b, 'train', { now, minutes: 6 });
+  let g = 0, ra = null, rb = null;
+  for (; g < 80; g++) {
+    const sa = E.modes.next(pa, a, now + g * 4000), sb = E.modes.next(pb, b, now + g * 4000);
+    if (sa.done || sb.done) break;
+    E.modes.answer(pa, a, sa, answer(sa), now + g * 4000 + 2000);
+    E.modes.answer(pb, b, sb, answer(sb), now + g * 4000 + 2000);
+    if (g === 12) replaceIn(b, E.merge(copy(b), copy(b)));
+  }
+  ra = E.modes.finish(pa, a, now + g * 4000 + 9000);
+  rb = E.modes.finish(pb, b, now + g * 4000 + 9000);
+  t.ok(g > 20, 'both sessions ran (' + g + ' items)');
+  t.eq(atlasTotals(b), atlasTotals(a), 'after a merge in the middle of a session, the Atlas ends where it ends without one');
+  t.eq(firstKeys(b), firstKeys(a), '… with the same firsts');
+  t.eq(rb.game.firsts.map((f) => f.ex + ':' + f.cell).sort(), ra.game.firsts.map((f) => f.ex + ':' + f.cell).sort(), '… and the summary announces the same firsts as this session\'s');
+}
+
 function testPooled(t) {
   t.section('the pooled export: a summary without days');
   const e = t.env({ now: T0 }), PX = e.PX, S = PX.core.store, E = PX.engine;
@@ -549,6 +606,7 @@ export async function run(t) {
   testDevices(t);
   testNotes(t);
   testContainer(t);
+  testMergeAtlas(t);
   testNoChains(t);
   testFirstWeek(t);
   testStimGuard(t);

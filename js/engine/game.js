@@ -228,16 +228,35 @@
   }
   function atlasMode(mode) { return cfg().atlasModes.indexOf(mode) >= 0; }
 
-  // A record that predates the game layer: its trial rows fill the Atlas once (firsts from them are marked
-  // old: never announced). Rows folded into day totals hold no settings and are lost to it.
+  // The trial rows read into the Atlas: once for a record that predates the game layer, and again after a two-tab
+  // merge (which drops `seeded` so both tabs' answers count). The rows are tallied into a fresh atlas that joins the
+  // stored one cell by cell: the larger counts, the highest guessing rate, handled on either side. So reading again
+  // never counts an answer twice, and the counts of rows the trial cap folded stay (review RV-code-1.2 M1: adding
+  // the rows onto merged counts doubled every cell). A cell the rows handle that the stored Atlas had not is a
+  // first, marked old (announced only when it falls in the session at hand, update() below). Rows folded into day
+  // totals hold no settings and are lost to it.
   function seedAtlas(rec, g) {
+    var fresh = { atlas: {}, firsts: [] }, newly = {};
     E.log.scan(rec, function (row, id, mode, ver) {
       if (!id || !atlasMode(mode) || (row[5] !== 0 && row[5] !== 1)) return;
       var def = defOf(id);
       if (!def || def.role !== 'train') return;
       var p = E.log.rowParams(def, row, ver);
-      if (p) tally(g, def, p, row[5] === 1, chanceOf(def, p), row[0] * 1000, true);
+      if (p) tally(fresh, def, p, row[5] === 1, chanceOf(def, p), row[0] * 1000, true);
     });
+    Object.keys(fresh.atlas).forEach(function (id) {
+      var def = defOf(id), s = fresh.atlas[id];
+      if (!def || !isObj(s) || s.v !== (def.version || 1)) return;
+      var a = slotOf(g, def);
+      Object.keys(s.c).forEach(function (k) {
+        var x = s.c[k], y = a.c[k], had = isArray(y) && y.length >= 4;
+        if (x[3] === 1 && !(had && y[3] === 1)) newly[id + ':' + k] = 1;
+        a.c[k] = had ? [Math.max(x[0], y[0]), Math.max(x[1], y[1]), Math.max(x[2], y[2]), x[3] === 1 || y[3] === 1 ? 1 : 0] : x.slice();
+      });
+    });
+    fresh.firsts.forEach(function (f) { if (newly[f.ex + ':' + f.cell]) g.firsts.push(f); });
+    var cap = cfg().firstsCap;
+    if (g.firsts.length > cap) g.firsts.splice(0, g.firsts.length - cap);
     g.seeded = 1;
   }
 
@@ -450,8 +469,9 @@
 
   // Two tabs: Reach's high mark the larger; cells per cell the larger counts and handled on either side;
   // firsts the union (the earlier of one cell); Climb runs per attempt the one further up; field notes from
-  // the newer side with both sides' done marks for the same week. The merged trial rows are the truth for
-  // the counts, so the next session re-reads them (seeded 0).
+  // the newer side with both sides' done marks for the same week. The merged trial rows hold both tabs' answers,
+  // so the next session reads them again (seeded dropped); seedAtlas joins what they count with the merged
+  // cells and never adds them on top (review RV-code-1.2 M1).
   function merge(theirs, mine, info) {
     var rep = E.record && E.record.repair ? E.record.repair('game') : function (x) { return x; };
     var a = rep(theirs), b = rep(mine);
