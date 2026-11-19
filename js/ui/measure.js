@@ -599,6 +599,21 @@
       })));
   }
 
+  // The schedule in words, from the config (RV-wave2 finding 15: no number typed beside the constant that sets it).
+  var WORDNUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  function scheduleText(r) {
+    var MX = E().config.measure, T = E().trend && E().trend.config ? E().trend.config.milestones : null, n = 0, m;
+    try { A().mix('block', r, null, canRun).forEach(function (x) { n += x.items; }); } catch (e) { n = 0; }
+    m = Math.round(n * MX.secPerItem / 30) / 2;
+    var weeks = function (d) { return d % 7 ? d + ' days' : (d / 7 === 1 ? 'week' : WORDNUM[d / 7] ? (d / 7) + ' weeks' : d + ' days'); };
+    var perWeek = WORDNUM[MX.blocksPerWeek] || String(MX.blocksPerWeek);
+    var days = T && Array.isArray(T.days) ? T.days : [];
+    var verdicts = days.length ? 'Verdicts come at day' + (days.length > 1 ? 's ' + days.slice(0, -1).join(', ') + ' and ' + days[days.length - 1] : ' ' + days[0]) +
+      (T.every ? ', then every ' + weeks(T.every) : '') + '.' : '';
+    return 'It starts with two starting points without feedback; then a short check' + (n ? ' of about ' + minutes(m) : '') + ' opens up to ' + perWeek +
+      ' sessions a week, and a full check comes every ' + weeks(MX.everyDays) + '. ' + verdicts;
+  }
+
   function progressPanel(r, t) {
     var K = PX.ui.kit, rep = A().report(r, t), st = status(r, t);
     var occ = A().occasions(r).length;
@@ -608,7 +623,7 @@
     var b = p.body;
     b.setAttribute('data-status', rep.status);
     if (rep.status === 'none') {
-      b.appendChild(h('p.px-prog-empty', 'The Spatial Check measures change on tasks you never practise, so it can show whether your training carries over. It starts with two starting points without feedback; then a short check of about 3.5 minutes opens up to four sessions a week, and a full check comes every 4 weeks. Verdicts come at days 14 and 28, then every 4 weeks.'));
+      b.appendChild(h('p.px-prog-empty', 'The Spatial Check measures change on tasks you never practise, so it can show whether your training carries over. ' + scheduleText(r)));
     } else if (rep.status !== 'trend') {
       b.appendChild(h('p', rep.lines[0] || ''));
     } else {
@@ -700,44 +715,32 @@
     return { el: p.el, after: 'ladder' };
   }, { id: 'measure.curves', order: 41 });
 
-  // Balance (a Lab check of the calibrate bet; note T1 §5.2): its rows, and its Lab section with a Start button and
-  // the runs so far. The pull: balance point 1 = far dots at full weight (the right answer), lower = far dots count
-  // for less; bus stop 0 = the middle house (the right answer), 1 = the mean of the houses.
-  function balanceRows(b) {
-    function row(label, x, pullText) {
-      if (!x || !x.n) return null;
-      return h('li', h('b', label), ': ' + x.right + ' of ' + x.n + ' within the mark' + (isNum(x.dist) ? ', ' + x.dist.toFixed(1) + ' units off on average' : '') +
-        (isNum(x.pull) ? '; ' + pullText(x.pull) : '') + '.');
-    }
-    return h('ul.pl-list.px-ms-balance', [
-      row('Balance point', b.centroid, function (t) { return 'the far dots counted at ' + Math.round(t * 100) + ' % of their weight'; }),
-      row('Bus stop', b.median, function (t) { return Math.round(t * 100) + ' % of the way from the middle house to the mean'; }),
-    ].filter(Boolean));
+  // Balance (a Lab check of the calibrate bet; note T1 §5.2) measures how a player weighs far points, so it must stay
+  // untrained: it shows no results and no right answers, before or after a run (RV-wave2 finding 1). The answers stay
+  // in rec.measure.balance and the community export; the player sees how many runs are kept and when.
+  function balanceMinutes() {
+    var L = E().config.measure.lab.balance;
+    return Math.round(L.items * E().config.measure.secPerItem / 30) / 2;
+  }
+  function balanceRuns(rec) {
+    var list = rec && rec.measure && Array.isArray(rec.measure.balance) ? rec.measure.balance : [];
+    return { n: list.length, last: list.length ? Date.parse(list[list.length - 1].date) : null };
   }
   PX.ui.hooks.on('lab:panels', function (ctx) {
     var K = PX.ui.kit, def = PX.ex.get('balance');
     if (!def || !(E().config.measure.lab || {}).balance) return null;
-    var list = [];
-    try { list = A().balanceReport(ctx.rec); } catch (e) { log('balance report failed', e); }
+    var runs = balanceRuns(ctx.rec);
     var p = K.panel({ title: 'Balance: a check of one bet', className: 'px-lab-section px-ms-balance-lab' });
     p.el.setAttribute('data-section', 'balance');
-    p.body.appendChild(h('p', 'Central Point practises the point of least total distance. This short check asks two related questions it never trains: the balance point of some dots, and the best spot for a bus stop on a street. The bet: the bus stop moves toward the middle house with practice while the balance point stays put; if the far dots started to count for less in the balance point, practice would be pulling the wrong way. About 3 minutes; run it now and again, for example every few weeks.'));
-    if (list.length) {
-      var last = list[0];
-      p.body.appendChild(h('p.px-meta', 'Latest run, ' + when(Date.parse(last.date)) + (list.length > 1 ? ' (' + list.length + ' runs kept)' : '') + ':'));
-      p.body.appendChild(balanceRows(last));
-      if (list.length > 1) {
-        var first = list[list.length - 1];
-        p.body.appendChild(h('p.px-meta', 'First run, ' + when(Date.parse(first.date)) + ':'));
-        p.body.appendChild(balanceRows(first));
-      }
-    } else p.body.appendChild(h('p.px-meta', 'No run yet.'));
-    var b = ui.button(list.length ? 'Run it again' : 'Start the Balance check', { kind: 'secondary', onClick: function () { PX.core.router.go('play', { mode: 'check', kind: 'balance' }); } });
+    p.body.appendChild(h('p', 'Central Point practises one kind of judgement about where points sit. This short check asks two related questions that no exercise trains, one about dots on a board and one about houses on a street, to test whether that practice changes how you judge them. About ' + minutes(balanceMinutes()) + '.'));
+    p.body.appendChild(h('p.px-meta', 'It shows no results, so that every run measures the same thing: your answers stay in your record and go into the community export, where pooled data test the bet. Run it now and again, for example every few weeks.'));
+    p.body.appendChild(h('p.px-meta', runs.n ? (runs.n === 1 ? 'One run kept' : runs.n + ' runs kept') + ', the latest ' + when(runs.last) + '.' : 'No run yet.'));
+    var b = ui.button(runs.n ? 'Run it again' : 'Start the Balance check', { kind: 'secondary', onClick: function () { PX.core.router.go('play', { mode: 'check', kind: 'balance' }); } });
     b.setAttribute('data-balance-start', '');
     p.body.appendChild(h('div.px-ms-actions', b));
     return { el: p.el, after: 'curves' };
   }, { id: 'measure.balance', order: 42 });
 
-  PX.ui.measure = { quiet: false, play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows, balanceRows: balanceRows,
+  PX.ui.measure = { quiet: false, play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows, balanceRuns: balanceRuns, balanceMinutes: balanceMinutes,
     _: { limitRange: limitRange, sessions: SESSIONS, askExpect: askExpect, askOverlap: askOverlap, offer: offer } };
 })(window.PX);
