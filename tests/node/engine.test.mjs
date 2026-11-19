@@ -1134,8 +1134,8 @@ function testStreak(t) {
 function testAchievements(t) {
   t.section('achievements');
   const PX = t.mk(), E = PX.engine, AC = E.achievements;
-  t.eq(AC.DEFS.length, 21, 'about 20 achievements (21 since v1.1: a full Section practice)');
-  t.eq(new Set(AC.DEFS.map((d) => d.id)).size, 21, 'unique ids');
+  t.eq(AC.DEFS.length, 22, 'about 20 achievements (21 since v1.1: a full Section practice; 22 since v1.2: Summit, the top of a weekly Climb, PLAN milestone 5)');
+  t.eq(new Set(AC.DEFS.map((d) => d.id)).size, 22, 'unique ids (22 with v1.2\'s Summit)');
   t.ok(!AC.DEFS.some((d) => ['first-session', 'answers-1000', 'daily-first', 'daily-seven'].includes(d.id)), 'nothing for showing up: no first-session, answer-count or Daily Challenge achievements');
   t.ok(AC.DEFS.every((d) => d.name && d.desc && typeof d.check === 'function' && (d.kind === 'skill' || d.kind === 'practice')), 'visible criteria and a check each');
   t.ok(!/master/i.test(JSON.stringify(AC.DEFS.map((d) => [d.name, d.desc]))), 'no achievement says "mastered"');
@@ -1145,7 +1145,7 @@ function testAchievements(t) {
   t.ok(Array.isArray(r.fin.achievements) && rec.sessions.length === 1, 'a finished session checks achievements');
   const old = newRecord(PX, T0);
   old.achievements['first-session'] = '2026-10-01T00:00:00.000Z';
-  t.ok(AC.get('first-session') === null && AC.list(old, T0).length === 21 && Array.isArray(AC.check(old, T0)), 'a record holding a removed id still works; the id is unknown to get()');
+  t.ok(AC.get('first-session') === null && AC.list(old, T0).length === AC.DEFS.length && Array.isArray(AC.check(old, T0)), 'a record holding a removed id still works; the id is unknown to get() (the list has every definition, 22 with v1.2\'s Summit)');
   const track =PX.ex.get('track'), ti = E.log.exIndex(rec, track), mi = E.log.modeIndex(rec, 'train');
   const code5 = PX.ex.paramsCode(track, { speed: 0, targets: 3, spheres: 2, time: 0, variant: 'still' });
   const code5of8 = PX.ex.paramsCode(track, { speed: 0, targets: 3, spheres: 1, time: 0, variant: 'still' });
@@ -1162,7 +1162,7 @@ function testAchievements(t) {
   t.ok(AC.check(rec, T0 + 6000).some((a) => a.id === 'both-strategies'), 'both strategies reported on one exercise');
   t.ok(!E.modes.checkin(rec, 'fold', 'guess', T0) && !E.modes.checkin(rec, 'nope', 'whole', T0), 'invalid check-ins are refused');
   const list = AC.list(rec, T0 + 7000);
-  t.ok(list.length === 21 && list.every((x) => Array.isArray(x.progress) && x.progress[0] <= x.progress[1]), 'list() shows progress for each');
+  t.ok(list.length === AC.DEFS.length && list.every((x) => Array.isArray(x.progress) && x.progress[0] <= x.progress[1]), 'list() shows progress for each (every definition, 22 with v1.2\'s Summit)');
   const plan = { mode: 'train', rated: { fold: { n: 10 } } };
   const rr = newRecord(PX, T0);
   t.ok(E.modes.checkinDue(rr, plan, 'fold', T0) && !E.modes.checkinDue(rr, { mode: 'free', rated: plan.rated }, 'fold', T0), 'strategy check-ins after the 10th answer in Train or Path');

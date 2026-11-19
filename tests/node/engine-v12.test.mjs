@@ -215,8 +215,12 @@ function variants(t, mk) {
   const p = play(PX, rec, 'path', { now: T0, exId: 'quickx', minutes: 10 });
   t.ok(p.steps.length > 5 && p.steps.every((x) => x.s.params.variant === 'quick'), 'Path deals Quick only');
   const daily = [];
+  // Daily v2 (PLAN milestone 5, W3-game) freezes each epoch's pool (config.daily2.epochs: an exercise added
+  // later never changes a date's items), so the fixture joins the Daily only through an epoch of its own
+  // that holds the live list of this context
+  E.config.daily2.epochs.push({ n: 99, from: PX.util.dayKey(T0), ramp: true, pool: E.daily.pool().map((d) => d.id) });
   for (let d = 0; d < 120; d++) E.daily.items(PX.util.dayKey(T0 + d * DAY)).forEach((it) => { if (it.exId === 'quickx') daily.push(it.params.variant); });
-  t.ok(daily.length > 0 && daily.every((v) => v === 'quick'), 'the Daily deals Quick only (' + daily.length + ' items)');
+  t.ok(daily.length > 0 && daily.every((v) => v === 'quick'), 'the Daily deals Quick only (' + daily.length + ' items, in a test epoch whose frozen pool holds the fixture)');
   const rr = newRecord(PX, T0 - DAY);
   rr.ex.quickx = { mu: 0, sd: 0.6, n: 50, nRight: 40, last: T0 - DAY, seen: {}, best: {}, hist: [], lru: { 'variant=quick': T0 - 3 * DAY } };
   const tr = play(PX, rr, 'train', { now: T0, pin: 'quickx', minutes: 20 });
