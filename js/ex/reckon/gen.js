@@ -10,17 +10,20 @@
    Homing (EX-11) is the landmark-aided stage before it. Ratings are kept per screen class (perDisplay).
 
    Right or wrong (R1 §6.2): point items are right when the angular error is at most the tolerance (40,
-   30, 20°); return items when the stop lies within a disk round the start whose radius is a share of
-   the home distance d (50, 35, 25 %), which never contains the end itself. The continuous errors go to
+   30, 20, 15°); return items when the stop lies within a disk round the start whose radius is a share of
+   the home distance d (50, 35, 25, 20 %), which never contains the end itself. The continuous errors go to
    score().detail and the view's feedback: angle error, distance ratio, position error and drift.
    value: point → the absolute angular error (°); return → the position error as a share of d.
    chance: point 2τ/360; return 2·asin(τ)/360 (an upper bound: a guesser who knew d exactly).
 
    Dims: route (Homing's 8 levels: legs × turn size), flow (textured blobs, sparse blobs, short-lived
    dots), speed (steady with ±10 % jitter; varied between legs, 0.5–2.0 m/s (each leg's time drawn first), turns 30–45°/s; varied
-   within legs: two speeds per leg at least 0.4 m/s apart), tolerance (as above); variants point and
-   return (+0.5 logit). Initial steps (hand-set, R1 §8.4; to be refitted from pooled exports): 0.55 per
-   extra leg, 0.4 per turn size, 0.35 per flow level, 0.3 per speed level, 0.9 per tolerance level.
+   within legs: two speeds per leg at least 0.4 m/s apart), tolerance (as above), legs (v1.2: 'the turns
+   tell a lot' or 'the legs decide', see below); variants point and return (+0.5 logit). Initial steps
+   (hand-set, R1 §8.4; to be refitted from pooled exports): 0.55 per extra leg (a placeholder: the refit
+   should model path length, total turning and the largest single rotation, N1 addendum A3), 0.4 per turn
+   size, 0.35 per flow level, 0.3 per speed level, 0.9 per tolerance level, 0.3 for the final turn on the
+   spot (every rated route, a constant shift), 0.4 where the legs decide (only in LEG_CELLS).
    extraParams.task: 'heading' (turn on the spot, then face the way you started) and 'distance' (walk,
    then walk the same distance again at another speed): tutorial items only, never chosen by the engine;
    v1.2: they move slower than rated items (TASK_RATE 30°/s, TASK_SPEED 1.2 m/s ± 10 %) and keep params.task.
@@ -31,19 +34,23 @@
    no turn had happened) and "mirror" (360° − key, sides swapped) miss by more than the tolerance + 2°
    (for return items the tolerance in angle is 2·asin(τ/2), the miss of a perfect distance at the disk's
    edge); "turn around" (180°) misses unless the drawn target lies within it; the key is never within
-   max(20°, (tol + 2°)/2) of straight ahead or behind; home distance 5–20 m; routes 12–28 m in all. One
-   target answer per item, kept across its attempts, so answers spread evenly where routes allow; a fixed
-   angle (or place) stays within chance + 10 points there (tests/node/reckon.test.mjs; EXEMPT_FIXED lists
-   the cells where R1's rules leave no room: routes 0, 1, 4, and route 2 at 40° and 30°).
-   Turn-only answers (the legs taken as equal, "the start is on the side I turned") are not held down: they
-   integrate every turn, which is partial path integration, and on 2-leg and small-turn routes the start
-   always lies on the side of the net turn, so no route choice could hide it (RV-reckon-homing B1, the
+   max(20°, (tol + 2°)/2) of straight ahead or behind; home distance 5–20 m (walks back 3–20 m, with a
+   log-uniform preference); routes 12–28 m in all. Every shortcut counts the final turn on the spot.
+   v1.2 (O35; note docs/research/v1.2/N1-reckon.md §3.3–3.4, §6 #6–11): every rated route ends with a turn on
+   the spot of 30–150° either way (the last entry of turns, so turns has as many entries as legs), which
+   takes away the side of the net turn and spreads the key: a fixed angle (or place) stays within chance + 10
+   points in every cell, with no exemptions (1.1's EXEMPT_FIXED is gone). Where the legs decide (LEG_CELLS,
+   legs level 1) the turns are drawn first and the legs then pick one of two answers more than 2·w + 8° apart
+   (w: the tolerance, or asin(τ) for walks back); the item stores both (alts) and which one it shows (alt), so
+   any answer worked out from the turns alone is right at most half the time. Elsewhere turn-only answers are
+   reported, not held down (they integrate every turn: partial path integration; RV-reckon-homing B1, the
    lead's decision (a)). The trial log keeps the angle error (value) and, for walks back, the distance ratio
    (value2) apart, so the leg part stays measurable.
 
-   Item (JSON): { ex: 'reckon', seed, params: { variant, route, flow, speed, tolerance }, task?, answer,
+   Item (JSON): { ex: 'reckon', seed, params: { variant, route, flow, speed, tolerance, legs }, task?, answer,
      key (deg | { x, z }), keyDeg, tolerance (deg | share), tolDeg, frame: 'end', experimental: true,
-     startHeading, legs, turns, path, heading, distance, returnBearing, pathLength,
+     startHeading, legs, turns (rated routes: one per leg, the last on the spot), path, heading, distance,
+     returnBearing, pathLength, alts?: [{ legs, key }, { legs, key }], alt? (0 | 1, the one shown),
      speeds: [[m/s] or [m/s, m/s]] per leg, splits: [share | null] per leg, turnRates: [deg/s], ramp, blend,
      duration (s), walkSpeed (m/s, the walk back), ground: { seed, kind, density, size, life? } }
    The ground seed comes from its own fork of the item's stream, so the marks carry no route information. */
@@ -68,9 +75,30 @@
     { name: 'short-lived dots', kind: 'dots', density: 0.6, size: [0.3, 0.5], life: [0.8, 1.4] },
   ];
   var SPEEDS = ['steady', 'varied between legs', 'varied within legs'];
-  var TOL_POINT = [40, 30, 20];          // degrees
-  var TOL_RETURN = [0.5, 0.35, 0.25];    // share of the home distance
-  var MODEL = { base: -2.25, leg: 0.55, turn: 0.4, flow: 0.35, speed: 0.3, tolerance: 0.9, ret: 0.5 };
+  var TOL_POINT = [40, 30, 20, 15];      // degrees (v1.2: a fourth level)
+  var TOL_RETURN = [0.5, 0.35, 0.25, 0.2]; // share of the home distance (v1.2: τ = 0.2, note N1 §3.4 #4)
+  // Hand-set steps (R1 §8.4; v1.2: rot and legs, note N1 §3.4, §6 #6–7, addendum A3). leg stays a placeholder: the
+  // O16 refit should model path length, total turning and the largest single rotation instead (A3 #1). rot: the
+  // final turn on the spot every rated route now ends with (a constant shift). legs: the 'legs decide' level,
+  // only where it applies (legCell).
+  var MODEL = { base: -2.25, leg: 0.55, turn: 0.4, flow: 0.35, speed: 0.3, tolerance: 0.9, ret: 0.5, rot: 0.3, legs: 0.4 };
+  // v1.2 (O35; note N1 §3.3–3.4, §6 #6–8): every rated route ends with a turn on the spot of ROT (either way), so
+  // the side of the net turn says nothing and a fixed answer stays near chance; on the 'legs decide' level the
+  // route is built from its turns first and the legs then choose between two answers more than 2·w + SEP_PAD
+  // apart (w: the half-width a right answer can have), so any answer worked out from the turns alone is right
+  // at most half the time (the item stores both: alts). Legs LEG2, routes PATH2 there. Walks back end 3–20 m
+  // from the start (D_MIN_RETURN), with a log-uniform preference.
+  var LEGS_LEVELS = ['the turns tell a lot', 'the legs decide'];
+  var ROT = [30, 150];
+  var LEG2 = [3, 15], PATH2 = [10, 28];
+  var SEP_PAD = 8;
+  var D_MIN = 5, D_MIN_RETURN = 3;
+  // The cells where the two-answer construction applies (route → tolerance levels), from N1 §3.3(b): 3–4 legs with
+  // medium or large turns and 2 legs with large turns; 2 or 3 legs with large turns and 4 legs with large turns
+  // start at 30° (2l at 40° rarely qualifies with a fair spread, 3l at 40° left fixed answers at 39–40 %, 4l at 40°
+  // qualifies in 1 % of turn draws). Elsewhere the level reads like 'the turns tell a lot' and costs nothing.
+  var LEG_CELLS = { 2: [1, 2, 3], 3: [0, 1, 2, 3], 5: [1, 2, 3], 6: [0, 1, 2, 3], 7: [1, 2, 3] };
+  var TURN_DRAWS = 200, RETARGET = 50, LEG_TRIES = 300, PAIR_TRIES = 12, STEER_TRIES = 30;
   var STEADY = 1.8, JITTER = 0.1;        // m/s, ± share per item at the steady level (R1 §9 risk 7)
   var V = [0.5, 2.0], V_GAP = 0.4;       // varied speeds (m/s); two speeds in one leg differ by ≥ V_GAP
   // Above 'steady' a leg's time must say little about its length (RV S1: |r| ≤ 0.5). Each leg's mean speed is
@@ -81,9 +109,9 @@
   var W = [30, 45];                      // varied turn rates (deg/s)
   var BLEND = 0.8, SPLIT = [0.3, 0.7];   // s to change speed within a leg; share of the leg at the first speed
   var WALK = [1.05, 1.95];               // the walk back (m/s): 1.5 ± 30 %, new every item
-  var D_MAX = 20;                        // home distance (m): 5–20
+  var D_MAX = 20;                        // home distance (m): 5–20 (walks back: 3–20)
   var LEAD_MS = 1200;                    // standing in the start ring before the walk
-  var MARGIN = H.MARGIN, TARGET_WIN = H.TARGET_WIN, STRICT = 16; // on-target attempts where answers can spread (Homing: 8; more keeps a fixed angle under chance + 10 at route 7)
+  var MARGIN = H.MARGIN, TARGET_WIN = H.TARGET_WIN, STRICT = 16; // on-target attempts (Homing: 8; more keeps a fixed angle under chance + 10 at route 7; v1.2: in every rated cell)
   var HEADING_TURN = [70, 150];          // the heading task's one turn (deg)
   var DIST_LEG = [6, 10];                // the distance task's walk (m)
   // The two tutorial rungs move slower than any rated item, so a first-timer has time to watch the ground flow
@@ -98,15 +126,25 @@
       variant: VARIANTS.indexOf(p.variant) >= 0 ? p.variant : VARIANTS[0],
       route: clampInt(p.route, ROUTES.length), flow: clampInt(p.flow, FLOWS.length),
       speed: clampInt(p.speed, SPEEDS.length), tolerance: clampInt(p.tolerance, TOL_POINT.length),
+      legs: clampInt(p.legs, LEGS_LEVELS.length),
     };
     if (TASKS.indexOf(p.task) >= 0) out.task = p.task;
     return out;
   }
   function routeCost(rt) { return MODEL.leg * (rt.legs - 2) + MODEL.turn * rt.turns; }
+  // The 'legs decide' construction applies to this cell (tutorial items never use it).
+  function legCell(p) { var t = LEG_CELLS[p.route]; return p.legs === 1 && !p.task && !!t && t.indexOf(p.tolerance) >= 0; }
   function difficulty(params) {
     var p = normParams(params);
-    return MODEL.base + routeCost(ROUTES[p.route]) + MODEL.flow * p.flow + MODEL.speed * p.speed + MODEL.tolerance * p.tolerance + (p.variant === 'return' ? MODEL.ret : 0);
+    return MODEL.base + MODEL.rot + routeCost(ROUTES[p.route]) + MODEL.flow * p.flow + MODEL.speed * p.speed + MODEL.tolerance * p.tolerance
+      + (p.variant === 'return' ? MODEL.ret : 0) + (legCell(p) ? MODEL.legs : 0);
   }
+  // The half-width (deg) of the directions a right answer can take from the end: point items their tolerance; a
+  // walk back's disk of radius τ·d round the start subtends asin(τ) either side. Two answers more than 2·w apart
+  // cannot both be right for one direction (keySep adds SEP_PAD).
+  function halfWidth(p) { return p.variant === 'point' ? TOL_POINT[p.tolerance] : asind(TOL_RETURN[p.tolerance]); }
+  function keySep(p) { return 2 * halfWidth(p) + SEP_PAD; }
+  function dMinOf(p) { return p.variant === 'return' ? D_MIN_RETURN : D_MIN; }
   // The tolerance in angle: point items their own; return items the direction error that, with a perfect
   // distance, puts the stop on the disk's edge (chord 2·d·sin(e/2) = τ·d): 29.0°, 20.1°, 14.4°.
   function tolDeg(p) { return p.variant === 'point' ? TOL_POINT[p.tolerance] : 2 * asind(TOL_RETURN[p.tolerance] / 2); }
@@ -134,30 +172,124 @@
   var stats = { fallbacks: 0, builds: 0, onTarget: 0, full: 0 };
   function spreads(p) { var rt = ROUTES[p.route]; return rt.legs >= 3 && rt.turns >= 1; }
 
-  // Scores a candidate route (Homing's search): 8 the shortcuts miss (and "turn around" unless the target
-  // lies within it), 4 the key lands on the target, 2 turning alone with equal legs misses too.
-  // target: the answer this item aims at, drawn once per item (generate), so an attempt that fails does not
-  // trade a hard-to-reach answer for an easy one (answers would pile up where routes end easily: RV B1).
+  // The final turn on the spot (v1.2): either way, ROT degrees, to 0.1°.
+  function drawRot(r) { return rnd((r.chance(0.5) ? 1 : -1) * r.float(ROT[0], ROT[1]), 10); }
+  // A walk back's preferred home distance: log-uniform over 3–20 m (note N1 §3.3(d), §3.4 #4), as the routes allow.
+  function drawDist(r) { return D_MIN_RETURN * Math.pow(D_MAX / D_MIN_RETURN, r.float(0, 1)); }
+
+  // 'The turns tell a lot' (Homing's search, then the turn on the spot). Scores a candidate: 8 the shortcuts miss
+  // (and "turn around" unless the target lies within it), 4 the key lands on the target, 2 turning alone with equal
+  // legs misses too, 1 (walks back) the home distance lies within 20 % of the preferred one. Every rule is applied
+  // to the final key (after the turn on the spot, which counts as one more turn). target: the final answer this item
+  // aims at, drawn once per item (generate), so a failed attempt does not trade a hard-to-reach answer for an easy
+  // one (answers would pile up where routes end easily: RV B1).
+  // v1.2: the turn on the spot R is fitted to the route: R = (the key before it) − target whenever that lies within
+  // ROT, so the key lands on the target whatever the turns did; otherwise the drawn R0 (off target). A drawn R0
+  // alone would not do: counted in "heading not updated", it must keep away from −(the turns between legs), which
+  // on small-turn routes leaves mostly rotations the same way as the turns and piles the keys up again (best fixed
+  // angle 47 % on 3 legs with small turns at 40°). The search steers the last leg towards target + R0.
   function build(r, p, strict, target) {
-    var rt = ROUTES[p.route], tol = tolDeg(p), gap = axisGap(tol);
-    var h0 = rnd(r.float(0, 360), 100), aroundFree;
+    var rt = ROUTES[p.route], tol = tolDeg(p), gap = axisGap(tol), ret = p.variant === 'return';
+    var h0 = rnd(r.float(0, 360), 100), R0 = drawRot(r.fork('rot')), dStar = ret ? drawDist(r.fork('dist')) : 0, aroundFree;
     if (!isNum(target)) target = H.drawTarget(r, gap);
     aroundFree = adiff(target, 180) <= tol + MARGIN;
     var best = H.search(r, {
-      n: rt.legs, band: TURNS[rt.turns], h0: h0, target: target, gap: gap, dMax: D_MAX, good: 12, full: 14, patience: H.EQUAL_TRIES,
+      n: rt.legs, band: TURNS[rt.turns], h0: h0, target: norm360(target + R0), gap: 0, dMax: D_MAX, dMin: dMinOf(p), good: 12, full: ret ? 15 : 14, patience: H.EQUAL_TRIES,
       score: function (g, legs, turns) {
-        var need = shortcutsMiss(g.key, turns, tol, SAFE) && (adiff(g.key, 180) > tol + MARGIN || aroundFree) && adiff(g.key, 0) >= gap + SAFE && adiff(g.key, 180) >= gap + SAFE;
-        var sc = (need ? 8 : 0) + (adiff(g.key, target) <= TARGET_WIN ? 4 : 0);
+        var R = rnd(norm180(g.key - target), 10);
+        if (!(Math.abs(R) >= ROT[0] && Math.abs(R) <= ROT[1])) R = R0;
+        g.rot = R;
+        var k = norm360(g.key - R), all = turns.concat([R]);
+        var need = shortcutsMiss(k, all, tol, SAFE) && (adiff(k, 180) > tol + MARGIN || aroundFree) && adiff(k, 0) >= gap + SAFE && adiff(k, 180) >= gap + SAFE;
+        var sc = (need ? 8 : 0) + (adiff(k, target) <= TARGET_WIN ? 4 : 0);
         if (sc >= 12) {
-          var eq = H.route(h0, legs.map(function () { return 1; }), turns);
-          if (adiff(g.key, eq.key) > tol + MARGIN) sc += 2;
+          var eq = H.route(h0, legs.map(function () { return 1; }), all);
+          if (adiff(k, eq.key) > tol + MARGIN) sc += 2;
+          if (ret && Math.abs(Math.log(g.distance / dStar)) <= 0.2) sc += 1;
         }
         return sc;
       },
     });
     if (!best || best.score < 8 || (strict && best.score < 12)) return null;
     stats.builds++; if (best.score >= 12) stats.onTarget++; if (best.score >= 14) stats.full++;
-    return assemble(r, p, h0, best.legs, best.turns);
+    return assemble(r, p, h0, best.legs, best.turns.concat([best.g.rot]));
+  }
+
+  // 'The legs decide' (v1.2; note N1 §3.3(b)): the turns and the turn on the spot first; then LEG_TRIES leg sets
+  // (legs LEG2, total PATH2, up to 5 : 1 between legs); those that pass every rule (home distance, 3 m from the
+  // start, the axis gap, turn around, turns reversed, heading not updated, mirror, all on the final key) are
+  // candidates; two whose keys lie more than keySep(p) apart become the item's alternatives, one of them shown.
+  // Turn draws with no such pair are redrawn (TURN_DRAWS). Returns null when none is found.
+  function legSets(r, n) {
+    var T = r.float(PATH2[0], PATH2[1]), w = [], sw = 0, i, legs = [];
+    for (i = 0; i < n; i++) { w.push(r.float(0.2, 1)); sw += w[i]; }
+    for (i = 0; i < n; i++) { var L = rnd(T * w[i] / sw, 10); if (L < LEG2[0] || L > LEG2[1]) return null; legs.push(L); }
+    var tot = sum(legs);
+    return tot >= PATH2[0] - 1e-9 && tot <= PATH2[1] + 1e-9 ? legs : null;
+  }
+  // "Turn around" is not excluded here: with the keys spread evenly it is one fixed angle among others, and keeping
+  // keys out of 180° ± (tol + 2°) would leave 228° at 40°, where an even spread still gives a fixed angle 35 %.
+  function legOk(g, all, p, tol, gap) {
+    if (g.distance < dMinOf(p) || g.distance > D_MAX) return false;
+    for (var i = 1; i < g.path.length - 1; i++) if (H.segDist([0, 0], g.path[i], g.path[i + 1]) < H.NEAR_START) return false;
+    var k = g.key;
+    return adiff(k, 0) >= gap + SAFE && adiff(k, 180) >= gap + SAFE && shortcutsMiss(k, all, tol, SAFE);
+  }
+  // Two targets per item, kept across the turn draws (H.drawTarget, so the keys spread evenly): the first
+  // alternative lands within TARGET_WIN of the first target, the second is the candidate far enough from the
+  // first that lies nearest the second target, and a fair coin picks the one shown, so the guarantee does not
+  // depend on how the pair was chosen.
+  function buildLegs(r, p, draws) {
+    var rt = ROUTES[p.route], n = rt.legs, band = TURNS[rt.turns], tol = tolDeg(p), gap = axisGap(tol), sep = keySep(p);
+    var target = H.drawTarget(r.fork('target'), gap), target2 = H.drawTarget(r.fork('target2'), gap);
+    for (var t = 0; t < (draws || TURN_DRAWS); t++) {
+      // a target the route type rarely reaches is redrawn after RETARGET turn draws (instead of a fallback item,
+      // which the engine voids); the keys still spread (the targets are even), slightly less where reach is poor
+      if (t && t % RETARGET === 0) { target = H.drawTarget(r.fork('target' + t), gap); target2 = H.drawTarget(r.fork('target2.' + t), gap); }
+      var rr = r.fork('turns' + t), h0 = rnd(rr.float(0, 360), 100), turns = [], j;
+      for (j = 1; j < n; j++) turns.push(rnd((rr.chance(0.5) ? 1 : -1) * rr.float(band.lo, band.hi), 10));
+      var all = turns.concat([drawRot(rr)]), cands = [];
+      for (var c = 0; c < LEG_TRIES; c++) {
+        var legs = legSets(rr, n);
+        if (!legs) continue;
+        var g = H.route(h0, legs, all);
+        if (legOk(g, all, p, tol, gap)) cands.push({ legs: legs, key: g.key });
+      }
+      if (!cands.length) continue;
+      // the first alternative: a candidate within TARGET_WIN of the target, or a leg set whose last leg is steered
+      // (H.steer) so that the key lands on it
+      var Rt = all[n - 1], Hb = h0 + sum(turns), near = cands.filter(function (x) { return adiff(x.key, target) <= TARGET_WIN; });
+      for (var s2 = 0; s2 < STEER_TRIES && near.length < 4; s2++) {
+        var pre = legSets(rr, n);
+        if (!pre) continue;
+        var first = pre.slice(0, n - 1), head = H.route(h0, first, turns.slice(0, n - 2));
+        var Ls = H.steer(head.path[n - 1], Hb, norm360(target + Rt));
+        if (Ls === null) continue;
+        Ls = rnd(Ls, 10);
+        var tot = sum(first) + Ls;
+        if (Ls < LEG2[0] || Ls > LEG2[1] || tot < PATH2[0] - 1e-9 || tot > PATH2[1] + 1e-9) continue;
+        var legsA = first.concat([Ls]), gA = H.route(h0, legsA, all);
+        if (legOk(gA, all, p, tol, gap) && adiff(gA.key, target) <= TARGET_WIN) near.push({ legs: legsA, key: gA.key });
+      }
+      if (!near.length) continue;
+      for (var a = 0; a < PAIR_TRIES; a++) {
+        var A = near[Math.min(near.length - 1, Math.floor(rr.float(0, near.length)))];
+        var far = cands.filter(function (B) { return adiff(A.key, B.key) > sep + SAFE; });
+        if (!far.length) continue;
+        // the second: the far candidate nearest a second target, so that it spreads too (a random one piles up
+        // where the route's keys gather)
+        var B = far[a % far.length];
+        far.forEach(function (x) { if (adiff(x.key, target2) < adiff(B.key, target2)) B = x; });
+        var shown = rr.chance(0.5) ? 0 : 1, alts = [A, B];
+        var it = assemble(rr, p, h0, alts[shown].legs, all);
+        it.alts = alts.map(function (x) { return { legs: x.legs.slice(), key: rnd(x.key, 100) % 360 }; });
+        it.alt = shown;
+        if (check(it) !== true) continue; // e.g. a route whose speeds cannot fit the 30-s cap: another pair
+        stats.builds++; stats.full++;
+        return it;
+      }
+    }
+    return null;
   }
 
   // Speeds, turn rates and splits of the route (their own stream: independent of the geometry, so the
@@ -177,7 +309,7 @@
       var f = Math.min(1.25, s / MAX_MOTION + 0.01);
       sp.speeds = sp.speeds.map(function (v) {
         var w = v.map(function (x) { return x * f; }), over = Math.max.apply(null, w) - V[1];
-        return w.map(function (x) { return rnd(over > 0 ? x - over : x, 100); });
+        return w.map(function (x) { return rnd(over > 0 ? Math.max(V[0], x - over) : x, 100); }); // never under V[0] (a two-speed leg may then lose its gap: the item is redrawn)
       });
       sp.rates = sp.rates.map(function (w) { return Math.min(W[1], rnd(w * f, 10)); });
       s = motionOf(legs, turns, sp);
@@ -221,7 +353,7 @@
 
   function base(r, p, extra) {
     var it = {
-      ex: 'reckon', params: { variant: p.variant, route: p.route, flow: p.flow, speed: p.speed, tolerance: p.tolerance },
+      ex: 'reckon', params: { variant: p.variant, route: p.route, flow: p.flow, speed: p.speed, tolerance: p.tolerance, legs: p.legs || 0 },
       answer: p.variant === 'point' ? 'angle' : 'position', experimental: true, frame: 'end',
     };
     for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) it[k] = extra[k];
@@ -274,7 +406,15 @@
     // a tutorial item keeps its task in params too (an extra param, as Painted Cubes keeps `ask`), so the
     // player's tips can be aimed at it (learn.js tips with when: { dim: 'task' }; v1.2 O39)
     if (p.task) { item = taskItem(rng, p); item.params.task = p.task; item.seed = rng.seed; return item; }
-    var strict = spreads(p) ? STRICT : 0, target = H.drawTarget(rng.fork('target'), axisGap(tolDeg(p)));
+    if (legCell(p)) {
+      item = buildLegs(rng, p);
+      if (item && validate(item) !== true) item = null;
+      if (!item) { item = fallback(rng, p); item.fallback = true; }
+      item.seed = rng.seed;
+      return item;
+    }
+    // v1.2: every rated cell asks for the target first (the fitted turn on the spot can reach it on any route)
+    var strict = STRICT, target = H.drawTarget(rng.fork('target'), axisGap(tolDeg(p)));
     for (var i = 0; i < 50 && !item; i++) {
       var it = build(i === 0 ? rng : rng.fork('retry' + i), p, i < strict, target);
       if (it && validate(it) === true) item = it;
@@ -290,6 +430,10 @@
   function fallback(rng, p) {
     stats.fallbacks++;
     var last = null;
+    if (legCell(p)) { // the two-answer construction with many more turn draws (every leg cell qualifies in ≥ 8 % of them)
+      last = buildLegs(rng.fork('fallback'), p, 600);
+      if (last) return last;
+    }
     for (var k = 0; k < 40; k++) {
       var it = build(rng.fork('fallback' + k), p, false);
       if (it) { last = it; if (validate(Object.assign({ seed: 0 }, it)) === true) return it; }
@@ -373,7 +517,7 @@
     var p = item.params;
     if (!p) return 'params missing';
     if (VARIANTS.indexOf(p.variant) < 0) return 'unknown variant';
-    var dims = [['route', ROUTES], ['flow', FLOWS], ['speed', SPEEDS], ['tolerance', TOL_POINT]];
+    var dims = [['route', ROUTES], ['flow', FLOWS], ['speed', SPEEDS], ['tolerance', TOL_POINT], ['legs', LEGS_LEVELS]];
     for (var d = 0; d < dims.length; d++) {
       var v = p[dims[d][0]];
       if (!Number.isInteger(v) || v < 0 || v >= dims[d][1].length) return 'params.' + dims[d][0] + ' out of range';
@@ -383,7 +527,8 @@
     if (item.answer !== (p.variant === 'point' ? 'angle' : 'position')) return 'the answer type does not match the variant';
     var tol = tolDeg(p);
     if (item.tolerance !== (p.variant === 'point' ? TOL_POINT : TOL_RETURN)[p.tolerance] || Math.abs(item.tolDeg - tol) > 0.006) return 'tolerance does not match the level';
-    var rt = ROUTES[p.route], out = {}, ok = H.checkRoute(item, rt.legs, TURNS[rt.turns], out);
+    var rt = ROUTES[p.route], lc = legCell(p), out = {};
+    var ok = H.checkRoute(item, rt.legs, TURNS[rt.turns], out, { rot: ROT, dMin: dMinOf(p), leg: lc ? LEG2 : undefined, path: lc ? PATH2 : undefined });
     if (ok !== true) return ok;
     if (out.dist > D_MAX + 1e-9) return 'the route ends more than ' + D_MAX + ' m from the start';
     // The key from the stored path: bearing of the start from the end, minus the final heading.
@@ -395,10 +540,32 @@
     var gap = axisGap(tol);
     if (adiff(key, 0) < gap - 1e-9 || adiff(key, 180) < gap - 1e-9) return 'the start is within ' + rnd(gap, 10) + '° of straight ahead or behind';
     if (!shortcutsMiss(key, item.turns, tol)) return 'a shortcut answer (turns reversed, heading not updated or mirror) lands within the tolerance';
+    ok = lc ? checkAlts(item, p, key) : item.alts === undefined && item.alt === undefined ? true : 'only a legs-decide item has alternatives';
+    if (ok !== true) return ok;
     ok = checkSpeeds(item, p.speed);
     if (ok !== true) return ok;
     if (item.duration > MAX_MOTION + 1e-9) return 'the route moves for more than ' + MAX_MOTION + ' s';
     return checkGround(item, p.flow);
+  }
+
+  // The two alternatives of a legs-decide item (v1.2): each re-derived from its own legs and the shared turns, each
+  // passing every rule; their keys more than keySep apart; the item shows one of them.
+  function checkAlts(item, p, key) {
+    var A = item.alts, n = ROUTES[p.route].legs, tol = tolDeg(p), gap = axisGap(tol);
+    if (!Array.isArray(A) || A.length !== 2 || (item.alt !== 0 && item.alt !== 1)) return 'a legs-decide item needs two alternatives and the one shown';
+    for (var i = 0; i < 2; i++) {
+      var a = A[i];
+      if (!a || !Array.isArray(a.legs) || a.legs.length !== n || !a.legs.every(function (L) { return isNum(L) && L >= LEG2[0] - 1e-9 && L <= LEG2[1] + 1e-9; })) return 'alternative ' + i + ' needs ' + n + ' legs of ' + LEG2.join('–') + ' m';
+      var tot = sum(a.legs);
+      if (tot < PATH2[0] - 1e-9 || tot > PATH2[1] + 1e-9) return 'alternative ' + i + ' is shorter than ' + PATH2[0] + ' m or longer than ' + PATH2[1] + ' m';
+      var g = H.route(item.startHeading, a.legs, item.turns);
+      if (!isNum(a.key) || adiff(g.key, a.key) > 0.02) return 'alternative ' + i + "'s key does not follow from its legs";
+      if (!legOk(g, item.turns, p, tol, gap - SAFE)) return 'alternative ' + i + ' breaks a route rule';
+    }
+    if (adiff(A[0].key, A[1].key) <= keySep(p)) return 'the alternatives lie within ' + rnd(keySep(p), 10) + '° of each other';
+    var S = A[item.alt];
+    if (S.legs.some(function (L, k) { return L !== item.legs[k]; }) || adiff(S.key, key) > 0.02) return 'the item does not show its alternative';
+    return true;
   }
 
   /* ------------------------------------------------------------ scoring */
@@ -482,21 +649,25 @@
   /* ------------------------------------------------------------ timing */
   var RESPONSE_MS = 5000;   // typical time to turn to face the start and confirm
   var STOP_MS = 2000;       // after the walk back: stopping and confirming
-  // Mean route length (m) and home distance (m) by number of legs, as the generator draws them (the node
-  // test keeps estMs within 15 % of the generated items' mean).
-  var MEAN_PATH = { 2: 16.8, 3: 23.0, 4: 24.5 }, MEAN_D = { 2: 8.8, 3: 10.8, 4: 10.6 };
+  // Mean route length (m), walk-back distance (m) and turn on the spot (°) per route level, as the generator
+  // draws them (v1.2, version 2; _L: where the legs decide), measured on 2 × 1 152 × 4 items; the node test keeps
+  // estMs within 15 % of the generated items' mean. Motion is capped at MAX_MOTION as the speed plan caps it.
+  var MEAN_PATH = [15.6, 21.2, 16.2, 23.1, 24.4, 24.2, 25.1, 24.5], MEAN_D = [10.6, 16.9, 6.8, 8.2, 16.1, 6.8, 8.0, 7.1];
+  var MEAN_ROT = [81, 80, 80, 88, 82, 92, 86, 71];
+  var MEAN_PATH_L = { 2: 19.0, 3: 22.1, 5: 23.4, 6: 24.3, 7: 24.1 }, MEAN_D_L = { 2: 7.6, 3: 9.0, 5: 6.8, 6: 7.7, 7: 6.5 }, MEAN_ROT_L = { 2: 83, 3: 88, 5: 91, 6: 92, 7: 87 };
   function estMs(params) {
-    var p = normParams(params), rt = ROUTES[p.route], band = TURNS[rt.turns];
+    var p = normParams(params), rt = ROUTES[p.route], band = TURNS[rt.turns], lc = legCell(p);
     var v = p.speed === 0 ? STEADY : V_MEAN, w = p.speed === 0 ? W[1] : (W[1] - W[0]) / Math.log(W[1] / W[0]);
-    var motion = MEAN_PATH[rt.legs] / v + (rt.legs - 1) * (band.lo + band.hi) / 2 / w + (2 * rt.legs - 1) * H.RAMP;
-    var answer = RESPONSE_MS + (p.variant === 'return' ? 1000 * MEAN_D[rt.legs] / ((WALK[0] + WALK[1]) / 2) + STOP_MS : 0);
+    var path = lc ? MEAN_PATH_L[p.route] : MEAN_PATH[p.route], d = lc ? MEAN_D_L[p.route] : MEAN_D[p.route], rot = lc ? MEAN_ROT_L[p.route] : MEAN_ROT[p.route];
+    var motion = Math.min(MAX_MOTION, path / v + ((rt.legs - 1) * (band.lo + band.hi) / 2 + rot) / w + 2 * rt.legs * H.RAMP);
+    var answer = RESPONSE_MS + (p.variant === 'return' ? 1000 * d / ((WALK[0] + WALK[1]) / 2) + STOP_MS : 0);
     return Math.round(LEAD_MS + 1000 * motion + answer);
   }
 
   function routeName(rt) { return rt.legs + ' legs, ' + TURNS[rt.turns].name + ' turns (' + TURNS[rt.turns].lo + '–' + TURNS[rt.turns].hi + '°)'; }
 
   PX.ex.define({
-    id: 'reckon', version: 1, code: 'EX-12', name: 'Reckon (experimental)', short: 'Reckon', experimental: true,
+    id: 'reckon', version: 2, code: 'EX-12', name: 'Reckon (experimental)', short: 'Reckon', experimental: true,
     abilities: ['NAV'], cell: 'extrinsic-dynamic', role: 'train', answer: 'angle', answers: { point: 'angle', return: 'position' },
     bet: 'calibrate', format: { point: 'reckon:walk-point-start', return: 'reckon:walk-back-start' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     perDisplay: true, variants: VARIANTS.slice(), extraParams: ['task'],
@@ -506,8 +677,10 @@
       { key: 'flow', label: 'Ground', levels: FLOWS.map(function (f) { return f.name; }), step: MODEL.flow },
       { key: 'speed', label: 'Speed', levels: SPEEDS.slice(), step: MODEL.speed },
       { key: 'tolerance', label: 'Tolerance', levels: TOL_POINT.map(function (t, i) { return '±' + t + '° or ' + Math.round(100 * TOL_RETURN[i]) + ' % of the way back'; }), step: MODEL.tolerance },
+      // v1.2: 'the legs decide' where the route has room (LEG_CELLS); its step is hand-set (note N1 §3.4 #1)
+      { key: 'legs', label: 'Legs', levels: LEGS_LEVELS.slice(), step: MODEL.legs },
     ],
-    base: difficulty({ variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 }),
+    base: difficulty({ variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0, legs: 0 }),
     difficulty: difficulty,
     chance: chance,
     estMs: estMs,
@@ -519,6 +692,8 @@
       MODEL: MODEL, STEADY: STEADY, JITTER: JITTER, V: V, V_GAP: V_GAP, W: W, BLEND: BLEND, SPLIT: SPLIT, WALK: WALK, D_MAX: D_MAX,
       LEAD_MS: LEAD_MS, MAX_MOTION: MAX_MOTION, RESPONSE_MS: RESPONSE_MS, STOP_MS: STOP_MS, MEAN_PATH: MEAN_PATH, MEAN_D: MEAN_D, HEADING_TURN: HEADING_TURN, DIST_LEG: DIST_LEG,
       TASK_RATE: TASK_RATE, TASK_SPEED: TASK_SPEED,
+      LEGS_LEVELS: LEGS_LEVELS, ROT: ROT, LEG2: LEG2, PATH2: PATH2, SEP_PAD: SEP_PAD, D_MIN: D_MIN, D_MIN_RETURN: D_MIN_RETURN, LEG_CELLS: LEG_CELLS,
+      legCell: legCell, halfWidth: halfWidth, keySep: keySep, dMinOf: dMinOf, buildLegs: buildLegs, legOk: legOk, drawRot: drawRot, checkAlts: checkAlts,
       MARGIN: MARGIN, SAFE: SAFE, HIST_N: HIST_N, stats: stats, homing: H,
       normParams: normParams, routeCost: routeCost, tolDeg: tolDeg, axisGap: axisGap, shortcuts: shortcuts, shortcutsMiss: shortcutsMiss, spreads: spreads,
       build: build, assemble: assemble, speedPlan: speedPlan, drawSpeeds: drawSpeeds, taskItem: taskItem, fallback: fallback, keyXZ: keyXZ,
