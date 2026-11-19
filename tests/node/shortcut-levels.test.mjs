@@ -62,7 +62,7 @@ const BUILTIN = {
 };
 const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880];
 
-// Cells over the bound when this check first ran (19 Nov 2026, W2-progress), each a request to the exercise's
+// Cells over the bound when this check first ran (18 Nov 2026, W2-progress), each a request to the exercise's
 // owner in docs/dev/v1.2/requests.md and a failed acceptance line in docs/dev/v1.2/progress-sim.md: they are
 // printed on every run, not failed, so the suite stays usable while the generators are rebalanced; a known
 // cell fails again if it grows by more than 2 points, and any other cell over the bound fails. Delete an
@@ -167,7 +167,7 @@ export async function run(t) {
     }
     t.ok(over.length === 0, def.id + ': every solver within chance + 10 points at every dimension level (' + nCells + ' cells of ≥ ' + MIN_CELL + ' items' + (worst ? '; closest ' + worst.key + ' ' + (worst.gap >= 0 ? '+' : '') + (100 * worst.gap).toFixed(1) + ' over ' + worst.n : '') + ')' + (over.length ? '; over: ' + over.slice(0, 6).join(', ') : ''));
     if (near.length) console.log('       ' + def.id + ': over chance + 10 by less than two standard errors of the cell (sampling noise, not failed): ' + near.join(', '));
-    if (known.length) console.log('       ' + def.id + ': KNOWN cells over chance + 10 (the acceptance line counts them as failures; requests.md 19 Nov 2026): ' + known.join(', '));
+    if (known.length) console.log('       ' + def.id + ': KNOWN cells over chance + 10 (the acceptance line counts them as failures; requests.md, 18 Nov 23:47 UTC): ' + known.join(', '));
     if (info.length) console.log('       ' + def.id + ': reported, not bounded (' + (sc.exempt.concat('info').join(', ')) + '), cells over chance + 10: ' + info.slice(0, 6).join(', ') + (info.length > 6 ? ' … (' + info.length + ')' : ''));
     done.push(def.id);
   }
