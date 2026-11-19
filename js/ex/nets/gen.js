@@ -319,28 +319,72 @@
     return abs(scores[0] - best) <= 1e-9 ? 1 / ties : 0;
   }
 
-  // 'opposite': the configuration (net, marked face at the wanted distance) and the adjacent
-  // face left out are chosen against three shortcuts: the option farthest from the marked face
-  // in the flat net (straight-line and along the net) and the option square most central among
-  // the options. Each should pick the key in about a quarter of the items: per item a random
-  // target (hit with probability ¼) for each, and the candidate closest to the targets.
-  function genOpposite(r, p) {
-    var D = data(), g = p.shape, cfgs = D.opposite.filter(function (c) { return c.shape.group === g; });
-    var maxD = 0;
+  // 'opposite': the configuration (net, marked face at the wanted distance) and the adjacent face left out
+  // are chosen against three shortcuts: the option farthest from the marked face in the flat net
+  // (straight-line, E, and along the net, G) and the option square most central among the options (C).
+  // v1.2 (CLAUDE.md rule 5 per dimension level, tests/node/shortcut-levels.test.mjs): the candidates of each
+  // (shape, between) cell fall into classes by what each shortcut scores on them, and the class weights are
+  // found once, by a grid search that keeps each shortcut's mean at or under its target (OPP_TARGET) and then
+  // spreads the weight over as many candidates as it can; within a class the candidate is drawn uniformly.
+  // One cell cannot be held: in a 1-4-1 net with three faces between (distance 4) the marked square and its
+  // opposite are the net's two lone squares, the ends of its longest path, so "farthest along the net" finds
+  // the key in at least half of its items (DECISIONS 19 Nov, a scoped exception with its cap in
+  // tests/node/nets.test.mjs). The 1-4-1 shape at two faces between and the 2-2-2 / 3-3 shapes at three aim
+  // lower, so that the 1-4-1 level and the three-faces level stay within chance + 10.
+  var OPP_STEP = 60;
+  function oppTarget(g, bt) {
+    if (g === 0 && bt === 0) return [0.15, 0.15, 0.25];
+    if (g === 2 && bt === 1) return [0.10, 0.10, 0.25];
+    return [0.25, 0.25, 0.25];
+  }
+  var OPP_PLANS = {};
+  function oppPlan(g, bt) {
+    var key = g * 10 + bt;
+    if (OPP_PLANS[key]) return OPP_PLANS[key];
+    var D = data(), cfgs = D.opposite.filter(function (c) { return c.shape.group === g; }), maxD = 0;
     cfgs.forEach(function (c) { if (c.d > maxD) maxD = c.d; });
-    var d = Math.min(BETWEEN[p.between] + 1, maxD);
-    cfgs = cfgs.filter(function (c) { return c.d === d; });
-    var cands = [];
-    cfgs.forEach(function (c) { c.adj.forEach(function (ex) { cands.push({ c: c, opts: [c.o].concat(c.adj.filter(function (a) { return a !== ex; })) }); }); });
-    var tE = r.next() < 0.25 ? 1 : 0, tG = tE, tC = r.next() < 0.25 ? 1 : 0, best = null, bestCost = INF; // the two distances agree mostly: one target
-    shuffle(r, cands).forEach(function (k) {
-      var cells = k.c.shape.cells, m = k.c.m, dist = k.c.shape.dist[m];
-      var hE = pickAcc(k.opts.map(function (i) { return dist2(cells, m, i); }));
-      var hG = pickAcc(k.opts.map(function (i) { return dist[i]; }));
-      var hC = pickAcc(k.opts.map(function (i) { var t = 0; k.opts.forEach(function (j) { t += sqrt(dist2(cells, i, j)); }); return -t; }));
-      var cost = abs(hE - tE) + abs(hG - tG) + abs(hC - tC);
-      if (cost < bestCost) { bestCost = cost; best = k; }
+    var d = Math.min(BETWEEN[bt] + 1, maxD), classes = [], byKey = {};
+    cfgs.filter(function (c) { return c.d === d; }).forEach(function (c) {
+      c.adj.forEach(function (ex) {
+        var opts = [c.o].concat(c.adj.filter(function (a) { return a !== ex; })), cells = c.shape.cells, m = c.m, dist = c.shape.dist[m];
+        var h = [
+          pickAcc(opts.map(function (i) { return dist2(cells, m, i); })),
+          pickAcc(opts.map(function (i) { return dist[i]; })),
+          pickAcc(opts.map(function (i) { var t = 0; opts.forEach(function (j) { t += sqrt(dist2(cells, i, j)); }); return -t; })),
+        ];
+        var k = h.join('|');
+        if (!byKey[k]) { byKey[k] = { h: h, list: [] }; classes.push(byKey[k]); }
+        byKey[k].list.push({ c: c, opts: opts });
+      });
     });
+    // Grid search over the class weights (steps of 1/OPP_STEP): the smallest largest excess of a shortcut's
+    // mean over its target, then the largest entropy over the candidates (weight spread evenly in a class).
+    var T = oppTarget(g, bt), n = classes.length, w = [], best = null;
+    function visit(i, left) {
+      if (i === n - 1) {
+        w[i] = left;
+        var ex = 0, ent = 0, s, j;
+        for (s = 0; s < 3; s++) {
+          var mean = 0;
+          for (j = 0; j < n; j++) mean += w[j] * classes[j].h[s];
+          mean /= OPP_STEP;
+          if (mean - T[s] > ex) ex = mean - T[s];
+        }
+        for (j = 0; j < n; j++) if (w[j] > 0) { var q = w[j] / OPP_STEP; ent -= q * Math.log(q / classes[j].list.length); }
+        if (!best || ex < best.ex - 1e-9 || (abs(ex - best.ex) <= 1e-9 && ent > best.ent + 1e-12)) best = { ex: ex, ent: ent, w: w.slice() };
+        return;
+      }
+      for (var k = 0; k <= left; k++) { w[i] = k; visit(i + 1, left - k); }
+    }
+    visit(0, OPP_STEP);
+    var plan = { d: d, classes: classes, w: best.w.map(function (x) { return x / OPP_STEP; }), excess: best.ex };
+    OPP_PLANS[key] = plan;
+    return plan;
+  }
+  function genOpposite(r, p) {
+    var g = p.shape, plan = oppPlan(g, p.between), d = plan.d, u = r.next(), ci = -1, cum = 0;
+    for (var i = 0; i < plan.classes.length; i++) { if (plan.w[i] <= 0) continue; ci = i; cum += plan.w[i]; if (u < cum) break; }
+    var list = plan.classes[ci].list, best = list[rint(r, list.length)];
     var c = best.c, o = orient(r, c.shape.cells), b = buildSquares(r, o.cells, c.m);
     var perm = shuffle(r, [0, 1, 2, 3]), opts = perm.map(function (i) { return best.opts[i]; });
     return {
@@ -366,9 +410,13 @@
     EDGE_CELLS[k] = { yes: yes, no: no };
     return EDGE_CELLS[k];
   }
+  // Concave-corner pairs (always meet, 0.71 apart; only the first squares-carried level has them) are a
+  // tenth of its "yes" pairs. v1.2 (rule 5 per level): at half, as in v1.1, "close in the flat net means
+  // they meet" decided 75 % of that level's items (no pair that fails to meet lies that close); at a tenth,
+  // 54 % (chance 50 %), and the inside corner stays in the level as the easy case the tips name.
+  var NOTCH_SHARE = 0.1;
   function genEdges(r, p) {
-    // Concave-corner pairs (always meet, 0.71 apart) are at most half of the "yes" pairs.
-    var cell = edgeCell(p.shape, p.carried), meet = r.next() < 0.5, corner = r.next() < 0.5;
+    var cell = edgeCell(p.shape, p.carried), meet = r.next() < 0.5, corner = r.next() < NOTCH_SHARE;
     var yes = cell.yes.filter(function (e) { return e.notch === corner; });
     if (!yes.length) yes = cell.yes;
     var ref = yes[rint(r, yes.length)], e = ref;
@@ -393,14 +441,18 @@
   // (for the folding animation) is the square closest to all others.
   function genCube(r, p) {
     // Hexominoes with a 2 × 2 block are drawn half as often as the others: "a block never folds"
-    // is true but decides at a glance, so it should not decide too many items.
+    // is true but decides at a glance, so it should not decide too many items. v1.2 (rule 5 per level):
+    // at the 1-4-1 level every net has exactly four in a row, so rows of five or six among its non-nets
+    // made "exactly four in a row folds" right 70 % of the time; drawn at 0.2 each they are an eighth of
+    // its non-nets and the rule is right 56 % (chance 50 %).
     var pool = data().cube[p.shape], isNet = r.next() < 0.5, list = isNet ? pool.nets : pool.others, s;
+    var weight = function (x) { return p.shape === 0 && x.longest >= 5 ? 0.2 : x.block ? 0.5 : 1; };
     if (isNet) s = list[rint(r, list.length)];
     else {
       var wsum = 0;
-      list.forEach(function (x) { wsum += x.block ? 0.5 : 1; });
+      list.forEach(function (x) { wsum += weight(x); });
       var pick = r.next() * wsum;
-      for (var q = 0; q < list.length; q++) { pick -= list[q].block ? 0.5 : 1; if (pick < 0 || q === list.length - 1) { s = list[q]; break; } }
+      for (var q = 0; q < list.length; q++) { pick -= weight(list[q]); if (pick < 0 || q === list.length - 1) { s = list[q]; break; } }
     }
     var tot = s.dist.map(function (row) { var t = 0; row.forEach(function (v) { t += v; }); return t; }), mn = INF, centre = [];
     tot.forEach(function (t, i) { if (t < mn) { mn = t; centre = [i]; } else if (t === mn) centre.push(i); });

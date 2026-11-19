@@ -191,6 +191,29 @@ export async function run(t) {
   t.ok(R.closeBest <= 0.6, `edges: "close in the flat net means they meet", best threshold ≤ 60 % (${pct(R.closeBest)} at ${R.closeAt})`);
   t.ok(R.farBest <= 0.6, `edges: the reverse rule, best threshold ≤ 60 % (${pct(R.farBest)})`);
   t.ok(R.row4 <= 0.6 && R.row4exact <= 0.6, `cube: "has 4 in a row" ≤ 60 % (${pct(R.row4)}; exactly 4: ${pct(R.row4exact)})`);
+  // v1.2: rule 5 per dimension level (tests/node/shortcut-levels.test.mjs) and the scoped exception of
+  // DECISIONS 19 Nov: in a 1-4-1 net with three faces between, the marked square and its opposite are the
+  // net's two lone squares, the two ends of its longest path, so "farthest along the net" finds the key in
+  // at least half of those items; the generator gives that cell the configurations where the key only ties
+  // (50 %), and the 1-4-1 level and the three-faces level stay within chance + 10.
+  {
+    const P = def.lib.data(), cnt = { tie: 0, unique: 0 };
+    for (const c of P.opposite) {
+      if (c.shape.group !== 0 || c.d !== 4) continue;
+      for (const ex of c.adj) {
+        const dist = c.shape.dist[c.m], opts = [c.o].concat(c.adj.filter((a) => a !== ex)), far = Math.max(...opts.map((i) => dist[i]));
+        if (dist[c.o] === far) cnt[opts.filter((i) => dist[i] === far).length > 1 ? 'tie' : 'unique']++;
+      }
+    }
+    t.eq([cnt.tie, cnt.unique], [3, 5], 'the exception is structural: at 1-4-1 with three faces between, the key is the farthest along the net in every candidate (3 tied, 5 alone)');
+    const ex = [];
+    for (let k = 0; k < 2000; k++) {
+      const p = { variant: 'opposite', carried: k % 5, shape: 0, between: 1 }, it = def.generate(PX.rng(PX.rng.hash('nets-exception', k)), p);
+      ex.push(shortcutScores(PX, def, it, p).farGraph.hit);
+    }
+    const capRate = ex.reduce((a, b) => a + b, 0) / ex.length;
+    t.ok(capRate <= 0.55, `scoped exception: "farthest along the net" at 1-4-1 with three faces between ≤ 55 % (${pct(capRate)}, chance 25 %)`);
+  }
   if (process.env.PX_REPORT) {
     console.log(`       nets: opposite straight2 ${pct(R.straight2)}, far ${pct(R.farEu)}, far-net ${pct(R.farGraph)}, central ${pct(R.central)}, marks ${pct(R.marks)} | edges close ${pct(R.closeBest)} @${R.closeAt}, far ${pct(R.farBest)} | cube row4 ${pct(R.row4)}, row4= ${pct(R.row4exact)}, block rule ${pct(R.block)} | CPU p95 ${p95.toFixed(2)} ms`);
   }
