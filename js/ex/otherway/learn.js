@@ -9,7 +9,7 @@
   PX.ex.learn('otherway', {
     goal: 'Six kinds of question that ask familiar skills the other way round.',
     // the card's text: what the first item needs (the instruction folds away under "More about this task")
-    brief: ['Six kinds of question in turn: turn a figure, unfold a sheet, find a cut, fold a net, name a side, find your place on a map. Each item says at its top what to find.'],
+    brief: ['Six kinds of question: turn a figure, unfold a sheet, find a cut, fold a net, name a side, find your place on a map. Each item says at its top what to find.'],
     instruction: {
       title: 'Other Way Round',
       lines: [

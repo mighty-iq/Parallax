@@ -12,9 +12,15 @@
   and the rung rows; Settings: Measurement week after Training (the setting and its event); the Lab: the ladder.
 - The check screen on its own (play?mode=check&kind=week): its intro card and Later.
 - Phones (390 x 844 and 360 x 640): Today's slot and the Progress panel, no horizontal scroll.
+- Baseline 1 on a phone (390 x 844 and 360 x 640; round 3 of the first session's fresh-player run): Pattern Memory comes
+  first and Other Way Round third; each task's card is one screen with one primary tap, named without "Task i of N",
+  with its size ("5 items · about 1 min"); the strip says the time left, never tasks or items; the worked example's
+  last button says "Start the task" and starts the items at once; a time-out's card comes the moment the time runs
+  out, and a tap aimed at an option, or Enter, landing in its first 600 ms neither counts nor presses Next item;
+  Other Way Round brings each kind's items together (3, 3, 3, 3, 2, 2) and Motion Graphs its four (2, 1, 1, 1).
 Screenshots: tests/e2e/out/check/. Run: tests/e2e/pwslot.sh python3 tests/e2e/check.py
 """
-import json, pathlib, sys, time
+import json, pathlib, re, sys, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from playwright.sync_api import sync_playwright
 from common import launch, Console, Checks, OUT as OUT_ROOT
@@ -331,12 +337,125 @@ def balance_lab(b, C, w, hgt, n_items):
     ctx.close()
 
 
+CARD_JS = r"""() => { const c = document.querySelector('[data-card-box]'); if (!c) return null; const r = c.getBoundingClientRect();
+  const title = c.querySelector('.px-panel-title, h2, h3'), aside = c.querySelector('.px-panel-aside');
+  return { id: c.getAttribute('data-card-box'), title: title ? title.textContent.trim() : '', aside: aside ? aside.textContent.trim() : '',
+    top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight, primary: c.querySelectorAll('.px-btn--primary').length }; }"""
+TIMEOUT_PROBE_JS = r"""() => { window.__to = { end: null, card: null };
+  (function f() { const t = performance.now();
+    if (__to.end === null && __play.state !== 'respond') __to.end = t;
+    if (__to.card === null && document.querySelector('[data-card-box="probe-timeout"]')) __to.card = t;
+    if (__to.card === null) requestAnimationFrame(f); })(); }"""
+VARIANTS_JS = r"""(id) => { const r = PX.core.store.state, a = r.assess[r.assess.length - 1], ex = PX.ex.get(id);
+  const rows = (a && a.items && a.items[id]) || [];
+  return r.trials.filter((t) => r.idx.ex[t[1]] && r.idx.ex[t[1]].split('@')[0] === id).map((t) => PX.ex.decodeParams(ex, t[3]).variant); }"""
+
+
+def runs(seq):
+    out = []
+    for v in seq:
+        if out and out[-1][0] == v:
+            out[-1][1] += 1
+        else:
+            out.append([v, 1])
+    return out
+
+
+def first_tasks(b, C, w, hgt):
+    tag = f'B1 {w}x{hgt}'
+    ctx = b.new_context(viewport={'width': w, 'height': hgt}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page, knobs=False)  # real time: the worked example waits for taps
+    go(page, {'mode': 'check', 'kind': 'B1'})
+    page.wait_for_function('!!document.querySelector("[data-card-box]")', timeout=10000)
+    for _ in range(4):
+        cid = card(page)
+        if cid == 'probe-intro':
+            break
+        click_card(page, 'skip' if page.locator('[data-card-box] [data-card="skip"]').count() and cid != 'check-intro' else 'start')
+        page.wait_for_timeout(200)
+    c1 = page.evaluate(CARD_JS)
+    page.screenshot(path=str(OUT / f'b1_first_card_{w}.png'))
+    C.ok(c1 and c1['id'] == 'probe-intro' and c1['title'] == 'Pattern Memory', f'{tag}: the first task is Pattern Memory ({c1})')
+    C.ok(c1 and not c1['title'].startswith('Task') and c1['aside'] == '5 items · about 1 min', f'{tag}: its card names it and its size, no "Task 1 of 7" ({c1 and (c1["title"], c1["aside"])})')
+    C.ok(c1 and c1['top'] >= 0 and c1['bottom'] <= c1['H'] and c1['primary'] == 1, f'{tag}: the card is one screen with one primary button ({c1})')
+    # the worked example: Next step taps to its last caption, which says Start the task and starts the items
+    click_card(page, 'example')
+    page.wait_for_selector('[data-showme-next]:not([hidden])', timeout=15000)
+    labels = []
+    for _ in range(14):
+        page.wait_for_timeout(350)
+        lab = page.locator('[data-showme-next]').inner_text().strip()
+        labels.append(lab)
+        if lab == 'Start the task':
+            break
+        page.locator('[data-showme-next]').click()
+    C.ok(labels and labels[-1] == 'Start the task' and 'Your turn' not in labels, f'{tag}: the example\'s last button says Start the task ({labels})')
+    rows0 = page.evaluate('PX.core.store.state.trials.length')
+    page.locator('[data-showme-next]').click()
+    page.wait_for_function('__play.state === "present" || __play.state === "respond" || !!document.querySelector("[data-card-box]")', timeout=15000)
+    C.ok(not card(page) and page.evaluate('__play.item && __play.item.seed') != page.evaluate("PX.ex.learn('patterns').demo[0].seed"),
+         f'{tag}: that tap starts the first item, with no card between ({card(page)})')
+    page.wait_for_function('__play.state === "respond"', timeout=15000)
+    meta = page.locator('.pl-hud-meta').inner_text().strip()
+    C.ok(re.search(r'(about|About|~) ?\d+ min left', meta) and 'task' not in meta.lower() and 'item' not in meta.lower(), f'{tag}: the strip says the time left ({meta!r})')
+    C.ok(page.evaluate('PX.core.store.state.trials.length') == rows0, f'{tag}: nothing logged before the first answer')
+    page.evaluate('PX.debug.fast(true)')
+    # on to Cube Match's first item, whose time runs out
+    at_cm = '(() => { const c = document.querySelector(\'[data-card-box="probe-intro"] .px-panel-title\'); return !!c && c.textContent.trim() === "Cube Match"; })()'
+    ok = drive(page, at_cm, cards={'probe-intro': 'skip'}, limit=200)
+    C.ok(ok, f'{tag}: Pattern Memory\'s five items, then Cube Match\'s card')
+    page.evaluate('PX.ui.play.config.limitScale = 0.03')
+    c2 = page.evaluate(CARD_JS)
+    C.ok(c2 and c2['aside'] == '5 items · about 1 min', f'{tag}: the second task is Cube Match, 5 items ({c2})')
+    click_card(page, 'skip')
+    page.wait_for_function('__play.state === "respond" && __play.exId === "cubematch"', timeout=15000)
+    page.evaluate('PX.ui.play.config.limitScale = 1')
+    opt = page.evaluate('(() => { const b = document.querySelectorAll(".pl-grid .px-choice")[1].getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; })()')
+    rows1 = page.evaluate('PX.core.store.state.trials.length')
+    page.evaluate(TIMEOUT_PROBE_JS)
+    page.wait_for_selector('[data-card-box="probe-timeout"]', timeout=15000)
+    t_card = page.evaluate('performance.now()')
+    page.touchscreen.tap(opt[0], opt[1])                       # a tap aimed at an option, landing late
+    page.locator('[data-card-box="probe-timeout"] [data-card="go"]').click(force=True)  # and one on Next item itself
+    page.keyboard.press('Enter')
+    held = page.evaluate('(t) => ({ ms: performance.now() - t, card: !!document.querySelector(\'[data-card-box="probe-timeout"]\'), rows: PX.core.store.state.trials.length, to: window.__to })', t_card)
+    gap = held['to']['card'] - held['to']['end'] if held['to']['card'] is not None and held['to']['end'] is not None else None
+    page.screenshot(path=str(OUT / f'b1_timeout_{w}.png'))
+    C.ok(gap is not None and 0 <= gap <= 250, f'{tag}: the time-out card comes the moment the time runs out ({gap} ms after the item ended)')
+    C.ok(held['card'] and held['rows'] == rows1 + 1 and held['ms'] < 600, f'{tag}: a late tap on an option, a tap on Next item and Enter in its first 600 ms do nothing ({held})')
+    last = page.evaluate('PX.core.store.state.trials[PX.core.store.state.trials.length - 1]')
+    C.ok(last[5] == 0, f'{tag}: the timed-out item is scored as not answered ({last[5]})')
+    txt = page.locator('[data-card-box="probe-timeout"]').inner_text()
+    C.ok('ran out before an answer' in txt and 'counts as not answered' in txt, f'{tag}: the card says the late tap did not count ({txt[:90]!r})')
+    page.wait_for_timeout(700)
+    page.locator('[data-card-box="probe-timeout"] [data-card="go"]').click()
+    page.wait_for_function('!document.querySelector(\'[data-card-box="probe-timeout"]\')', timeout=5000)
+    C.ok(True, f'{tag}: after that, Next item goes on')
+    # the rest of Baseline 1, then the order of Other Way Round's and Motion Graphs' kinds
+    ok = drive(page, '!!document.querySelector(\'[data-card-box="measure-done"]\') || !!document.querySelector(".pl-summary")',
+               cards={'probe-intro': 'skip', 'expect': 'skip'}, limit=1500, right=0.65)
+    C.ok(ok, f'{tag}: Baseline 1 runs to its end')
+    ow = runs(page.evaluate(VARIANTS_JS, 'otherway'))
+    mg = runs(page.evaluate(VARIANTS_JS, 'motiongraphs'))
+    C.ok([n for _, n in ow] == [3, 3, 3, 3, 2, 2] and len({v for v, _ in ow}) == 6, f'{tag}: Other Way Round brings each kind\'s items together ({ow})')
+    C.ok([n for _, n in mg] == [2, 1, 1, 1] and len({v for v, _ in mg}) == 4, f'{tag}: Motion Graphs too ({mg})')
+    order = page.evaluate('(() => { const r = PX.core.store.state, seen = []; r.trials.forEach((t) => { const id = r.idx.ex[t[1]].split("@")[0]; if (seen[seen.length - 1] !== id) seen.push(id); }); return seen; })()')
+    C.ok(order[:3] == ['patterns', 'cubematch', 'otherway'] and order[-1] == 'wordlinks', f'{tag}: the tasks in order ({order})')
+    errs = [e for e in con.errors() if 'favicon' not in e]
+    C.ok(not errs, f'{tag}: no console errors {errs[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('check')
     with sync_playwright() as p:
         b = launch(p)
         state = desktop(b, C)
         phones(b, C, state)
+        first_tasks(b, C, 390, 844)
+        first_tasks(b, C, 360, 640)
         balance_lab(b, C, 360, 640, 12)
         balance_lab(b, C, 844, 390, 4)
         balance_lab(b, C, 1366, 768, 2)

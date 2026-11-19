@@ -295,6 +295,7 @@
       steps = Array.isArray(steps) ? steps : [];
       return new Promise(function (resolve) {
         var i = 0, t = 0, paused = false, done = false, stop = null, prev = P.state, lastK = -1, waiting = false, waited = -1, lastNoted = false;
+        var endTap = false; // the walkthrough ended on a Next at its last caption (played.last.tap; js/ui/measure.js)
         var seen = 0, replays = 0, closed = false; // for the showme event (CONTRACT-v1.2 O)
         var rm = reducedMotion(), scale = FAST ? 0.02 : rm ? 0.75 : 1;
         // A Watch demo plays slowly: at least DEMO_MS in all (PLAN §8), unless motion is reduced.
@@ -376,7 +377,8 @@
           var gEnd = i;
           while (gEnd + 1 < steps.length && group[gEnd + 1] === group[i]) gEnd++;
           var inLast = tap && gEnd + 1 >= steps.length, lastWait = demo && inLast;
-          P.el.pNext.firstChild.textContent = inLast ? (demo ? 'Your turn' : 'Done') : 'Next step';
+          // (a probe's worked example names its own: cfg.lastLabel "Start the task", js/ui/measure.js)
+          P.el.pNext.firstChild.textContent = inLast ? (demo ? (P.demoCfg && P.demoCfg.lastLabel) || 'Your turn' : 'Done') : 'Next step';
           if (lastWait && !lastNoted) {
             lastNoted = true;
             try { if (P.demoCfg && typeof P.demoCfg.onLastWait === 'function') P.demoCfg.onLastWait(); } catch (e) { log('onLastWait failed', e); }
@@ -394,7 +396,7 @@
           done = true;
           P.played.finished++;
           P.played.ms = Math.round(timing.now() - t0);
-          P.played.last = { steps: seen, of: steps.length, replays: replays, closed: closed, ms: P.played.ms };
+          P.played.last = { steps: seen, of: steps.length, replays: replays, closed: closed, ms: P.played.ms, tap: endTap };
           if (closed) { try { caption(''); } catch (e) { /* the view's caption */ } } // round 4: no caption left beside the answer after Close
           if (stop) stop();
           cur = null;
@@ -429,10 +431,10 @@
         function next() {
           if (done) return;
           lastCmd = timing.now();
-          if (waiting) { waiting = false; paused = false; label(); return; }
+          if (waiting) { if (i + 1 >= steps.length) endTap = true; waiting = false; paused = false; label(); return; }
           paused = false;
           var g0 = group[i];
-          while (!done && group[i] === g0) { finish(); if (i + 1 < steps.length) enter(i + 1); else end(); }
+          while (!done && group[i] === g0) { finish(); if (i + 1 < steps.length) enter(i + 1); else { endTap = true; end(); } }
           label();
         }
         cur = {

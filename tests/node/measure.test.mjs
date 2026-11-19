@@ -83,13 +83,21 @@ function mixes(t) {
   const week = A.mix('week', newRecord(PX, T0)).map((m) => m.id + '×' + m.items);
   t.eq(week, ['otherway×6', 'cubematch×6', 'viewmatch×6', 'mechanisms×6', 'wordlinks×4'], 'a measurement-week block: 6 items per probe, the control 4');
   const full = A.mix('B1', rec).map((m) => m.id + '×' + m.items);
-  t.eq(full, ['otherway×16', 'cubematch×5', 'viewmatch×5', 'mechanisms×5', 'patterns×5', 'motiongraphs×5', 'wordlinks×5'], 'a full check: the near probe × 16, every other probe × 5 (1.1’s four in their order), the control × 5: 46 items');
+  t.eq(full, ['patterns×5', 'cubematch×5', 'otherway×16', 'viewmatch×5', 'mechanisms×5', 'motiongraphs×5', 'wordlinks×5'], 'a full check: the near probe × 16, every other probe × 5, the control × 5: 46 items, two short one-kind tasks first (config.measure.fullOrder)');
+  const KA = A._.kindAt, V6 = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const run = (vs, items, ctx) => Array.from({ length: items }, (_, n) => KA(vs, { n, items }, ctx)).join('');
+  t.eq(run(V6, 16, {}), 'aaabbbcccdddeeff', 'a full check groups a multi-format probe: 16 items over six kinds, 3 3 3 3 2 2');
+  t.eq(run(V6, 16, { block: true }), 'abcdefabcdefabcd', 'a block takes the kinds in turn');
+  const count = (str) => V6.map((v) => str.split(v).length - 1).join(',');
+  t.eq(count(run(V6, 16, {})), count(run(V6, 16, { block: true })), 'the same number of items per kind either way');
+  t.eq(run(['w', 'x', 'y', 'z'], 5, {}), 'wwxyz', 'Motion Graphs in a full check: 5 over four kinds, 2 1 1 1');
+  t.eq(run(V6, 6, { lab: true }), 'abcdef', 'the Lab keeps the turn');
   t.eq(A.mix('regular', rec, { optional: true }).slice(-1)[0].id + '×' + A.mix('regular', rec, { optional: true }).slice(-1)[0].items, 'level×8', 'Level only when asked for, last, 8 items');
   const can = (def) => def.id !== 'patterns';
   t.ok(A.mix('block', rec, {}, can).every((m) => m.id !== 'patterns') && A.mix('B1', rec, {}, can).length === 6, 'a probe the device cannot run is left out');
 
   const P0 = t.mk({ ladder: false }), r0 = newRecord(P0, T0);
-  t.eq(P0.engine.assess.mix('B1', r0).map((m) => m.id + '×' + m.items), ['cubematch×5', 'viewmatch×5', 'mechanisms×5', 'patterns×5', 'wordlinks×5'], 'without the new probes a full check holds 1.1’s probes, 25 items');
+  t.eq(P0.engine.assess.mix('B1', r0).map((m) => m.id + '×' + m.items), ['patterns×5', 'cubematch×5', 'viewmatch×5', 'mechanisms×5', 'wordlinks×5'], 'without the new probes a full check holds 1.1’s probes, 25 items');
   t.eq(P0.engine.assess.mix('block', r0).map((m) => m.id + '×' + m.items), ['cubematch×2', 'viewmatch×2', 'mechanisms×2', 'wordlinks×2'], 'and a block keeps the places it can fill');
 }
 
