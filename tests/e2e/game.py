@@ -331,6 +331,15 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     rot = page.evaluate('getComputedStyle(document.querySelector(".gm-summary .gm-stamp")).transform')
     C.ok(rot not in ('none', ''), f'{name}: the stamp sits at its slight angle ({rot})')
     page.screenshot(path=str(OUT / f'{name}-grade.png'), full_page=False)
+    # quiet and reduced motion: effects show their end state at once (fx.run refuses to animate)
+    q = page.evaluate('''(() => { const S = PX.core.store.state.settings, keep = [S.celebrate, S.reducedMotion], out = [];
+      const el = () => { const d = document.createElement('div'); document.body.appendChild(d); return d; };
+      S.celebrate = 'quiet'; out.push(PX.ui.game.fx.run(el(), 'gm-fx-type', 300));
+      S.celebrate = 'medium'; S.reducedMotion = 'on'; document.documentElement.setAttribute('data-motion', 'reduce'); out.push(PX.ui.game.fx.run(el(), 'gm-fx-type', 300));
+      S.reducedMotion = keep[1]; document.documentElement.removeAttribute('data-motion'); out.push(PX.ui.game.fx.run(el(), 'gm-fx-type', 300));
+      document.body.classList.add('px-stim'); out.push(PX.ui.game.fx.run(el(), 'gm-fx-type', 300)); document.body.classList.remove('px-stim');
+      S.celebrate = keep[0]; return out; })()''')
+    C.ok(q == [False, False, True, False], f'{name}: no motion at the quiet level, under reduced motion or during a stimulus; motion at medium otherwise ({q})')
     # the needle sweep on a level bar (play.js calls it at a block end and on the summary)
     sw = page.evaluate('''(() => { const b = PX.ui.bar(50, 100, { kind: 'signal' }); document.querySelector('.px-wrap').appendChild(b);
       const ran = PX.ui.game.sweep(b, 40, 50); return [ran, b.classList.contains('gm-fx-sweep'), b.style.getPropertyValue('--gm-from')]; })()''')
