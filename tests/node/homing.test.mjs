@@ -252,6 +252,28 @@ export async function run(t) {
 
   checkGentle(t, L, items.map((x) => x.it), 'homing');
 
+  t.section('homing: the solution map draws landmarks as seen from the start (v1.2, O42)');
+  {
+    // In map coordinates (start heading up, SVG y down): the dot lies on the rim ring round the end, and the line
+    // from the start to it keeps the landmark's bearing from the start, the direction the 3D view showed there.
+    let ring = true, dir = true, firstBad = null, n = 0;
+    for (const { it } of items.filter((_, i) => i % 7 === 0)) {
+      if (!it.landmarks || !it.landmarks.length) continue;
+      const h0 = it.startHeading, s = Math.sin(rad(h0)), c = Math.cos(rad(h0)), mp = (p) => [p[0] * c - p[1] * s, -(p[0] * s + p[1] * c)];
+      const pts = it.path.map(mp), E = pts.at(-1), S = pts[0], R = Math.max(...pts.map((q) => Math.hypot(q[0] - E[0], q[1] - E[1]))), r = 0.88 * Math.max(9, 1.42 * R + 2.5);
+      for (const Lm of it.landmarks) {
+        const b = Math.atan2(Lm.x - it.path[0][0], Lm.y - it.path[0][1]) * 180 / Math.PI - h0, q = L.rimFromStart(S, E, b, r);
+        const seen = Math.atan2(q[0] - S[0], -(q[1] - S[1])) * 180 / Math.PI;
+        if (Math.abs(Math.hypot(q[0] - E[0], q[1] - E[1]) - r) > 1e-6) { ring = false; firstBad = firstBad || `seed ${it.seed}: off the ring`; }
+        if (adiff(seen, b) > 1e-6) { dir = false; firstBad = firstBad || `seed ${it.seed}: ${seen.toFixed(2)}° against ${b.toFixed(2)}°`; }
+        n++;
+      }
+    }
+    const src = readFileSync(new URL('../../js/ex/homing/view.js', import.meta.url), 'utf8');
+    t.ok(n > 1000 && ring && dir, `every landmark dot lies on the rim and in its direction from the start (${n} landmarks)` + (firstBad ? ` (first bad: ${firstBad})` : ''));
+    t.ok(/Math\.atan2\(Lm\.x - start\[0\], Lm\.y - start\[1\]\)/.test(src) && /rimFromStart\(pts\[0\], E, b, H \* 0\.88\)/.test(src), 'the view places the dots with that rule (bearing from the start, rimFromStart)');
+  }
+
   t.section('homing: shortcut solvers');
   const cellKey = (p) => `${p.route}/${p.tolerance}`, cellName = (k) => { const [r, o] = k.split('/').map(Number); return `${L.ROUTES[r].legs}${'sml'[L.ROUTES[r].turns]}@${[40, 30, 20][o]}°`; };
   const solvers = {

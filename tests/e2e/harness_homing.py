@@ -583,6 +583,45 @@ def v12_demo(b, cons):
     ctx.close()
 
 
+def map_from_start(b, cons):
+    """v1.2 O42 (PLAN milestone 8): Show me's map draws each landmark where the line from the start keeps the
+    landmark's direction from the start, the direction the 3D view showed there (1.1 used its bearing from the
+    end, on a ring round the end). At 360 × 640 (touch) and 1366 × 768; screenshots of the map."""
+    rows = []
+    for vp, extra in (((360, 640), PHONE), ((1366, 768), {})):
+        ctx = b.new_context(viewport={'width': vp[0], 'height': vp[1]}, **extra)
+        page = ctx.new_page()
+        cons.append(Console(page))
+        page.goto(file_url('tests/dev/harness.html', ex='homing', seed=9, p=PARAMS, fast=1))
+        page.wait_for_function(READY, timeout=60000)
+        for sd in (9, 23):
+            if sd != 9:
+                page.evaluate('(s) => __harness.next({ route: 3, landmarks: 0, tolerance: 1 }, s)', sd)
+                page.wait_for_function(READY, timeout=60000)
+            page.evaluate('() => __harness.answer(false)')
+            page.wait_for_function(STATE, arg='reveal', timeout=15000)
+            before = page.evaluate('() => __harness.played.finished')
+            page.evaluate('() => { __harness.showMe(); }')
+            page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=60000)
+            page.wait_for_timeout(300)
+            r = page.evaluate("""() => {
+                const it = __harness.item, h0 = it.startHeading, s = Math.sin(h0 * Math.PI / 180), c = Math.cos(h0 * Math.PI / 180);
+                const mp = (p) => [p[0] * c - p[1] * s, -(p[0] * s + p[1] * c)], S = mp(it.path[0]);
+                const dots = [...document.querySelectorAll('.ex-fp-map .ex-fp-maplandmark')].map((e) => [+e.getAttribute('cx'), +e.getAttribute('cy')]);
+                const want = (it.landmarks || []).map((L) => Math.atan2(L.x - it.path[0][0], L.y - it.path[0][1]) * 180 / Math.PI - h0);
+                const got = dots.map((q) => Math.atan2(q[0] - S[0], -(q[1] - S[1])) * 180 / Math.PI);
+                const off = want.map((w, i) => i < got.length ? Math.abs((((got[i] - w) % 360) + 540) % 360 - 180) : 999);
+                return { n: dots.length, lands: (it.landmarks || []).length, worst: off.length ? Math.max(...off) : null };
+            }""")
+            r.update(size='%dx%d' % vp, seed=sd)
+            rows.append(r)
+            shot(page, 'homing_map_from_start_%dx%d_%d.png' % (vp[0], vp[1], sd))
+        ctx.close()
+    REPORT['mapFromStart'] = rows
+    C.ok(rows and all(r['n'] == r['lands'] and r['lands'] >= 1 and r['worst'] is not None and r['worst'] < 0.5 for r in rows),
+         f'show me: every landmark dot lies in its direction from the start (worst error per map, degrees: {[(r["size"], r["seed"], r["worst"] if r["worst"] is None else round(r["worst"], 3)) for r in rows]})')
+
+
 def main():
     cons = []
     only = set(sys.argv[1:])
@@ -593,6 +632,8 @@ def main():
                 gentle(b, cons)
             if 'demo' in only:
                 v12_demo(b, cons)
+            if 'map' in only:
+                map_from_start(b, cons)
             b.close()
             errors = [e for c in cons for e in c.errors()]
             C.ok(not errors, f'no console errors ({errors[:5]})')
@@ -605,6 +646,7 @@ def main():
         sandboxed(b, cons)
         gentle(b, cons)
         v12_demo(b, cons)
+        map_from_start(b, cons)
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')
