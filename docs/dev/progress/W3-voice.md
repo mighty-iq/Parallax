@@ -86,3 +86,5 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   References: 25 added from the notes, the validity study linked (O26), the ADA instruction sheet and candidate
   guide cited; three no longer cited dropped (Kivetz 2006, Perkins & Salomon 1988, Sailer et al. 2017); 119 in all,
   over four pages. Morgan & Glennerster 1991 has no link (its DOI in C1 is marked unchecked).
+- 2026-11-19 12:50 UTC, CHANGELOG: the 1.2.0 entry ("unreleased": the lead dates it at release). Its
+  Missing View line ("moves to profile solids") assumes W1-band-B's phase B lands before release.
