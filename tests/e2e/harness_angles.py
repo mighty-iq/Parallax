@@ -1,7 +1,8 @@
 """E2E: the dev harness with Angles (EX-16, SVG). Shared flow in tests/e2e/pat_harness.py.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_angles.py
 Own checks: four cells numbered 1–4, each drawing exactly the item's endpoints; options read as
-lists of the four numbers, lettered A–D (the format's labelling; keys A–D and 1–4); each cell is a
+lists of the four numbers, lettered A–D (the format's labelling; keys A–D alone, optionKeys
+'letters-only': a digit names an angle and answers nothing); each cell is a
 white plate in both themes; reveal shows every angle's size; each number in a strip under its
 drawing, in one place in every cell and item, Try 1's mark a ring round it, the sizes beside it, off the
 drawing, and the reveal moving nothing (strip_checks, at 360 × 640, 390 × 844 and 1366 × 768);
@@ -40,9 +41,11 @@ def options(C, page, tag):
     d = page.evaluate("""() => ({ texts: Array.from(document.querySelectorAll('.hx-grid .ex-angles-opt .ex-answer-text')).map((e) => e.textContent.replace(/\u00a0/g, ' ')),
         want: __harness.item.options.map((o) => o.map((c) => String(c + 1)).join(' – ')),
         keys: Array.from(document.querySelectorAll('.hx-grid .px-choice .px-choice-key')).map((e) => e.textContent),
+        short: Array.from(document.querySelectorAll('.hx-grid .px-choice')).map((b) => b.getAttribute('aria-keyshortcuts') || ''),
         aria: Array.from(document.querySelectorAll('.hx-grid .px-choice')).map((b) => b.getAttribute('aria-label') || '') })""")
     C.ok(d['texts'] == d['want'], f'{tag}: the options read as the item\'s orderings of the angles\' numbers ({d["texts"]})')
     C.ok(d['keys'] == ['A', 'B', 'C', 'D'] and all(a.startswith('Option ' + k + ':') for a, k in zip(d['aria'], 'ABCD')), f'{tag}: the options are lettered A–D, named so for screen readers ({d["keys"]}, {d["aria"][:1]})')
+    C.ok(d['short'] == ['A', 'B', 'C', 'D'], f'{tag}: each option\'s key shortcut is its letter alone, no digit ({d["short"]})')
 
 
 def showme(C, frame, tag):
@@ -114,6 +117,18 @@ def strip_checks(b, cons, C, out_dir):
 
 
 class Band(Pat):
+    def answer_keyboard(self, page, frame, tag):
+        """Letters-only keys (f22aab4): a digit names an angle and answers nothing; the key's letter answers."""
+        key = frame.evaluate('() => __harness.key')
+        page.keyboard.press(str((key + 1) % 4 + 1))
+        page.wait_for_timeout(250)
+        st = frame.evaluate('() => __harness.state')
+        self.C.ok(st == 'respond', f'{tag}: a digit key answers nothing (letters-only keys; state {st})')
+        page.keyboard.press('abcd'[key])
+        frame.wait_for_function("(s) => window.__harness && __harness.state === s", arg='reveal', timeout=10000)
+        r = frame.evaluate('() => __harness.last')
+        self.C.ok(r['result']['correct'] is True and r['source'] == 'key', f'{tag}: a right answer by its letter key scores right ({r["result"]}, {r["source"]})')
+
     def fit(self, b, cons):
         """Pat.fit with the player's answer rows (band_checks' player_rows): the harness draws the
         answers as 88 px tiles where the player uses 3.5rem rows, and since the numbers moved into

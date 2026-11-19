@@ -2,7 +2,8 @@
    layout 'stem+options': the stem is four cells numbered 1–4 (2 × 2 on phones, a row on wide
    screens), each with one angle drawn from the item's own endpoints (cell units, 1 × 1); the options
    are orderings of the numbers, smallest angle first ("3 – 1 – 4 – 2"), lettered A–D by the player
-   (optionKeys 'letters': keys A–D and 1–4 both pick). That is the format's labelling (note D1 §2.3,
+   (optionKeys 'letters-only': keys A–D alone, since the angles' own numbers are 1–4; W2-core's
+   f22aab4 on W3-bandA's request after the lead's fresh-player run). That is the format's labelling (note D1 §2.3,
    §6.2 and addendum A.1 row 2: angles numbered, answers lettered); version 1.1 had it the other way
    round. Captions name answers through ctx.optionName ("answer B").
    - The test look (CONTRACT-v1.2 W2): each cell is a white plate with ink lines in both themes;
@@ -394,7 +395,7 @@
 
   PX.ex.view('angles', {
     layout: 'stem+options',
-    optionKeys: 'letters', // answers A–D (CONTRACT-v1.2 W1)
+    optionKeys: 'letters-only', // answers A–D, keys A–D alone: the digits 1–4 name the angles (CONTRACT-v1.2 W1; f22aab4)
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
     reveal: reveal, showMe: showMe, demo: demo, unmount: unmount, drawRule: drawRule,
