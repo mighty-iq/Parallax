@@ -71,9 +71,9 @@ const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880];
 // these cells are held at the accuracy given here instead of chance + 10.
 const SCOPED = {
   slice: { 'roundest|cut=0': 0.40, 'fullest|cut=0': 0.40, 'roundest|structure=1': 0.40, 'fullest|structure=1': 0.40 }, // DECISIONS 19 Nov
+  fold: { 'sym1|folds=0': 0.48, 'punchHoles|folds=0': 0.48 }, // DECISIONS 19 Nov
 };
 const KNOWN = {
-  fold: { 'sym1|folds=0': 0.194, 'punchHoles|folds=0': 0.153 },
 };
 
 // Two-fold cross-validated accuracy of the best single threshold (either direction) on a yes/no cue.
