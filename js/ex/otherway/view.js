@@ -196,20 +196,27 @@
     else if (k === 'hexagon') s.appendChild(poly(ngon(6, 0, r * 1.15), 'ow-mark'));
     else if (k === 'cross') { pts = [[-1, -0.35], [-0.35, -0.35], [-0.35, -1], [0.35, -1], [0.35, -0.35], [1, -0.35], [1, 0.35], [0.35, 0.35], [0.35, 1], [-0.35, 1], [-0.35, 0.35], [-1, 0.35]]; s.appendChild(poly(pts.map(function (p) { return [x + p[0] * r * 1.15, y + p[1] * r * 1.15]; }), 'ow-mark')); }
     else { for (var j = 0; j < 10; j++) { var a = -Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? r * 0.55 : r * 1.3; pts.push([x + rr * Math.cos(a), y + rr * Math.sin(a)]); } s.appendChild(poly(pts, 'ow-mark')); }
-    s.appendChild(SV.text(x, y + r * 0.08, MARK[i], { class: 'ow-marklab', 'font-size': fsz || r * 1.3 }));
+    // a triangle's label sits a little low, where the triangle is wide (round 3: the 3 crossed its outline)
+    s.appendChild(SV.text(x, y + r * (k === 'triangle' ? 0.2 : 0.08), MARK[i], { class: 'ow-marklab', 'font-size': fsz || r * 1.3 }));
   }
+  // The map: landmarks and spots at full size (the generator keeps every spot 16 units from every landmark, so a
+  // 7.3-unit landmark and a 5.6-unit spot keep a gap); the N stands above the map's frame, never among its marks
+  // (round 3 of the first session's fresh-player run: the 3, circle C and the N crowded the top left corner).
+  // A phone held sideways has the height of the map for its words (css/ex/otherway.css draws them larger there): the
+  // N goes beside the map with an arrow up, and the shapes grow with the words (still clear of each other).
+  function shortScreen() { try { return !!(window.matchMedia && window.matchMedia('(max-height: 480px)').matches); } catch (e) { return false; } }
   function map(item) {
-    var s = SV.el('svg', { viewBox: '0 0 100 100', class: 'ow-map', 'aria-hidden': 'true', focusable: 'false' });
+    var short = shortScreen(), r = short ? 6.4 : 5.6, rs = short ? 5.8 : 5.6;
+    var s = SV.el('svg', { viewBox: short ? '-13 0 113 100' : '0 -12 100 112', class: 'ow-map', 'aria-hidden': 'true', focusable: 'false' });
     s.appendChild(poly([[0, 0], [100, 0], [100, 100], [0, 100]], 'ow-ground2'));
-    s.appendChild(SV.text(50, 6, 'N', { class: 'ow-north' }));
-    // a landmark may stand 12 units from a spot (the generator's least distance), where full-size shapes touch: the
-    // map's shapes shrink together until the closest pair keeps a gap (fresh-player run of 19 Nov: 1 covered D)
-    var dmin = Infinity;
-    item.marks.forEach(function (m) { item.options.forEach(function (p) { dmin = Math.min(dmin, Math.hypot(m[0] - p[0], m[1] - p[1])); }); });
-    var sc = Math.max(0.74, Math.min(1, dmin / 16));
-    item.marks.forEach(function (m, i) { markShape(s, i, m[0], m[1], 5.6 * sc, 5.6 * 1.3); }); // labels keep their size
+    if (short) {
+      s.appendChild(SV.text(-6.5, 6, 'N', { class: 'ow-north' }));
+      s.appendChild(line([-6.5, 24], [-6.5, 14.5], 'ow-northarrow'));
+      s.appendChild(poly([[-6.5, 11.5], [-8.6, 15.5], [-4.4, 15.5]], 'ow-northhead'));
+    } else s.appendChild(SV.text(50, -5.5, 'N', { class: 'ow-north' }));
+    item.marks.forEach(function (m, i) { markShape(s, i, m[0], m[1], r, 7.6); });
     item.options.forEach(function (p, i) {
-      s.appendChild(SV.el('circle', { cx: p[0], cy: p[1], r: 6.2 * sc, class: 'ow-spot', 'data-spot': i }));
+      s.appendChild(SV.el('circle', { cx: p[0], cy: p[1], r: rs, class: 'ow-spot', 'data-spot': i }));
       s.appendChild(SV.text(p[0], p[1] + 0.4, SPOT[i], { class: 'ow-spotlab' }));
     });
     return s;
@@ -223,7 +230,7 @@
     item.shown.forEach(function (mi, j) {
       var a = (item.rel[j] - 90) * Math.PI / 180, x = 36 * Math.cos(a), y = 36 * Math.sin(a);
       s.appendChild(line([0, 0], [x * 0.7, y * 0.7], 'ow-ray'));
-      markShape(s, mi, x, y, 9.5);
+      markShape(s, mi, x, y, 9.5, 13);
     });
     return s;
   }
@@ -312,7 +319,9 @@
     if (k === 'whereami') return 'Spot ' + SPOT[i];
     return 'Option ' + (i + 1);
   }
-  function gridCols(item) { return item && (item.strand === 'viewfrom' || item.strand === 'whereami') ? 4 : 2; }
+  // the four spots' letters fit one row; the four sides with their plans take two rows of two (round 3: one row of
+  // four squeezed Front, Right, Back and Left against their borders)
+  function gridCols(item) { return item && item.strand === 'whereami' ? 4 : 2; }
 
   function focusOption(i) {
     st.opts.forEach(function (o, j) { var cell = o && o.closest ? o.closest('.px-choice') : null; if (cell) cell.classList.toggle('ex-focus', j === i); });

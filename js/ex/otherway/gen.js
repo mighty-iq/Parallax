@@ -689,6 +689,7 @@
   // landmark within TOL of its place on the circle.
   var TOL = 10, FAR = 25;
   var WHERE_LEVELS = [{ marks: 5, shown: 2 }, { marks: 6, shown: 3 }, { marks: 7, shown: 3 }];
+  var SPOT_GAP = 16; // map units (the map is 100 wide) between a spot and a landmark; spots stay 18 apart
   function dist2(a, b) { return msqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1])); }
   function bearing(a, b) { var d = matan2(b[0] - a[0], -(b[1] - a[1])) * 180 / PI; return (d + 360) % 360; }
   function angDiff(a, b) { var d = mabs(((a - b) % 360 + 540) % 360 - 180); return d; }
@@ -716,8 +717,10 @@
         if (marks.every(function (q) { return msqrt((p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1])) >= 18; })) marks.push(p);
       }
       if (marks.length < L.marks) continue;
+      // a spot keeps SPOT_GAP from every landmark, so the map's shapes are drawn at full size with room between them
+      // (round 3 of the first session's fresh-player run: a landmark, a spot and the N crowded at a corner)
       function free(p, others) {
-        return marks.every(function (q) { return msqrt((p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1])) >= 12; }) &&
+        return marks.every(function (q) { return msqrt((p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1])) >= SPOT_GAP; }) &&
           others.every(function (q) { return msqrt((p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1])) >= 18; });
       }
       var spot = null;
@@ -763,6 +766,10 @@
       var fo = pick.map(function (c) { return c.opt; });
       if (fo.every(function (o) { return near(o) > near(spot); }) && !rng.chance(0.6)) continue;
       if (fo.every(function (o) { return centre(o) > centre(spot); }) && !rng.chance(0.7)) continue;
+      // ...and, with two landmarks shown (level 0), items where it is the spot farthest from the other three (the odd one
+      // out by place): spots 16 from every landmark made that guess 36 % right over 2 000 seeds (DECISIONS 19 Nov)
+      var spread = function (o) { return fo.concat([spot]).reduce(function (sum, x) { return sum + dist2(o, x); }, 0); };
+      if (level === 0 && fo.every(function (o) { return spread(o) < spread(spot); }) && !rng.chance(0.7)) continue;
       var placed = placeOptions(rng, spot, pick);
       return { strand: 'whereami', marks: marks, shown: shown, rel: rel, options: placed.options, why: placed.why, key: placed.key, facing: facing };
     }
@@ -770,6 +777,10 @@
   }
   function whereValidate(it) {
     if (!isArray(it.options) || it.options.length !== 4) return 'four options';
+    for (var o = 0; o < 4; o++) {
+      for (var m = 0; m < it.marks.length; m++) if (dist2(it.options[o], it.marks[m]) < SPOT_GAP) return 'every spot ' + SPOT_GAP + ' from every landmark';
+      for (var q = 0; q < o; q++) if (dist2(it.options[o], it.options[q]) < 18) return 'spots 18 apart';
+    }
     var hits = 0;
     for (var i = 0; i < 4; i++) {
       var f = fit(it.options[i], it.marks, it.shown, it.rel, 1);
