@@ -162,6 +162,33 @@ export async function run(t) {
   t.ok(acc.symAny / acc.count <= bound, `"most symmetric about any sheet axis" ≤ chance + 10 (${pct(acc.symAny)})`);
   t.ok(acc.dKey / acc.count <= bound, `"the hole count 2^folds × punches" ≤ chance + 10 (${pct(acc.dKey)})`);
   creaseReport(cs, [1, 2, 3, 4, 5]);
+  // v1.2: rule 5 per dimension level (tests/node/shortcut-levels.test.mjs) and the scoped exception of
+  // DECISIONS 19 Nov. With one fold the key is the only option that is both symmetric about the crease and
+  // has a hole under every punch (crease symmetry, the format's analytic method): a foil symmetric about
+  // the crease always lacks a hole under a punch. With L such foils among three, "most symmetric about the
+  // first fold line" finds the key in 1/(1 + L) of the items and "a hole under every punch" in 1/(4 − L),
+  // so the two cannot both be under 41.7 %; the generator mixes L = 1 and 2, and both are held at 48 %.
+  {
+    const H = def.lib, sum = { sym1: 0, punchHoles: 0 };
+    let n1 = 0, both = 0;
+    for (let k = 0; k < 1200; k++) {
+      const p = PX.ex.decodeParams(def, k % 180);
+      p.folds = 0; p.variant = 'choose';
+      const it = def.generate(PX.rng(PX.rng.hash('fold-exception', k)), p);
+      if (!it || it.fallback) continue;
+      n1++;
+      const sc = shortcutScores(PX, def, it, p);
+      sum.sym1 += sc.sym1.hit; sum.punchHoles += sc.punchHoles.hit;
+      const L1 = it.folds[0].line, pm = H.maskOf(it.punches), keySym = H.symScore(it.options[it.key], L1);
+      it.options.forEach((o, i) => {
+        if (i === it.key) return;
+        const m = H.maskOf(o), all = (m[0] & pm[0]) === pm[0] && (m[1] & pm[1]) === pm[1];
+        if (all && H.symScore(o, L1) >= keySym - 1e-9) both++;
+      });
+    }
+    t.eq(both, 0, `with one fold no foil is as symmetric about the crease as the key and has a hole under every punch (${n1} items)`);
+    for (const k of ['sym1', 'punchHoles']) t.ok(sum[k] / n1 <= 0.48, `scoped exception: "${k === 'sym1' ? 'most symmetric about the first fold line' : 'a hole under every punch'}" with one fold ≤ 48 % (${(100 * sum[k] / n1).toFixed(1)} %, chance 25 %)`);
+  }
   if (process.env.PX_REPORT) {
     console.log(`       fold: n ${acc.count}, chance ${(100 * chance).toFixed(1)} %, sym1 ${pct(acc.sym1)}, like ${pct(acc.like)}, odd ${pct(acc.odd)}, under-punch ${pct(acc.punchHoles)}, sym-any ${pct(acc.symAny)}, count ${pct(acc.dKey)}; CPU p95 ${p95.toFixed(1)} ms, wall p95 ${wall95.toFixed(1)} ms`);
     console.log('       holes', JSON.stringify(holesHist));

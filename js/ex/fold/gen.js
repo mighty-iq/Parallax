@@ -828,6 +828,10 @@
       }
       var symCost = full ? nf - sTie : rankCost(ts, sAbove, sAbove + sTie);
       var cost = rankCost(tc, below, below + tie) + symCost;
+      // v1.2 (rule 5 per level): a key tied for the most like the others (or for the odd one out) shares
+      // that solver's pick; when the target is another rank, such a tie costs half a rank.
+      if (tc > 0 && below === 0) cost += 0.5;
+      if (tc < n - 1 && below + tie === n - 1) cost += 0.5;
       if (cost < bestCost) { bestCost = cost; best = opt; }
     }
     return best;
