@@ -475,7 +475,9 @@ function testLearn(t, PX, def) {
 /* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs (the bounded
    solvers of testShortcuts above, restated per item; the diagnostics stay there) */
 export function shortcutScores(PX, def, it, params) {
-  const L = def.lib, M = L.SMALL, key = it.key, chance = def.chance(params || it.params || {});
+  const p = params || it.params || {};
+  if (p.variant !== undefined && p.variant !== 'choose') return {}; // the option-picking form only
+  const L = def.lib, M = L.SMALL, key = it.key, chance = def.chance(p);
   const D = it.options.map((o) => L.describe(o.loops)), G = it.options.map((o) => L.rasterize(o.loops, M)), sil = meshSilhouette(L, it.solid, M);
   const corners = (d) => d.parts.reduce((s, q) => s + q.corners, 0);
   const sumBy = (n, f) => Array.from({ length: n }, (_, i) => { let s = 0; for (let j = 0; j < n; j++) if (j !== i) s += f(i, j); return s; });

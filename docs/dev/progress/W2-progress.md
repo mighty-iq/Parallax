@@ -50,3 +50,15 @@ lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.md.
   within 1 point of its target. Rerunning on the final engine, with the cap lever (1.5) and the reported profiles.
 - Next: progress-sim.md, ENGINE.md §19, the "nothing else moves" sim.mjs comparison (100 learners, with and without
   dims.js), the final report.
+
+## 2026-11-19 00:01 UTC: acceptance results, the per-level shortcut check, ENGINE.md §19
+- Final runs (200 learners × 90 days per gated profile, seed 1, the engine identical to the build branch's): every
+  line, number, lever and cost in docs/dev/v1.2/progress-sim.md. Uneven 93.8 % within ±0.10 (fails by 0.2, Track;
+  86.5 % before), even 96.0 % (97.3 % before); per-level worst observed −6.6 on Track's speed levels for both
+  (expected 3.6 and −4.8: pass); overall +0.1/+0.5; coverage 97.8/98.1 % (above sim.mjs's 93–97 % band, as before
+  the change: 97.2/98.3 %); fluency in time 78.1 vs 77.2 and 77.1. Levers run: cap 1.5 (94.3 % pass, Track's levels
+  worse), longPrior (no help). sim.mjs with and without dims.js: same targeting, coverage and hard checks; record +5 %.
+- tests/node/shortcut-levels.test.mjs on 12 exercises (e6a8ee3): 9 pass at every level; Fold, Nets and Slice exceed
+  chance + 10 at single levels (KNOWN list, requests.md 18 Nov 23:47 UTC); 8 exercises without exports (owners).
+- ENGINE.md §19 written (before §20). Open: the lead's call on the cap (0.75 kept, recommended) and on the KNOWN
+  cells; W2-core's lastRated and Speed reference time (requests 22:11 UTC).
