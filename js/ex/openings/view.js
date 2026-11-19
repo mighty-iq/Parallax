@@ -26,6 +26,8 @@
   var FACE = { x: 'side', y: 'top', z: 'front' };
 
   function learn() { return PX.ex.learn('openings') || {}; }
+  // Openings are lettered A–E (CONTRACT-v1.2 W1, the format's own naming).
+  function nm(i) { return PX.ui.optionName ? PX.ui.optionName(i, true) : String(i + 1); }
   function cap(key, vars) {
     var s = String((learn().captions || {})[key] || '');
     if (vars) for (var k in vars) s = s.split('{' + k + '}').join(String(vars[k]));
@@ -77,15 +79,18 @@
   }
 
   /* ---------- the solid ---------- */
+  // The test look above the starter band (version 3; CONTRACT-v1.2 W2, note D1 addendum A.1 row 16): a plain
+  // line drawing, white unshaded faces and ink edges on the white plate; the band keeps its shaded faces.
+  var PLATE = '#FFFFFF', PLATE_INK = '#16191C';
   function makeMaterials() {
     var face = { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 };
-    return { face: new T.MeshLambertMaterial(face), edge: new T.MeshBasicMaterial() };
+    return { face: new T.MeshLambertMaterial(face), plain: new T.MeshBasicMaterial(Object.assign({ color: PLATE }, face)), edge: new T.MeshBasicMaterial() };
   }
   function tint() {
     var c = S3.colors();
     st.mats.face.color.copy(c.face);
-    st.mats.edge.color.copy(c.edge);
-    if (st.scene) st.scene.background = c.ground.clone();
+    if (st.plain) st.mats.edge.color.set(PLATE_INK); else st.mats.edge.color.copy(c.edge);
+    if (st.scene) st.scene.background = st.plain ? new T.Color(PLATE) : c.ground.clone();
   }
   function buildSolid(item) {
     var g = lib.gridsOf(item), faces = lib.surface(g.F, g.T, g.S), E = lib.edges(faces);
@@ -98,7 +103,7 @@
     var geo = new T.BufferGeometry();
     geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
     geo.setAttribute('normal', new T.Float32BufferAttribute(nrm, 3));
-    var grp = new T.Group(), mesh = new T.Mesh(geo, st.mats.face);
+    var grp = new T.Group(), mesh = new T.Mesh(geo, st.plain ? st.mats.plain : st.mats.face);
     var bars = new T.InstancedMesh(st.unit, st.mats.edge, Math.max(1, E.length)), M = new T.Matrix4(), q = new T.Quaternion(), X = new T.Vector3(1, 0, 0);
     E.forEach(function (e, i) {
       var a = new T.Vector3(e[0][0] - ox, e[0][1] - oy, e[0][2] - oz), b = new T.Vector3(e[1][0] - ox, e[1][1] - oy, e[1][2] - oz);
@@ -189,12 +194,13 @@
     el.appendChild(h('span.ex-opt.op-opt-cell', svg, tag));
     st.opts[i] = { el: el, svg: svg, over: over, tag: tag, ox: ox, oy: oy, size: size };
   }
-  function optionLabel(item, i) { return 'Opening ' + (i + 1); }
+  function optionLabel(item, i) { return 'Opening ' + nm(i); }
   function gridCols(item) { return item.options.length; }
 
   /* ---------- mount, items ---------- */
   function describe(item) {
-    return 'A solid block with ' + (item.feats.F.length + item.feats.T.length + item.feats.S.length) + ' notches, steps or slanted cuts that run straight through it, seen from above at the front right. Which of five openings, each possibly turned or flipped, does it pass through exactly?';
+    var t = lib.cleanParams(item.params).turn;
+    return 'A solid block with ' + (item.feats.F.length + item.feats.T.length + item.feats.S.length) + ' notches, steps or slanted cuts that run straight through it, seen from above at the front right. Which of five openings, A to E, ' + (t === 0 ? 'each drawn as its face is seen' : t === 1 ? 'each possibly turned' : 'each possibly turned or flipped') + ', does it pass through exactly?';
   }
   function mount(ctx) {
     var root = h('div.op-stem'), stage = h('div.ex-stage.op-stage'), d3 = h('div.op-3d');
@@ -225,7 +231,9 @@
     st.M = optScale(item);
     st.k = 0; st.kCap = 0;
     st.item = item;
+    st.plain = lib.cleanParams(item.params).features >= 1;
     if (st.v3) {
+      tint();
       dropSolid();
       st.solid = buildSolid(item);
       st.scene.add(st.solid);
@@ -243,7 +251,8 @@
     st.desc.textContent = describe(item);
     PX.ui.clear(st.ink);
     var band = lib.cleanParams(item.params).features === 0;
-    if (st.root.closest) { var wrap = st.root.closest('.ex-openings'); if (wrap) wrap.classList.toggle('op-band', band); }
+    if (st.root.closest) { var wrap = st.root.closest('.ex-openings'); if (wrap) { wrap.classList.toggle('op-band', band); wrap.classList.toggle('op-plain', !band); } }
+    st.root.classList.toggle('op-plain', !band);
     fitScale();
     if (st.v3) { st.cur = camAt(VIEW0.az, VIEW0.el); render(); }
     st.assisted = !!(ctx && ctx.assist && ctx.assist.trace && st.v3);
@@ -274,7 +283,7 @@
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
     });
-    st.verdict.textContent = '✓ Opening ' + (item.key + 1);
+    st.verdict.textContent = '✓ Opening ' + nm(item.key);
     st.verdict.setAttribute('data-kind', 'key');
     st.verdict.hidden = false;
     return timing.wait(ctx && ctx.fast ? 0 : 250);
@@ -409,9 +418,9 @@
           inkPage(spun(st.spinA, st.spinC, ANG[tn.n] * a, 1 - 2 * b), 1);
         },
       });
-    } else if (band) list.push({ ms: 1600, caption: cap('straight'), enter: function () { reset(); straight(); inkOutline(item, 1); } });
+    } else list.push({ ms: 1600, caption: cap('straight'), enter: function () { reset(); straight(); inkOutline(item, 1); } }); // drawn as seen (dim 'turn' 0): no turn needed
     list.push({
-      ms: 1600, caption: cap('land', { n: key + 1 }),
+      ms: 1600, caption: cap('land', { n: nm(key) }),
       enter: function () { reset(); straight(); st.flyA = turnedOutline(item, tn); inkPage(st.flyA, 1); st.flyB = optionPage(item, key); flyAt(st.flyA, st.flyB, 0); },
       update: function (k) { flyAt(st.flyA, st.flyB, ease(k)); },
       exit: function () { clearFly(); focusOption(key); overlay(item, key, item.prof[name], dm[0], dm[1], item.options[key].tf, 'op-ghost'); },
@@ -423,7 +432,7 @@
   function whyStep(item, i, straight, name, dm) {
     var kind = item.options[i].kind, key = item.key;
     return {
-      ms: 2600, caption: cap(kind === 'proportion' ? 'whyProportion' : kind === 'face' ? 'whyFace' : 'whyFeature', { n: i + 1 }),
+      ms: 2600, caption: cap(kind === 'proportion' ? 'whyProportion' : kind === 'face' ? 'whyFace' : 'whyFeature', { n: nm(i) }),
       enter: function () {
         reset(); straight(); inkOutline(item, 1); focusOption(i);
         var nb = nearest(item, i);
@@ -491,7 +500,7 @@
     if (st.v3) {
       dropSolid();
       st.unit.dispose();
-      st.mats.face.dispose(); st.mats.edge.dispose();
+      st.mats.face.dispose(); st.mats.plain.dispose(); st.mats.edge.dispose();
       st.v3.detach();
     }
     if (st.root.parentNode) st.root.parentNode.removeChild(st.root);
@@ -499,6 +508,7 @@
   }
 
   PX.ex.view('openings', {
+    optionKeys: 'letters', // openings A–E (CONTRACT-v1.2 W1)
     layout: 'stem+options',
     needs: 'webgl',
     css: true,

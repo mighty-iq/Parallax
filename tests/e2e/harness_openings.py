@@ -21,10 +21,10 @@ C = Checks('harness_openings')
 EX, DIR, STEM = 'openings', OUT / 'openings', '.op-stage'
 DIR.mkdir(parents=True, exist_ok=True)
 CASES = {  # name: (params, seed)
-    'band': ('features:0,edges:0,keyview:0,pose:0,foils:0', 4),  # v1.2: the starter band
-    'easy': ('features:1,edges:0,keyview:0,pose:0,foils:0', 7),
-    'side': ('features:3,edges:1,keyview:1,pose:0,foils:0', 4),
-    'lying': ('features:4,edges:1,keyview:2,pose:1,foils:1', 9),
+    'band': ('features:0,edges:0,keyview:0,pose:0,foils:0,turn:0', 4),  # v1.2: the starter band, drawn as seen
+    'easy': ('features:1,edges:0,keyview:0,pose:0,foils:0,turn:1', 7),  # version 3: two in all, turned
+    'side': ('features:3,edges:1,keyview:1,pose:0,foils:0,turn:2', 4),
+    'lying': ('features:5,edges:1,keyview:2,pose:1,foils:1,turn:2', 9),
 }
 DONE = """() => {
     const it = __harness.item, cells = document.querySelectorAll('.hx-grid .px-choice'), wrong = !__harness.last.result.correct;
@@ -49,13 +49,14 @@ def opts_ok(page, tag, min_px=0):
     C.ok(k['open'] > 0 and abs(k['solid'] - k['open']) <= 0.02 * k['open'] and abs(k['drawn'] - k['open']) <= 0.02 * k['open'], f'{tag}: solid and openings at the same scale ({k})')
     if min_px:
         C.ok(k['drawn'] >= min_px, f'{tag}: a step of an opening is at least {min_px} px ({k["drawn"]:.1f})')
-    # The solid fills its box (its height at least 60 % of the stage), and no key digit sits on a drawing.
+    # The solid fills its box (its height at least 60 % of the stage), and no option letter (A–E, version 3; on
+    # its own chip) sits on an opening's outline.
     f = page.evaluate("""() => { const fill = +document.querySelector('.op-stem').getAttribute('data-fill');
-        const hit = Array.from(document.querySelectorAll('.hx-grid .px-choice')).filter((c) => { const k = c.querySelector('.px-choice-key'), s = c.querySelector('.op-opt-svg');
+        const hit = Array.from(document.querySelectorAll('.hx-grid .px-choice')).filter((c) => { const k = c.querySelector('.px-choice-key'), s = c.querySelector('.op-opt-svg .op-hole');
           if (!k || !s) return false; const a = k.getBoundingClientRect(), b = s.getBoundingClientRect();
           return a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom; }).length;
         return { fill, hit }; }""")
-    C.ok(f['fill'] >= 0.6 and f['hit'] == 0, f'{tag}: the solid fills its stage ({f["fill"]:.2f} of its height) and no key digit overlaps a drawing ({f["hit"]})')
+    C.ok(f['fill'] >= 0.6 and f['hit'] == 0, f'{tag}: the solid fills its stage ({f["fill"]:.2f} of its height) and no option letter overlaps an opening ({f["hit"]})')
 
 
 def desktop_and_phone(b, cons):

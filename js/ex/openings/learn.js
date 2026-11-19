@@ -12,7 +12,7 @@
       { id: 'solid', label: 'Solid', text: 'A block with notches, steps and slanted cuts. Every cut runs straight through it, so what you see on one face continues to the opposite face.' },
       { id: 'rules', label: 'Rules', text: 'The solid may be turned any way before it goes in. Then it slides straight through without turning, so the opening is its outline seen along that direction.' },
       { id: 'fit', label: 'Exact fit', text: 'An opening must match the outline exactly. The openings are drawn at the same scale as the solid, so one that is too large or too small is wrong.' },
-      { id: 'options', label: 'Openings', text: 'Five openings, each shown turned or flipped at random (starter items: drawn the way their face is seen). Exactly one fits. Tap it or press its key (1–5).' },
+      { id: 'options', label: 'Openings', text: 'Five openings, A to E. First they are drawn the way their face is seen, then turned, then turned or flipped. Exactly one fits. Tap it or press its letter (A–E; 1–5 work too).' },
     ],
     // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.4): the rules card first, the
     // Watch at the starter band (one feature, openings drawn as the face is seen), the strategy card
@@ -26,18 +26,20 @@
     minutes: 3,
     // the Watch goes in side first (fresh-player test: which face leads was unclear); Try 1 goes in front
     // first, Try 2 side first
-    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, seed: 39, kind: 'side' }],
-    // Try 3 brings turned openings, after a worked example of a quarter-turned one on a sister item
-    // (note D2 addendum C change 4).
+    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 0, task: 'tutorial' }, seed: 39, kind: 'side' }],
+    // Try 3 brings two features and turned openings, after a worked example of a quarter-turned one on a
+    // sister item (note D2 addendum C change 4); Try 4 openings turned or flipped (version 3: dim 'turn').
     practice: [
-      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, assist: { trace: true }, seed: 104 },
-      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, seed: 239 },
-      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, task: 'tutorial' }, tip: 'turned', seed: 301, example: { seed: 3 } },
-      { params: { features: 1, edges: 0, keyview: 1, pose: 0, foils: 0, task: 'tutorial' }, tip: 'side', seed: 400 },
+      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 0, task: 'tutorial' }, assist: { trace: true }, seed: 104 },
+      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 0, task: 'tutorial' }, seed: 239 },
+      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 1, task: 'tutorial' }, tip: 'turned', seed: 1, example: { seed: 3 } },
+      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 2, task: 'tutorial' }, tip: 'flipped', seed: 400 },
     ],
     tips: [
-      { id: 'one', when: { dim: 'features', levels: [0] }, text: 'Starter items: one notch, step or cut, on one face. Find that face, then the opening with its outline; the openings are drawn the way that face is seen.' },
-      { id: 'turned', when: { dim: 'features', levels: [1] }, text: 'From here the openings are turned or flipped at random, and every face has a feature. Turn the outline in your mind, not the opening: same corners in the same order.' },
+      { id: 'one', when: { dim: 'features', levels: [0] }, text: 'Starter items: one notch, step or cut, on one face. Find that face, then the opening with its outline.' },
+      { id: 'two', when: { dim: 'features', levels: [1] }, text: 'Two features now, on two faces. Each outline shows only its own face\'s feature: trace one face at a time.' },
+      { id: 'turned', when: { dim: 'turn', levels: [1] }, text: 'From here the openings may be turned in quarter steps. Turn the outline in your mind, not the opening: same corners in the same order.' },
+      { id: 'flipped', when: { dim: 'turn', levels: [2] }, text: 'Openings may now be flipped as well as turned: the solid can go in either way round, so the mirror image of the outline fits too.' },
       { id: 'front', when: { dim: 'keyview', levels: [0] }, text: 'Start with the face nearest you: push the solid in face first and trace that face\'s outline. No fit? Try the side.' },
       { id: 'side', when: { dim: 'keyview', levels: [1] }, text: 'Any face can fit now: check the front, the side and the top outline in turn.' },
       { id: 'top', when: { dim: 'keyview', levels: [2] }, text: 'Mostly the top now: the solid can go in upright, and the opening is then the outline seen from above.' },
