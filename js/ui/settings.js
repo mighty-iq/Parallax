@@ -208,6 +208,10 @@
         if (on && snd) { try { snd.unlock(); snd.play('right'); } catch (e) { /* no audio here: the setting stays */ } }
       } }));
     p.body.appendChild(K.toggle({ key: 'keyHints', label: 'Show key hints', checked: s.keyHints !== false, hint: 'Shows the keyboard shortcut on buttons and answer options.', onChange: set('keyHints') }));
+    // v1.2 O22 (W3-phones; registered in js/ui/play.js)
+    p.body.appendChild(K.toggle({ key: 'confirmTaps', label: 'Confirm taps', checked: s.confirmTaps === true,
+      hint: 'On a touch screen, a first tap on an answer marks it and a second tap on the same answer gives it, so a scroll that ends on an answer never answers. Answer times then include the second tap. Keys and a mouse answer at once. Off by default.',
+      onChange: set('confirmTaps') }));
     return p.el;
   }
 

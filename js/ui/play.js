@@ -37,6 +37,9 @@
   var keys = PX.core.keys, timing = PX.core.timing, store = PX.core.store, router = PX.core.router;
   var S3 = PX.core.stage3d;
   var hasOwn = Object.prototype.hasOwnProperty;
+  // v1.2 O22 (W3-phones): Settings → Sound and keys → Confirm taps (touch; off by default)
+  store.setting('confirmTaps', { def: false, type: 'bool' });
+  function confirmTaps() { var st = store.state && store.state.settings; return !!(st && st.confirmTaps === true); }
 
   var FAST = false;
   // Test knobs: slowMs overrides the "See solution" threshold; limitScale scales time limits;
@@ -825,6 +828,7 @@
             el.grid.appendChild(P.grid.el);
             for (var i = 0; i < n; i++) view.drawOption(P.grid.cells[i], item, i, P.ctx);
             P.offGrid = P.grid.onPick(onPick);
+            P.armed = -1; // O22: nothing marked by a first tap yet
           }
         } catch (e) { log('drawing the options failed (' + P.exId + ')', e); el.trial.style.visibility = ''; failTrial(token); return; }
         el.confirmRow.hidden = type !== 'multi' || P.layout !== 'stem+options'; // an item with its own input confirms there
@@ -911,6 +915,13 @@
     function onPick(ix, source) {
       if (P.state !== 'respond') return;
       var type = answerType(P.def, P.item);
+      // v1.2 O22 (W3-phones): with "Confirm taps" on, a touch tap on a single-choice answer first marks it (the
+      // grid shows it selected) and a second tap on the same answer gives it, so a scroll that ends on a tile
+      // never answers; keys and a mouse answer at once, and the answer clock runs to the answer as before
+      if ((type === 'yesno' || type === 'choice') && source === 'pointer' && P.lastPointer === 'touch' && confirmTaps() && P.armed !== ix) {
+        P.armed = ix;
+        return;
+      }
       if (type === 'yesno') respond(ix === 0, source);
       else if (type === 'choice') respond(ix, source);
       else if (type === 'multi') el.confirm.disabled = P.grid.selected().length !== nCorrect(P.def, P.item);
