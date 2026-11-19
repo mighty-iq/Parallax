@@ -15,7 +15,8 @@ the controls fit the screen without scrolling.
 
 Until three DAT-style exercises can run here, stand-ins (Fold, Views, Slice, Hidden, Nets) take
 their place through the test knob PX.engine.section.config.parts.
-Screenshots: tests/e2e/out/section/. Run: tests/e2e/pwslot.sh python3 tests/e2e/section.py
+v1.2 O28: the same on a phone held sideways (844×390, 740×360): every item of a part fits the screen.
+Screenshots: tests/e2e/out/section/. Run: tests/e2e/pwslot.sh python3 tests/e2e/section.py [sideways]
 """
 import json, os, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -410,13 +411,88 @@ def time_up(b, C):
     ctx.close()
 
 
+def sideways(b, C, sizes=((844, 390), (740, 360))):
+    """v1.2 O28 (W3-phones): a mini section on a phone held sideways: the setup and the part card fit sideways
+    (nothing wider than the screen), and every item of the first part shows its stimulus, its options and the
+    controls row on the screen without scrolling, through answers, a flag, Skip and Back; the pause sheet opens
+    and resumes; the end-of-part card shows."""
+    for w, hgt in sizes:
+        tag = f'sideways {w}x{hgt}'
+        ctx = b.new_context(viewport={'width': w, 'height': hgt}, has_touch=True, is_mobile=True, device_scale_factor=2)
+        page = ctx.new_page()
+        con = Console(page)
+        boot(page)
+        parts, kind = choose_parts(page)
+        knobs(page, parts)
+        page.evaluate('void PX.core.router.go("section", { size: "mini" })')
+        page.wait_for_timeout(300)
+        wide = page.evaluate('Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)')
+        C.ok(page.locator('[data-sec-start]').count() == 1 and wide <= w + 1, f'{tag}: the setup screen has Start and nothing wider than the screen ({wide})')
+        page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_setup.png'))
+        press(page, '[data-sec-start]', True)
+        wait_mode(page, 'intro')
+        card_js = '(() => { const b = document.querySelector(\'[data-card="start"]\'); if (!b) return null; const r = b.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })()'
+        card = page.evaluate(card_js)
+        if card is not None and card[1] > hgt + 1:  # the card is a page (not an item): a short scroll may bring Start up
+            print(f'  note: {tag}: the part card\'s Start ends at {card[1]} of {hgt} px; a scroll brings it up', flush=True)
+            page.locator('[data-card="start"]').first.scroll_into_view_if_needed()
+            page.wait_for_timeout(150)
+            card = page.evaluate(card_js)
+        C.ok(card is not None and card[0] >= 0 and card[1] <= hgt + 1, f'{tag}: the part card\'s Start is on the screen, or a scroll brings it there ({card})')
+        page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_intro.png'))
+        press(page, '[data-card="start"]', True)
+        wait_mode(page, 'item')
+        bad, seen = [], 0
+        for k in range(5):
+            wait_respond(page)
+            page.wait_for_timeout(200)
+            f = fits(page)
+            seen += 1
+            if not f['ok'] or f['scroll'] > 1:
+                bad.append((k, page.evaluate('__play.exId'), f))
+            if k == 0:
+                page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_item.png'))
+                press(page, '[data-sec-flag]', True)
+                C.ok(page.locator('[data-sec-flag]').get_attribute('aria-pressed') == 'true', f'{tag}: Flag marks the item')
+                press(page, '[data-sec-next]', True)  # Skip
+                wait_respond(page)
+                press(page, '[data-sec-back]', True)
+                page.wait_for_function('__section.state.index === 0', timeout=5000)
+                wait_respond(page)
+                page.evaluate('PX.ui.play.current() && PX.ui.play.current().pause && PX.ui.play.current().pause()')
+                page.wait_for_timeout(300)
+                sheet = page.evaluate('(() => { const e = document.querySelector(\'.pl-pause:not([hidden]), [data-pause-sheet]\'); if (!e) return null; const r = e.getBoundingClientRect(); return [r.top, r.bottom]; })()')
+                if sheet:
+                    page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_pause.png'))
+                    C.ok(sheet[1] <= hgt + 1, f'{tag}: the pause sheet lies on the screen ({sheet})')
+                    page.evaluate('PX.ui.play.current() && PX.ui.play.current().resume && PX.ui.play.current().resume()')
+                    page.wait_for_timeout(300)
+                    wait_respond(page)
+            answer_key(page, True, True)
+            page.wait_for_timeout(200)
+            if sec(page)['mode'] != 'item':
+                break
+        C.ok(seen >= 3 and not bad, f'{tag}: every item of the part fits the screen without scrolling ({seen} items; {bad[:2]})')
+        page.wait_for_timeout(300)
+        mode = sec(page)['mode']
+        C.ok(mode in ('partend', 'intro', 'review', 'done'), f'{tag}: the part goes on to its end ({mode})')
+        page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_after.png'))
+        C.ok(not con.errors(), f'{tag}: no console errors ({con.errors()[:3]})')
+        ctx.close()
+
+
 def main():
     C = Checks('section')
+    only = [a for a in sys.argv[1:] if not a.startswith('-')]
     with sync_playwright() as p:
         b = launch(p)
         try:
+            if only == ['sideways']:  # v1.2 O28: `section.py sideways` runs only the sideways part
+                sideways(b, C)
+                sys.exit(C.summary())
             main_run(b, C, 'phone', True)
             main_run(b, C, 'desktop', False)
+            sideways(b, C)
             time_up(b, C)
         finally:
             b.close()
