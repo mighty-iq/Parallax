@@ -18,6 +18,7 @@ export async function run(t) {
   testModel(t, PX, L);
   const pool = testPool(t, PX, def, L);
   testItems(t, PX, def, L, pool);
+  testShown(t, PX, def, L, pool);
   testShortcuts(t, PX, def, L, pool);
   testTampering(t, PX, def, L, pool);
   testFallback(t, PX, def, L);
@@ -225,6 +226,50 @@ const shareOf = (scores, key, high) => {
 // Two pools, each about 2 000 items: the starter band's own (every band item) and the levels above it
 // (every fourth item). On the band one face carries the only feature by construction, so "checks the
 // most featured face only" is the method there (reported); above it, it stays bounded at 50 %.
+// PLAN milestone 9, O29 (rule 4): every feature shows in the picture, by featuresShown, which shares no code with the
+// generator's featuresSeen: filling the feature in must change the first surface on at least SHOWN_MIN rays of a
+// tenth-step grid. The validator runs it on every item of the pool; here its full counts per level (two items per
+// combination), two hand-made solids, and raw solids on which featuresSeen must never pass a feature in no sight.
+function testShown(t, PX, def, L, pool) {
+  t.section('openings: features shown in the picture (O29, independent of featuresSeen)');
+  const W = 6, H = 7, D = 8, plainF = [[0, 0], [6, 0], [6, 7], [0, 7]], S = [[0, 0], [3, 0], [3, 3], [5, 3], [5, 0], [8, 0], [8, 7], [0, 7]];
+  const open = { F: plainF, T: [[0, 0], [6, 0], [6, 8], [0, 8]], S }, behind = { F: plainF, T: [[0, 0], [6, 0], [6, 3], [3, 3], [3, 5], [6, 5], [6, 8], [0, 8]], S };
+  const a = L.featuresShown(open, W, H, D, 'I', true), b = L.featuresShown(behind, W, H, D, 'I', true), bs = b.find((x) => x.prof === 'S');
+  t.ok(a.length === 1 && a[0].shown >= 100, `a tunnel along the side profile, its mouth in plain sight, shows (${a[0] && a[0].shown} rays)`);
+  t.ok(bs && bs.shown === 0 && b.find((x) => x.prof === 'T').shown >= 100, `the same tunnel behind a slot of the top profile that has its mouth already open changes nothing in sight (${bs && bs.shown} rays), the slot shows`);
+  const sb = L.featuresSeen(behind, W, H, D, 'I').find((x) => x.prof === 'S');
+  t.ok(sb && sb.hits < L.SEEN_MIN, `featuresSeen (the generator's test) agrees that the tunnel is hidden (${sb && sb.hits} sample points, its bar ${L.SEEN_MIN})`);
+  // the pool: what the validator found (every item validated) and, for a share, the full counts per level
+  const combos = PX.ex.enumerate(def), low = {}, n = { items: 0, feats: 0 };
+  let least = Infinity;
+  for (let ci = 0; ci < combos.length; ci++) for (let s = 0; s < 2; s++) {
+    const p = combos[ci], it = def.generate(PX.rng(PX.rng.hash('openings-shown', ci, s)), p);
+    if (it.fallback) continue;
+    n.items++;
+    L.featuresShown(it.prof, it.W, it.H, it.D, it.pose, true).forEach((x) => {
+      n.feats++; least = Math.min(least, x.shown);
+      for (const d of def.dims) { const k = d.key + '=' + p[d.key]; low[k] = Math.min(low[k] === undefined ? Infinity : low[k], x.shown); }
+    });
+  }
+  t.ok(least >= L.SHOWN_MIN, `every feature of ${n.items} items (${n.feats} features, two per combination) shows: the least in sight moves the first surface on ${least} rays (at least ${L.SHOWN_MIN})`);
+  t.ok(def.dims.every((d) => d.levels.every((_, l) => low[d.key + '=' + l] >= L.SHOWN_MIN)), 'at every level of every dimension (least per level: ' + Object.entries(low).map(([k, v]) => k + ' ' + v).join(', ') + ')');
+  // raw solids (features placed at random, before any test of sight): featuresSeen never passes a hidden feature
+  const rng = PX.rng(PX.rng.hash('openings-shown-raw')), dimsAll = [5, 6, 7, 8];
+  let total = 0, falseSeen = 0, strict = 0;
+  for (let k = 0; k < 600; k++) {
+    const ds = dimsAll.slice().sort(() => rng.next() - 0.5).slice(0, 3), [w, h, d] = ds;
+    const dm = { F: [w, h], T: [w, d], S: [d, h] }, feats = { F: [], T: [], S: [] };
+    for (const nm of ['F', 'T', 'S']) for (let f = 0; f < 2; f++) { const nf = L.randomFeature(rng, dm[nm][0], dm[nm][1], rng.chance(0.4)); if (nf && L.profile(dm[nm][0], dm[nm][1], feats[nm].concat([nf]))) feats[nm].push(nf); }
+    const P = L.buildProfiles(w, h, d, feats), polys = P && L.polysOf(P);
+    if (!polys) continue;
+    const pose = L.POSE_SETS[rng.chance(0.5) ? 0 : 1][rng.chance(0.5) ? 0 : 1];
+    const sa = L.featuresSeen(polys, w, h, d, pose), sh = L.featuresShown(polys, w, h, d, pose, true);
+    if (sa.length !== sh.length) continue;
+    sa.forEach((x, i) => { total++; if (x.hits >= L.SEEN_MIN && sh[i].shown < L.SHOWN_MIN) falseSeen++; if (x.hits < L.SEEN_MIN && sh[i].shown >= L.SHOWN_MIN) strict++; });
+  }
+  t.ok(total >= 1000 && falseSeen === 0, `raw solids: featuresSeen passes no feature that filling in leaves unseen (${falseSeen} of ${total}; it turns down ${strict} that show, a safe side)`);
+}
+
 function testShortcuts(t, PX, def, L, pool) {
   t.section('openings: shortcut solvers, starter band');
   shortcutPool(t, L, pool.filter((x) => x.p.features === 0), true);

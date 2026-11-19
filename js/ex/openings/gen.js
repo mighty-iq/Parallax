@@ -41,7 +41,8 @@
    a match is IoU ≥ .985 with equal boxes; a non-match needs a box off by half a unit or a
    difference of half a unit² that holds a disc of a quarter unit. Exactly one option matches any
    silhouette; options pairwise do not match; every feature of the solid shows in the picture
-   (rays from its faces reach the viewer).
+   (v1.2, O29: by featuresShown, independent of the generator's featuresSeen: filling the feature in
+   changes the first surface on at least SHOWN_MIN rays of a tenth-step grid).
 
    Item: { ex: 'openings', seed, params, W, H, D, prof: { F, T, S } (polygons in steps, CCW),
            feats: { F: [...], T: [...], S: [...] }, pose, keyAxis, key, options: [{ kind, poly,
@@ -384,9 +385,11 @@
         var hits = 0;
         run.forEach(function (e) {
           var ex = e[1][0] - e[0][0], ey = e[1][1] - e[0][1], len = Mth.sqrt(ex * ex + ey * ey), nx = ey / len, ny = -ex / len;
+          // v1.2 (O29): a wall counts only when it faces the viewer clearly (cos ≥ 0.2), as Form's evidence rule
+          var n3 = name === 'F' ? [nx, ny, 0] : name === 'T' ? [nx, 0, ny] : [0, ny, nx], facing = n3[0] * dir[0] + n3[1] * dir[1] + n3[2] * dir[2] >= 0.2;
           [0.21, 0.5, 0.79].forEach(function (u) {
             var a = e[0][0] + u * ex + 0.01 * nx, b = e[0][1] + u * ey + 0.01 * ny;
-            for (var s = 0; s < 8; s++) {
+            for (var s = 0; s < 8 && facing; s++) {
               var c = (s + 0.37) / 8 * dm[2], o = name === 'F' ? [a, b, c] : name === 'T' ? [a, c, b] : [c, b, a];
               var face = name === 'F' ? pip(prof.T, o[0], o[2]) && pip(prof.S, o[2], o[1]) : name === 'T' ? pip(prof.F, o[0], o[1]) && pip(prof.S, o[2], o[1]) : pip(prof.F, o[0], o[1]) && pip(prof.T, o[0], o[2]);
               if (face && !rayHits(prof, o, dir)) hits++;
@@ -400,7 +403,15 @@
             if (iv.length) {
               var t0 = Mth.min.apply(null, iv.map(function (q) { return q[0]; })), sp = st.slice();
               sp[ax] = st[ax] + dd[ax] * (t0 - 0.01);
-              if (!rayHits(prof, sp, dir)) hits++;
+              // v1.2 (O29): the edge bounds that end face only if, just outside it and just under the face, the other
+              // two profiles hold material (the face would run on if this feature were filled); else another
+              // feature's edge or face lies there, and filling this one would change nothing in sight
+              var oa = e[0][0] + u * ex + 0.02 * nx, ob = e[0][1] + u * ey + 0.02 * ny, po = name === 'F' ? [oa, ob, 0] : name === 'T' ? [oa, 0, ob] : [0, ob, oa];
+              po[ax] = st[ax] + dd[ax] * (t0 + 0.01);
+              var carried = name === 'F' ? pip(prof.T, po[0], po[2]) && pip(prof.S, po[2], po[1]) : name === 'T' ? pip(prof.F, po[0], po[1]) && pip(prof.S, po[2], po[1]) : pip(prof.F, po[0], po[1]) && pip(prof.T, po[0], po[2]);
+              // and only on the flat end itself (an edge seen on another, slanted face may be seen edge-on)
+              var atEnd = Mth.abs(st[ax] + dd[ax] * t0 - (sg > 0 ? dm[2] : 0)) < 1e-6;
+              if (carried && atEnd && !rayHits(prof, sp, dir)) hits++;
             }
           });
         });
@@ -408,6 +419,106 @@
       });
     });
     return seen;
+  }
+
+  /* ------------------------------------------------------------ features shown: an independent check (O29) */
+  // Rule 4's independent check of featuresSeen (PLAN milestone 9, O29; RV-dat-style-B #15): a feature shows in the
+  // picture when filling it in changes what the viewer sees. It shares no code with featuresSeen (its own feature
+  // runs, polygon crossings, intervals and rays): the picture is sampled by parallel rays from the viewer (the
+  // pose's view direction) on a grid of a tenth of a step over the box that the filled pocket of the feature
+  // projects to; each ray finds the first surface of the solid and of the solid with that pocket filled, and the
+  // feature counts as shown when that surface moves on at least SHOWN_MIN rays (a few hundredths of a square step
+  // seen). → [{ prof, shown: rays that change }], one per feature (with full false, counted up to SHOWN_MIN only).
+  var SHOWN_MIN = 4;
+  var SEEN_MIN = 2; // the generator's own bar (featuresSeen's sample points that reach the viewer)
+  function shownRuns(P, A, B) { // maximal runs of edges off the box [0, A] × [0, B], as vertex lists [start, …, end]
+    var n = P.length, off = [], i, k;
+    for (i = 0; i < n; i++) {
+      var a = P[i], b = P[(i + 1) % n];
+      off.push(!((a[0] === 0 && b[0] === 0) || (a[0] === A && b[0] === A) || (a[1] === 0 && b[1] === 0) || (a[1] === B && b[1] === B)));
+    }
+    var s0 = off.indexOf(false), runs = [], cur = null;
+    if (s0 < 0) return [];
+    for (k = 1; k <= n; k++) {
+      i = (s0 + k) % n;
+      if (off[i]) { if (!cur) cur = [P[i]]; cur.push(P[(i + 1) % n]); } else if (cur) { runs.push(cur); cur = null; }
+    }
+    if (cur) runs.push(cur);
+    return runs;
+  }
+  function perim(p, A, B) { // where a point of the box's border lies along it, counter-clockwise from (0, 0)
+    return p[1] === 0 ? p[0] : p[0] === A ? A + p[1] : p[1] === B ? A + B + (A - p[0]) : 2 * A + B + (B - p[1]);
+  }
+  // The pocket a run cuts from the box (the profile is counter-clockwise): the run, then back along the border.
+  function pocketOf(run, A, B) {
+    var L = 2 * (A + B), s = perim(run[0], A, B), e = perim(run[run.length - 1], A, B), span = ((e - s) % L + L) % L;
+    var corners = [[0, 0, 0], [A, A, 0], [A + B, A, B], [2 * A + B, 0, B]].map(function (c) { return { f: ((c[0] - s) % L + L) % L, p: [c[1], c[2]] }; });
+    var back = corners.filter(function (c) { return c.f > 1e-9 && c.f < span - 1e-9; }).sort(function (x, y) { return y.f - x.f; });
+    return run.concat(back.map(function (c) { return c.p; }));
+  }
+  // Where the line o + t·d is inside the union of simple polygons (the half-open crossing rule).
+  function lineIn(polys, ox, oy, dx, dy) {
+    var all = [], out = [];
+    polys.forEach(function (Q) {
+      var ts = [];
+      for (var i = 0; i < Q.length; i++) {
+        var a = Q[i], b = Q[(i + 1) % Q.length], sa = (a[0] - ox) * dy - (a[1] - oy) * dx > 0, sb = (b[0] - ox) * dy - (b[1] - oy) * dx > 0;
+        if (sa === sb) continue;
+        var ex = b[0] - a[0], ey = b[1] - a[1];
+        ts.push(((a[0] - ox) * ey - (a[1] - oy) * ex) / (dx * ey - dy * ex));
+      }
+      ts.sort(function (x, y) { return x - y; });
+      for (var k = 0; k + 1 < ts.length; k += 2) all.push([ts[k], ts[k + 1]]);
+    });
+    all.sort(function (x, y) { return x[0] - y[0]; }).forEach(function (iv) {
+      var last = out[out.length - 1];
+      if (last && iv[0] <= last[1] + 1e-12) last[1] = Mth.max(last[1], iv[1]); else out.push(iv.slice());
+    });
+    return out;
+  }
+  // The first surface along a ray from the viewer: the start of the first interval inside all three prisms.
+  function firstHit(sets, X0, v) {
+    var F = lineIn(sets.F, X0[0], X0[1], v[0], v[1]), T = lineIn(sets.T, X0[0], X0[2], v[0], v[2]), S = lineIn(sets.S, X0[2], X0[1], v[2], v[1]);
+    var best = INF;
+    F.forEach(function (a) { T.forEach(function (b) { S.forEach(function (c) {
+      var lo = Mth.max(a[0], b[0], c[0]), hi = Mth.min(a[1], b[1], c[1]);
+      if (hi - lo > 1e-9 && lo < best) best = lo;
+    }); }); });
+    return best;
+  }
+  function featuresShown(prof, W, H, D, poseKey, full) {
+    var R = POSES[poseKey], d = [R[0] * VIEW[0] + R[3] * VIEW[1] + R[6] * VIEW[2], R[1] * VIEW[0] + R[4] * VIEW[1] + R[7] * VIEW[2], R[2] * VIEW[0] + R[5] * VIEW[1] + R[8] * VIEW[2]];
+    var n = Mth.hypot(d[0], d[1], d[2]), v = [-d[0] / n, -d[1] / n, -d[2] / n]; // toward the solid
+    var r = [v[2], 0, -v[0]], rn = Mth.hypot(r[0], r[2]); r = [r[0] / rn, 0, r[2] / rn];
+    var u = [v[1] * r[2] - v[2] * r[1], v[2] * r[0] - v[0] * r[2], v[0] * r[1] - v[1] * r[0]];
+    var far = 4 * (W + H + D), base = { F: [prof.F], T: [prof.T], S: [prof.S] }, out = [];
+    var dm = { F: [W, H, D], T: [W, D, H], S: [D, H, W] };
+    function to3(name, a, b, c) { return name === 'F' ? [a, b, c] : name === 'T' ? [a, c, b] : [c, b, a]; }
+    ['F', 'T', 'S'].forEach(function (name) {
+      var A = dm[name][0], B = dm[name][1], Ln = dm[name][2];
+      shownRuns(prof[name], A, B).forEach(function (run) {
+        var pocket = pocketOf(run, A, B), filled = { F: base.F, T: base.T, S: base.S };
+        filled[name] = [prof[name], pocket];
+        var lo = [INF, INF], hi = [-INF, -INF];
+        pocket.forEach(function (p) { [0, Ln].forEach(function (c) {
+          var X = to3(name, p[0], p[1], c), a = X[0] * r[0] + X[1] * r[1] + X[2] * r[2], b = X[0] * u[0] + X[1] * u[1] + X[2] * u[2];
+          lo = [Mth.min(lo[0], a), Mth.min(lo[1], b)]; hi = [Mth.max(hi[0], a), Mth.max(hi[1], b)];
+        }); });
+        // the grid coarse to fine (every fourth ray, then every second, then the rest), so a check that stops at
+        // SHOWN_MIN (full false) settles a feature in sight after a few rays
+        var pts = [], moved = 0, na = Mth.max(1, Mth.ceil((hi[0] - lo[0]) / 0.1)), nb = Mth.max(1, Mth.ceil((hi[1] - lo[1]) / 0.1));
+        for (var i = 0; i < na; i++) for (var j = 0; j < nb; j++) pts.push([i, j, i % 4 === 0 && j % 4 === 0 ? 0 : i % 2 === 0 && j % 2 === 0 ? 1 : 2]);
+        pts.sort(function (p, q) { return p[2] - q[2]; });
+        for (var k = 0; k < pts.length && (full || moved < SHOWN_MIN); k++) {
+          var a = lo[0] + 0.0437 + 0.1 * pts[k][0], b = lo[1] + 0.0371 + 0.1 * pts[k][1];
+          var X0 = [a * r[0] + b * u[0] - far * v[0], a * r[1] + b * u[1] - far * v[1], a * r[2] + b * u[2] - far * v[2]];
+          var t1 = firstHit(base, X0, v), t2 = firstHit(filled, X0, v);
+          if (t1 === INF ? t2 !== INF : Mth.abs(t1 - t2) > 1e-6) moved++;
+        }
+        out.push({ prof: name, shown: moved });
+      });
+    });
+    return out;
   }
 
   /* ------------------------------------------------------------ the solid's surface (for the view) */
@@ -860,7 +971,7 @@
     feats[keyProf] = [kf];
     var P = buildProfiles(W, H, D, feats), polys = P && polysOf(P);
     if (!polys) return null;
-    if (featuresSeen(polys, W, H, D, pose).some(function (s) { return s.hits < 2; })) { stats.unseen++; return null; }
+    if (featuresSeen(polys, W, H, D, pose).some(function (s) { return s.hits < SEEN_MIN; })) { stats.unseen++; return null; }
     var S3 = sils(P);
     if (!sameGrid(S3.z, P.F) || !sameGrid(S3.y, P.T) || !sameGrid(S3.x, P.S)) { stats.interact++; return null; }
     var crops = { z: P.F, y: P.T, x: P.S }, key = crops[keyAxis], pool = [], admit = admitInto(pool, crops);
@@ -926,7 +1037,7 @@
     var P = buildProfiles(W, H, D, feats), polys = P && polysOf(P);
     if (!polys) return null;
     var seen = featuresSeen(polys, W, H, D, pose);
-    if (seen.some(function (s) { return s.hits < 2; })) { stats.unseen++; return null; }
+    if (seen.some(function (s) { return s.hits < SEEN_MIN; })) { stats.unseen++; return null; }
     // Each silhouette is its own profile: no profile cuts away another's outline (no interactions),
     // so every outline is a profile polygon spanning its full rectangle.
     var S3 = sils(P);
@@ -1016,8 +1127,10 @@
         if (i !== item.key && hits) return 'option ' + i + ' also fits the solid';
       }
       for (i = 0; i < 5; i++) for (j = i + 1; j < 5; j++) if (rcompare(item.options[i].poly, rs[j], caches[i]) !== 'differ') return 'options ' + i + ' and ' + j + ' are not clearly different';
-      var seen = featuresSeen(prof, W, H, D, item.pose);
-      for (i = 0; i < seen.length; i++) if (seen[i].hits < 2) return 'a feature of profile ' + seen[i].prof + ' is hidden in the picture';
+      // every feature shows in the picture: checked here by featuresShown (filling it in changes what the viewer
+      // sees), independent of the generator's featuresSeen (O29)
+      var shown = featuresShown(prof, W, H, D, item.pose);
+      for (i = 0; i < shown.length; i++) if (shown[i].shown < SHOWN_MIN) return 'a feature of profile ' + shown[i].prof + ' is hidden in the picture';
       var lv = cleanParams(item.params), vt = validTurn(item, sil, lv.turn);
       if (vt !== true) return vt;
       if (lv.features === 1) {
@@ -1159,6 +1272,7 @@
       silZ: silZ, silX: silX, silY: silY, sils: sils, outline: outline, polyArea: polyArea, area4: area4, crop: crop,
       tfPoint: tfPoint, tfSize: tfSize, tfGrid: tfGrid, tfPoly: tfPoly, compare: compare, dist: dist, stretch: stretch, mutate: mutate, MAXEXT: MAXEXT, KEYVIEW_SETS: KEYVIEW_SETS, FEATURES: FEATURES,
       pip: pip, rayIntervals: rayIntervals, rayHits: rayHits, inSolid: inSolid, featureRuns: featureRuns, featuresSeen: featuresSeen, tmul: tmul, axisFacing: axisFacing,
+      featuresShown: featuresShown, shownRuns: shownRuns, pocketOf: pocketOf, SHOWN_MIN: SHOWN_MIN, SEEN_MIN: SEEN_MIN,
       surface: surface, edges: edges, raySil: raySil, polyRaster: polyRaster, scanFill: scanFill, tfRaster: tfRaster, rcompare: rcompare, shares: shares, fitsBox: fitsBox,
       build: build, buildBand: buildBand, fallback: fallback, cleanParams: cleanParams, seenTf: seenTf, cameraTf: cameraTf, bandFeatOk: bandFeatOk, tfThen: tfThen, optionTf: optionTf, validTurn: validTurn, TURN: TURN, LEVEL_TAGS: LEVEL_TAGS,
       // the profiles of an item as quarter grids, from its stored polygons (centroid tests)
