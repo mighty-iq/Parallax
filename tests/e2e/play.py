@@ -1299,12 +1299,112 @@ def run_gamefeel(b, C):
     ctx.close()
 
 
+def run_round4(b, C):
+    """Fresh-player round 4 (a new player's first session, phone 390 x 844): the tour's length from each
+    tutorial's own estimate; the walkthrough button's words follow what a tap does and Close leaves no
+    caption; the tour's step indicator whole, one Pause during Track, Track's label on a chip; the tour's
+    Track Try items at the first band."""
+    tag = 'round 4'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    page.goto(INDEX.as_uri())
+    page.wait_for_function(READY, timeout=20000)
+    page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')
+    for _ in range(3):  # the Chimera welcome first; the tour offer comes after it
+        if page.locator('.px-modal.px-offer').count():
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(200)
+    tm = page.evaluate('PX.ui.tour.minutes()')
+    go_txt = page.locator('.px-offer-go').inner_text().strip()
+    body = page.locator('.px-modal.px-offer').inner_text()
+    C.ok(tm['minutes'] >= 5 and go_txt == f"Watch, Try, Go ({tm['minutes']} min)" and f"about {tm['words']}" in body,
+         f'{tag}: the tour offer gives the tutorials\' own length ({go_txt!r}; {tm})')
+    page.locator('.px-offer-go').click()
+    page.wait_for_selector('[data-wtg="rotate"]', timeout=8000)
+    page.evaluate('PX.debug.fast(true)')
+    for ex in ('rotate', 'fold'):
+        page.wait_for_selector(f'[data-wtg="{ex}"]', timeout=15000)
+        page.locator('[data-wtg-skip]').click()
+    page.wait_for_selector('[data-wtg="track"]', timeout=15000)
+    page.wait_for_timeout(300)
+    steps = page.evaluate("""(() => { const ol = document.querySelector('.pl-wtg-steps'), r = ol.getBoundingClientRect();
+      return { over: ol.scrollWidth - ol.clientWidth, pills: [...ol.children].map((li) => Math.round(li.getBoundingClientRect().right - r.right)) }; })()""")
+    C.ok(steps['over'] <= 1 and all(x <= 1 for x in steps['pills']), f'{tag}: the tour\'s step indicator shows its three steps whole at 390 px ({steps})')
+    tries = []
+    for _ in range(400):
+        if page.locator('[data-tour-end]').count() == 0 or page.evaluate("!document.querySelector('[data-wtg=\"track\"]')"):
+            break
+        st = state(page)
+        nb = page.locator('.ex-track-notice:not([hidden]) .px-btn')
+        if nb.count() and nb.first.is_visible():
+            nb.first.click()
+        elif st == 'present':
+            vis = page.evaluate("""(() => { const own = document.querySelector('.pl-host .ex-track-pause'); if (!own || own.hidden) return null;
+              return [getComputedStyle(document.querySelector('.pl-hud [data-pause]')).visibility, getComputedStyle(document.querySelector('.pl-trial.ex-track .pl-host .ex-label')).backgroundColor]; })()""")
+            if vis:
+                tries.append(('pause', vis))
+        elif st == 'respond':
+            it = page.evaluate("({ p: __play.item.params, practice: !!PX.ui.play.current().cfg.practice, demo: !!PX.ui.play.current().cfg.demo })")
+            if it['practice'] and not it['demo']:
+                tries.append(('try', it['p']))
+            page.evaluate('__play.answer(true).catch(() => 0)')
+        elif st in ('reveal', 'showme'):
+            page.evaluate('__play.next()')
+        cb = page.locator('[data-card-box] .px-btn--primary')
+        if cb.count():
+            cb.first.click()
+        page.wait_for_timeout(60)
+    first = page.evaluate("(() => { const L = PX.ex.learn('track'), x = L.practice[0]; return x.params || x; })()")
+    tp = [x[1] for x in tries if x[0] == 'try']
+    C.ok(len(tp) >= 3 and all(all(p.get(k) == v for k, v in first.items()) for p in tp), f'{tag}: the tour\'s Track Try items stay at the first band ({len(tp)} items; {tp[-1:]} vs {first})')
+    pv = [x[1] for x in tries if x[0] == 'pause']
+    C.ok(pv and all(v[0] == 'hidden' and v[1] not in ('rgba(0, 0, 0, 0)', 'transparent') for v in pv), f'{tag}: during Track\'s stimulus one Pause shows (the title row\'s steps aside) and its label sits on a chip ({pv[:1]})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+    # the walkthrough button's words, and Close (the runner with steps of known shape, as run_captions)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    go(page, {'mode': 'free', 'exId': 'rotate', 'params': {'angle': 0, 'axis': 0, 'cubes': 0, 'variant': 'pick'}, 'trials': 3})
+    wait_state(page, 'respond')
+    page.evaluate('PX.debug.fast(false); PX.core.store.state.ui.autoplay = false')
+    start = """(steps) => { const P = PX.ui.play.current(); P.demoing = true; window.__done = false;
+      const mk = (s) => Object.assign({ ms: s.ms || 300 }, s.cap ? { caption: s.cap } : {}, s.motion !== undefined ? { motion: s.motion } : {}, s.anim ? { update() {} } : {});
+      P.ctx.play(steps.map(mk)).then(() => { __done = true; P.demoing = false; }); }"""
+    page.evaluate(start, [{'cap': 'M1', 'ms': 4000, 'motion': True}, {'cap': 'M2', 'ms': 4000, 'motion': True}, {'cap': 'S3', 'ms': 4000, 'anim': True}, {'cap': 'S4'}])
+    page.wait_for_timeout(400)
+    l1 = page.locator('[data-showme-next]').inner_text().strip()
+    page.locator('[data-showme-next]').tap()
+    page.wait_for_timeout(300)
+    c2 = page.evaluate("document.querySelector('.pl-caption').textContent")
+    C.ok(l1.startswith('Next step') and c2 == 'M2', f'{tag}: on a moving caption the button says Next step, and a tap shows the next caption ({l1!r} -> {c2!r})')
+    page.locator('[data-showme-next]').tap()
+    page.wait_for_timeout(300)
+    l3 = page.locator('[data-showme-next]').inner_text().strip()
+    c3 = page.evaluate("document.querySelector('.pl-caption').textContent")
+    C.ok(c3 == 'S3' and l3.startswith('Finish step'), f'{tag}: on a still caption whose steps play it says Finish step ({c3!r}, {l3!r})')
+    page.locator('[data-showme-next]').tap()
+    page.wait_for_timeout(300)
+    s4 = page.evaluate("[document.querySelector('.pl-caption').textContent, !!document.querySelector('.pl-showme[data-waiting]'), document.querySelector('[data-showme-next]').textContent.trim()]")
+    C.ok(s4[0] == 'S3' and s4[1] and s4[2].startswith('Next step'), f'{tag}: Finish step finishes that caption and waits there; then Next step ({s4})')
+    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
+    page.wait_for_function('__done === true', timeout=5000)
+    cap = page.evaluate("document.querySelector('.pl-caption').textContent")
+    C.ok(cap == '', f'{tag}: Close leaves no caption behind ({cap!r})')
+    C.ok(not con.errors(), f'{tag} words: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue
