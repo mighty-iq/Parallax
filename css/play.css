@@ -234,7 +234,7 @@
 .pl-marks li.is-wrong .pl-mark-g { color: var(--wrong); background: var(--wrong-wash); }
 .pl-mark-n { font-size: var(--fs-xs); color: var(--ink-3); }
 .pl-mark-x { font-size: var(--fs-xs); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pl-daily .px-copybox-text { min-height: 0; resize: none; }
+.pl-daily .px-copybox-text { min-height: 0; resize: none; overflow: hidden; overflow-wrap: anywhere; } /* as tall as its lines (play.js fitCopy) */
 .pl-daily .px-linkcopy { margin-top: var(--s4); max-width: 26rem; }
 
 /* ---------- Free play setup ---------- */
@@ -524,6 +524,15 @@
 @media (max-width: 719px) {
   body.px-item .pl-player[data-state="reveal"] > .pl-feedback:not([hidden]) { position: fixed; left: 0; right: 0; margin: 0; }
   body.px-item .pl-player[data-state="reveal"]:has(> .pl-feedback:not([hidden])) { padding-bottom: 8rem; }
+  /* the buttons are the strip's last row, whatever note comes (first-session fresh test: a Stretch note under them
+     moved Next item up, and a tap aimed at its usual place missed): the verdict, then the notes, then the buttons */
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback:not([hidden]) { display: flex; flex-direction: column; }
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback > .pl-feedback-main { display: contents; }
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback > .pl-feedback-main > * { flex: none; }
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback .pl-verdict { order: 1; }
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback > .pl-notes { order: 2; margin-top: var(--s2); }
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback .pl-actions { order: 3; margin-top: var(--s2); }
+  body.px-item .pl-player[data-state="reveal"] > .pl-feedback > .pl-showme { order: 4; }
 }
 /* during a show-me after an answer, Next is the bar's last button (where a demo's Next is), so the
    strip's own row waits under the item until the show-me ends */

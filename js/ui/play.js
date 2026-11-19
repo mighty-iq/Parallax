@@ -42,8 +42,8 @@
   function confirmTaps() { var st = store.state && store.state.settings; return !!(st && st.confirmTaps === true); }
 
   var FAST = false;
-  // Test knobs: slowMs overrides the "See solution" threshold; limitScale scales time limits;
-  // budgetMs replaces a time-boxed session's budget of active time (sessions of a few seconds).
+  // Test knobs: limitScale scales time limits; budgetMs replaces a time-boxed session's budget of active time
+  // (sessions of a few seconds); slowMs is kept for older tests (See solution now follows every right answer).
   var CONFIG = { slowMs: null, limitScale: 1, budgetMs: null };
   var AUTO_SHOWME = 3;      // automatic show-me replays per exercise, then a "Why?" button instead
   var VOID_NOTICE = 3;      // voided trials in a row before the calm device notice
@@ -61,6 +61,8 @@
   // v1.2 wave 2 (CONTRACT-v1.2 R): the modes whose sessions run the player hooks (session:start,
   // item:before, item:notes); the Daily, Threshold and friend challenges keep their fixed items
   var HOOK_MODES = { train: 1, path: 1, speed: 1, free: 1 };
+  // The modes whose summary offers "Keep going" for a session too short to count toward the week (modes.start continueOf)
+  var KEEP_MODES = ['train', 'path', 'speed', 'free'];
   var MODE_NAMES = { train: 'Train', path: 'Path', speed: 'Speed', threshold: 'Threshold', free: 'Free play', daily: 'Daily Challenge', check: 'Spatial Check', watch: 'Watch, Try, Go', tour: 'Watch, Try, Go' };
 
   function E() { return PX.engine; }
@@ -180,6 +182,10 @@
 
   // In the Library's words when it is loaded (PX.ui.exinfo.dimText: '10 cubes', 'speed 0.22 cw/s').
   function lowFirst(s) { s = String(s || ''); return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+  // A level whose likely range (the estimator's 95 % range) is wider than this many levels is still settling: the
+  // words say so instead of a bare "likely 1–79" (first-session fresh test)
+  var SETTLING_WIDTH = 30;
+  function settling(lo, hi) { return isNum(lo) && isNum(hi) && hi - lo > SETTLING_WIDTH; }
   // Dims the exercise does not use at these settings (def.ignores: Angles' size class at its 9° level) are left out.
   // The level deals neighbouring settings too, so its texts give this one as an example ("At this level, for example:
   // …"; W3-bandA's request after the lead's fresh-player run: a "typical" arm pose the item did not show).
@@ -1078,11 +1084,12 @@
       if (tr.outcome === 'stutter') el.verdict.appendChild(h('span.pl-verdict-void', voidText(tr.voidReason)));
       else sound.play(ok ? 'right' : 'wrong'); // a short tone when the setting is on (never during a stimulus)
       var canShow = !!(P.view && P.view.showMe);
-      // "See solution" after a slow right answer, and after any right practice answer (W1-fixes' request)
-      var slow = ok && (cfg.practice || (isNum(tr.rtMs) && tr.rtMs > slowMs(P.exId)));
+      // "See solution" after every right answer (v1.2, first-session fresh test: it came only after a slow one, so
+      // Next item took the whole row after a quick answer and a tap aimed at its usual place could miss; W1-fixes had
+      // asked for it after any right practice answer)
       var auto = !ok && canShow && (cfg.practice || counter('showMe', P.exId) < AUTO_SHOWME);
       el.showBtn.firstChild.textContent = !ok ? (auto ? 'Show me again' : 'Why?') : 'See solution';
-      el.showBtn.hidden = !canShow || (ok && !slow) || auto;
+      el.showBtn.hidden = !canShow || auto;
       el.nextBtn.hidden = false;
       el.actions.hidden = false;
       el.feedback.hidden = false;
@@ -1629,26 +1636,6 @@
     return { wanted: wanted, unlock: unlock, play: play, ready: function () { return !!ctx; }, played: 0 };
   })();
 
-  // A correct answer slower than this gets "See solution": 1.5 × the person's median right
-  // answer time on the exercise (last 30), at least 4 s; 15 s before 5 right answers exist.
-  var slowCache = {};
-  function slowMs(exId) {
-    if (isNum(CONFIG.slowMs)) return CONFIG.slowMs;
-    var r = rec(), key = ((r.trials ? r.trials.length : 0) / 10) | 0;
-    if (slowCache[exId] && slowCache[exId].key === key) return slowCache[exId].ms;
-    var rts = [];
-    try {
-      var names = E().log.names(r), rows = r.trials || [];
-      for (var i = rows.length - 1; i >= 0 && rts.length < 30 && i >= rows.length - 3000; i--) {
-        var row = rows[i];
-        if (Array.isArray(row) && names.ex[row[1]] === exId && row[5] === 1 && isNum(row[6])) rts.push(row[6]);
-      }
-    } catch (e) { rts = []; }
-    var ms = rts.length >= 5 ? Math.max(4000, 1.5 * U.median(rts)) : 15000;
-    slowCache[exId] = { key: key, ms: ms };
-    return ms;
-  }
-
   /* =====================================================================================
      Cards (a panel with a choice, shown in place of the player) and the focus chrome
      ===================================================================================== */
@@ -2150,6 +2137,7 @@
     if (Number(p.count) > 0) o.count = Math.round(Number(p.count)); // Train: how many exercises (1 = the pinned one only)
     if (typeof p.day === 'string') o.day = p.day;
     if (p.range === 'test') o.range = 'test'; // Free play's "test range only" (v1.2 milestone 8, CONTRACT-v1.2 W3)
+    if (typeof p.continueOf === 'string' && p.continueOf) o.continueOf = p.continueOf; // "Keep going" (modes.start)
     return o;
   }
 
@@ -2728,7 +2716,7 @@
     var right5 = l5.filter(function (x) { return x === 1; }).length;
     return h('div.pl-note.pl-note--level', { 'data-note': 'level' },
       h('p', h('strong', o.first ? name + ': first ' + levelText(a) : moved ? name + ' level ' + b.level + ' → ' + levelText(a) : name + ' ' + levelText(a) + ', unchanged'),
-        h('span.px-num.pl-note-range', ' likely ' + a.lo + '–' + a.hi), ' after the last 10 items'),
+        settling(a.lo, a.hi) ? h('span.pl-note-range', ', still settling (likely ' + a.lo + '–' + a.hi + '),') : h('span.px-num.pl-note-range', ' likely ' + a.lo + '–' + a.hi), ' after the last 10 items'),
       h('div.pl-note-bar', bar),
       st ? h('p.px-meta.pl-note-starter', { 'data-starter': String(Math.round(st.toNext * 100)) }, (l5.length ? right5 + ' of your last ' + l5.length + ' right; ' : '') + 'level 2 comes at about ' + st.needOf5 + ' of 5 right over a block.') : null,
       set ? h('p.px-meta', 'At this level, for example: ' + lowFirst(set) + '.') : null);
@@ -2899,13 +2887,19 @@
       var bar = ui.bar(lv.after, 100, { band: [lv.lo, lv.hi], label: (def.short || def.name) + ' level', kind: 'signal' });
       bar.setAttribute('aria-valuetext', levelText(lv.after) + ', likely between ' + lv.lo + ' and ' + lv.hi);
       if (moved && Array.isArray(sweeps)) sweeps.push([bar, lv.before, lv.after]);
+      // v1.2 (first-session fresh test: "Level 17 likely 1–79" was hard to read): a wide range reads "still settling",
+      // and the line under the bar gives the range in words (the estimator's 95 % range, which narrows with answers)
+      var wide = settling(lv.lo, lv.hi), isFirst = lv.before === null || lv.before === undefined;
+      var rangeWords = 'likely between ' + lv.lo + ' and ' + lv.hi + ' for now; the range narrows as you answer more.';
       kids.push(h('div.pl-res-level',
         h('p.pl-res-lv', h('span.pl-res-lvk', timed === true ? 'Speed level' : 'Level'), h('b.px-num', moved ? lv.before + ' → ' + lv.after : String(lv.after)),
-          lv.after <= 1 ? h('span.pl-res-starter', ' · starter items') : null, h('span.px-num.pl-res-range', 'likely ' + lv.lo + '–' + lv.hi)),
+          lv.after <= 1 ? h('span.pl-res-starter', ' · starter items') : null,
+          wide ? h('span.pl-res-range.pl-res-settling', { 'data-range': lv.lo + '-' + lv.hi }, 'still settling') : h('span.px-num.pl-res-range', 'likely ' + lv.lo + '–' + lv.hi)),
         h('div.pl-res-bar', bar),
         since,
-        h('p.px-meta', lv.before === null || lv.before === undefined ? 'A first level: it narrows as you practise.' :
-          r.clear ? 'A clear change: larger than the usual ±' + r.noise + ' between sessions.' : 'Within the usual session-to-session noise (±' + r.noise + ').'),
+        h('p.px-meta', isFirst ? (wide ? 'A first level, ' + rangeWords : 'A first level: it narrows as you practise.') :
+          (r.clear ? 'A clear change: larger than the usual ±' + r.noise + ' between sessions.' : 'Within the usual session-to-session noise (±' + r.noise + ').') +
+          (wide ? ' Still settling: ' + rangeWords : '')),
         lv.settings && settingsText(def, lv.settings) ? h('p.px-meta', 'At this level, for example: ' + lowFirst(settingsText(def, lv.settings)) + '.') : null));
     }
     return h('li.pl-res', { 'data-ex': r.exId }, kids);
@@ -2982,13 +2976,32 @@
       if (inv === 'achievement' && !invPanel) { var ia = invite('achievement', { host: out, id: res.achievements[0].id }); if (ia) out.appendChild(ia); }
     }
     hp.filter(function (x) { return x.order >= 50; }).forEach(hookPanel);
+    var keepBtn = null;
     if (res && res.streak) {
       var pw = K.panel({ title: 'This week', className: 'pl-panel', aside: 'goal ' + res.streak.goal + ' a week' });
       pw.body.appendChild(h('p', res.streak.text + (res.streak.week && isNum(res.streak.week.ms) ? ' Practice this week: ' + PX.core.clock.fmtMinutes(res.streak.week.ms) + '.' : '')));
-      // a session too short to count says so, with the rule's own numbers (fresh-player tests)
+      // a session too short to count says how many answers make it count, with a one-tap way to keep going (v1.2,
+      // first-session fresh test: after the long check, a first session of 5 answers read only "does not count yet");
+      // "Keep going" goes on with this session (modes.start continueOf), so its answers count together
       var EN = E(), sc = res.session, CS = EN && EN.config && EN.config.streak;
-      if (sc && CS && EN.streak && typeof EN.streak.counts === 'function' && sc.mode !== 'check' && !EN.streak.counts(sc)) {
-        pw.body.appendChild(h('p.px-meta.pl-week-short', 'This session does not count toward the week yet: a session counts from ' + CS.minTrials + ' answers or ' + Math.round(CS.minMs / 60000) + ' minutes of practice (this one: ' + (sc.trials || 0) + ' answers, ' + PX.core.clock.fmtMinutes(sc.practiceMs || 0) + ').'));
+      var counted = sc && CS && EN.streak && typeof EN.streak.counts === 'function' && sc.mode !== 'check' ? EN.streak.counts(sc) : null;
+      if (counted === false) {
+        var more = Math.max(1, CS.minTrials - (sc.trials || 0));
+        pw.body.appendChild(h('p.pl-week-short', { 'data-more': String(more) }, (more === 1 ? 'One more answer' : more + ' more answers') + ' and this session counts toward your week.'));
+        pw.body.appendChild(h('p.px-meta', 'A session counts from ' + CS.minTrials + ' answers or ' + Math.round(CS.minMs / 60000) + ' minutes of practice; this one so far: ' + plural(sc.trials || 0, 'answer') + ', ' + PX.core.clock.fmtMinutes(sc.practiceMs || 0) + '.'));
+        if (KEEP_MODES.indexOf(mode) >= 0 && isNum(sc.start) && U.dayKey(sc.start) === U.dayKey(now()) && !S.restored) {
+          keepBtn = ui.button('Keep going', { kind: 'primary', onClick: function () {
+            var prm = {}, src = S.params || router.current().params || {};
+            for (var k in src) if (hasOwn.call(src, k) && k !== 'restore' && k !== 'continueOf') prm[k] = src[k];
+            prm.mode = mode;
+            prm.continueOf = sc.id;
+            router.go('play', prm, { force: true });
+          } });
+          keepBtn.setAttribute('data-keep-going', '');
+          pw.body.appendChild(h('div.pl-summary-actions.pl-keep-going', keepBtn));
+        }
+      } else if (counted && res.joined) {
+        pw.body.appendChild(h('p.pl-week-short', { 'data-joined': '' }, 'With its first ' + plural(res.joined.trials, 'answer') + ', this session now counts toward your week.'));
       }
       pw.body.appendChild(weekDots(res.streak));
       if (res.streak.current > 1) pw.body.appendChild(h('p.px-meta', res.streak.current + ' weeks in a row at your goal. One missed week in four is forgiven automatically.'));
@@ -3004,9 +3017,9 @@
       sh.setAttribute('data-share', '');
       acts.appendChild(sh);
     }
-    var again = ui.button(mode === 'train' ? 'Another session' : 'Again', { kind: nx.go ? 'secondary' : 'primary', onClick: function () {
+    var again = ui.button(mode === 'train' ? 'Another session' : 'Again', { kind: nx.go || keepBtn ? 'secondary' : 'primary', onClick: function () {
       var prm = {}, src = S.params || router.current().params || {};
-      for (var k in src) if (hasOwn.call(src, k) && k !== 'restore') prm[k] = src[k];
+      for (var k in src) if (hasOwn.call(src, k) && k !== 'restore' && k !== 'continueOf') prm[k] = src[k];
       prm.mode = mode;
       router.go('play', prm, { force: true });
     } });
@@ -3081,6 +3094,22 @@
 
   /* ---------- the Daily Challenge result ---------- */
 
+  // A copy field as tall as its text, at any width (W3-game-2's request: on a 390 px phone the Daily's one-row share
+  // line was cut off): the box wraps, and its height follows its lines once in the page and when the width changes.
+  function fitCopy(box) {
+    var ta = box && box.querySelector ? box.querySelector('textarea') : null;
+    if (!ta) return box;
+    function fit() {
+      if (!ta.isConnected) return false;
+      ta.style.height = 'auto';
+      ta.style.height = Math.ceil(ta.scrollHeight + 2) + 'px'; // the scroll height leaves out the 1 px borders
+      return true;
+    }
+    function onResize() { if (!fit()) win.removeEventListener('resize', onResize); }
+    if (win.requestAnimationFrame) win.requestAnimationFrame(fit); else win.setTimeout(fit, 0);
+    win.addEventListener('resize', onResize);
+    return box;
+  }
   function renderDailyEnd(wrap, S, res) {
     var K = PX.ui.kit, d = res && res.daily, D = S.plan.daily;
     wrap.appendChild(screenHead('Daily Challenge · ' + (D ? D.day : ''), d ? 'Daily #' + d.number : 'Daily Challenge', null));
@@ -3134,7 +3163,7 @@
     var line = d.scored ? d.share : (prevR ? (typeof ED.shareOf === 'function' ? ED.shareOf(d.day, prevR) : ED.share(d.number, prevR.right, prevR.n)) : d.share);
     var ps = K.panel({ title: 'Share', className: 'pl-panel' });
     ps.body.appendChild(h('p', 'Your share line. Paste it in the Chimera Discord to compare notes.'));
-    ps.body.appendChild(K.copyField(line, { rows: 1, ariaLabel: 'Daily share line', label: 'Copy' }));
+    ps.body.appendChild(fitCopy(K.copyField(line, { rows: 1, ariaLabel: 'Daily share line', label: 'Copy' })));
     var card = ui.button('Share card', { kind: 'secondary', onClick: function () {
       openShare({ kind: 'daily', title: 'Daily Challenge #' + d.number, label: 'Daily #' + d.number, lines: [d.right + ' of ' + d.n + ' right'].concat(ramp ? [d.points + ' of ' + (isNum(d.max) ? d.max : 36) + ' points'] : []), footer: d.day, marks: marks.map(function (m) { return m === 1 ? 1 : 0; }), text: line });
     } });

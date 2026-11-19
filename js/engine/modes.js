@@ -141,6 +141,32 @@
     return 's' + Math.floor(now).toString(36) + '-' + E.select.eng(rec).seedN.toString(36);
   }
 
+  // A session "Keep going" may go on with: one of today (the local day) in the same mode, not a check, that does not
+  // count toward the week yet (E.streak.counts). null otherwise.
+  function continuable(rec, id, mode, now) {
+    if (mode === 'check' || !isArray(rec.sessions)) return null;
+    for (var i = rec.sessions.length - 1; i >= 0; i--) {
+      var s = rec.sessions[i];
+      if (!isObj(s) || s.id !== id) continue;
+      return s.mode === mode && isNum(s.start) && E.day(s.start) === E.day(now) && !(E.streak && E.streak.counts(s)) ? s : null;
+    }
+    return null;
+  }
+  // Two compact summaries ({ acc, ex: [[exId, n, right, before, after]] }) of one session's parts as one.
+  function joinCompact(a, b) {
+    if (!isObj(a) || !isArray(a.ex)) return b || a || null;
+    if (!isObj(b) || !isArray(b.ex)) return a;
+    var rows = a.ex.map(function (r) { return r.slice(); }), n = 0, right = 0;
+    b.ex.forEach(function (r) {
+      var o = null;
+      for (var k = 0; k < rows.length; k++) if (rows[k][0] === r[0]) { o = rows[k]; break; }
+      if (!o) { rows.push(r.slice()); return; }
+      o[1] = (o[1] || 0) + (r[1] || 0); o[2] = (o[2] || 0) + (r[2] || 0); o[4] = r[4];
+    });
+    rows.forEach(function (r) { n += r[1] || 0; right += r[2] || 0; });
+    return { acc: n ? U.round(right / n, 3) : null, ex: rows };
+  }
+
   // The level shown for an exercise in this session (est.shown: no idle drift, so the start, the
   // block ends and the summary read one scale and change only with answers).
   function levelNow(rec, def, plan) {
@@ -167,6 +193,11 @@
       rng: E.select.rng(rec, 'plan:' + mode + ':' + now), unavailable: null, finished: null, stageBacks: [],
       clocked: false, lastActive: 0, paces: [], boxed: false, natural: false, ended: null, share: {},
     };
+    // v1.2 (first-session fresh test: a first session of 5 answers after the long check did not count toward the
+    // week): "Keep going" goes on with a session of today that does not count yet. The plan takes its id, so its
+    // answers log under it, and finish() adds this part to its record (opts.continueOf: that session's id).
+    var cont = typeof opts.continueOf === 'string' ? continuable(rec, opts.continueOf, mode, now) : null;
+    if (cont) { plan.id = cont.id; plan.continues = cont.id; }
     MODES[mode].start(plan, rec, opts, now);
     runHooks('start', plan, [plan, rec, opts, now]); // v1.2 wave 2 (CONTRACT-v1.2 Q)
     plan.boxed = isNum(plan.budgetMs) && plan.budgetMs !== Infinity;
@@ -476,9 +507,29 @@
       }
       if (xs && xs.gentle === true) session.gentle = true;
       if (!isArray(rec.sessions)) rec.sessions = [];
-      rec.sessions.push(session);
       // a Spatial Check is a measurement, not practice: its time stays out of the practice total
       if (plan.mode !== 'check') rec.practiceMs = (isNum(rec.practiceMs) ? rec.practiceMs : 0) + session.practiceMs;
+      // "Keep going" (plan.continues): this part joins the record of the session it goes on with, so both parts'
+      // answers and practice count together toward the week; res.joined says so to the summary
+      var into = null;
+      if (plan.continues) for (var q = rec.sessions.length - 1; q >= 0; q--) if (isObj(rec.sessions[q]) && rec.sessions[q].id === plan.id) { into = rec.sessions[q]; break; }
+      if (into) {
+        res.joined = { trials: into.trials || 0, practiceMs: into.practiceMs || 0 }; // the first part's
+        into.trials = (into.trials || 0) + session.trials;
+        into.right = (into.right || 0) + session.right;
+        into.practiceMs = (into.practiceMs || 0) + session.practiceMs;
+        into.end = Math.max(isNum(into.end) ? into.end : 0, session.end);
+        session.exs.forEach(function (id) { if (!isArray(into.exs)) into.exs = []; if (into.exs.indexOf(id) < 0) into.exs.push(id); });
+        into.summary = joinCompact(into.summary, session.summary);
+        into.ended = session.ended;
+        if (session.budgetMs) into.budgetMs = (into.budgetMs || 0) + session.budgetMs;
+        if (session.rounds) {
+          if (!isObj(into.rounds)) into.rounds = {};
+          Object.keys(session.rounds).forEach(function (id) { var a = into.rounds[id], b = session.rounds[id]; into.rounds[id] = isArray(a) ? [a[0] + b[0], a[1] + b[1]] : b; });
+        }
+        if (session.gentle) into.gentle = true;
+        session = into;
+      } else rec.sessions.push(session);
       res.session = session;
     }
     runHooks('finish', plan, [plan, rec, now, res]); // v1.2 wave 2 (CONTRACT-v1.2 Q)
