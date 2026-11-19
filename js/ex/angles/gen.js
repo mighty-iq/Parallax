@@ -3,10 +3,19 @@
    like Track's attention practice): angle ranking is a perceptual drill, and practice tends to stay
    specific to the trained stimuli, so no transfer beyond the format is claimed.
 
-   The item. Four angles lettered A–D on screen (two straight arms from a vertex, no arc: an arc's
+   The item. Four angles numbered 1–4 on screen (two straight arms from a vertex, no arc: an arc's
    size would be a cue), each in its own square cell (coordinates in cell units, x right, y down).
-   The options are four orderings of the letters, smallest angle first ("C – A – D – B"); exactly one
-   is true. Letters keep the angles apart from the answers, whose keys are 1–4 (RV-play-dat).
+   The options are four orderings of the angles, smallest first ("3 – 1 – 4 – 2"), lettered A–D;
+   exactly one is true. That is the format's labelling (v1.2 milestone 8; note D1 §2.3, §6.2,
+   addendum A.1 row 2); 1.1 lettered the angles and numbered the answers. The items themselves
+   did not change, so the version stays 2 (note D1 §6.2).
+
+   Test range (CONTRACT-v1.2 W3; DECISIONS 19 Nov): the 9° starter gap and the aligned pose (one arm
+   lying flat, a shared base) are below the test; the other gaps and the free pose are inside the
+   format; the size class and what has to be resolved are format features of every level (the
+   official sample is acute, its explanatory example runs to about 105°), so they carry no tag. How
+   close the test's angles come is not documented officially (one sample; the 2–10° range is a
+   test taker's recollection, note D1 addendum A.4 row 7), which the gap's note says.
 
    Values. The four sizes sit in one size class: near-right (70–110°), acute (25–72°) or obtuse
    (108–155°). Adjacent ranks differ by gaps; the closest gap is the level's δ (9, 6, 5, 4, 3 or 2°)
@@ -518,6 +527,13 @@
     ],
     base: BASE,
     starter: { dim: 'gap', levels: 1 },
+    testRange: {
+      dims: { gap: ['below', 'test', 'test', 'test', 'test', 'test'], pose: ['below', 'test'] },
+      notes: {
+        gap: 'How close the angles come on the test is not documented officially. 9° is a starter level of near right angles.',
+        pose: 'One arm lying flat gives the angles a shared base: a starter help. On the test the angles point every way.',
+      },
+    },
     difficulty: difficulty,
     chance: 0.25,
     generate: generate,

@@ -12,11 +12,11 @@
   PX.ex.learn('angles', {
     label: 'Perceptual-judgement practice',
     labelLine: 'Angles is perceptual-judgement practice: it trains judging angles by eye, and the gains tend to stay with this kind of figure.',
-    goal: 'Rank the four angles from smallest to largest. Which list gives the right order?',
+    goal: 'Rank the four angles from smallest to largest. Which answer gives the right order?',
     parts: [
-      { id: 'angles', label: 'Angles', text: 'Four angles, lettered A to D. Only the opening between the two arms counts: arm length and how the angle is turned do not.' },
-      { id: 'options', label: 'Answers', text: 'Each answer lists the four letters from the smallest angle to the largest, for example C – A – D – B. Exactly one list is right.' },
-      { id: 'answer', label: 'Answer', text: 'Pick a list with keys 1–4, or tap it.' },
+      { id: 'angles', label: 'Angles', text: 'Four angles, numbered 1 to 4. Only the opening between the two arms counts: arm length and how the angle is turned do not.' },
+      { id: 'options', label: 'Answers', text: 'Answers A to D each list the four angles\' numbers from the smallest angle to the largest, for example 3 – 1 – 4 – 2. Exactly one is right.' },
+      { id: 'answer', label: 'Answer', text: 'Pick an answer with keys A–D (or 1–4), or tap it.' },
     ],
     // The teaching template (v1.2, docs/research/v1.2/D2-first-band.md §3.0 C, §3.2): the rules card
     // first, the Watch at the 9° starter level, the "Extremes first" card before Try 1, Try 1 with
@@ -85,8 +85,8 @@
       },
     ],
     captions: {
-      angles: 'Four angles, lettered A to D. Only the opening between the arms counts.',
-      options: 'Each answer lists the letters from the smallest angle to the largest. One list is right.',
+      angles: 'Four angles, numbered 1 to 4. Only the opening between the arms counts.',
+      options: 'Answers A to D list the angles from the smallest to the largest. One is right.',
       order: 'From smallest to largest: {order}.',
       overlay: 'Lay angle {b} on angle {a}, corners and one arm lined up.',
       pair: 'Angle {b} opens {d}° wider than angle {a}.',
@@ -95,10 +95,10 @@
       chosen: 'Answer {n} puts angle {b} before angle {a}, but angle {b} is the larger one.',
       // Show me and the Watch carry out the "Extremes first" card; the solving captions start with
       // the card's step (n/3), name the reason and mark what they name (R-reader, note D2 addendum C).
-      smallest: '1/3 · Smallest first: {a} opens the least, so keep the answers that start with {a}.',
-      largest: '2/3 · Largest next: {b} opens the most, so keep the answers that end with {b}.',
+      smallest: '1/3 · Smallest first: angle {a} opens the least, so keep the answers that start with {a}.',
+      largest: '2/3 · Largest next: angle {b} opens the most, so keep the answers that end with {b}.',
       left: 'One answer is left: {order}.',
-      disagree: '3/3 · The pair left: the answers left disagree on {a} and {b}, so lay one on the other.',
+      disagree: '3/3 · The pair left: the answers left disagree on angles {a} and {b}, so lay one on the other.',
       assist: 'The smallest angle is marked for you.',
     },
     checkin: { whole: 'I laid the angles on each other in my mind', parts: 'I settled the smallest and largest first', unsure: 'Not sure, or both' },

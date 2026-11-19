@@ -3,10 +3,12 @@
    .ex-focus) come from css/ex.css. Cells are 1 × 1 user units; strokes keep their CSS width at any
    size (vector-effect: non-scaling-stroke). */
 .ex-angles {
-  --ang-ink: var(--ink, #1A1D21);
-  --ang-mark: var(--signal, #0B6A86);
+  /* The test look (CONTRACT-v1.2 W2): the cells and the overlay are white plates with ink lines in
+     both themes, so the marks drawn on them use a fixed dark accent that reads on white (5.9:1). */
+  --ang-ink: var(--plate-ink, #16191C);
+  --ang-mark: #0B6A86;
   --ang-wedge: rgba(11, 106, 134, 0.16);
-  --ang-cell: var(--surface, #FFFFFF);
+  --ang-cell: var(--plate, #FFFFFF);
 }
 .ex-angles .ex-angles-stem { width: 100%; }
 .ex-angles .ex-angles-stage { padding: var(--s2, 0.5rem); }
@@ -16,12 +18,12 @@
 }
 .ex-angles .ex-angles-cells[hidden], .ex-angles .ex-angles-big[hidden] { display: none; }
 .ex-angles .ex-angles-cell {
-  position: relative; min-width: 0; border: 1px solid var(--rule, #D5D9D6); border-radius: var(--r-plate, 2px);
-  background: var(--ang-cell);
+  position: relative; min-width: 0; border: 1px solid var(--plate-frame, #9AA1A7); border-radius: var(--r-plate, 2px);
+  background: var(--ang-cell); color: var(--ang-ink);
 }
 .ex-angles .ex-angles-cell.is-pointed { outline: 2px solid var(--ang-mark); outline-offset: 2px; }
 /* The number sits in a corner the arms keep clear of (view.js labelCorners: top left when free). */
-.ex-angles .ex-angles-n { position: absolute; top: 0.25rem; left: 0.25rem; z-index: 1; font-size: var(--fs-md, 1rem); font-weight: 600; }
+.ex-angles .ex-angles-n { position: absolute; top: 0.25rem; left: 0.25rem; z-index: 1; font-size: var(--fs-md, 1rem); font-weight: 600; color: var(--ang-ink); }
 .ex-angles .ex-angles-n[data-corner="tr"] { left: auto; right: 0.25rem; }
 .ex-angles .ex-angles-n[data-corner="bl"] { top: auto; bottom: 0.25rem; }
 .ex-angles .ex-angles-n[data-corner="br"] { top: auto; left: auto; right: 0.25rem; bottom: 0.25rem; }
@@ -43,7 +45,7 @@
 .ex-angles .ex-angles-arc { fill: none; stroke: var(--ang-mark); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .ex-angles .ex-angles-num { font-size: 0.13px; font-weight: 600; fill: var(--ang-ink); text-anchor: middle; }
 .ex-angles .ex-angles-num--large { fill: var(--ang-mark); }
-.ex-angles .ex-angles-big { display: flex; justify-content: center; }
+.ex-angles .ex-angles-big { display: flex; justify-content: center; background: var(--ang-cell); border: 1px solid var(--plate-frame, #9AA1A7); border-radius: var(--r-plate, 2px); }
 .ex-angles .ex-angles-big .ex-angles-svg { width: auto; max-width: 100%; height: min(18rem, 40vh); }
 .ex-angles .ex-angles-under { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem); }
 .ex-angles .ex-angles-under .ex-caption { flex: 1 1 16rem; }
@@ -107,8 +109,9 @@
 .ex-angles .ex-angles-flag[data-corner="tl"] { bottom: auto; right: auto; top: 0.2rem; left: 0.3rem; }
 .ex-angles .ex-angles-out { opacity: 0.45; }
 .ex-angles .ex-angles-out .ex-answer-text { text-decoration: line-through; text-decoration-thickness: 2px; }
-/* Rule figures on the rules card (play.js .pl-rule-fig). */
-.ex-angles.ex-angles-rulefig { width: 100%; height: 100%; }
+/* Rule figures on the rules card (play.js .pl-rule-fig): on the card's own ground, so in the
+   theme's ink and accent, not the plate's. */
+.ex-angles.ex-angles-rulefig { width: 100%; height: 100%; --ang-ink: var(--ink, #1A1D21); --ang-mark: var(--signal, #0B6A86); --ang-cell: var(--surface, #FFFFFF); }
 .ex-angles .ex-angles-rule-svg { display: block; width: 100%; height: 100%; aspect-ratio: auto; }
 .ex-angles .ex-angles-rule-arms { stroke-width: 2.5px; }
 .ex-angles .ex-angles-rule-arc { stroke-width: 2px; }
