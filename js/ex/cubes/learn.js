@@ -11,7 +11,7 @@
     goal: 'Painted on every outside face except the bottom: how many cubes have exactly the number of painted sides asked?',
     parts: [
       { id: 'figure', label: 'Figure', text: 'Equal cubes glued together and painted on every face that shows on the outside, except the faces resting on the ground.' },
-      { id: 'question', label: 'Question', text: 'The number of painted sides to look for. A cube can have 0 to 5 painted sides: its top and four sides, never its bottom.' },
+      { id: 'question', label: 'Question', text: 'The number of painted sides to look for. A cube can have 0 to 5 painted sides: its top and four sides, never its bottom. Larger figures come with 2 to 4 questions, one at a time.' },
       { id: 'options', label: 'Answers', text: 'Five answers: 1 to 5 cubes. Exactly one is right.' },
       { id: 'answer', label: 'Answer', text: 'Pick a count with keys 1–5, or tap it.' },
     ],
@@ -31,7 +31,7 @@
     strategyFirst: 'analytic',
     // The Watch at the starter band: four flat cubes in an L, asked about 3 painted sides (the
     // corner and the middle of the row: 2 cubes). Seeds are fixed so the answers vary their slot
-    // (Watch 2, Try 3, 1, 3, 4), Try 3 hides exactly one cube and Try 4 hides one that is counted.
+    // (Watch 2, Try 3, 1, 3, 2), Try 3 hides exactly one cube and Try 4 hides one that is counted.
     demo: [
       { params: { cubes: 0, height: 0, asked: 0 }, seed: 1, kind: 'flat' },
     ],
@@ -45,7 +45,7 @@
       // dashed and numbered), faded (Try 3, dashed), alone (Try 4, nothing marked); note D2 §2.2,
       // where fading itself is a working assumption.
       { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden', example: { seed: 5 }, assist: { hidden: true } },
-      { params: { cubes: 1, height: 1, asked: 0 }, seed: 113 },
+      { params: { cubes: 1, height: 1, asked: 0 }, seed: 108 },
     ],
     tips: [
       { id: 'flat', when: { dim: 'height', levels: [0] }, text: 'A flat figure: every cube is in view, and each one has 5 painted sides minus the cubes it touches.' },
@@ -54,6 +54,8 @@
       { id: 'few', when: { dim: 'asked', levels: [1] }, text: 'Cubes with one or two painted sides sit inside the figure or under other cubes. Check the hidden ones too.' },
       { id: 'bottom', when: { dim: 'cubes', levels: [2] }, text: 'The bottom is never painted: a cube on the ground has at most five painted sides, and only if nothing touches it.' },
       { id: 'big', when: { dim: 'cubes', levels: [3, 4] }, text: 'Many cubes now: go column by column and keep a tally, so no cube is counted twice or missed.' },
+      // version 3: a figure's later questions (params.ask 1–3) come one at a time, the figure unchanged
+      { id: 'set', when: { dim: 'ask', levels: [1, 2, 3] }, text: 'Same figure, new question: every cube keeps the number of painted sides you gave it, so count the cubes with the new number.' },
     ],
     // Prep courses teach a tally table (rows cubes, columns 0–5 painted sides) filled column by column
     // and re-checked from another direction, plus learning common positions; the classic errors are
@@ -68,6 +70,7 @@
           'A cube at the end of a row on the ground: top and three sides, so 4.',
           'A cube in the middle of a row: top and the two long sides, so 3; with a neighbour in front or behind, fewer.',
           'A cube under another cube: no top, so count its open sides only.',
+          'A column taller than all four of its neighbours: its top cube has all 5 sides painted.',
         ],
         when: 'Quick on small figures with few hidden cubes.',
       },
@@ -75,7 +78,7 @@
         // The card before Try 1 (strategyFirst): the tally in the format's own terms, a number per
         // cube (D2 §3.3); show-me carries out the same steps on the item.
         id: 'analytic', title: 'Count by position',
-        text: 'Give every cube its number of painted sides, one cube at a time, hidden ones included; then count the cubes with the number asked.',
+        text: 'Give every cube its number of painted sides, one cube at a time, hidden ones included; then count the cubes with the number asked. The numbers hold for every question about the same figure.',
         steps: [
           'A cube\'s painted sides: its top if nothing sits on it, plus every side no cube touches. Never the bottom.',
           'Say each cube\'s number as you go, column by column. On a flat figure: 5 minus the cubes it touches.',

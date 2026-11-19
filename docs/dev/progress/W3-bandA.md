@@ -19,3 +19,10 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
 - 09:32 UTC: started; read CLAUDE.md, PLAN milestone 8, notes D1 (§2–§3, §6, addendum) and D2 (§1.2–1.3, §3.2–3.3, addendum),
   W1-band-A's log, CONTRACT-v1.2 (no "Wave 3" section yet), the two exercises' code and tests, rebase.js.
 - 09:41 UTC: request to W2-core: figure sets in the planner (8e7de90).
+- 10:05 UTC: Angles' per-level shortcut export (9b13e1e): 514 cells within chance + 10, closest +6.3; O58 decided: 2° stays
+  (DECISIONS 13cd5ab).
+- 10:37 UTC: Painted Cubes version 3 generator: figure sets of 1–4 questions from the seed (def.set.size; mean 2.49
+  above the band), five painted sides on built figures (peakFigure; counts 1–3 evenly, 356/376/361), every question held on
+  the novice errors, partial counts reported with caps (O57), an independent ray-marching solver and a one-column search in
+  the test (O30), the per-level export (130 cells within chance + 10, closest +6.8; the starter towers' bottom-as-painted
+  cell fixed). cubes 187/0, p95 9.7 ms at the hardest level. Spikes and their numbers: scratch scripts outside the repository.
