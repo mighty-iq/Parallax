@@ -106,7 +106,7 @@ def run_viewport(p, C, name, ctx_opts, rnd):
 
     # A Train session with Fold pinned
     page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "train", exId: "fold", pin: "fold", count: 1 }, { force: true })')
-    answers, block_first = 0, False
+    answers, block_first, ticks, swept = 0, False, [0, 0], False
     for i in range(24):
         r = to_respond(page, C, name, 'train')
         if r is not True:
@@ -119,6 +119,12 @@ def run_viewport(p, C, name, ctx_opts, rnd):
         answers += 1
         if page.evaluate('!!document.querySelector(".gm-block-firsts")'):
             block_first = True
+        v = page.evaluate('(() => { const v = document.querySelector(".pl-verdict"); return v ? [v.getAttribute("data-kind"), !!v.querySelector(".pl-verdict-icon.gm-tick")] : null; })()')
+        if v and v[0] == 'right':
+            ticks[0] += 1
+            ticks[1] += 1 if v[1] else 0
+        if page.evaluate('!!document.querySelector(".px-bar[style*=\'--gm-from\']")'):
+            swept = True
         page.evaluate('PX.debug.fast(false); __play.next()')
     C.ok(answers >= 20, f'{name}: {answers} answers in the Train session')
     to_respond(page, C, name, 'train end')
@@ -129,6 +135,8 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.wait_for_timeout(800)
     gm = page.evaluate('(() => { const s = __play.session; return s && s.res ? s.res.game : null; })()')
     print(f'{name}: a first shown as a note between items after a block end: {block_first} (informational: a first made in the last block shows on the summary only)')
+    C.ok(ticks[0] > 0 and ticks[1] == ticks[0], f'{name}: every right verdict gets the plotter tick (item:reveal: {ticks[1]} of {ticks[0]})')
+    print(f'{name}: a level bar swept at a block end: {swept} (informational: only when a block moved the shown level)')
     C.ok(gm is not None and isinstance(gm.get('firsts'), list), f'{name}: the session has res.game ({gm and {k: (len(gm[k]) if isinstance(gm[k], list) else gm[k]) for k in ("firsts", "grades", "near")}})')
     panel = page.locator('.pl-summary [data-gm="summary"]')
     made = gm and (gm['firsts'] or gm['grades'] or (gm['reach'] and gm['reach']['delta'] > 0))
@@ -179,6 +187,8 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.screenshot(path=str(OUT / f'{name}-climb-intro.png'), full_page=False)
     fits(page, C, name, '.gm-panel', vw)
     page.evaluate('PX.core.store.state.settings.sound = true; PX.core.store.save()')
+    if name == 'desktop':  # playtest mode on (a test build's default; off under automation unless switched on)
+        page.evaluate("PX.ui.playtest && PX.ui.playtest.set && PX.ui.playtest.set(true)")
     played0 = page.evaluate('PX.ui.game.sound.played')
     page.locator('[data-climb-start]').click()
     rungs, misses, stepped, hud_ok, voided = 0, 0, 0, True, 0
@@ -231,6 +241,9 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     rc = page.evaluate('(() => { const c = PX.core.store.state.game.climb; const w = c.w[PX.engine.climb.week(Date.now())]; return w && w.A ? w.A : null; })()')
     C.ok(rc and rc['h'] == rungs and rc['m'] == 2 and 'p' not in rc, f'{name}: the record keeps attempt A ({rc})')
     C.ok(page.locator('text=Climb attempt B').count() == 1, f'{name}: the next attempt is offered')
+    if name == 'desktop':
+        C.ok(page.locator('.pt-rate[data-rate="climb"]').count() == 1, f'{name}: playtest mode: the printout carries the three taps for the Climb')
+        page.evaluate("PX.ui.playtest && PX.ui.playtest.set && PX.ui.playtest.set(false)")
     played = page.evaluate('PX.ui.game.sound.played') - played0
     C.ok(played == rungs + 1, f'{name}: with Sound on, one rising tone per rung cleared and a reward for the personal best ({played} sounds, {rungs} rungs)')
     page.evaluate('PX.core.store.state.settings.sound = false; PX.core.store.save()')
@@ -318,6 +331,12 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     rot = page.evaluate('getComputedStyle(document.querySelector(".gm-summary .gm-stamp")).transform')
     C.ok(rot not in ('none', ''), f'{name}: the stamp sits at its slight angle ({rot})')
     page.screenshot(path=str(OUT / f'{name}-grade.png'), full_page=False)
+    # the needle sweep on a level bar (play.js calls it at a block end and on the summary)
+    sw = page.evaluate('''(() => { const b = PX.ui.bar(50, 100, { kind: 'signal' }); document.querySelector('.px-wrap').appendChild(b);
+      const ran = PX.ui.game.sweep(b, 40, 50); return [ran, b.classList.contains('gm-fx-sweep'), b.style.getPropertyValue('--gm-from')]; })()''')
+    page.wait_for_timeout(750)
+    done = page.evaluate('(() => { const b = document.querySelectorAll(".px-wrap > .px-bar"); const x = b[b.length - 1]; return [x.classList.contains("gm-fx-sweep"), x.classList.contains("gm-fx-done")]; })()')
+    C.ok(sw[0] is True and sw[1] is True and sw[2].strip() == '0.8' and done == [False, True], f'{name}: the needle sweeps from 40 to 50 and ends within 700 ms ({sw}, {done})')
     errs = con.errors()
     C.ok(not errs, f'{name}: no page or console errors ({errs[:3]})')
     b.close()
