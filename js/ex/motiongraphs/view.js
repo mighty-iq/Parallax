@@ -71,7 +71,7 @@
   }
 
   function timerStart(item) {
-    var ms = def.timeLimit(item.params) + (item.extraMs > 0 ? item.extraMs : 0); // extraMs: the Check's time for a kind's line
+    var ms = def.timeLimit(item.params);
     st.timer.hidden = !ms;
     st.timer.classList.remove('is-running', 'is-stopped');
     if (!ms) return;
@@ -108,7 +108,7 @@
     st.root.classList.remove('is-revealed');
     st.verdict.hidden = true;
     st.caption.textContent = '';
-    var ms = def.timeLimit(item.params) + (item.extraMs > 0 ? item.extraMs : 0);
+    var ms = def.timeLimit(item.params);
     st.desc.textContent = prompt(item) + (t ? ' ' + t : '') + ' Choose one of four (keys 1 to 4)' + (ms ? '; up to ' + Math.round(ms / 1000) + ' seconds.' : '.');
     timerStart(item);
     return timing.nextPaint();
