@@ -5,7 +5,7 @@ import { MANIFEST, deepDiff } from './run.mjs';
 import { performance } from 'node:perf_hooks';
 
 const FILES = [...MANIFEST, 'js/ex/fold/gen.js', 'js/ex/patfold/gen.js', 'js/ex/patfold/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 36 level combinations × 280 (12 on the starter band)
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 72 level combinations × 140 (24 on the starter band)
 const procMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
 
 // Expected accuracy of a heuristic that picks uniformly among the best-scoring options.
@@ -22,19 +22,22 @@ export async function run(t) {
   t.ok(def, 'patfold is registered');
   if (!def) return;
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat, def.perDisplay],
-    ['patfold', 2, 'EX-17', ['Vz'], 'intrinsic-dynamic', 'train', 'choice', 5, true, false], 'id, version 2 (the starter band), code, abilities, cell, role, answer, 5 options, pat');
-  t.eq(def.dims.map((d) => d.key), ['folds', 'type', 'idle'], 'dims');
+    ['patfold', 3, 'EX-17', ['Vz'], 'intrinsic-dynamic', 'train', 'choice', 5, true, false], 'id, version 3 (wrong sheets with other hole counts), code, abilities, cell, role, answer, 5 options, pat');
+  t.eq(def.dims.map((d) => d.key), ['folds', 'type', 'idle', 'sheets'], 'dims');
+  t.eq([def.dims[3].levels, def.dims[3].at], [['counts may differ', 'all at the key\'s count'], [-0.4, 0]], 'sheets: other hole counts allowed (the official samples), then every sheet at the key\'s count (1.1)');
+  t.eq(def.testRange && def.testRange.dims, { folds: ['below', 'test', 'test'], sheets: ['test', 'beyond'] }, 'test range (CONTRACT-v1.2 W3): one fold below it, every sheet at the key\'s count beyond it');
+  t.ok(Object.values(def.testRange.notes || {}).every((x) => typeof x === 'string' && x.length <= 240 && !/score|predict|harder than|easier than|DAT/i.test(x)), 'range notes describe format features only');
   t.eq(def.dims[0].levels, ['1 (starter)', 2, 3], 'one fold on the starter band (outside the official format, so labelled), then two or three folds');
   t.eq(def.starter, { dim: 'folds', levels: 1 }, 'the starter band is the first level of folds');
   const all = PX.ex.enumerate(def);
-  t.eq(all.length, 36, 'every level combination is enumerated');
+  t.eq(all.length, 72, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 2.5, `difficulty spans at least 2.5 logits (${lo.toFixed(2)} … ${hi.toFixed(2)}; the format caps folds at 3)`);
-  t.ok(Math.abs(lo + 3.15) < 1e-9 && Math.abs(def.difficulty({ folds: 0, type: 0, idle: 0 }) - def.difficulty({ folds: 1, type: 0, idle: 0 }) + 1.3) < 1e-9,
-    `the starter band sits 1.3 below two folds that both matter, 0.85 below the pre-1.2 floor (floor ${lo.toFixed(2)}; note D2 §3.6)`);
-  t.ok([0, 1, 2].every((ty) => [0, 1, 2].every((id) => Math.abs(def.difficulty({ folds: 1 + Math.floor(ty / 3), type: ty, idle: id }) - (-1.85 + 0.45 * ty - 0.45 * Math.min(id, 1))) < 1e-9)),
-    'older levels keep their 1.1 difficulty (two folds: base −1.85, type +0.45, an idle fold −0.45)');
-  const old0 = { folds: 1, type: 0, idle: 1 }, g = def.chance(old0);
+  t.ok(Math.abs(lo + 3.55) < 1e-9 && Math.abs(def.difficulty({ folds: 0, type: 0, idle: 0, sheets: 1 }) - def.difficulty({ folds: 1, type: 0, idle: 0, sheets: 1 }) + 1.3) < 1e-9,
+    `the starter band sits 1.3 below two folds that both matter, 0.85 below the pre-1.2 floor; other hole counts 0.4 lower still (floor ${lo.toFixed(2)}; note D2 §3.6)`);
+  t.ok([0, 1, 2].every((ty) => [0, 1, 2].every((id) => Math.abs(def.difficulty({ folds: 1 + Math.floor(ty / 3), type: ty, idle: id, sheets: 1 }) - (-1.85 + 0.45 * ty - 0.45 * Math.min(id, 1))) < 1e-9)),
+    'older levels keep their 1.1 difficulty with every sheet at the key\'s count (two folds: base −1.85, type +0.45, an idle fold −0.45)');
+  const old0 = { folds: 1, type: 0, idle: 1, sheets: 1 }, g = def.chance(old0);
   const pBeginner = g + (1 - g - 0.03) / (1 + Math.exp(def.difficulty(old0)));
   t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the pre-1.2 floor is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
   t.ok(all.every((p) => Math.abs(def.chance(p) - 0.2) < 1e-12), 'chance = 1/5');
@@ -52,8 +55,9 @@ export async function run(t) {
   t.section('patfold: items');
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, optCount = 0, fallbacks = 0, firstBad = null, n = 0;
-  const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0 };
-  const band = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, gate: 0, oneFold: 0, shareUnder: 0, symFoil: 0 };
+  const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0 };
+  const band = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, gate: 0, oneFold: 0, shareUnder: 0, symFoil: 0 };
+  let sheetsOk = 0;
   const keyPos = [0, 0, 0, 0, 0], holesHist = {}, whyHist = {}, items = [], cs = {};
   for (let ci = 0; ci < all.length; ci++) {
     for (let s = 0; s < per; s++) {
@@ -66,7 +70,9 @@ export async function run(t) {
       if (v !== true) { invalid++; firstBad = firstBad || `${JSON.stringify(params)} seed ${seed}: ${v}`; continue; }
       if (!def.score(item, item.key).correct) keyWrong++;
       for (let i = 0; i < item.options.length; i++) if (i !== item.key && def.score(item, i).correct) foilRight++;
-      if (item.options.length !== 5 || item.options.some((o) => o.length !== item.holes)) optCount++;
+      // dim 'sheets': all five at the key's count, or two wrong sheets at it and two with another count
+      const atKey = item.options.filter((o) => o.length === item.holes).length;
+      if (item.options.length !== 5 || atKey !== (params.sheets === 1 ? 5 : 3)) optCount++; else sheetsOk++;
       if (n % 50 === 0 && deepDiff(JSON.parse(JSON.stringify(item)), item) !== null) nonJson++;
       if (n % 8 === 0) items.push({ seed, params, item });
       keyPos[item.key]++;
@@ -81,7 +87,7 @@ export async function run(t) {
   t.eq(invalid, 0, 'validate passes on every item' + (firstBad && invalid ? ` (${firstBad})` : ''));
   t.eq(keyWrong, 0, 'the key scores right');
   t.eq(foilRight, 0, 'every other option scores wrong');
-  t.eq(optCount, 0, '5 options, all with the key\'s hole count');
+  t.eq(optCount, 0, `5 options: every sheet at the key's count, or (counts may differ) two wrong sheets at it and two with another count (${sheetsOk} items)`);
   t.eq(nonJson, 0, 'items survive JSON round trips');
   t.eq(fallbacks, 0, 'no item needed the fallback construction');
   t.ok(keyPos.every((c) => Math.abs(c / n - 0.2) < Math.max(0.03, 3 * Math.sqrt(0.2 * (1 - 0.2) / n))), `keys spread over the five positions (${keyPos.join(', ')})`);
@@ -173,10 +179,10 @@ export async function run(t) {
   t.section('patfold: shortcut solvers');
   const bound = 0.2 + 0.10;
   const pct = (x) => (100 * x / acc.count).toFixed(1) + ' %';
-  for (const [k, name] of [['under', 'a hole under the punch'], ['sym1', 'most symmetric about the first crease'], ['low1', 'least symmetric about the first crease'],
-    ['symAny', 'most symmetric about any sheet axis'], ['like', 'most like the others'], ['odd', 'odd one out'], ['count2', 'the hole count 2^folds']]) {
-    t.ok(acc[k] / acc.count <= bound, `"${name}" ≤ chance + 10 (${pct(acc[k])}, chance 20 %)`);
+  for (const k of ['under', 'sym1', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest']) {
+    t.ok(acc[k] / acc.count <= bound, `"${NAMES[k]}" ≤ chance + 10 (${pct(acc[k])}, chance 20 %)`);
   }
+  console.log(`       info  ${NAMES.layers}: ${pct(acc.layers)} (a third where counts may differ, a fifth where they may not)`);
   creaseReport(cs, [2, 3]);
   t.section('patfold: the starter band (one fold; note D2 §3.6)');
   const bp = (x) => (100 * x / band.count).toFixed(1) + ' %';
@@ -184,9 +190,8 @@ export async function run(t) {
   t.eq(band.oneFold, band.count, 'one straight fold that matters (the band\'s type 0), or the level\'s one corner or slanted fold; two holes');
   t.eq(band.symFoil, band.count, 'every band item has a foil symmetric about the crease without the punch hole');
   t.ok(band.shareUnder / band.count >= 2.5, `most foils share the punch hole (${(band.shareUnder / band.count).toFixed(2)} of 4 on average)`);
-  for (const [k, name] of [['under', 'a hole under the punch'], ['low1', 'least symmetric about the crease'], ['symAny', 'most symmetric about any sheet axis'],
-    ['like', 'most like the others'], ['odd', 'odd one out'], ['count2', 'the hole count 2^folds']]) {
-    t.ok(band[k] / band.count <= bound, `starter band: "${name}" ≤ chance + 10 (${bp(band[k])}, chance 20 %)`);
+  for (const k of ['under', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest']) {
+    t.ok(band[k] / band.count <= bound, `starter band: "${NAMES[k]}" ≤ chance + 10 (${bp(band[k])}, chance 20 %)`);
   }
   console.log(`       info  starter band, the format's method (reported, not bounded; PLAN Defaults): crease symmetry alone ${bp(band.sym1)}, punch-gated crease symmetry ${bp(band.gate)}`);
   if (process.env.PX_REPORT) {
@@ -198,21 +203,35 @@ export async function run(t) {
   testTutorialRepeat(t, PX, def, 'patfold');
 }
 
-function shortcuts(A, lib, item, acc) {
-  const opts = item.options, k = item.key, masks = opts.map((o) => A.maskOf(o));
-  acc.count++;
+// Per item, each heuristic's expected accuracy (ties shared). Counting the layers under the punch is the
+// format's own method when hole counts differ (the official explanations derive the count from the layers;
+// DECISIONS): reported, not bounded. One implementation for this file and tests/node/shortcut-levels.test.mjs.
+const NAMES = { sym1: 'most symmetric about the first crease', low1: 'least symmetric about the first crease', symAny: 'most symmetric about any sheet axis',
+  like: 'most like the others', odd: 'odd one out', under: 'a hole under the punch', count2: 'the hole count 2^folds', most: 'the most holes', fewest: 'the fewest holes',
+  layers: 'as many holes as layers under the punch (the format\'s method, reported)' };
+function itemScores(A, lib, item) {
+  const opts = item.options, k = item.key, masks = opts.map((o) => A.maskOf(o)), out = {};
   const L1 = item.folds[0].line;
   const s1 = opts.map((o) => A.symScore(o, L1));
-  acc.sym1 += pickBest(s1, k);
-  acc.low1 += pickBest(s1, k, false);
+  out.sym1 = pickBest(s1, k);
+  out.low1 = pickBest(s1, k, false);
   const tot = masks.map((m, i) => masks.reduce((s, m2, j) => s + (i === j ? 0 : A.hamming(m, m2)), 0));
-  acc.like += pickBest(tot, k, false);
-  acc.odd += pickBest(tot, k, true);
+  out.like = pickBest(tot, k, false);
+  out.odd = pickBest(tot, k, true);
   const pm = A.maskOf(item.punches);
-  acc.under += pickBest(masks.map((m) => ((m[0] & pm[0]) === pm[0] && (m[1] & pm[1]) === pm[1] ? 1 : 0)), k);
-  acc.symAny += pickBest(opts.map((o) => Math.max(...lib.AXES.map((L) => A.symScore(o, L)))), k);
+  out.under = pickBest(masks.map((m) => ((m[0] & pm[0]) === pm[0] && (m[1] & pm[1]) === pm[1] ? 1 : 0)), k);
+  out.symAny = pickBest(opts.map((o) => Math.max(...lib.AXES.map((L) => A.symScore(o, L)))), k);
   const want = 2 ** item.folds.length;
-  acc.count2 += pickBest(opts.map((o) => -Math.abs(o.length - want)), k);
+  out.count2 = pickBest(opts.map((o) => -Math.abs(o.length - want)), k);
+  out.most = pickBest(opts.map((o) => o.length), k);
+  out.fewest = pickBest(opts.map((o) => o.length), k, false);
+  out.layers = pickBest(opts.map((o) => (o.length === item.holes ? 1 : 0)), k); // the layers under the punch are the true hole count
+  return out;
+}
+function shortcuts(A, lib, item, acc) {
+  acc.count++;
+  const sc = itemScores(A, lib, item);
+  for (const key of Object.keys(sc)) acc[key] += sc[key];
 }
 
 // Crease symmetry (RV-dat-style-A §1; the lead's decision: the format's analytic method, not a
@@ -277,14 +296,15 @@ function testLearn(t, PX, def) {
     `Try 4 (two folds that matter) comes after a worked example on a sister item with two folds that matter (seed ${exE && exE.seed})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].folds === 0 && P[1].folds === 0 && P[0].type === 0 && P[1].type === 0, 'Try 1 and Try 2 are at the starter band (one straight fold)');
-  t.eq(P[2], { folds: 1, type: 0, idle: 1, task: 'tutorial' }, 'Try 3 is the pre-1.2 floor (an idle fold)');
-  t.eq(P[3], { folds: 1, type: 0, idle: 0, task: 'tutorial' }, 'Try 4: two folds that both matter');
+  t.eq(P[2], { folds: 1, type: 0, idle: 1, sheets: 0, task: 'tutorial' }, 'Try 3: two folds, one idle; wrong sheets may have other hole counts (the test range)');
+  t.eq(P[3], { folds: 1, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, 'Try 4: two folds that both matter');
+  t.ok(['count', 'same'].every((id) => (L.tips || []).some((x) => x.id === id && x.when.dim === 'sheets')), 'tips for counting the layers and for every sheet at the key\'s count');
   t.eq(L.practice[0].assist, { twin: true }, 'Try 1 has its first step done (the twin ringed)');
   t.ok(L.practice.slice(1).every((e) => e.assist === undefined), 'only Try 1 is assisted');
   const tipIds = new Set((L.tips || []).map((x) => x.id));
   t.ok(L.practice[2].tip === 'idle' && L.practice.every((e) => e.tip === undefined || tipIds.has(e.tip)), 'Try 3 shows the idle-fold tip; forced tips exist');
   t.eq(new Set(items.map((it) => it.key)).size, 4, `the Try answers sit in four different places (${items.map((it) => it.key + 1).join(', ')})`);
-  const cls = (w) => (/wrong order/.test(w) ? 'order' : /one cell away|another place/.test(w) ? 'moved' : /turned/.test(w) ? 'turned' : /mirrored/.test(w) ? 'mirrored' : /across/.test(w) ? 'crease' : 'other');
+  const cls = (w) => (/not unfolded|hole missed|extra hole|layer counted/.test(w) ? 'count' : /wrong order/.test(w) ? 'order' : /one cell away|another place/.test(w) ? 'moved' : /turned/.test(w) ? 'turned' : /mirrored/.test(w) ? 'mirrored' : /across/.test(w) ? 'crease' : 'other');
   const kindsOf = (it) => new Set(it.why.filter((w, i) => i !== it.key).map(cls));
   const dk = kindsOf(demoItem), tk = new Set(items.flatMap((it) => [...kindsOf(it)]));
   t.ok([...tk].every((k) => dk.has(k)), `every kind of wrong sheet in Try (${[...tk].join(', ')}) is in the Watch item (${[...dk].join(', ')})`);
@@ -337,3 +357,16 @@ function testTutorialRepeat(t, PX, def, id) {
   t.eq(repeats, 0, `no rated item at the tutorial's settings has a tutorial stem (${n} items; ${guarded} first draws were redrawn)`);
   t.eq(changed, 0, 'an item whose first draw is not a tutorial stem is the same as before');
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
+export function shortcutScores(PX, def, item) {
+  const out = {};
+  def.lib.onSheet((A) => {
+    const sc = itemScores(A, def.lib, item);
+    // reported: counting the layers (the method where counts differ) and, on the starter band, crease
+    // symmetry (the band's method: the key is the punch and its twin across the one crease; DECISIONS)
+    for (const k of Object.keys(sc)) out[NAMES[k]] = k === 'layers' || (k === 'sym1' && item.folds.length === 1) ? { hit: sc[k], chance: 0.2, info: true } : { hit: sc[k], chance: 0.2 };
+  });
+  return out;
+}
+export const SHORTCUT_EXEMPT = [];

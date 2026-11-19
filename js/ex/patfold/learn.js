@@ -12,10 +12,10 @@
   PX.ex.learn('patfold', {
     goal: 'A square sheet is folded, then punched once through every layer. Which sheet shows the holes once it is unfolded?',
     parts: [
-      { id: 'folds', label: 'Folds', text: 'One panel per fold. The dashed outline is where the paper was; the solid shape is the folded paper, with the flap that just moved shaded and an arrow showing where it went.' },
+      { id: 'folds', label: 'Folds', text: 'One panel per fold. The dashed square is the paper before folding; the solid shape is the folded paper. Starter items also shade the flap that just moved and show where it went.' },
       { id: 'punch', label: 'Punch', text: 'The last panel shows the folded paper and the punch: one hole through every layer under it.' },
-      { id: 'options', label: 'Unfolded sheets', text: 'Five sheets, each with the 16 hole positions: a filled circle is a hole, an open ring is no hole. All five have the same number of holes; exactly one is right.' },
-      { id: 'answer', label: 'Answer', text: 'Pick a sheet with keys 1–5, or tap it.' },
+      { id: 'options', label: 'Unfolded sheets', text: 'Five sheets, A to E, each with the 16 hole positions: a filled circle is a hole, an open ring is no hole. Exactly one is right.' },
+      { id: 'answer', label: 'Answer', text: 'Pick a sheet with its letter (A–E; 1–5 work too), or tap it.' },
     ],
     // The rules of this format, in our own words.
     rules: [
@@ -29,23 +29,25 @@
     // and two folds that both matter. Corner and slanted folds come later in Go, each with its tip.
     strategyFirst: 'analytic',
     minutes: 3,
-    demo: [{ params: { folds: 0, type: 0, idle: 0, task: 'tutorial' }, seed: 14, kind: 'one fold' }],
+    demo: [{ params: { folds: 0, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, seed: 14, kind: 'one fold' }],
     // Try 4 brings two folds that both matter, after a worked example on a sister item (note D2 addendum
     // C change 4; Try has no slanted fold, so the example goes to the first item with two folds).
     practice: [
-      { params: { folds: 0, type: 0, idle: 0, task: 'tutorial' }, assist: { twin: true }, seed: 1 },
-      { params: { folds: 0, type: 0, idle: 0, task: 'tutorial' }, seed: 13 },
-      { params: { folds: 1, type: 0, idle: 1, task: 'tutorial' }, tip: 'idle', seed: 303 },
-      { params: { folds: 1, type: 0, idle: 0, task: 'tutorial' }, tip: 'two', seed: 403, example: { seed: 1 } },
+      { params: { folds: 0, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, assist: { twin: true }, seed: 1 },
+      { params: { folds: 0, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, seed: 2 },
+      { params: { folds: 1, type: 0, idle: 1, sheets: 0, task: 'tutorial' }, tip: 'idle', seed: 4 },
+      { params: { folds: 1, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, tip: 'two', seed: 6, example: { seed: 1 } },
     ],
     // In Try and Go the first tip that fits the item is shown, so the slanted-crease tips come first.
     tips: [
       { id: 'diagonal', when: { dim: 'type', levels: [2, 3] }, text: 'A slanted crease mirrors on the slant: a hole crosses straight over the crease to the same distance on the other side.' },
       { id: 'corner', when: { dim: 'type', levels: [1] }, text: 'A corner fold has a slanted crease and covers only part of the paper: only a hole punched through the corner flap gets a twin, straight across the slant.' },
       { id: 'one', when: { dim: 'folds', levels: [0] }, text: 'Starter items: one fold. The punch goes through two layers, so the sheet gets two holes: the punch and its twin straight across the crease.' },
-      { id: 'two', when: { dim: 'folds', levels: [1] }, text: 'Two folds: undo the last fold first, then the first. Each unfolding gives every hole on its flap a twin across its crease.' },
+      { id: 'two', when: { dim: 'folds', levels: [1] }, text: 'Two folds: undo the last fold first, then the first. Each unfolding gives every hole on its flap a twin across its crease. The panels are plain now, as in the test.' },
       { id: 'three', when: { dim: 'folds', levels: [2] }, text: 'Three folds: unfold the last fold first. Each unfolding copies the holes on its flap across its crease.' },
       { id: 'idle', when: { dim: 'idle', levels: [1, 2] }, text: 'Not every fold adds holes: when the punch misses a flap, unfolding that flap changes nothing.' },
+      { id: 'count', when: { dim: 'sheets', levels: [0] }, text: 'Count the layers under the punch: each becomes a hole, so the right sheet has that many. Then check where they sit.' },
+      { id: 'same', when: { dim: 'sheets', levels: [1] }, text: 'Every sheet has the right number of holes now: only unfolding shows where they sit.' },
     ],
     // Burte et al. 2018: a "two holes per fold" rule fits many solvers, and the folds relevant to
     // the answer predict accuracy better than the total. Prep courses teach unfolding backwards on
@@ -94,6 +96,7 @@
       unfoldIdleMore: '3/3 · Keep undoing, fold {n}: the punch missed this flap, so no new holes.',
       done: '3/3 · Flat again, compare: sheet {n} has exactly these holes.',
       chosen: 'Sheet {n}: the dashed rings are holes these folds do not make ({why}).',
+      chosenCount: 'Sheet {n} has {m}, but the punch goes through {k} layers ({why}).',
       assist: 'Ringed for you: the punch\'s twin across the crease.',
     },
     checkin: { whole: 'I unfolded the paper in my mind', parts: 'I tracked the hole across each crease', unsure: 'Not sure' },

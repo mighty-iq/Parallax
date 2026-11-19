@@ -27,6 +27,12 @@
   var st = null, uid = 0;
 
   function learn() { return PX.ex.learn('patfold') || {}; }
+  // Sheets are lettered A–E (CONTRACT-v1.2 W1, the format's own naming).
+  function nm(i) { return PX.ui.optionName ? PX.ui.optionName(i, true) : String(i + 1); }
+  // The test look from two folds on (version 3; CONTRACT-v1.2 W2, note D1 addendum A.1 row 4): the
+  // original square a broken outline in every panel, the folded paper solid, no flap shading, arrow, cell
+  // lines or position dots, the punch a small open circle; the starter band keeps its scaffolds.
+  function plainLook(item) { return item.folds.length > 1; }
   function cap(key, vars) {
     var s = String((learn().captions || {})[key] || '');
     Object.keys(vars || {}).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
@@ -64,15 +70,15 @@
   function hole(c, cls) { return S.el('circle', { cx: c[0] + 0.5, cy: c[1] + 0.5, r: HOLE_R, class: cls || 'ex-patfold-hole' }); }
   function ring(c, cls) { return S.el('circle', { cx: c[0] + 0.5, cy: c[1] + 0.5, r: RING_R + 0.16, class: cls || 'ex-patfold-ring' }); }
   // One piece of paper: fill and solid edge, with its holes when asked; faint cell lines inside.
-  function faceGroup(face, withHoles, cls) {
-    var g = S.el('g', { class: 'ex-patfold-face' + (face.back ? ' is-back' : '') + (cls ? ' ' + cls : '') });
+  function faceGroup(face, withHoles, cls, plain) {
+    var g = S.el('g', { class: 'ex-patfold-face' + (face.back && !plain ? ' is-back' : '') + (cls ? ' ' + cls : '') }); // the test look: every layer white
     var d = S.pathData(face.poly, true), id = 'expatfold-c' + (++uid);
     g.appendChild(S.el('path', { d: d, class: 'ex-patfold-paper' }));
     g.appendChild(S.el('clipPath', { id: id }, S.el('path', { d: d })));
     var grid = '';
     for (var x = 1; x < N; x++) grid += 'M' + x + ' 0V' + N;
     for (var y = 1; y < N; y++) grid += 'M0 ' + y + 'H' + N;
-    g.appendChild(S.el('path', { d: grid, class: 'ex-patfold-grid', 'clip-path': 'url(#' + id + ')' }));
+    if (!plain) g.appendChild(S.el('path', { d: grid, class: 'ex-patfold-grid', 'clip-path': 'url(#' + id + ')' }));
     g.appendChild(S.el('path', { d: d, class: 'ex-patfold-edge' }));
     if (withHoles) face.holes.forEach(function (c) { g.appendChild(hole(c)); });
     return g;
@@ -93,11 +99,11 @@
   // Panel k (1..F): the paper after fold k: where it was before the fold dashed, the folded paper
   // solid, the flap shaded, an arrow from the flap's old place. No holes before the punch.
   function foldPanel(item, k) {
-    var s = item.steps[k], prev = item.steps[k - 1], svg = panelSvg('ex-patfold-svg--panel', VB);
-    svg.appendChild(outline(prev.outline, 'ex-patfold-was'));
-    s.faces.forEach(function (face) { svg.appendChild(faceGroup(face, false, face.moved ? 'is-flap' : '')); });
+    var s = item.steps[k], prev = item.steps[k - 1], svg = panelSvg('ex-patfold-svg--panel', VB), plain = plainLook(item);
+    svg.appendChild(outline(plain ? [[0, 0], [N, 0], [N, N], [0, N]] : prev.outline, 'ex-patfold-was'));
+    s.faces.forEach(function (face) { svg.appendChild(faceGroup(face, false, face.moved && !plain ? 'is-flap' : '', plain)); });
     var moved = s.faces.filter(function (f) { return f.moved && f.from; });
-    if (moved.length) {
+    if (moved.length && !plain) {
       var big = moved.reduce(function (a, b) { return Math.abs(polyArea(b.poly)) > Math.abs(polyArea(a.poly)) ? b : a; });
       var a = arrow(centroid(big.from), centroid(big.poly));
       if (a) svg.appendChild(a);
@@ -113,13 +119,14 @@
   function punchPanel(item, assist) {
     var s = item.steps[item.steps.length - 1], svg = panelSvg('ex-patfold-svg--panel', VB);
     svg.appendChild(outline([[0, 0], [N, 0], [N, N], [0, N]], 'ex-patfold-was'));
-    s.faces.forEach(function (face) { svg.appendChild(faceGroup(face, false)); });
+    var plain = plainLook(item);
+    s.faces.forEach(function (face) { svg.appendChild(faceGroup(face, false, '', plain)); });
     if (item.folds.length === 1) { // the starter band: the 16 positions, faint, wherever paper lies
       for (var j = 0; j < N; j++) for (var i = 0; i < N; i++) {
         if (s.faces.some(function (f) { return pip(f.poly, i + 0.5, j + 0.5); })) svg.appendChild(S.el('circle', { cx: i + 0.5, cy: j + 0.5, r: 0.07, class: 'ex-patfold-dot' }));
       }
     }
-    item.punches.forEach(function (c) { svg.appendChild(hole(c, 'ex-patfold-hole ex-patfold-punch')); });
+    item.punches.forEach(function (c) { svg.appendChild(plain ? S.el('circle', { cx: c[0] + 0.5, cy: c[1] + 0.5, r: HOLE_R * 0.8, class: 'ex-patfold-punch-open' }) : hole(c, 'ex-patfold-hole ex-patfold-punch')); });
     if (assist && assist.twin && item.folds.length === 1) {
       var P = item.punches[0], tw = lib.reflCell(item.folds[0].line, P[0], P[1]);
       svg.appendChild(crease(item.folds[0]));
@@ -209,7 +216,7 @@
     st.opts[i] = { el: el, tag: tag };
   }
   function optionLabel(item, i) {
-    return 'Sheet ' + (i + 1) + ': holes at ' + item.options[i].map(function (c) { return 'column ' + (c[0] + 1) + ' row ' + (c[1] + 1); }).join(', ');
+    return 'Sheet ' + nm(i) + ': holes at ' + item.options[i].map(function (c) { return 'column ' + (c[0] + 1) + ' row ' + (c[1] + 1); }).join(', ');
   }
   function gridCols(item) { return item.options.length; }
 
@@ -218,6 +225,10 @@
   function shortWhy(why) {
     var w = String(why || '');
     if (/wrong order/.test(w)) return 'Wrong order';
+    if (/not unfolded/.test(w)) return 'Fold not undone';
+    if (/hole missed/.test(w)) return 'Hole missed';
+    if (/extra hole/.test(w)) return 'Extra hole';
+    if (/layer counted/.test(w)) return 'Extra layer';
     if (/one cell away|another place/.test(w)) return 'Punch moved';
     if (/turned/.test(w)) return 'Turned';
     if (/mirrored/.test(w)) return 'Mirrored';
@@ -239,7 +250,7 @@
       o.tag.setAttribute('data-kind', key ? 'key' : 'foil');
       o.tag.hidden = false;
     });
-    st.verdict.textContent = '✓ Sheet ' + (item.key + 1) + ' unfolds from these folds: ' + plural(item.holes, 'hole', 'holes') + '.';
+    st.verdict.textContent = '✓ Sheet ' + nm(item.key) + ' unfolds from these folds: ' + plural(item.holes, 'hole', 'holes') + '.';
     st.verdict.setAttribute('data-kind', 'key');
     st.verdict.hidden = false;
     return timing.wait(ctx && ctx.fast ? 0 : 250);
@@ -328,15 +339,17 @@
       out.push(unfoldStep(item, k));
       if (item.folds[k - 1].matters) out.push(holdStep(item, k));
     }
-    out.push({ ms: 1800, caption: cap('done', { n: item.key + 1 }), enter: function () { setMode('big'); drawState(item, 0, []); focusOption(item.key); } });
+    out.push({ ms: 1800, caption: cap('done', { n: nm(item.key) }), enter: function () { setMode('big'); drawState(item, 0, []); focusOption(item.key); } });
     var r = response;
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < item.options.length) out.push(chosenStep(item, r));
     return out;
   }
-  // Sheet r against the true holes: the holes these folds do not make, dashed.
+  // Sheet r against the true holes: the holes these folds do not make, dashed; a sheet with another hole
+  // count is named by its count against the layers under the punch (version 3).
   function chosenStep(item, r) {
+    var m = item.options[r].length;
     return {
-      ms: 2400, caption: cap('chosen', { n: r + 1, why: whyText(item, r) }),
+      ms: 2400, caption: m !== item.holes ? cap('chosenCount', { n: nm(r), m: plural(m, 'hole', 'holes'), k: item.holes, why: whyText(item, r) }) : cap('chosen', { n: nm(r), why: whyText(item, r) }),
       enter: function () {
         setMode('big');
         var svg = drawState(item, 0, []), keyCells = {};
@@ -405,6 +418,7 @@
   }
 
   PX.ex.view('patfold', {
+    optionKeys: 'letters', // sheets A–E (CONTRACT-v1.2 W1)
     layout: 'stem+options',
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
