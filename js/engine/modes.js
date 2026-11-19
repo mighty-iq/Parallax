@@ -318,8 +318,49 @@
     if (plan.done) return { done: true, reason: plan.unavailable || 'finished' };
     if (!isNum(now)) now = plan.lastAt;
     clockIn(plan, t);
-    var step = MODES[plan.mode].next(plan, rec, now);
+    var step = setNext(plan, rec, now) || MODES[plan.mode].next(plan, rec, now);
     if (!step) { plan.done = true; plan.natural = true; return { done: true, reason: 'finished' }; }
+    if (step.kind !== 'set') setOpen(plan, rec, step);
+    return step;
+  }
+
+  /* ---------- figure sets (v1.2 milestone 8; CONTRACT-v1.2 W4; note D1 §6.3) ----------
+     An exercise with def.set (Painted Cubes) asks several questions about one figure in Train, Path and Free play:
+     a step the mode deals (any kind but fluency, a Path recheck or a fixed one-off) opens a set of
+     PX.ex.setSize(def, params, seed) questions; until it is done the next steps are its later questions, before
+     anything else: the same seed, code and difficulty, params plus { <set.param>: i }, kind 'set'. A 'set' step is
+     shown, scored, logged and counted in the session's answers, but never rated: answer() leaves out the mode's
+     answer (rating, Path's stage), the Quick deadline step and the block of 10, and the row readers skip 'set' rows
+     (dims.js, plateau.js, the learning curves, Speed's untimed times), since later questions reuse the player's tally
+     of the same figure. A voided question goes on with the set; a session that is over drops the rest; in Train
+     the questions count against the exercise's run. step.set = { i, n } (i from 0) tells the player where it is. */
+  var SET_MODES = { train: true, path: true, free: true };
+  function setOpen(plan, rec, step) {
+    plan.set = null;
+    var def = defOf(step.exId);
+    if (!def || !def.set || !SET_MODES[plan.mode] || step.kind === 'fluency' || step.recheck || plan.lastServed) return;
+    var n = PX.ex.setSize(def, step.params, step.seed);
+    if (n < 2) return;
+    step.set = { i: 0, n: n };
+    plan.set = { exId: def.id, seed: step.seed, params: M.copyParams(step.params), key: step.key, code: step.code, b: step.b, g: step.g,
+      p: step.pPred, target: step.target, stage: step.stage, pathStage: step.pathStage || null, deadlineMs: step.deadlineMs || null,
+      timed: !!step.timed, n: n, i: 1 };
+  }
+  function setNext(plan, rec, now) {
+    var S = plan.set;
+    if (!S) return null;
+    var def = defOf(S.exId), end = atEnd(plan, now, plan.avgMs);
+    if (!def || !def.set || S.i >= S.n || end === 'over') { plan.set = null; return null; }
+    var params = M.copyParams(S.params);
+    params[def.set.param] = S.i;
+    var r = { params: params, key: S.key, code: S.code, b: S.b, g: S.g, p: S.p, target: S.target, cand: null };
+    var step = makeStep(plan, rec, def, r, 'set', { seed: S.seed, noNote: true, stage: S.stage, pathStage: S.pathStage,
+      deadlineMs: S.deadlineMs, timed: S.timed, set: { i: S.i, n: S.n } });
+    step.paced = false; step.deadlineMs = S.deadlineMs; // the first question's deadline, if any; the Quick staircase never moves for a set question
+    S.i += 1;
+    if (S.i >= S.n) plan.set = null;
+    if (plan.mode === 'train' && plan.run && plan.run.exId === S.exId) plan.run.left -= 1; // questions count against the run
+    if (end === 'last') { plan.lastServed = true; plan.set = null; }
     return step;
   }
 
@@ -347,19 +388,20 @@
     plan.lastAt = Math.max(plan.lastAt, now);
     var out = { row: row, outcome: oc, rated: false, p: step.pPred, blockEnd: null, done: false };
     plan.log.push({ exId: step.exId, kind: step.kind, oc: oc, rt: row[6], p: step.pPred, target: step.target, b: step.b, g: step.g, stage: step.stage, sw: !!step.switched, i: step.i, code: step.code });
+    var inSet = step.kind === 'set'; // a figure set's later question: counted, never rated (CONTRACT-v1.2 W4)
     if (oc === 2 || oc === 3) {
       plan.extra += 1;
       if (step.kind === 'last') { plan.lastServed = false; plan.lastVoids = (plan.lastVoids || 0) + 1; }
-      if (MODES[plan.mode].void) MODES[plan.mode].void(plan, rec, step);
+      if (MODES[plan.mode].void && !inSet) MODES[plan.mode].void(plan, rec, step);
     } else {
       plan.count[step.exId] = (plan.count[step.exId] || 0) + 1;
       var tl = plan.rated[step.exId] || (plan.rated[step.exId] = { n: 0, right: 0, rt: [] });
       tl.n += 1;
       if (oc === 1) { tl.right += 1; if (row[6] !== null) tl.rt.push(row[6]); }
-      MODES[plan.mode].answer(plan, rec, step, oc === 1, result, now, out);
+      if (!inSet) MODES[plan.mode].answer(plan, rec, step, oc === 1, result, now, out);
       // v1.2: rated Train and Path answers move the Quick deadline (an answer before it counts as in
       // time, right or wrong: the rating judges accuracy)
-      if (step.paced && (plan.mode === 'train' || plan.mode === 'path') && E.pace) {
+      if (step.paced && !inSet && (plan.mode === 'train' || plan.mode === 'path') && E.pace) {
         out.paceMs = E.pace.step(rec, def, !(result && result.timeout));
       }
       if (out.rated && RATED[plan.mode]) {
@@ -389,7 +431,7 @@
     var out = [];
     for (var i = plan.log.length - 1; i >= 0 && out.length < n; i--) {
       var x = plan.log[i];
-      if (x.exId === exId && (x.oc === 0 || x.oc === 1) && x.kind !== 'fluency') out.unshift(x);
+      if (x.exId === exId && (x.oc === 0 || x.oc === 1) && x.kind !== 'fluency' && x.kind !== 'set') out.unshift(x);
     }
     return out;
   }
@@ -557,6 +599,9 @@
         if (ok !== true) { plan.unavailable = 'These settings are not valid: ' + ok + '.'; return; }
         plan.fixed = p;
       } else plan.fixed = null;
+      // v1.2 milestone 8 (CONTRACT-v1.2 W3): "test range only" keeps every item inside the exercise's test range
+      plan.range = opts.range === 'test' && def.testRange ? 'test' : null;
+      if (plan.fixed && plan.range && PX.ex.rangeTag(def, plan.fixed) !== 'test') { plan.unavailable = 'These settings are outside the test range.'; return; }
       plan.deadlineMs = isNum(opts.deadlineMs) && opts.deadlineMs > 0 ? Math.round(opts.deadlineMs) : null;
       plan.avgMs = E.schedule.trialMs(rec, def, E.schedule.trialTimes(rec), plan.fixed || E.schedule.typical(rec, def, { display: plan.display }, now, plan.k));
       if (isNum(opts.trials) && opts.trials > 0) { plan.total = Math.round(opts.trials); plan.budgetMs = Infinity; }
@@ -574,7 +619,10 @@
         var o = { kind: 'target', k: plan.k, policy: plan.policy, recent: E.select.recent(rec, def), rng: plan.rng };
         extra = pickHooks(plan, rec, def, o, { kind: kind, st: st, now: now, run: null, runFilter: null, share: shareOf(plan, def.id) });
         if (extra && typeof extra.kind === 'string' && extra.kind) kind = o.kind = extra.kind;
+        var inRange = plan.range ? function (c) { return PX.ex.rangeTag(def, c.params) === plan.range; } : null;
+        o.filter = both(o.filter, inRange);
         r = E.select.pick(def, st, o);
+        if (!r && inRange) { o.filter = inRange; r = E.select.pick(def, st, o); } // a hook's filter goes before the range
       }
       if (!r) return null;
       var step = makeStep(plan, rec, def, r, kind, Object.assign({
@@ -820,9 +868,9 @@
   // items or with a Speed deadline (trial columns 14 and 18) are timed, so they stay out (milestone 7).
   function untimedRt(rec, def) {
     var rts = [], rows = isArray(rec.trials) ? rec.trials : [];
-    var KF = E.log.KINDS.indexOf('fluency'), DS = E.log.DEADLINES.indexOf('speed');
+    var KF = E.log.KINDS.indexOf('fluency'), KS = E.log.KINDS.indexOf('set'), DS = E.log.DEADLINES.indexOf('speed');
     E.log.scan(rec, function (r, id, mode) {
-      if (r.length > 13 && (r[13] === KF || r[17] === DS)) return;
+      if (r.length > 13 && (r[13] === KF || r[13] === KS || r[17] === DS)) return; // set questions reuse a tally (W4)
       if (id === def.id && r[5] === 1 && isNum(r[6]) && (mode === 'train' || mode === 'path' || mode === 'free')) rts.push(r[6]);
     }, Math.max(0, rows.length - 5000));
     rts = rts.slice(-50);
@@ -1320,6 +1368,6 @@
     available: available, checkin: checkin, checkinDue: checkinDue, STRATEGIES: STRATEGIES,
     timeLeft: timeLeft, pace: paceOf, suggest: suggest, hook: hook, hooks: hooksOf,
     _: { atEnd: atEnd, kindFor: kindFor, earlyKind: earlyKind, early: early, oneStep: oneStep, autoFilter: autoFilter, makeStep: makeStep, levelNow: levelNow, effTotal: effTotal, defOf: defOf, timedGroup: timedGroup, extend: extend, clockIn: clockIn,
-      runHooks: runHooks, kindHooks: kindHooks, pickHooks: pickHooks, extraFields: extraFields, shareOf: shareOf },
+      runHooks: runHooks, kindHooks: kindHooks, pickHooks: pickHooks, extraFields: extraFields, shareOf: shareOf, untimedRt: untimedRt },
   };
 })(window.PX);

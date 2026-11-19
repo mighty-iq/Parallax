@@ -336,7 +336,7 @@
     kind: 13, layer: 14, amode: 15, orient: 16, dl: 17, bOff: 18 };
   var DISPLAYS = ['', 'small', 'large'];
   var INPUTS = ['', 'mouse', 'touch', 'pen', 'key'];
-  var KINDS = ['', 'warmup', 'target', 'easy', 'stretch', 'stretch1', 'last', 'weak', 'recheck', 'lead', 'fluency', 'drill', 'fixed', 'timed', 'threshold', 'probe', 'daily', 'climb'];
+  var KINDS = ['', 'warmup', 'target', 'easy', 'stretch', 'stretch1', 'last', 'weak', 'recheck', 'lead', 'fluency', 'drill', 'fixed', 'timed', 'threshold', 'probe', 'daily', 'climb', 'set'];
   var LAYERS = ['', 'compare-apply', 'produce', 'calib-detail', 'bridge'];
   var AMODES = ['', 'option', 'drag', 'dial', 'fine', 'keys', 'place', 'draw'];
   var ORIENTS = ['', 'portrait', 'landscape'];

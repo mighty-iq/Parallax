@@ -6,7 +6,8 @@
    button(label, { kind, onClick, go, key, title, ariaLabel, disabled, small, type, className })
    bar(value, max, { label, text, kind, band: [lo, hi] }) → element with set(value, max, band)
    ring(value, max, { label, text, size }) → <svg> with set(value, max)
-   choiceGrid(n, layout) → { el, cells, buttons, select, selected, mark, onPick, pick, lock, focus, destroy }
+   choiceGrid(n, layout) → { el, cells, buttons, letters, select, selected, mark, onPick, pick, lock, focus, name, destroy }
+   optionName(i, letters) → 'B' (letter mode, options 1–5) or '2'
    copyBox(text, { rows, label }) → element with setText(text); copyText(text) → Promise<boolean>
    Also: clear(el), focusables(root), modalOpen() → number of open modals.
 
@@ -420,8 +421,14 @@
 
   function autoCols(n) { return n <= 3 ? n : n === 4 ? 2 : n <= 6 ? 3 : n <= 8 ? 4 : 3; }
 
+  // The name of option i: a letter A–E in letter mode (the DAT-style formats letter their options; at most five,
+  // so no letter key reaches a player or Section key such as F, R or S), else its number 1–9.
+  var LETTERS = 'ABCDE';
+  function optionName(i, letters) { return letters && i >= 0 && i < LETTERS.length ? LETTERS.charAt(i) : String(i + 1); }
+
   // layout: 'auto' (default) | 'grid' | 'row' | 'col' | a column count, or an options object
-  // { layout, cols, label, labels: [..] or fn(i), multi, keys (default true) }.
+  // { layout, cols, label, labels: [..] or fn(i), multi, keys (default true), keyLabels ('digits' by
+  // default, or 'letters': badges A–E, keys A–E and 1–5 both pick; v1.2 milestone 8, CONTRACT-v1.2 W1) }.
   // Keys: a pass-through layer takes 1–9 (Enter/Space on a focused option too); everything
   // else falls to the layer below, so push the player's own layer before creating the grid.
   function choiceGrid(n, layout) {
@@ -431,8 +438,9 @@
     var kind = lay === 'row' ? 'row' : lay === 'col' ? 'col' : 'grid';
     var cols = typeof lay === 'number' ? lay : o.cols || (kind === 'row' ? n : kind === 'col' ? 1 : autoCols(n));
     var multi = !!o.multi;
+    var letters = o.keyLabels === 'letters' && n <= LETTERS.length;
     var root = h('div', {
-      class: ['px-choices', 'px-choices--' + kind], role: 'group',
+      class: ['px-choices', 'px-choices--' + kind, letters ? 'px-choices--letters' : null], role: 'group',
       'aria-label': o.label || 'Answer options', style: '--px-cols:' + cols,
     });
     var buttons = [], cells = [], marks = [], states = [], sel = multi ? [] : null;
@@ -441,7 +449,7 @@
     function baseLabel(i) {
       if (typeof o.labels === 'function') return o.labels(i);
       if (Array.isArray(o.labels) && o.labels[i]) return o.labels[i];
-      return 'Option ' + (i + 1);
+      return 'Option ' + optionName(i, letters);
     }
     function isSel(i) { return multi ? sel.indexOf(i) >= 0 : sel === i; }
     function render(i) {
@@ -460,8 +468,9 @@
       var markEl = h('span.px-choice-mark', { 'aria-hidden': 'true' }); // not `mark`: that is the function below
       var btn = h('button.px-choice', {
         type: 'button', 'data-index': String(i), 'data-px-keys': '', 'aria-pressed': 'false',
-        'aria-keyshortcuts': i < 9 ? String(i + 1) : null,
-      }, i < 9 ? h('span.px-choice-key', { 'aria-hidden': 'true' }, String(i + 1)) : null, cellBody, markEl);
+        'aria-keyshortcuts': i < 9 ? (letters ? optionName(i, true) + ' ' : '') + String(i + 1) : null,
+        'data-option': optionName(i, letters),
+      }, i < 9 ? h('span.px-choice-key', { 'aria-hidden': 'true' }, optionName(i, letters)) : null, cellBody, markEl);
       btn.addEventListener('click', (function (ix) { return function () { pick(ix, 'pointer'); }; })(i));
       buttons.push(btn); cells.push(cellBody); marks.push(markEl); states.push(null);
       root.appendChild(btn);
@@ -521,6 +530,7 @@
       var map = {};
       for (var k = 0; k < Math.min(n, 9); k++) {
         map[String(k + 1)] = (function (ix) { return function () { return pick(ix, 'key') ? undefined : false; }; })(k);
+        if (letters) map[optionName(k, true).toLowerCase()] = map[String(k + 1)]; // keys name letters in lower case
       }
       // On a focused option: Enter/Space select it; on an already selected one they go on
       // to the player (Enter confirms). In multi, Space toggles and Enter always goes on.
@@ -543,10 +553,11 @@
     }
 
     return {
-      el: root, cells: cells, buttons: buttons,
+      el: root, cells: cells, buttons: buttons, letters: letters,
       select: select, selected: selected, pick: pick, mark: mark, onPick: onPick,
       lock: lock, isLocked: function () { return locked; },
       focus: function (i) { focusEl(buttons[i || 0]); },
+      name: function (i) { return optionName(i, letters); },
       destroy: destroy,
     };
   }
@@ -634,6 +645,7 @@
   PX.ui.bar = bar;
   PX.ui.ring = ring;
   PX.ui.choiceGrid = choiceGrid;
+  PX.ui.optionName = optionName; // optionName(i, letters) → 'B' or '2'
   PX.ui.copyBox = copyBox;
   PX.ui.copyText = copyText;
 })(window.PX);

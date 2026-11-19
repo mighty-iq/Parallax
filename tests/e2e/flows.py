@@ -24,7 +24,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from playwright.sync_api import sync_playwright
 from common import launch, Console, Checks
 from play import (OUT, INDEX, READY, boot, go, state, wait_state, card, click_card, drive, last_row,
-                  row_count, seen_all, last_outcome)
+                  row_count, seen_all, last_outcome, past_cards)
 MUTE = 'window.PX_HOOKS_MUTE = true'  # PX.ui.hooks runs no builder's hook, reloads included (js/ui/hooks.js)
 
 
@@ -116,9 +116,11 @@ def run_check(b, C):
     rows0 = page.evaluate('PX.core.store.state.trials.length')
     click_card(page, 'example')
     page.wait_for_function('__play.played.demos >= 1', timeout=10000)
-    C.ok(page.locator('.pl-grid .px-choice.is-right').count() >= 1 and 'answer is marked' in page.locator('.pl-note').last.inner_text(),
-         f'{tag}: the worked example ends with its answer marked')
-    page.locator('.pl-note [data-card="start"]').click()
+    # W2-measure (fresh-player run, 19 Nov): the worked example ends on a card of its own
+    page.wait_for_selector('[data-card-box="probe-example-end"]', timeout=10000)
+    C.ok(page.locator('.pl-grid .px-choice.is-right').count() >= 1 and 'worked example' in page.locator('[data-card-box="probe-example-end"]').inner_text(),
+         f'{tag}: the worked example ends with its answer marked, then a card of its own')
+    click_card(page, 'start')
     wait_state(page, 'respond')
     C.ok(page.evaluate('PX.core.store.state.trials.length') == rows0, f'{tag}: the worked example is never logged')
     C.ok(page.evaluate('__play.item.seed') != page.evaluate('PX.ex.learn(__play.exId).demo[0].seed'), f'{tag}: items never use the example seed')
@@ -126,7 +128,7 @@ def run_check(b, C):
     page.evaluate('__play.answer(false)')
     page.wait_for_function('__play.state === "done" || __play.state === "respond"')
     C.ok(page.locator('.pl-verdict[data-kind]').count() == 0 and page.locator('.pl-grid .px-choice.is-right, .pl-grid .px-choice.is-wrong').count() == 0, f'{tag}: no feedback and no reveal')
-    wait_state(page, 'respond')
+    past_cards(page)
     # pause stops the probe's own bar
     page.keyboard.press('Escape')
     wait_state(page, 'paused')
@@ -137,6 +139,12 @@ def run_check(b, C):
     # a time-out: scored wrong, rt = the limit
     page.evaluate('PX.ui.play.config.limitScale = 0.01')  # the next item's limit: 1 % of it
     page.evaluate('__play.answer(true)')
+    for _ in range(100):  # a card between items (a change of format inside a task) goes first
+        if page.evaluate('(__play.history.slice(-1)[0] || {}).timeout === true'):
+            break
+        if card(page):
+            page.locator('[data-card-box] .px-btn--primary').first.click()
+        page.wait_for_timeout(100)
     page.wait_for_function('(__play.history.slice(-1)[0] || {}).timeout === true', timeout=8000)
     page.evaluate('PX.ui.play.config.limitScale = 1')
     lim = page.evaluate('(() => { const r = PX.core.store.state, t = r.trials[r.trials.length - 1], id = r.idx.ex[t[1]].split("@")[0], d = PX.ex.get(id); return d.timeLimit(PX.ex.decodeParams(d, t[3])); })()')
@@ -160,8 +168,8 @@ def run_check(b, C):
         page.wait_for_timeout(150)
     C.ok(card(page) == 'probe-intro', f'{tag}: the expectations question is asked once only')
     click_card(page, 'skip')
-    wait_state(page, 'respond')
-    page.evaluate('__play.answer(true)'); wait_state(page, 'respond')
+    past_cards(page)
+    page.evaluate('__play.answer(true)'); past_cards(page)
     page.keyboard.press('Escape'); wait_state(page, 'paused')
     # Stop the check asks first and says what happens; Keep going leaves it paused
     page.locator('[data-end]').click()

@@ -327,11 +327,14 @@
     el.tip.textContent = tip ? tip.text : '';
     if (tip) H.shown[tip.id] = true;
     if (view.layout === 'stem+options') {
+      var letters = view.optionKeys === 'letters' && n <= 5;
+      if (H.ctx) H.ctx.letters = letters;
       H.grid = PX.ui.choiceGrid(n, {
         cols: view.gridCols ? view.gridCols(item) : undefined,
         multi: type === 'multi',
         label: 'Answer options',
-        labels: function (i) { return view.optionLabel ? view.optionLabel(item, i) : 'Option ' + (i + 1); },
+        keyLabels: letters ? 'letters' : 'digits',
+        labels: function (i) { return view.optionLabel ? view.optionLabel(item, i) : 'Option ' + PX.ui.optionName(i, letters); },
       });
       el.grid.appendChild(H.grid.el);
       for (var i = 0; i < n; i++) view.drawOption(H.grid.cells[i], item, i, H.ctx);
@@ -723,6 +726,9 @@
         assist: cfg.assist === '__first__' ? firstAssist() : cfg.assist === undefined ? null : cfg.assist, gentleMotion: !!cfg.gentle,
         addMotion: function (ms) { if (typeof ms === 'number' && isFinite(ms) && ms > 0) H.played.motionMs = (H.played.motionMs || 0) + ms; },
         playCmd: function (name) { if (name === 'step' || name === 'pause' || name === 'replay' || name === 'close') playerCmd(name); },
+        // v1.2 milestone 8 (CONTRACT-v1.2 W1): letter mode, as in the player
+        letters: H.view.optionKeys === 'letters',
+        optionName: function (i) { return PX.ui.optionName(i, !!(H.ctx && H.ctx.letters)); },
       };
       if (H.view.mount) H.view.mount(H.ctx);
       if (cfg.rules) renderRules(true);

@@ -300,7 +300,7 @@ function rows(t) {
     generate(rng, params) { return { ex: 'drawx', seed: rng.seed, params, key: 0 }; }, validate() { return true; }, score(item, r) { return { correct: r === item.key }; },
   });
   t.eq([L.COL.value2, L.COL.kind, L.COL.layer, L.COL.amode, L.COL.orient, L.COL.dl, L.COL.bOff], [12, 13, 14, 15, 16, 17, 18], 'column indexes');
-  t.eq([L.KINDS.length, L.LAYERS, L.AMODES, L.ORIENTS, L.DEADLINES], [18, ['', 'compare-apply', 'produce', 'calib-detail', 'bridge'], ['', 'option', 'drag', 'dial', 'fine', 'keys', 'place', 'draw'], ['', 'portrait', 'landscape'], ['', 'pace', 'speed', 'limit']], 'the code lists');
+  t.eq([L.KINDS.length, L.KINDS[18], L.LAYERS, L.AMODES, L.ORIENTS, L.DEADLINES], [19, 'set', ['', 'compare-apply', 'produce', 'calib-detail', 'bridge'], ['', 'option', 'drag', 'dial', 'fine', 'keys', 'place', 'draw'], ['', 'portrait', 'landscape'], ['', 'pace', 'speed', 'limit']], 'the code lists');
   const rec = newRecord(PX, T0), fold = PX.ex.get('fold'), dx = PX.ex.get('drawx');
   const p0 = { folds: 1, type: 0, punches: 0 }, b0 = fold.difficulty(p0);
   const row = (def, mode, step, result) => L.row(rec, def, mode, Object.assign({ code: PX.ex.paramsCode(fold, p0), seed: 1, params: p0 }, step), 1, result || {}, T0);
