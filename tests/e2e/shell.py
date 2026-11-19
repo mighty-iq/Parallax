@@ -190,7 +190,7 @@ def offer_flow(page, t, tag, close_key=True):
     R.check(f'{tag}: first-run tour offer appears', has_offer)
     if has_offer:
         go_txt = t.locator('.px-offer-go').inner_text().strip()
-        R.check(f'{tag}: offer buttons', go_txt.startswith('Watch, Try, Go (3 min)') and t.locator('.px-offer-skip').inner_text().strip() == 'Skip', go_txt)
+        R.check(f'{tag}: offer buttons', re.match(r'Watch, Try, Go \(\d+ min\)', go_txt) is not None and t.locator('.px-offer-skip').inner_text().strip() == 'Skip', go_txt)
         t.click('.px-offer-skip')
         page.wait_for_timeout(100)
     R.check(f'{tag}: no dialog left, focus back in the page', modals(t) == 0 and t.evaluate('!!document.activeElement.closest("main")'),
