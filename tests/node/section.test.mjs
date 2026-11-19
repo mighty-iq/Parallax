@@ -60,7 +60,74 @@ export async function run(t) {
   testNumbers(t);
   testKeep(t);
   testStarter(t);
+  testFree(t);
   testReal(t);
+}
+
+// v1.2 (PLAN milestone 8): Section practice under test conditions (note D1 addendum A.4)
+function testFree(t) {
+  t.section('section: test conditions (instructions before the clock, free navigation, strike-out, review list)');
+  const PX = mk(t), S = PX.engine.section, rec = rec0();
+  const run = S.start(rec, { size: 'mini', now: T0 });
+  t.eq([run.v, run.nav, run.begun], [2, 'free', false], 'a new run is free (v 2) and has not begun: its parts\' instructions come before the clock');
+  t.ok(S.begin(run) === run && run.begun === true, 'begin() starts it');
+  // free navigation across parts
+  t.eq(S.go(run, 2, 3), run.parts[3].items[2], 'go(index, part) opens an item of another part');
+  t.eq([run.part, run.index], [3, 2], 'and makes it the current item');
+  t.eq(S.go(run, 9, 1), null, 'an index outside that part is refused');
+  t.eq(S.step(run, 1), { part: 3, index: 3 }, 'step +1: the next item of the part');
+  S.go(run, 4, 3);
+  t.eq(S.step(run, 1), { part: 4, index: 0 }, 'from a part\'s last item, the next part\'s first');
+  S.go(run, 0, 3);
+  t.eq(S.step(run, -1), { part: 2, index: 4 }, 'step −1 from a part\'s first item: the previous part\'s last');
+  S.go(run, 0, 0);
+  t.eq(S.step(run, -1), null, 'nothing before the first item');
+  S.go(run, 4, 5);
+  t.eq(S.step(run, 1), null, 'nothing after the last item');
+  // voids and broken parts are skipped; a replacement is reachable at the end of its part
+  S.go(run, 1, 1);
+  const o = S.answer(run, 1, { voided: true, voidReason: 'stutter' }, T0 + 1000);
+  t.eq(S.step(run, 1, { part: 1, index: 0 }), { part: 1, index: 2 }, 'a voided item is skipped');
+  t.eq(S.step(run, 1, { part: 1, index: 4 }), { part: 1, index: o.replaced }, 'its replacement waits at the end of its part');
+  S.breakPart(run, 2, 'cannot run on this device');
+  t.eq(S.step(run, 1, { part: 1, index: o.replaced }), { part: 3, index: 0 }, 'a broken part is skipped');
+  // strike-out
+  S.go(run, 0, 0);
+  t.eq(S.strike(run, 0, 2), [2], 'strike(index, option) toggles an option on');
+  t.eq(S.strike(run, 0, 0), [0, 2], 'kept sorted');
+  t.eq(S.strike(run, 0, 2), [0], 'and off again');
+  t.eq(S.strike(run, 0, 3, false), [0], 'on = false never adds');
+  t.eq([S.strike(run, 0, 10), S.strike(run, 0, -1), S.strike(run, 0, 1.5)], [null, null, null], 'options outside 0–9 are refused');
+  t.eq(S.strike(run, 2, 1, true, 4), [1], 'with a part: an item of another part');
+  t.eq(S.strike(run, 1, 0, true, 1), null, 'never on a voided item');
+  // the review list
+  S.go(run, 0, 0);
+  S.answer(run, 0, { response: 1, correct: true, rtMs: 2000 }, T0 + 2000);
+  S.flag(run, 0, true);
+  S.go(run, 3, 4);
+  S.visit(run, 3, 4000, T0 + 6000);
+  S.flag(run, 3, true);
+  const marked = S.list(run, 'marked'), open = S.list(run, 'unanswered'), all = S.list(run, 'all');
+  t.eq(marked.map((e) => [e.part, e.index, e.answered, e.flag]), [[0, 0, true, true], [4, 3, false, true]], 'marked: the flagged items, answered or not');
+  t.ok(open.every((e) => !e.answered) && open.some((e) => e.part === 4 && e.index === 3 && e.seen) && open.some((e) => !e.seen), 'unanswered: seen and never-shown items alike');
+  t.eq(all.length, 30 - 5 - 1 + 1, 'all: every item but voided ones and the broken part\'s (with the replacement)');
+  t.ok(all.find((e) => e.part === 4 && e.index === 3).current && all.filter((e) => e.current).length === 1, 'the current item is marked current');
+  t.ok(all.every((e) => e.no === S.numberOf(run, e.index, e.part)), 'with the numbers the screen shows');
+  // the end: a part's time is its items' time on screen; struck options and nav survive a save
+  S.save(rec, run, 12000, 0, T0 + 7000);
+  const back = S.live(rec);
+  t.eq([back.nav, back.begun, back.parts[0].items[0].struck, back.parts[4].items[2].struck], ['free', true, [0], [1]], 'the live run keeps nav, begun and struck options');
+  const old = clone(back); delete old.nav; delete old.begun;
+  rec.section.live = old;
+  t.eq([S.live(rec).nav, S.live(rec).begun], [undefined, true], 'a 1.1 run stays part by part, and had begun');
+  const bad = clone(back); bad.parts[0].items[0].struck = [3, 3, 'x', 12, 1];
+  rec.section.live = bad;
+  t.eq(S.live(rec).parts[0].items[0].struck, [1, 3], 'damaged struck lists are repaired');
+  const res = S.finish(run, rec, T0 + 8000, { usedMs: 12000, pausedMs: 0, ended: 'user' });
+  t.eq([res.parts[0].timeMs, res.parts[4].timeMs, res.parts[1].timeMs], [0, 4000, 0], 'part times: the time its items were on screen');
+  t.ok(rec.trials.length > 0 && rec.trials.every((r) => r[2] === rec.idx.mode.indexOf('section')), 'every part is logged when the section ends');
+  t.eq(S.last(rec).nav, 'free', 'the kept run remembers it was free, for its part times');
+  t.eq(S.lastResult(rec).parts[4].timeMs, 4000, 'and its review shows the same times');
 }
 
 function testShape(t) {
@@ -102,15 +169,17 @@ function testForms(t) {
   const all = new Set();
   for (const size of ['full', 'mini']) for (let f = 1; f <= 8; f++) for (const id of PAT) S.formItems(size, f, id, size === 'full' ? 15 : 5).forEach((x) => all.add(x.seed + ':' + (x.params.ask ?? '')));
   t.eq(all.size, 8 * 6 * 20, 'items are unique across sizes, forms and parts (a figure’s questions differ in ask)');
-  // Painted Cubes: up to three questions about one figure, together, never the same question twice
+  // Painted Cubes: a figure's questions together, never the same question twice; since v1.2 a figure keeps all
+  // the questions it carries (the format asks 2 to 5; at most SET_MAX), only the part's last one may be cut short
   for (const [size, n] of [['full', 15], ['mini', 5]]) {
     for (let f = 1; f <= 6; f++) {
       const c = S.formItems(size, f, 'cubes', n);
       const groups = [];
       c.forEach((x) => { const g = groups[groups.length - 1]; if (g && g.seed === x.seed) g.asks.push(x.params.ask); else groups.push({ seed: x.seed, asks: [x.params.ask] }); });
       const allows = (seed) => 1 + (PX.ex.get('cubes').generate(PX.rng(seed), { a: 0, b: 0 }).asks.length - 1);
-      t.ok(c.length === n && groups.every((g) => g.asks.length <= 3 && g.asks.every((a, i) => a === i) && g.asks.length <= allows(g.seed)),
-        `cubes ${size} form ${f}: ${groups.length} figures, questions ${groups.map((g) => g.asks.length).join('+')} = ${n}, each figure asked only what it allows`);
+      const short = groups.filter((g) => g.asks.length < allows(g.seed)).length;
+      t.ok(c.length === n && groups.every((g) => g.asks.length <= S.SET_MAX && g.asks.every((a, i) => a === i) && g.asks.length <= allows(g.seed)) && short <= 1,
+        `cubes ${size} form ${f}: ${groups.length} figures, questions ${groups.map((g) => g.asks.length).join('+')} = ${n}, each figure asked all it carries (one may be cut at the part's end: ${short})`);
       t.eq(new Set(groups.map((g) => g.seed)).size, groups.length, `cubes ${size} form ${f}: a figure's questions stay together`);
     }
   }
