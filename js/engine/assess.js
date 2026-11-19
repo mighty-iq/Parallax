@@ -18,7 +18,7 @@
 
    The mix (config block 'measure', DECISIONS 18 Nov "N14"): a block holds the near probe × 6, two of the three mid
    probes × 2 (rotating), one of the two far probes × 2 (alternating) and the control × 2; a full check holds every
-   probe (config.measure.full). Missing probes (not built yet, or not runnable on this device) leave their places
+   probe (config.measure.full), in config.measure.fullOrder, each multi-format probe's formats grouped (kindAt). Missing probes (not built yet, or not runnable on this device) leave their places
    empty. Items aim at g + (1 − g)·0.6 (a probe's own def.measureK where it has one: Pattern Memory's 0.35, since its
    cells carry the information) under a prior centred on the trend model's prediction for the probe (SD 1.5); a
    probe's first two items ever at 0.85, after its worked example, and while it is new no item more than
@@ -65,6 +65,10 @@
     week: { near: [1, 6], mid: [2, 6], far: [1, 6], control: 4 },
     // items per probe in a full check (B1, B2, the 4-weekly check, a delayed check): 46 items, 11.5 minutes
     full: { near: 16, mid: 5, far: 5, control: 5, alone: 8 },
+    // The order a full check presents its probes in (presentation only: the same items per probe): two short tasks
+    // of one kind each first, then the near probe's sixteen, the control last (the first session's fresh-player run,
+    // 19 Nov: a newcomer wanted to stop inside the near probe when it came first); probes not listed follow
+    fullOrder: ['patterns', 'cubematch', 'otherway', 'viewmatch', 'mechanisms', 'motiongraphs', 'wordlinks', 'level'],
     blocksPerWeek: 4,      // at most four blocks in any 7 days
     gapHours: 8,           // occasions at least 8 hours apart (one state per occasion)
     b2Hours: 12,           // B2 from 12 hours after B1
@@ -271,7 +275,9 @@
     rungIds('far', can).forEach(function (id) { add(id, F.far); });
     add(C.measure.control, F.control);
     if (opts && opts.optional) C.measure.alone.forEach(function (id) { add(id, F.alone); });
-    return out;
+    var ord = isArray(C.measure.fullOrder) ? C.measure.fullOrder : [];
+    var at = function (m, i) { var k = ord.indexOf(m.id); return k >= 0 ? k : ord.length + i; };
+    return out.map(function (m, i) { return { m: m, k: at(m, i) }; }).sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.m; });
   }
   // A block (spec C.measure.block or C.measure.week) number `index`: k of a rung's n probes, starting at index·k mod n.
   function blockMix(spec, index, can) {
@@ -513,9 +519,10 @@
     // The first items of a probe (version) met for the first time are easy (g + (1 − g)·0.85), so a newcomer meets
     // an easy item right after the worked example; then the usual g + (1 − g)·0.6.
     var k = pr.n < pr.easy ? C.measure.easyK : isNum(def.measureK) && def.measureK > 0 && def.measureK < 1 ? def.measureK : C.measure.k;
-    // A probe of several formats (def.cycle 'variant': Other Way Round's strands) reads them in turn: item i is
-    // variant i mod n, and its items adapt within the variant.
-    var cyc = def.cycle === 'variant' && isArray(def.variants) && def.variants.length ? def.variants[pr.n % def.variants.length] : null;
+    // A probe of several formats (def.cycle 'variant': Other Way Round's strands) reads them all, and its items adapt
+    // within the variant: in a block item i is variant i mod n (one of each), in a full check each variant's items
+    // come together, in the same counts (kindAt)
+    var cyc = def.cycle === 'variant' && isArray(def.variants) && def.variants.length ? kindAt(def.variants, pr, pc) : null;
     var byKind = cyc ? function (c) { return c.params.variant === cyc; } : null, filt = byKind;
     if (pr.fresh && isNum(pr.top) && isNum(C.measure.climb)) {
       var cap = pr.top + C.measure.climb + 1e-9;
@@ -551,6 +558,17 @@
       seed: seed, noNote: true, feedback: false, banner: pr.n === 0, newRun: pr.n === 0,
       probe: { id: pr.id, index: pr.n, of: pr.items, form: pc.form, control: pr.id === C.assess.control, example: example, newVariant: newVariant, kind: pc.kind },
     });
+  }
+
+  // The variant of a probe's next item. Blocks (and the Lab) take them in turn, one of each; a full check groups each
+  // variant's items, in the counts the turn would give (16 over six: 3, 3, 3, 3, 2, 2; 5 over four: 2, 1, 1, 1), so a
+  // newcomer uses a kind before meeting the next (the first session's fresh-player run, 19 Nov: six new kinds in a row)
+  function kindAt(vs, pr, pc) {
+    var n = vs.length;
+    if (pc.block || pc.lab || !(pr.items > 0)) return vs[pr.n % n];
+    var per = Math.floor(pr.items / n), extra = pr.items % n, i = pr.n;
+    for (var k = 0; k < n; k++) { var c = per + (k < extra ? 1 : 0); if (i < c) return vs[k]; i -= c; }
+    return vs[pr.n % n];
   }
 
   function byId(plan, id) {
@@ -1068,7 +1086,7 @@
     form: form, checks: checks, occasions: occasions, composite: composite, needB3: needB3, expect: expect,
     nextMeasure: nextMeasure, meter: meter, later: later, trendInput: trendInput, fit: fit, settle: settle, wire: wire,
     mix: mixOf, FULL: FULL, curves: curves, balanceReport: balanceReport, balanceSummary: balanceSummary,
-    _: { fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0, cellsOf: cellsOf, rowCells: rowCells,
+    _: { kindAt: kindAt, fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0, cellsOf: cellsOf, rowCells: rowCells,
       checkMeasure: checkMeasure, mergeMeasure: mergeMeasure, hAt: hAt, fromPosterior: fromPosterior, blockMix: blockMix, fullMix: fullMix },
   };
 })(window.PX);

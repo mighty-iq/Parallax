@@ -93,6 +93,7 @@
     (def.variants && def.variants.length ? def.variants : [null]).forEach(function (v) { walk(0, v ? { variant: v } : {}); });
     return hi > 0 ? { lo: Math.round(lo / 1000), hi: Math.round(hi / 1000) } : null;
   }
+  var GUARD_MS = 600; // a card after a time-out takes no input this long (a tap aimed at the item as its time ran out)
   function inputName(src) {
     var s = String(src || '').toLowerCase();
     return s === 'touch' ? 'touch' : s === 'pen' ? 'pen' : s === 'key' || s === 'keys' || s === 'keyboard' ? 'key' : s === 'mouse' || s === 'pointer' ? 'mouse' : 'unknown';
@@ -108,7 +109,7 @@
     // while it runs, a probe's time bar is drawn to read as time (css/measure.css; fresh-player run, item 7)
     if (P && P.el && P.el.root) P.el.root.classList.add('pl-measuring');
     if (o.extra) { if (!plan.check.extra || typeof plan.check.extra !== 'object') plan.check.extra = {}; Object.keys(o.extra).forEach(function (k) { plan.check.extra[k] = o.extra[k]; }); }
-    var block = !!plan.check.block, probes = plan.check.probes.map(function (x) { return x.id; });
+    var block = !!plan.check.block;
     var device = { display: displayOf(), viewport: Math.round(win.innerWidth || 0) + 'x' + Math.round(win.innerHeight || 0) };
     var CK = PX.core.clock, clock = CK && typeof CK.create === 'function' ? CK.create({ idleMs: 60000 }) : null, offs = [];
     S.clock = clock; // the check screen's pause sheet pauses it (PX.ui.check)
@@ -158,14 +159,31 @@
     }
     if (P.el.pause) P.el.pause.addEventListener('click', onEnd, true);
 
-    function progress(step) {
-      var pr = step && step.probe;
-      var at = pr ? probes.indexOf(pr.id) + 1 : S.probeNo;
-      var it = pr ? ' · item ' + Math.min(pr.of, pr.index + 1) + ' of ' + pr.of : '';
+    // The HUD says the time left in the whole occasion, not tasks or items left (the first session's fresh-player run,
+    // 19 Nov, round 3: "task 4 of 7" and "item 3 of 16" made Baseline 1 feel long): the items still to come at the
+    // config's seconds an item, the same figure the app announces before it starts (about 11.5 minutes for 46 items).
+    function leftText() {
+      var per = (E().config.measure && E().config.measure.secPerItem) || 15;
+      var sec = Math.max(0, (plan.total || 0) - S.answered) * per;
+      return sec < 45 ? 'under a minute left' : 'about ' + Math.max(1, Math.round(sec / 60)) + ' min left';
+    }
+    function progress() {
+      var left = leftText();
       // shorter forms when the line would wrap (a taller strip would push the item's controls down on phones)
-      P.setMeta((NAMES[kind] || 'Check') + ' · task ' + at + ' of ' + probes.length + it, ['Task ' + at + ' of ' + probes.length + it,
-        'Task ' + at + '/' + probes.length + (pr ? ' · ' + Math.min(pr.of, pr.index + 1) + '/' + pr.of : '')]);
+      P.setMeta((NAMES[kind] || 'Check') + ' · ' + left, [left.charAt(0).toUpperCase() + left.slice(1), left.replace(/^about /, '~')]);
       P.setProgress(S.answered, plan.total);
+    }
+    // A task's size on its card: "5 items · about 1 min"
+    function sizeOf(step) {
+      var n = step.probe && step.probe.of, per = (E().config.measure && E().config.measure.secPerItem) || 15;
+      return n ? n + ' items · about ' + Math.max(1, Math.round(n * per / 60)) + ' min' : null;
+    }
+    // How a probe of several kinds brings them: a full check groups each kind's items (js/engine/assess.js kindAt), a
+    // block takes them in turn
+    function kindsLine(def, step) {
+      var n = step.probe.of, k = def.variants.length, per = Math.floor(n / k), extra = n % k, w = function (x) { return WORDNUM[x] || String(x); };
+      var each = n <= k ? 'each of a different kind' : extra ? w(per) + ' or ' + w(per + 1) + ' of each kind' : w(per) + ' of each kind';
+      return n + ' items: ' + each + (block || n <= k ? '' : ', one kind at a time') + '. The first of each kind says how to read it.';
     }
     function markKey(def, item) {
       var g = P.grid, type = item && (item.answer || def.answer), key = item && item.key;
@@ -208,6 +226,21 @@
       var expl = v && learn.explain && learn.explain[v];
       return expl && expl.length && typeof expl[0] === 'string' ? expl[0] : null;
     }
+    // A card that must not take a tap meant for the screen it replaced: its buttons wait GUARD_MS, keys too.
+    function guardCard(p) {
+      var btns = Array.prototype.slice.call(p.el.querySelectorAll('button'));
+      btns.forEach(function (b) { b.disabled = true; });
+      p.el.setAttribute('data-guard', '');
+      var swallow = function () { return true; };
+      var pop = PX.core.keys && PX.core.keys.push ? PX.core.keys.push({ Enter: swallow, Space: swallow }, { through: true }) : null;
+      win.setTimeout(function () {
+        if (pop) pop();
+        btns.forEach(function (b) { b.disabled = false; });
+        p.el.removeAttribute('data-guard');
+        var prim = p.el.querySelector('.px-btn--primary');
+        if (prim && prim.isConnected) { try { prim.focus({ preventScroll: true }); } catch (e) { /* focus is a convenience */ } }
+      }, GUARD_MS);
+    }
     // The probe's instruction card; on first contact (or in a full check) its worked example, never scored. A probe
     // of several formats (Other Way Round) brings each format's example before that format's first item (again).
     function instruct(step, def, again) {
@@ -220,22 +253,22 @@
       var v = step.params && step.params.variant, expl = v && learn.explain && learn.explain[v];
       if (again) lines = expl && expl.length ? [expl[0]] : [];
       var ex = step.probe && step.probe.example, canDemo = !!(ex && P.view && P.view.demo);
-      // a probe of several kinds: the count, and where each kind's line will be (under the first item of the kind)
-      if (!again && def.cycle === 'variant' && Array.isArray(def.variants) && def.variants.length > 1 && step.probe && step.probe.of) {
-        var kinds = WORDNUM[def.variants.length] || String(def.variants.length), named = /kinds of question/.test(lines.join(' '));
-        lines.push(step.probe.of + ' items' + (named ? '' : ', ' + kinds + ' kinds in turn') + '. The first item of each kind adds one line on how to read it.');
-      }
+      // a probe of several kinds: how many of each, and where each kind's line will be (under its first item)
+      if (!again && def.cycle === 'variant' && Array.isArray(def.variants) && def.variants.length > 1 && step.probe && step.probe.of) lines.push(kindsLine(def, step));
       var lim = limitRange(def);
       if (again) { var ms = def.timeLimit ? def.timeLimit(step.params) : null; lim = ms ? { lo: Math.round(ms / 1000), hi: Math.round(ms / 1000) } : null; }
-      if (lim) lines.push((lim.lo === lim.hi ? 'Each item has up to ' + lim.lo + ' seconds' : 'Each item has ' + lim.lo + ' to ' + lim.hi + ' seconds (harder items get more)') + ', shown as a slow bar under it.');
+      // one short line: the bar under the item is labelled "Time left" (round 3: each intro one screen and one tap)
+      if (lim) lines.push(lim.lo === lim.hi ? 'Each item has up to ' + lim.lo + ' seconds.' : 'Each item has ' + lim.lo + ' to ' + lim.hi + ' seconds.');
       if (block && !canDemo) lines = lines.slice(0, 1).concat(lim ? [lines[lines.length - 1]] : []); // a known task: its goal and its time
       var bg = again ? null : background(def);
       if (bg) lines = lines.concat(bg.lines);
       if (!again && !block && more.length) lines.push(h('details.px-ms-more', h('summary', 'More about this task'), more.map(function (t) { return h('p', t); })));
-      // no "PR-6 · Vz" spec line: the codes mean nothing to a player (fresh-player run, item 6)
+      // no "PR-6 · Vz" spec line: the codes mean nothing to a player (fresh-player run, item 6); no "Task 4 of 7" and no
+      // separate line about the example (round 3: the card is one screen and one tap; the example's own strip says
+      // "Worked example · never scored")
       return o.card({
-        id: again ? 'probe-format' : 'probe-intro', title: again ? 'Next in ' + (ins.title || nameOf(def)) + ': a new kind of question' : 'Task ' + (probes.indexOf(def.id) + 1) + ' of ' + probes.length + ': ' + (ins.title || nameOf(def)), def: null,
-        lines: lines.concat(canDemo ? ['First, one worked example. It is never scored.'] : []),
+        id: again ? 'probe-format' : 'probe-intro', title: again ? 'Next in ' + (ins.title || nameOf(def)) + ': a new kind of question' : ins.title || def.name || nameOf(def), def: null,
+        aside: again ? null : sizeOf(step), lines: lines,
         actions: canDemo ? [{ label: 'Skip the example', value: 'skip' }, { label: 'Show the example', value: 'example', primary: true }] : [{ label: 'Start', value: 'start', primary: true }],
       }).then(function (v) {
         if (bg) bg.done();
@@ -247,17 +280,21 @@
         P.setLabel(def);
         return new Promise(function (resolve) {
           var shown = false;
-          // the end of the example: a card of its own, so nothing covers the options and no caption is left over from the
-          // walkthrough (fresh-player run, item 4)
+          // The end of the example. Its last button says "Start the task" (round 3: "Your turn" asked for an answer the
+          // example never took), and that tap starts the items at once. An example that ended otherwise (Auto-play,
+          // Close) ends on a card of its own, so nothing covers the options and no caption is left over from the
+          // walkthrough (fresh-player run, item 4).
           function startBtn() {
             if (shown) return;
             shown = true;
+            var last = P.played && P.played.last;
+            if (last && last.tap === true && !last.closed) { P.abort(); return; }
             markKey(def, item);
             o.card({ id: 'probe-example-end', title: 'That was the worked example', lines: ['The items that follow count, and give no feedback.'],
-              actions: [{ label: 'Start ' + nameOf(def), value: 'start', primary: true }] })
+              actions: [{ label: 'Start the task', value: 'start', primary: true }] })
               .then(function () { P.abort(); });
           }
-          P.demo(item, { feedback: false, goal: Play.goalOf(learn, item), onDemoEnd: startBtn }).then(function (tr) {
+          P.demo(item, { feedback: false, goal: Play.goalOf(learn, item), onDemoEnd: startBtn, lastLabel: 'Start the task' }).then(function (tr) {
             P.el.actions.hidden = false;
             resolve(tr && tr.end ? 'stop' : null);
           });
@@ -313,7 +350,7 @@
         if (S.lastProbe !== def.id) { S.lastProbe = def.id; S.probeNo++; }
         skipLabel(!!S.freeSkip[def.id]);
         P.setLabel(def);
-        progress(step);
+        progress();
         var first = step.probe && step.probe.index === 0 && !S.instructed[def.id];
         if (first) S.instructed[def.id] = true;
         // the first item of each kind inside a probe of several kinds (met for the first time): the kind's line goes
@@ -326,7 +363,7 @@
           if (!item) { E().modes.answer(plan, rec(), step, { correct: false, outcome: 'skipped' }, now()); loop(); return null; }
           if (newKind) item.hint = newKind;
           P.setLabel(def);
-          progress(step);
+          progress();
           var limit = def.timeLimit ? def.timeLimit(item.params) : null;
           return P.run(item, { feedback: false, limitMs: limit || null, limitBar: false, goal: Play.goalOf(PX.ex.learn(def.id), item) }).then(function (tr) {
             if (S.done || tr.outcome === 'aborted') return null;
@@ -348,12 +385,14 @@
               S.answered++;
               if (!tr.timeout) { var inp = inputName(tr.input || tr.source); S.inputs[inp] = (S.inputs[inp] || 0) + 1; }
             }
-            progress(step);
+            progress();
             // a time-out: the next item waits for the player, so a player called away loses one item, not a run of them
-            // (fresh-player run of 19 Nov: two items timed out in a row and the task ended unseen)
+            // (fresh-player run of 19 Nov: two items timed out in a row and the task ended unseen). The card comes the
+            // moment the time runs out and says that a late tap did not count; for its first GUARD_MS it takes no tap
+            // and no Enter or Space, so a tap aimed at an option as the time ran out cannot press Next item (round 3)
             if (tr.timeout && !S.done) {
-              return o.card({ id: 'probe-timeout', title: 'Time is up', lines: ['That item ran out of time. The next one starts when you are ready.'],
-                actions: [{ label: 'Next item', value: 'go', primary: true }] }).then(function (x) { if (x === 'closed') { stop(true); return null; } return loop(); });
+              return o.card({ id: 'probe-timeout', title: 'Time is up', lines: ['The time for that item ran out before an answer, so it counts as not answered. The next item starts when you tap Next item.'],
+                actions: [{ label: 'Next item', value: 'go', primary: true }], onShow: guardCard }).then(function (x) { if (x === 'closed') { stop(true); return null; } return loop(); });
             }
             return P.waitNext().then(loop);
           });
