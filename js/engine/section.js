@@ -34,6 +34,17 @@
      numberOf(run, index, p) → the item's number, which never shifts (v1.2 O11): its place in the form
        (j + 1); a replacement takes the number of the item it replaces (it is still shown at the part's
        end); numberCount(run, p) → the part's numbers (its original items)
+   Test conditions (v1.2, PLAN milestone 8; note docs/research/v1.2/D1-pat-formats.md addendum A.4). A run made
+   by this version (v 2, nav 'free') starts with every part's instructions, before its clock (begun false until
+   begin(run)); then the player moves freely across the parts, as test takers describe the screen:
+     go(run, index, part) opens any item of any part      step(run, dir, from?) → { part, index } of the next
+       (dir 1) or previous (−1) item across parts, skipping voided items and broken parts; null at either end
+     strike(run, index, option, on?, part?) → the item's struck-out options (a sorted list; on toggles when absent)
+     list(run, 'marked' | 'unanswered' | 'all') → [{ part, index, no, exId, answered, flag, seen, current }],
+       the review list (never-shown items count as unanswered; voided items and broken parts are left out)
+   Its trials are logged when it ends (finish), and a part's time is the time its items were on screen (the
+   sum of their visits); runs from 1.1 keep their part-by-part flow (endPart, part times from the clock).
+   Painted Cubes' figures carry 2 to 5 questions (item.asks), and a form asks each figure all of them that fit.
    The last finished run (v1.2 O10: a reload during the review lost it) is kept in rec.section.last, a
    compact copy of its items and answers with `open` while its review is on screen:
      last(rec) → that copy or null; lastResult(rec, now) → a result as finish() returns it (no session),
@@ -117,7 +128,8 @@
   // param `ask` (Painted Cubes) asks up to PER_FIGURE questions about one figure, as the test's
   // cube-counting part does (R3 §2.2): the questions share the figure's seed, differ in `ask`, and
   // stay together.
-  var PER_FIGURE = 3;
+  var PER_FIGURE = 3; // 1.1's cap; since v1.2 a figure keeps all its questions, up to SET_MAX (the format asks 2 to 5)
+  var SET_MAX = 5;
   // The band is taken from the range the exercise spans without its starter levels (v1.2: a first band in
   // front, note D2 §3.0 A, must not make test-conditions practice easier; W1-band-A's request). For an
   // exercise without starter levels this is M.range(def), so its forms are unchanged.
@@ -141,7 +153,7 @@
     return out;
   }
   function figureItems(def, size, form, exId, n, cands, rng) {
-    var F = Math.max(1, Math.ceil(n / PER_FIGURE)), figs = [], count = 0, used = {};
+    var F = Math.max(1, Math.ceil(n / PER_FIGURE)), figs = [], count = 0, used = {}; // F: how many figure slots stratify the band
     for (var f = 0; count < n && f < 4 * n; f++) {
       var c = cands[Math.min(cands.length - 1, Math.floor(((f % F) + rng.next()) / F * cands.length))];
       var seed = E.select.sharedSeed(PX.rng.hash('px-section', size, form, exId, 'figure', f));
@@ -149,7 +161,7 @@
       used[seed] = true;
       var m = 1; // how many different questions the figure allows (item.asks)
       try { var it0 = def.generate(PX.rng(seed), M.copyParams(c.params)); m = it0 && isArray(it0.asks) && it0.asks.length ? it0.asks.length : 1; } catch (e) { m = 1; }
-      var q = Math.max(1, Math.min(PER_FIGURE, m, n - count)), group = [];
+      var q = Math.max(1, Math.min(SET_MAX, m, n - count)), group = [];
       for (var i = 0; i < q; i++) {
         var p = M.copyParams(c.params);
         p.ask = i;
@@ -198,7 +210,7 @@
     var form = isNum(opts.form) && opts.form >= 1 ? Math.floor(opts.form) : nextForm(rec, size);
     var display = opts.display === 'small' ? 'small' : 'large';
     var run = {
-      v: 1, id: 'sec' + Math.floor(now).toString(36), size: size, form: form, start: now, at: now,
+      v: 2, nav: 'free', begun: false, id: 'sec' + Math.floor(now).toString(36), size: size, form: form, start: now, at: now,
       budgetMs: sh.budgetMs, usedMs: 0, pausedMs: 0, display: display,
       part: 0, index: 0, missing: sh.missing, done: false, ended: null,
       parts: sh.parts.map(function (id) {
@@ -220,12 +232,65 @@
     var P = partOf(run), it = P ? P.items[run.index] || null : null;
     return { part: run.part, index: run.index, it: it, exId: P ? P.exId : null };
   }
-  function go(run, index) {
+  function go(run, index, part) {
+    if (isNum(part) && part !== run.part) {
+      // another part: only a free run moves across parts (a 1.1 run closes each part with endPart)
+      var Q = run.nav === 'free' ? run.parts[part] : null;
+      if (!Q || run.done || !(index >= 0 && index < Q.items.length)) return null;
+      run.part = part;
+      run.index = index;
+      return Q.items[index];
+    }
     var P = partOf(run);
     if (!P || run.done || !(index >= 0 && index < P.items.length)) return null;
     run.index = index;
     return P.items[index];
   }
+  // The positions a free run can open, in order: every item that is not voided, in parts that are not broken.
+  function positions(run) {
+    var out = [];
+    run.parts.forEach(function (P, p) {
+      if (P.broken) return;
+      P.items.forEach(function (it, i) { if (it.status !== 'void') out.push({ part: p, index: i }); });
+    });
+    return out;
+  }
+  function step(run, dir, from) {
+    var p = from && isNum(from.part) ? from.part : run.part, i = from && isNum(from.index) ? from.index : run.index;
+    var list = positions(run), after = function (q) { return q.part > p || (q.part === p && q.index > i); };
+    if (dir < 0) {
+      for (var k = list.length - 1; k >= 0; k--) if (!after(list[k]) && !(list[k].part === p && list[k].index === i)) return list[k];
+      return null;
+    }
+    for (var j = 0; j < list.length; j++) if (after(list[j])) return list[j];
+    return null;
+  }
+  var STRIKE_MAX = 10;
+  function strike(run, index, opt, on, part) {
+    var P = partOf(run, part), it = P ? P.items[index] : null;
+    if (!it || run.done || it.status === 'void' || !(isNum(opt) && opt >= 0 && opt < STRIKE_MAX && opt === Math.floor(opt))) return null;
+    var s = isArray(it.struck) ? it.struck.slice() : [], at = s.indexOf(opt), want = on === undefined ? at < 0 : !!on;
+    if (want && at < 0) s.push(opt);
+    if (!want && at >= 0) s.splice(at, 1);
+    s.sort(function (a, b) { return a - b; });
+    if (s.length) it.struck = s; else delete it.struck;
+    return s;
+  }
+  function list(run, which) {
+    var out = [];
+    run.parts.forEach(function (P, p) {
+      if (P.broken) return;
+      P.items.forEach(function (it, i) {
+        if (it.status === 'void') return;
+        var answered = it.status === 'answered';
+        if (which === 'marked' && !it.flag) return;
+        if (which === 'unanswered' && answered) return;
+        out.push({ part: p, index: i, no: numberOf(run, i, p), exId: P.exId, answered: answered, flag: !!it.flag, seen: it.status !== 'new', current: p === run.part && i === run.index });
+      });
+    });
+    return out;
+  }
+  function begin(run) { if (run && !run.done) run.begun = true; return run; }
   function itemAt(run, index) { var P = partOf(run); return P ? P.items[index] || null : null; }
 
   function originals(P) { var n = 0; P.items.forEach(function (x) { if (!x.rep) n++; }); return n; }
@@ -389,7 +454,8 @@
     var used = run.usedMs;
     var parts2 = run.parts.map(function (x) {
       var c = counts(x.items, true, !!x.broken);
-      var t = isNum(x.t0) ? Math.max(0, Math.round((isNum(x.t1) ? x.t1 : used) - x.t0)) : 0;
+      var t = run.nav === 'free' ? x.items.reduce(function (a, it) { return a + (it.status === 'void' ? 0 : isNum(it.timeMs) ? it.timeMs : 0); }, 0)
+        : isNum(x.t0) ? Math.max(0, Math.round((isNum(x.t1) ? x.t1 : used) - x.t0)) : 0;
       // reached: at least one of its items was shown (a part left during its instructions was not)
       return { exId: x.exId, n: c.n, right: c.right, answered: c.answered, unanswered: c.unanswered, flagged: c.flagged, voided: c.voided, seen: c.seen, timeMs: t, reached: c.seen > 0, broken: x.broken || null };
     });
@@ -413,7 +479,7 @@
   var KEEP_ITEM = ['j', 'seed', 'params', 'code', 'status', 'resp', 'correct', 'rtMs', 'timeMs', 'flag', 'rep', 'replaces'];
   function keep(run) {
     return {
-      v: 1, id: run.id, size: run.size, form: run.form, start: run.start, end: run.end, budgetMs: run.budgetMs, usedMs: run.usedMs,
+      v: 1, nav: run.nav === 'free' ? 'free' : undefined, id: run.id, size: run.size, form: run.form, start: run.start, end: run.end, budgetMs: run.budgetMs, usedMs: run.usedMs,
       pausedMs: run.pausedMs, display: run.display, ended: run.ended, missing: U.deepCopy(run.missing || []), open: true,
       parts: run.parts.map(function (P) {
         var Q = { exId: P.exId, version: P.version, t0: P.t0, t1: P.t1, items: P.items.map(function (it) {
@@ -515,6 +581,9 @@
     out.visits = F.int(x.visits, 0, 1e6) || 0;
     out.flag = x.flag === true;
     out.correct = st === 'answered' ? x.correct === true : null;
+    // struck-out options (v1.2): distinct whole numbers 0–9, sorted; anything else is dropped
+    var sk = isArray(x.struck) ? x.struck.filter(function (v, i, a) { return isNum(v) && v >= 0 && v < STRIKE_MAX && v === Math.floor(v) && a.indexOf(v) === i; }).sort(function (a, b) { return a - b; }) : [];
+    if (sk.length) out.struck = sk; else delete out.struck;
     return out;
   }
   // A saved run, repaired: replacements beyond the cap (one per original item) that were never
@@ -553,6 +622,9 @@
     out.budgetMs = isNum(b) && b >= nOrig * 1000 && b <= nOrig * 600000 ? b : nOrig * PACE_MS;
     out.form = F.int(r.form, 1, 1e6) || 1;
     if (out.index >= parts2[out.part].items.length) out.index = 0;
+    // v1.2: a free run (test conditions) and whether its clock has started; a 1.1 run had always begun
+    if (r.nav === 'free') out.nav = 'free'; else delete out.nav;
+    out.begun = r.begun !== false;
     return out;
   }
   E.field('section', defaults, function (v) {
@@ -569,5 +641,6 @@
     partInfo: partInfo, endPart: endPart, finish: finish, review: review, ERR_RUN: ERR_RUN,
     save: save, live: live, drop: drop, fixLive: fixLive, defaults: defaults,
     numberOf: numberOf, numberCount: numberCount, last: last, lastResult: lastResult, lastOpen: lastOpen, fixLast: fixLast, tally: tally,
+    begin: begin, step: step, strike: strike, list: list, STRIKE_MAX: STRIKE_MAX, SET_MAX: SET_MAX,
   };
 })(window.PX);
