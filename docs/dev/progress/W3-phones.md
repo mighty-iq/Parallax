@@ -55,6 +55,9 @@ items W3-phones owns the files they need, and every file touched is listed here.
   was 396 s in one file; 518/0); shards.test.mjs checks every file runs once for 1-6 shards and CI's four stay
   under 15 min each (47/0). Openings stays one file (one pool of 10 080 seeds for rule 5).
 
+- 02:56 UTC, last verified on 853fccb + working tree: tests/e2e/phones.py, every part in one run, 274/0;
+  node --shard 1/4: 15 files, 2366/0, 406 s.
+
 ## Next
 All ten items done. Left for later: the Watch caption and Fold's draw-the-answer controls at 360 x 640 (other
 owners), Section's part card at 740 x 360, the Levels tab's length on phones (about 11 screens with the game
