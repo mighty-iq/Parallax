@@ -159,5 +159,17 @@ Numbers are the code's at HEAD (19 Nov) unless a note is named; "sim" = the simu
 ## Self-check 2: quote scan (scripts outside the repository, /tmp/w3voice/scripts/quotescan.py)
 - Six-word runs shared with BRIEF.md: README 2, CHANGELOG 1.2.0 entry 2, about.js 3, library.js 0, bets.js 0,
   guide 3; every one is the fixed Chimera line ("built by the Chimera community on Discord"), which rule 1
-  requires. Two guide phrases that matched the lead's own question texts in BRIEF ("a deadline that tightens as you
-  improve", "weeks in a row at your goal") were reworded. O24: no "IQ point" anywhere (grep).
+  requires. Two guide phrases that matched the lead's own question texts in BRIEF (one on Central Point's
+  deadline, one on the weekly goal's count) were reworded. O24: no "IQ point" anywhere (grep).
+
+## After the session restart (19 Nov ~13:10 UTC)
+- 13:12 UTC: 5496958, Missing View's card says that Show me draws the solid beside the views (W1-band-B's 13:05
+  request), PDF rebuilt. 13:15 UTC: the contents' chapter 5 line gives the bets page's number (W2-bets' 22:50
+  request asked for it in the contents); PDF rebuilt, 57 sheets, no overflow; pages 2, 23 and 34 looked at.
+- Rechecked on the working copy: node bets, overlap, chimera 851/0, then bets 589/0 after the contents line;
+  tests/e2e/overlap.py 58/0; quote scan again (only the fixed Chimera line, in README, CHANGELOG, about.js and the
+  guide); calibration says "its transfer is untested" in README, About (bets.js), the Library's bet tag ("new,
+  transfer untested") and the guide; O24 (no IQ figure) and O26 (validity study linked) still hold; pdfinfo:
+  /Author the Chimera community only.
+- Request lines to the guide's owner marked DONE in requests.md: 15:52 (W1-central), 22:50 (W2-bets), 01:30
+  (W2-measure), 10:58 and 12:03 (W3-bandA), 13:05 (W1-band-B).
