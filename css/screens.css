@@ -166,6 +166,14 @@
 /* ---------- Progress ---------- */
 .px-prog-nav { display: flex; flex-wrap: wrap; gap: 0 var(--s1); margin: calc(-1 * var(--s2)) 0 var(--s5) -0.75rem; }
 .px-prog { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); } /* one column, never wider than the page */
+/* v1.2 O20 (W3-phones): a phone shows one section at a time (js/ui/progress.js tabs: each section with the
+   panels placed after it); the buttons above pick it, as chips of 44 px with the shown one marked */
+@media (max-width: 719px) {
+  .px-prog[data-tabs] > [data-tab]:not([data-tab-on]) { display: none; }
+  .px-prog-nav { gap: var(--s1); margin: calc(-1 * var(--s2)) 0 var(--s4); scroll-margin-top: calc(3.5rem + 1px + env(safe-area-inset-top, 0px) + var(--s2)); }
+  .px-prog-nav .px-btn { min-height: 2.75rem; border: 1px solid var(--rule); }
+  .px-prog-nav .px-btn[aria-current="true"] { background: var(--signal-wash); border-color: var(--signal); color: var(--signal-strong); box-shadow: inset 0 -2px 0 var(--signal); }
+}
 .px-prog-start { margin-bottom: var(--s4); border-color: var(--signal); }
 .px-prog-start > * + * { margin-top: var(--s3); }
 .px-prog-start p { max-width: var(--measure); color: var(--ink-2); }
