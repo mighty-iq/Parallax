@@ -21,3 +21,12 @@ tests/node/<id>*.test.mjs and tests/e2e/harness_<id>*.py. Source: fresh players 
 - Checks: node nets 68/0, layers-nets 23/0, bets 400/0 (rounds' shortcuts unchanged); harness_nets 253/0; fit.py nets
   360 × 640 31/31, 390 × 844 3/3; screenshots (light, dark, Try 1 at 360 × 640, the Watch's pointer) looked at.
 - For W3-voice: the guide's Nets text and shot still say "marked face" (requests.md).
+
+## Track (item 3)
+- Why 5 of 6 first: no starter band and no `at` steps; gen.js prices 4 or 5 of 6 by the unmarked spheres (Keff, by
+  design), so 5 of 6 is the warm-up's easiest cell (60 of 60 simulated newcomers got it first; 4 or 5 of 6 were 68 %
+  of the first five), while Try showed 2 and 3 targets only.
+- Fix: Try 2 = 5 of 6 at the slowest speed with the 'others' tip (follow the unmarked ones); the cue line of every item
+  with fewer unmarked than marked spheres says it, and the motion line says "Follow them, or the unmarked ones."
+- Checks: node track 343/0 (new: a 5-of-6 Try item with its tip; the cue captions); harness_track 199/0; fit.py track
+  360 × 640 30/30, 390 × 844 2/2; the cue line at 360 × 640 and 390 × 844 (three lines at 360 px, no scroll) looked at.
