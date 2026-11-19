@@ -284,6 +284,23 @@ function testShortcuts(t, PX, L, pool) {
     else t.ok(Math.max(acc, (1 - acc) / 3) <= LIMIT, `diagnostic "${name}" ${(acc * 100).toFixed(1)} %: neither it nor eliminating its pick beats chance + 10`);
   }
   console.log('       slice shortcuts over ' + n + ' items: ' + line.join(', '));
+  // v1.2: rule 5 per dimension level (tests/node/shortcut-levels.test.mjs) and the scoped exception of
+  // DECISIONS 19 Nov: a cut along an axis makes the key a rectangle or a round outline, which "the roundest"
+  // and "the fullest" (the stereotyping error) find unless a foil of the same problem ties with it; at the
+  // first cut level and for joined solids they are held at 40 % or less (chance 25 %), every other solver and
+  // level within chance + 10.
+  for (const [dim, lv] of [['cut', 0], ['structure', 1]]) {
+    const hit = { roundest: 0, fullest: 0 };
+    let m = 0;
+    for (let k = 0; k < 600; k++) {
+      const p = { structure: dim === 'structure' ? lv : k % 3, cut: dim === 'cut' ? lv : k % 3, curved: Math.floor(k / 3) % 2, variant: 'choose' };
+      const it = PX.ex.get('slice').generate(PX.rng(PX.rng.hash('slice-exception', dim, k)), p);
+      if (!it || it.fallback) continue;
+      const sc = shortcutScores(PX, PX.ex.get('slice'), it, p);
+      hit.roundest += sc.roundest.hit; hit.fullest += sc.fullest.hit; m++;
+    }
+    for (const k of ['roundest', 'fullest']) t.ok(hit[k] / m <= 0.40, `scoped exception: "${k}" at ${dim} level ${lv} ≤ 40 % (${(100 * hit[k] / m).toFixed(1)} % of ${m}, chance 25 %)`);
+  }
 }
 
 /* ------------------------------------------------------------------ analytic sections (second method) */

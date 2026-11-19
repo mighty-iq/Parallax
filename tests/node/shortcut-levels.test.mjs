@@ -67,9 +67,13 @@ const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880];
 // printed on every run, not failed, so the suite stays usable while the generators are rebalanced; a known
 // cell fails again if it grows by more than 2 points, and any other cell over the bound fails. Delete an
 // entry when its generator is fixed. (gap: accuracy − chance at that run)
+// Scoped exceptions (CLAUDE.md rule 5: a DECISIONS line and a per-level test in the exercise's own test file):
+// these cells are held at the accuracy given here instead of chance + 10.
+const SCOPED = {
+  slice: { 'roundest|cut=0': 0.40, 'fullest|cut=0': 0.40, 'roundest|structure=1': 0.40, 'fullest|structure=1': 0.40 }, // DECISIONS 19 Nov
+};
 const KNOWN = {
   fold: { 'sym1|folds=0': 0.194, 'punchHoles|folds=0': 0.153 },
-  slice: { 'roundest|cut=0': 0.143, 'fullest|cut=0': 0.165, 'roundest|structure=1': 0.123 },
 };
 
 // Two-fold cross-validated accuracy of the best single threshold (either direction) on a yes/no cue.
@@ -161,12 +165,14 @@ export async function run(t) {
       nCells++;
       if (!worst || gap > worst.gap) worst = { key, gap, n: c.n };
       if (gap <= 0.10) continue;
+      const cap = (SCOPED[def.id] || {})[key];
+      if (cap !== undefined) { if (acc > cap) over.push(tag + ' (scoped cap ' + (100 * cap).toFixed(0) + ' %)'); else known.push(tag + ' (scoped, cap ' + (100 * cap).toFixed(0) + ' %)'); continue; }
       if (key in K) { (gap <= K[key] + 0.02 ? known : over).push(tag + (gap > K[key] + 0.02 ? ' (known at +' + (100 * K[key]).toFixed(1) + ')' : '')); continue; }
       (gap > 0.10 + 2 * se ? over : near).push(tag);
     }
     t.ok(over.length === 0, def.id + ': every solver within chance + 10 points at every dimension level (' + nCells + ' cells of ≥ ' + MIN_CELL + ' items' + (worst ? '; closest ' + worst.key + ' ' + (worst.gap >= 0 ? '+' : '') + (100 * worst.gap).toFixed(1) + ' over ' + worst.n : '') + ')' + (over.length ? '; over: ' + over.slice(0, 6).join(', ') : ''));
     if (near.length) console.log('       ' + def.id + ': over chance + 10 by less than two standard errors of the cell (sampling noise, not failed): ' + near.join(', '));
-    if (known.length) console.log('       ' + def.id + ': KNOWN cells over chance + 10 (the acceptance line counts them as failures; requests.md, 18 Nov 23:47 UTC): ' + known.join(', '));
+    if (known.length) console.log('       ' + def.id + ': KNOWN or scoped cells over chance + 10 (KNOWN: requests.md, 18 Nov 23:47 UTC; scoped: DECISIONS): ' + known.join(', '));
     if (info.length) console.log('       ' + def.id + ': reported, not bounded (' + (sc.exempt.concat('info').join(', ')) + '), cells over chance + 10: ' + info.slice(0, 6).join(', ') + (info.length > 6 ? ' … (' + info.length + ')' : ''));
     done.push(def.id);
   }
