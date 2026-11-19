@@ -50,6 +50,7 @@
   var DYNAMIC_MS = 400;     // a present() longer than this held a moving or timed stimulus
   var DEMO_MS = 5000;       // a Watch demo lasts at least this long (slow, with captions)
   var DEMO_CAPTION_MS = 3000; // and each of its captions stays on the screen at least this long
+  var WTG_MIN_REM = 20; // round 5: Watch, Try, Go keeps its header on a phone only where the item keeps at least this height
   // Fresh-player round 3 (Central Point, phone): a walkthrough after an answer ignores taps from the
   // item at first (they were meant as answers); after a time-out it starts a moment after the
   // verdict; and when it ends, its bar's place takes no tap for a moment (the tap was meant for it).
@@ -313,6 +314,7 @@
           var s = steps[i];
           if (s.caption) caption(s.caption);
           safe(s.enter); safe(s.update, 0);
+          if (k === 0 || group[k] !== group[k - 1]) label(); // a new caption: the button's words follow it at once
         }
         function finish() { var s = steps[i]; safe(s.update, 1); safe(s.exit); }
         function label() {
@@ -325,19 +327,15 @@
           P.el.pNext.hidden = !(demo || answered); P.el.pStep.hidden = demo || answered;
           P.el.pNext.toggleAttribute('data-answered', answered); // wide screens keep the strip's own Next
           P.el.pNext.classList.toggle('is-waiting', !!waiting);
-          // while a caption's steps still play, the first tap finishes them: say so; at the demo's last
-          // caption the tap hands the item over, and Watch, Try, Go's line says so (fresh-player tests)
-          var lastWait = demo && tap && waiting && i === steps.length - 1;
-          // round 3: "Skip ahead" read as skipping the whole demo; the tap finishes the caption's steps.
-          // At the last caption a demo hands the item over; a walkthrough after an answer is done.
-          var lastTap = tap && waiting && i === steps.length - 1;
-          // round 4 (first-session test: "Finish step" moved on a caption per tap): while steps play, the words
-          // say what a tap does: a still caption's steps finish and wait there; a moving one goes on
+          // round 5 (Angles fresh-player run: "Finish step" read as ending the whole Watch, and taps on the figure
+          // did nothing while a caption's steps played): a tap on Next, on the figure, Enter or → always shows the
+          // next caption, finishing the current one's steps at once, so the button says Next step at every moment;
+          // from the start of the last caption it says what the tap does there: Your turn (a demo hands the item
+          // over) or Done (a walkthrough after an answer), and Watch, Try, Go's line says the same (onLastWait)
           var gEnd = i;
           while (gEnd + 1 < steps.length && group[gEnd + 1] === group[i]) gEnd++;
-          var stays = !!(steps[gEnd] && steps[gEnd].hold && !FAST) || waitsAt(gEnd), playing = tapped && tap && !waiting;
-          P.el.pNext.firstChild.textContent = playing ? (stays ? 'Finish step' : gEnd + 1 >= steps.length ? (demo ? 'Your turn' : 'Done') : 'Next step')
-            : lastWait ? 'Your turn' : lastTap ? 'Done' : 'Next step';
+          var inLast = tap && gEnd + 1 >= steps.length, lastWait = demo && inLast;
+          P.el.pNext.firstChild.textContent = inLast ? (demo ? 'Your turn' : 'Done') : 'Next step';
           if (lastWait && !lastNoted) {
             lastNoted = true;
             try { if (P.demoCfg && typeof P.demoCfg.onLastWait === 'function') P.demoCfg.onLastWait(); } catch (e) { log('onLastWait failed', e); }
@@ -383,30 +381,18 @@
           }
           return true;
         }
-        // Next: go on from a wait; while a caption's steps still play, finish them and wait there
-        // (a tap never skips a caption unseen); in motion, finish the motion and wait.
+        // Next (a tap on Next, on the figure, Enter or →): from a wait, the caption after it; while a caption's
+        // steps still play, they finish at once and the next caption comes (round 5: one tap, one new caption, at
+        // every moment, in taps and in Auto-play alike); at the last caption the walkthrough ends.
         var lastCmd = -1e9; // a tap on the figure that a view already turned into a step is not a second Next
         function next() {
           if (done) return;
           lastCmd = timing.now();
           if (waiting) { waiting = false; paused = false; label(); return; }
           paused = false;
-          if (!tapMode()) { // Auto-play, and a show-me after an answer: on to the next caption (Next means the same in both players)
-            var g0 = group[i];
-            while (!done && group[i] === g0) { finish(); if (i + 1 < steps.length) enter(i + 1); else end(); }
-            label();
-            return;
-          }
-          while (!done) {
-            if ((steps[i].hold && !FAST) || waitsAt(i)) {
-              if (lastK !== 1) { safe(steps[i].update, 1); lastK = 1; }
-              t = dur() + hold(i);
-              wait();
-              return;
-            }
-            finish();
-            if (i + 1 < steps.length) enter(i + 1); else end();
-          }
+          var g0 = group[i];
+          while (!done && group[i] === g0) { finish(); if (i + 1 < steps.length) enter(i + 1); else end(); }
+          label();
         }
         cur = {
           pause: function () {
@@ -418,8 +404,9 @@
             finish(); if (i + 1 < steps.length) { enter(i + 1); paused = true; label(); } else end();
           },
           next: next,
-          // a tap on the figure: Next, while a caption waits
-          tap: function () { if (waiting && tapMode() && timing.now() - lastCmd > 250) next(); },
+          // a tap on the figure: Next, at every moment where captions wait for taps (round 5: it did nothing while a
+          // caption's steps played, though the line says "Tap Next, or the figure")
+          tap: function () { if (tapMode() && timing.now() - lastCmd > 250) next(); },
           replay: function () { replays++; paused = false; waited = -1; lastNoted = false; enter(0); label(); },
           close: function () { if (!done) closed = true; while (!done) { finish(); if (i + 1 < steps.length) { i++; safe(steps[i].enter); } else end(); } },
           auto: function () {
@@ -1081,11 +1068,15 @@
     // The scroll is the least that clears the strip, so what lies above the Pause row (Watch, Try, Go's
     // stepper) goes first and the row itself only when the options need it (fit.py: no option under
     // the strip; the marks are the feedback).
+    // Round 5 (Angles fresh-player run): Watch, Try, Go's header (the step bar) is never left cut in half: a scroll
+    // that would cut it takes it away whole (makeRoom keeps it on the screen where the screen is tall enough).
     function marksIntoView() {
       try {
         var t = (P.grid ? el.grid : el.host).getBoundingClientRect(), f = el.feedback.getBoundingClientRect();
         if (!t.height || t.bottom <= f.top) return;
-        var by = Math.min(t.bottom - f.top + 12, Math.max(0, t.top - 64));
+        var cap = Math.max(0, t.top - 64), by = Math.min(t.bottom - f.top + 12, cap);
+        var prev = el.root.previousElementSibling, hd = prev && prev.classList && prev.classList.contains('pl-wtg') ? prev.getBoundingClientRect() : null;
+        if (hd && hd.height && hd.top >= -1 && by > hd.top + 1 && by < hd.bottom) by = Math.min(Math.ceil(hd.bottom), Math.max(by, cap));
         if (by > 0) win.scrollBy(0, by);
       } catch (e) { /* cosmetic */ }
     }
@@ -1390,6 +1381,7 @@
     function notice(node) { ui.clear(el.notice); if (node) el.notice.appendChild(node); }
     P.setLabel = setLabel; P.setMeta = setMeta; P.setProgress = setProgress; P.setGoal = setGoal;
     P.setTip = setTip; P.note = note; P.clearNotes = clearNotes; P.notice = notice;
+    P.keepMarks = function () { if (P.state === 'reveal') marksIntoView(); }; // the marks stay above the reading strip
     // The "How to solve" button: P.setHowTo(def, card) shows it, P.setHowTo(null) hides it.
     P.setHowTo = function (def, card) { P.howTo = def && card ? { def: def, card: card } : null; el.howBtn.hidden = !P.howTo; };
     P.showHud = function (on) { el.hud.hidden = !on; };
@@ -1920,13 +1912,21 @@
     // .is-wtg), so a Try item fits like a scored one (RV-play-dat). In Watch the strip and the goal
     // scroll away while the demo plays (stageIntoView), and the item gives up what the show-me
     // caption and bar pinned under it need beyond that strip's room: 7.5rem less about 3.5rem.
+    // Round 5 (Angles fresh-player run: the step bar was cut off when the answer strip came up): where the
+    // screen is tall enough to keep WTG_MIN_REM for the item, the item also leaves room for this header (the step
+    // bar and its line) and, in Watch, for the goal and the Your turn strip that follows the demo, so header, item
+    // and strip fit on one screen; a short screen keeps the item's size, and the header scrolls away whole.
     function makeRoom(goal, tip, demo) {
       if (!isPhone()) { host.style.removeProperty('--pl-extra'); return; }
       try {
         P.setGoal(goal); P.setTip(tip); // run() sets the same again
         var g = P.el.guide, gh = g ? g.getBoundingClientRect().height : 0;
         var rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
-        var extra = demo ? 4 * rem : (gh > 0 ? gh + 0.5 * rem : 0) + stripRoom();
+        var guide = gh > 0 ? gh + 0.5 * rem : 0, strip = stripRoom();
+        var extra = demo ? 4 * rem : guide + strip;
+        var hh = head.isConnected ? head.getBoundingClientRect().height + 0.5 * rem : 0;
+        var more = hh + (demo && strip ? guide + strip + 1.5 * rem - 4 * rem : 0); // Your turn: the strip and one more line
+        if (more > 0 && strip && (win.innerHeight || 640) - 4.5 * rem - extra - more >= WTG_MIN_REM * rem) extra += more;
         host.style.setProperty('--pl-extra', Math.round(extra) + 'px');
       } catch (e) { /* the item keeps its usual size */ }
     }
@@ -1994,7 +1994,7 @@
       return P.demo(item, {
         goal: goalOf(learn, item),
         turn: { skip: practice.length ? 'Skip to Try' : 'Skip to Go' },
-        onLastWait: function () { text.textContent = 'Watch: that was the last step. Tap “Your turn” and answer the item yourself.'; },
+        onLastWait: function () { text.textContent = 'Watch: the last step. Then tap “Your turn” and answer the item yourself.'; },
         onDemoEnd: function () { text.textContent = 'Your turn: answer the demo item yourself. Practice never counts.'; partsOn(false); }, // the item and its options fit again
       }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
@@ -2016,7 +2016,7 @@
       stageSoon(item, true);
       emit('play:screen', { screen: 'wtg-example', mode: P.mode, exId: exId });
       return P.demo(item, { goal: goalOf(learn, item), turn: { skip: 'Now your turn' },
-        onLastWait: function () { text.textContent = 'Try: that was the worked example. Tap “Your turn”, then go on to your own item.'; },
+        onLastWait: function () { text.textContent = 'Try: the worked example’s last step. Then tap “Your turn” and go on to your own item.'; },
       }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; }
@@ -2425,6 +2425,7 @@
       if (step.feedback !== false && (tr.outcome === 'right' || tr.outcome === 'wrong')) {
         hookCollect('item:reveal', { mode: mode, step: step, def: def, item: item, tr: tr, out: out, verdict: P.el.verdict, P: P });
       }
+      if (P.keepMarks) P.keepMarks(); // notes and reveal lines may have made the reading strip taller (round 5)
       return P.waitNext({ label: out.done || S.ended ? 'Finish' : 'Next item' }).then(function (w) { // round 3: not the walkthrough's "Next step"
         if (w === 'end') S.ended = true; // End on a pause between items (O4)
         if (w !== 'abort') loop();
@@ -3243,13 +3244,28 @@
           return h('li.pl-wtg-step' + (i < 2 ? '.is-done' : '.is-current'), i === 2 ? { 'aria-current': 'step' } : null, h('span.pl-wtg-n.px-num', String(i + 1)), h('span.pl-wtg-name', n));
         })));
       }
+      // round 5 (Angles fresh-player run: Go opened Baseline 1's card instead of Angles): while the starting
+      // point is due, the screen and its button say so before the tap, and Later trains at once (the session
+      // reads the choice as params.baseline, js/ui/measure.js; the next session opens with the check)
+      var b1 = null;
+      try { b1 = PX.ui.tour && typeof PX.ui.tour.baseline1 === 'function' ? PX.ui.tour.baseline1() : null; } catch (e) { b1 = null; }
+      var b1Words = b1 ? (b1.text ? 'about ' + b1.text + ' minutes' : 'a few minutes') : '';
+      var goTo = function (baseline) {
+        if (baseline === 'later') { try { E().assess.later(rec(), 'B1', now()); save(); } catch (e) { log('later failed', e); } }
+        router.go('play', baseline ? { mode: 'train', exId: exId, baseline: baseline } : { mode: 'train', exId: exId }, { force: true });
+      };
       wrap.appendChild(done
-        ? screenHead('Watch, Try, Go · step 3', 'Go: ' + name + ' for real', 'That was the tutorial; nothing was logged. In Go the items count: a session starts with easier ' + name + ' items, then follows your level.')
-        : screenHead('Watch, Try, Go', name + ': ready', 'Skipped. How to play stays in the Library.'));
+        ? screenHead('Watch, Try, Go · step 3', 'Go: ' + name + ' for real', 'That was the tutorial; nothing was logged. In Go the items count: ' +
+          (b1 ? 'first comes your starting point, ' + b1Words + ' of short tasks without feedback, measured once before training changes it; then a session starts with easier ' + name + ' items.'
+            : 'a session starts with easier ' + name + ' items, then follows your level.'))
+        : screenHead('Watch, Try, Go', name + ': ready', 'Skipped. How to play stays in the Library.' + (b1 ? ' Your first session opens with your starting point, ' + b1Words + ' without feedback.' : '')));
       emit('play:screen', { screen: 'watch-end', mode: 'watch', exId: exId });
-      var start = ui.button(done ? 'Go: start a session with ' + name : 'Start a session with ' + name, { kind: 'primary', onClick: function () { router.go('play', { mode: 'train', exId: exId }, { force: true }); } });
+      var start = ui.button(b1 ? (done ? 'Go: the starting-point check first, then ' + name : 'The starting-point check first, then ' + name)
+        : done ? 'Go: start a session with ' + name : 'Start a session with ' + name, { kind: 'primary', onClick: function () { goTo(b1 ? 'now' : null); } });
       start.setAttribute('data-card', 'session');
-      wrap.appendChild(h('div.pl-summary-actions', start,
+      var later = b1 ? ui.button(name + ' now, the check later', { kind: 'secondary', onClick: function () { goTo('later'); } }) : null;
+      if (later) later.setAttribute('data-card', 'later');
+      wrap.appendChild(h('div.pl-summary-actions', start, later,
         ui.button('Free play', { kind: 'secondary', onClick: function () { router.go('play', { mode: 'free', exId: exId }, { force: true }); } }),
         ui.button('Back to the Library', { kind: 'ghost', go: 'library' })));
       wrap.appendChild(slot);

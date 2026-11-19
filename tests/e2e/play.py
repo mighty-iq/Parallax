@@ -893,15 +893,22 @@ def run_captions(b, C):
     page.keyboard.press('Enter')
     page.wait_for_function('__done === true', timeout=5000)
     C.ok(True, f'{tag}: Enter is Next, and the last caption ends the demo')
-    # Next while a caption's steps still play: they finish, and the caption waits (nothing skipped)
-    page.evaluate(start, [{'name': 'e', 'cap': 'E', 'ms': 4000, 'anim': True}, {'name': 'f', 'cap': 'F'}])
+    # round 5: Next while a caption's steps still play finishes them and shows the next caption at once (one tap,
+    # one new caption, as the line says), and so does a tap on the figure
+    page.evaluate(start, [{'name': 'e', 'cap': 'E', 'ms': 4000, 'anim': True}, {'name': 'f', 'cap': 'F', 'ms': 4000, 'anim': True}, {'name': 'g0', 'cap': 'G0'}])
     page.wait_for_timeout(500)
     lab = page.locator('[data-showme-next]').inner_text()
-    C.ok(lab.startswith('Finish step'), f'{tag}: while a caption\'s steps play, Next reads "Finish step" ({lab!r})')
+    C.ok(lab.startswith('Next step'), f'{tag}: while a caption\'s steps play, Next reads "Next step" ({lab!r})')
     page.locator('[data-showme-next]').tap()
     page.wait_for_timeout(300)
     s6 = page.evaluate(probe)
-    C.ok(s6['cap'] == 'E' and s6['waiting'], f'{tag}: Next during the animation of a caption finishes it and waits there ({s6})')
+    C.ok(s6['cap'] == 'F' and not s6['waiting'] and s6['log'] == 'e f', f'{tag}: Next during the animation of a caption finishes it and shows the next one ({s6})')
+    page.wait_for_timeout(400)
+    page.locator('.pl-host').tap()
+    page.wait_for_timeout(300)
+    s6b = page.evaluate(probe)
+    lab2 = page.locator('[data-showme-next]').inner_text()
+    C.ok(s6b['cap'] == 'G0' and lab2.startswith('Your turn'), f'{tag}: a tap on the figure does the same; the last caption says Your turn at once ({s6b["cap"]}, {lab2!r})')
     page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
     page.wait_for_function('__done === true', timeout=5000)
     # Auto-play: the timed pace, kept as the player's choice
@@ -1376,16 +1383,144 @@ def run_round4(b, C):
     page.wait_for_timeout(300)
     l3 = page.locator('[data-showme-next]').inner_text().strip()
     c3 = page.evaluate("document.querySelector('.pl-caption').textContent")
-    C.ok(c3 == 'S3' and l3.startswith('Finish step'), f'{tag}: on a still caption whose steps play it says Finish step ({c3!r}, {l3!r})')
+    C.ok(c3 == 'S3' and l3.startswith('Next step'), f'{tag}: on a still caption whose steps play it says Next step too (round 5) ({c3!r}, {l3!r})')
     page.locator('[data-showme-next]').tap()
     page.wait_for_timeout(300)
     s4 = page.evaluate("[document.querySelector('.pl-caption').textContent, !!document.querySelector('.pl-showme[data-waiting]'), document.querySelector('[data-showme-next]').textContent.trim()]")
-    C.ok(s4[0] == 'S3' and s4[1] and s4[2].startswith('Next step'), f'{tag}: Finish step finishes that caption and waits there; then Next step ({s4})')
+    C.ok(s4[0] == 'S4' and s4[2].startswith('Your turn'), f'{tag}: that tap shows the next caption, the last one, which says Your turn ({s4})')
     page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
     page.wait_for_function('__done === true', timeout=5000)
     cap = page.evaluate("document.querySelector('.pl-caption').textContent")
     C.ok(cap == '', f'{tag}: Close leaves no caption behind ({cap!r})')
     C.ok(not con.errors(), f'{tag} words: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
+STEPBAR_JS = '''() => { const s = document.querySelector('.pl-wtg-top'), g = document.querySelector('.pl-grid .px-choices'),
+  f = document.querySelector('.pl-feedback'), r = s ? s.getBoundingClientRect() : null, gr = g ? g.getBoundingClientRect() : null,
+  fr = f && !f.hidden ? f.getBoundingClientRect() : null;
+  return { top: r ? Math.round(r.top) : null, bottom: r ? Math.round(r.bottom) : null, H: innerHeight,
+    gridBottom: gr ? Math.round(gr.bottom) : null, stripTop: fr ? Math.round(fr.top) : null }; }'''
+
+
+def bar_whole(m):
+    """The step bar is on the screen whole, and the options end above the reading strip."""
+    return m['top'] is not None and m['top'] >= -0.5 and m['bottom'] <= m['H'] and (m['stripTop'] is None or m['gridBottom'] <= m['stripTop'] + 2)
+
+
+def run_round5(b, C):
+    """Fresh-player round 5 (Angles on a phone, 390 x 844): during Watch the line, the button and a tap on the figure
+    agree at every moment (each tap shows the next caption; from the start of the last caption the button and the
+    line both say Your turn); Your turn and a Try item's answer strip leave the step bar whole, on the screen; the
+    Go screen says when the starting point comes first, and its Later trains at once; a stretch tag says what it
+    is the first time. Screenshots out/play/round5_*.png."""
+    tag = 'round 5'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    page.evaluate('PX.debug.fast(false); PX.core.store.state.ui.autoplay = false')
+    go(page, {'mode': 'watch', 'exId': 'angles'})
+    for _ in range(100):  # the rules card first (the teaching template)
+        if page.evaluate('window.__play && __play.state === "showme"'):
+            break
+        rc = page.locator('[data-card-box="wtg-rules"] [data-card="watch"]')
+        if rc.count():
+            rc.first.tap()
+        page.wait_for_timeout(100)
+    page.wait_for_timeout(400)
+    # the caption on screen: the view's own line (Angles: .ex-caption) or the player's
+    page.evaluate("window.CAP = () => { const v = document.querySelector('.pl-host .ex-caption'); return (v && v.textContent) || document.querySelector('.pl-caption').textContent; }")
+    seen, agree, moved, shot = [], True, True, False
+    for _ in range(30):
+        if page.evaluate('__play.state') != 'showme':
+            break
+        m = page.evaluate("""() => ({ cap: CAP(), btn: document.querySelector('[data-showme-next]').textContent.trim(),
+          line: document.querySelector('.pl-wtg-text').textContent, waiting: document.querySelector('.pl-showme').hasAttribute('data-waiting') })""")
+        seen.append(m)
+        last = m['btn'].startswith('Your turn')
+        if last != m['line'].startswith('Watch: the last step') or not (last or m['btn'].startswith('Next step')) or (not last and 'Tap Next, or the figure' not in m['line']):
+            agree = False
+        if not shot and not m['waiting']:
+            page.screenshot(path=str(OUT / 'round5_watch_playing.png'))
+            shot = True
+        if last:
+            page.locator('[data-showme-next]').tap()
+            break
+        page.locator('.pl-host').tap(position={'x': 60, 'y': 60})  # a tap on the figure, often while the caption's steps play
+        page.wait_for_timeout(350)
+        if page.evaluate('CAP()') == m['cap'] and page.evaluate('__play.state') == 'showme':
+            moved = False
+    C.ok(len(seen) >= 3 and agree, f'{tag}: during Watch the button says Next step and the line "Tap Next, or the figure", and from the last caption both say Your turn ({[(s["btn"], s["line"][:24]) for s in seen]})')
+    C.ok(moved, f'{tag}: every tap on the figure showed the next caption, also while a caption\'s steps played ({len(seen)} captions)')
+    wait_state(page, 'respond')
+    page.wait_for_timeout(500)
+    turn = page.evaluate(STEPBAR_JS)
+    page.screenshot(path=str(OUT / 'round5_turn.png'))
+    C.ok(page.evaluate("document.querySelector('.pl-wtg-text').textContent").startswith('Your turn') and bar_whole(turn), f'{tag}: at Your turn the step bar is whole on the screen and the options clear the strip ({turn})')
+    page.evaluate('PX.debug.fast(true)')
+    k = page.evaluate('__play.key')
+    page.locator('.pl-grid .px-choice').nth(k).tap()
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    page.evaluate('__play.next()')
+    tries = []
+    for _ in range(6):
+        for _ in range(100):
+            sc = page.locator('[data-card-box="wtg-strategy"] [data-card="try"]')
+            if sc.count():
+                sc.first.tap()
+            if page.evaluate('__play.state') == 'respond' and not card(page):
+                break
+            page.wait_for_timeout(100)
+        if not page.evaluate("(document.querySelector('.pl-wtg-text') || { textContent: '' }).textContent").startswith('Try'):
+            break
+        k = page.evaluate('__play.key')
+        page.locator('.pl-grid .px-choice').nth((k + 1) % 4 if len(tries) == 1 else k).tap()  # one wrong answer among them
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+        if page.evaluate('__play.state') == 'showme':
+            page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close the walkthrough
+            page.wait_for_function('__play.state === "reveal"', timeout=8000)
+        page.wait_for_timeout(300)
+        tries.append(page.evaluate(STEPBAR_JS))
+        if len(tries) == 1:
+            page.screenshot(path=str(OUT / 'round5_try_answered.png'))
+        page.evaluate('__play.next()')
+        page.wait_for_timeout(200)
+    C.ok(len(tries) >= 3 and all(bar_whole(m) for m in tries), f'{tag}: after each Try answer the step bar is whole on the screen and the options clear the strip ({tries})')
+    # the Go screen while Baseline 1 is due
+    page.wait_for_selector('[data-card="session"]', timeout=15000)
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUT / 'round5_go.png'))
+    go_txt = page.locator('[data-card="session"]').inner_text().strip()
+    later_txt = page.locator('[data-card="later"]').inner_text().strip() if page.locator('[data-card="later"]').count() else ''
+    lead = page.locator('.px-screen-head .px-lead').inner_text()
+    C.ok(go_txt == 'Go: the starting-point check first, then Angles' and later_txt == 'Angles now, the check later' and 'first comes your starting point' in lead,
+         f'{tag}: the Go screen says the starting point comes first, before the tap ({go_txt!r}; {later_txt!r})')
+    page.evaluate(FIRSTRUN_CARDS)
+    page.evaluate('PX.ui.hooks.mute(false)')  # the measurement's hooks, as a new player has them
+    page.locator('[data-card="later"]').tap()
+    page.wait_for_timeout(400)
+    rp = page.evaluate('PX.core.router.current().params')
+    for _ in range(60):
+        if page.evaluate('window.__play && __play.state === "respond"') and not card(page):
+            break
+        if card(page) and card(page) not in ('measure-offer', 'expect'):
+            page.locator('[data-card-box] .px-btn--primary').first.tap()
+        page.wait_for_timeout(100)
+    st = page.evaluate("({ ex: __play.exId, st: __play.state, cards: __cards.slice(), later: PX.core.store.state.measure && PX.core.store.state.measure.later })")
+    C.ok(rp.get('baseline') == 'later' and st['ex'] == 'angles' and st['st'] == 'respond' and 'measure-offer' not in st['cards'] and st['later'],
+         f'{tag}: its Later trains Angles at once, with the put-off logged ({rp}; {st})')
+    # a stretch tag says what it is, once
+    sl = page.evaluate("""(() => { const seen = PX.core.store.state.ui.seen || (PX.core.store.state.ui.seen = {}); delete seen.stretchNote;
+      const notes = [], mk = () => { const v = document.createElement('div'), i = document.createElement('span'); i.className = 'pl-verdict-icon'; v.appendChild(i); return v; };
+      const P = { note: (n) => { notes.push(n.textContent); return n; } }, v1 = mk(), v2 = mk();
+      PX.ui.hooks.collect('item:reveal', { step: { kind: 'stretch' }, tr: { result: { correct: true } }, verdict: v1, P: P });
+      PX.ui.hooks.collect('item:reveal', { step: { kind: 'stretch1' }, tr: { result: { correct: true } }, verdict: v2, P: P });
+      const t = v1.querySelector('.gm-stretch-tag');
+      return { tag: t && t.textContent, title: t && t.getAttribute('title'), tag2: !!v2.querySelector('.gm-stretch-tag'), notes: notes, seen: seen.stretchNote }; })()""")
+    C.ok(sl['tag'] == 'stretch' and (sl['title'] or '').startswith('Stretch: an item set above your level') and sl['tag2'] and sl['notes'] == [sl['title']] and sl['seen'] == 1,
+         f'{tag}: a stretch tag carries its words, and the first one adds them as a line under the verdict, once ({sl})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
 
 
@@ -1645,7 +1780,7 @@ def main():
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

@@ -12,7 +12,8 @@
    skipped. The end screen carries the Chimera invite (v1.2, gap C6) and, in a test build, the playtest taps.
    Flags: store.state.tour.done (true once the tutorial ended, finished or left) and
    store.state.ui.tour = { started, finished, done: [ids], skipped: [ids], baseline: 'now' | 'later' | 'none' }.
-   PX.ui.tour = { start(), run(host, route, ctx) → cleanup, LIST, minutes() → { minutes, words, short, names } } */
+   PX.ui.tour = { start(), run(host, route, ctx) → cleanup, LIST, minutes() → { minutes, words, short, names },
+     baseline1() → { minutes, text } while Baseline 1 is due, else null (the standalone Go screen says it too) } */
 (function (PX) {
   'use strict';
 
@@ -162,5 +163,5 @@
     };
   }
 
-  PX.ui.tour = { start: start, run: run, LIST: LIST, minutes: minutes };
+  PX.ui.tour = { start: start, run: run, LIST: LIST, minutes: minutes, baseline1: baseline1 };
 })(window.PX);

@@ -538,9 +538,26 @@
       var ring = h('span.gm-ring', { 'aria-hidden': 'true' });
       icon.appendChild(ring);
       fx.run(ring, 'gm-fx-ring', 300, function () { if (ring.parentNode) ring.parentNode.removeChild(ring); });
-      if (stretch) ctx.verdict.appendChild(h('span.gm-stretch-tag.px-meta', 'stretch'));
+      if (stretch) {
+        // W2-core, fresh-player round 5 (Angles: the tag had no explanation): its words as its title and name, and
+        // the first time one line under the verdict (rec.ui.seen.stretchNote; the player keeps the marks in view)
+        var line = stretchLine();
+        ctx.verdict.appendChild(h('span.gm-stretch-tag.px-meta', { title: line, 'aria-label': line }, 'stretch'));
+        var u = rec().ui, seen = u && isObj(u.seen) ? u.seen : null;
+        if (u && !seen) seen = u.seen = {};
+        if (seen && !seen.stretchNote && ctx.P && typeof ctx.P.note === 'function') {
+          seen.stretchNote = 1;
+          save();
+          ctx.P.note(h('p.px-meta.gm-stretch-note', line));
+        }
+      }
     }
     return null;
+  }
+  // What a stretch item is, from the engine's mix (C.mix.stretch: the share of stretch items in a deck of ten)
+  function stretchLine() {
+    var m = E().config && E().config.mix, n = m && m.stretch > 0 ? Math.round(1 / m.stretch) : 10;
+    return 'Stretch: an item set above your level (about one in ' + n + '), so a right answer counts for more.';
   }
 
   var Hk = PX.ui.hooks;
