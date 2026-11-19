@@ -131,6 +131,8 @@ def wtg_checks(b, cons, C, ex, out_dir, assist_selector, n_rated=5, try_marks=No
         page.wait_for_timeout(150)
     page.evaluate('PX.debug.fast(true)')
     page.evaluate('PX.core.store.state.settings.patFocus = true')  # the DAT-style formats are opt-in
+    # wave 2's hooks (the baseline after a first tutorial, bets, plateau cards) have their own tests: muted here
+    page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')
     page.evaluate(f'void PX.core.router.go("play", {{ mode: "watch", exId: "{ex}" }}, {{ force: true }})')
     tag = f'{ex} Watch, Try, Go (app, 390×844)'
     page.wait_for_selector('[data-card-box="wtg-rules"]', timeout=15000)
@@ -246,6 +248,8 @@ def reveal_stable(b, cons, C, ex, out_dir, sizes=((360, 640), (390, 844), (1366,
             page.wait_for_timeout(150)
         page.evaluate('PX.core.store.state.settings.patFocus = true')
         page.evaluate('PX.debug.fast(true)')
+        # wave 2's hooks (baselines, bets, plateau cards) have their own tests: muted here, as play.py does
+        page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')
         page.evaluate(f'void PX.core.router.go("play", {{ mode: "train", exId: "{ex}" }}, {{ force: true }})')
         page.wait_for_timeout(600)
         if page.locator('[data-card="skip"]').count() and page.locator('[data-card="skip"]').first.is_visible():

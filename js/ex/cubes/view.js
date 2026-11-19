@@ -120,11 +120,12 @@
     svg.appendChild(S.el('g', { class: 'ex-cubes-marks' }));
     return { svg: svg, cubes: cubes, vb: vb };
   }
-  // A cube outlined as a dashed ghost (all 12 edges), for the hidden supports.
+  // A cube outlined as a dashed ghost, for the hidden supports: the 9 edges a solid cube shows from the
+  // figure's viewpoint (v1.2 O56: the 3 edges at its far corner, corner 0, made the overlay busy on a phone).
   function ghost(q) {
     var c = [];
     for (var i = 0; i < 8; i++) c.push(pt([q.x + (i & 1), q.y + ((i >> 1) & 1), q.z + ((i >> 2) & 1)]));
-    var E = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+    var E = [[2, 3], [4, 5], [6, 7], [1, 3], [4, 6], [5, 7], [1, 5], [2, 6], [3, 7]];
     var d = E.map(function (e) { return 'M' + c[e[0]][0] + ' ' + c[e[0]][1] + 'L' + c[e[1]][0] + ' ' + c[e[1]][1]; }).join('');
     return S.el('path', { d: d, class: 'ex-cubes-ghost' });
   }
@@ -139,10 +140,12 @@
       var f = faceAt([q.x, q.y, q.z], side);
       at = [(f[0][0] + f[2][0]) / 2, (f[0][1] + f[2][1]) / 2];
     }
+    // a hidden cube's badge is smaller (v1.2 O56): it sits over the cubes in front of it
+    var k = c.hidden ? 0.8 : 1;
     var g = S.el('g', { class: 'ex-cubes-badge ex-cubes-badge--' + kind + (c.hidden ? ' is-hidden' : '') });
-    if (kind === 'count') g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.4, class: 'ex-cubes-ring' }));
-    g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.3 }));
-    g.appendChild(S.text(at[0], at[1] + 0.11, String(text), { class: 'ex-cubes-badge-n' }));
+    if (kind === 'count') g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.4 * k, class: 'ex-cubes-ring' }));
+    g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.3 * k }));
+    g.appendChild(S.text(at[0], at[1] + 0.11 * k, String(text), { class: 'ex-cubes-badge-n' }));
     return g;
   }
   function marks() { var m = st.fig.svg.querySelector('.ex-cubes-marks'); PX.ui.clear(m); return m; }
