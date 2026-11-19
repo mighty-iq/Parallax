@@ -543,6 +543,7 @@ def run_phones_b2(b):
     page.keyboard.press('Escape')
     # How to play carries B7's "Also in tests" note when the exercise has one, and no key line on touch.
     has_overlap = page.evaluate('!!(PX.ui.overlap && PX.ui.overlap.noteFor && PX.ui.overlap.noteFor("fold"))')
+    page.evaluate('PX.core.keys.typed(false)')  # the Escapes above count as a keyboard (key hints show after a key press)
     page.evaluate('void PX.ui.play.howTo("fold")'); page.wait_for_timeout(200)
     howto = page.locator('.pl-howto')
     if has_overlap:

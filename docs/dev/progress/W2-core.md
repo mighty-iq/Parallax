@@ -62,6 +62,18 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
   253/1, the one failure its banner check, which now reads the name (train 33/0); fit.py spin, rotate 24/0;
   flows.py modes, today 31/1, the one failure band B's new dims' phrases (requests.md).
 
+## 2026-11-19 12:50 UTC: W3-bandA's three requests and the Painted Cubes fresh-player run
+- Requests: `ignores(params)` and `PX.ex.ignored()` (settings texts leave those dims out), "At this level, for example:
+  …" for a level's settings, `optionKeys: 'letters-only'` (grid, player, harness; keys lines name the item's range).
+- How to play: a wheel anywhere over a modal scrolls its dialog; the page behind a modal stays still (a scroll on the
+  same screen is put back, focus returns without scrolling); a shadow on the fixed buttons while more lies below.
+- Worked example: the line and the strip say one thing ("Your turn: pick the answer the example found"), the skip
+  says "Skip to your own item", the line after the answer says the example is done; the Watch, Try, Go line keeps
+  two lines' room on portrait phones and Your turn's room is 2rem over the strip, so nothing jumps.
+- Guard: play.py run_cubes2 (390 x 844) 12/0; play.py 266/1 then wave3 11/0 after its keys line counted the item's
+  options; shell.py 274/0 (one reset line, requests.md); overlap.py 58/0; section.py 165/0; flows.py 70/2 (band B's
+  phrases; a check time-out from W2-measure's uncommitted probes: HEAD with these changes passes 19/0); node 2222/0.
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with

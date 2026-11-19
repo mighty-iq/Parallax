@@ -34,7 +34,9 @@
    and out of the range) and atlas ([dimA, dimB] or null).
    v1.2 milestone 8 (CONTRACT-v1.2 W3, W4): testRange (frozen { dims, variants, notes } or null) with
    rangeTag(def, params) → 'below' | 'test' | 'beyond' | null and RANGE_TAGS; set (frozen { param, size }
-   or null) with setSize(def, params, seed) → 1 … SET_MAX. A view may declare optionKeys 'letters' (W1).
+   or null) with setSize(def, params, seed) → 1 … SET_MAX. A view may declare optionKeys 'letters' (W1) or
+   'letters-only' (badges and keys A–E alone). ignores(params) → [dim keys] (or null): the dims the generator does not
+   use at those params; ignored(def, params) gives them for texts.
    key(def) → 'id@version' (how trial logs index exercises). Definitions are frozen after define. */
 (function (PX) {
   'use strict';
@@ -302,6 +304,17 @@
       }
       d.atlas = Object.freeze(d.atlas.slice());
     }
+    // v1.2 milestone 8 (W3-bandA's request, Angles version 3): ignores(params) → the dim keys the generator does not use
+    // at those params (Angles' 9° level ignores the size class); texts built from params leave them out (ignored())
+    if (d.ignores === undefined || d.ignores === null) d.ignores = null;
+    else if (!isFn(d.ignores)) fail(id, 'ignores must be a function (params) → [dim keys the generator does not use there]');
+  }
+  // The dims a definition's ignores(params) names, as valid dim keys ([] without ignores, or when it fails).
+  function ignored(defOrId, params) {
+    var d = typeof defOrId === 'string' ? defs[defOrId] : defOrId, r = null;
+    if (!d || !isFn(d.ignores) || !params || typeof params !== 'object') return [];
+    try { r = d.ignores(params); } catch (e) { return []; }
+    return Array.isArray(r) ? r.filter(function (k) { return (d.dims || []).some(function (x) { return x.key === k; }); }) : [];
   }
   // v1.2 milestone 8 (docs/dev/CONTRACT-v1.2.md W3, W4), both optional:
   //   testRange: { dims: { <dim key>: [a tag per level] }, variants: { <variant>: tag }, notes: { <dim key | variant |
@@ -451,12 +464,13 @@
       if (!isFn(v.collect) || !isFn(v.reveal)) throw new Error(where + 'layoutFor needs collect(…) and reveal(…) for the items it gives their own input');
     }
     // v1.2 milestone 8 (CONTRACT-v1.2 W1): optionKeys 'letters' letters a stem+options view's options A–E (keys A–E
-    // and 1–5); 'digits' (the default) numbers them
+    // and 1–5); 'letters-only' letters them with keys A–E alone (W3-bandA's request: Angles numbers its angles 1–4, so
+    // digit keys would clash); 'digits' (the default) numbers them
     if (v.optionKeys !== undefined) {
-      if (v.optionKeys !== 'letters' && v.optionKeys !== 'digits') throw new Error(where + 'optionKeys must be "letters" or "digits"');
+      if (['letters', 'letters-only', 'digits'].indexOf(v.optionKeys) < 0) throw new Error(where + 'optionKeys must be "letters", "letters-only" or "digits"');
       if (v.layout !== 'stem+options') throw new Error(where + 'optionKeys is for stem+options views (a custom view draws its own input)');
       var nMax = defs[id].nOptions;
-      if (v.optionKeys === 'letters' && nMax > 5) throw new Error(where + 'optionKeys "letters" holds at most five options (A–E; the exercise has ' + nMax + ')');
+      if (v.optionKeys !== 'digits' && nMax > 5) throw new Error(where + 'optionKeys "' + v.optionKeys + '" holds at most five options (A–E; the exercise has ' + nMax + ')');
     }
     views[id] = v;
     return v;
@@ -655,5 +669,6 @@
   PX.ex.rangeTag = rangeTag; // v1.2 milestone 8 (CONTRACT-v1.2 W3)
   PX.ex.RANGE_TAGS = RANGE_TAGS;
   PX.ex.setSize = setSize;   // v1.2 milestone 8 (CONTRACT-v1.2 W4)
+  PX.ex.ignored = ignored;   // v1.2 milestone 8: the dims def.ignores(params) names (W3-bandA's request)
   PX.ex.SET_MAX = SET_MAX;
 })(window.PX);
