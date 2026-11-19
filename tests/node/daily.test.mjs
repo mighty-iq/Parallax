@@ -191,6 +191,65 @@ function testMidDaily(t) {
   t.ok(!S.state.daily[day].partial && S.state.daily[day].answered === 8, 'and the attempt is spent');
 }
 
+/* ============================================================ each answer writes the attempt through (M2) */
+
+// Review RV-code-1.2 M2: a phone that discards a background tab fires no pagehide, so finish() never runs; the scored
+// attempt is written with each answer, as the Climb's runs are, and goes on by seed when the Daily opens again.
+function testWriteThrough(t) {
+  t.section('daily: each answer writes the scored attempt through (review RV-code-1.2 M2)');
+  const PX = mk(t), E = PX.engine, D = E.daily, day = '2026-11-24', now = at(day, 7), its = D.items(day);
+  const rec = newRecord(PX, T0), plan = E.modes.start(rec, 'daily', { now }), seen = [];
+  for (let i = 0; i < 3; i++) {
+    const s = E.modes.next(plan, rec, now + i);
+    seen.push(s.seed);
+    E.modes.answer(plan, rec, s, { correct: i !== 1, rt: 1500 }, now + 1000 * i);
+    const e = rec.daily[day];
+    t.ok(e && e.partial === true && e.answered === i + 1 && e.right === (i === 0 ? 1 : i === 1 ? 1 : 2) && D.seedsOk(day, e), 'after answer ' + (i + 1) + ' the record holds the attempt part-way, with its seeds');
+  }
+  t.eq([rec.daily[day].points, rec.daily[day].t], [1 + 3, now + 2000], 'with its points so far and the time of the last answer');
+  const st = D.status(rec, now + 5000);
+  t.ok(!st.done && st.partial && st.partial.answered === 3, 'Today says it waits part-way, not that a fresh attempt is open');
+  // the tab is discarded here: no finish(); the Daily opens again
+  const p2 = E.modes.start(rec, 'daily', { now: now + 3600e3 });
+  t.ok(p2.daily.scored && p2.daily.resumed && p2.daily.n === 3 && p2.daily.right === 2, 'opened again, the scored attempt goes on with its three answers');
+  const rest = playOn(E, p2, rec, now + 3600e3 + 10);
+  t.ok(rest.length === 5 && rest.every((s) => seen.indexOf(s) < 0), 'it deals the five others, never an item already seen');
+  t.ok(rec.daily[day].partial === undefined && rec.daily[day].answered === 8, 'the last answer writes the whole result, before finish()');
+  const before = copy(rec.daily[day]);
+  E.modes.finish(p2, rec, now + 3700e3);
+  t.eq(Object.assign({}, rec.daily[day], { t: 0 }), Object.assign({}, before, { t: 0 }), 'finish() writes the same result');
+  // practice rounds and voided items write nothing
+  const p3 = E.modes.start(rec, 'daily', { now: now + 3800e3 }), s3 = E.modes.next(p3, rec, now + 3800e3);
+  E.modes.answer(p3, rec, s3, { correct: false, rt: 900 }, now + 3801e3);
+  t.ok(!p3.daily.scored && rec.daily[day].right === before.right && rec.daily[day].answered === 8, 'a practice round changes nothing stored');
+  const r2 = newRecord(PX, T0), p4 = E.modes.start(r2, 'daily', { now }), s4 = E.modes.next(p4, r2, now);
+  E.modes.answer(p4, r2, s4, { outcome: 'stutter' }, now + 500);
+  t.ok(!r2.daily[day], 'a voided item writes nothing (it comes back)');
+  void its;
+}
+
+// The same through the store: answers saved as the player saves after each one, then a new page (no finish()).
+function testWriteThroughStore(t) {
+  t.section('daily: a discarded tab keeps the part-way attempt (store)');
+  const e = env(t), PX = e.PX, S = PX.core.store, E = PX.engine, D = E.daily;
+  S.load();
+  const day = '2026-11-25', now = at(day, 9), plan = E.modes.start(S.state, 'daily', { now }), seen = [];
+  for (let i = 0; i < 4; i++) {
+    const s = E.modes.next(plan, S.state, now + i);
+    seen.push(s.seed);
+    E.modes.answer(plan, S.state, s, { correct: true, rt: 1400 }, now + 1000 * i);
+    S.save();
+  }
+  e.clock.tick(6000);
+  const stored = JSON.parse(e.storage.get(S.KEY)).daily[day];
+  t.ok(stored && stored.partial === true && stored.answered === 4 && JSON.stringify(stored.seeds) === JSON.stringify(D.daySeeds(day)), 'the saved record holds the attempt after four answers, with no finish()');
+  S.load(); // the page comes back: the discarded tab's plan is gone
+  const p2 = E.modes.start(S.state, 'daily', { now: now + 7200e3 });
+  t.ok(p2.daily.resumed && p2.daily.n === 4, 'the new page goes on with the four answers');
+  const rest = playOn(E, p2, S.state, now + 7200e3 + 10);
+  t.ok(rest.length === 4 && rest.every((s) => seen.indexOf(s) < 0), 'and deals only the four items not seen');
+}
+
 /* ============================================================ the hook leaves other records alone */
 
 function testOthers(t) {
@@ -209,5 +268,7 @@ export async function run(t) {
   testResume(t);
   testSaves(t);
   testMidDaily(t);
+  testWriteThrough(t);
+  testWriteThroughStore(t);
   testOthers(t);
 }
