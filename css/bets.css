@@ -50,6 +50,7 @@
 .px-bets-opt.is-right { border-color: var(--right); color: var(--right); background: var(--right-wash); }
 .px-bets-opt.is-wrong { border-color: var(--wrong); color: var(--wrong); }
 .px-bets-opt.is-dim { opacity: 0.55; }
+.px-bets-opt.is-chosen { border-color: var(--ink); border-width: 2px; color: var(--ink); font-weight: 600; } /* a pick with no right answer: neutral */
 .px-bets-after { display: grid; gap: var(--s2); max-width: 36rem; }
 .px-bets-after p { margin: 0; }
 .px-bets-verdict { font-weight: 600; }

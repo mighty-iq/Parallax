@@ -150,6 +150,18 @@ def run_screens(b):
         page.wait_for_timeout(150)
         C.ok(page.evaluate('PX.core.store.state.settings.betTrials') is True, f'{tag}: and back on')
         page.locator('[data-section="bettrials"]').first.screenshot(path=str(OUT / f'settings_{w}.png'))
+        hint = page.locator('[data-section="bettrials"]').first.inner_text()
+        C.ok('about half of the exercises' in hint, f'{tag}: the switch says about half (a period can switch a strand\'s exercises together)')
+        # the exercise page's trial line follows the switch (RV-wave2 finding 18)
+        page.evaluate('PX.core.store.state.settings.betTrials = false')
+        go(page, 'exercise/views')
+        t_off = page.locator('.px-bet-line[data-where="page"] .px-bet-meta').first.inner_text()
+        page.evaluate('PX.core.store.state.settings.betTrials = true')
+        go(page, 'exercise/fold')  # another route first: the same route twice is not drawn again
+        go(page, 'exercise/views')
+        t_on = page.locator('.px-bet-line[data-where="page"] .px-bet-meta').first.inner_text()
+        C.ok('every time while you are out of the bet trials' in t_off and 'some periods' not in t_off and 'some periods' in t_on,
+             f'{tag}: the page says the add-ons always run out of the trials, and come in some periods in them')
         C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
         ctx.close()
 
@@ -338,6 +350,8 @@ def run_bridge(b):
         card.locator('.px-bets-opt').nth(3).click(); page.wait_for_timeout(150)
         inp = card.locator('.px-bets-other input')
         C.ok(inp.count() == 1 and inp.first.is_visible(), f'{tag}: "somewhere else" opens an optional box')
+        C.ok(card.locator('.px-bets-opt.is-chosen').count() == 1 and card.locator('.px-bets-opt.is-right').count() == 0,
+             f'{tag}: the pick is marked chosen, not right (this question has no right answer)')
         inp.first.fill('my secret workshop')
         card.first.screenshot(path=str(OUT / f'bridge_uses_{w}.png'))
         card.locator('[data-bets="bridge-next"]').first.click()
