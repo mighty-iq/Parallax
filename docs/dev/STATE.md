@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-18 23:22 UTC.
+Updated 2026-11-19 03:25 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -38,23 +38,23 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
-## In progress (Phase 2)
-- **Wave 1: DONE.** Fresh-player rounds 1–3 fixed (player, Central Point, band-A, band-B); reruns pass: Views 4/4 and 5/5, Central Point 3/3 and 4/5 (one time-out), Form's first right Try at 117.8 s after its cut. Tutorial times and decisions in DECISIONS.
-- **Test build 2 (1.2.0-test.2)** replaced test build 1 on the same private preview at 23:17 UTC, built from a committed snapshot (9c49888): single 17/0, preview adapter 10/0, a phone long run 21/0. The Library has a "Jump to" select; Central Point is tagged new.
-- **Wave 2:** W2-core's hooks, record format 4, events, trial columns, player call sites and the per-item custom input are in; W2-core has stopped (resume it when a request needs its files). Milestone 4 (W2-bets) and milestone 3 (W2-plateau) are built; plateau detection within 800 answers is 87–88 % against the plan's 90 %, kept as a known miss (DECISIONS). Running: W2-progress (milestone 7), W2-measure (milestone 6 build), W2-bets (draw-the-answer variants, kept in v1.2 because the owner kept that layer).
-- **Wave 3 started:** W3-game (milestone 5, the game layer; owns daily.js and the new achievements; requests to W2-core batched).
-- **Tonight:** the owner asked for a stop within 6–7 hours of 22:29 UTC to protect his usage: the wind-down starts 04:15 UTC (builders commit and stop, state and notes updated, the best verified test build published). At most four builders run at once.
+## In progress (Phase 2): paused for the night at the owner's request (19 Nov ~03:30 UTC)
+- **Built and verified:** milestones 1, 2 and Central Point (wave 1); 3 plateaus (detection within 800 answers 87–88 % against 90 %, a known miss); 4 bets and layers (comparison rounds, bridge sets, off-screen challenges, calibration detail, draw-the-answer variants for Views, Fold and Slice); 5 the game layer (grades, Reach, records, firsts and the Atlas, Daily v2 with its ramp off until release, the weekly Climb with Summit, field notes, game feel between items); 6 measurement (Design A occasions, meter and milestone words, Other Way Round, Motion Graphs, Balance kept untrained, learning curves, Cube Match version 2); 7 per-dimension progress (known misses on Track's speed levels; DECISIONS); 8 Reckon version 2 and Homing's map; 9 a phone subset (O20, O22, O27, O28, O33, O41, O48, O54–O56); rule 5 now holds at every level of Nets, Slice and Fold (three scoped exceptions).
+- **Reviews and tests:** an independent review of wave 2 (docs/dev/reviews/RV-wave2.md: 2 high, 6 medium, 13 low) is fixed in full; fresh-player reruns of Views, Central Point and Form pass; a new player's first session was run and its findings fixed (times now agree; the tour says about 6 minutes). Node suite 6,869/0 on a4990d2 (now in four CI shards); single 17/0, preview adapter 10/0 and long runs clean on the test-build snapshots.
+- **Test build 3 (1.2.0-test.3)** replaced test build 2 on the same private preview at 03:27 UTC, built from a committed snapshot (8b1dd86). Test gap found: longrun.py's bot stalls on a comparison round (desktop path); teach it the layer cards (comparison rounds, bridge sets, draw-the-answer items) or mute W2-bets' hooks there.
+- **Owner question (morning):** a new player's first session runs the tour (about 6 minutes), then Baseline 1 (about 11.5 minutes without feedback) before any training. Options: one two-minute tutorial before the baseline (recommended), training first with the baseline next session, or as is.
 
-## Next three steps
-1. Builders' reports → push; a test build 3 from a committed snapshot at the wind-down if it verifies (single, preview adapter, phone long run).
-2. After the owner's "resume": the review of wave 2 by agents that did not build it (wording of the bet lines included), reruns of the plateau acceptance on the integrated engine, fit.py's open failures (Hole Punch at 844 × 390, Cube Match with the measurement timer at 360 × 640), screens.py and a full node run.
-3. Then milestones 8 (DAT-style rebuild, Reckon), 9, 10 and 11 (verification, release checklist page, the owner's yes).
+## Next three steps (after the owner's "resume")
+1. The owner's answer on the first session; his playtest reports from the preview's database (playtest/<device>).
+2. Milestone 8's DAT-style rebuild toward the real formats (lettered options, plain line drawings, test-range tags; Painted Cubes 2–4 questions a figure; Form's kinds; Missing View profile solids; Openings' test range), the Mechanisms and Pattern Memory probe upgrades, leading items kept off the scoped shortcut cells (dims.js).
+3. Milestone 10 (voice: About, README, Library notes, guide chapters 1, 5, 8; the guide's "15 to 25 minutes" lines; `--shard` in CLAUDE.md), then 11 (two-minute start on all exercises, reviews, long runs, the release checklist page, the owner's yes). The Daily v2 start date is set on release day.
 
 Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from.
 
 ## Last verified
 - **Live site** serves 1.1.0: px.js fetched on 14 Nov. The Pages build and CI passed on the release commit, and they rerun on b5ead08 after the rewrite.
-- **Before release:**
+- **v1.2 build (19 Nov, committed snapshots):** node 6,869/0 (a4990d2, 59 files); single 17/0 and preview adapter 10/0 (8b1dd86); long runs on a phone (train, path, free, daily) clean (258f055); longrun's check mode 11/0 after its Design A update (972b341).
+- **v1.1, before release:**
 
   | Check | Result |
   |---|---|
