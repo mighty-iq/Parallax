@@ -37,3 +37,15 @@ definition; the marked section of docs/guide/guide.html; ENGINE.md §22; its DEC
   245 checks in one full run (screens, rounds for Central Point and Spin, drawings, bridge set, expectation
   rating) at 360 x 640, 390 x 844 and 1366 x 768, 0 failed; sim.mjs train runs as in ENGINE §18 (balanced 77.7 vs
   77.0 %); its guard false comes from plateau (FYI to W2-plateau).
+
+## 2026-11-19 00:08 UTC: the draw-the-answer items (the produce layer stays in v1.2: the lead's DECISIONS line 61e1674)
+- Built on W2-core's per-item input (6f5599e): Fold 'mark' (904e03c), Views 'draw' (66748e7), Slice 'mark' (49fafc8). Each is
+  the choose item of the same seed and settings with answer 'targets'; right only for the exact set; detail counts right,
+  missing and extra; offsets + 0.6 / + 1.0 / + 0.4 logit (provisional); guessing rate 0; out of the level scale and Train's
+  variants; scoring rules in DECISIONS. Slice marks straight solids with clean cuts only (lib.produceOk; the pick hook keeps to it).
+- Checks: tests/node/layers-produce.test.mjs, 10,000 items per variant valid, every key matched by an independent solver (a
+  forward fold model, a projection from the height map, the corners of the meshes' section); fold, views, slice, bets
+  green; tests/e2e/bets.py 371 checks, 0 failed (produce: taps, a drag, keys, Undo, reveal, show me at 360 x 640, 390 x 844
+  and 1366 x 768; both phone items fit 360 x 640 with Check; on wide screens the input sits beside the stem).
+- Fold's, Views' and Slice's own node tests now read their choice variants as before (marked lines; Slice's went in with
+  W2-progress's e6a8ee3).
