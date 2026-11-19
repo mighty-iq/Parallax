@@ -505,9 +505,10 @@
       h('p.px-screen-meta', list.length + ' training exercises · ' + (started ? started + ' started' : 'none started yet')),
       h('h1', 'Library'),
       h('p.px-lead', 'Every exercise with your level, the bet it makes, how to play it and the ways to practise it. The tasks that measure your change are never trained, so they are not here.')));
+    // round 9: Jump to and the way down to the DAT-style formats come first, on the first screen of a small phone too
+    host.appendChild(jumpTo(main, pat, host));
     var box = PX.ui.share && PX.ui.share.challenge ? PX.ui.share.challenge.box({ className: 'px-panel px-lib-challenge' }) : null;
     if (box) host.appendChild(box);
-    host.appendChild(jumpTo(main, pat, host));
     var grid = h('div.px-excards', { 'data-group': 'main' });
     main.forEach(function (def) { grid.appendChild(card(def, rec, now)); });
     host.appendChild(grid);
@@ -526,15 +527,27 @@
     var kids = [h('option', { value: '' }, 'Choose an exercise…')].concat(main.map(opt));
     if (pat.length) kids.push(h('optgroup', { label: 'DAT-style formats' }, pat.map(opt)));
     var sel = h('select.px-select', { id: 'px-lib-jump', 'data-lib': 'jump' }, kids);
+    function goTo(el, focusEl) {
+      if (!el) return;
+      try { el.scrollIntoView({ block: 'start', behavior: 'auto' }); } catch (e) { el.scrollIntoView(); }
+      if (focusEl) { try { focusEl.focus({ preventScroll: true }); } catch (e2) { focusEl.focus(); } }
+    }
     sel.addEventListener('change', function () {
       var id = sel.value, el = id ? host.querySelector('.px-excard[data-ex="' + id + '"]') : null;
       sel.value = '';
-      if (!el) return;
-      try { el.scrollIntoView({ block: 'start', behavior: 'auto' }); } catch (e) { el.scrollIntoView(); }
-      var nm = el.querySelector('.px-excard-name');
-      if (nm) { try { nm.focus({ preventScroll: true }); } catch (e2) { nm.focus(); } }
+      if (el) goTo(el, el.querySelector('.px-excard-name'));
     });
-    return h('div.px-lib-jump', h('label', { for: 'px-lib-jump' }, 'Jump to'), sel);
+    // round 9 (DAT-style fresh run at 390 px: about 35 actions to find Openings): a second way down, to the DAT-style
+    // group, whose head says they are opt-in and holds their switch
+    var toPat = null;
+    if (pat.length) {
+      toPat = ui.button('DAT-style formats: opt-in ↓', { kind: 'secondary', small: true, ariaLabel: 'DAT-style formats: opt-in, further down the page', onClick: function () {
+        var g = host.querySelector('.px-lib-group[data-group="pat"]');
+        goTo(g, g && g.querySelector('h2'));
+      } });
+      toPat.setAttribute('data-lib', 'to-pat');
+    }
+    return h('div.px-lib-jump', h('label', { for: 'px-lib-jump' }, 'Jump to'), sel, toPat);
   }
 
   /* ---------- the DAT-style formats (v1.1 PLAN M5; R3 §6, §8.0, §9) ---------- */
@@ -552,17 +565,16 @@
   function patGroup(list, rec, now) {
     var O = PX.ui.overlap, K = PX.ui.kit, store = PX.core.store;
     var panel = h('div.px-panel.px-lib-pat');
-    if (O) {
-      panel.appendChild(K.toggle({
-        key: 'patFocus', label: 'DAT-style focus', checked: rec.settings.patFocus === true,
-        hint: 'On: these formats join Train and Today’s plan. Off: they stay here, in Free play and in Section practice.',
-        onChange: function (on) {
-          O.setFocus(store.state, on, Date.now());
-          store.save();
-          PX.bus.emit('settings', { key: 'patFocus', value: !!on });
-        },
-      }));
-    }
+    // round 9 (DAT-style fresh run): the group's head says in one line that the formats are opt-in, with the switch
+    var sw = O ? K.toggle({
+      key: 'patFocus', label: 'DAT-style focus', checked: rec.settings.patFocus === true,
+      hint: 'On: these formats join Train and Today’s plan. Off: they stay here, in Free play and in Section practice.',
+      onChange: function (on) {
+        O.setFocus(store.state, on, Date.now());
+        store.save();
+        PX.bus.emit('settings', { key: 'patFocus', value: !!on });
+      },
+    }) : null;
     var st = sectionText();
     if (st) {
       var go = function (size) {
@@ -582,7 +594,9 @@
     list.forEach(function (def) { grid.appendChild(card(def, rec, now)); });
     return h('section.px-lib-group', { 'data-group': 'pat', 'aria-labelledby': 'px-lib-pat-h' },
       h('div.px-lib-group-head',
-        h('h2', { id: 'px-lib-pat-h' }, 'DAT-style formats'),
+        h('h2', { id: 'px-lib-pat-h', tabindex: '-1' }, 'DAT-style formats'),
+        sw ? h('p.px-lib-optin', { 'data-lib': 'optin' }, 'Opt-in: switch the DAT-style focus on to add them to Train and Today’s plan.') : null,
+        sw,
         h('p.px-lead', 'Practice in the six question formats of the Perceptual Ability Test (PAT) of the Dental Admission Test (DAT®): lettered answers, plain line drawings, and a tag on each level that says where its features sit against the test’s documented format. Every item is generated by Parallax.')),
       panel, grid);
   }

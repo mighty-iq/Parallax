@@ -86,6 +86,23 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
   390 x 844 85/0; node 2237/0 (engine-w2 keepGoing); flows.py 71/1 (W2-measure's uncommitted probes; HEAD with these
   changes passes check 19/0).
 
+## 2026-11-19 16:13 UTC: round 9 (fresh-player batch at 390 x 844, the DAT-style run, a desktop run)
+- After a scored answer, a phone's walkthrough bar has Next item (one tap on), in Close's place (Esc still closes);
+  wide screens keep the strip's own Next item beside the bar. The walkthrough no longer takes the focus after an
+  answer: Space goes to the next item while it plays (as the strip's key says); after a scored answer Enter does too
+  and Next step's key reads →; a key on a walkthrough button the player picked stays with it.
+- The header reads "Today’s session · about N min left" (aria: session time used). The pause sheet on a phone covers
+  the screen with Resume, End session, Skip this item at one place.
+- Watch's Your turn moves nothing on the screen, on every training exercise at 390 x 844 and 360 x 640 (probe of all
+  20): the item's own caption line gets back its words when a pinned walkthrough ends; a demo is placed above the Your
+  turn room on short screens and keeps the page's place when the strip comes (--pl-keep); a scroll that would cut
+  Watch, Try, Go's header takes it away whole; Fold's large sheet keeps to two rows of panels (css/ex/fold.css).
+- A kind of item met for the first time (its variant or a figure set, not in a practice item or the log) gets one
+  line under the question, or above an item with its own input, in every mode with feedback.
+- During a walkthrough after an answer the strip folds to the verdict and its time, above the pinned caption.
+- The Library: Jump to and "DAT-style formats: opt-in ↓" come first; the group's head says opt-in, with the switch.
+- Guard: play.py run_round9 (390 x 844, 360 x 640, 1366 x 768 keys); flows.py today 12/0.
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with

@@ -302,6 +302,16 @@ def run_train(b, C):
     ctx.close()
 
 
+def close_walk(page):
+    """Closes a walkthrough: its Close, or Esc where Close has stepped aside (round 9: on a phone after a scored answer
+    the bar's Next item takes its place)."""
+    c = page.locator('[data-showme-close]')
+    if c.count() and c.first.is_visible():
+        c.first.tap()
+    else:
+        page.keyboard.press('Escape')
+
+
 def seen_all(page):
     page.evaluate("PX.ex.list('train').forEach(d => { PX.core.store.state.tour.seen[d.id] = true; })")
 
@@ -572,17 +582,21 @@ def run_review(b, C):
     page.evaluate('__play.answer(true)')
     page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
     C.ok(voided is False and page.evaluate('__play.last.voidReason') != 'paused', f'{tag} 10: a pause on the motion notice voids nothing ({voided}, {page.evaluate("__play.last.voidReason")})')
-    # QA 2: Space during show me pauses it (the focused Next waits until it ends or is closed)
+    # QA 2, as round 9 changed it (a desktop fresh run: Space stepped or paused the walkthrough while the strip's Next
+    # item said Space): Esc closes a walkthrough after a scored answer, and Space during one goes to the next item
     page.evaluate('PX.debug.fast(false)')
     go(page, {'mode': 'free', 'exId': 'rotate', 'params': {'angle': 1, 'axis': 0, 'cubes': 0, 'variant': 'samediff'}, 'trials': 3})
     wait_state(page, 'respond')
+    s0 = page.evaluate('__play.item.seed')
     page.evaluate('__play.answer(false)')
     page.wait_for_function('__play.state === "showme"', timeout=8000)
-    page.keyboard.press('Space')
-    page.wait_for_timeout(200)
-    C.ok(page.evaluate('__play.state') == 'showme' and page.locator('.pl-showme-buttons .px-btn').first.inner_text().startswith('Resume'), f'{tag} QA2: Space pauses show me ({page.evaluate("__play.state")})')
     page.keyboard.press('Escape')
     wait_state(page, 'reveal')
+    page.evaluate('void __play.showMe()')
+    page.wait_for_function('__play.state === "showme"', timeout=8000)
+    page.keyboard.press('Space')
+    page.wait_for_function(f'__play.item && __play.item.seed !== {s0}', timeout=8000)
+    C.ok(page.evaluate('__play.state') in ('present', 'respond'), f'{tag} QA2: Esc closes the walkthrough; Space during it goes to the next item ({page.evaluate("__play.state")})')
     page.evaluate('PX.debug.fast(true)')
     # QA 17: How to play opens at its title
     page.evaluate('void PX.ui.play.howTo("rotate")')
@@ -910,7 +924,7 @@ def run_captions(b, C):
     s6b = page.evaluate(probe)
     lab2 = page.locator('[data-showme-next]').inner_text()
     C.ok(s6b['cap'] == 'G0' and lab2.startswith('Your turn'), f'{tag}: a tap on the figure does the same; the last caption says Your turn at once ({s6b["cap"]}, {lab2!r})')
-    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
+    close_walk(page)  # Close
     page.wait_for_function('__done === true', timeout=5000)
     # Auto-play: the timed pace, for the item it was switched on for (run_first2: the next item starts with taps)
     page.evaluate(start, [{'name': 'g', 'cap': 'G'}, {'name': 'h', 'cap': 'H'}])
@@ -929,7 +943,7 @@ def run_captions(b, C):
     page.wait_for_timeout(1500)
     s9 = page.evaluate(probe)
     C.ok(s9['waiting'] and s9['auto'] == 'false', f'{tag}: Auto-play off makes the current caption wait ({s9})')
-    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()
+    close_walk(page)
     page.wait_for_function('__done === true', timeout=5000)
     page.evaluate('PX.ui.play.current().demoing = false')
     # round 2: after a wrong answer the show-me's Next is "next caption" (as in Watch), never the next item
@@ -943,7 +957,7 @@ def run_captions(b, C):
     page.wait_for_timeout(400)
     st = page.evaluate('[__play.state, __play.last && __play.last.item && __play.last.item.seed]')
     C.ok(st[0] in ('showme', 'reveal') and st[1] == seed0, f'{tag}: that Next shows the next caption and stays on the item ({st}, seed {seed0})')
-    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
+    close_walk(page)  # Close
     page.wait_for_function('__play.state === "reveal"', timeout=8000)
     # round 2: a pause between items hides the strip under its card
     page.keyboard.press('Escape')
@@ -1214,7 +1228,7 @@ def run_round3(b, C):
     if state(page) != 'showme':  # the walkthrough ended: play it again, to close it
         page.locator('[data-showme]').tap()
         page.wait_for_function('__play.state === "showme"', timeout=8000)
-    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close: the walkthrough ends
+    close_walk(page)  # Close: the walkthrough ends
     page.wait_for_function('__play.state === "reveal"', timeout=8000)
     seed0 = page.evaluate('__play.item && __play.item.seed')
     page.locator('[data-next]').tap()  # at once: meant for the walkthrough's Next
@@ -1390,7 +1404,7 @@ def run_round4(b, C):
     page.wait_for_timeout(300)
     s4 = page.evaluate("[document.querySelector('.pl-caption').textContent, !!document.querySelector('.pl-showme[data-waiting]'), document.querySelector('[data-showme-next]').textContent.trim()]")
     C.ok(s4[0] == 'S4' and s4[2].startswith('Your turn'), f'{tag}: that tap shows the next caption, the last one, which says Your turn ({s4})')
-    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
+    close_walk(page)  # Close
     page.wait_for_function('__done === true', timeout=5000)
     cap = page.evaluate("document.querySelector('.pl-caption').textContent")
     C.ok(cap == '', f'{tag}: Close leaves no caption behind ({cap!r})')
@@ -1480,7 +1494,7 @@ def run_round5(b, C):
         page.locator('.pl-grid .px-choice').nth((k + 1) % 4 if len(tries) == 1 else k).tap()  # one wrong answer among them
         page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
         if page.evaluate('__play.state') == 'showme':
-            page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close the walkthrough
+            close_walk(page)  # Close the walkthrough
             page.wait_for_function('__play.state === "reveal"', timeout=8000)
         page.wait_for_timeout(300)
         tries.append(page.evaluate(STEPBAR_JS))
@@ -1729,14 +1743,14 @@ def run_first2(b, C):
     page.wait_for_timeout(1500)
     a1 = page.evaluate(probe)
     C.ok(a1['auto'] == 'true' and not a1['waiting'] and not a1['saved'], f'{tag}: Auto-play holds for the item it was switched on for, and is not saved ({a1})')
-    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
+    close_walk(page)  # Close
     page.wait_for_function('__done === true', timeout=5000)
     page.evaluate('PX.ui.play.current().token++')  # the next item
     page.evaluate(start, ['E', 'F'])
     page.wait_for_function('document.querySelector(".pl-showme").hasAttribute("data-waiting")', timeout=8000)
     a2 = page.evaluate(probe)
     C.ok(a2['auto'] == 'false' and a2['cap'] == 'E', f'{tag}: the next item\'s walkthrough waits for taps again ({a2})')
-    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()
+    close_walk(page)
     page.wait_for_function('__done === true', timeout=5000)
     page.evaluate('PX.debug.fast(true)')
     # 5. Spin's tags under the figures (and Rotate's), tall shapes, after the reveal
@@ -2005,6 +2019,242 @@ def run_first3(b, C):
     ctx.close()
 
 
+PAUSE_JS = """() => { const r = (sel) => { const e = document.querySelector(sel); if (!e || e.hidden || !e.offsetParent) return null; const x = e.getBoundingClientRect(); return [Math.round(x.left), Math.round(x.top), Math.round(x.width)]; };
+  return { resume: r('.pl-pause [data-resume]'), end: r('.pl-pause [data-end]'), skip: r('.pl-pause [data-skip]'),
+    order: [...document.querySelectorAll('.pl-pause-actions .px-btn')].filter((b) => !b.hidden).map((b) => b.getAttribute('data-resume') !== null ? 'resume' : b.getAttribute('data-end') !== null ? 'end' : 'skip') }; }"""
+
+
+STRIP_JS = """() => { const v = document.querySelector('.pl-verdict'), t = v && v.querySelector('.pl-verdict-text'), bar = document.querySelector('.pl-showme-buttons');
+  if (!v || !bar) return null;
+  const caps = [...document.querySelectorAll('.pl-trial .ex-caption, .pl-showme .pl-caption')].filter((e) => e.textContent.trim() && getComputedStyle(e).position === 'fixed');
+  const pinTop = Math.min(bar.getBoundingClientRect().top, ...caps.map((e) => e.getBoundingClientRect().top)), r = v.getBoundingClientRect();
+  return { text: !!t && getComputedStyle(t).display !== 'none', vTop: Math.round(r.top), vBottom: Math.round(r.bottom), vh: Math.round(r.height), pinTop: Math.round(pinTop),
+    rule: getComputedStyle(document.querySelector('.pl-feedback .pl-showme')).borderTopWidth }; }"""
+LIBPAT_JS = """() => { const g = document.querySelector('.px-lib-group[data-group="pat"]'); if (!g) return null;
+  const h2 = g.querySelector('h2'), line = g.querySelector('[data-lib="optin"]'), sw = g.querySelector('.px-lib-group-head [data-setting="patFocus"]');
+  return { h2Top: Math.round(h2.getBoundingClientRect().top), line: line ? line.textContent : null, swBottom: sw ? Math.round(sw.getBoundingClientRect().bottom) : null,
+    focus: document.activeElement === h2 }; }"""
+
+
+ITEM_AT_JS = "(() => { const e = document.querySelector('.pl-host'), g = document.querySelector('.pl-grid'); return [Math.round(e.getBoundingClientRect().top), g && g.offsetParent ? Math.round(g.getBoundingClientRect().bottom) : null]; })()"
+
+
+def watch_turn(page, ex):
+    """Plays ex's Watch to its last caption, taps Your turn; → (where the item sits on the screen before, after: [top,
+    grid bottom], the step bar after) or None. Scroll anchoring may change scrollY while nothing moves on the screen."""
+    page.evaluate('PX.debug.fast(false)')
+    go(page, {'mode': 'watch', 'exId': ex})
+    for _ in range(250):
+        m = page.evaluate("""() => ({ st: __play.state, cards: document.querySelectorAll('[data-card-box]').length, meta: (document.querySelector('.pl-hud-meta') || {}).textContent,
+          next: document.querySelector('[data-showme-next]') && !document.querySelector('[data-showme-next]').hidden ? document.querySelector('[data-showme-next]').firstChild.textContent.trim() : null })""")
+        if m['meta'] == 'Watch' and m['next'] == 'Your turn':
+            page.wait_for_timeout(500)
+            a0 = page.evaluate(ITEM_AT_JS)
+            page.locator('[data-showme-next]').tap()
+            page.wait_for_timeout(900)
+            return a0, page.evaluate(ITEM_AT_JS), page.evaluate(STEPBAR_JS)
+        if m['cards'] and page.locator('[data-card-box] .px-btn--primary').count():
+            page.locator('[data-card-box] .px-btn--primary').first.tap()
+        elif m['st'] == 'showme' and m['next']:
+            page.locator('[data-showme-next]').tap()
+        elif m['st'] == 'respond':
+            page.evaluate('__play.answer(true).catch(() => 0)')
+        page.wait_for_timeout(200)
+    return None
+
+
+def run_round9(b, C):
+    """The lead's fresh-player batch (390 x 844, and 360 x 640 for the pause sheet and Watch): after a wrong scored answer
+    the walkthrough's bar has Next item, which moves on in one tap; the header names the session's time; the pause
+    sheet keeps its buttons in one place and order; Watch's Your turn moves nothing (Fold, Slice and others); a kind of
+    item met for the first time gets one line saying what to do, and the item still fits. From the DAT-style run: the
+    Library's first screen leads to the DAT-style group, whose head says opt-in beside the switch; a walkthrough after a
+    wrong answer keeps the strip to one row above its pinned caption and bar."""
+    tag = 'round 9'
+    for (w, hgt) in ((390, 844), (360, 640)):
+        ctx = b.new_context(viewport={'width': w, 'height': hgt}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        page = ctx.new_page()
+        con = Console(page)
+        boot(page)
+        seen_all(page)
+        sz = f'{w}x{hgt}'
+        # 3. the pause sheet: one place and one order, during an item, between items, on items of different heights
+        page.evaluate('PX.ui.play.config.budgetMs = 600000')
+        go(page, {'mode': 'train', 'exId': 'fold', 'count': 1, 'minutes': 30})
+        wait_state(page, 'respond')
+        spots = []
+        def tap_pause():  # the title row's Pause, or its copy at the top corner when the row has scrolled away
+            for sel in ('.pl-hud-tools [data-pause]', '.pl-float-pause'):
+                loc = page.locator(sel).first
+                if loc.count() and loc.is_visible():
+                    loc.tap()
+                    return
+            page.evaluate('__play.pause()')
+        for k in range(3):
+            tap_pause()
+            wait_state(page, 'paused')
+            page.wait_for_timeout(200)
+            spots.append(page.evaluate(PAUSE_JS))
+            if k == 0:
+                page.screenshot(path=str(OUT / f'round9_pause_{sz}.png'))
+            page.locator('.pl-pause [data-resume]').tap()
+            wait_state(page, 'respond')
+            page.evaluate('__play.answer(true)')
+            page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+            if k == 1:  # between items: a pause during the feedback (after the strip's scroll settles)
+                page.wait_for_timeout(500)
+                tap_pause()
+                page.wait_for_timeout(300)
+                spots.append(page.evaluate(PAUSE_JS))
+                page.locator('.pl-pause [data-resume]').tap()
+                page.wait_for_timeout(300)
+            page.evaluate('__play.next()')
+            wait_state(page, 'respond')
+        ends = [s_['end'] for s_ in spots]
+        C.ok(len(spots) == 4 and all(e and e == ends[0] for e in ends) and all(s_['resume'] == spots[0]['resume'] for s_ in spots)
+             and all(s_['order'][:2] == ['resume', 'end'] for s_ in spots), f'{tag} {sz}: the pause sheet keeps Resume and End session in one place and order ({spots})')
+        # 2. the header names the session's time
+        meta = page.evaluate("document.querySelector('.pl-hud-meta').textContent")
+        aria = page.evaluate("document.querySelector('.pl-hud-bar .px-bar, .pl-hud .px-bar').getAttribute('aria-valuetext')")
+        C.ok(meta.startswith('Today’s session') and 'min left' in meta and aria.startswith('Session time:'), f'{tag} {sz}: the header says it is today’s session time ({meta!r}; {aria!r})')
+        page.evaluate('__play.end()')
+        page.wait_for_selector('.pl-summary', timeout=8000)
+        # 4. Watch: Your turn moves nothing
+        for ex in ('fold', 'slice', 'cubes', 'rotate'):
+            t = watch_turn(page, ex)
+            C.ok(t is not None and abs(t[1][0] - t[0][0]) <= 2 and (t[0][1] is None or abs(t[1][1] - t[0][1]) <= 2) and (hgt < 700 or bar_whole(t[2])),
+                 f'{tag} {sz}: {ex} Watch: Your turn moves nothing on the screen ({t})')
+        page.evaluate('PX.debug.fast(true)')
+        # 7. a walkthrough after a wrong answer (Missing View): the strip folds to the verdict's one row, fully above the
+        # pinned caption and bar, with no rule left behind; its line comes back when the walkthrough ends
+        page.evaluate('PX.debug.fast(false)')
+        go(page, {'mode': 'free', 'exId': 'patviews', 'trials': 3, 'run': 1})
+        wait_state(page, 'respond')
+        page.evaluate("PX.core.store.state.ui.showMe = {}")
+        page.evaluate('__play.answer(false)')
+        page.wait_for_function('__play.state === "showme"', timeout=15000)
+        page.wait_for_timeout(900)
+        fold = page.evaluate(STRIP_JS)
+        page.screenshot(path=str(OUT / f'round9_strip_{sz}.png'))
+        for _ in range(30):
+            if page.evaluate('__play.state') != 'showme':
+                break
+            page.locator('[data-showme-next]').tap()
+            page.wait_for_timeout(250)
+        back = page.evaluate("(() => { const t = document.querySelector('.pl-verdict .pl-verdict-text'); return !!t && getComputedStyle(t).display !== 'none'; })()")
+        C.ok(fold and not fold['text'] and fold['vh'] > 0 and fold['vBottom'] <= fold['pinTop'] + 1 and fold['rule'] == '0px' and back,
+             f'{tag} {sz}: a walkthrough after a wrong answer keeps the strip to one row above its caption and bar, and the line comes back after it ({fold}; back {back})')
+        page.evaluate('PX.debug.fast(true); __play.end()')
+        page.wait_for_selector('.pl-summary', timeout=8000)
+        # 6. the Library: a way down to the DAT-style group on the first screen; the group's head says opt-in, with the switch
+        page.evaluate('void PX.core.router.go("library", {}, { force: true })')
+        page.wait_for_selector('.px-excards', timeout=10000)
+        page.evaluate('scrollTo(0, 0)')
+        page.wait_for_timeout(200)
+        chip = page.locator('[data-lib="to-pat"]')
+        cb = chip.bounding_box() if chip.count() else None
+        first = bool(cb) and cb['y'] >= 0 and cb['y'] + cb['height'] <= hgt - 57 and cb['height'] >= 44
+        if chip.count():
+            chip.tap()
+            page.wait_for_timeout(400)
+        head = page.evaluate(LIBPAT_JS)
+        page.screenshot(path=str(OUT / f'round9_library_pat_{sz}.png'))
+        page.locator('.px-lib-group-head [data-setting="patFocus"] label').tap()
+        page.wait_for_timeout(250)
+        on = page.evaluate('PX.core.store.state.settings.patFocus')
+        C.ok(first and head and 0 <= head['h2Top'] < 200 and head['line'] and head['line'].startswith('Opt-in:') and head['swBottom'] and head['swBottom'] <= hgt - 57
+             and head['focus'] and on is True, f'{tag} {sz}: the Library’s first screen has a way down to the DAT-style formats, whose head says they are opt-in with the switch right there ({cb}; {head}; on {on})')
+        page.evaluate('PX.core.store.state.settings.patFocus = false')
+        if w == 390:
+            # 1. a wrong scored answer: the walkthrough's bar has Next item, one tap to the next item
+            page.evaluate('PX.debug.fast(false)')
+            go(page, {'mode': 'free', 'exId': 'track', 'trials': 4, 'run': 1})
+            wait_state(page, 'respond')
+            page.evaluate("PX.core.store.state.ui.showMe = {}")
+            seed0 = page.evaluate('__play.item && __play.item.seed')
+            page.evaluate('__play.answer(false)')
+            page.wait_for_function('__play.state === "showme"', timeout=15000)
+            page.wait_for_timeout(600)
+            bar = page.evaluate("""() => ({ skip: (() => { const b = document.querySelector('[data-showme-skip]'); return b && b.offsetParent ? b.firstChild.textContent.trim() : null; })(),
+              close: !!document.querySelector('[data-showme-close]').offsetParent,
+              nextPrimary: document.querySelector('[data-showme-next]').classList.contains('px-btn--primary') })""")
+            page.screenshot(path=str(OUT / 'round9_wrong_bar.png'))
+            page.locator('[data-showme-skip]').tap()
+            page.wait_for_function(f'__play.state === "respond" || __play.state === "present" || __play.state === "ready"', timeout=15000)
+            seed1 = page.evaluate('__play.item && __play.item.seed')
+            C.ok(bar['skip'] == 'Next item' and not bar['close'] and not bar['nextPrimary'] and seed1 != seed0,
+                 f'{tag}: after a wrong scored answer the bar has Next item, which goes on in one tap ({bar}; {seed0} → {seed1})')
+            page.evaluate('PX.debug.fast(true); __play.end()')
+            page.wait_for_selector('.pl-summary', timeout=8000)
+            # 5. a kind of item met for the first time: one line, placed by layout, the item still fits
+            for ex, params, where in (('fold', {'folds': 0, 'type': 0, 'punches': 0, 'idle': 0, 'variant': 'mark'}, 'above'), ('spin', {'angle': 0, 'cells': 0, 'variant': 'pick'}, 'under')):
+                go(page, {'mode': 'free', 'exId': ex, 'params': params, 'trials': 3})
+                wait_state(page, 'respond')
+                page.wait_for_timeout(300)
+                nk = page.evaluate("""() => { const l = document.querySelector('[data-newkind]'), t = document.querySelector('.pl-trial');
+                  const host = document.querySelector('.pl-host'), grid = document.querySelector('.pl-grid');
+                  const ctl = [...t.querySelectorAll('button, .px-choice')].filter((x) => x.offsetParent).map((x) => x.getBoundingClientRect().bottom);
+                  return { text: l && !l.hidden ? l.textContent : null, before: l && l.nextElementSibling ? (l.nextElementSibling === host ? 'host' : l.nextElementSibling === grid ? 'grid' : l.nextElementSibling.className) : null,
+                    lowest: Math.round(Math.max(0, ...ctl)), H: innerHeight, nk: document.querySelector('.pl-player').style.getPropertyValue('--pl-nk') }; }""")
+                page.screenshot(path=str(OUT / f'round9_newkind_{ex}.png'))
+                want = 'host' if where == 'above' else 'grid'
+                C.ok(nk['text'] and nk['text'].startswith('New kind of item: ') and nk['before'] == want and nk['lowest'] <= nk['H'] and nk['nk'],
+                     f'{tag}: {ex}: a kind met for the first time gets one line ({where} the item’s answers) and the item still fits ({nk})')
+                page.evaluate('__play.answer(true)')
+                page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+                page.evaluate('__play.next()')
+                wait_state(page, 'respond')
+                again = page.evaluate("(() => { const l = document.querySelector('[data-newkind]'); return l && !l.hidden ? l.textContent : null; })()")
+                C.ok(again is None, f'{tag}: {ex}: the next item of that kind has no line ({again!r})')
+                page.evaluate('__play.end()')
+                page.wait_for_selector('.pl-summary', timeout=8000)
+        C.ok(not con.errors(), f'{tag} {sz}: no console errors {con.errors()[:3]}')
+        ctx.close()
+    # 8. keys after a wrong scored answer on a desktop (Knots): the walkthrough does not take the focus; Space and Enter go
+    # to the next item while it plays; → steps it, as its key says; a key on Next step, once the player picks it, steps
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate('PX.debug.fast(false)')
+    go(page, {'mode': 'free', 'exId': 'knots', 'trials': 8, 'run': 1})
+    wait_state(page, 'respond')
+
+    def wrong():
+        page.evaluate('PX.core.store.state.ui.showMe = {}')
+        s0 = page.evaluate('__play.item.seed')
+        page.evaluate('__play.answer(false)')
+        page.wait_for_function('__play.state === "showme"', timeout=15000)
+        page.wait_for_timeout(700)
+        return s0
+    for key in ('Space', 'Enter'):
+        s0 = wrong()
+        info = page.evaluate("""() => { const n = document.querySelector('[data-showme-next]'), a = document.activeElement;
+          return { focusNext: a === n, focusIn: !!(a && a.closest && a.closest('.pl-showme-buttons')), kbd: (n.querySelector('.px-kbd') || {}).textContent,
+            skip: !!document.querySelector('[data-showme-skip]').offsetParent, close: !!document.querySelector('[data-showme-close]').offsetParent }; }""")
+        if key == 'Space':
+            page.screenshot(path=str(OUT / 'round9_keys_desktop.png'))
+        page.keyboard.press(key)
+        page.wait_for_function(f'__play.item && __play.item.seed !== {s0} && (__play.state === "respond" || __play.state === "present")', timeout=15000)
+        C.ok(not info['focusNext'] and not info['focusIn'] and info['kbd'] == '→' and not info['skip'] and info['close'],
+             f'{tag} 1366x768: after a wrong scored answer the walkthrough leaves the focus, and {key} goes to the next item ({info})')
+        wait_state(page, 'respond')
+    s0 = wrong()
+    cap0 = page.evaluate('__play.played')
+    page.locator('[data-showme-next]').focus()
+    page.keyboard.press('Enter')
+    page.wait_for_timeout(500)
+    st = page.evaluate('({ st: __play.state, seed: __play.item.seed, played: __play.played })')
+    page.keyboard.press('ArrowRight')
+    page.wait_for_timeout(300)
+    C.ok(st['seed'] == s0 and st['st'] in ('showme', 'reveal'), f'{tag} 1366x768: Enter on Next step, once the player picks it, steps the walkthrough and stays on the item ({st})')
+    page.evaluate('PX.debug.fast(true); __play.end()')
+    page.wait_for_selector('.pl-summary', timeout=8000)
+    C.ok(not con.errors(), f'{tag} 1366x768: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def run_wave3(b, C):
     """Shared support for PLAN milestone 8 (CONTRACT-v1.2 Wave 3): a view with optionKeys 'letters' shows A–D on
     its options, a letter key and a digit both answer, the keys sheet and the view context name letters (W1); Free
@@ -2099,7 +2349,7 @@ def main():
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2, run_cubes2, run_first3)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2, run_cubes2, run_first3, run_round9)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

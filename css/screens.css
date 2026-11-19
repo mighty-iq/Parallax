@@ -59,9 +59,17 @@
 .px-excards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20.5rem), 1fr)); gap: var(--s4); }
 .px-excard { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s4) var(--s5); }
 .px-excard { scroll-margin-top: calc(var(--s5) + 56px); }
-.px-lib-jump { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s5); }
+.px-lib-jump { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin-bottom: var(--s5); }
 .px-lib-jump > label { flex: none; font-weight: 600; }
-.px-lib-jump > .px-select { flex: 1 1 auto; min-width: 0; min-height: 44px; }
+.px-lib-jump > .px-select { flex: 1 1 14rem; min-width: 0; min-height: 44px; }
+/* round 9 (W2-core): the way down to the DAT-style group, beside the select (under it on a phone); the group's head
+   says they are opt-in and holds their switch, in a box of its own */
+.px-lib-jump > [data-lib="to-pat"] { flex: 0 0 auto; min-height: 44px; }
+.px-lib-group[data-group="pat"] { scroll-margin-top: calc(var(--s5) + 56px); }
+.px-lib-group-head > h2:focus { outline: none; }
+.px-lib-group-head > h2:focus-visible { outline: 2px solid var(--signal); outline-offset: 4px; }
+.px-lib-optin { margin-top: var(--s2); font-weight: 600; max-width: var(--measure); }
+.px-lib-group-head > .px-setting { margin-top: var(--s3); padding: var(--s3) var(--s4); max-width: 32rem; background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--r-panel); }
 .px-excard-head {
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s1) var(--s3);
   padding-bottom: var(--s2); border-bottom: 1px solid var(--rule);

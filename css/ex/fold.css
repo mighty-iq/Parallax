@@ -87,6 +87,9 @@
   .pl-trial.ex-fold { --fold-u: calc((var(--pl-avail) - 4.5rem) / 4.2); }
   .pl-trial.ex-fold .ex-fold-strip { max-width: calc(var(--fold-cols) * min(12rem, var(--fold-u)) + (var(--fold-cols) - 1) * var(--s3)); }
   .pl-trial.ex-fold .ex-fold-opt .ex-fold-svg { max-width: min(8.5rem, calc(var(--fold-u) - 2rem)); }
+  /* the large sheet of a demo or show-me keeps to the room of two rows of panels, so the item never outgrows the
+     height it was given (round 9, W2-core: in Watch the page jumped 85 px at 390 x 844 when Your turn came) */
+  .pl-trial.ex-fold .ex-fold-big .ex-fold-svg { width: min(100%, 20rem, 46vh, calc(2 * var(--fold-u) + 1.5rem)); }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   .pl-trial.ex-fold .ex-fold-strip,
