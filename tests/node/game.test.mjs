@@ -41,6 +41,7 @@ function testGuessing(t) {
   const rows = [
     [0, 1, 1, true], [0.25, 1, 1, false], [0.25, 2, 2, true], [0.25, 3, 2, false], [0.25, 4, 3, true],
     [0.5, 3, 3, false], [0.5, 4, 4, true], [1 / 3, 2, 2, false], [1 / 3, 3, 3, true], [0.2, 2, 2, true],
+    [0.1, 1, 1, false], [0.1, 2, 2, true], // exactly one time in ten is not less than one time in ten
   ];
   rows.forEach(([g, n, r, want]) => t.eq(G.handledBy(n, r, g), want, `g ${g.toFixed(2)}: ${r} right of ${n} ${want ? 'handled' : 'not yet'}`));
   t.near(G.tail(3, 2, 0.25), 3 * 0.0625 * 0.75 + 0.015625, 1e-12, 'tail is the binomial upper tail');

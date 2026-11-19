@@ -120,7 +120,7 @@ body.px-stim .gm-fx-sweep .px-bar-fill { animation: none !important; }
 /* ---------- the Atlas ---------- */
 .gm-atlas-chips { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0; }
 .gm-chip { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3); border: 1px solid var(--rule-strong); border-radius: var(--r-control); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
-.gm-chip[aria-selected="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.gm-chip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .gm-chip.is-untried { color: var(--ink-3); }
 .gm-chip-n { font-size: var(--fs-xs); color: var(--ink-2); }
 .gm-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -142,6 +142,8 @@ body.px-stim .gm-fx-sweep .px-bar-fill { animation: none !important; }
 .gm-cell[data-state="handled"] .gm-cell-mark { width: 1.3rem; height: 1.3rem; background: var(--ink); }
 .gm-cell.is-out { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--rule) 4px 5px); }
 .gm-cell.is-band { box-shadow: inset 0 0 0 2px var(--right); }
+/* the band has a shape as well as a colour: a short bar along the cell's foot, like a ruler mark */
+.gm-cell.is-band::after { content: ''; position: absolute; left: 25%; right: 25%; bottom: 4px; height: 2px; background: var(--ink-2); }
 .gm-cell.is-reach { outline: 2px dashed var(--ink); outline-offset: -5px; }
 .gm-cell.gm-fx-flip .gm-cell-mark { animation: gm-flip 200ms ease-out both; }
 @keyframes gm-flip { from { transform: scale(0.2); opacity: 0.2; } to { transform: none; opacity: 1; } }
