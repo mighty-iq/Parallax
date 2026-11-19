@@ -110,3 +110,9 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   direction; validate's exact propagation already gives both.
 - Pattern Memory by cells (×2 assumed in note M1, unverified): the trend model takes binary items; cells need a
   binomial per item or a correlation-aware weight. Simulate it in measure-sim before building.
+
+## 2026-11-19 01:30 UTC: Cube Match version 2 (the lead's go)
+- 63d8091: four drawings, one the reference turned; version 1's range in def.past (the trend keeps @1 and @2 apart).
+  Node 82 checks (10,008 items; cheap answers pooled 16-32 %, two scoped cells 42-50 %, DECISIONS); fit.py's Spatial
+  Check part at 360 x 640 (right and wrong), 390 x 844, 412 x 915 and 844 x 390; check.py 59/0;
+  harness_cubematch.py 83/0; engine and measurement suites 2,819/0.
