@@ -59,8 +59,8 @@
     function intro() {
       if (lab) return card({
         id: 'check-intro', title: 'Lab · ' + name(kind), lines: [
-          items + ' items, about ' + minutes(m) + ': the balance point of some dots, and the best spot for a bus stop on a street. One tap each, no feedback.',
-          'It tests one bet: whether Central Point\'s practice with the point of least total distance carries over to the bus stop, and leaves the balance point alone. It is not part of the Spatial Check; the Lab keeps each run, and the community\'s pooled exports set them side by side.',
+          items + ' items, about ' + minutes(m) + ': questions about dots on a board and houses on a street, one tap each. There is no feedback and no result at the end.',
+          'It is not part of the Spatial Check. The Lab keeps your answers for the community\'s pooled exports, which test whether practice changes these judgements.',
         ],
         actions: [{ label: 'Back', value: 'later' }, { label: 'Start', value: 'start', primary: true }],
       });
@@ -158,11 +158,10 @@
     checkInvite(out);
   }
 
-  // Balance (a Lab check): its two kinds in numbers, no verdict.
+  // Balance (a Lab check): saved, with no result (a result would teach the weighting it measures; RV-wave2 finding 1).
   function renderLab(out, c) {
-    var K = PX.ui.kit, b = c.balance || {}, p = K.panel({ title: name(c.kind), className: 'pl-panel px-ms-balance-end' });
-    p.body.appendChild(M().balanceRows(b));
-    p.body.appendChild(h('p', 'One run is rough; the Lab keeps every run, so later runs show whether the bus stop moves toward the middle house while the balance point stays put.'));
+    var K = PX.ui.kit, runs = M().balanceRuns(rec()), p = K.panel({ title: name(c.kind), className: 'pl-panel px-ms-balance-end' });
+    p.body.appendChild(h('p', 'Saved' + (runs.n > 1 ? ' as run ' + runs.n : '') + '. Balance shows no results, so that every run measures the same thing; your answers stay in your record and go into the community export.'));
     p.body.appendChild(h('div.pl-summary-actions', ui.button('Back to the Lab', { kind: 'primary', go: 'lab' }), ui.button('Back to Today', { kind: 'secondary', go: 'home' })));
     out.appendChild(p.el);
   }
