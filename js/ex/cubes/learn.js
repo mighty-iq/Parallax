@@ -12,8 +12,8 @@
     parts: [
       { id: 'figure', label: 'Figure', text: 'Equal cubes glued together and painted on every face that shows on the outside, except the faces resting on the ground.' },
       { id: 'question', label: 'Question', text: 'The number of painted sides to look for. A cube can have 0 to 5 painted sides: its top and four sides, never its bottom. Larger figures come with 2 to 4 questions, one at a time.' },
-      { id: 'options', label: 'Answers', text: 'Five answers: 1 to 5 cubes. Exactly one is right.' },
-      { id: 'answer', label: 'Answer', text: 'Pick a count with keys 1–5, or tap it.' },
+      { id: 'options', label: 'Answers', text: 'Five answers, A to E: 1 to 5 cubes. Exactly one is right.' },
+      { id: 'answer', label: 'Answer', text: 'Pick an answer with keys A–E (or 1–5), or tap it.' },
     ],
     // The teaching template (v1.2, docs/research/v1.2/D2-first-band.md §3.0 C, §3.3): the rules
     // card first, the Watch at the starter band (a flat figure), the "Count by position" card before
@@ -101,7 +101,7 @@
       figure: 'Equal cubes, painted on every outside face except the bottom.',
       hidden: '{what} out of sight, {where}. Hidden cubes count too.',
       question: 'The question names a number of painted sides to look for.',
-      options: 'Answers are 1 to 5 cubes. One is right.',
+      options: 'Answers A to E are 1 to 5 cubes. One is right.',
       // Show me and the Watch carry out the "Count by position" card; the solving captions start
       // with the card's step (n/3), name the rule behind it and mark what they name (R-reader,
       // note D2 addendum C, Atkinson et al. 2000).
@@ -111,8 +111,8 @@
       tally: '3/3 · Count the cubes with {N}: cube {n} of {k}, {sides}.',
       tallyHidden: '3/3 · Count the cubes with {N}: cube {n} of {k} is hidden under a cube and counts too, {sides}.',
       skip: 'The other cubes have a different number of painted sides.',
-      done: '{k} {cubes} exactly {sides}: answer {k}.',
-      chosen: 'Answer {n} is {d} the true count: check the hidden cubes and the faces at the back.',
+      done: '{k} {cubes} exactly {sides}: answer {n}.',
+      chosen: 'Answer {n}, {c}, is {d} the true count: check the hidden cubes and the faces at the back.',
       assist: 'Numbers given, except the two cubes marked ?.',
       assistHidden: '{what} drawn dashed for you.',
     },

@@ -315,7 +315,27 @@ export async function run(t) {
     console.log(`       later questions by N (counts 0–5) ${JSON.stringify(laterN)}; questions per figure 2/3/4 ${asksLen.slice(2, 5).join('/')} (mean ${meanAsks.toFixed(2)}); ray cast: smallest top ${minTopRay.toFixed(3)}`);
     console.log(`       info: the most common answer per level and N on later questions (learned on half) ${(100 * laterPrior.hit).toFixed(1)} % of ${laterPrior.n} (unrated questions; bounded per number over all sizes above)`);
   }
+  testRange(t, PX, def);
   testLearn(t, PX, def);
+}
+
+/* ---------- test-range tags (CONTRACT-v1.2 W3; DECISIONS 19 Nov) ---------- */
+
+function testRange(t, PX, def) {
+  t.section('cubes: test-range tags');
+  const R = def.testRange;
+  t.ok(R && R.dims && R.dims.cubes && R.dims.height, 'a test range on the cubes and the tallest column');
+  if (!R || !PX.ex.rangeTag) return;
+  t.eq(R.dims.cubes, ['below', 'test', 'test', 'test', 'test'], 'cubes: 4–6 below the test (a starter level), 6–22 inside it');
+  t.eq(R.dims.height, ['below', 'test', 'test', 'test'], 'tallest column: flat below the test, 2–4 high inside it');
+  t.ok(!R.dims.asked, 'the painted sides asked carry no tag (both classes, and five painted sides, are the format\'s)');
+  const all = PX.ex.enumerate(def), tag = (p) => PX.ex.rangeTag(def, p);
+  t.ok(all.every((p) => tag(p) === (p.cubes === 0 || p.height === 0 ? 'below' : 'test')), 'rangeTag: below on the starter band, else test range; never beyond');
+  t.eq(all.filter((p) => tag(p) === 'test').length, 4 * 3 * 2, 'every stacked figure from 6 cubes up is inside the test range (24 combinations)');
+  const notes = Object.values(R.notes || {});
+  t.ok(notes.length === 3 && notes.every((x) => typeof x === 'string' && x.length <= 240), 'notes on the cubes, the height and the whole format, each 240 characters or fewer');
+  t.ok(/not documented officially/.test(R.notes.cubes) && /not documented officially/.test(R.notes['*']), 'figure sizes and questions per figure: not documented officially (note D1 addendum A.4 row 7)');
+  t.ok(!/scor|predict|difficult|easier|harder|forecast/i.test(notes.join(' ')), 'the notes describe format features only: no score, prediction or difficulty of the real test');
 }
 
 function addHit(acc, name, hit) { const a = acc[name] = acc[name] || { hit: 0, n: 0 }; a.hit += hit; a.n++; }
@@ -449,6 +469,7 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.ok((L.tips || []).some((tip) => tip.id === 'set' && tip.when && tip.when.dim === 'ask'), 'a tip for a figure\'s later questions (version 3: params.ask 1–3)');
   t.ok(/2 to 4 questions/.test(L.parts.find((x) => x.id === 'question').text), 'the question part says that larger figures come with 2 to 4 questions');
+  t.ok(/A to E/.test(L.parts.find((x) => x.id === 'options').text) && /A–E/.test(L.parts.find((x) => x.id === 'answer').text), 'answers lettered A to E (the format\'s labelling), keys A–E named');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
   const caps = ['figure', 'hidden', 'question', 'options', 'explode', 'numbers', 'numbersFlat', 'tally', 'tallyHidden', 'skip', 'done', 'chosen', 'assist'];

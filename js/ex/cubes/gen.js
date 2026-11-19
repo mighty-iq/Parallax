@@ -808,6 +808,18 @@
     ],
     base: BASE,
     starter: [{ dim: 'height', levels: 1 }, { dim: 'cubes', levels: 1 }],
+    // Test range (CONTRACT-v1.2 W3; DECISIONS 19 Nov): the starter levels are below the test; stacked
+    // figures from 6 cubes up are the format (the official sample is about the size of 1.1's largest
+    // figures, note D1 addendum A.1 row 8); both question classes and five painted sides are the
+    // format's (row 6), so the asked dim carries no tag.
+    testRange: {
+      dims: { cubes: ['below', 'test', 'test', 'test', 'test'], height: ['below', 'test', 'test', 'test'] },
+      notes: {
+        cubes: 'Figure sizes on the test are not documented officially. 4–6 cubes is a starter level.',
+        height: 'Flat figures, one cube high with nothing hidden, are a starter level: the format stacks cubes, and hidden cubes hold others up.',
+        '*': 'How many questions a figure gets on the test is not documented officially.',
+      },
+    },
     difficulty: difficulty,
     chance: 0.2,
     generate: generate,

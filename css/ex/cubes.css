@@ -86,3 +86,43 @@
   .pl-trial.ex-cubes .ex-cubes-svg { max-height: calc(var(--pl-avail) - 3rem - 2.375rem - 2 * var(--s1, 0.25rem)); }
   .pl-trial.ex-cubes .ex-cubes-q { margin-top: var(--s1, 0.25rem); font-size: var(--fs-sm, 0.875rem); }
 }
+
+/* v1.2 version 3 (PLAN milestone 8; CONTRACT-v1.2 W2): the format's plain line drawing in the test range,
+   white faces and ink edges on the white plate (.px-plate, both themes); the starter band, the rule figures
+   and show me keep the three tones (is-plain is taken off while show me plays). Marks on the plate use a
+   fixed dark accent that reads on white. */
+.ex-cubes .ex-cubes-figure-box.px-plate { --cube-mark: #0B6A86; }
+.ex-cubes .ex-cubes-figure-box.is-plain .ex-cubes-face--top,
+.ex-cubes .ex-cubes-figure-box.is-plain .ex-cubes-face--front,
+.ex-cubes .ex-cubes-figure-box.is-plain .ex-cubes-face--right { fill: var(--plate, #FFFFFF); }
+.ex-cubes .ex-cubes-figure-box.is-plain .ex-cubes-face { stroke: var(--plate-ink, #16191C); }
+/* The set row: "Question 2 of 3" and the tally toggle; the open pad below it (O12). Buttons are 44 px. */
+.ex-cubes .ex-cubes-set[hidden] { display: none; }
+.ex-cubes .ex-cubes-set { margin: var(--s1, 0.25rem) auto 0; max-width: 26rem; }
+.ex-cubes .ex-cubes-set-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s2, 0.5rem); min-height: 2.75rem; }
+.ex-cubes .ex-cubes-set-n { font-family: var(--font-mono, monospace); font-size: var(--fs-sm, 0.875rem); color: var(--ink-2, #454B52); }
+.ex-cubes .ex-cubes-tally-toggle { min-height: 2.75rem; min-width: 4.5rem; }
+.ex-cubes .ex-cubes-tally-toggle[aria-pressed="true"] { border-color: var(--signal, #0B6A86); box-shadow: inset 0 0 0 1px var(--signal, #0B6A86); }
+/* Seven 44 px columns and 2 px gaps (320 px) fit the narrowest stem (328 px at 360 x 640). */
+.ex-cubes .ex-cubes-tally { display: grid; grid-template-columns: repeat(7, minmax(2.75rem, 1fr)); gap: 2px; margin-top: var(--s1, 0.25rem); }
+.ex-cubes .ex-cubes-tally-c, .ex-cubes .ex-cubes-tally-clear {
+  min-height: 2.75rem; min-width: 2.75rem; padding: 0.1rem 0.2rem; border: 1px solid var(--rule, #D5D9D6); border-radius: var(--r-ctl, 4px);
+  background: var(--surface, #FFFFFF); color: var(--ink, #1A1D21); font: inherit; cursor: pointer; touch-action: manipulation;
+}
+.ex-cubes .ex-cubes-tally-c { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.ex-cubes .ex-cubes-tally-k { font-size: var(--fs-xs, 0.75rem); color: var(--ink-3, #5D646C); }
+.ex-cubes .ex-cubes-tally-v { font-family: var(--font-mono, monospace); font-size: var(--fs-md, 1rem); font-weight: 600; }
+.ex-cubes .ex-cubes-tally-clear { font-size: var(--fs-sm, 0.875rem); }
+.ex-cubes .ex-cubes-tally-c:focus-visible, .ex-cubes .ex-cubes-tally-clear:focus-visible, .ex-cubes .ex-cubes-tally-toggle:focus-visible { outline: 2px solid var(--signal, #0B6A86); outline-offset: 2px; }
+/* Phones: a figure is laid out with the set row (2.75rem) and, when the pad is already open, the pad (3rem)
+   inside the item's height; opening or closing the pad then moves the figure's size, not the answers
+   (view.js padRoom). */
+@media (max-width: 719px), (max-height: 500px) {
+  .pl-trial.ex-cubes .ex-cubes-stem.has-set .ex-cubes-svg { max-height: min(22rem, calc(var(--pl-avail) - 3.5rem - 4.25rem - 2.375rem - 3 * var(--s2, 0.5rem) - 3rem)); }
+  .pl-trial.ex-cubes .ex-cubes-stem.has-set.is-tally .ex-cubes-svg { max-height: min(22rem, calc(var(--pl-avail) - 3.5rem - 4.25rem - 2.375rem - 3 * var(--s2, 0.5rem) - 6rem)); }
+  .ex-cubes .ex-cubes-set { margin-top: 0; }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-cubes .ex-cubes-stem.has-set .ex-cubes-svg { max-height: calc(var(--pl-avail) - 3rem - 2.375rem - 2 * var(--s1, 0.25rem) - 3rem); }
+  .pl-trial.ex-cubes .ex-cubes-stem.has-set.is-tally .ex-cubes-svg { max-height: calc(var(--pl-avail) - 3rem - 2.375rem - 2 * var(--s1, 0.25rem) - 6rem); }
+}

@@ -21,7 +21,16 @@
      then show me's steps, each caption up long enough to read (readable()).
    - Try 3 (ctx.assist = { hidden: true }): the hidden support drawn dashed, without its number,
      between the worked example (dashed and numbered) and Try 4 (nothing marked); its reveal
-     numbers it. */
+     numbers it.
+   - Version 3 (PLAN milestone 8; note D1 §6.1, §6.3): answers lettered A–E for 1–5 cubes
+     (optionKeys 'letters'; captions name them through ctx.optionName); the format's plain line
+     drawing in the test range (white faces, ink edges, on a white plate in both themes; CONTRACT-v1.2
+     W2), the three face tones kept for the starter band (flat figures, 4–6 cubes), the rule figures
+     and show me; a figure with several questions keeps its drawing from one question to the next
+     and shows a set row: "Question 2 of 3" (ctx.set; Section practice says "Same figure") and an
+     optional tally pad (O12): six counters, 0–5 painted sides, a tap adds one, Clear empties them,
+     kept for the figure's questions and emptied for a new figure. On phones the figure gives the
+     set row and the open pad their height, so the answers never move. */
 (function (PX) {
   'use strict';
 
@@ -207,17 +216,82 @@
   function mount(ctx) {
     var root = h('div.ex-cubes-stem');
     var q = h('p.ex-cubes-q');
-    var figure = h('div.ex-cubes-figure-box');
+    var figure = h('div.ex-cubes-figure-box.px-plate');
     var stage = h('div.ex-stage.ex-cubes-stage', figure);
     var verdict = h('div.ex-verdict.ex-cubes-verdict', { hidden: true, role: 'status' });
     var caption = h('p.ex-caption', { 'aria-live': 'polite' });
     var desc = h('p.px-sr');
+    var setRow = h('div.ex-cubes-set', { hidden: true });
     root.appendChild(stage);
+    root.appendChild(setRow);
     root.appendChild(q);
     root.appendChild(h('div.ex-cubes-under', caption, verdict));
     root.appendChild(desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, stage: stage, figure: figure, q: q, verdict: verdict, caption: caption, desc: desc, item: null, optItem: null, opts: [], fig: null, pulled: null, assist: null, assistHidden: false, list: null, listItem: null };
+    st = { ctx: ctx, root: root, stage: stage, figure: figure, q: q, verdict: verdict, caption: caption, desc: desc, item: null, optItem: null, opts: [], fig: null, pulled: null, assist: null, assistHidden: false, list: null, listItem: null,
+      setRow: setRow, figKey: null, tally: [0, 0, 0, 0, 0, 0], tallyOpen: false, cut: '' };
+  }
+  // The name of answer i (a letter A–E in the format's labelling, else its number).
+  function answerName(i) { return st && st.ctx && typeof st.ctx.optionName === 'function' ? st.ctx.optionName(i) : PX.ui.optionName(i, true); }
+  // The starter band (flat figures, 4–6 cubes) keeps the face tones; the test range is drawn plain.
+  function plainOf(item) { var p = item.params || {}; return !(p.cubes === 0 || p.height === 0); }
+  // The figure's identity: its seed, level and heights (one figure across its set of questions).
+  function figKeyOf(item) { var p = item.params || {}; return [item.seed, p.cubes, p.height, p.asked, JSON.stringify(item.heights)].join('|'); }
+
+  /* ---------- the set row: "Question 2 of 3" and the tally pad (O12) ---------- */
+
+  function setRow(item, ctx) {
+    // A planner's set (Train, Path, Free play: ctx.set), or Section practice, which asks about a figure
+    // by params.ask itself and stops when its part does, so it gets no total.
+    var row = st.setRow, set = ctx && ctx.set && ctx.set.n > 1 ? ctx.set : null;
+    var sec = !(ctx && ctx.set) && Number.isInteger((item.params || {}).ask) && Array.isArray(item.asks) && item.asks.length > 1;
+    var several = !!(set || sec);
+    PX.ui.clear(row);
+    st.root.classList.toggle('has-set', !!several);
+    st.root.classList.toggle('is-tally', !!several && st.tallyOpen);
+    row.hidden = !several;
+    if (!several) return;
+    var label = set ? 'Question ' + (set.i + 1) + ' of ' + set.n : 'Question ' + (item.pos + 1) + ' about this figure';
+    var toggle = h('button.px-btn.ex-cubes-tally-toggle', { type: 'button', 'aria-pressed': st.tallyOpen ? 'true' : 'false', 'aria-controls': 'ex-cubes-tally' }, 'Tally');
+    toggle.addEventListener('click', function () {
+      var svg = st.figure.querySelector('svg'), h0 = svg ? svg.getBoundingClientRect().height : 0;
+      st.tallyOpen = !st.tallyOpen;
+      setRow(st.item, st.ctx);
+      padRoom(h0);
+      var t = st.setRow.querySelector('.ex-cubes-tally-toggle');
+      if (t && t.focus) try { t.focus({ preventScroll: true }); } catch (e) { /* older engines */ }
+    });
+    row.appendChild(h('div.ex-cubes-set-bar', h('span.ex-cubes-set-n', label), toggle));
+    if (!st.tallyOpen) return;
+    var pad = h('div.ex-cubes-tally', { id: 'ex-cubes-tally', role: 'group', 'aria-label': 'Tally pad: cubes counted by painted sides' });
+    st.tally.forEach(function (c, n) {
+      var b = h('button.ex-cubes-tally-c', { type: 'button', 'aria-label': 'Cubes with ' + n + ' painted side' + (n === 1 ? '' : 's') + ': ' + c + '. Tap to add one.' },
+        h('span.ex-cubes-tally-k', String(n)), h('span.ex-cubes-tally-v', c ? String(c) : '·'));
+      b.addEventListener('click', function () { st.tally[n] = Math.min(99, st.tally[n] + 1); setRow(st.item, st.ctx); focusTally(n); });
+      pad.appendChild(b);
+    });
+    var clear = h('button.ex-cubes-tally-clear', { type: 'button' }, 'Clear');
+    clear.addEventListener('click', function () { st.tally = [0, 0, 0, 0, 0, 0]; setRow(st.item, st.ctx); focusTally('clear'); });
+    pad.appendChild(clear);
+    row.appendChild(pad);
+  }
+  // Opening the pad takes its height from the figure (closing gives it back), so the answers keep their
+  // place whatever bounds the figure's size; the cut stays on this figure's drawings while the pad is open.
+  function padRoom(h0) {
+    var pad = st.setRow.querySelector('.ex-cubes-tally');
+    st.cut = '';
+    if (st.tallyOpen && pad && h0 > 0) {
+      var cs = window.getComputedStyle ? window.getComputedStyle(pad) : null, ph = pad.getBoundingClientRect().height + (cs ? parseFloat(cs.marginTop) || 0 : 0);
+      st.cut = Math.max(64, Math.round(h0 - ph)) + 'px';
+    }
+    applyCut();
+  }
+  function applyCut() {
+    [st.fig && st.fig.svg, st.pulled && st.pulled.svg].forEach(function (svg) { if (svg) svg.style.maxHeight = st.cut || ''; });
+  }
+  function focusTally(which) {
+    var el = which === 'clear' ? st.setRow.querySelector('.ex-cubes-tally-clear') : st.setRow.querySelectorAll('.ex-cubes-tally-c')[which];
+    if (el && el.focus) try { el.focus({ preventScroll: true }); } catch (e) { /* older engines */ }
   }
 
   function question(item) {
@@ -235,10 +309,24 @@
     st.verdict.textContent = '';
     st.caption.textContent = '';
     st.root.classList.remove('is-revealed');
-    PX.ui.clear(st.figure);
-    st.fig = figureSvg(item.heights, 1);
+    var key = figKeyOf(item);
+    if (key !== st.figKey || !st.fig) {
+      // a new figure: a new drawing, an empty tally
+      PX.ui.clear(st.figure);
+      st.fig = figureSvg(item.heights, 1);
+      st.figure.appendChild(st.fig.svg);
+      st.figKey = key;
+      st.tally = [0, 0, 0, 0, 0, 0];
+      st.cut = ''; // a new figure is laid out with the pad as it is (css/ex/cubes.css budgets it on phones)
+      st.list = null; st.listItem = null;
+    } else {
+      // the same figure, a new question: the drawing stays, its marks go
+      normal();
+      marks();
+    }
     st.pulled = null;
-    st.figure.appendChild(st.fig.svg);
+    st.figure.classList.toggle('is-plain', plainOf(item));
+    setRow(item, ctx);
     question(item);
     var a = ctx && ctx.assist && typeof ctx.assist === 'object' ? ctx.assist : null;
     st.assist = a && a.numbers > 0 ? assistBlanks(item, a.numbers) : null;
@@ -268,7 +356,7 @@
     el.appendChild(h('span.ex-answer.ex-cubes-opt', h('span.ex-answer-text', String(n)), h('span.ex-cubes-unit', n === 1 ? 'cube' : 'cubes')));
     st.opts[i] = { el: el };
   }
-  function optionLabel(item, i) { return plural(item.options[i], 'cube', 'cubes'); }
+  function optionLabel(item, i) { return 'Option ' + PX.ui.optionName(i, true) + ': ' + plural(item.options[i], 'cube', 'cubes'); }
   function gridCols() { return 5; }
 
   /* ---------- rule figures (the rules card; CONTRACT-v1.2 D) ---------- */
@@ -324,7 +412,7 @@
     st.figure.classList.remove('is-pulled');
   }
   function pulledApart(item) {
-    if (!st.pulled) st.pulled = figureSvg(item.heights, SPREAD);
+    if (!st.pulled) { st.pulled = figureSvg(item.heights, SPREAD); applyCut(); }
     if (st.fig.svg.parentNode) st.figure.replaceChild(st.pulled.svg, st.fig.svg);
     st.figure.classList.add('is-pulled');
   }
@@ -343,13 +431,13 @@
       });
     });
     out.push({
-      ms: 1800, caption: cap('done', { k: item.count, cubes: item.count === 1 ? 'cube has' : 'cubes have', sides: plural(item.ask, 'painted side', 'painted sides') }),
+      ms: 1800, caption: cap('done', { k: item.count, n: answerName(item.key), cubes: item.count === 1 ? 'cube has' : 'cubes have', sides: plural(item.ask, 'painted side', 'painted sides') }),
       enter: function () { normal(); numbers(item, { counted: k }); focusOption(item.key); },
     });
     var r = response;
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < 5) {
       out.push({
-        ms: 2200, caption: cap('chosen', { n: item.options[r], d: item.options[r] > item.count ? 'more than' : 'fewer than' }),
+        ms: 2200, caption: cap('chosen', { n: answerName(r), c: plural(item.options[r], 'cube', 'cubes'), d: item.options[r] > item.count ? 'more than' : 'fewer than' }),
         enter: function () { normal(); numbers(item, { counted: k }); focusOption(r); },
       });
     }
@@ -385,9 +473,12 @@
     return runSteps(list, ctx, o);
   }
   // After show me or a demo the last caption goes, so the stem returns to the room it keeps.
-  function done() { if (st) { normal(); focusOption(-1); st.caption.textContent = ''; } }
+  function done() { if (st) { normal(); focusOption(-1); st.caption.textContent = ''; if (st.item) st.figure.classList.toggle('is-plain', plainOf(st.item)); } }
+  // Show me and the Watch draw the face tones as an aid (note D1 §6.1: tones stay a scaffold).
+  function toned() { if (st) st.figure.classList.remove('is-plain'); }
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
+    toned();
     return play(steps(item, response), ctx, { name: 'show-me' }).then(done, done);
   }
   // The cubes nothing of which shows (supports under taller columns), as dashed ghosts.
@@ -398,6 +489,7 @@
   }
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
+    toned();
     var hid = cubeList(item).filter(function (c) { return c.hidden; }).length;
     var intro = [
       { ms: 2200, caption: cap('figure'), enter: function () { normal(); marks(); focusOption(-1); st.figure.classList.add('is-pointed'); }, exit: function () { st.figure.classList.remove('is-pointed'); } },
@@ -420,6 +512,7 @@
 
   PX.ex.view('cubes', {
     layout: 'stem+options',
+    optionKeys: 'letters', // answers A–E for 1–5 cubes (CONTRACT-v1.2 W1)
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
     reveal: reveal, showMe: showMe, demo: demo, unmount: unmount, drawRule: drawRule,

@@ -26,3 +26,10 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
   the novice errors, partial counts reported with caps (O57), an independent ray-marching solver and a one-column search in
   the test (O30), the per-level export (130 cells within chance + 10, closest +6.8; the starter towers' bottom-as-painted
   cell fixed). cubes 187/0, p95 9.7 ms at the hardest level. Spikes and their numbers: scratch scripts outside the repository.
+- 10:41 UTC: W2-core's wave 3 (ab8bf2b): figure sets as requested (def.set, kind 'set', ctx.set), letters, the plate look,
+  test-range tags. My two commits above got new IDs in the lead's unpushed-range rewrite (e395c1b, 6e21462), content intact.
+- 10:56 UTC: Angles: angles numbered 1–4, answers A–D (letters mode), plates in both themes, test-range tags, version
+  stays 2; harness_angles 244/0. Painted Cubes: answers A–E, plain look in the test range (tones on the band and in show me),
+  the set row with "Question i of n" and the tally pad (O12), test-range tags; harness_cubes 249/0 (app checks at 360 x 640,
+  390 x 844, 1366 x 768: the answers keep their place when the pad opens and at the reveal; the tally survives the figure's
+  next question). Node: angles, cubes, wave3, section, firstband, core, rebase, formats, bets 1904/0; shortcut-levels 196/0.
