@@ -142,6 +142,33 @@ function testDisplayClass(t) {
   t.eq(G.displayFor(rec, PX.ex.get('fold'), 'small'), 'large', 'an exercise with one rating reads it whatever the screen');
 }
 
+function testReachRebase(t) {
+  t.section('Reach on a changed level scale (E.rebase)');
+  const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 31);
+  for (let d = 0; d < 4; d++) playSession(PX, rec, L, 'train', { now: T0 + d * DAY, pin: 'fold', exId: 'fold', count: 1, minutes: 12 }, d);
+  const def = PX.ex.get('fold'), r = E.model.range(def), now = [Math.round(r.min * 1e4) / 1e4, Math.round(r.max * 1e4) / 1e4];
+  const old = rec.ex.fold.best.block.level, part = rec.game.reach.bests.fold;
+  t.ok(old > 0 && part === old, 'a best block is kept as Fold\'s part of Reach (' + part + ')');
+  // the stored levels were written on another range (as when Reckon's version 2 widened its own)
+  const from = [now[0] + 0.6, now[1] - 0.3], cv = E.rebase.conv(from, now);
+  rec.scales = rec.scales || {};
+  rec.scales.fold = from;
+  E.rebase.run(rec, 4);
+  t.eq([rec.ex.fold.best.block.level, rec.game.reach.bests.fold], [cv(old), cv(part)], 'the kept part moves with the same conversion as the best block (' + old + ' → ' + cv(old) + ')');
+  const R = G.reach(rec);
+  t.ok(R.value === R.parts.reduce((s, x) => s + x.best, 0) && rec.game.reach.high === R.value, 'Reach and its high mark are the sum of the converted parts');
+  rec.ex.fold.best.block.level += 3;
+  t.eq(G.reach(rec).value, R.value + 3, 'a new best after the change raises Reach again');
+  // a record whose parts were never kept takes them from the converted bests
+  const r2 = JSON.parse(JSON.stringify(rec));
+  delete r2.game.reach.bests;
+  r2.game.reach.high = 9999;
+  r2.scales = r2.scales || {};
+  r2.scales.fold = from;
+  E.rebase.run(r2, 4);
+  t.ok(r2.game.reach.bests && r2.game.reach.bests.fold === r2.ex.fold.best.block.level && r2.game.reach.high === G.reach(r2).value, 'without kept parts, the converted bests become the parts and the old high mark goes');
+}
+
 function testSeeding(t) {
   t.section('Atlas seeding');
   const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 11);
@@ -444,6 +471,7 @@ export async function run(t) {
   testSeeding(t);
   testPending(t);
   testDisplayClass(t);
+  testReachRebase(t);
   testDaily(t);
   testDailyRelease(t);
   testClimb(t);
