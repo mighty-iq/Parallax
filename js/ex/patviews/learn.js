@@ -15,7 +15,7 @@
       { id: 'end', label: 'End view', text: 'The end view looks at the right side of the structure, so the front is on its left. The top view has the front at the bottom.' },
       { id: 'dotted', label: 'Dotted lines', text: 'A solid line is an edge you can see. A dotted line is an edge hidden behind nearer cubes. The light tone fills the outline.' },
       { id: 'blocks', label: 'The structure', text: 'Unit cubes on a grid; every cube stands on the ground or on another cube. Nothing hangs in the air.' },
-      { id: 'answer', label: 'Answer', text: 'Four drawings of the missing view: exactly one fits both given views. Tap it or press its key (1–4).' },
+      { id: 'answer', label: 'Answer', text: 'Four drawings of the missing view, A to D: exactly one fits both given views. Tap it or press its letter (A–D; 1–4 work too).' },
     ],
     // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.7): the rules card first, the
     // Watch at the starter band (the structure drawn beside the views, no dotted line in the answer, no

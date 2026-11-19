@@ -25,6 +25,8 @@
   var GAP = 1, PAD = 0.45;
 
   function learn() { return PX.ex.learn('patviews') || {}; }
+  // Drawings are lettered A–D (CONTRACT-v1.2 W1, the format's own naming).
+  function nm(i) { return PX.ui.optionName ? PX.ui.optionName(i, true) : String(i + 1); }
   function cap(key, vars) {
     var s = String((learn().captions || {})[key] || '');
     if (vars) for (var k in vars) s = s.split('{' + k + '}').join(String(vars[k]));
@@ -109,7 +111,7 @@
 
   function describe(item) {
     var gv = lib.VIEWS.filter(function (v) { return v !== item.missing; });
-    return 'Two views of a block structure are drawn: the ' + gv[0] + ' view and the ' + gv[1] + ' view. Solid lines are seen edges, dotted lines hidden ones. Which of four drawings is its ' + item.missing + ' view?';
+    return 'Two views of a block structure are drawn: the ' + gv[0] + ' view and the ' + gv[1] + ' view. Solid lines are seen edges, dotted lines hidden ones. Which of four drawings, A to D, is its ' + item.missing + ' view?';
   }
 
   /* ---------- view functions ---------- */
@@ -154,7 +156,7 @@
     el.appendChild(h('span.ex-opt.pv-opt-cell', svg, tag));
     st.opts[i] = { el: el, svg: svg, g: g, tag: tag, ghost: null };
   }
-  function optionLabel(item, i) { return 'Drawing ' + (i + 1); }
+  function optionLabel(item, i) { return 'Drawing ' + nm(i); }
   function gridCols() { return 4; }
 
   function present(item, ctx) {
@@ -183,7 +185,7 @@
       o.tag.hidden = false;
       if (i !== item.key) markDiff(item, i, 'pv-diff'); // where this drawing differs from the right one
     });
-    st.verdict.textContent = '✓ Drawing ' + (item.key + 1) + ' is the ' + item.missing + ' view';
+    st.verdict.textContent = '✓ Drawing ' + nm(item.key) + ' is the ' + item.missing + ' view';
     st.verdict.setAttribute('data-kind', 'key');
     st.verdict.hidden = false;
     return timing.wait(ctx && ctx.fast ? 0 : 250);
@@ -405,10 +407,10 @@
     // (the Watch waits there for a tap: O52).
     var ndAll = nd + Object.keys(item.given).reduce(function (a, v) { return a + item.given[v].segs.filter(function (q) { return q[4] === 2; }).length; }, 0);
     if (ndAll) list.push({ ms: 4200, caption: cap('dotted'), dotted: true, enter: function () { draw(item, S({ built: all, object: true, dotted: true })); } });
-    list.push({ id: 'land', ms: 1300, caption: cap('land', { n: key + 1 }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
+    list.push({ id: 'land', ms: 1300, caption: cap('land', { n: nm(key) }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
     if (picked >= 0) {
       var why = item.options[picked].why;
-      list.push({ ms: 3200, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: picked + 1 }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
+      list.push({ ms: 3200, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: nm(picked) }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
     }
     return list;
   }
@@ -480,6 +482,7 @@
   }
 
   PX.ex.view('patviews', {
+    optionKeys: 'letters', // drawings A–D (CONTRACT-v1.2 W1)
     layout: 'stem+options',
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,

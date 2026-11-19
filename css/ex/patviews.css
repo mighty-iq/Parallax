@@ -104,3 +104,6 @@
 .ex-patviews .pv-label--shown { font-weight: 600; }
 .ex-patviews .pv-proj--assist { stroke-opacity: 0.55; }
 .ex-patviews .pv-landing .pv-line { stroke: var(--stim-target, #0B6A86); }
+
+/* v1.2 (CONTRACT-v1.2 W1): the drawing's letter (A–D) stays above the drawing, on a chip of the cell's ground. */
+.ex-patviews .px-choice .px-choice-key { position: absolute; z-index: 2; padding: 0 0.15rem; border-radius: 2px; background: var(--stim-ground, #F4F5F3); }
