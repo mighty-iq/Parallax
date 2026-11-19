@@ -273,16 +273,11 @@ function testShortcuts(t, PX, def, L, pool) {
   t.section('patviews: shortcut solvers, levels above the band');
   shortcutPool(t, L, pool.filter((x) => x.p.cubes > 0), false);
 }
-function shortcutPool(t, L, pool, band) {
-  t.ok(pool.length >= 2000, `${pool.length} items`);
-  const acc = {}, cnt = {}, cell = {};
-  let tag = '';
-  const add = (name, v) => {
-    acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1;
-    const k = name + ' @ ' + tag; cell[k] = cell[k] || [0, 0]; cell[k][0] += v; cell[k][1]++;
-  };
-  for (const { it, p } of pool) {
-    tag = 'foil ' + p.foil + ', ' + it.missing + ' missing';
+// Per item, every shortcut solver's share of the key (ties shared). One implementation for this file's pools
+// and for tests/node/shortcut-levels.test.mjs (the export at the end).
+function itemScores(L, it) {
+  const out = {}, add = (name, v) => { out[name] = v; };
+  {
     const g = it.options.map((o) => L.grid(o.drawing)), c = g.map(L.counts), key = it.key;
     const sum = g.map((a, i) => g.reduce((s, b, j) => s + (i === j ? 0 : L.gdist(a, b)), 0));
     const sumL = g.map((a, i) => g.reduce((s, b, j) => s + (i === j ? 0 : linesApart(a, b)), 0));
@@ -306,6 +301,18 @@ function shortcutPool(t, L, pool, band) {
     // Stem-based: solid units equal to a given view's.
     const sc = gv.map((x) => L.counts(x).solid);
     add('as many solid units as a given view', shareOf(c.map((x) => (sc.includes(x.solid) ? 1 : 0)), key, true));
+  }
+  return out;
+}
+function shortcutPool(t, L, pool, band) {
+  t.ok(pool.length >= 2000, `${pool.length} items`);
+  const acc = {}, cnt = {}, cell = {};
+  for (const { it, p } of pool) {
+    const tag = 'foil ' + p.foil + ', ' + it.missing + ' missing';
+    for (const [name, v] of Object.entries(itemScores(L, it))) {
+      acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1;
+      const k = name + ' @ ' + tag; cell[k] = cell[k] || [0, 0]; cell[k][0] += v; cell[k][1]++;
+    }
   }
   const line = [];
   for (const name of Object.keys(acc)) {
@@ -457,3 +464,11 @@ function testTutorialRepeat(t, PX, def, id) {
   t.eq(repeats, 0, `no rated item at the tutorial's settings has a tutorial stem (${n} items; ${guarded} first draws were redrawn)`);
   t.eq(changed, 0, 'an item whose first draw is not a tutorial stem is the same as before');
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
+export function shortcutScores(PX, def, item) {
+  const out = {};
+  for (const [name, hit] of Object.entries(itemScores(def.lib, item))) out[name] = name === 'size fits the stem' ? { hit, chance: 0.25, info: true } : { hit, chance: 0.25 };
+  return out;
+}
+export const SHORTCUT_EXEMPT = ['size fits the stem'];
