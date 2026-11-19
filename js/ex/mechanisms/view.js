@@ -408,19 +408,23 @@
     if (!st) mount(ctx);
     if (st.item !== item) newItem(item);
     var svg = S.svg(40, 20, { width: 40, height: 20, class: 'ex-glyph mx-glyph', 'aria-hidden': 'true' });
-    svg.appendChild(S.el('path', { d: ICONS[item.answers[i]] || '', class: 'ex-glyph-a' }));
+    var a = item.answers[i], two = /^(cw|ccw)-(faster|slower)$/.exec(a);
+    if (two) { // version 2: the turn on the left, the speed on the right (shapes, never colour)
+      svg.appendChild(S.el('path', { d: ICONS[two[1]], class: 'ex-glyph-a', transform: 'translate(-8 0)' }));
+      svg.appendChild(S.el('path', { d: ICONS[two[2]], class: 'ex-glyph-a', transform: 'translate(15 3) scale(0.7)' }));
+    } else svg.appendChild(S.el('path', { d: ICONS[a] || '', class: 'ex-glyph-a' }));
     var box = h('span.ex-answer.mx-answer', svg, h('span.ex-answer-text', optionText(item, i)));
     el.appendChild(box);
     st.opts[i] = box;
   }
   function optionLabel(item, i) { return optionText(item, i); }
-  function gridCols() { return 3; }
+  function gridCols(item) { return item && item.options && item.options.length > 3 ? 2 : 3; }
 
   /* ---------- reveal (development; the Check shows nothing), ≤ 700 ms ---------- */
 
   function verdictText(item) {
     var a = item.answers[item.key], w = st.model.res.omega[item.target];
-    var why = a === 'jam' ? ' (a loop with an odd number of gears)' : item.question === 'speed' ? ' (' + w.n + ' turns for every ' + w.d + ' of the driver)' : '';
+    var why = a === 'jam' ? ' (a loop with an odd number of gears)' : item.question === 'speed' || item.question === 'dirspeed' ? ' (' + w.n + ' turns for every ' + w.d + ' of the driver)' : '';
     return optionText(item, item.key) + why;
   }
   function reveal(item, response, result, ctx) {
@@ -508,7 +512,7 @@
         enter: function () { reset(); },
         update: function (k) { setTurn(item, k * 3 * DRIVE_DEG_PER_S); }, // 3 s at the driver's speed
       });
-      var w = res.omega[item.target], key = item.question === 'speed' ? 'answerSpeed' : item.question === 'lift' ? 'answerLift' : 'answerDir';
+      var w = res.omega[item.target], key = item.question === 'dirspeed' ? 'answerDirSpeed' : item.question === 'speed' ? 'answerSpeed' : item.question === 'lift' ? 'answerLift' : 'answerDir';
       steps.push({ ms: 1600 * f, caption: cap(key, { answer: item.options[item.key], n: w.n, d: w.d }), enter: function () { focusOption(item.key); } });
     }
     // The instruction's pace adds how to answer, before the answer: the example ends on its answer.
