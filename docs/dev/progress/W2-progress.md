@@ -71,3 +71,14 @@ lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.md.
   first cut level and for joined solids (36–37 %, held at 40 %).
 - Fold 507e597: half a rank for key ties at the extremes ("most like the others" +11.0 → +2.0); scoped: one fold
   (structural, held at 48 %). shortcut-levels 37/0 on 12 exercises; KNOWN empty; no version bumps.
+
+## 2026-11-19 11:40 UTC: leading and fluency items off the scoped shortcut cells (the lead's task)
+- One list in the engine, `E.dims.scoped` (js/engine/dims.js): Nets, Slice, Fold, Painted Cubes (five painted sides,
+  named by the seed), Homing's fixed-angle routes, Cube Match, Pattern Memory; each entry with its DECISIONS line.
+  The lead's frontier and item and the fluent zone leave out cells named by params; MODES.train.next asks
+  E.dims.seedFor for a seed outside a seed-named cell before the step is made. The per-level check, and the Nets,
+  Slice and Fold tests, read their cells and caps from it.
+- dims 88/0 (with the fixture Fold: 0 of 323 leading and 0 of 189 fluency items at one fold, 26 target items there;
+  12 and 151 without the entry); shortcut-levels 58/0 on 18 exercises; nets, slice, fold tests pass.
+- sim-progress (200 learners × 90 days, seed 1): the new gate passes (0 leading or fluency items in scoped cells of
+  about 300,000 per profile); the other lines unchanged within noise.

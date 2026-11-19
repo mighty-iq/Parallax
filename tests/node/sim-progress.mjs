@@ -66,6 +66,7 @@ function blank() {
     feas: { n: 0, in10: 0, abs: 0, x: 0, t: 0 },
     byKind: {}, byEx: {}, covEx: {},
     cov: { n: 0, in: 0, z2: 0, bias: 0 }, covMid: { n: 0, in: 0, bias: 0 }, flu: { n: 0, x: 0, t: 0, nb: 0, xb: 0, tb: 0 }, kinds: {},
+    sc: { lead: 0, flu: 0, leadIn: 0, fluIn: 0, tgt: 0, tgtIn: 0 }, // the scoped shortcut cells (E.dims.scoped): lead and fluency items stay off them
     off: { n: 0, err2: 0, capFit: {}, capTrue: {}, dimN: {} }, sw: { n: 0, strong: 0, weak: 0 }, errors: 0, deadEnds: 0,
     hooksErr: [],
   };
@@ -118,6 +119,10 @@ function simLearner(PX, cond, profile, i, S) {
         const st = s.step, out = s.out, def = PX.ex.get(st.exId);
         if (out.outcome > 1) return;
         S.kinds[st.kind] = (S.kinds[st.kind] || 0) + 1;
+        if (E.dims && E.dims.isScoped) {
+          const inS = E.dims.isScoped(def, st.params, st.seed) ? 1 : 0;
+          if (st.kind === 'lead') { S.sc.lead++; S.sc.leadIn += inS; } else if (st.kind === 'fluency') { S.sc.flu++; S.sc.fluIn += inS; } else if (st.kind === 'target') { S.sc.tgt++; S.sc.tgtIn += inS; }
+        }
         const x = out.outcome === 1 ? 1 : 0;
         if (st.kind === 'fluency') {
           const n0 = fluN[st.exId] = (fluN[st.exId] || 0) + 1, it = out.inTime ? 1 : 0;
@@ -247,7 +252,7 @@ function summarise(S) {
     coverage: S.cov.n ? S.cov.in / S.cov.n : NaN, rmsZ: S.cov.n ? Math.sqrt(S.cov.z2 / S.cov.n) : NaN, bias: S.cov.n ? S.cov.bias / S.cov.n : NaN,
     coverageMid: S.covMid.n ? S.covMid.in / S.covMid.n : NaN, biasMid: S.covMid.n ? S.covMid.bias / S.covMid.n : NaN,
     flu: { n: S.flu.n, inTime: S.flu.n ? S.flu.x / S.flu.n : NaN, target: S.flu.n ? S.flu.t / S.flu.n : NaN, nb: S.flu.nb, inTimeB: S.flu.nb ? S.flu.xb / S.flu.nb : NaN, targetB: S.flu.nb ? S.flu.tb / S.flu.nb : NaN },
-    offRms: S.off.n ? Math.sqrt(S.off.err2 / S.off.n) : NaN,
+    offRms: S.off.n ? Math.sqrt(S.off.err2 / S.off.n) : NaN, sc: S.sc,
     capMaxFit: capFit.length ? Math.max(...capFit.map((x) => x[1])) : 0, capMaxFitKey: (capFit.sort((a, b) => b[1] - a[1])[0] || [''])[0],
     capFit: Object.fromEntries(capFit.map((x) => [x[0], [Number(x[1].toFixed(3)), Number(x[2].toFixed(3))]])),
     strongShare: S.sw.n ? S.sw.strong / S.sw.n : NaN, weakShare: S.sw.n ? S.sw.weak / S.sw.n : NaN,
@@ -286,6 +291,7 @@ for (const p of PROF) {
         [Math.abs(r.fWorstObs) <= 0.05, `no dimension level more than 5 points off (observed, cells of ≥ 200 items where the pool reaches the target): worst ${(100 * r.fWorstObs).toFixed(1)} (${r.fWorstObsKey}); expected ${(100 * r.fWorstExp).toFixed(1)}`],
         [Math.abs(r.success - r.target) <= 0.01, `overall success within ±1 point of target: ${(100 * (r.success - r.target)).toFixed(1)}`],
         [r.coverage >= 0.93 && r.coverage <= 0.97, `about 95 % coverage (93–97 %, as tests/node/sim.mjs): ${pct(r.coverage)} %`],
+        [r.sc.leadIn + r.sc.fluIn === 0, `no leading or fluency item in a scoped shortcut cell (E.dims.scoped): ${r.sc.leadIn} of ${r.sc.lead} leading, ${r.sc.fluIn} of ${r.sc.flu} fluency (target items there: ${r.sc.tgtIn} of ${r.sc.tgt})`],
         [Math.abs(r.flu.inTimeB - r.flu.targetB) <= 0.02, `fluency items in time within ±2 points of their deadline target (after each exercise's first 10): ${pct(r.flu.inTimeB)} vs ${pct(r.flu.targetB)}`],
       ];
       g.forEach(([ok, what]) => console.log(`    gate ${ok ? 'PASS' : 'FAIL'}: ${what}`));

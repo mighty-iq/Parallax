@@ -187,7 +187,8 @@ export async function run(t) {
       });
     }
     t.eq(both, 0, `with one fold no foil is as symmetric about the crease as the key and has a hole under every punch (${n1} items)`);
-    for (const k of ['sym1', 'punchHoles']) t.ok(sum[k] / n1 <= 0.48, `scoped exception: "${k === 'sym1' ? 'most symmetric about the first fold line' : 'a hole under every punch'}" with one fold ≤ 48 % (${(100 * sum[k] / n1).toFixed(1)} %, chance 25 %)`);
+    const cap = PX.engine.dims.scoped.find((e) => e.ex === 'fold' && e.when && e.when.folds === 0).cap; // the one list (js/engine/dims.js)
+    for (const k of ['sym1', 'punchHoles']) t.ok(sum[k] / n1 <= cap, `scoped exception: "${k === 'sym1' ? 'most symmetric about the first fold line' : 'a hole under every punch'}" with one fold ≤ ${100 * cap} % (${(100 * sum[k] / n1).toFixed(1)} %, chance 25 %)`);
   }
   if (process.env.PX_REPORT) {
     console.log(`       fold: n ${acc.count}, chance ${(100 * chance).toFixed(1)} %, sym1 ${pct(acc.sym1)}, like ${pct(acc.like)}, odd ${pct(acc.odd)}, under-punch ${pct(acc.punchHoles)}, sym-any ${pct(acc.symAny)}, count ${pct(acc.dKey)}; CPU p95 ${p95.toFixed(1)} ms, wall p95 ${wall95.toFixed(1)} ms`);

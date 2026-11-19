@@ -299,7 +299,8 @@ function testShortcuts(t, PX, L, pool) {
       const sc = shortcutScores(PX, PX.ex.get('slice'), it, p);
       hit.roundest += sc.roundest.hit; hit.fullest += sc.fullest.hit; m++;
     }
-    for (const k of ['roundest', 'fullest']) t.ok(hit[k] / m <= 0.40, `scoped exception: "${k}" at ${dim} level ${lv} ≤ 40 % (${(100 * hit[k] / m).toFixed(1)} % of ${m}, chance 25 %)`);
+    const cap = PX.engine.dims.scoped.find((e) => e.ex === 'slice' && e.when && e.when[dim] === lv).cap; // the one list (js/engine/dims.js)
+    for (const k of ['roundest', 'fullest']) t.ok(hit[k] / m <= cap, `scoped exception: "${k}" at ${dim} level ${lv} ≤ ${100 * cap} % (${(100 * hit[k] / m).toFixed(1)} % of ${m}, chance 25 %)`);
   }
 }
 

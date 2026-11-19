@@ -81,6 +81,71 @@
   });
   function cfg() { return C.dims; }
 
+  /* ---------- scoped shortcut exceptions (CLAUDE.md rule 5) ----------
+     Every cell of an item pool where a DECISIONS line lets a cheap answer beat chance + 10 points, in one
+     list: the tests read their caps from it (tests/node/shortcut-levels.test.mjs and the exercises' own
+     tests), and leading and fluency items never land in these cells (rated items of the ordinary pool may).
+     A new exception is added here. Per entry: ex, the exercise; when, the params that select the cell
+     (level indices, a variant by name; every key must match); or item(def, params, seed), true for an item
+     of the cell that params alone cannot name (checked on the seed before the step is made); solvers, the
+     cheap answers the exception covers (the names of the exercise's test); cap, the accuracy they are held
+     at (or over: points over chance); from, the DECISIONS line. Central Point's two partial-skill guesses
+     (DECISIONS 18 Nov, W1-central) are reported in every cell, not scoped to one, so they are not listed. */
+  var SCOPED = [
+    { ex: 'nets', when: { variant: 'opposite', shape: 0, between: 1 }, solvers: ['farGraph'], cap: 0.55, from: 'DECISIONS 2026-11-19 (W2-progress): Nets, 1-4-1 with three faces between' },
+    { ex: 'slice', when: { cut: 0 }, solvers: ['roundest', 'fullest'], cap: 0.40, from: 'DECISIONS 2026-11-19 (W2-progress): Slice, the first cut level' },
+    { ex: 'slice', when: { structure: 1 }, solvers: ['roundest', 'fullest'], cap: 0.40, from: 'DECISIONS 2026-11-19 (W2-progress): Slice, joined solids' },
+    { ex: 'fold', when: { folds: 0 }, solvers: ['sym1', 'punchHoles'], cap: 0.48, from: 'DECISIONS 2026-11-19 (W2-progress): Fold, one fold' },
+    { ex: 'cubes', item: function (def, params, seed) { var L = def && def.lib; return !!(L && typeof L.setOf === 'function' && L.setOf(params, seed).five); },
+      solvers: ['the most common answer'], cap: 0.38, from: 'DECISIONS 2026-11-19 (W3-bandA): Painted Cubes, five painted sides (a figure set\'s later question)' },
+    { ex: 'homing', when: { route: 0 }, solvers: ['fixed angle'], from: 'DECISIONS 2026-11-13 (B3, decision (a)): Homing, a fixed angle on the easy routes' },
+    { ex: 'homing', when: { route: 1 }, solvers: ['fixed angle'], from: 'DECISIONS 2026-11-13 (B3, decision (a))' },
+    { ex: 'homing', when: { route: 4 }, solvers: ['fixed angle'], from: 'DECISIONS 2026-11-13 (B3, decision (a))' },
+    { ex: 'homing', when: { route: 2, tolerance: 0 }, solvers: ['fixed angle'], from: 'DECISIONS 2026-11-13 (B3, decision (a))' },
+    { ex: 'homing', when: { route: 2, tolerance: 1 }, solvers: ['fixed angle'], from: 'DECISIONS 2026-11-13 (B3, decision (a))' },
+    { ex: 'cubematch', when: { rotation: 0, change: 0 }, solvers: ['how like the other options'], cap: 0.60, from: 'DECISIONS 2026-11-19 (W2-measure): Cube Match version 2, spin × swap' },
+    { ex: 'cubematch', when: { rotation: 2, change: 0 }, solvers: ['how like the other options'], cap: 0.60, from: 'DECISIONS 2026-11-19 (W2-measure): Cube Match version 2, flip × swap' },
+  ];
+  [[0, 0], [0, 1], [2, 0], [2, 1], [2, 2], [2, 3]].forEach(function (x) { // Pattern Memory version 2: six levels
+    SCOPED.push({ ex: 'patterns', when: { regularity: x[0], size: x[1] }, solvers: ['the squares filled most often'], over: 0.25, from: 'DECISIONS 2026-11-19 (W2-measure): Pattern Memory version 2' });
+  });
+  // Whether params (and, for an entry that needs it, the seed) fall in a scoped cell of the exercise.
+  function inCell(e, params) {
+    for (var k in e.when) if (hasOwn.call(e.when, k) && (!params || params[k] !== e.when[k])) return false;
+    return true;
+  }
+  function scopedParams(def, params) {
+    for (var i = 0; i < SCOPED.length; i++) {
+      var e = SCOPED[i];
+      if (e.ex === def.id && e.when && inCell(e, params)) return true;
+    }
+    return false;
+  }
+  function scopedSeed(def, params, seed) {
+    for (var i = 0; i < SCOPED.length; i++) {
+      var e = SCOPED[i];
+      if (e.ex === def.id && typeof e.item === 'function' && (!e.when || inCell(e, params)) && e.item(def, params, seed)) return true;
+    }
+    return false;
+  }
+  function isScoped(def, params, seed) { return !!def && (scopedParams(def, params) || (isNum(seed) && scopedSeed(def, params, seed))); }
+  function hasSeedCells(def) {
+    for (var i = 0; i < SCOPED.length; i++) if (SCOPED[i].ex === def.id && typeof SCOPED[i].item === 'function') return true;
+    return false;
+  }
+  // A candidate filter that keeps also f0 and leaves out the scoped cells.
+  function offScoped(def, f0) {
+    return function (c) { return (!f0 || f0(c)) && !scopedParams(def, c.params); };
+  }
+  // A fresh training seed whose item lies in no scoped cell (null: the exercise has none that need the seed,
+  // so the step draws its own). Every draw is a counter value of E.select.seed, so replays hold.
+  function seedFor(rec, def, params) {
+    if (!def || !hasSeedCells(def)) return null;
+    var seed = E.select.seed(rec);
+    for (var tries = 0; tries < 12 && scopedSeed(def, params, seed); tries++) seed = E.select.seed(rec);
+    return seed;
+  }
+
   /* ---------- dimensions ---------- */
 
   var infoCache = typeof WeakMap === 'function' ? new WeakMap() : null;
@@ -520,7 +585,7 @@
     var u = ctx.st || E.est.get(rec, def, { display: plan.display }), fk = S.fluentK, f0 = o.filter;
     var ok = function (c) {
       return c.g === tg.g && (tg.variant === null || c.params.variant === tg.variant) && (!f0 || f0(c)) &&
-        M.pExp(u.mu, u.sd, c.b, c.g) >= M.target(c.g, fk);
+        !scopedParams(def, c.params) && M.pExp(u.mu, u.sd, c.b, c.g) >= M.target(c.g, fk);
     };
     var list = (pe || M.poolEntry(def)).list, any = false;
     for (var q = 0; q < list.length && !any; q++) if (ok(list[q])) any = true;
@@ -613,7 +678,8 @@
     s.lead = nextLead(inf, d);
     var st = ctx.st || E.est.get(rec, def, { display: plan.display }), k = plan.k, tol = C.select.tol;
     var run = ctx.run, rf = run && run.variant !== undefined ? function (c) { return c.params.variant === run.variant; } : null;
-    var f0 = E.modes._.autoFilter(def, rf), pe = pool(rec, def, plan.display), list = (pe || M.poolEntry(def)).list;
+    // off the scoped shortcut cells (SCOPED): the frontier and the item both
+    var f0 = offScoped(def, E.modes._.autoFilter(def, rf)), pe = pool(rec, def, plan.display), list = (pe || M.poolEntry(def)).list;
     var lv = hardestHandled(dm, easiest(list, d, dm.L, f0), st, k, true, tol);
     if (lv < 0) return null;
     for (var q = 0; q < list.length; q++) {
@@ -632,7 +698,7 @@
     var L = plan.dimsLead;
     if (ctx && ctx.kind === 'lead' && L && L.pos === plan.pos && L.exId === def.id) {
       var f0 = o.filter, d = L.d, lv = L.lv;
-      o.filter = f0 ? function (c) { return c.lv[d] === lv && f0(c); } : function (c) { return c.lv[d] === lv; };
+      o.filter = function (c) { return c.lv[d] === lv && (!f0 || f0(c)) && !scopedParams(def, c.params); };
       return { lead: L.key };
     }
     if (ctx && ctx.kind === 'fluency') return fluencyPick(plan, rec, def, o, ctx, pe);
@@ -676,6 +742,7 @@
   E.dims = {
     state: state, fit: fit, b: bOf, pool: pool, frontier: frontier, lead: lead, room: room,
     fluencyOpen: fluencyOpen, timedStep: timedStep, fluencyAnswer: fluencyAnswer,
+    scoped: SCOPED, isScoped: isScoped, seedFor: seedFor, // the scoped shortcut cells (CLAUDE.md rule 5), for the tests too
     _: { info: info, rowsFor: rowsFor, solve: solve, offsetOf: offsetOf, priorSd: priorSd, capStep: capStep, kindHook: kindHook, pickHook: pickHook, finishHook: finishHook, startHook: startHook },
   };
 })(window.PX);
