@@ -41,7 +41,7 @@
     var b = B(), bet = b.of(def);
     if (!bet) return null;
     var x = b.INFO[bet];
-    var head = h('p.px-bet-head', h('span.px-tag.px-bet-tag', 'The bet · ' + x.label), x.isNew ? h('span.px-tag.px-bet-new', 'new, untested') : null);
+    var head = h('p.px-bet-head', h('span.px-tag.px-bet-tag', 'The bet · ' + x.label), x.isNew ? h('span.px-tag.px-bet-new', 'new, transfer untested') : null);
     var kids = [head, h('p.px-bet-text', x.line)];
     if (where === 'page') {
       var layers = b.LAYERS.filter(function (l) { return b.hosts(def, l); }).map(function (l) { return LAYER_WORDS[l]; });
@@ -102,7 +102,7 @@
   PX.ui.hooks.on('about:sections', function () {
     var sec = h('section.px-about-section.px-bets-about', { 'data-section': 'bets' },
       h('h2', 'Test the bets with us'),
-      h('p', 'No theory of transfer has won yet, so Parallax spreads its bets. Each exercise names the one mechanism it bets on, and your record logs how much of each you got, so the community’s pooled exports can test the bets against each other. One bet, calibration, is new: no study has tested it.'),
+      h('p', 'No theory of transfer has won yet, so Parallax spreads its bets. Each exercise names the one mechanism it bets on, and your record logs how much of each you got, so the community’s pooled exports can test the bets against each other. One bet, calibration, is new: no study has tested its transfer yet.'),
       betList(false),
       h('p', trialsText() + ' “Join the bet trials” in Settings is on by default; switch it off and every add-on runs for every exercise.'),
       h('p', { 'data-bets': 'addons' }, addonsLine()),

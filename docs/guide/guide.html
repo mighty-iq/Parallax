@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parallax: user guide</title>
 <meta name="author" content="the Chimera community">
-<meta name="description" content="What Parallax does, how to use it, and the research behind it. Version 1.1.0.">
+<meta name="description" content="What Parallax does, how to use it, and the research behind it. Version 1.2.0.">
 <!-- Parallax user guide. Text: CC BY-SA 4.0 (LICENSE-GUIDE.md). Rendered to docs/Parallax-Guide.pdf by
      tools/build-pdf.py; figures come from tools/shots.py (docs/shots/). Every factual claim comes from the
      project's research notes; points the notes tag as unverified are left out or marked "reported". -->
@@ -16,7 +16,7 @@
 <!-- ======================================================= 1 · cover -->
 <section class="page cover bare" id="cover">
   <div class="frame">
-    <div class="top"><span class="label">Parallax 1.1.0 · user guide</span><span class="label">13 November 2026</span></div>
+    <div class="top"><span class="label">Parallax 1.2.0 · user guide</span><span class="label">November 2026</span></div>
     <h1>Parallax</h1>
     <p class="sub">A visuospatial trainer</p>
     <div class="specimens">
@@ -30,7 +30,7 @@
         <div class="built">Built by the Chimera community on Discord</div>
         <a class="addr quiet" href="https://discord.gg/chmr">discord.gg/chmr</a>
       </div>
-      <div class="ver">Free · open source · offline<br>Version 1.1.0<br>13 November 2026</div>
+      <div class="ver">Free · open source · offline<br>Version 1.2.0<br>November 2026</div>
     </div>
   </div>
 </section>
@@ -38,19 +38,19 @@
 <!-- ======================================================= 2 · contents -->
 <section class="page" id="contents" data-chapter="Contents">
   <div class="content">
-    <div class="chapter"><span class="no">Parallax 1.1.0</span><h1>Contents</h1></div>
+    <div class="chapter"><span class="no">Parallax 1.2.0</span><h1>Contents</h1></div>
     <ol class="toc">
-      <li><span class="no">1.1</span><a href="#new">What's new in 1.1</a><span class="what">one clock, phones, Reckon, Knots, six test formats, test hygiene</span><span class="pg" data-for="new"></span></li>
-      <li><span class="no">01</span><a href="#ch-what">What Parallax is, and what it is not</a><span class="what">honest claims in one box</span><span class="pg" data-for="ch-what"></span></li>
-      <li><span class="no">02</span><a href="#ch-start">Quick start</a><span class="what">the five steps of a first week; phones</span><span class="pg" data-for="ch-start"></span></li>
-      <li><span class="no">03</span><a href="#ch-ex">The exercises</a><span class="what">what each of the nineteen trains and how to play it</span><span class="pg" data-for="ch-ex"></span></li>
-      <li><span class="no">04</span><a href="#ch-modes">Progression modes</a><span class="what">Train, Path, Threshold, Speed, Free play, Section practice; the clock</span><span class="pg" data-for="ch-modes"></span></li>
-      <li><span class="no">05</span><a href="#ch-transfer">Transfer</a><span class="what">near, mid and far; the Spatial Check and how to read it</span><span class="pg" data-for="ch-transfer"></span></li>
-      <li><span class="no">06</span><a href="#ch-motivation">Motivation</a><span class="what">what Parallax includes and avoids, and why</span><span class="pg" data-for="ch-motivation"></span></li>
+      <li><span class="no">1.2</span><a href="#new">What's new in 1.2</a><span class="what">Central Point, a fast first session, the bets, a measure that moves, the game</span><span class="pg" data-for="new"></span></li>
+      <li><span class="no">01</span><a href="#ch-what">What Parallax is</a><span class="what">what it trains, what it bets on, how it measures</span><span class="pg" data-for="ch-what"></span></li>
+      <li><span class="no">02</span><a href="#ch-start">Quick start</a><span class="what">the first session, a first week, phones, settings</span><span class="pg" data-for="ch-start"></span></li>
+      <li><span class="no">03</span><a href="#ch-ex">The exercises</a><span class="what">what each of the twenty trains, and how to play it</span><span class="pg" data-for="ch-ex"></span></li>
+      <li><span class="no">04</span><a href="#ch-modes">Progression</a><span class="what">your edge on every setting, plateaus, the modes, the clock</span><span class="pg" data-for="ch-modes"></span></li>
+      <li><span class="no">05</span><a href="#ch-transfer">Transfer</a><span class="what">the bets, the ladder of probes, the meter and its words</span><span class="pg" data-for="ch-transfer"></span></li>
+      <li><span class="no">06</span><a href="#ch-motivation">Motivation and the game</a><span class="what">grades, Reach, the Atlas, the Daily, the Climb, and why</span><span class="pg" data-for="ch-motivation"></span></li>
       <li><span class="no">07</span><a href="#ch-research">The research in one table</a><span class="what">finding, numbers, design response</span><span class="pg" data-for="ch-research"></span></li>
-      <li><span class="no">08</span><a href="#ch-limits">Honest limits and test hygiene</a><span class="what">what Parallax cannot tell you; formats that tests share</span><span class="pg" data-for="ch-limits"></span></li>
-      <li><span class="no">09</span><a href="#ch-data">Your data</a><span class="what">on your device; backups, import and export</span><span class="pg" data-for="ch-data"></span></li>
-      <li><span class="no">10</span><a href="#ch-lab">The Lab</a><span class="what">protocols, research export, a self-experiment</span><span class="pg" data-for="ch-lab"></span></li>
+      <li><span class="no">08</span><a href="#ch-limits">Playing fair</a><span class="what">test hygiene, the precision of every number, open questions</span><span class="pg" data-for="ch-limits"></span></li>
+      <li><span class="no">09</span><a href="#ch-data">Your data</a><span class="what">on your device; backups, exports, the community export</span><span class="pg" data-for="ch-data"></span></li>
+      <li><span class="no">10</span><a href="#ch-lab">The Lab</a><span class="what">the bets, the ladder, learning curves, Balance, a self-experiment</span><span class="pg" data-for="ch-lab"></span></li>
       <li><span class="no">11</span><a href="#ch-dev">For contributors</a><span class="what">code layout, building an exercise, tests, licences</span><span class="pg" data-for="ch-dev"></span></li>
       <li><span class="no">12</span><a href="#ch-chimera">Credits and the Chimera community</a><span class="what">come and say hi</span><span class="pg" data-for="ch-chimera"></span></li>
       <li><span class="no">13</span><a href="#ch-refs">References</a><span class="what">every source cited, with links</span><span class="pg" data-for="ch-refs"></span></li>
@@ -58,12 +58,12 @@
     <div class="cols">
       <div class="panel">
         <span class="label">About this guide</span>
-        <p>This guide explains what Parallax does, how to use it, and what the research behind it shows, including where that research is thin. Its claims come from the project's research notes: four for version 1.0 (evidence, tasks, progression, motivation) and six for 1.1 (path integration, knots, the formats of an admissions test, test overlap, timing, phones). Points those notes could not confirm against a primary source are left out or marked "reported".</p>
-        <p>Pictures of exercises come from the development harness at mid-level settings; in the app the same views appear inside the player. Most pictures of the app's screens show a record built by about six weeks of simulated practice, played through the real engine: their numbers belong to no real person. The new phone pictures and screens of 1.1 start from a fresh record.</p>
+        <p>This guide explains what Parallax does, how to use it, and what the research behind it shows, including where that research is thin. Its claims come from the project's research notes: four for version 1.0, six for 1.1 and eight for 1.2 (the game layer, measurement, plateaus and progress, transfer, Central Point, the formats of an admissions test, teaching beginners, and dead reckoning). Each note records how much of every source was read; points the notes could not confirm against a primary source are left out or marked "reported".</p>
+        <p>Pictures of exercises come from the development harness; in the app the same views appear inside the player. Pictures of screens with history show a record built by about six weeks of simulated practice through the real engine: their numbers belong to no real person.</p>
       </div>
       <div class="panel">
         <span class="label">Reading the numbers</span>
-        <p><b>g</b> and <b>d</b> are standardised effect sizes: the difference between two groups, or between before and after, in standard deviations. An effect of 0.5 means the average trained person ended half a standard deviation above the average comparison person. <b>r</b> is a correlation, from −1 to 1; 0 means none. <b>N</b> is the number of people, <b>k</b> the number of effects pooled.</p>
+        <p><b>g</b> and <b>d</b> are standardised effect sizes: the difference between two groups, or between before and after, in standard deviations. An effect of 0.5 means the average trained person ended half a standard deviation above the average comparison person. <b>r</b> is a correlation, from −1 to 1; 0 means none. <b>N</b> is the number of people, <b>k</b> the number of effects pooled. A <b>logit</b> is the unit of Parallax's ratings and item difficulties.</p>
         <p>Sources appear as (author, year); chapter 13 lists them with links.</p>
       </div>
     </div>
@@ -71,79 +71,77 @@
   </div>
 </section>
 
-<!-- ======================================================= 2b · what's new in 1.1 -->
-<section class="page" id="new" data-chapter="What's new in 1.1">
+<!-- ======================================================= 2b · what's new in 1.2 -->
+<section class="page" id="new" data-chapter="What's new in 1.2">
   <div class="content">
-    <div class="chapter"><span class="no">Version 1.1.0 · 13 November 2026</span><h1>What's new in 1.1</h1></div>
-    <p class="lead">One honest clock, phones as first-class devices, path integration without landmarks, knots, practice in the question formats of an admissions test, and a careful look at which exercises overlap with published tests. A record from 1.0 carries over, with nothing lost.</p>
+    <div class="chapter"><span class="no">Version 1.2.0 · November 2026</span><h1>What's new in 1.2</h1></div>
+    <p class="lead">Version 1.2 is built to be opened every day without bending the science: a new exercise, a first session that reaches training fast, items at your edge on every setting, a stated change when you stall, nine named bets the community can test, a measure that moves every week, and a game layer that never pays for time. A record from 1.0 or 1.1 carries over, with nothing lost.</p>
     <div class="new-grid">
       <div class="panel">
-        <h3>One clock that counts honestly</h3>
-        <p>Version 1.0 timed a session with four clocks that disagreed. Now one active-time clock runs during items, feedback, show-me and tutorials, and stops for the pause sheet, any open sheet or dialog, a hidden tab, and after 60 seconds without input. Its minutes end Train, Path and Speed sessions, and the HUD, the summary, the Log, the share card and the weekly goal show the same number. Other fixes: next page. <span class="see">Page <span class="pgref" data-for="clock"></span></span></p>
+        <h3>Central Point <span class="spec">EX-20</span></h3>
+        <p>Tap the spot with the least total distance to a set of marked dots. By default it is a quick estimate against a deadline that tightens as you improve, and near misses still score; the exact form, without a clock, is a variant. The method comes first, in plain words. Its bet is calibration. <span class="see">Page <span class="pgref" data-for="ex-centralpoint"></span></span></p>
       </div>
       <div class="panel">
-        <h3>Phones, first-class</h3>
-        <p>Every scored item of all nineteen exercises and six probes fits a 360 × 640 screen without scrolling; held sideways, items switch to two columns. During an item the header steps aside and the goal and tips wait behind Help. Turning the phone while an item plays voids that trial. Homing was rebuilt for touch, with slower, smoother motion. <span class="see">Page <span class="pgref" data-for="phone"></span></span></p>
+        <h3>A first session that reaches training</h3>
+        <p>One two-minute tutorial, then your starting point (about 11.5 minutes without feedback, or Later), then training. Views and the six DAT-style formats start lower, with a rules card, a worked example, a strategy card and a first practice item with its first step done. <span class="see">Page <span class="pgref" data-for="ch-start"></span></span></p>
       </div>
       <div class="panel">
-        <h3>Reckon <span class="spec">EX-12</span></h3>
-        <p>Dead reckoning with nothing to steer by: watch a walk across an empty plain, then point home or walk home. Feedback gives the angle and distance errors, the drift per metre and your habit over the last 20 routes. A community member pointed out that Homing's landmarks correct the very errors this training should work on; Homing stays as the landmark-aided stage before Reckon. Experimental. <span class="see">Page <span class="pgref" data-for="ex-reckon"></span></span></p>
+        <h3>Your edge on every setting</h3>
+        <p>From 100 rated answers on an exercise, Train learns how hard each of its settings is for you and keeps items at your edge on every one, each setting leading in turn. Once Speed is open, easy items come with its deadline. <span class="see">Page <span class="pgref" data-for="dims"></span></span></p>
       </div>
       <div class="panel">
-        <h3>Knots <span class="spec">EX-13</span></h3>
-        <p>Pull both ends: does a knot remain? Which marked crossing, switched, unties the rope, or ties it? Are two loops linked? Every answer is proved before you see the item, by the moves that take a rope apart, a determinant or the Jones polynomial; Show me replays the moves, checking each one. <span class="see">Page <span class="pgref" data-for="ex-knots"></span></span></p>
+        <h3>Plateaus get a change</h3>
+        <p>When an exercise's last 640 rated answers show no progress, Parallax changes one thing, says what and why, runs it for 3 sessions and 120 answers, then tells you how it went. <span class="see">Page <span class="pgref" data-for="plateaus"></span></span></p>
       </div>
       <div class="panel">
-        <h3>Six admissions-test formats <span class="spec">EX-14 to EX-19</span></h3>
-        <p>Openings, Missing View, Angles, Hole Punch, Painted Cubes and Form practise the six question formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). They join Train only under the DAT-style focus, and Section practice rehearses them in the test's order against one clock, with a review and no score prediction. <span class="see">Page <span class="pgref" data-for="dat"></span></span></p>
+        <h3>Test the bets with us</h3>
+        <p>Every exercise names the mechanism of transfer it bets on: nine bets, one of them new. Comparison rounds, bridge sets, draw-the-answer items and detailed feedback on estimates come and go at random within each player, so pooled exports form randomised trials. <span class="see">Page <span class="pgref" data-for="ch-bets"></span></span></p>
       </div>
       <div class="panel">
-        <h3>Test hygiene</h3>
-        <p>Practising a kind of puzzle raises scores on tests that use it. Exercises whose formats published tests share carry an "Also in tests" note; About has a Test hygiene section; later Spatial Checks ask one question about outside practice; and a "Taking a test soon?" helper can leave the matching exercises out of Train until your test. <span class="see">Page <span class="pgref" data-for="hygiene"></span></span></p>
+        <h3>A measure that moves</h3>
+        <p>Short blocks without feedback open up to four sessions a week, and a full check comes every 4 weeks. After each block a meter shows how likely it is that your probe scores have risen; words wait for milestones. New probes: Other Way Round (near) and Motion Graphs (far). <span class="see">Page <span class="pgref" data-for="check"></span></span></p>
       </div>
-    </div>
-    <div class="gallery">
-      <figure><div class="shot"><img src="../shots/ex12-reckon-feedback.png" alt="Reckon after a walk back: the flag at the start, the arrows on the circle and the errors"></div><figcaption><span class="spec">EX-12 · Reckon</span><br>After a walk back: the errors in direction and distance, and the drift.</figcaption></figure>
-      <figure><div class="shot"><img src="../shots/ex13-knots.png" alt="Knots: a rope with eight crossings, Knot or No knot"></div><figcaption><span class="spec">EX-13 · Knots</span><br>Pull both ends: does a knot remain?</figcaption></figure>
-      <figure><div class="shot"><img src="../shots/ex18-cubes.png" alt="Painted Cubes: a figure of glued cubes and five answers"></div><figcaption><span class="spec">EX-18 · Painted Cubes</span><br>How many cubes have exactly 4 painted sides?</figcaption></figure>
+      <div class="panel">
+        <h3>A game layer between items</h3>
+        <p>Grades 1 to 10, Reach, an Atlas of the settings you have handled, a Daily that ramps from easy to hard, the weekly Climb with its Summit, field notes and cards to post. No streaks, no points for time, no leaderboards. <span class="see">Page <span class="pgref" data-for="ch-motivation"></span></span></p>
+      </div>
+      <div class="panel">
+        <h3>The DAT-style formats, closer to the real ones</h3>
+        <p>Lettered answers, plain line drawings and a range tag on every level; Painted Cubes asks several questions about one figure; Openings, Hole Punch, Form and Missing View gained the test's kinds of item; Section practice runs under test conditions. <span class="see">Page <span class="pgref" data-for="dat"></span></span></p>
+      </div>
     </div>
     <p class="ada">DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.</p>
   </div>
 </section>
 
-<!-- ======================================================= 2c · what's new: fixed, and your record -->
-<section class="page" data-chapter="What's new in 1.1">
+<!-- ======================================================= 2c · what's new: also in 1.2, and your record -->
+<section class="page" data-chapter="What's new in 1.2">
   <div class="content">
-    <h2>Fixed in 1.1</h2>
-    <p>An audit of version 1.0 played real sessions in a browser, with pauses, hidden tabs and idle stretches, and found these problems. Each is fixed, and a test now plays five-minute sessions with such stretches and checks that every screen shows the same minutes.</p>
+    <h2>Also in 1.2</h2>
     <table class="small">
-      <thead><tr><th style="width:84mm">In 1.0</th><th>In 1.1</th></tr></thead>
+      <thead><tr><th style="width:38mm">Where</th><th>What changed</th></tr></thead>
       <tbody>
-        <tr><td>The countdown ("about 5 min left") stood still while you answered quickly, and sessions could end with minutes "left".</td><td>The HUD counts down active time, refreshed every few seconds, and a session ends within about one item of its length.</td></tr>
-        <tr><td>Pauses, hidden tabs and idle time ran the session down, while the pause sheet said the clock had stopped.</td><td>The clock stops for the pause sheet, any sheet or dialog, a hidden tab and after 60 seconds without input, so the pause sheet tells the truth.</td></tr>
-        <tr><td>Practice minutes dropped any gap of more than 90 seconds whole, and counted idle gaps just under it.</td><td>Practice minutes are the clock's reading.</td></tr>
-        <tr><td>One session showed four different minute counts ("0.7 min", "1 min").</td><td>One format everywhere: "under 1 min", "7 min", "1 h 05 min". Progress shows your practice totals.</td></tr>
-        <tr><td>A reload split one sitting into two sessions; reopening the app could start a session by itself.</td><td>A reload never starts a session; it shows the last summary, or Today.</td></tr>
-        <tr><td>The Daily Challenge: a reload or "End now" spent the day's one scored attempt; unanswered items showed as wrong; Today mixed the UTC and the local day.</td><td>The attempt is spent only when all 8 items are answered; a partial attempt resumes; unanswered items show as "–"; one local day everywhere, and Today shows the challenge's number.</td></tr>
-        <tr><td>Speed sessions were sized by item count, not by their deadlines.</td><td>Speed plans from its deadlines and ends on time.</td></tr>
-        <tr><td>Progress counted skipped and voided items as answers; a Spatial Check counted as a practice session for the weekly goal.</td><td>Only answered items count; a check never counts as practice.</td></tr>
-        <tr><td>"Measured" was awarded for a Threshold run stopped after 3 items.</td><td>Threshold and Speed achievements need a complete run.</td></tr>
-        <tr><td>Two "Export trials" buttons wrote two different files under one name.</td><td>One CSV format, with the screen class, the input and a second value added.</td></tr>
-        <tr><td>The Sounds setting did nothing.</td><td>Short synthesized tones after an answer, off by default, never while an item plays.</td></tr>
-        <tr><td>Smaller slips: Today too wide at 150 % text on a phone; Today numbering a session's exercises in an order the session did not follow; the item counter one ahead during feedback; the deadline bar jumping back to full after an answer, and a deadline timed from a few milliseconds after the item appeared; Pause not saying Resume; Threshold results without units; Path asking twice before its first item; the Spatial Check's time estimate.</td><td>All fixed. A check now says honestly that it takes 15 to 25 minutes.</td></tr>
+        <tr><td><b>Reckon</b> <span class="spec">version 2</span></td><td>Every route ends with one more turn on the spot, of 30° to 150°; a legs level where the same turns end in places far apart, so every leg's length counts; a 15° tolerance level; walks back of 3 to 20 m. Homing's solution map draws each landmark in the direction it had from the start.</td></tr>
+        <tr><td><b>Motion comfort</b></td><td>Homing and Reckon show a one-time notice, check in after 3 minutes of motion and then every 5, and end a new player's first block of walks after about 5 minutes of motion. Gentle motion, in Settings, plays walks at two thirds of the speed with gentler starts and stops and a still dot to look at.</td></tr>
+        <tr><td><b>Modes</b></td><td>Every mode says in the app when it is the right one, and Today suggests one at a time from your log (dismissed, it stays hidden for 14 days).</td></tr>
+        <tr><td><b>Chimera</b></td><td>The full welcome shows on the first launch only; later launches show a one-tap note under the header. An invitation comes at natural high points: a personal best, a grade, a Path pass, a check result, a plateau card, an export.</td></tr>
+        <tr><td><b>Privacy</b></td><td>Cards and exports name nobody unless you add the nickname you typed, and carry no browser, language or time zone unless you tick device details; the community export keeps every time in UTC and no local day.</td></tr>
+        <tr><td><b>Phones</b></td><td>Progress in tabs; Confirm taps (a first tap marks an answer, a second gives it); larger words on the arrow circle; Section practice held sideways; clearer layouts for Hole Punch, Form, Painted Cubes and Knots.</td></tr>
+        <tr><td><b>Fixes</b></td><td>Pause and End work while feedback shows; one way of writing answer times; the summary says its median time is of right answers; Section practice keeps its clock and its review over a reload and numbers its items without gaps; Reckon's tips and feedback read clearly.</td></tr>
+        <tr><td><b>Playtest mode</b></td><td>For testers, off by default: three taps after each exercise, a note on any screen, and a report to copy. It stays on your device unless you copy it.</td></tr>
       </tbody>
     </table>
     <div class="cols push">
       <div class="panel">
         <span class="label">Your record</span>
-        <p>Version 1.1 stores the record in format 2. A 1.0 record upgrades when 1.1 first opens it, with nothing lost; a 1.0 tab still open elsewhere then runs from memory instead of overwriting the newer record. Every trial gains the screen class (small or large) and the input (mouse, touch, pen or keys), so that results can be compared like with like, and room for a second number where an exercise reports one. Homing's items changed, so its new trials are logged as version 2.</p>
+        <p>Version 1.2 stores the record in format 4. A 1.0 or 1.1 record upgrades when 1.2 first opens it, with nothing lost. Where an exercise's level scale changed (easier first levels for Views and the six DAT-style formats; new ranges for Reckon, Form and other rebuilt exercises), stored levels, bests and Path stages are converted once to the new scale, so a level may read differently for the same skill. New parts of the record hold plateau events, bet periods, measurement occasions and the game layer; each trial gains its kind, add-on, answer mode, screen orientation, deadline and difficulty offset. Rebuilt exercises log their trials under a new version.</p>
       </div>
       <div class="panel">
         <span class="label">Also new</span>
         <ul class="dash">
-          <li>The Daily Challenge follows your local date and leaves out Track, Homing, Reckon and the six test formats, so it is the same on every device.</li>
-          <li>21 achievements: one more, for a full Section practice.</li>
-          <li>Checks and sessions record the screen they were taken on, and Progress says when a check was taken on another kind of screen than your starting checks.</li>
+          <li>22 achievements: Summit, for clearing all 20 rungs of a weekly Climb, is new.</li>
+          <li>The Daily Challenge's ramp and points start on the day 1.2 is released; earlier Dailies keep the rule they were played under.</li>
+          <li>The Daily and the Climb draw on the same eleven exercises on every device; the six DAT-style formats, Track, Homing and Reckon stay out.</li>
         </ul>
       </div>
     </div>
@@ -153,15 +151,15 @@
 <!-- ======================================================= 3 · chapter 1 -->
 <section class="page" id="ch-what" data-chapter="01 · What Parallax is">
   <div class="content">
-    <div class="chapter"><span class="no">Chapter 01</span><h1>What Parallax is, and what it is not</h1></div>
-    <p class="lead">Parallax is a free, open-source web app for practising visuospatial skills: picturing objects as they turn, fold, are cut, or are seen from somewhere else. It works offline in your browser, on a computer or a phone, and everything you do stays on your device.</p>
+    <div class="chapter"><span class="no">Chapter 01</span><h1>What Parallax is</h1></div>
+    <p class="lead">Parallax is a free, open-source web app for practising visuospatial skills: picturing objects as they turn, fold, are cut, or are seen from somewhere else. It works offline in your browser, on a computer or a phone, and everything you do stays on your device. It is also an experiment you can join: every exercise names how it hopes to carry over, and Parallax measures whether it does.</p>
 
     <div class="panel claims">
-      <span class="label">What practice can and cannot do</span>
+      <span class="label">Trains, bets, measures</span>
       <ul class="dash">
-        <li><b>Practice improves the practised tasks, and often similar spatial tests.</b> Across 206 training studies, spatial practice raised spatial test scores by about half a standard deviation (g = 0.47), and spatial tests that were never trained gained about as much as the trained ones, for at least several weeks <span class="cite">(Uttal et al., 2013)</span>. Part of any raw gain is familiarity: untrained control groups improved too.</li>
-        <li><b>Effects on grades, work, sport or IQ are not established.</b> Gains in school mathematics are small (g = 0.28) and were shown mainly in children and teenagers <span class="cite">(Hawes et al., 2022)</span>. In the one randomised trial with college students, training raised the physics grade a little (d = 0.32); eight months later there were no differences on spatial tests, later grades or chosen majors <span class="cite">(Miller &amp; Halpern, 2013)</span>. There is no good evidence that spatial training raises intelligence.</li>
-        <li><b>Parallax measures your transfer instead of promising it.</b> The Spatial Check uses tasks you never practise, starts from two baselines, and compares your change with a non-spatial control task and with what familiarity alone would give. When those cannot be told apart, it says "unclear yet", which is not the same as no progress.</li>
+        <li><b>It trains spatial thinking at your edge.</b> Practice works on spatial tests: across 206 training studies it raised spatial test scores by about half a standard deviation (g = 0.47), and spatial tests that were never trained gained about as much, for at least several weeks <span class="cite">(Uttal et al., 2013)</span>. Parallax keeps every item at the edge of your level, on every setting.</li>
+        <li><b>It bets on transfer, openly.</b> How far gains reach beyond spatial tests is the open question: in school mathematics they were small (g = 0.28) and shown mainly in children and teenagers <span class="cite">(Hawes et al., 2022)</span>. No theory of transfer has won, so each exercise names the one mechanism it bets on, nine in all, one of them new, and add-ons switched on and off at random let the community's pooled exports test the bets against each other.</li>
+        <li><b>It measures your own change.</b> The Spatial Check follows you on tasks you never train, near, mid and far, with a word task as a control. Short blocks keep a meter moving every week; the words come at milestones and allow for familiarity with the tasks. "Unclear yet" is not the same as no progress.</li>
       </ul>
     </div>
 
@@ -169,27 +167,27 @@
       <div>
         <h2>What you get</h2>
         <ul class="dash">
-          <li><b>Nineteen exercises:</b> rotation in 3D and 2D, paper folding, cube nets, cross-sections, views, perspective taking, spatial span, hidden figures, knots, navigation, tracking as attention practice, and six opt-in formats of an admissions test.</li>
-          <li><b>A new seed every time,</b> so each item is new and checked by a solver: exactly one right answer, wrong options that differ visibly, nothing decisive hidden.</li>
-          <li><b>Five ways to practise and one to measure, on one record:</b> Train, Path, Threshold, Speed, Free play and the Spatial Check; plus a community Daily Challenge, and Section practice for the six test formats.</li>
-          <li><b>Feedback that explains.</b> After a miss, a slow "show me" replays the solution, drawn from the same model that graded your answer.</li>
-          <li><b>Honest progress:</b> levels from 1 to 100 with a likely range and the real settings you handle, a weekly goal with grace, achievements for skills.</li>
+          <li><b>Twenty exercises:</b> rotation in 3D and 2D, paper folding, cube nets, cross-sections, views, perspective taking, spatial span, hidden figures, knots, navigation and a central point, with tracking as attention practice and six opt-in formats of an admissions test.</li>
+          <li><b>A new seed every time,</b> so each item is new and checked by a solver: exactly one right answer, wrong options that differ visibly, and cheap shortcuts near chance.</li>
+          <li><b>Five ways to practise and one to measure, on one record:</b> Train, Path, Threshold, Speed, Free play and the Spatial Check; plus the Daily Challenge, the weekly Climb and Section practice.</li>
+          <li><b>Feedback that explains.</b> After an answer, a slow "show me" replays the solution, drawn from the same model that graded it.</li>
+          <li><b>Growth you can see:</b> levels from 1 to 100 with a likely range, grades, Reach, an Atlas of settings handled, a weekly goal with grace, achievements, and a stated change when you stall.</li>
           <li><b>Short tutorials</b> (Watch, Try, Go) and two strategy cards per exercise, with advice on when to switch.</li>
         </ul>
         <h2>Who it is for</h2>
-        <p>Adults and teenagers who enjoy spatial puzzles, and anyone curious to measure their own change honestly.</p>
+        <p>Adults and teenagers who enjoy spatial puzzles, anyone curious to measure their own change, and a community that wants to find out which kinds of practice carry over.</p>
       </div>
       <div>
-        <h2>What it is not</h2>
+        <h2>What the numbers and labels mean</h2>
         <ul class="dash">
-          <li><b>Not a test of intelligence, and not a medical or diagnostic tool.</b> It shows no IQ, no index, no percentile and no "brain age".</li>
-          <li><b>Not a copy of a published test.</b> No exercise clones Wechsler Block Design or Visual Puzzles, and no item comes from a published test.</li>
-          <li><b>Not a ranking.</b> Levels compare you with your own past on one exercise. There are no leaderboards and no points for time spent.</li>
-          <li><b>Not all one thing.</b> Track is labelled attention practice: following moving objects is linked to attention and working memory rather than to visuospatial ability. Angles is perceptual-judgement practice; Homing and Reckon are experimental.</li>
-          <li><b>Not online:</b> no account, ads or analytics.</li>
+          <li><b>Your numbers compare you with yourself.</b> Levels, grades, probe points and the meter describe your own record. Parallax shows no IQ, no index, no percentile and no "brain age", and it is not a medical or diagnostic tool.</li>
+          <li><b>Its own items.</b> No exercise clones Wechsler Block Design or Visual Puzzles, and no item comes from a published test.</li>
+          <li><b>No ranking, nothing for time.</b> There are no leaderboards and no points for minutes or logins; comparing with friends works through codes and cards.</li>
+          <li><b>Each exercise says what it is.</b> Track is labelled attention practice, Angles perceptual-judgement practice; Homing and Reckon are experimental.</li>
+          <li><b>Offline:</b> no account, ads or analytics.</li>
         </ul>
-        <h2>Why the careful wording</h2>
-        <p>Reviews of cognitive training find extensive evidence that trained tasks improve, less for closely related tasks, and little for distant tasks or everyday life <span class="cite">(Simons et al., 2016)</span>. US consumer-protection guidance judges claims by their overall impression, implied claims included; "may" or "helps" does not rescue an unsupported claim <span class="cite">(FTC, 2022)</span>. Parallax tries to meet that standard.</p>
+        <h2>How we word claims</h2>
+        <p>Reviews of cognitive training find extensive evidence that trained tasks improve, less for closely related tasks, and little so far for distant tasks or everyday life <span class="cite">(Simons et al., 2016)</span>. Consumer-protection guidance judges a claim by its overall impression, implied claims included <span class="cite">(FTC, 2022)</span>. So this guide says what studies found, what Parallax bets on and how it measures, and promises no outcome. The bets are open: test them with us.</p>
       </div>
     </div>
   </div>
@@ -1293,7 +1291,7 @@
 <section class="page" data-chapter="05 · Transfer" id="ch-bets">
   <div class="content">
     <h2>Test the bets with us</h2>
-    <p>No theory of transfer has won yet, so Parallax spreads its bets. Each exercise names the one mechanism it bets on, and your record logs how much of each you got, so the community’s pooled exports can test the bets against each other. One bet, calibration, is new: no study has tested it.</p>
+    <p>No theory of transfer has won yet, so Parallax spreads its bets. Each exercise names the one mechanism it bets on, and your record logs how much of each you got, so the community’s pooled exports can test the bets against each other. One bet, calibration, is new: no study has tested its transfer yet.</p>
     <table class="small">
       <thead><tr><th style="width:30mm">Bet</th><th>The bet</th><th style="width:34mm">Exercises</th><th style="width:58mm">Evidence so far</th></tr></thead>
       <tbody>
@@ -2072,7 +2070,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
 <!-- ======================================================= back cover -->
 <section class="page cover bare back" id="back">
   <div class="frame">
-    <div class="top"><span class="label">Parallax · user guide 1.1.0</span><span class="label">13 November 2026</span></div>
+    <div class="top"><span class="label">Parallax · user guide 1.2.0</span><span class="label">November 2026</span></div>
     <p class="big">Built by the Chimera community on Discord.</p>
     <p class="lead">Questions, results, strategies, ideas for new exercises, corrections to this guide: bring them to the community that made Parallax.</p>
     <p><a class="join" href="https://discord.gg/chmr">Join the Chimera Discord</a></p>
@@ -2095,7 +2093,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
     if (pg.classList.contains('bare')) return;
     var head = document.createElement('header');
     head.className = 'run-head';
-    head.innerHTML = '<span><b>Parallax</b> · User guide 1.1.0</span><span>' + (pg.getAttribute('data-chapter') || '') + '</span>';
+    head.innerHTML = '<span><b>Parallax</b> · User guide 1.2.0</span><span>' + (pg.getAttribute('data-chapter') || '') + '</span>';
     var foot = document.createElement('footer');
     foot.className = 'folio';
     foot.innerHTML = '<a href="https://discord.gg/chmr">discord.gg/chmr</a><span>Built by the Chimera community</span><span>Page <span class="n"></span></span>';
