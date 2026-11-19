@@ -118,10 +118,13 @@ def desktop(b, C):
     page.screenshot(path=str(OUT / 'b1_done_1366.png'))
     a = page.evaluate('''(() => { const r = PX.core.store.state, e = r.assess[0] || {}, s = r.sessions[r.sessions.length - 1] || {};
       return { n: r.assess.length, kind: e.kind, form: e.form, form0: r.measure.form0, items: Object.keys(e.items || {}).length, results: Object.keys(e.results || {}).length,
-        pv: Object.keys(e.pv || {}).length, rows: Object.values(e.items || {}).every((x) => x.every((y) => y.length === 4)), skind: s.kind, smode: s.mode, late: !!e.late,
+        pv: Object.keys(e.pv || {}).length, skind: s.kind, smode: s.mode, late: !!e.late,
+        rows: Object.entries(e.items || {}).every(([id, x]) => x.every((y) => (id === 'patterns' ? y.length === 6 && Number.isInteger(y[4]) && y[4] >= 0 && y[4] <= y[5] : y.length === 4))),
+        cells: (e.items && e.items.patterns || []).length, pmv: (e.pv || {}).patterns,
         practice: r.practiceMs || 0 }; })()''')
     C.ok(a['n'] == 1 and a['kind'] == 'B1' and a['form'] == a['form0'] and a['form0'] in ('A', 'B', 'C'), f'{tag}: B1 saved on the record\'s first form ({a})')
-    C.ok(a['items'] == a['results'] == a['pv'] and a['items'] >= 5 and a['rows'], f'{tag}: items [b, g, ok, rtMs] and the version of every probe')
+    C.ok(a['items'] == a['results'] == a['pv'] and a['items'] >= 5 and a['rows'], f'{tag}: items [b, g, ok, rtMs] (Pattern Memory [b, g, ok, rtMs, s, k]) and the version of every probe')
+    C.ok(a['cells'] >= 5 and a['pmv'] == 2, f'{tag}: Pattern Memory version 2, scored by cells ({a["cells"]} rows)')
     C.ok(a['skind'] == 'baseline' and a['smode'] == 'check' and not a['late'], f'{tag}: its session is marked baseline; not late')
     C.ok(a['practice'] == practice0, f'{tag}: the measurement is not practice time')
     click_card(page, 'go')
