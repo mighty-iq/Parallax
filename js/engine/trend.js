@@ -23,7 +23,12 @@
    Kalman smoother over the occasions), with the occasion's state integrated out by Sherman–Morrison.
    Blocks come either as summaries { y, v } or as items [b, g, ok, rtMs?, a?] (the rows rec.assess stores:
    the response time is ignored here; a, the item's slope, defaults to 1 as in the engine) under the item model
-   P = g + (1 − g − lapse)·σ(a(θ − b)); items are linearised at the block's fitted ability (fixed part plus
+   P = g + (1 − g − lapse)·σ(a(θ − b)), or as items scored by cells, [b, g, ok, rtMs, a, { k, s }] (Pattern
+   Memory from version 2: k cells, score s = squares marked right minus extra marks, at least 0) under
+   P(s) = (1 − lapse)·E_u[Binomial(s; k, σ(θ + u − b + Δ))] + lapse/(k + 1), u ~ N(0, cells.tau²) the pattern's
+   own ease, shared by its cells, and Δ = Δ(k, tau) such that the whole pattern is recalled half the time at
+   θ = b (b keeps the meaning of an exact-pattern difficulty; docs/dev/v1.2/measure-sim.md §12); items are
+   linearised at the block's fitted ability (fixed part plus
    the predicted state) and the fit is iterated to convergence: penalised quasi-likelihood, i.e. the Laplace
    approximation at the joint posterior mode, so blocks of two or three items need no weak per-block prior.
 
@@ -41,7 +46,7 @@
    population values in minutes.
 
      fit(input, opts?) → { ok, day, gain: { comp, near, mid, far, …per rung }, meter, segment, eta, beta, cov, index }
-       input = { occasions: [{ t (ms), h?, blocks: [{ probe, items: [[b, g, ok, rtMs?, a?], …] } | { probe, n, y, v }] }] }
+       input = { occasions: [{ t (ms), h?, blocks: [{ probe, items: [[b, g, ok, rtMs?, a?, cells?], …] } | { probe, n, y, v }] }] }
        gain.x = { mean, sd (SD units of that readout), p = P(D > 0), pNone = P(D < margin), lo, hi (config.range),
                   logits (mean in probe points), pts: { mean, sd, lo, hi } (probe points), sdUnit (SD of the readout
                   in per-probe SD) }; probe keys may carry a version ('cubematch@2': its own probe in the fit)
@@ -49,7 +54,9 @@
      track(input, opts?) → one entry per occasion: { day, t, meter, gain, verdict: null | { milestone, words, … } }
      milestoneAt(day) → { index, day, bar, none } | null     verdict(fit, milestone, readout?) → words
      predict(fit, probe, h?) → { mean, sd } (logits) of the probe's next block, for item targeting
-     familiarity(n) and afterBreak(state) for tests; configure(patch | 'reset'); config; DEFAULTS */
+     familiarity(n) and afterBreak(state) for tests; configure(patch | 'reset'); config; DEFAULTS
+     cells.logp(θ, b, k, s) the log likelihood of a score by cells (the Spatial Check's grid posterior uses it);
+     cells.si(θ, b, k, s) → { S, I } its score and expected information; cells.delta(k, tau) */
 (function (PX) {
   'use strict';
 
@@ -89,6 +96,10 @@
     // alphaSd: a weak prior on each probe's level, N(the probe's centre (opts.center, else 0), (alphaSd·σ)²),
     // so a level never drifts onto the guessing floor; flat: the precision used for the gains (a flat prior)
     fit: { lapse: 0.03, maxIter: 40, tol: 1e-5, minInfo: 1e-4, startSd: 2, alphaSd: 3, flat: 1e-8 },
+    // Items scored by cells: tau, the SD (logits) of a pattern's own ease shared by its cells. 1.5 is the cautious
+    // end of the simulated range (0.5–1.5): with it the claimed information never exceeds what the scores carry by
+    // more than version 1's exact score does (docs/dev/v1.2/measure-sim.md §12); pooled data can set it.
+    cells: { tau: 1.5 },
   };
 
   function deepCopy(x) {
@@ -193,8 +204,89 @@
     for (var i = 0; i < items.length; i++) {
       var it = items[i];
       if (!isArray(it) || !isNum(it[0]) || !isNum(it[1]) || it[1] < 0 || it[1] >= 1) return false;
+      if (it[5] !== undefined && it[5] !== null && typeof it[5] === 'object' && !cellsOf(it)) return false;
     }
     return true;
+  }
+
+  /* ---------- items scored by cells (header; docs/dev/v1.2/measure-sim.md §12) ---------- */
+
+  // u ~ N(0, tau²) by a 17-point rule on z ∈ [−4, 4]: the integrands are smooth, and the error is far below the
+  // model's own uncertainty
+  var CZ = [], CW = [];
+  (function () {
+    var i, t = 0;
+    for (i = 0; i <= 16; i++) { var z = -4 + 0.5 * i; CZ.push(z); CW.push(mexp(-z * z / 2)); t += CW[i]; }
+    for (i = 0; i < CW.length; i++) CW[i] /= t;
+  })();
+  function softplus(x) { return x > 0 ? x + mlog(1 + mexp(-x)) : mlog(1 + mexp(x)); }
+  function isCount(x, lo, hi) { return typeof x === 'number' && x === mfloor(x) && x >= lo && x <= hi; }
+  // An item's cells, { k, s } (k from 1 to 64; s from 0 to k), or null
+  function cellsOf(it) {
+    var c = it && it[5];
+    return c && typeof c === 'object' && isCount(c.k, 1, 64) && isCount(c.s, 0, c.k) ? c : null;
+  }
+  var DELTA = {}, LOGC = {}, INFO = {};
+  // Δ(k, tau): the offset that makes E_u[σ(Δ + u)^k] = ½, so the whole pattern is recalled half the time at θ = b
+  function cellDelta(k, tau) {
+    var key = k + ':' + tau;
+    if (hasOwn.call(DELTA, key)) return DELTA[key];
+    var lo = -4, hi = 16;
+    for (var it = 0; it < 60; it++) {
+      var m = (lo + hi) / 2, p = 0;
+      for (var j = 0; j < CZ.length; j++) p += CW[j] * mexp(-k * softplus(-(m + tau * CZ[j])));
+      if (p < 0.5) lo = m; else hi = m;
+    }
+    return (DELTA[key] = (lo + hi) / 2);
+  }
+  function logChoose(k) {
+    if (hasOwn.call(LOGC, k)) return LOGC[k];
+    var out = [0], acc = 0;
+    for (var s = 1; s <= k; s++) { acc += mlog(k - s + 1) - mlog(s); out.push(acc); }
+    return (LOGC[k] = out);
+  }
+  // P(s) and dP(s)/dθ for one s, at x = θ − b (lapse included)
+  function cellPD(x, k, s, tau, lapse) {
+    var d = cellDelta(k, tau), lc = logChoose(k)[s], P = 0, D = 0;
+    for (var j = 0; j < CZ.length; j++) {
+      var e = x + d + tau * CZ[j], f = mexp(lc - s * softplus(-e) - (k - s) * softplus(e));
+      P += CW[j] * f; D += CW[j] * f * (s - k * sig(e));
+    }
+    return { P: (1 - lapse) * P + lapse / (k + 1), D: (1 - lapse) * D };
+  }
+  // The expected information Σ_s D(s)² / P(s) as a function of x = θ − b: a table per (k, tau, lapse) on a 0.05 grid
+  // over [−12, 12], built the first time it is needed (k + 1 terms × 17 points × 481 places), read by interpolation
+  function cellInfo(x, k, tau, lapse) {
+    var key = k + ':' + tau + ':' + lapse, tab = hasOwn.call(INFO, key) ? INFO[key] : null, i;
+    if (!tab) {
+      tab = [];
+      for (i = 0; i <= 480; i++) {
+        var xi = -12 + i * 0.05, v = 0;
+        for (var s = 0; s <= k; s++) { var pd = cellPD(xi, k, s, tau, lapse); if (pd.P > 0) v += pd.D * pd.D / pd.P; }
+        tab.push(v);
+      }
+      INFO[key] = tab;
+    }
+    var t = (mmin(12, mmax(-12, x)) + 12) / 0.05, i0 = mmin(479, mfloor(t)), w = t - i0;
+    return tab[i0] * (1 - w) + tab[i0 + 1] * w;
+  }
+  function cellLogp(theta, b, k, s) {
+    var pd = cellPD(theta - b, k, s, config.cells.tau, config.fit.lapse);
+    return mlog(mmax(pd.P, 1e-300));
+  }
+  function cellSI(eta, b, k, s) {
+    var tau = config.cells.tau, lapse = config.fit.lapse, pd = cellPD(eta - b, k, s, tau, lapse);
+    return { S: pd.P > 0 ? pd.D / pd.P : 0, I: cellInfo(eta - b, k, tau, lapse) };
+  }
+  // One item's score and expected information at eta: an exact (right or wrong) item, or one scored by cells
+  function itemSI(it, eta) {
+    var c = cellsOf(it);
+    if (c) return cellSI(eta, it[0], c.k, c.s);
+    var lapse = config.fit.lapse, b = it[0], g = it[1], ok = it[2] ? 1 : 0, a = isNum(it[4]) && it[4] > 0 ? it[4] : 1;
+    var sg = sig(a * (eta - b)), top = 1 - g - lapse, p = g + top * sg;
+    if (p < 1e-9) p = 1e-9; else if (p > 1 - 1e-9) p = 1 - 1e-9;
+    var dp = top * a * sg * (1 - sg), w = dp / (p * (1 - p));
+    return { S: (ok - p) * w, I: dp * w };
   }
 
   // Occasions sorted by time, with valid blocks only; returns [{ t, h, blocks: [{ probe, items | y, v, n }] }].
@@ -290,27 +382,17 @@
 
   // A block's working observation at the linearisation point eta: y* = eta + S/I, v = 1/I.
   function linearise(items, eta) {
-    var lapse = config.fit.lapse, S = 0, I = 0;
-    for (var k = 0; k < items.length; k++) {
-      var it = items[k], b = it[0], g = it[1], ok = it[2] ? 1 : 0, a = isNum(it[4]) && it[4] > 0 ? it[4] : 1;
-      var s = sig(a * (eta - b)), top = 1 - g - lapse, p = g + top * s;
-      if (p < 1e-9) p = 1e-9; else if (p > 1 - 1e-9) p = 1 - 1e-9;
-      var dp = top * a * s * (1 - s), w = dp / (p * (1 - p));
-      S += (ok - p) * w; I += dp * w;
-    }
+    var S = 0, I = 0;
+    for (var k = 0; k < items.length; k++) { var si = itemSI(items[k], eta); S += si.S; I += si.I; }
     if (I < config.fit.minInfo) I = config.fit.minInfo;
     return { y: eta + S / I, v: 1 / I };
   }
   // A start for a block's linearisation point: its own posterior mode under N(center, startSd²).
   function startEta(items, center) {
-    var lapse = config.fit.lapse, sd2 = config.fit.startSd * config.fit.startSd, th = center;
+    var sd2 = config.fit.startSd * config.fit.startSd, th = center;
     for (var it = 0; it < 20; it++) {
       var gr = -(th - center) / sd2, inf = 1 / sd2;
-      for (var k = 0; k < items.length; k++) {
-        var x = items[k], g = x[1], a = isNum(x[4]) && x[4] > 0 ? x[4] : 1, ok = x[2] ? 1 : 0;
-        var s = sig(a * (th - x[0])), top = 1 - g - lapse, p = mmin(1 - 1e-9, mmax(1e-9, g + top * s)), dp = top * a * s * (1 - s);
-        gr += (ok - p) * dp / (p * (1 - p)); inf += dp * dp / (p * (1 - p));
-      }
+      for (var k = 0; k < items.length; k++) { var si = itemSI(items[k], th); gr += si.S; inf += si.I; }
       var step = gr / inf;
       if (step > 2) step = 2; else if (step < -2) step = -2;
       th += step;
@@ -589,6 +671,7 @@
     fit: fit, track: track, predict: predict, milestoneAt: milestoneAt, verdict: verdict,
     familiarity: familiarity, afterBreak: afterBreak, normalise: normalise,
     baseId: baseId,
-    _: { Phi: Phi, zOf: zOf, spdInverse: spdInverse, linearise: linearise, design: design, prior: prior, compFactor: compFactor },
+    cells: { logp: cellLogp, si: cellSI, delta: cellDelta, of: cellsOf },
+    _: { Phi: Phi, zOf: zOf, spdInverse: spdInverse, linearise: linearise, design: design, prior: prior, compFactor: compFactor, cellPD: cellPD, cellInfo: cellInfo },
   };
 })(window.PX);

@@ -278,3 +278,33 @@ All runs by hand, `nice -n 15`, one at a time (two CPU cores shared with browser
     node tests/node/measure-sim.mjs --crossover --players 1500 --seed 1 --design N14                        # 132 s
 
 `--json out.json` keeps every number; `--trend <file>` points at another copy of the trend model. The runs above were made on 2026-11-18 between 20:02 and 20:34 UTC on the commits of this note; the exit code was 1 for the three runs with a failing line, all reported above: classic-week (coverage 91.8 %, §4), N14-wideTail (ever 6.6 %, §9) and N14 with seed 2 (coverage 91.8 %, §6); every other batch and the crossover passed all hard checks.
+
+## 12. Pattern Memory scored by cells (19 Nov, PLAN milestone 6's last probe upgrade)
+
+Note M1 assumed that scoring Pattern Memory by its squares would double its information (§4.3, "×2 assumed"). Before building version 2 this was simulated in `tests/node/measure-cells.mjs`, with an explicit model of how squares are recalled, and the scoring was built from the result.
+
+**Truth.** On each item every filled square is recalled with σ(θ + u − β); u ~ N(0, τ²) is the pattern's own ease, shared by all its squares (a pattern that chunks well is recalled well as a whole), with τ = 0.5, 1 or 1.5. β is set so that the whole pattern is recalled half the time at θ = b + e, where b is version 1's difficulty and e is a level error ~ N(0, 0.3²) that applies to both scorings. Each forgotten square is guessed with probability γ (0 or 0.5): a mark on a random unmarked square, which counts as an extra mark unless it lands on another forgotten one. Three items in a hundred are lapses (p halved). Pool: the 21 real levels.
+
+**Scores and models.** The exact score uses version 1's model, g + (1 − g − 0.03)·σ(θ − b), with items aimed at the exact-pattern chance k = 0.6. The score by cells is s = squares marked right − extra marks, at least 0. Its model is P(s) = 0.97·E_u[Binomial(s; k, σ(θ + u − b + Δ(k, τm)))] + 0.03/(k + 1), with Δ chosen so that the whole pattern is recalled half the time at θ = b. Because b keeps version 1's meaning, the cell model needs only one new number, τm. Items aim at a lower exact chance (0.45, 0.35 or 0.25), where the squares carry more.
+
+**Measure.** Blocks of m items are run at fixed abilities θ ∈ {−1.5, −0.75, 0, 0.75, 1.5}, 3,000 blocks each. The targeting prior is centred at θ + N(0, 0.7²) with SD 1.5, and the estimate is the block's posterior under a weak N(0, 3²). Efficiency is (dE[θ̂]/dθ)² / Var(θ̂) averaged over the middle three abilities: what a block actually tells the trend model. It is set against the claim, the model's 1 / posterior variance. A claim/efficiency ratio above 1 means the model is over-confident.
+
+| m items, truth | exact (k 0.6): efficiency, claim/eff | cells τm 1.5, k 0.35: efficiency (× exact), claim/eff |
+|---|---|---|
+| 5, τ 0.5, no guesses | 0.79, 0.94 | 2.66 (×3.38), 0.52 |
+| 5, τ 0.5, guesses | 0.71, 1.03 | 2.02 (×2.87), 0.65 |
+| 5, τ 1, no guesses | 0.65, 1.14 | 1.73 (×2.65), 0.74 |
+| 5, τ 1, guesses | 0.64, 1.15 | 1.29 (×2.01), 0.94 |
+| 5, τ 1.5, no guesses | 0.57, 1.32 | 1.14 (×2.01), 1.02 |
+| 5, τ 1.5, guesses | 0.56, 1.33 | 0.91 (×1.62), 1.21 |
+| 2, τ 0.5 / 1 / 1.5, guesses | 0.17 / 0.16 / 0.15 | ×4.09 / ×3.00 / ×2.28 |
+
+(Level error on in every row; the first items are not the easy ones, as in blocks after the first. With the two easy items first, the 5-item gains are ×1.3–2.6 at k 0.35.)
+
+- **The information gain comes from the aim, not from τm.** At the version 1 aim (k 0.6) cells add ×0.9–1.4. At 0.35 they add ×1.6–3.4 per 5-item block, and more in Design A's 2-item blocks, where the exact score carries almost nothing. Lowering k to 0.25 adds a little more (×2.0–4.6), but players would get the whole pattern only a quarter of the time. 0.35 was chosen; the mean cell score stays about 0.83–0.89.
+- **τm decides honesty, not information.** τm 1.0 or 1.25 over-claim when the truth has τ 1.5 and guesses (claim/eff 1.34–1.51). τm 1.5 keeps the claim at or below version 1's own over-claim in every simulated case: its worst is 1.21, where the exact score's is 1.33, because a hand-set slope of 1 is too steep when patterns differ in ease. **Chosen: τm 1.5** (`E.trend.config.cells.tau`). Pooled data should set τ first.
+- **Guesses** lower the efficiency of the cell score by about a quarter. Version 2's card tells players that a wrong mark costs as much as a missed square, so they should mark the squares they remember.
+- **A first pass with a fixed weight** (a fractional-logistic outcome weighted by k / (1 + (k − 1)ρ)) was dropped. No single ρ was honest across τ, because the correlation of the squares depends on where θ sits.
+- **Blind answers** (rule 5): see DECISIONS 19 Nov and tests/node/patterns.test.mjs. Version 2 balances the checkerboard colours of scattered patterns, and six small or scattered levels have a scoped cap of chance + 25. In a 5-item check, a blind answer of the squares filled most often reads −3.70, below the pool.
+
+Reproduce (seconds each): `node tests/node/measure-cells.mjs --players 4000` (per-occasion table, posterior under N(0, 1.5²)); `node tests/node/measure-cells.mjs --efficiency --reps 3000 --m 5 --easy 0 --taus 1.25,1.5 --ks 0.6,0.45,0.35,0.25` and the same with `--m 2` (the table above); `--easy 2` with the default taus 1.0,1.25,1.5 for the first-occasion case.

@@ -5,7 +5,8 @@
    the opt-in measurement week, the run-in after a break, the delayed check), the entries (items and probe versions
    kept for life, `late`, the standard-prior posterior), the trend input (versions as their own probes; 1.1 entries as
    summaries; h from training minutes), the meter and the verdicts stored once per milestone, the measure container's
-   repair and merge, the events and the session kinds. */
+   repair and merge, the events and the session kinds; a probe scored by cells (Pattern Memory from version 2: rows
+   [b, g, ok, rtMs, s, k], the posterior and the trend input under the cell model, items aimed at its measureK). */
 import { MANIFEST } from './run.mjs';
 import { defineFixtures, TRAIN, PROBES } from './fixtures/exercises.mjs';
 import { Learner, newRecord, playSession } from './fixtures/learner.mjs';
@@ -29,12 +30,13 @@ function stub(id) {
 }
 
 export async function run(t0) {
-  // o.versions: { <probe id>: version } (o.past: { <probe id>: { <version>: { min, max } } }); o.ladder false: no new probes
+  // o.versions: { <probe id>: version } (o.past: { <probe id>: { <version>: { min, max } } }; o.extra: { <probe id>: more
+  // definition fields }); o.ladder false: no new probes
   const mk = (o = {}) => {
     const c = o.store ? t0.env({ files: [...MANIFEST], exercises: false, now: T0 }) : t0.context({ exercises: false });
     const v = o.versions || {}, past = o.past || {};
     defineFixtures(c.PX, { only: [...TRAIN, ...PROBES].map((d) => d.id).filter((id) => !v[id]) });
-    for (const d of PROBES) if (v[d.id]) c.PX.ex.define({ ...d, ...stub(d.id), version: v[d.id], ...(past[d.id] ? { past: past[d.id] } : {}) });
+    for (const d of PROBES) if (v[d.id]) c.PX.ex.define({ ...d, ...stub(d.id), version: v[d.id], ...(past[d.id] ? { past: past[d.id] } : {}), ...((o.extra || {})[d.id] || {}) });
     if (o.ladder !== false) for (const d of NEW_PROBES) c.PX.ex.define({ ...d, ...stub(d.id), version: v[d.id] || 1 });
     return c.PX;
   };
@@ -47,6 +49,7 @@ export async function run(t0) {
   container(t);
   curves(t);
   balance(t);
+  cells(t);
 }
 
 /* ---------- helpers ---------- */
@@ -477,4 +480,54 @@ function balance(t) {
   t.eq(A._.checkMeasure({ v: 1, balance: [{ date: 'd', n: 1, items: [] }, { n: 2 }, 'x'] }), { v: 1, balance: [{ date: 'd', n: 1, items: [] }] }, 'the repair drops broken runs');
   const m = A._.mergeMeasure({ v: 1, balance: [{ date: '2026-11-02', n: 1, items: [] }] }, { v: 1, balance: [{ date: '2026-11-01', n: 2, items: [] }, { date: '2026-11-02', n: 1, items: [] }] }, {});
   t.eq(m.balance.map((e) => e.date), ['2026-11-01', '2026-11-02'], 'two tabs: every run once, in time order');
+}
+
+/* ---------- a probe scored by cells (Pattern Memory from version 2) ---------- */
+
+function cells(t) {
+  t.section('measure: a probe scored by cells');
+  const K = [4, 6, 8, 10, 12, 15, 18, 20];
+  // the fixture's patterns as version 2, scored by cells (k from its size level), aimed at 0.35
+  const PX = t.mk({ versions: { patterns: 2 }, past: { patterns: { 1: { min: -2, max: 2.06 } } },
+    extra: { patterns: { scoreBy: 'cells', measureK: 0.35, cells(p) { return K[p.size]; } } } });
+  const E = PX.engine, A = E.assess, M = E.model, def = PX.ex.get('patterns');
+  t.eq(A._.cellsOf(def, { size: 2 }), 8, 'cellsOf reads def.cells(params)');
+  t.eq(A._.cellsOf(PX.ex.get('cubematch'), { size: 2 }), 0, '… and is 0 for a probe scored right or wrong');
+  const rec = newRecord(PX, T0), plan = E.modes.start(rec, 'check', { now: T0, kind: 'B1' });
+  const pr = plan.check.probes.find((x) => x.id === 'patterns');
+  t.ok(pr && pr.v === 2, 'the check runs version 2');
+  const got = [];
+  let now = T0;
+  for (let i = 0; i < 200; i++) {
+    const st = E.modes.next(plan, rec, now);
+    if (st.done) break;
+    now += 6000;
+    if (st.exId !== 'patterns') { E.modes.answer(plan, rec, st, { correct: i % 2 === 0, rt: 2000 }, now); continue; }
+    const k = K[st.params.size], n = got.length;
+    // answers: the whole pattern, then k − 2, then a time-out with nothing marked, then k − 3, …
+    const res = n === 0 ? { correct: true, rt: 3000, value: 1 } : n === 2 ? { correct: false, rt: null, timeout: true }
+      : { correct: false, rt: 3100, value: (k - 2 - (n % 2)) / k };
+    got.push({ st, k, res });
+    E.modes.answer(plan, rec, st, res, now);
+  }
+  E.modes.finish(plan, rec, now);
+  const e = rec.assess[0], rows = e.items.patterns;
+  t.ok(got.length === rows.length && got.length >= 4, `one row per answer (${rows.length})`);
+  t.ok(rows.every((r, i) => r.length === 6 && r[5] === got[i].k && r[2] === (i === 0 ? 1 : 0)), 'rows [b, g, ok, rtMs, s, k] with ok the exact pattern');
+  t.eq(rows.map((r) => r[4]), got.map((g, i) => (i === 0 ? g.k : i === 2 ? 0 : g.k - 2 - (i % 2))), 's from the score’s value (s / k); a time-out with nothing marked is 0');
+  t.eq(e.results.patterns.right, 1, '`right` counts exact patterns');
+  const lw = A._.newPost(def);
+  for (const r of rows) for (let q = 0; q < A._.GRID.length; q++) lw[q] += E.trend.cells.logp(A._.GRID[q], r[0], r[5], r[4]);
+  t.near(e.results.patterns.theta, A._.summary(lw).mu, 1e-4, 'the stored θ is the standard-prior posterior under the cell model');
+  // aims: the first two items at 0.85 (a version met for the first time), then at the probe's own 0.35
+  t.ok(got.slice(0, 2).every((g) => Math.abs(g.st.target - M.target(g.st.g, 0.85)) < 1e-12) &&
+    got.slice(2).every((g) => Math.abs(g.st.target - M.target(g.st.g, 0.35)) < 1e-12), 'items aim at 0.85 first, then at def.measureK 0.35');
+  const inp = A.trendInput(rec), blk = inp.occasions[0].blocks.find((b) => b.probe === 'patterns@2');
+  t.ok(blk && blk.items.every((it, i) => it.length === 6 && it[3] === null && it[4] === 1 && it[5].k === rows[i][5] && it[5].s === rows[i][4]),
+    'the trend input reads [b, g, ok, null, 1, { k, s }]');
+  t.ok(inp.occasions[0].blocks.filter((b) => b.probe !== 'patterns@2').every((b) => b.items.every((it) => it.length === 3)), 'other probes keep [b, g, ok]');
+  const f = A.fit(rec);
+  t.ok(f && f.ok && f.probes.includes('patterns@2'), 'the trend model fits it, under its version');
+  t.eq(A._.rowCells([0, 0.01, 0, null, 7, 6]), null, 'a row with s above k is not read as cells');
+  t.eq(A._.rowCells([0, 0.01, 0, null, 3]), null, 'nor a short row');
 }

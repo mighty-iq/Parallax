@@ -5,6 +5,10 @@
    Every measurement occasion is an entry of rec.assess:
      { date, form, kind, results: { <probe>: { right, n, theta, se, rtMed } }, items: { <probe>: [[b, g, ok, rtMs], …] },
        pv: { <probe>: version }, late?: true, … }
+   A probe scored by cells (def.scoreBy 'cells', def.cells(params) = k: Pattern Memory from version 2) stores
+   [b, g, ok, rtMs, s, k]: s = squares marked right minus extra marks (at least 0) of the k filled squares, ok the
+   exact pattern, b its exact-pattern difficulty; the posterior and the trend read s under the cell model
+   (js/engine/trend.js, E.trend.cells; docs/dev/v1.2/measure-sim.md §12), and `right` counts exact patterns.
    kind: full checks 'B1', 'B2' (baselines), 'regular' (the 4-weekly check; also the run-in after a long break),
    'delayed' (after training stops) and, in records from 1.1, 'B3'; Design A adds 'block' (the no-feedback block at
    the start of a training session) and 'week' (a session of the opt-in measurement week). `results` holds each
@@ -15,8 +19,9 @@
    The mix (config block 'measure', DECISIONS 18 Nov "N14"): a block holds the near probe × 6, two of the three mid
    probes × 2 (rotating), one of the two far probes × 2 (alternating) and the control × 2; a full check holds every
    probe (config.measure.full). Missing probes (not built yet, or not runnable on this device) leave their places
-   empty. Items aim at g + (1 − g)·0.6 under a prior centred on the trend model's prediction for the probe
-   (SD 1.5); a probe's first two items ever at 0.85, after its worked example.
+   empty. Items aim at g + (1 − g)·0.6 (a probe's own def.measureK where it has one: Pattern Memory's 0.35, since its
+   cells carry the information) under a prior centred on the trend model's prediction for the probe (SD 1.5); a
+   probe's first two items ever at 0.85, after its worked example.
 
      start/next/answer/void/finish     the check session (called by modes, mode 'check'; opts.kind picks the kind)
      nextMeasure(rec, now) → { due, kind, when: 'after-tutorial' | 'session-start' | 'check', minutes, why,
@@ -93,11 +98,27 @@
     var m = isNum(center) ? center : priorCenter(def), s = isNum(sd) && sd > 0 ? sd : C.assess.priorSd;
     return GRID.map(function (th) { return -(th - m) * (th - m) / (2 * s * s); });
   }
-  function updatePost(lw, b, g, ok) {
-    for (var i = 0; i < GRID.length; i++) {
+  function updatePost(lw, b, g, ok, k, s) {
+    var i;
+    if (k && E.trend && E.trend.cells) { // scored by cells: the trend model's likelihood of s
+      for (i = 0; i < GRID.length; i++) lw[i] += E.trend.cells.logp(GRID[i], b, k, s);
+      return;
+    }
+    for (i = 0; i < GRID.length; i++) {
       var p = M.p(GRID[i], b, g);
       lw[i] += Math.log(ok ? p : 1 - p);
     }
+  }
+  // A probe scored by cells: its filled squares for these params (0 for every other probe)
+  function cellsOf(def, params) {
+    if (!def || def.scoreBy !== 'cells' || typeof def.cells !== 'function') return 0;
+    var k = def.cells(params);
+    return isNum(k) && k >= 1 && k <= 64 && k === Math.floor(k) ? k : 0;
+  }
+  // A stored row's cells as the trend model reads them, or null
+  function rowCells(x) {
+    return isArray(x) && x.length >= 6 && isNum(x[5]) && x[5] >= 1 && x[5] <= 64 && x[5] === Math.floor(x[5]) &&
+      isNum(x[4]) && x[4] >= 0 && x[4] <= x[5] && x[4] === Math.floor(x[4]) ? { k: x[5], s: x[4] } : null;
   }
   function summary(lw) {
     var mx = -Infinity, i;
@@ -309,7 +330,10 @@
         if (!def || def.role !== 'probe') return;
         var v = isNum(pv[id]) ? pv[id] : 1, key = keyOf(id, v), its = isObj(a.items) ? a.items[id] : null;
         if (isArray(its) && its.length) {
-          var items = its.filter(function (x) { return isArray(x) && isNum(x[0]) && isNum(x[1]); }).map(function (x) { return [x[0], x[1], x[2] ? 1 : 0]; });
+          var items = its.filter(function (x) { return isArray(x) && isNum(x[0]) && isNum(x[1]); }).map(function (x) {
+            var c = rowCells(x);
+            return c ? [x[0], x[1], x[2] ? 1 : 0, null, 1, c] : [x[0], x[1], x[2] ? 1 : 0];
+          });
           if (items.length) blocks.push({ probe: key, items: items });
         } else {
           var s = fromPosterior(def, a.results[id], pv[id]);
@@ -482,7 +506,7 @@
     var def = PX.ex.get(pr.id), post = summary(pr.lw), pc = plan.check;
     // The first items of a probe (version) met for the first time are easy (g + (1 − g)·0.85), so a newcomer meets
     // an easy item right after the worked example; then the usual g + (1 − g)·0.6.
-    var k = pr.n < pr.easy ? C.measure.easyK : C.measure.k;
+    var k = pr.n < pr.easy ? C.measure.easyK : isNum(def.measureK) && def.measureK > 0 && def.measureK < 1 ? def.measureK : C.measure.k;
     // A probe of several formats (def.cycle 'variant': Other Way Round's strands) reads them in turn: item i is
     // variant i mod n, and its items adapt within the variant.
     var cyc = def.cycle === 'variant' && isArray(def.variants) && def.variants.length ? def.variants[pr.n % def.variants.length] : null;
@@ -537,15 +561,18 @@
       pr.right += 1;
       if (rt !== null) pr.rts.push(rt);
     }
-    updatePost(pr.lw, step.b, step.g, ok);
-    if (pr.lwS) updatePost(pr.lwS, step.b, step.g, ok);
+    // scored by cells: s from the score's value (s / k), or from the exact verdict when no value came (a timeout)
+    var k = cellsOf(PX.ex.get(pr.id), step.params), s = null;
+    if (k) s = result && isNum(result.value) ? Math.max(0, Math.min(k, mround(result.value * k))) : ok ? k : 0;
+    updatePost(pr.lw, step.b, step.g, ok, k, s);
+    if (pr.lwS) updatePost(pr.lwS, step.b, step.g, ok, k, s);
     if (plan.check.lab) { // Balance: [b, g, ok, rtMs, distance, pull, kind (0 balance point, 1 bus stop), x, y]
       var at = result && isArray(result.at) ? result.at : [];
       pr.log.push([U.round(step.b, 3), U.round(step.g, 3), ok ? 1 : 0, rt, isNum(result && result.value) ? result.value : null,
         isNum(result && result.value2) ? result.value2 : null, step.params && step.params.variant === 'median' ? 1 : 0, isNum(at[0]) ? at[0] : null, isNum(at[1]) ? at[1] : null]);
       return;
     }
-    pr.log.push([U.round(step.b, 3), U.round(step.g, 3), ok ? 1 : 0, rt]);
+    pr.log.push(k ? [U.round(step.b, 3), U.round(step.g, 3), ok ? 1 : 0, rt, s, k] : [U.round(step.b, 3), U.round(step.g, 3), ok ? 1 : 0, rt]);
   }
 
   function finish(plan, rec, now, res) {
@@ -1011,7 +1038,7 @@
     form: form, checks: checks, occasions: occasions, composite: composite, needB3: needB3, expect: expect,
     nextMeasure: nextMeasure, meter: meter, later: later, trendInput: trendInput, fit: fit, settle: settle, wire: wire,
     mix: mixOf, FULL: FULL, curves: curves, balanceReport: balanceReport, balanceSummary: balanceSummary,
-    _: { fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0,
+    _: { fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0, cellsOf: cellsOf, rowCells: rowCells,
       checkMeasure: checkMeasure, mergeMeasure: mergeMeasure, hAt: hAt, fromPosterior: fromPosterior, blockMix: blockMix, fullMix: fullMix },
   };
 })(window.PX);

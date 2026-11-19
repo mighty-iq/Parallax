@@ -146,6 +146,49 @@ export async function run(t) {
   const pv = T.predict(fv, 'cubematch@2');
   t.ok(pv && Number.isFinite(pv.mean) && T.predict(fv, 'cubematch@3') === null, 'predict knows the versions the fit saw');
   t.ok(['mean', 'sd', 'lo', 'hi'].every((k) => Number.isFinite(fv.gain.comp.pts[k])) && fv.gain.comp.pts.hi > fv.gain.comp.pts.lo, 'the readout in probe points has a range');
+
+  t.section('items scored by cells (Pattern Memory from version 2)');
+  const C = T.cells, tau = T.config.cells.tau, lapse = T.config.fit.lapse;
+  t.eq(tau, 1.5, 'tau 1.5 (docs/dev/v1.2/measure-sim.md §12)');
+  let sumsOk = true, scoreOk = true, infoOk = true;
+  for (const k of [4, 6, 8, 10, 12, 15, 18]) for (const x of [-4, -1.5, 0, 0.7, 2.5]) {
+    let tot = 0, info = 0;
+    for (let s = 0; s <= k; s++) {
+      const pd = T._.cellPD(x, k, s, tau, lapse), h = 1e-5;
+      tot += pd.P; info += pd.D * pd.D / pd.P;
+      const num = (C.logp(x + h, 0, k, s) - C.logp(x - h, 0, k, s)) / (2 * h);
+      if (Math.abs(num - C.si(x, 0, k, s).S) > 1e-5) scoreOk = false;
+    }
+    if (Math.abs(tot - 1) > 1e-9) sumsOk = false;
+    if (Math.abs(info - T._.cellInfo(x, k, tau, lapse)) > 1e-3 * Math.max(1, info)) infoOk = false;
+  }
+  t.ok(sumsOk, 'P(s) sums to 1 over s = 0…k');
+  t.ok(scoreOk, 'the score is d/dθ log P(s) (numerical derivative)');
+  t.ok(infoOk, 'the information table matches Σ D²/P');
+  // Δ(k, tau): the whole pattern half the time at θ = b (lapse aside)
+  const whole = [4, 8, 18].map((k) => (T._.cellPD(0, k, k, tau, lapse).P - lapse / (k + 1)) / (1 - lapse));
+  t.ok(whole.every((p) => Math.abs(p - 0.5) < 1e-6), `the whole pattern half the time at θ = b (${whole.map((p) => p.toFixed(4)).join(', ')})`);
+  t.ok(C.delta(18, tau) > C.delta(8, tau) && C.delta(8, tau) > C.delta(4, tau), 'more squares, larger Δ (each square easier at θ = b)');
+  // rows: { k, s } at index 5; a malformed one makes the block invalid; a number there (a simulation's tag) is ignored
+  t.ok(C.of([0, 0.01, 0, null, 1, { k: 8, s: 5 }]) && !C.of([0, 0.01, 0, null, 1, { k: 8, s: 9 }]) && !C.of([0, 0.01, 0, null, 1, 3]), 'cells.of reads { k, s } and refuses s > k');
+  const bad = T.fit({ occasions: [{ t: 0, h: 0, blocks: [{ probe: 'patterns', items: [[0, 0.01, 0, null, 1, { k: 8, s: 9 }]] }] }] });
+  t.ok(!bad.ok, 'a block with a malformed cells entry is dropped (no data: no fit)');
+  // a block of cell items: the linearised observation sits at the item likelihood's mode, with its information
+  const rng = PX.rng(4242), draw = (theta, b, k) => {
+    const u = tau * Math.sqrt(-2 * Math.log(1 - rng.float(0, 1))) * Math.cos(2 * Math.PI * rng.float(0, 1)), d = C.delta(k, tau);
+    let s = 0; for (let q = 0; q < k; q++) if (rng.float(0, 1) < 1 / (1 + Math.exp(-(theta + u - b + d)))) s++;
+    return s;
+  };
+  const items = [];
+  for (let i = 0; i < 40; i++) { const b = -1 + (i % 5) * 0.5, k = [8, 10, 12][i % 3]; items.push([b, 0.001, 0, null, 1, { k, s: draw(0.4, b, k) }]); }
+  let eta = 0;
+  for (let it = 0; it < 50; it++) { const w = T._.linearise(items, eta); eta = w.y; }
+  const G = []; for (let x = -4; x <= 4.0001; x += 0.001) G.push(x);
+  let best = -Infinity, mode = 0;
+  for (const x of G) { let l = 0; for (const it of items) l += C.logp(x, it[0], it[5].k, it[5].s); if (l > best) { best = l; mode = x; } }
+  t.near(eta, mode, 2e-3, `iterated linearisation reaches the likelihood's mode (${eta.toFixed(3)} vs ${mode.toFixed(3)}; truth 0.4)`);
+  const mixed = T._.linearise([...items.slice(0, 3), [0.2, 0.25, 1], [0.5, 0.25, 0]], 0.3);
+  t.ok(Number.isFinite(mixed.y) && mixed.v > 0, 'cell items and right-or-wrong items mix in one block');
 }
 
 /* ---------- helpers ---------- */

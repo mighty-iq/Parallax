@@ -16,9 +16,16 @@
    Item (JSON): { ex: 'patterns', seed, params, key, rows, cols, k, clusters, exposureMs }
      cells are numbered row-major from the top left: id = row × cols + col; key = the filled ids,
      sorted ascending (the response shape of answer 'targets').
-   score(item, ids): correct when the tapped set equals the pattern exactly; value = the share of
-     cells classified right (filled tapped, empty untapped); detail = { hits, misses, falseAlarms }.
-   helpers: clusters(cells, rows, cols), band(params), SIZES, CLUSTER_BANDS (for tests). */
+   score(item, ids): correct when the tapped set equals the pattern exactly; detail = { hits, misses,
+     falseAlarms, cells }, cells = hits − false alarms, at least 0 (each square marked right counts, each wrong
+     mark costs as much as a missed square); value = cells / k.
+   Version 2 (v1.2, PLAN milestone 6's probe upgrades; docs/dev/v1.2/measure-sim.md §12): the same task, scored
+     by cells: the Spatial Check reads `cells` under the cell model of js/engine/trend.js (scoreBy 'cells',
+     cells(params) = k) instead of the exact pattern alone, and aims its items at a whole-pattern chance of 0.35
+     (measureK), where the cells carry the most. Version 1 scored the exact pattern (value was the share of all
+     cells classified right); its range stays in def.past for the trend model.
+   helpers: clusters(cells, rows, cols), band(params), SIZES, CLUSTER_BANDS, shortcuts (fixed responses that
+     never look at the pattern, for the tests' rule-5 check) (for tests). */
 (function (PX) {
   'use strict';
 
@@ -79,6 +86,16 @@
 
   function band(params) { return CLUSTER_BANDS[params.size][params.regularity]; }
 
+  // Version 2: at the scattered level the filled squares split between the two colours of a checkerboard within
+  // PARITY (scored by cells, a checkerboard marked blind would otherwise earn about a quarter of the squares on
+  // patterns of single squares, which lean to one colour; tests/node/patterns.test.mjs, rule 5).
+  var PARITY = 2;
+  function parityGap(cells, cols) {
+    var a = 0;
+    for (var i = 0; i < cells.length; i++) if ((Math.floor(cells[i] / cols) + cells[i] % cols) % 2 === 0) a++;
+    return Math.abs(2 * a - cells.length);
+  }
+
   /* Places c mutually non-touching seed cells, then adds k − c cells one at a time, each touching
      exactly one cluster (so clusters grow but never merge): the pattern has exactly c clusters.
      Returns the sorted cells, or null when no cell can be added (the caller retries). */
@@ -130,16 +147,11 @@
   }
 
   /* Fallback when 50 tries fail (rare): shapes = one block filled row by row over all columns but
-     the last (one cluster); scattered = the first k cells of a checkerboard (every cell its own
-     cluster); clusters = the first valid pattern from a fixed list of seeds that do not depend on
-     the item seed (the tests check that it exists for every level). */
+     the last (one cluster); clusters and scattered = the first valid pattern from a fixed list of seeds
+     that do not depend on the item seed (the tests check that it exists for every level). */
   function fallback(seed, params) {
-    var s = SIZES[params.size], rows = s[0], cols = s[1], k = s[2], cells = [], id, item;
-    if (params.regularity === 2) {
-      for (id = 0; id < rows * cols && cells.length < k; id++) {
-        if ((Math.floor(id / cols) + id % cols) % 2 === 0) cells.push(id);
-      }
-    } else if (params.regularity === 0) {
+    var s = SIZES[params.size], rows = s[0], cols = s[1], k = s[2], cells = [], item;
+    if (params.regularity === 0) {
       for (var r = 0; r < rows && cells.length < k; r++) {
         for (var c = 0; c < cols - 1 && cells.length < k; c++) cells.push(r * cols + c);
       }
@@ -173,6 +185,7 @@
     if (c !== item.clusters) return 'stored cluster count is wrong';
     if (c < b[0] || c > b[1]) return c + ' clusters is outside the ' + REGULARITY[p.regularity] + ' band ' + b.join('–');
     if (p.regularity > 0 && fullLines(cells, s[0], s[1])) return 'a full row or column above the shapes level';
+    if (p.regularity === 2 && parityGap(cells, s[1]) > PARITY) return 'scattered squares lean to one checkerboard colour by more than ' + PARITY;
     if (item.exposureMs !== EXPOSURE_MS) return 'exposure must be 3 s';
     return true;
   }
@@ -199,20 +212,49 @@
       seen[id] = true;
       if (inKey[id]) hits++; else fa++;
     }
-    var misses = item.key.length - hits;
+    var k = item.key.length, misses = k - hits, cells = Math.max(0, hits - fa);
     return {
       correct: misses === 0 && fa === 0,
-      value: (N - misses - fa) / N,
-      detail: { hits: hits, misses: misses, falseAlarms: fa },
+      value: k ? cells / k : 0,
+      detail: { hits: hits, misses: misses, falseAlarms: fa, cells: cells },
+    };
+  }
+
+  /* Shortcut responses (CLAUDE.md rule 5, for a recall task): answers that never look at the pattern, from the
+     grid's size alone. Scored by cells, each must stay within the score of k random cells + 10 points at every
+     level (tests/node/patterns.test.mjs). The positional prior (the k cells filled most often) is the tests' own,
+     from other seeds. */
+  function shortcuts(rows, cols, k) {
+    var N = rows * cols, all = [], i;
+    for (i = 0; i < N; i++) all.push(i);
+    function parity(q) { return all.filter(function (id) { return (Math.floor(id / cols) + id % cols) % 2 === q; }); }
+    function nearest(cx, cy) { // the k cells nearest a point (row, col units), ties by id
+      return all.map(function (id) { var r = Math.floor(id / cols), c = id % cols; return [(r - cy) * (r - cy) + (c - cx) * (c - cx), id]; })
+        .sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).slice(0, k).map(function (x) { return x[1]; }).sort(function (a, b) { return a - b; });
+    }
+    var ring = all.filter(function (id) { var r = Math.floor(id / cols), c = id % cols; return r === 0 || c === 0 || r === rows - 1 || c === cols - 1; });
+    return {
+      nothing: [], everything: all, checkerA: parity(0), checkerB: parity(1),
+      checkerAk: parity(0).slice(0, k), checkerBk: parity(1).slice(0, k),
+      centre: nearest((cols - 1) / 2, (rows - 1) / 2), corner: nearest(0, 0), reading: all.slice(0, k),
+      columns: all.slice().sort(function (a, b) { return a % cols - b % cols || a - b; }).slice(0, k).sort(function (a, b) { return a - b; }),
+      border: ring, borderk: ring.slice(0, k),
     };
   }
 
   // The shared model for the view and the tests (def.lib; def.helpers is the same object).
-  var LIB = { clusters: clusters, fullLines: fullLines, band: band, SIZES: SIZES, CLUSTER_BANDS: CLUSTER_BANDS, fallback: fallback, EXPOSURE_MS: EXPOSURE_MS };
+  var LIB = { clusters: clusters, fullLines: fullLines, band: band, SIZES: SIZES, CLUSTER_BANDS: CLUSTER_BANDS, fallback: fallback, EXPOSURE_MS: EXPOSURE_MS, shortcuts: shortcuts, parityGap: parityGap, PARITY: PARITY };
 
   PX.ex.define({
-    id: 'patterns', version: 1, code: 'PR-4', name: 'Pattern Memory', short: 'Patterns',
+    id: 'patterns', version: 2, code: 'PR-4', name: 'Pattern Memory', short: 'Patterns',
     abilities: ['MV'], cell: 'extrinsic-static', role: 'probe', answer: 'targets',
+    // version 1's level range (exact-pattern scoring; the same levels), for the trend model's earlier entries
+    past: { 1: { min: -2.1, max: 2.1 } },
+    // scored by cells (header): the Spatial Check reads detail.cells of k = cells(params) filled squares, and aims
+    // at a whole-pattern chance of 0.35 (docs/dev/v1.2/measure-sim.md §12)
+    scoreBy: 'cells',
+    cells: function (params) { return SIZES[params && SIZES[params.size] ? params.size : 0][2]; },
+    measureK: 0.35,
     format: 'patterns:grid-pattern-recall', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
     dims: [
       { key: 'size', label: 'Grid and filled cells', levels: ['3×3 · 4', '3×4 · 6', '4×4 · 8', '4×5 · 10', '5×5 · 12', '5×6 · 15', '6×6 · 18'], step: 0.45 },
