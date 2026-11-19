@@ -172,6 +172,13 @@ function testDaily(t) {
   const ar = D.archive(rec, now, 5);
   t.ok(ar.length === 5 && ar[0].day === '2026-11-20' && ar.find((x) => x.day === '2026-11-19').state === 'done', 'the archive lists past days with their state');
   t.ok(Object.keys(h).every((k) => !/streak|row|consecutive/i.test(k)), 'no count of days in a row in the history');
+  // the ramp's top item is in the hardest tenth for everyone: a right answer there earns no skill milestone
+  const r8 = newRecord(PX, T0), top = D.items(day)[7], tdef = PX.ex.get(top.exId), trg = M.range(tdef);
+  t.ok(tdef.difficulty(top.params) >= trg.min + 0.9 * (trg.max - trg.min) - 1e-9, 'item 8 sits in the hardest tenth of its range');
+  const p8 = E.modes.start(r8, 'daily', { now });
+  for (let i = 0; i < 8; i++) { const s = E.modes.next(p8, r8, now + i); E.modes.answer(p8, r8, s, { correct: true, rt: 1500 }, now + i); }
+  const f8 = E.modes.finish(p8, r8, now + 100);
+  t.ok(!f8.achievements.some((a) => a.id === 'top-tenth'), 'a right answer to the Daily\'s top item does not earn Top tenth (it is dealt to everyone, not aimed at the player)');
 }
 
 /* ============================================================ the Climb */
