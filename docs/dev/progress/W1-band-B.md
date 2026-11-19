@@ -92,8 +92,36 @@ Design source: docs/research/v1.2/D2-first-band.md §3.0, §3.4–3.9, §4. Requ
   the feature in, cast rays), independent of featuresSeen, which is now conservative; node openings 346/0,
   shortcut-levels openings 193/0, harness_openings 154/0, harness_starter_b 66/0.
 
+## Round 3: the fresh-player run on a 390 × 844 phone (snapshot f647a60), 19 Nov
+- Missing View dealt one item twice in a session (step_216, step_219). Cause: the starter band's tiny pools (4 to
+  14 stems per setting at a missing end or front view; two draws shared a stem 7 to 25 % of the time) and no
+  content check anywhere (the engine keeps seeds and the last three settings apart, not stems). Fixed at the root:
+  a session guard (lib.sessionGuard in js/ex/patviews/gen.js, run at the player's item:before from
+  js/ex/patviews/view.js, order 40) re-seeds from the engine any item whose stem the session has shown, for every
+  exercise whose lib has sigOf (all four DAT-style formats of mine; the item made last is remembered, so the
+  player's own item is not made twice); the logged seed rebuilds the item shown. A missing end view with
+  same-outline or solid-or-dotted foils takes the 3 × 3 box too (4 to 14 stems). Measured pools elsewhere: Hole
+  Punch 8 to 160 stems per setting (a repeat answers from memory: a stem fixes the answer), Openings' starter
+  level, Form's wedges and pyramids, cube stacks at levels 1 and 2. Section forms skip a seed whose stem the part
+  has where lib.fewStems says so (Hole Punch repeated a stem in 37 of 60 forms; now none).
+- Form (the half of item 2 that was started): the band's wrong sizes are twice to 2.5 times (foil 0) or 1.5 to
+  under 2 times (foil 1) the pattern's size; every picture shows a corner of three faces (no end-on rectangle);
+  the four pictures always differ (rule 4: about 3 % of items, Try 4 among them, had two look-alike options);
+  Try 2, Try 4 and the worked example on new seeds (14, 151, 51), the Try answers in four places.
+- Review RV-claims-1.2 M5 and L9: the bridges of Openings, Missing View, Form and Hole Punch carry one limit, then
+  the ADA line; Openings' features note names no difficulty.
+
 ## Next
 - Form's fresh-player rerun (the lead's); fix what it finds once.
 
-## Open problems
-- none
+## Open (round 3 items not started: the coordinator stopped the round on 19 Nov at about 16:05 UTC, owner low on usage)
+- Missing View: one line when the drawn structure stops being drawn (step_209); one Try item with dotted hidden
+  lines (they first come in scored items, step_192); "TOP" and "THE STRUCTURE" touch in the header at 390 px
+  (step_188, step_196); the result strip packs the time, "The right answer is marked ✓" and the step caption into
+  three tight rows (step_197, 200, 210, 222): the caption side is mine, the strip is play.js's (request to file).
+- tests/e2e/phones.py (granted): Hole Punch's checks lack version 3's 'sheets' dim; Form's badge cover is 13 % of
+  12 % allowed.
+- Form after this round's view and size change: fit.py at 360 × 640 and 390 × 844, harness_form, and a look at the
+  real Try items in the app (harness_starter_b opens the band's settings, not the Try items themselves).
+- W2-core: the session guard could move into play.js (every exercise with a stemSig) and item:before's ctx could
+  carry the generated item (requests.md).
