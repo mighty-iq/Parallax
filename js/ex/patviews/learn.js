@@ -119,6 +119,6 @@
       diffMissing: 'A line is missing where marked: an edge lies there.',
       diffMixed: 'The marked lines differ from the right drawing.',
     },
-    bridge: 'Drafters and machinists read top, front and end views like these. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
+    bridge: 'Drafters and machinists read top, front and end views like these; here you work out the third from the other two. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®); practising it here improves this task, and an effect on DAT scores has not been shown or measured. ' + ADA,
   });
 })(window.PX);

@@ -32,9 +32,12 @@
     demo: [{ params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, seed: 5, kind: 'box' }],
     practice: [
       { params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, assist: { letters: true }, seed: 12 },
-      { params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, seed: 207 },
-      { params: { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, tip: 'plain', seed: 35, example: { seed: 8 } },
-      { params: { solid: 0, marks: 2, view: 0, foil: 0, task: 'tutorial' }, tip: 'shaded', seed: 12 },
+      { params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, seed: 14 }, // v1.2 (19 Nov): the Try answers in four places
+      // v1.2 (fresh-player run, 19 Nov: three wrong-size picks in a row): every Try item and the worked example
+      // has its wrong size twice or half the pattern's (Try 1, 2 and the Watch by the band's rule; Try 3, 35: 2.5
+      // times; the example, 51, and Try 4, 151: twice), and Try 4's two shaded faces both show on the right solid
+      { params: { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, tip: 'plain', seed: 35, example: { seed: 51 } },
+      { params: { solid: 0, marks: 2, view: 0, foil: 0, task: 'tutorial' }, tip: 'shaded', seed: 151 },
     ],
     tips: [
       { id: 'one', when: { dim: 'marks', levels: [0] }, text: 'Starter items: one shaded face. First drop the solids of the wrong size, then check that the shaded face has the shape it has in the pattern.' },
@@ -116,6 +119,6 @@
       assist: 'Numbered for you: the faces that meet the shaded face once folded.',
       assistHalf: 'New: a half-shaded face. Its shaded corner is dotted: that corner must touch the same faces once folded.',
     },
-    bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
+    bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design; here you do the folding in your head. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®); practising it here improves this task, and an effect on DAT scores has not been shown or measured. ' + ADA,
   });
 })(window.PX);

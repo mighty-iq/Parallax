@@ -100,7 +100,7 @@
       assist: 'Ringed for you: the punch\'s twin across the crease.',
     },
     checkin: { whole: 'I unfolded the paper in my mind', parts: 'I tracked the hole across each crease', unsure: 'Not sure' },
-    bridge: 'Hole punching is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). Practice on a format usually raises scores on that format; an effect of Parallax on DAT scores has not been shown or measured, and those scores relate only modestly to dental-school grades. ' + ADA,
+    bridge: 'Hole punching is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®): fold, punch, then unfold in your head, keeping every layer in mind. Practice on a format usually raises scores on that format; an effect of Parallax on DAT scores has not been shown or measured. ' + ADA,
     ada: ADA,
   });
 })(window.PX);

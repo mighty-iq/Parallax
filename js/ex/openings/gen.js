@@ -1222,11 +1222,23 @@
   var TUTORIAL = [2764413377, 1146957781, 4014106692, 3644707956, 3784165992, 3100478066];
   function stemSig(item) { return PX.rng.hash('openings-stem', JSON.stringify([item.W, item.H, item.D, item.prof, item.pose])); }
   function generateFresh(rng, params) {
-    var item = generate(rng, params);
+    var item = generate(rng, params), sig;
     if (params && params.task === 'tutorial') return item;
-    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    sig = stemSig(item);
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(sig) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; sig = stemSig(item); }
+    lastGen = { seed: rng.seed, params: params, sig: sig };
     return item;
   }
+  // v1.2 (fresh-player run, 19 Nov): no stem twice in a session (js/ex/patviews/gen.js has the guard and the
+  // reasons). The starter level allows few stems (fewStems: 2 to 7 in 1,000 pairs of draws at one setting came
+  // out the same); every setting with two features or more gave 50 different stems in 50 draws (DECISIONS).
+  var lastGen = null;
+  function sigOf(seed, params) {
+    var g = lastGen, s = PX.rng(seed).seed;
+    if (g && g.seed === s && (g.params === params || PX.ex.paramsKey(g.params) === PX.ex.paramsKey(params))) return g.sig;
+    return stemSig(generateFresh(PX.rng(s), params));
+  }
+  function fewStems(params) { return !!params && params.features === 0; }
 
   /* ------------------------------------------------------------ definition */
   // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .2. base −2.3: one feature on each face,
@@ -1259,14 +1271,14 @@
     testRange: {
       dims: LEVEL_TAGS,
       notes: {
-        features: 'One feature in all is a starter level. Two features, on two faces, is the easy end of the format; the official sample spreads a few over more than one face.',
+        features: 'One feature in all is a starter level. Two features, on two faces, is the fewest the format shows; the official sample spreads a few over more than one face.',
         turn: 'The official rules let the solid go in any way round, so an opening may show turned or mirrored. Openings drawn as their face is seen, or only turned, are starter help.',
       },
     },
     base: -2.3,
     generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
-      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate, sigOf: sigOf, fewStems: fewStems,
       DIMS: DIMS, POSES: POSES, POSE_SETS: POSE_SETS, VIEW: VIEW, AXES: AXES, PROF_OF: PROF_OF, AXIS_OF: AXIS_OF, RES: RES, SOLVERS: SOLVERS, stats: stats,
       qgrid: qgrid, qcopy: qcopy, profile: profile, featCells: featCells, randomFeature: randomFeature, buildProfiles: buildProfiles, polysOf: polysOf,
       silZ: silZ, silX: silX, silY: silY, sils: sils, outline: outline, polyArea: polyArea, area4: area4, crop: crop,

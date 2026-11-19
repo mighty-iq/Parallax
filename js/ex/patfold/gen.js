@@ -326,11 +326,23 @@
   var TUTORIAL = [1013064581, 667686021, 256731889, 2839566138, 248429863, 1197173088];
   function stemSig(item) { return PX.rng.hash('patfold-stem', JSON.stringify([item.folds.map(function (f) { return [f.line, f.seg]; }), item.punches])); }
   function generateFresh(rng, params) {
-    var item = generate(rng, params);
+    var item = generate(rng, params), sig;
     if (params && params.task === 'tutorial') return item;
-    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    sig = stemSig(item);
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(sig) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; sig = stemSig(item); }
+    lastGen = { seed: rng.seed, params: params, sig: sig };
     return item;
   }
+  // v1.2 (fresh-player run, 19 Nov): no stem twice in a session (js/ex/patviews/gen.js has the guard and the
+  // reasons). Every setting allows few stems (fewStems): the folds and holes give 8 to 160 per setting, and a
+  // stem fixes the answer, so a repeat can be answered from memory (DECISIONS).
+  var lastGen = null;
+  function sigOf(seed, params) {
+    var g = lastGen, s = PX.rng(seed).seed;
+    if (g && g.seed === s && (g.params === params || PX.ex.paramsKey(g.params) === PX.ex.paramsKey(params))) return g.sig;
+    return stemSig(generateFresh(PX.rng(s), params));
+  }
+  function fewStems(params) { return !!params; }
 
   // Fallback: a valid item for these params from a fixed search (the same for every seed, so
   // cached), soft limits relaxed after 200 tries; marked fallback: true (the engine voids it).
@@ -437,7 +449,7 @@
     validate: validate,
     score: score,
     lib: {
-      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate, sigOf: sigOf, fewStems: fewStems,
       SIZE: SIZE, FOLDS: FOLDS, TYPES: TYPES, IDLE: IDLE, AXES: AXES, SHEETS: SHEETS, SHEETS_AT: SHEETS_AT, LEVEL_TAGS: LEVEL_TAGS,
       norm: normParams, foldParams: foldParams, idleOf: idleOf, fallback: fallbackFor,
       // Fold's sheet helpers on the 4 × 4 sheet (maskOf, hamming, symScore, reflCell, …): fn(A).

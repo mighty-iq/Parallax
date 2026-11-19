@@ -705,8 +705,11 @@
     // A missing front view takes the 3 × 2 box for outline foils and the 3 × 3 box for same-outline
     // foils, at either grid level: a 3 × 2 front has too few same-outline drawings, and in a 3 × 3 box
     // the key's front outline is nearly always the smallest (DECISIONS).
-    var boxes = miss === 'front' ? [foil ? [3, 3] : [3, 2]] : [[2, 2], [2, 3], [3, 2]].concat(grid === 1 ? [[3, 3]] : []).filter(function (wd) { return wide({ W: wd[0], D: wd[1] }, miss); });
-    var list = bandAll(boxes).filter(function (b) { return bandBox(b, miss === 'front' ? 1 : grid) && (!miss || !b.dotted[miss]); });
+    // v1.2 (fresh-player run, 19 Nov: one session dealt the same starter item twice): a missing end view with
+    // same-outline or solid-or-dotted foils takes the 3 × 3 box too, at either grid level, as the front view
+    // does: a 2 × 3 box gave those settings four stems in all (DECISIONS).
+    var boxes = miss === 'front' ? [foil ? [3, 3] : [3, 2]] : miss === 'end' && foil ? [[2, 3], [3, 3]] : [[2, 2], [2, 3], [3, 2]].concat(grid === 1 ? [[3, 3]] : []).filter(function (wd) { return wide({ W: wd[0], D: wd[1] }, miss); });
+    var list = bandAll(boxes).filter(function (b) { return bandBox(b, miss === 'front' || (miss === 'end' && foil) ? 1 : grid) && (!miss || !b.dotted[miss]); });
     var b = list[rint(rng, 0, list.length - 1)];
     return { W: b.W, H: b.H, D: b.D, hm: new Int8Array(b.hm) };
   }
@@ -821,7 +824,8 @@
       if (typeof b === 'string') return b;
       var nc = cubeCount(b), win = CUBES[pp.cubes];
       if (nc < win[0] || nc > win[1]) return 'the structure has ' + nc + ' cubes, outside its level\'s ' + win.join('–');
-      if (band && !bandBox(b, item.missing === 'front' ? 1 : pp.grid)) return 'starter: at most two high, in a box of at most ' + (pp.grid || item.missing === 'front' ? '3 × 3' : '2 × 3');
+      var bandWide = pp.grid || item.missing === 'front' || (item.missing === 'end' && pp.foil);
+      if (band && !bandBox(b, bandWide ? 1 : 0)) return 'starter: at most two high, in a box of at most ' + (bandWide ? '3 × 3' : '2 × 3');
       var W = b.W, H = b.H, D = b.D, miss = item.missing, rows = item.heights, true3 = {}, given = {};
       VIEWS.forEach(function (v) { true3[v] = drawRay(rows, W, H, D, v); });
       var gv = VIEWS.filter(function (v) { return v !== miss; });
@@ -1704,10 +1708,72 @@
   var TUTORIAL = [337167328, 1869791245, 968252950, 1422305051, 242981060, 2398888743];
   function stemSig(item) { return PX.rng.hash('patviews-stem', JSON.stringify([item.missing, Object.keys(item.given).sort().map(function (v) { return [v, item.given[v].segs]; })])); }
   function generateFresh(rng, params) {
-    var item = generate(rng, params);
+    var item = generate(rng, params), sig;
     if (params && params.task === 'tutorial') return item;
-    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    sig = stemSig(item);
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(sig) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; sig = stemSig(item); }
+    lastGen = { seed: rng.seed, params: params, sig: sig };
     return item;
+  }
+
+  // v1.2 (fresh-player run, 19 Nov: one session dealt the same starter item twice, the same two views and the
+  // same four drawings): a session shows no stem twice while its setting has stems it has not shown. Nothing
+  // compared items, and the starter band allows 10 to 73 stems per setting (two draws shared one up to 14 % of
+  // the time; cube stacks at level 1 about 1 %), while profile solids came out different in every one of 60
+  // draws at each setting. The player's guard (sessionGuard, at item:before) runs for every exercise whose lib
+  // has sigOf(seed, params), which reads an item's stem (the item generated last is remembered, so the
+  // player's own item is not made twice). Section forms (js/engine/section.js), which would otherwise generate
+  // every item of a part at its start, do the same where fewStems(params) says a setting allows few stems.
+  // Openings, Form and Hole Punch export the same sigOf and their own fewStems (DECISIONS).
+  var lastGen = null;
+  function sigOf(seed, params) {
+    var g = lastGen, s = PX.rng(seed).seed;
+    if (g && g.seed === s && (g.params === params || PX.ex.paramsKey(g.params) === PX.ex.paramsKey(params))) return g.sig;
+    return stemSig(generateFresh(PX.rng(s), params));
+  }
+  function fewStems(params) { return !!params && params.cubes < NCUBE; } // the cube stacks
+  // The guard's choice for a step: seen = { stem: order } of the stems the session has shown (a larger order is
+  // later); next() → a new seed from the engine, or null when the seed must stay. Returns { seed, sig, fresh,
+  // tries }: the step's own seed when its stem is new; else the first of up to opts.tries new seeds (within
+  // opts.ms) whose stem is new; when the setting has none left, the one whose stem was shown longest ago.
+  function freshSeed(d, seed, params, seen, next, opts) {
+    var o = opts || {}, tries = o.tries > 0 ? o.tries : 64, ms = o.ms > 0 ? o.ms : INF, clock = o.clock || Date.now, t0 = clock();
+    var sig = d.lib.sigOf(seed, params), has = Object.prototype.hasOwnProperty;
+    if (!has.call(seen, sig)) return { seed: seed, sig: sig, fresh: true, tries: 0 };
+    var best = { seed: seed, sig: sig, at: seen[sig] }, k = 0;
+    while (k < tries && clock() - t0 < ms) {
+      var s = next();
+      if (typeof s !== 'number') break;
+      k++;
+      var g = d.lib.sigOf(s, params);
+      if (!has.call(seen, g)) return { seed: s, sig: g, fresh: true, tries: k };
+      if (seen[g] < best.at) best = { seed: s, sig: g, at: seen[g] };
+    }
+    return { seed: best.seed, sig: best.sig, fresh: false, tries: k };
+  }
+  // The guard at the player's item:before (registered by js/ex/patviews/view.js; ctx: CONTRACT-v1.2 R's mode,
+  // plan, rec, step, def). shown: a WeakMap plan → { n, ex: { exId: { stem: order } } }. An item whose stem the
+  // session has shown takes a new seed from the engine (E.dims.seedFor where seeds name cells, else
+  // E.select.seed), so the log keeps a seed that rebuilds the item shown. A Path recheck, a fixed item (as
+  // play.js's FIXED_KINDS) and a comparison round's apply item keep their seed; their stems still count.
+  // Returns the guard's choice (freshSeed), or null where it does not apply. opts: freshSeed's (the tests lift
+  // the time limit, so their runs do not depend on the machine's speed).
+  var GUARD_KEEP = { recheck: 1, probe: 1, daily: 1, threshold: 1, set: 1 }, GUARD_OPTS = { tries: 64, ms: 200 };
+  function sessionGuard(ctx, shown, opts) {
+    var d = ctx && ctx.def, step = ctx && ctx.step, L = d && d.lib, E = PX.engine;
+    if (!shown || !L || typeof L.sigOf !== 'function' || !step || !ctx.plan || typeof step.seed !== 'number') return null;
+    var S = shown.get(ctx.plan);
+    if (!S) shown.set(ctx.plan, S = { n: 0, ex: {} });
+    var seen = S.ex[d.id] || (S.ex[d.id] = {});
+    var keep = !!step.recheck || GUARD_KEEP[step.kind] === 1 || step.layer === 'compare-apply' || !E || !E.select;
+    var next = keep ? function () { return null; } : function () {
+      var s = E.dims && E.dims.seedFor ? E.dims.seedFor(ctx.rec, d, step.params) : null;
+      return typeof s === 'number' ? s : E.select.seed(ctx.rec);
+    };
+    var r = freshSeed(d, step.seed, step.params, seen, next, opts || GUARD_OPTS);
+    if (r.seed !== step.seed) step.seed = r.seed;
+    seen[r.sig] = ++S.n;
+    return r;
   }
 
   /* ------------------------------------------------------------ definition */
@@ -1752,7 +1818,7 @@
     base: -2.2,
     generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
-      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate, sigOf: sigOf, fewStems: fewStems, freshSeed: freshSeed, sessionGuard: sessionGuard, GUARD_OPTS: GUARD_OPTS,
       VIEWS: VIEWS, MISSING: MISSING, CUBES: CUBES, GRIDS: GRIDS, FOILS: FOILS, HMAX: HMAX, SOLVERS: SOLVERS, stats: stats,
       boxOf: boxOf, rowsOf: rowsOf, fills: fills, connectedBox: connectedBox, drawView: drawView, drawRay: drawRay, codeOf: codeOf,
       sameGrid: sameGrid, pub: pub, grid: grid, counts: counts, gdist: gdist, kindOf: kindOf, hullFails: hullFails, alignFails: alignFails,

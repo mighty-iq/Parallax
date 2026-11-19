@@ -1,6 +1,7 @@
 /* EX-19 Form (DAT-style format): solids, nets that fold back (closure), symmetry groups, generator, validator, scorer,
    shortcut solvers, timing, learn data. Run through tests/node/run.mjs (filter: form). */
 import { performance } from 'node:perf_hooks';
+import { checkSessions } from './patviews.test.mjs';
 import { MANIFEST } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/form/gen.js', 'js/ex/form/learn.js'];
@@ -23,6 +24,7 @@ export async function run(t) {
   testTiming(t, PX, def);
   testLearn(t, PX, def);
   testTutorialRepeat(t, PX, def, 'form');
+  testSession(t);
 }
 
 const sig = (x) => 1 / (1 + Math.exp(-x));
@@ -238,8 +240,8 @@ function testItems(t, PX, def, L, pool) {
       const cls = it.options.map((o, i) => (sz[i] ? 'S' : 'W') + (i === it.key || (sz[i] ? false : stretched.length === 2 && JSON.stringify(o.marks) === JSON.stringify(it.marks)) ? 'k' : 'm'));
       if (JSON.stringify(cls.slice().sort()) === JSON.stringify(['Sk', 'Sm', 'Wk', 'Wm']) && stretched.length === 2 && stretched[0].solid.dims.join() === stretched[1].solid.dims.join()
         && it.options.filter((o, i) => sz[i] && i !== it.key).every((o) => shadeKey(o) !== keyShade)) band2x2++;
-      const need = p.foil === 0 ? 0.5 : 0.4;
-      if (stretched.every((o) => { const d = o.solid.dims.map((x, j) => Math.abs(x - it.solid.dims[j]) / it.solid.dims[j]).filter((x) => x > 1e-9); return d.length === 1 && d[0] >= need - 1e-9 && d[0] < (p.foil === 0 ? 0.8 : 0.5) + 1e-9; })) bandOff++;
+      // v1.2 (fresh-player run, 19 Nov): the larger size over the smaller, 2 to 2.5 times (foil 0), 1.5 to under 2 (foil 1)
+      if (stretched.every((o) => { const r = o.solid.dims.map((x, j) => Math.max(x, it.solid.dims[j]) / Math.min(x, it.solid.dims[j])).filter((x) => x > 1 + 1e-9); return r.length === 1 && (p.foil === 0 ? r[0] >= 2 - 1e-9 && r[0] <= 2.5 + 1e-9 : r[0] >= 1.5 - 1e-9 && r[0] < 2 - 1e-9) && o.solid.dims.every((x) => x <= 5); })) bandOff++;
       it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
       if (it.options.every((o) => L.TILT_SETS[p.view].includes(o.view.tilt))) viewOk++;
       if (!(it.solid.kind === 'box' && new Set(it.solid.dims).size < 3)) noCube++;
@@ -331,7 +333,7 @@ function testItems(t, PX, def, L, pool) {
   t.ok(nBand >= 1400, `starter band items (${nBand})`);
   t.eq(bandKinds, nBand, 'starter band, easiest solids: boxes and triangular prisms only');
   t.eq(band2x2, nBand, 'starter band: a 2 × 2 of right or wrong size and right or wrong shaded face (one mark foil with the shade on a face of another shape; one stretched solid twice)');
-  t.eq(bandOff, nBand, 'starter band: a wrong size is one length off by 50–80 % (foil level 0) or 40–49 % (foil level 1; PLAN milestone 8: at least 40 %)');
+  t.eq(bandOff, nBand, 'starter band: a wrong size changes one length, twice to 2.5 times or half (foil level 0), one and a half to under twice (foil level 1)');
   t.eq(seen3, N, 'every picture shows at least two faces clearly (three where the solid allows it)');
   t.ok(ranks.every((r) => r / N > 0.22 && r / N < 0.28), `the key's place is spread (${ranks.map((r) => (r / N * 100).toFixed(0) + '%').join(' ')})`);
   t.ok(kinds.mirror > 0, `mirror foils occur ${JSON.stringify(kinds)}`);
@@ -575,12 +577,27 @@ function testLearn(t, PX, def) {
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered|boost|raise your|score gain|predict/i.test(all), 'no IQ, "mastered", score-gain or prediction claims');
-  t.ok(typeof L.bridge === 'string' && /has not measured/i.test(L.bridge), 'a "where it is used" line with its limitation beside it');
+  // RV-claims-1.2 M5: one limit, which the exercise page's pattern knows (so it adds no second one), then the ADA line
+  const limits = typeof L.bridge === 'string' ? (L.bridge.match(/not been shown|not been studied|has not measured|only modestly|grades or job|little or no/gi) || []).length : 0;
+  t.ok(typeof L.bridge === 'string' && limits === 1 && /not been shown|not been studied|little or no|not established/i.test(L.bridge) && /American Dental Association/.test(L.bridge.slice(-260)), `a "where it is used" line with one limit (${limits}), then the ADA line`);
 }
 
 // v1.2 (fresh-player test): no tutorial item comes back as a rated item. Every learn.js item carries
 // params.task 'tutorial'; lib.TUTORIAL holds exactly their stems' hashes; rated items at the tutorial's
 // settings never have one of those stems, and an item whose first draw is not one is unchanged.
+// v1.2 (fresh-player run, 19 Nov: one session dealt the same Missing View item twice): no stem twice in a session
+// (the guard and its runs: js/ex/patviews/gen.js, tests/node/patviews.test.mjs). Every Form setting takes it: the
+// second solid level's patterns repeat about once in 1,000 pairs of draws at one setting.
+function testSession(t) {
+  t.section('form: a session never shows a stem twice');
+  const PX = t.context({ files: [...FILES, 'js/ex/views/gen.js', 'js/ex/patviews/gen.js'] }).PX, def = PX.ex.get('form'), L = def.lib;
+  const all = PX.ex.enumerate(def);
+  t.ok(all.every((p) => L.fewStems(p) === (p.solid === 1)), `fewStems (Section forms): wedges and pyramids only (${all.filter((p) => L.fewStems(p)).length} of ${all.length} settings)`);
+  t.ok([1, 2, 3, 4, 5].every((s) => L.sigOf(s, all[s * 11]) === L.stemSig(def.generate(PX.rng(s), all[s * 11]))), 'sigOf gives the stem of the item the seed makes');
+  const settings = all.filter((p) => p.solid === 1 && p.view === 2 && p.foil === 0 && p.marks <= 2);
+  checkSessions(t, PX, def, settings, 10, 'form, the second solid (the fewest stems)', false);
+}
+
 function testTutorialRepeat(t, PX, def, id) {
   t.section(id + ': tutorial items do not come back');
   const L = PX.ex.learn(id), lib = def.lib, entries = [];

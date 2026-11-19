@@ -2,6 +2,7 @@
    edge between two different faces), generator, validator, scorer, shortcut solvers, timing,
    learn data. Run through tests/node/run.mjs (filter: openings). */
 import { performance } from 'node:perf_hooks';
+import { checkSessions } from './patviews.test.mjs';
 import { MANIFEST } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/openings/gen.js', 'js/ex/openings/learn.js'];
@@ -25,6 +26,7 @@ export async function run(t) {
   testTiming(t, PX, def);
   testLearn(t, PX, def);
   testTutorialRepeat(t, PX, def, 'openings');
+  testSession(t);
 }
 
 const sig = (x) => 1 / (1 + Math.exp(-x));
@@ -490,12 +492,27 @@ function testLearn(t, PX, def) {
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered|boost|raise your|score gain|predict/i.test(all), 'no IQ, "mastered", score-gain or prediction claims');
-  t.ok(typeof L.bridge === 'string' && /has not measured/i.test(L.bridge), 'a "where it is used" line with its limitation beside it');
+  // RV-claims-1.2 M5: one limit, which the exercise page's pattern knows (so it adds no second one), then the ADA line
+  const limits = typeof L.bridge === 'string' ? (L.bridge.match(/not been shown|not been studied|has not measured|only modestly|grades or job|little or no/gi) || []).length : 0;
+  t.ok(typeof L.bridge === 'string' && limits === 1 && /not been shown|not been studied|little or no|not established/i.test(L.bridge) && /American Dental Association/.test(L.bridge.slice(-260)), `a "where it is used" line with one limit (${limits}), then the ADA line`);
 }
 
 // v1.2 (fresh-player test): no tutorial item comes back as a rated item. Every learn.js item carries
 // params.task 'tutorial'; lib.TUTORIAL holds exactly their stems' hashes; rated items at the tutorial's
 // settings never have one of those stems, and an item whose first draw is not one is unchanged.
+// v1.2 (fresh-player run, 19 Nov: one session dealt the same Missing View item twice): no stem twice in a session
+// (the guard and its runs: js/ex/patviews/gen.js, tests/node/patviews.test.mjs). The starter level allows the
+// fewest stems (2 to 7 in 1,000 pairs of draws at one setting came out the same).
+function testSession(t) {
+  t.section('openings: a session never shows a stem twice');
+  const PX = t.context({ files: [...FILES, 'js/ex/views/gen.js', 'js/ex/patviews/gen.js'] }).PX, def = PX.ex.get('openings'), L = def.lib;
+  const all = PX.ex.enumerate(def);
+  t.ok(all.every((p) => L.fewStems(p) === (p.features === 0)), `fewStems (Section forms): the starter level only (${all.filter((p) => L.fewStems(p)).length} of ${all.length} settings)`);
+  t.ok([1, 2, 3, 4, 5].every((s) => L.sigOf(s, all[s * 37]) === L.stemSig(def.generate(PX.rng(s), all[s * 37]))), 'sigOf gives the stem of the item the seed makes');
+  const settings = all.filter((p) => p.features === 0 && p.edges === 1 && p.foils === 0 && p.turn === 0);
+  checkSessions(t, PX, def, settings, 10, 'openings, the starter level', false);
+}
+
 function testTutorialRepeat(t, PX, def, id) {
   t.section(id + ': tutorial items do not come back');
   const L = PX.ex.learn(id), lib = def.lib, entries = [];

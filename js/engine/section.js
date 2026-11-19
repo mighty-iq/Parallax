@@ -189,11 +189,23 @@
     var cands = band(def);
     var rng = PX.rng(PX.rng.hash('px-section-params', size, form, exId)), out = [], used = {};
     if (asks(def)) return figureItems(def, size, form, exId, n, cands, rng);
+    // v1.2 (fresh-player run, 19 Nov): a part never shows a stem twice where the exercise says a setting allows
+    // few (lib.fewStems, lib.sigOf; js/ex/patviews/gen.js): Hole Punch's parts repeated one in 37 of 60 forms.
+    // The next seeds of the chain are tried until the stem is new, the same for everyone.
+    var L = def.lib, stems = {}, fresh = !!L && typeof L.fewStems === 'function' && typeof L.sigOf === 'function';
     for (var j = 0; j < n; j++) {
       var at = Math.min(cands.length - 1, Math.floor((j + rng.next()) / n * cands.length));
       var c = cands[at];
       var seed = E.select.sharedSeed(PX.rng.hash('px-section', size, form, exId, j));
       while (used[seed]) seed = E.select.sharedSeed(PX.rng.hash('px-section', size, form, exId, j, seed));
+      if (fresh && L.fewStems(c.params)) {
+        var sig = L.sigOf(seed, c.params);
+        for (var t = 0; t < 64 && stems[sig] === true; t++) {
+          var s2 = E.select.sharedSeed(PX.rng.hash('px-section', size, form, exId, j, 'stem', t));
+          if (!used[s2]) { seed = s2; sig = L.sigOf(seed, c.params); }
+        }
+        stems[sig] = true;
+      }
       used[seed] = true;
       out.push({ params: M.copyParams(c.params), seed: seed, code: c.code, b: c.b, g: c.g });
     }
