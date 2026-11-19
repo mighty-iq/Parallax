@@ -5,13 +5,20 @@ name: tests
 on:
   push:
   pull_request:
+# The suite runs as four shards side by side (tests/node/run.mjs --shard k/4: the test files dealt so that
+# each shard takes about the same time, about 6 minutes on the build machine), each well inside its
+# 30 minutes; together they run every file with its full seed counts.
 jobs:
   node:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node tests/node/run.mjs
+      - run: node tests/node/run.mjs --shard ${{ matrix.shard }}/4

@@ -399,6 +399,47 @@ function makeT() {
   return t;
 }
 
+/* ---------- shards (v1.2 O33, W3-phones) ----------
+   node tests/node/run.mjs --shard k/n runs the k-th of n shards (k from 1). The test files (after any name
+   filter) are dealt heaviest first, each to the shard with the least expected time so far (WEIGHTS: seconds
+   on a full run on the build machine, 19 Nov 2026; other files count 2 s), so the shards take about the same
+   time and together run every file once; shard 1 also runs the load check. CI runs four shards side by side
+   (.github/workflows/tests.yml), each well inside its 30 minutes; no file runs fewer seeds. */
+export const WEIGHTS = {
+  'knots.test.mjs': 203, 'knots-b.test.mjs': 145, 'shortcut-levels.test.mjs': 197, 'openings.test.mjs': 116,
+  'centralpoint.test.mjs': 84, 'reckon.test.mjs': 77, 'motiongraphs.test.mjs': 64, 'layers-centralpoint.test.mjs': 63,
+  'layers-produce.test.mjs': 60, 'slice.test.mjs': 42, 'otherway.test.mjs': 39, 'angles.test.mjs': 32, 'fold.test.mjs': 30,
+  'homing.test.mjs': 28, 'patviews.test.mjs': 26, 'track.test.mjs': 24, 'cubes.test.mjs': 20, 'form.test.mjs': 19,
+  'viewmatch.test.mjs': 19, 'rotate.test.mjs': 16, 'patfold.test.mjs': 13, 'views.test.mjs': 8, 'hidden.test.mjs': 7,
+  'firstband.test.mjs': 7,
+};
+export function weightOf(f) { return Object.prototype.hasOwnProperty.call(WEIGHTS, f) ? WEIGHTS[f] : 2; }
+export function shardFiles(files, k, n) {
+  const load = new Array(n).fill(0), out = Array.from({ length: n }, () => []);
+  [...files].sort((a, b) => weightOf(b) - weightOf(a) || (a < b ? -1 : a > b ? 1 : 0)).forEach((f) => {
+    let best = 0;
+    for (let i = 1; i < n; i++) if (load[i] < load[best]) best = i;
+    out[best].push(f);
+    load[best] += weightOf(f);
+  });
+  return { files: out[k - 1].sort(), load: load[k - 1], loads: load };
+}
+// '--shard k/n' or '--shard=k/n' → { k, n, rest: the other arguments }; null without one; throws when malformed
+export function parseShard(argv) {
+  const rest = [];
+  let spec = null;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--shard') { spec = argv[++i] || ''; continue; }
+    if (a.startsWith('--shard=')) { spec = a.slice(8); continue; }
+    rest.push(a);
+  }
+  if (spec === null) return { shard: null, rest };
+  const m = /^(\d+)\/(\d+)$/.exec(spec);
+  if (!m || +m[2] < 1 || +m[1] < 1 || +m[1] > +m[2]) throw new Error(`--shard needs k/n with 1 ≤ k ≤ n (got "${spec}")`);
+  return { shard: { k: +m[1], n: +m[2] }, rest };
+}
+
 /* ---------- main ---------- */
 
 function stripComments(src) {
@@ -452,19 +493,28 @@ function report(name, t, ms) {
 }
 
 async function main(argv) {
+  let shard = null;
+  try { const ps = parseShard(argv); shard = ps.shard; argv = ps.rest; } catch (e) { console.error(e.message); process.exit(2); }
   const filters = argv.filter((a) => !a.startsWith('-'));
   const started = performance.now();
   let passed = 0, failed = 0, failedFiles = 0;
 
-  const t0 = performance.now();
-  const { t: lt, files } = loadCheck(filters);
-  report(`load (${files.length} files)`, lt, performance.now() - t0);
-  passed += lt.passed; failed += lt.failed; if (lt.failed) failedFiles++;
+  if (!shard || shard.k === 1) {
+    const t0 = performance.now();
+    const { t: lt, files } = loadCheck(filters);
+    report(`load (${files.length} files)`, lt, performance.now() - t0);
+    passed += lt.passed; failed += lt.failed; if (lt.failed) failedFiles++;
+  }
 
-  const tests = fs.readdirSync(HERE)
+  let tests = fs.readdirSync(HERE)
     .filter((f) => f.endsWith('.test.mjs'))
     .sort()
     .filter((f) => !filters.length || filters.some((x) => f.includes(x)));
+  if (shard) {
+    const sh = shardFiles(tests, shard.k, shard.n);
+    console.log(`shard ${shard.k}/${shard.n}: ${sh.files.length} of ${tests.length} test files, about ${Math.round(sh.load)} s by the weights (shards: ${sh.loads.map((x) => Math.round(x) + ' s').join(', ')})`);
+    tests = sh.files;
+  }
   if (!tests.length) console.log('no test files match', filters.join(' '));
 
   let current = null;
