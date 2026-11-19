@@ -41,7 +41,8 @@ def check_frame(c, frame, label):
     c.ok(r['ready'], f'{label}: app booted')
     # every exercise whose files index.html loads is in the build (v1.1 adds exercises as they land)
     want = expected_exercises()
-    c.ok(r['nTrain'] + r['nProbe'] == want and r['nProbe'] == 6, f"{label}: {want - 6} exercises + 6 probes registered (got {r['nTrain']} + {r['nProbe']})")
+    # v1.2 adds probes (Other Way Round, Motion Graphs, Balance), so count them from the registry
+    c.ok(r['nTrain'] + r['nProbe'] == want and r['nProbe'] >= 6 and r['nTrain'] >= 20, f"{label}: all {want} exercises and probes registered (got {r['nTrain']} training + {r['nProbe']} probes)")
     c.ok(not r['noView'], f"{label}: every exercise has a view (missing: {r['noView']})")
     c.ok(r['webgl'], f'{label}: WebGL available')
     c.ok(r['discord'] and r['discordTarget'] == '_blank', f'{label}: Chimera pop-up links to discord.gg/chmr in a new tab')
