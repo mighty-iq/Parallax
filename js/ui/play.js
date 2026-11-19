@@ -81,8 +81,17 @@
   function viewOf(id) { try { return PX.ex.view(id) || null; } catch (e) { return null; } }
   function needsGL(v) { var n = v && v.needs; return n === 'webgl' || (Array.isArray(n) && n.indexOf('webgl') >= 0); }
   // v1.2 milestone 8 (CONTRACT-v1.2 W1): a view whose format letters its options (the DAT-style six) declares
-  // optionKeys: 'letters'; its choice grids then show A–E and take keys A–E and 1–5 (at most five options)
-  function lettersOf(v, n) { return !!v && v.optionKeys === 'letters' && !(n > 5); }
+  // optionKeys: 'letters'; its choice grids then show A–E and take keys A–E and 1–5 (at most five options).
+  // 'letters-only' (W3-bandA's request: Angles numbers its angles 1–4): A–E alone, the digits are not answer keys.
+  function lettersOf(v, n) { return !!v && (v.optionKeys === 'letters' || v.optionKeys === 'letters-only') && !(n > 5); }
+  function lettersOnlyOf(v) { return !!v && v.optionKeys === 'letters-only'; }
+  // The keys that pick an option, for the keys sheet and How to play: 'A–D or 1–4', 'A–D' (letters only), '1–9'
+  function pickKeys(v, n) {
+    n = isNum(n) && n > 0 ? Math.min(9, Math.round(n)) : 9;
+    if (!lettersOf(v, n)) return '1–' + n;
+    var abc = 'A–' + ui.optionName(n - 1, true);
+    return lettersOnlyOf(v) ? abc : abc + ' or 1–' + n;
+  }
   // cheap: true skips creating the WebGL context (Today's preview); the session start checks it.
   function canRun(def, cheap) {
     var v = def && viewOf(def.id);
@@ -170,9 +179,14 @@
   function seedOf(parts) { return PX.rng.hash.apply(null, parts) >>> 0; }
 
   // In the Library's words when it is loaded (PX.ui.exinfo.dimText: '10 cubes', 'speed 0.22 cw/s').
+  function lowFirst(s) { s = String(s || ''); return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+  // Dims the exercise does not use at these settings (def.ignores: Angles' size class at its 9° level) are left out.
+  // The level deals neighbouring settings too, so its texts give this one as an example ("At this level, for example:
+  // …"; W3-bandA's request after the lead's fresh-player run: a "typical" arm pose the item did not show).
   function settingsText(def, s) {
     if (!s || !Array.isArray(s.dims)) return '';
-    var X = PX.ui.exinfo, out = s.dims.filter(function (d) { return d.of > 1; }).map(function (d) {
+    var skip = PX.ex.ignored ? PX.ex.ignored(def, s.params) : [];
+    var X = PX.ui.exinfo, out = s.dims.filter(function (d) { return d.of > 1 && skip.indexOf(d.key) < 0; }).map(function (d) {
       var dim = (def.dims || []).filter(function (x) { return x.key === d.key; })[0] || {};
       if (X && typeof X.dimText === 'function' && dim.key) { try { return X.dimText(def, dim, d.value); } catch (e) { /* plain text below */ } }
       var v = typeof d.value === 'number' ? Number(d.value.toPrecision(3)) + (dim.unit || '') : String(d.value);
@@ -843,7 +857,7 @@
           if (P.layout === 'stem+options') {
             P.grid = ui.choiceGrid(n, {
               cols: view.gridCols ? view.gridCols(item) : undefined, multi: type === 'multi', label: 'Answer options',
-              keyLabels: P.letters ? 'letters' : 'digits',
+              keyLabels: P.letters ? (lettersOnlyOf(view) ? 'letters-only' : 'letters') : 'digits',
               labels: function (i) { return view.optionLabel ? view.optionLabel(item, i) : 'Option ' + ui.optionName(i, P.letters); },
             });
             el.grid.appendChild(P.grid.el);
@@ -1210,7 +1224,7 @@
       el.verdict.setAttribute('data-kind', 'turn');
       el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, '→'));
       el.verdict.appendChild(h('strong.pl-verdict-word', 'Your turn'));
-      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'Answer it the way the demo did: pick the answer it found.' : 'Answer it yourself, the way the demo did.'));
+      el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? o.text || 'Answer it the way the demo did: pick the answer it found.' : 'Answer it yourself, the way the demo did.'));
       var row = h('span.pl-turn-actions');
       if (typeof again === 'function' && P.view && P.view.demo) {
         var w = ui.button('Watch again', { kind: 'secondary', small: true, onClick: function () { if (P.state === 'respond' && !P.last) again(); } });
@@ -1431,7 +1445,7 @@
         className: 'pl-keys',
         body: [
           h('ul.pl-keylist',
-            row(P.letters && !custom ? 'A–E, 1–5' : '1–9', custom ? 'Pick (as shown on the item)' : 'Pick an option'),
+            row(custom ? '1–9' : pickKeys(P.view, P.grid && P.grid.buttons ? P.grid.buttons.length : P.def && P.def.nOptions).replace(' or ', ', '), custom ? 'Pick (as shown on the item)' : 'Pick an option'),
             row('Enter', 'Confirm a choice of two, or go on'),
             row('Space', 'Next item'),
             row('Esc', 'Pause; during a moving display the exercise pauses itself'),
@@ -1948,7 +1962,9 @@
         var guide = gh > 0 ? gh + 0.5 * rem : 0, strip = stripRoom();
         var extra = demo ? 4 * rem : guide + strip;
         var hh = head.isConnected ? head.getBoundingClientRect().height + 0.5 * rem : 0;
-        var more = hh + (demo && strip ? guide + strip + 1.5 * rem - 4 * rem : 0); // Your turn: the strip and one more line
+        // Your turn: the strip with its word, a wrapped line and its buttons (Painted Cubes fresh test: 1.5rem more
+        // than the answer strip was 7 px short at 390 x 844)
+        var more = hh + (demo && strip ? guide + strip + 2 * rem - 4 * rem : 0);
         if (more > 0 && strip && (win.innerHeight || 640) - 4.5 * rem - extra - more >= WTG_MIN_REM * rem) extra += more;
         host.style.setProperty('--pl-extra', Math.round(extra) + 'px');
       } catch (e) { /* the item keeps its usual size */ }
@@ -2038,12 +2054,17 @@
       makeRoom(goalOf(learn, item), null, true);
       stageSoon(item, true);
       emit('play:screen', { screen: 'wtg-example', mode: P.mode, exId: exId });
-      return P.demo(item, { goal: goalOf(learn, item), turn: { skip: 'Now your turn' },
-        onLastWait: function () { text.textContent = 'Try: the worked example’s last step. Then tap “Your turn” and go on to your own item.'; },
+      // Painted Cubes fresh test: the line said to go on to your own item while the strip asked for the example's
+      // answer, beside a "Now your turn" that skipped it. One instruction at a time, the same on the line and the
+      // strip: answer the example as it showed, then your own item (the skip names what it skips).
+      return P.demo(item, { goal: goalOf(learn, item), turn: { skip: 'Skip to your own item', text: 'Pick the answer the example found.' },
+        onLastWait: function () { text.textContent = 'Try: the example’s last step. Tap “Your turn”, then pick the answer it found.'; },
+        onDemoEnd: function () { text.textContent = 'Your turn: pick the answer the example found. Your own item comes next.'; },
       }).then(function (tr) {
         if (tr.outcome === 'aborted' || skipped) return null;
         if (tr.end) { skipped = true; ended = true; return null; }
         if (tr.outcome === 'skipped') return null;
+        text.textContent = 'Try: the example is done. Next, your own item.';
         return P.waitNext({ label: 'Now your turn' }).then(function (w) { if (w === 'end') { skipped = true; ended = true; } });
       });
     }
@@ -2710,7 +2731,7 @@
         h('span.px-num.pl-note-range', ' likely ' + a.lo + '–' + a.hi), ' after the last 10 items'),
       h('div.pl-note-bar', bar),
       st ? h('p.px-meta.pl-note-starter', { 'data-starter': String(Math.round(st.toNext * 100)) }, (l5.length ? right5 + ' of your last ' + l5.length + ' right; ' : '') + 'level 2 comes at about ' + st.needOf5 + ' of 5 right over a block.') : null,
-      set ? h('p.px-meta', 'Typical at this level: ' + set + '.') : null);
+      set ? h('p.px-meta', 'At this level, for example: ' + lowFirst(set) + '.') : null);
   }
 
   function pathNote(def, x) {
@@ -2885,7 +2906,7 @@
         since,
         h('p.px-meta', lv.before === null || lv.before === undefined ? 'A first level: it narrows as you practise.' :
           r.clear ? 'A clear change: larger than the usual ±' + r.noise + ' between sessions.' : 'Within the usual session-to-session noise (±' + r.noise + ').'),
-        lv.settings ? h('p.px-meta', 'Typical at this level: ' + settingsText(def, lv.settings) + '.') : null));
+        lv.settings && settingsText(def, lv.settings) ? h('p.px-meta', 'At this level, for example: ' + lowFirst(settingsText(def, lv.settings)) + '.') : null));
     }
     return h('li.pl-res', { 'data-ex': r.exId }, kids);
   }
@@ -3334,7 +3355,7 @@
       return el0 ? { el: el0, order: isObj(x) && isNum(x.order) ? x.order : 50, i: i } : null;
     }).filter(Boolean).sort(function (a, b) { return a.order - b.order || a.i - b.i; }).forEach(function (x) { body.push(x.el); });
     // The key line is for keyboards: touch screens leave it out (css/play.css).
-    body.push(h('p.px-meta.pl-howto-keys', 'Keys: ' + (lettersOf(viewOf(exId), 5) ? 'A–E or 1–5' : '1–9') + ' pick · Enter confirm · Space next · Esc pause · S show me the solution.'));
+    body.push(h('p.px-meta.pl-howto-keys', 'Keys: ' + pickKeys(viewOf(exId), def.nOptions) + ' pick · Enter confirm · Space next · Esc pause · S show me the solution.'));
     if (learn && Array.isArray(learn.strategies) && learn.strategies.length) {
       body.push(h('h3.pl-howto-h', 'Ways to solve it'));
       body.push(h('ul.pl-list', learn.strategies.map(function (s) { return h('li', h('b', s.title), ': ', s.text); })));
@@ -3350,6 +3371,15 @@
     try {
       close.el.focus({ preventScroll: true });
       [close.el, close.el.parentNode, close.el.querySelector('.px-modal-body')].forEach(function (x) { if (x) x.scrollTop = 0; });
+    } catch (e) { /* cosmetic */ }
+    // Painted Cubes fresh test: the sheet's end lay under its fixed buttons with nothing to say there was more. While
+    // more lies below, the buttons' edge casts a shadow (data-more); the sheet scrolls by itself (a wheel or a drag
+    // anywhere over it, PX.ui.modal) and ends with its last line above the buttons.
+    try {
+      var sh = close.el, more = function () { sh.toggleAttribute('data-more', sh.scrollTop + sh.clientHeight < sh.scrollHeight - 2); };
+      sh.addEventListener('scroll', more, { passive: true });
+      more();
+      if (win.requestAnimationFrame) win.requestAnimationFrame(more);
     } catch (e) { /* cosmetic */ }
     return close;
   }

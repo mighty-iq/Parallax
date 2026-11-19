@@ -43,6 +43,7 @@ function mk(t, withDat) {
 export async function run(t) {
   registry(t);
   views(t);
+  ignores(t);
   freeRange(t);
   sets(t);
   setsOff(t);
@@ -101,8 +102,26 @@ function views(t) {
   const base = { layout: 'stem+options', present() {}, drawOption() {} };
   t.ok(PX.ex.view('datx', Object.assign({ optionKeys: 'letters' }, base)), 'letters on a stem+options view');
   t.throws(() => PX.ex.view('datsix', Object.assign({ optionKeys: 'letters' }, base)), /at most five options/, 'letters hold five options at most');
-  t.throws(() => PX.ex.view('datsix', Object.assign({ optionKeys: 'abc' }, base)), /"letters" or "digits"/, 'only letters or digits');
+  t.throws(() => PX.ex.view('datsix', Object.assign({ optionKeys: 'abc' }, base)), /"letters", "letters-only" or "digits"/, 'only letters, letters only or digits');
   t.throws(() => PX.ex.view('datcus', { layout: 'custom', optionKeys: 'letters', present() {}, collect() {}, reveal() {} }), /stem\+options/, 'not on a custom view');
+  // 'letters-only' (W3-bandA's request: Angles numbers its angles 1–4): like letters, at most five options
+  PX.ex.define(Object.assign(datDef({ id: 'datlo', code: 'EX-92', nOptions: 4 }), { testRange: undefined, set: undefined }));
+  t.ok(PX.ex.view('datlo', Object.assign({ optionKeys: 'letters-only' }, base)), 'letters-only on a stem+options view');
+  t.throws(() => PX.ex.view('datsix', Object.assign({ optionKeys: 'letters-only' }, base)), /"letters-only" holds at most five options/, 'letters-only holds five options at most');
+}
+
+function ignores(t) {
+  t.section('registry: ignores(params) and ignored() (W3-bandA\'s request)');
+  const PX = t.context({ exercises: false }).PX;
+  const ig = PX.ex.define(Object.assign(datDef({ id: 'datig', code: 'EX-93', ignores(p) { return p.gap === 0 ? ['size', 'nope'] : p.gap === 1 ? null : []; } }), { testRange: undefined, set: undefined }));
+  t.eq(PX.ex.ignored(ig, { size: 2, gap: 0, turn: 0 }), ['size'], 'the dims it names, as dim keys only (an unknown key is dropped)');
+  t.eq(PX.ex.ignored('datig', { size: 2, gap: 1, turn: 0 }), [], 'no list: none');
+  t.eq(PX.ex.ignored(ig, null), [], 'no params: none');
+  const plain = PX.ex.define(Object.assign(datDef({ id: 'datpl', code: 'EX-94' }), { testRange: undefined, set: undefined }));
+  t.eq([plain.ignores, PX.ex.ignored(plain, { size: 0, gap: 0, turn: 0 })], [null, []], 'without ignores: null, and nothing ignored');
+  const bad = PX.ex.define(Object.assign(datDef({ id: 'datbad', code: 'EX-90', ignores() { throw new Error('boom'); } }), { testRange: undefined, set: undefined }));
+  t.eq(PX.ex.ignored(bad, { gap: 0 }), [], 'one that fails ignores nothing');
+  t.throws(() => PX.ex.check(Object.assign(datDef({ id: 'datig2', code: 'EX-89', ignores: ['size'] }), { testRange: undefined, set: undefined })), /ignores must be a function/, 'ignores is a function');
 }
 
 function freeRange(t) {

@@ -1762,13 +1762,15 @@ def run_first2(b, C):
     page.wait_for_timeout(400)
     sm = page.evaluate("""() => { const r = document.querySelector('.pl-res[data-ex="spin"]'), s = r && r.querySelector('.pl-res-since'), g = document.querySelector('.gm-grade .gm-line');
       return { head: r ? r.querySelector('.pl-res-head').textContent : '', lv: r ? r.querySelector('.pl-res-lv b').textContent : '', since: s ? s.textContent : null,
-        block: s ? s.getAttribute('data-block') : null, grade: g ? g.textContent : null, codes: /EX-\\d|\\bSR\\b|\\bVz\\b/.test([...document.querySelectorAll('.pl-res')].map((x) => x.innerText).join(' ')) }; }""")
+        block: s ? s.getAttribute('data-block') : null, grade: g ? g.textContent : null,
+        example: r ? ([...r.querySelectorAll('p')].map((p) => p.textContent).find((x) => x.startsWith('At this level')) || null) : null, typical: /Typical at this level/.test(r ? r.textContent : ''), codes: /EX-\\d|\\bSR\\b|\\bVz\\b/.test([...document.querySelectorAll('.pl-res')].map((x) => x.innerText).join(' ')) }; }""")
     page.screenshot(path=str(OUT / 'first2_summary.png'), full_page=True)
     C.ok(sm['since'] and f"block of 10 ended at level {sm['block']}" in sm['since'] and f"moved your level to {sm['lv']}" in sm['since'] and re.search(r'the (\d+ answers|answer) after it', sm['since']),
          f'{tag}: the summary says how its level follows from the block note ({sm["lv"]}; {sm["since"]!r})')
     C.ok(sm['grade'] and f"best block of 10 ended at level {sm['block']}" in sm['grade'] and 'or more brings grade' in sm['grade'],
          f'{tag}: the grade line names the same block and what the next grade needs ({sm["grade"]!r})')
     C.ok(sm['head'].startswith('Spin') and '2D speeded rotation' in sm['head'] and not sm['codes'], f'{tag}: the summary names the exercise in words, no codes ({sm["head"]!r})')
+    C.ok(sm['example'] and sm['example'].startswith('At this level, for example: ') and not sm['typical'], f'{tag}: the settings come as an example of the level ({sm["example"]!r})')
     page.evaluate('PX.ui.hooks.mute(true)')
     # 3. Today: what is left of the day's session length, or the day done
     page.evaluate('PX.core.store.state.settings.sessionMin = 20')
@@ -1807,6 +1809,119 @@ def run_first2(b, C):
     ctx.close()
 
 
+CUBES_M = """() => ({ st: __play.state, meta: (document.querySelector('.pl-hud-meta') || {}).textContent, line: (document.querySelector('.pl-wtg-text') || {}).textContent,
+  turn: !!document.querySelector('[data-turn-skip]'), cards: document.querySelectorAll('[data-card-box]').length,
+  next: document.querySelector('[data-showme-next]') && !document.querySelector('[data-showme-next]').hidden ? document.querySelector('[data-showme-next]').firstChild.textContent.trim() : null })"""
+
+
+def run_cubes2(b, C):
+    """The lead's Painted Cubes fresh-player run (390 x 844) and W3-bandA's three requests: How to play scrolls by
+    itself (a wheel anywhere over it), its end clears the fixed buttons, a shadow says there is more, and the page
+    behind a modal stays still (a new screen under it keeps its own scroll); after the second worked example the line
+    and the strip give one instruction, the skip names what it skips, and nothing jumps; lettered options with
+    letter keys alone; settings texts leave out the dims an exercise ignores at those settings."""
+    tag = 'cubes 2'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    # 0. W3-bandA's requests: letters-only grids; the dims an exercise ignores left out of settings texts
+    g = page.evaluate("""() => { const g = PX.ui.choiceGrid(4, { keyLabels: 'letters-only' }), host = document.createElement('div'), got = [];
+      host.style.cssText = 'position:fixed;left:0;top:0'; host.appendChild(g.el); document.body.appendChild(host); g.onPick((i) => got.push(i));
+      const fire = (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      PX.core.keys.typed(false); const shown = getComputedStyle(g.el.querySelector('.px-choice-key')).display; // no keyboard: letters still show
+      fire('1'); fire('c');
+      const out = { badges: [...g.el.querySelectorAll('.px-choice-key')].map((x) => x.textContent), shown,
+        aria: g.buttons.map((x) => x.getAttribute('aria-keyshortcuts')), got, digitKeys: g.digitKeys, letters: g.letters };
+      g.destroy(); host.remove(); return out; }""")
+    C.ok(g['badges'] == ['A', 'B', 'C', 'D'] and g['shown'] != 'none' and g['aria'] == ['A', 'B', 'C', 'D'] and g['got'] == [2] and g['digitKeys'] is False and g['letters'] is True,
+         f'{tag}: letters-only: badges and keys A–D alone, shown on a phone too; the digit 1 picks nothing ({g})')
+    st = page.evaluate("""() => { const def = PX.ex.get('angles'), mkS = (gap) => { const p = {}; def.dims.forEach((d) => { p[d.key] = d.key === 'gap' ? gap : 1; });
+        return { params: p, dims: def.dims.map((d) => ({ key: d.key, label: d.label, index: p[d.key], of: d.levels.length, value: d.levels[p[d.key]] })) }; };
+      const sizeDim = def.dims.find((d) => d.key === 'size'), word = PX.ui.exinfo.dimText(def, sizeDim, sizeDim.levels[1]);
+      return { word, lib0: PX.ui.exinfo.settingsText(def, mkS(0)), lib1: PX.ui.exinfo.settingsText(def, mkS(1)), play0: PX.ui.play.settingsText(def, mkS(0)), play1: PX.ui.play.settingsText(def, mkS(1)) }; }""")
+    low = st['word'].lower()
+    C.ok(low not in st['lib0'].lower() and low not in st['play0'].lower() and low in st['lib1'].lower() and low in st['play1'].lower(),
+         f'{tag}: Angles at 9° leaves its size class out of settings texts, and keeps it at other gaps ({st})')
+    # 1. How to play over a scrolled Library
+    page.evaluate('void PX.core.router.go("library", {}, { force: true })')
+    page.wait_for_timeout(400)
+    page.evaluate('window.scrollTo(0, 600)')
+    page.wait_for_timeout(150)
+    page.evaluate("void PX.ui.play.howTo('cubes')")  # void: a function returned to evaluate would be called (and close it)
+    page.wait_for_selector('.px-modal.pl-howto', timeout=5000)
+    page.wait_for_timeout(300)
+    hm = """() => { const d = document.querySelector('.px-modal.pl-howto'), a = d.querySelector('.px-modal-actions'), last = d.querySelector('.px-modal-body').lastElementChild;
+      return { st: Math.round(d.scrollTop), max: d.scrollHeight - d.clientHeight, more: d.hasAttribute('data-more'), y: Math.round(scrollY),
+        lastBottom: Math.round(last.getBoundingClientRect().bottom), actionsTop: Math.round(a.getBoundingClientRect().top) }; }"""
+    h0 = page.evaluate(hm)
+    page.mouse.move(5, 5)  # over the backdrop, as a test driver's wheel lands at the corner
+    page.mouse.wheel(0, 300)
+    page.wait_for_timeout(300)
+    h1 = page.evaluate(hm)
+    C.ok(h0['max'] > 0 and h0['more'] and h0['st'] == 0 and h1['st'] > 0 and h1['y'] == 600, f'{tag}: a wheel anywhere scrolls How to play, never the page ({h0}; {h1})')
+    page.evaluate('window.scrollBy(0, 300)')
+    page.wait_for_timeout(300)
+    C.ok(page.evaluate('Math.round(scrollY)') == 600, f'{tag}: a script\'s scroll of the page behind is put back ({page.evaluate("scrollY")})')
+    page.mouse.move(200, 400)
+    page.mouse.wheel(0, 4000)
+    page.wait_for_timeout(400)
+    h2 = page.evaluate(hm)
+    C.ok(h2['st'] >= h2['max'] - 2 and not h2['more'] and h2['lastBottom'] <= h2['actionsTop'], f'{tag}: at its end the last line sits above the fixed buttons and the shadow goes ({h2})')
+    page.screenshot(path=str(OUT / 'cubes2_howto_end.png'))
+    page.locator('.px-modal.pl-howto .px-modal-actions .px-btn', has_text='Close').tap()
+    page.wait_for_timeout(300)
+    page.evaluate('window.scrollBy(0, 100)')
+    page.wait_for_timeout(200)
+    C.ok(page.evaluate('Math.round(scrollY)') == 700, f'{tag}: closed, the page is where it was and scrolls again ({page.evaluate("scrollY")})')
+    page.evaluate("window.__cl = PX.ui.modal({ title: 'Test', body: 'A modal over a route change' }); void PX.core.router.go('progress', {}, { force: true }); void 0")
+    page.wait_for_timeout(400)
+    y_new = page.evaluate('Math.round(scrollY)')
+    page.evaluate('__cl()')
+    C.ok(y_new == 0, f'{tag}: a new screen under a modal keeps its own scroll (top: {y_new})')
+    # 2. Watch, Try, Go: the second worked example's Your turn
+    page.evaluate('PX.debug.fast(false)')
+    go(page, {'mode': 'watch', 'exId': 'cubes'})
+    found = None
+    for _ in range(400):
+        m = page.evaluate(CUBES_M)
+        if m['meta'] == 'Example' and m['next'] == 'Your turn':
+            found = m
+            break
+        if m['cards'] and page.locator('[data-card-box] .px-btn--primary').count():
+            page.locator('[data-card-box] .px-btn--primary').first.tap()
+        elif m['st'] == 'showme' and m['next']:
+            page.locator('[data-showme-next]').tap()
+        elif m['st'] == 'respond':
+            page.locator('.pl-grid .px-choice').nth(page.evaluate('__play.key')).tap()
+        elif m['st'] == 'reveal':
+            page.evaluate('__play.next()')
+        page.wait_for_timeout(250)
+    C.ok(found and found['line'].startswith('Try: the example’s last step') and 'pick the answer it found' in found['line'],
+         f'{tag}: at the example\'s last caption the line says what Your turn leads to ({found})')
+    page.wait_for_timeout(500)
+    s0, y0 = page.evaluate(STEPBAR_JS), page.evaluate('Math.round(scrollY)')
+    page.locator('[data-showme-next]').tap()
+    wait_state(page, 'respond')
+    page.wait_for_timeout(700)
+    s1, y1 = page.evaluate(STEPBAR_JS), page.evaluate('Math.round(scrollY)')
+    t1 = page.evaluate("""() => ({ line: document.querySelector('.pl-wtg-text').textContent, strip: document.querySelector('.pl-verdict-text').textContent,
+      skip: document.querySelector('[data-turn-skip]').textContent.trim(), again: !!document.querySelector('[data-turn-again]') })""")
+    page.screenshot(path=str(OUT / 'cubes2_example_turn.png'))
+    C.ok(t1['line'].startswith('Your turn: pick the answer the example found') and t1['strip'] == 'Pick the answer the example found.' and t1['skip'] == 'Skip to your own item' and t1['again'],
+         f'{tag}: Your turn: the line and the strip give one instruction, the skip names what it skips ({t1})')
+    C.ok(y1 == y0 and bar_whole(s1) and s1['top'] == s0['top'], f'{tag}: nothing jumps: the step bar stays whole where it was ({y0} → {y1}; {s0} → {s1})')
+    page.locator('.pl-grid .px-choice').nth(page.evaluate('__play.key')).tap()
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    page.wait_for_timeout(400)
+    t2 = page.evaluate("""() => ({ line: document.querySelector('.pl-wtg-text').textContent, next: [...document.querySelectorAll('[data-next]')].filter((x) => !x.hidden).map((x) => x.textContent.replace(/Enter|Space$/, '').trim()) })""")
+    C.ok(t2['line'].startswith('Try: the example is done') and 'Now your turn' in ' '.join(t2['next']), f'{tag}: answered, the line says the example is done and Next goes to your own item ({t2})')
+    page.evaluate('PX.debug.fast(true)')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def run_wave3(b, C):
     """Shared support for PLAN milestone 8 (CONTRACT-v1.2 Wave 3): a view with optionKeys 'letters' shows A–D on
     its options, a letter key and a digit both answer, the keys sheet and the view context name letters (W1); Free
@@ -1838,10 +1953,12 @@ def run_wave3(b, C):
     C.ok(last_outcome(page) == 'right', f'{tag}: a digit still answers ({k + 1})')
     page.evaluate('__play.next()')
     wait_state(page, 'respond')
+    nopt = page.locator('.pl-grid .px-choice').count()
     page.keyboard.press('?')
     page.wait_for_selector('.pl-keys', timeout=4000)
     row = page.locator('.pl-keys .pl-keylist li').first.inner_text()
-    C.ok('A–E, 1–5' in row, f'{tag}: the keys sheet names the letters ({row!r})')
+    want = f"A–{'ABCDE'[nopt - 1]}, 1–{nopt}"
+    C.ok(want in row, f'{tag}: the keys sheet names the letters and digits of this item\'s {nopt} options ({row!r})')
     page.keyboard.press('Escape')
     C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
@@ -1899,7 +2016,7 @@ def main():
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2, run_cubes2)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

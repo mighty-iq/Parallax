@@ -6,7 +6,7 @@
    button(label, { kind, onClick, go, key, title, ariaLabel, disabled, small, type, className })
    bar(value, max, { label, text, kind, band: [lo, hi] }) → element with set(value, max, band)
    ring(value, max, { label, text, size }) → <svg> with set(value, max)
-   choiceGrid(n, layout) → { el, cells, buttons, letters, select, selected, mark, onPick, pick, lock, focus, name, destroy }
+   choiceGrid(n, layout) → { el, cells, buttons, letters, digitKeys, select, selected, mark, onPick, pick, lock, focus, name, destroy }
    optionName(i, letters) → 'B' (letter mode, options 1–5) or '2'
    copyBox(text, { rows, label }) → element with setText(text); copyText(text) → Promise<boolean>
    Also: clear(el), focusables(root), modalOpen() → number of open modals.
@@ -143,9 +143,9 @@
     return out;
   }
 
-  function focusEl(el) {
+  function focusEl(el, still) { // still: focus without scrolling (focus going back to the page a modal covered)
     if (!el || typeof el.focus !== 'function') return;
-    try { el.focus({ preventScroll: false }); } catch (e) { try { el.focus(); } catch (e2) { /* detached */ } }
+    try { el.focus({ preventScroll: !!still }); } catch (e) { try { el.focus(); } catch (e2) { /* detached */ } }
   }
 
   /* ---------- button ---------- */
@@ -200,6 +200,39 @@
     });
   }
 
+  /* The page behind a modal stays still (v1.2, Painted Cubes fresh test: a scroll moved the page behind How to
+     play instead of the sheet). html.px-modal-open stops wheel and touch scrolling of the page (BASE_CSS); a
+     scroll of the page that happens anyway on the same screen (a script, a browser that ignores the lock) is put
+     back; a new screen under the modal keeps its own scroll. A wheel or a drag on the backdrop scrolls the top
+     dialog instead (modal() below). */
+  var pageLock = null;
+  function routeKey() {
+    try { var c = PX.core.router && PX.core.router.current ? PX.core.router.current() : null; return c ? String(c.route || c.name || '') : ''; } catch (e) { return ''; }
+  }
+  function scrollY() { return window.pageYOffset || (doc.documentElement && doc.documentElement.scrollTop) || 0; }
+  function onLockedScroll() {
+    if (!pageLock || !stack.length) return;
+    var r = routeKey();
+    if (r !== pageLock.route) { pageLock.route = r; pageLock.y = scrollY(); return; }
+    if (Math.abs(scrollY() - pageLock.y) >= 1) { try { window.scrollTo(window.pageXOffset || 0, pageLock.y); } catch (e) { /* ignore */ } }
+  }
+  function lockPage() {
+    if (pageLock || !window.addEventListener) return;
+    pageLock = { y: scrollY(), route: routeKey() };
+    window.addEventListener('scroll', onLockedScroll);
+  }
+  function unlockPage() {
+    if (!pageLock) return;
+    window.removeEventListener('scroll', onLockedScroll);
+    pageLock = null;
+  }
+  // The part of a dialog that scrolls: the dialog itself (BASE_CSS overflow auto), else its body.
+  function scrollerOf(dialog) {
+    var cands = [dialog, dialog.querySelector('.px-modal-body')];
+    for (var i = 0; i < cands.length; i++) { var c = cands[i]; if (c && c.scrollHeight > c.clientHeight + 1) return c; }
+    return null;
+  }
+
   function modal(opts) {
     opts = opts || {};
     installBase();
@@ -243,6 +276,15 @@
     backdrop.addEventListener('mousedown', function (e) {
       if (e.target === backdrop && dismissable) close(undefined);
     });
+    // A wheel over the backdrop scrolls the dialog; a drag there moves nothing (inside the dialog the browser
+    // scrolls it, and overscroll-behavior keeps that scroll in the dialog)
+    backdrop.addEventListener('wheel', function (e) {
+      if (e.target !== backdrop || e.ctrlKey) return;
+      var s = scrollerOf(dialog);
+      if (s) s.scrollTop += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * s.clientHeight : e.deltaY;
+      e.preventDefault();
+    }, { passive: false });
+    backdrop.addEventListener('touchmove', function (e) { if (e.target === backdrop) e.preventDefault(); }, { passive: false });
 
     // Everything else becomes inert (not focusable, hidden from assistive tech) while open.
     var inerted = [];
@@ -255,6 +297,7 @@
     }
     doc.body.appendChild(backdrop);
     doc.documentElement.classList.add('px-modal-open');
+    lockPage();
 
     // The top layer takes every key: Escape closes when dismissable; other keys keep
     // their default action (buttons, inputs) but never reach the layers below.
@@ -278,8 +321,8 @@
       if (at >= 0) stack.splice(at, 1);
       if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
       for (var j = 0; j < inerted.length; j++) inerted[j].removeAttribute('inert');
-      if (!stack.length) doc.documentElement.classList.remove('px-modal-open');
-      if (opener && doc.contains(opener)) focusEl(opener);
+      if (!stack.length) { doc.documentElement.classList.remove('px-modal-open'); unlockPage(); }
+      if (opener && doc.contains(opener)) focusEl(opener, true); // the page behind stays where it was
       else if (topModal()) focusEl(topModal().dialog);
       close.closed = true;
       if (typeof opts.onClose === 'function') {
@@ -428,7 +471,8 @@
 
   // layout: 'auto' (default) | 'grid' | 'row' | 'col' | a column count, or an options object
   // { layout, cols, label, labels: [..] or fn(i), multi, keys (default true), keyLabels ('digits' by
-  // default, or 'letters': badges A–E, keys A–E and 1–5 both pick; v1.2 milestone 8, CONTRACT-v1.2 W1) }.
+  // default, or 'letters': badges A–E, keys A–E and 1–5 both pick; v1.2 milestone 8, CONTRACT-v1.2 W1; or
+  // 'letters-only': badges and keys A–E alone, for a format whose figures carry numbers of their own) }.
   // Keys: a pass-through layer takes 1–9 (Enter/Space on a focused option too); everything
   // else falls to the layer below, so push the player's own layer before creating the grid.
   function choiceGrid(n, layout) {
@@ -438,7 +482,8 @@
     var kind = lay === 'row' ? 'row' : lay === 'col' ? 'col' : 'grid';
     var cols = typeof lay === 'number' ? lay : o.cols || (kind === 'row' ? n : kind === 'col' ? 1 : autoCols(n));
     var multi = !!o.multi;
-    var letters = o.keyLabels === 'letters' && n <= LETTERS.length;
+    var letters = (o.keyLabels === 'letters' || o.keyLabels === 'letters-only') && n <= LETTERS.length;
+    var digitKeys = !(letters && o.keyLabels === 'letters-only'); // letters-only: the digits stay with the figure
     var root = h('div', {
       class: ['px-choices', 'px-choices--' + kind, letters ? 'px-choices--letters' : null], role: 'group',
       'aria-label': o.label || 'Answer options', style: '--px-cols:' + cols,
@@ -468,7 +513,7 @@
       var markEl = h('span.px-choice-mark', { 'aria-hidden': 'true' }); // not `mark`: that is the function below
       var btn = h('button.px-choice', {
         type: 'button', 'data-index': String(i), 'data-px-keys': '', 'aria-pressed': 'false',
-        'aria-keyshortcuts': i < 9 ? (letters ? optionName(i, true) + ' ' : '') + String(i + 1) : null,
+        'aria-keyshortcuts': i < 9 ? (letters ? optionName(i, true) : '') + (letters && digitKeys ? ' ' : '') + (digitKeys ? String(i + 1) : '') : null,
         'data-option': optionName(i, letters),
       }, i < 9 ? h('span.px-choice-key', { 'aria-hidden': 'true' }, optionName(i, letters)) : null, cellBody, markEl);
       btn.addEventListener('click', (function (ix) { return function () { pick(ix, 'pointer'); }; })(i));
@@ -529,8 +574,9 @@
     if (o.keys !== false) {
       var map = {};
       for (var k = 0; k < Math.min(n, 9); k++) {
-        map[String(k + 1)] = (function (ix) { return function () { return pick(ix, 'key') ? undefined : false; }; })(k);
-        if (letters) map[optionName(k, true).toLowerCase()] = map[String(k + 1)]; // keys name letters in lower case
+        var fnK = (function (ix) { return function () { return pick(ix, 'key') ? undefined : false; }; })(k);
+        if (digitKeys) map[String(k + 1)] = fnK;
+        if (letters) map[optionName(k, true).toLowerCase()] = fnK; // keys name letters in lower case
       }
       // On a focused option: Enter/Space select it; on an already selected one they go on
       // to the player (Enter confirms). In multi, Space toggles and Enter always goes on.
@@ -553,7 +599,7 @@
     }
 
     return {
-      el: root, cells: cells, buttons: buttons, letters: letters,
+      el: root, cells: cells, buttons: buttons, letters: letters, digitKeys: digitKeys,
       select: select, selected: selected, pick: pick, mark: mark, onPick: onPick,
       lock: lock, isLocked: function () { return locked; },
       focus: function (i) { focusEl(buttons[i || 0]); },

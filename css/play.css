@@ -252,6 +252,8 @@
 .pl-howto-note > p + p { margin-top: var(--s2); }
 .pl-howto-note b { color: var(--ink); }
 .pl-howto-h { margin-top: var(--s4); font-size: var(--fs-md); }
+/* How to play: while more of the sheet lies below its fixed buttons, their edge casts a shadow (play.js howTo) */
+.px-modal.pl-howto[data-more] > .px-modal-actions { box-shadow: 0 -0.75rem 1rem -0.875rem rgba(26, 29, 33, 0.55); }
 .pl-strategy + .pl-strategy { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--rule); }
 .pl-strategy h3 { font-size: var(--fs-md); color: var(--ink); }
 .pl-strategy ol { margin: var(--s2) 0 0; padding-left: 1.25rem; }
@@ -403,6 +405,9 @@
   .pl-wtg-tools .px-btn { white-space: normal; text-align: center; line-height: 1.15; }
   .pl-wtg-text { font-size: var(--fs-sm); }
   .pl-wtg:not(.is-parts-open) .pl-parts { display: none; }
+  /* Painted Cubes fresh test: the line grew by one line at the worked example's last caption and the page
+     jumped when Your turn came up; on a portrait phone it keeps two lines' room, so it never changes height */
+  @media (min-height: 501px) { .pl-wtg-text { min-height: calc(2em * var(--lh-body, 1.5)); } }
   .pl-wtg.is-parts-open .pl-parts { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
 }
 @media (min-width: 720px) and (min-height: 501px) { .pl-parts-btn { display: none; } }

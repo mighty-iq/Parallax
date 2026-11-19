@@ -178,9 +178,12 @@
     return isNum(v) && !dim.unit && COUNT_DIMS.test(label) ? numText(v) + ' ' + low : low + ' ' + valueText(dim, v);
   }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  // The dims the exercise does not use at these settings (def.ignores, e.g. Angles' size class at its 9° level) are left
+  // out, so the words name only what such an item shows (W3-bandA's request).
   function settingsText(def, settings) {
     if (!def || !settings || !settings.dims) return '';
-    return cap(settings.dims.map(function (d) {
+    var skip = PX.ex.ignored ? PX.ex.ignored(def, settings.params) : [];
+    return cap(settings.dims.filter(function (d) { return skip.indexOf(d.key) < 0; }).map(function (d) {
       var dim = def.dims.filter(function (x) { return x.key === d.key; })[0] || d;
       return dimText(def, dim, d.value);
     }).join(', '));
