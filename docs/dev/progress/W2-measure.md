@@ -157,3 +157,19 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   note), fit.py's Spatial Check part (otherway, motiongraphs, mechanisms at 360 x 640, 390 x 844, 844 x 390;
   viewmatch, patterns at 360 x 640 and 390 x 844), harnesses of mechanisms, viewmatch, cubematch, wordlinks,
   patterns, level; the new cards and items looked at on phones.
+
+## 2026-11-19 14:54 UTC: round 3 of the lead's first-session run (390 x 844, snapshot 26b3b9a)
+- b885384 Baseline 1 feels shorter, same measurement: full checks open with Pattern Memory and Cube Match
+  (`config.measure.fullOrder`), Other Way Round's and Motion Graphs' kinds come grouped (3 3 3 3 2 2; 2 1 1 1;
+  `assess._.kindAt`; blocks keep the turn); the strip says "about N min left"; one-screen task cards with their size;
+  the example's last button "Start the task" starts the items (play.js `cfg.lastLabel`, `played.last.tap`); the
+  time-out card comes at once and ignores input for 600 ms. No simulation applies (order and kinds are not modelled).
+- 74143a6 Pattern Memory drag-to-paint (clear from a marked square; corner grazes ignored; skipped squares filled);
+  414529e Mechanisms' speed caption and "In the items" key lines (Word Links too); f137200 Other Way Round's map
+  (spots 16 from landmarks, full-size shapes, N outside, side by side by width) and 2 x 2 side buttons; level-0
+  odd-one-out thinned (36 % to 27.9 % over 2 000 seeds).
+- Verified: node 1,931/0 (15 probe and measurement files) and otherway 300/0; check.py 99/0 (new first_tasks at
+  390 x 844 and 360 x 640: order, cards, time left, Start the task, time-out within a frame and its 600 ms guard,
+  grouped kinds); fit.py every probe at 360 x 640, 390 x 844, 844 x 390: 58/0; harness_patterns 115/0 (mouse and real
+  touch strokes), harness_mechanisms 180/0, harness_wordlinks 103/0; flows.py check 19/0 (snapshot of HEAD, since
+  the working tree's tests/e2e/play.py does not parse: not mine, W2-core told).

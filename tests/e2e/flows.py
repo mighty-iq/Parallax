@@ -118,8 +118,10 @@ def run_check(b, C):
     page.wait_for_function('__play.played.demos >= 1', timeout=10000)
     # W2-measure (fresh-player run, 19 Nov): the worked example ends on a card of its own
     page.wait_for_selector('[data-card-box="probe-example-end"]', timeout=10000)
-    C.ok(page.locator('.pl-grid .px-choice.is-right').count() >= 1 and 'worked example' in page.locator('[data-card-box="probe-example-end"]').inner_text(),
-         f'{tag}: the worked example ends with its answer marked, then a card of its own')
+    # (round 3: Pattern Memory opens the check; its squares have no option grid to mark, so the mark is checked on grids)
+    grid = page.locator('.pl-grid .px-choice').count()
+    C.ok((grid == 0 or page.locator('.pl-grid .px-choice.is-right').count() >= 1) and 'worked example' in page.locator('[data-card-box="probe-example-end"]').inner_text(),
+         f'{tag}: the worked example ends with its answer marked (where it has options), then a card of its own (an example ended without the last tap, as here)')
     click_card(page, 'start')
     wait_state(page, 'respond')
     C.ok(page.evaluate('PX.core.store.state.trials.length') == rows0, f'{tag}: the worked example is never logged')
