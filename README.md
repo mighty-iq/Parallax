@@ -21,7 +21,7 @@ Each exercise starts with **Watch, Try, Go**, in two or three minutes: a slow wo
 
 ## What it bets on
 
-No theory of transfer has won, so Parallax spreads its bets. Every training exercise names the one mechanism it is built around: attention control (Track), load at the edge (Span), variety (Fold, Spin, Hidden), named strategies (Rotate, Orient), comparison (Nets, Knots), bridging (Slice), producing the answer (Views), format practice (the six DAT-style formats), and **calibration** (Reckon, Homing, Central Point): exact feedback on an intuitive estimate, a bet no study has tested yet.
+No theory of transfer has won, so Parallax spreads its bets. Every training exercise names the one mechanism it is built around: attention control (Track), load at the edge (Span), variety (Fold, Spin, Hidden), named strategies (Rotate, Orient), comparison (Nets, Knots), bridging (Slice), producing the answer (Views), format practice (the six DAT-style formats), and **calibration** (Reckon, Homing, Central Point): exact feedback on an intuitive estimate, a bet whose transfer no study has tested yet.
 
 Four add-ons put the bets to work between items: comparison rounds (two solved items side by side and the rule they share), bridge sets (the same problem in a real setting), draw-the-answer items (draw the view, mark the holes, mark the cut) and detailed feedback on your estimates. In the bet trials, which you can leave in Settings, each add-on comes with about half of its exercises in one period of at least 4 weeks and 8 sessions and with the other half in the next, at random. Your record logs how much of each bet you got, so the community's pooled exports form randomised trials of the bets.
 

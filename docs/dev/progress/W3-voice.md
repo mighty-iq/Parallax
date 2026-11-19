@@ -29,3 +29,18 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   the community export without a name or device details unless ticked), the Library notes (requests.md line to
   W2-core), CLAUDE.md's commands (`--shard k/n`). Anchors kept: About's data-section values (claims, hygiene, refs;
   bets.js places "Test the bets with us" after claims), overlap.py's phrases, O.ANALOGY, data-about="testsoon".
+- 2026-11-19 12:25 UTC, the coordinator's two items (PLAN milestone 9, O24 and O26): O26, the guide's ADA
+  reference links the DAT Validity Study (March 2026): its address is not in the research notes (R3 line 851 gives
+  "ada.org/…/education/dat_validity_study.pdf"); found on the ADA's "newsletters and resources" page of the DAT
+  section (one search, one fetch, 19 Nov): https://www.ada.org/-/media/project/ada-organization/ada/ada-org/files/education/dat_validity_study.pdf
+  (the page adds a cache query, rev=…&hash=…, left out). O24: no effect size is converted into IQ points anywhere in
+  the guide; checked by a scan at the end (see Self-check).
+- 2026-11-19 12:26 UTC, the coordinator's spot check of fa49a67: calibration is "a bet whose transfer no study
+  has tested yet" (note T1 lines 21, 175: the bias is corrected within a session, Noel et al. 2020). README fixed;
+  js/ui/bets.js (W2-bets stopped; FYI to the lead in requests.md): About's sentence and the exercise page's tag
+  ("new, transfer untested"); the guide's marked page. node bets 589/0.
+- 2026-11-19 12:26 UTC, guide step 1: cover and contents for 1.2.0 (date "November 2026": the lead adjusts at
+  release if it slips), "What's new in 1.2" (two pages replace 1.1's: eight panels, "Also in 1.2", the record),
+  chapter 1 rewritten as "What Parallax is" (trains, bets, measures; what the numbers and labels mean; how we word
+  claims). The run head reads 1.2.0. Page references to pages still to write (ex-centralpoint, dims, plateaus,
+  check) read "?" until those pages exist.
