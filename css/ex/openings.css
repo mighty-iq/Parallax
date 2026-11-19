@@ -92,3 +92,12 @@
   .pl-trial.ex-openings .op-stage { height: min(calc(var(--pl-avail) - 2.5rem), calc(var(--op-s) * 1.465 + 1.5rem)); }
   .pl-trial.ex-openings .px-choice { height: calc(var(--op-s) + 1.25rem + 6px); padding: 1.25rem 2px 2px 2px; }
 }
+
+/* v1.2 version 3 (PLAN milestone 8; CONTRACT-v1.2 W2; note D1 addendum A.1 row 16): above the starter band the
+   format's look, the openings white shapes outlined in ink on grey panels (the solid is drawn unshaded, white with
+   ink edges, on the white plate by the view). The band keeps its dark openings on light plates. */
+.ex-openings.op-plain .op-plate, .ex-openings .op-plain .op-plate { fill: var(--plate-panel, #E3E6E5); stroke: var(--plate-frame, #9AA1A7); }
+.ex-openings.op-plain .op-hole, .ex-openings .op-plain .op-hole { fill: var(--plate, #FFFFFF); stroke: var(--plate-ink, #16191C); stroke-width: 1.6px; }
+.ex-openings .op-stem.op-plain .op-stage { background: var(--plate, #FFFFFF); border: 1px solid var(--plate-frame, #9AA1A7); }
+/* The opening's letter (A–E) stays above the drawing, on a chip of the cell's ground. */
+.ex-openings .px-choice .px-choice-key { position: absolute; z-index: 2; padding: 0 0.15rem; border-radius: 2px; background: var(--stim-ground, #F4F5F3); }

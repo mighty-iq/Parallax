@@ -25,8 +25,10 @@
    three profiles: mostly changes that keep the outline's corner count, so counting corners does
    not find the key) and, at foil level 1, one proportion foil (an outline of the key's family,
    usually a sibling's, stretched or squeezed by at least 25 %).
-   Every option is shown under its own random turn or flip (the D4 group), as the solid may be
-   turned before it enters, so orientation is never a cue.
+   Every option is shown under its own turn (dim 'turn', version 3): as its face is seen, that turned by
+   quarter steps, or any of the eight turns and flips (the D4 group; the official rules let the solid go
+   in any way round), so orientation is never a cue. Version 3 also adds '2 in all' (one feature on the
+   key's profile, one on another) as the easy end of the test range.
    Starter band (v1.2, features level 0; note D2 §3.4): one feature in all, on the key's own profile
    (a box with one notch, step or slanted cut through it); foils keep the key's corner count: its
    outline with the feature moved, resized or on a neighbouring side ('feature', at least two on the
@@ -718,6 +720,20 @@
   }
   var WEIGHTS = [1, 1, 1, 1, 3, 1.5, 1.5, 2.5, 2, 1];
   // minSame (the starter band): at least that many foils share the key's box, as far as the sample allows.
+  // The composition of two of the eight turns and flips (k1 first, then k2), as one of them.
+  function tfThen(k1, k2) {
+    var a = tfPoint(k2, tfPoint(k1, 1, 0, 0, 0)[0], tfPoint(k1, 1, 0, 0, 0)[1], 0, 0), b = tfPoint(k2, tfPoint(k1, 0, 1, 0, 0)[0], tfPoint(k1, 0, 1, 0, 0)[1], 0, 0);
+    for (var k = 0; k < 8; k++) { var u = tfPoint(k, 1, 0, 0, 0), v = tfPoint(k, 0, 1, 0, 0); if (u[0] === a[0] && u[1] === a[1] && v[0] === b[0] && v[1] === b[1]) return k; }
+    return k1;
+  }
+  // An option's drawing turn for the level (dim 'turn'): its face as seen; that turned by quarter steps;
+  // any of the eight.
+  function optionTf(rng, p, pose, axis) {
+    var seen = seenTf(pose, axis);
+    if (p.turn === 0) return seen;
+    if (p.turn === 1) return tfThen(seen, rint(rng, 0, 3));
+    return rint(rng, 0, 7);
+  }
   function chooseFoils(rng, key, pool, S, needProp, minSame) {
     var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 12), best = null, bestScore = INF;
     var all = [key].concat(idx.map(function (i) { return pool[i]; })), M = [];
@@ -796,15 +812,22 @@
   function sameGrid(a, b) { if (a.A !== b.A || a.B !== b.B) return false; for (var k = 0; k < a.m.length; k++) if (a.m[k] !== b.m[k]) return false; return true; }
   // dim 'features': features per profile, dealt to the three profiles in a random order. Level 0 (v1.2,
   // the starter band): one feature in all, on the key's own profile; the other two profiles stay plain.
-  var FEATURES = [[1, 0, 0], [1, 1, 1], [2, 1, 1], [2, 2, 1], [2, 2, 2]], EDGES = ['straight', 'chamfers'], POSE = ['upright', 'lying'], FOILS = ['features', 'proportion'];
-  var FEATURE_LABELS = ['1 in all (starter)', '1 + 1 + 1', '2 + 1 + 1', '2 + 2 + 1', '2 + 2 + 2'];
+  // Version 3 (PLAN milestone 8, note D1 §6.6 and addendum A.1 row 16): '2 in all', one feature on the key's
+  // own profile and one on another, is the easy end of the test range (RV-B §3); the third profile stays plain.
+  var FEATURES = [[1, 0, 0], [1, 1, 0], [1, 1, 1], [2, 1, 1], [2, 2, 1], [2, 2, 2]], EDGES = ['straight', 'chamfers'], POSE = ['upright', 'lying'], FOILS = ['features', 'proportion'];
+  var FEATURE_LABELS = ['1 in all (starter)', '2 in all', '1 + 1 + 1', '2 + 1 + 1', '2 + 2 + 1', '2 + 2 + 2'];
+  // dim 'turn' (version 3, note D1 §6.6, addendum A.1 row 15): every opening drawn as its face is seen,
+  // then turned in quarter steps from there, then turned or flipped (the official rules let the solid go in
+  // any way round, so the fitting opening may show turned and mirrored: the test range).
+  var TURN = ['as seen', 'turned', 'turned or flipped'];
+  var LEVEL_TAGS = { features: ['below', 'test', 'test', 'test', 'test', 'test'], turn: ['below', 'below', 'test'] };
   // dim 'keyview': the face the key comes from, as world axes of the picture: front (z), side (x), top
   // (y). Every level mixes faces, and over the three levels each face is the key in a third of items,
   // so no single face is the place to look (the front is seen most, the top least).
   var KEYVIEW = ['front, sometimes side', 'front, side or top', 'top, sometimes side'], KEYVIEW_SETS = [[2, 2, 0], [2, 0, 1], [0, 1, 1]];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) {
-    return { features: lvl(params, 'features', 5), edges: lvl(params, 'edges', 2), keyview: lvl(params, 'keyview', 3), pose: lvl(params, 'pose', 2), foils: lvl(params, 'foils', 2) };
+    return { features: lvl(params, 'features', 6), edges: lvl(params, 'edges', 2), keyview: lvl(params, 'keyview', 3), pose: lvl(params, 'pose', 2), foils: lvl(params, 'foils', 2), turn: lvl(params, 'turn', 3) };
   }
   // A foil candidate joins the pool when it fits the box limit, differs clearly from every silhouette of
   // the solid and from every candidate already in, and has one outline.
@@ -869,7 +892,7 @@
     if (!set || set.filter(function (o) { return o.kind === 'feature'; }).length < (kf.t === 'cham' ? 1 : 2)) return null;
     var perm = rshuffle(rng, [0, 1, 2, 3, 4]), all = [keyO].concat(set);
     var options = perm.map(function (i) {
-      var o = all[i], k = seenTf(pose, o.axis), sz = tfSize(k, o.g.A, o.g.B);
+      var o = all[i], k = optionTf(rng, p, pose, o.axis), sz = tfSize(k, o.g.A, o.g.B);
       return { kind: o.kind, axis: o.axis, tf: k, w: sz[0], h: sz[1], poly: tfPoly(o.poly, k, o.g.A, o.g.B) };
     });
     var fl = {};
@@ -881,8 +904,10 @@
     var dims = rshuffle(rng, DIMS).slice(0, 3), W = dims[0], H = dims[1], D = dims[2];
     var pose = rpick(rng, POSE_SETS[p.pose]), keyAxis = axisFacing(POSES[pose], rpick(rng, KEYVIEW_SETS[p.keyview])), keyProf = PROF_OF[keyAxis];
     var cham = p.edges === 1, dm = profDims(W, H, D), feats = { F: [], T: [], S: [] }, names = ['F', 'T', 'S'];
-    // The level's counts dealt to the profiles at random, without regard to the key.
+    // The level's counts dealt to the profiles at random, without regard to the key; '2 in all' keeps one
+    // on the key's own profile (a plain key would be a bare rectangle) and one on another.
     var counts = rshuffle(rng, FEATURES[p.features]), order = rshuffle(rng, [0, 1, 2]), first = true;
+    if (p.features === 1) { var ki = names.indexOf(keyProf), oth = rpick(rng, [0, 1, 2].filter(function (x) { return x !== ki; })); counts = [0, 1, 2].map(function (x) { return x === ki || x === oth ? 1 : 0; }); }
     for (var q = 0; q < 3; q++) {
       var name = names[order[q]], cnt = counts[order[q]];
       for (var f = 0; f < cnt; f++) {
@@ -940,7 +965,7 @@
     if (!set) return null;
     var perm = rshuffle(rng, [0, 1, 2, 3, 4]), all = [keyO].concat(set);
     var options = perm.map(function (i) {
-      var o = all[i], k = rint(rng, 0, 7), sz = tfSize(k, o.g.A, o.g.B);
+      var o = all[i], k = optionTf(rng, p, pose, o.axis), sz = tfSize(k, o.g.A, o.g.B);
       return { kind: o.kind, axis: o.axis, tf: k, w: sz[0], h: sz[1], poly: tfPoly(o.poly, k, o.g.A, o.g.B) };
     });
     var fl = {};
@@ -993,7 +1018,13 @@
       for (i = 0; i < 5; i++) for (j = i + 1; j < 5; j++) if (rcompare(item.options[i].poly, rs[j], caches[i]) !== 'differ') return 'options ' + i + ' and ' + j + ' are not clearly different';
       var seen = featuresSeen(prof, W, H, D, item.pose);
       for (i = 0; i < seen.length; i++) if (seen[i].hits < 2) return 'a feature of profile ' + seen[i].prof + ' is hidden in the picture';
-      if (cleanParams(item.params).features === 0) return validBand(item, sil);
+      var lv = cleanParams(item.params), vt = validTurn(item, sil, lv.turn);
+      if (vt !== true) return vt;
+      if (lv.features === 1) {
+        var runs = ['F', 'T', 'S'].map(function (n) { return featureRuns(prof[n], dm[n][0], dm[n][1]).length; });
+        if (runs.reduce(function (a, b) { return a + b; }, 0) !== 2 || !runs[['F', 'T', 'S'].indexOf(PROF_OF[item.keyAxis])] || runs.indexOf(0) < 0) return '2 in all: one feature on the key\'s face and one on another';
+      }
+      if (lv.features === 0) return validBand(item, sil);
       return true;
     } catch (e) { return 'validate threw: ' + (e && e.message); }
   }
@@ -1015,18 +1046,31 @@
     }
     return -1;
   }
+  // dim 'turn', checked from the camera's own basis (cameraTf, not seenTf): the key turned back by the
+  // inverse of its stored turn lies on its silhouette as it is (the stored turn is the true one); as seen,
+  // every option is in its face's straight-on turn; turned, every option keeps that turn's handedness
+  // (quarter turns only); turned or flipped, any.
+  var INV = [0, 3, 2, 1, 4, 5, 6, 7];
+  function validTurn(item, sil, turn) {
+    var o = item.options[item.key], a = sil[item.keyAxis], b = polyRaster(o.poly, INV[o.tf]), inter = 0, uni = 0;
+    if (!Number.isInteger(o.tf) || o.tf < 0 || o.tf > 7) return 'bad turn on the key';
+    if (a.w !== b.w || a.h !== b.h) return 'the key is not drawn under its stored turn';
+    for (var n = 0; n < a.r.length; n++) { if (a.r[n] && b.r[n]) inter++; if (a.r[n] || b.r[n]) uni++; }
+    if (!uni || inter / uni < 0.985) return 'the key is not drawn under its stored turn';
+    for (var i = 0; i < 5; i++) {
+      var oi = item.options[i], cam = cameraTf(item.pose, oi.axis);
+      if (!Number.isInteger(oi.tf) || AXES.indexOf(oi.axis) < 0 || cam < 0) return 'option ' + i + ': no turn';
+      if (turn === 0 && oi.tf !== cam) return 'as seen: option ' + i + ' is not drawn as its face is seen';
+      if (turn === 1 && (oi.tf < 4) !== (cam < 4)) return 'turned: option ' + i + ' is flipped';
+    }
+    return true;
+  }
   function validBand(item, sil) {
     var keyProf = PROF_OF[item.keyAxis], dm = profDims(item.W, item.H, item.D), plain = 0;
     ['F', 'T', 'S'].forEach(function (n) { if (item.prof[n].length === 4) plain++; });
     if (plain !== 2 || item.prof[keyProf].length === 4 || featureRuns(item.prof[keyProf], dm[keyProf][0], dm[keyProf][1]).length !== 1) return 'starter: one feature in all, on the key\'s face';
-    var k = cameraTf(item.pose, item.keyAxis), o = item.options[item.key];
-    if (k < 0) return 'starter: no straight-on view of the key\'s face';
-    // the key turned back by the inverse of k lies on the silhouette exactly as it is (no other alignment)
-    var a = sil[item.keyAxis], b = polyRaster(o.poly, [0, 3, 2, 1, 4, 5, 6, 7][k]), inter = 0, uni = 0;
-    if (a.w !== b.w || a.h !== b.h) return 'starter: the key is not drawn as its face is seen';
-    for (var n = 0; n < a.r.length; n++) { if (a.r[n] && b.r[n]) inter++; if (a.r[n] || b.r[n]) uni++; }
-    if (!uni || inter / uni < 0.985) return 'starter: the key is not drawn as its face is seen';
-    for (var i = 0; i < 5; i++) { var oi = item.options[i]; if (!Number.isInteger(oi.tf) || AXES.indexOf(oi.axis) < 0 || oi.tf !== cameraTf(item.pose, oi.axis)) return 'starter: option ' + i + ' is not drawn as its face is seen'; }
+    // how the openings are drawn (as seen, turned, or turned or flipped) is the turn dim's, checked in validTurn
+    if (cameraTf(item.pose, item.keyAxis) < 0) return 'starter: no straight-on view of the key\'s face';
     return true;
   }
   function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
@@ -1041,7 +1085,7 @@
   }
   function generate(rng, params) {
     var p = cleanParams(params), item = null;
-    for (var i = 0; i < 50 && !item; i++) item = attempt(i === 0 ? rng : rng.fork('retry' + i), p);
+    for (var i = 0; i < 120 && !item; i++) item = attempt(i === 0 ? rng : rng.fork('retry' + i), p); // version 3: the band with chamfers, as seen, can need many draws
     if (!item) item = fallback(p);
     item.seed = rng.seed;
     item.params = params ? PX.util.deepCopy(params) : p;
@@ -1049,9 +1093,9 @@
   }
   function fallback(p) {
     stats.fallbacks++;
-    var tries = [p, { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0 }];
+    var tries = [p, { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: p.turn }];
     for (var t = 0; t < tries.length; t++) for (var k = 0; k < 400; k++) {
-      var q = tries[t], item = attempt(PX.rng(PX.rng.hash('openings-fallback', q.features, q.edges, q.keyview, q.pose, q.foils, k)), q);
+      var q = tries[t], item = attempt(PX.rng(PX.rng.hash('openings-fallback', q.features, q.edges, q.keyview, q.pose, q.foils, q.turn, k)), q);
       if (item) item.params = q; // validate reads the level (the starter band's checks)
       if (item && validate(item) === true) { item.fallback = true; return item; }
     }
@@ -1062,7 +1106,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [2764413377, 1146957781, 4014106692, 4256521827, 3913201483, 152884121];
+  var TUTORIAL = [2764413377, 1146957781, 4014106692, 3644707956, 3784165992, 3100478066];
   function stemSig(item) { return PX.rng.hash('openings-stem', JSON.stringify([item.W, item.H, item.D, item.prof, item.pose])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params);
@@ -1084,17 +1128,28 @@
   // 74 % edge, so −1.6 centres it): the floor moves from −2.3 to −3.9 and every older combination keeps
   // its exact difficulty (at = [Δ, 0, step, 2·step, 3·step]). Range 5.6 logits.
   PX.ex.define({
-    id: 'openings', version: 2, code: 'EX-14', name: 'Openings', short: 'Openings',
+    id: 'openings', version: 3, code: 'EX-14', name: 'Openings', short: 'Openings',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 5, pat: true,
     bet: 'format', format: 'openings:solid-through-opening', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     starter: { dim: 'features', levels: 1 },
     dims: [
-      { key: 'features', label: 'Features', levels: FEATURE_LABELS.slice(), step: 0.6, at: [-1.6, 0, 0.6, 1.2, 1.8] },
+      // version 3: '2 in all' below 1.1's floor; the band's offset split between features (−1.0) and the
+      // turn dim's 'as seen' (−0.6), so band items drawn as seen keep their −1.6 and the range is unchanged
+      { key: 'features', label: 'Features', levels: FEATURE_LABELS.slice(), step: 0.6, at: [-1.0, -0.4, 0, 0.6, 1.2, 1.8] },
       { key: 'edges', label: 'Edges', levels: EDGES.slice(), step: 0.5 },
       { key: 'keyview', label: 'Fitting face', levels: KEYVIEW.slice(), step: 0.4 },
       { key: 'pose', label: 'Pose', levels: POSE.slice(), step: 0.6 },
       { key: 'foils', label: 'Foils', levels: FOILS.slice(), step: 0.3 },
+      { key: 'turn', label: 'Openings drawn', levels: TURN.slice(), step: 0.3, at: [-0.6, -0.3, 0] },
     ],
+    // Test range (CONTRACT-v1.2 W3; DECISIONS 19 Nov): format features only, never the test's difficulty
+    testRange: {
+      dims: LEVEL_TAGS,
+      notes: {
+        features: 'One feature in all is a starter level. Two features, on two faces, is the easy end of the format; the official sample spreads a few over more than one face.',
+        turn: 'The official rules let the solid go in any way round, so an opening may show turned or mirrored. Openings drawn as their face is seen, or only turned, are starter help.',
+      },
+    },
     base: -2.3,
     generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
@@ -1105,7 +1160,7 @@
       tfPoint: tfPoint, tfSize: tfSize, tfGrid: tfGrid, tfPoly: tfPoly, compare: compare, dist: dist, stretch: stretch, mutate: mutate, MAXEXT: MAXEXT, KEYVIEW_SETS: KEYVIEW_SETS, FEATURES: FEATURES,
       pip: pip, rayIntervals: rayIntervals, rayHits: rayHits, inSolid: inSolid, featureRuns: featureRuns, featuresSeen: featuresSeen, tmul: tmul, axisFacing: axisFacing,
       surface: surface, edges: edges, raySil: raySil, polyRaster: polyRaster, scanFill: scanFill, tfRaster: tfRaster, rcompare: rcompare, shares: shares, fitsBox: fitsBox,
-      build: build, buildBand: buildBand, fallback: fallback, cleanParams: cleanParams, seenTf: seenTf, cameraTf: cameraTf, bandFeatOk: bandFeatOk,
+      build: build, buildBand: buildBand, fallback: fallback, cleanParams: cleanParams, seenTf: seenTf, cameraTf: cameraTf, bandFeatOk: bandFeatOk, tfThen: tfThen, optionTf: optionTf, validTurn: validTurn, TURN: TURN, LEVEL_TAGS: LEVEL_TAGS,
       // the profiles of an item as quarter grids, from its stored polygons (centroid tests)
       gridsOf: function (item) {
         var dm = profDims(item.W, item.H, item.D), out = {};
