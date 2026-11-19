@@ -146,7 +146,8 @@
 .bets-views-line { stroke: var(--ink); stroke-width: 0.09; stroke-linecap: round; }
 .bets-views-line.is-right { stroke: var(--right); }
 .bets-views-line.is-missed { stroke: var(--ink); stroke-dasharray: 0.12 0.1; stroke-width: 0.07; }
-.bets-views-line.is-extra { stroke: var(--wrong); }
+.bets-views-line.is-extra { stroke: var(--wrong); stroke-dasharray: 0.18 0.07 0.03 0.07; stroke-linecap: butt; }
+.bets-views-cross { stroke: var(--wrong); stroke-width: 0.06; stroke-linecap: round; fill: none; }
 .bets-views-pen { fill: none; stroke: var(--focus); stroke-width: 0.05; visibility: hidden; }
 .bets-views-pen.is-on { visibility: visible; }
 .bets-views-pen.is-down { fill: var(--focus); fill-opacity: 0.25; }

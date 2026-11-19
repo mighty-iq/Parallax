@@ -5,7 +5,7 @@
    once (or erases, when the first line it meets is drawn). Keys: arrows move the pen, Space puts it down or
    lifts it (down, each move draws or erases a line), Backspace undoes, Enter checks. The drawing may sit
    anywhere on the grid. The reveal lays the right drawing over the player's at the best match: right
-   lines solid green, missing lines dashed, extra lines red. Show me turns the camera to the asked side and
+   lines solid green, missing lines dashed, extra lines red, dash-dotted and crossed out (never colour alone). Show me turns the camera to the asked side and
    traces the view on the structure (the toview steps). js/ex/views/view.js calls these through its 'draw'
    block with its own pieces (api). */
 (function (PX) {
@@ -17,7 +17,7 @@
   var T = {
     task: 'Draw the {view} view: tap or drag between dots.',
     keys: 'Keys: arrows move the pen, Space puts it down or lifts it, Backspace undoes, Enter checks.',
-    done: 'That is the {view} view, traced on the structure. Below, your drawing: right lines green, missing lines dashed, extra lines red.',
+    done: 'That is the {view} view, traced on the structure. Below, your drawing: right lines solid green, missing lines dashed, extra lines crossed out.',
   };
   function fill(s, vars) { Object.keys(vars || {}).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); }); return s; }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
@@ -215,12 +215,19 @@
       if (mine[e]) { right++; g.appendChild(edgeEl(e, 'bets-views-line is-right')); }
       else { missed++; g.appendChild(edgeEl(e, 'bets-views-line is-missed')); }
     });
-    Object.keys(mine).forEach(function (k) { if (!inKey[k]) { extra++; g.appendChild(edgeEl(+k, 'bets-views-line is-extra')); } });
+    // extra lines: red, dash-dotted and crossed out at their middle (colour is never the only cue, CLAUDE.md rule 8)
+    Object.keys(mine).forEach(function (k) {
+      if (inKey[k]) return;
+      extra++;
+      g.appendChild(edgeEl(+k, 'bets-views-line is-extra'));
+      var p = xyOf(+k), mx = p[0] + (p[2] ? 0 : 0.5), my = sy(p[1] + (p[2] ? 0.5 : 0)), r = 0.14;
+      g.appendChild(SV.el('path', { d: 'M' + (mx - r) + ' ' + (my - r) + 'L' + (mx + r) + ' ' + (my + r) + 'M' + (mx - r) + ' ' + (my + r) + 'L' + (mx + r) + ' ' + (my - r), class: 'bets-views-cross' }));
+    });
     cur.penEl.classList.remove('is-on');
     cur.check.disabled = true; cur.clear.disabled = true; cur.undo.disabled = true;
     var n = item.key.length, ok = !!(result && result.correct);
     cur.verdict.textContent = ok ? '✓ Every line right: the ' + item.view + ' view.'
-      : right + ' of ' + plural(n, 'line', 'lines') + ' right' + (missed ? '; ' + missed + ' missing (dashed)' : '') + (extra ? '; ' + extra + ' extra (red)' : '') + '.';
+      : right + ' of ' + plural(n, 'line', 'lines') + ' right' + (missed ? '; ' + missed + ' missing (dashed)' : '') + (extra ? '; ' + extra + ' extra (crossed out)' : '') + '.';
     cur.verdict.setAttribute('data-kind', ok ? 'key' : 'foil');
     cur.verdict.hidden = false;
     cur.root.classList.add('is-revealed');

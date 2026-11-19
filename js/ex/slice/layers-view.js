@@ -208,7 +208,7 @@
     cur.check.disabled = true; cur.clear.disabled = true;
     var d = (result && result.detail) || {}, n = item.key.length, ok = !!(result && result.correct);
     cur.verdict.textContent = ok ? '✓ All ' + plural(n, 'edge', 'edges') + ' the plane crosses.'
-      : (d.right || 0) + ' of ' + plural(n, 'edge', 'edges') + ' the plane crosses' + (d.missing ? '; ' + d.missing + ' missed (dashed rings)' : '') + (d.extra ? '; ' + d.extra + ' extra (red)' : '') + '.';
+      : (d.right || 0) + ' of ' + plural(n, 'edge', 'edges') + ' the plane crosses' + (d.missing ? '; ' + d.missing + ' missed (dashed rings)' : '') + (d.extra ? '; ' + d.extra + ' extra (crossed out)' : '') + '.';
     cur.verdict.setAttribute('data-kind', ok ? 'key' : 'foil');
     cur.verdict.hidden = false;
     cur.root.classList.add('is-revealed');
