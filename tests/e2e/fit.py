@@ -290,6 +290,22 @@ WTG_JS = r"""() => {
 }"""
 
 
+def settle(page, quiet_ms=240, max_ms=2500):
+    """Waits until the page has stopped scrolling (scrollY the same for quiet_ms; O27). True when it moved."""
+    t0, last, same, moved = time.time(), None, 0, False
+    while (time.time() - t0) * 1000 < max_ms:
+        y = page.evaluate('[scrollX, scrollY, (document.scrollingElement || document.documentElement).scrollTop]')
+        if y == last:
+            same += 80
+            if same >= quiet_ms:
+                break
+        else:
+            moved = moved or last is not None
+            last, same = y, 0
+        page.wait_for_timeout(80)
+    return moved
+
+
 def run_wtg(page, size, ex, rows):
     """Watch, Try, Go on a phone (PLAN M2; RV-play-dat):
     - watch: while the demo plays, its caption is on the screen above the pinned controls, and the
@@ -315,7 +331,15 @@ def run_wtg(page, size, ex, rows):
         if state(page) == 'showme':
             m = page.evaluate(WTG_JS)
             if m['caption']:
-                demo, dfit = m, page.evaluate(FIT_JS)
+                # v1.2 O27: a demo that scrolls itself into place (Hole Punch) is measured after the scroll,
+                # not during it (under load the first caption came before the scroll had ended): measured at
+                # once, and again if the page was still moving and the same demo still shows a caption
+                fit_now = page.evaluate(FIT_JS)
+                if settle(page, quiet_ms=160, max_ms=700):
+                    m2 = page.evaluate(WTG_JS)
+                    if state(page) == 'showme' and m2['caption']:
+                        m, fit_now = m2, page.evaluate(FIT_JS)
+                demo, dfit = m, fit_now
                 break
         page.wait_for_timeout(30)
     turn, tfit, tries = None, None, []
@@ -325,6 +349,7 @@ def run_wtg(page, size, ex, rows):
             if state(page) == 'respond' and page.evaluate('(document.querySelector(".pl-wtg-text") || {}).textContent || ""').startswith('Your turn'):
                 if turn is None:
                     page.wait_for_timeout(150)
+                    settle(page, quiet_ms=160, max_ms=700)  # O27: after any scroll into place
                     turn, tfit = page.evaluate(WTG_JS), page.evaluate(FIT_JS)
                 page.evaluate('__play.answer(true).catch(() => 0)')
             page.wait_for_timeout(60)

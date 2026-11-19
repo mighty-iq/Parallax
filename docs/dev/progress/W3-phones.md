@@ -10,6 +10,8 @@ items W3-phones owns the files they need, and every file touched is listed here.
 - js/ex/cubes/view.js, css/ex/cubes.css (W1-band-A): the hidden cubes' ghosts and badges (O56).
 - css/ex/patfold.css (W1-band-B): the panels on tall and sideways phones (O55).
 - css/ex/knots.css (B4's v1.1 file): the sideways margins (O48).
+- js/ui/progress.js, css/screens.css, tests/e2e/screens.py (O20); js/ui/play.js, js/ui/settings.js (O22).
+- tests/e2e/fit.py (W2-core; O27), tests/e2e/section.py (O28).
 - tests/e2e/band_a.py (W1-band-A): reveal_stable and wtg_checks mute wave 2's hooks, as play.py does (both
   timed out in Train for every band-A and band-B exercise since the hooks: a baseline card after the first
   tutorial; harness_cubes 217/0 after, and the same holds for Angles).
@@ -32,5 +34,18 @@ items W3-phones owns the files they need, and every file touched is listed here.
 - O48: Knots plate measured 318 / 303 / 288 px at 844 x 390 / 667 x 375 / 740 x 360; now 330 / 310 / 300
   (4 px margins sideways); 328+ upright. phones.py knots.
 
+- 02:25 UTC, O20: Progress in tabs on phones (phones.py progress 51/0; screens.py 374/0 with its text checks
+  reading every section). O22: Confirm taps (phones.py taps 15/0).
+- 02:36 UTC, O27: fit.py's Watch and "Your turn" checks measure at once and again once the page stops scrolling
+  (settle): openings 21/21, patfold 17/17, homing 16/16 at 360 x 640; patfold and knots pass at 844 x 390 and
+  390 x 844 (the open 844 x 390 failure is gone with O55). O28: section.py sideways (844 x 390, 740 x 360) 14/0;
+  at 740 x 360 the part card's Start ends 11 px under the screen (a scroll brings it up; noted, not fixed).
+
+## Found, not mine (for the lead)
+- fit.py at 360 x 640: Fold's draw-the-answer items put Clear and Check below the screen (lowest 656-755 of 640;
+  W2-bets' variant), and Fold's Watch caption covers its item (fold 18/31).
+- Hole Punch's Watch at 360 x 640 (seen once before the settle fix): the floating Pause button covers the end of
+  the stem's first line.
+
 ## Next
-O20, O22, O27, O28, O33.
+O33.
