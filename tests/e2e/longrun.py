@@ -42,6 +42,16 @@ OUT = OUT_ROOT / 'longrun'
 OUT.mkdir(parents=True, exist_ok=True)
 INDEX = ROOT / 'index.html'
 READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
+# The end of a Spatial Check (Design A): what the screen must show for the entry just saved.
+END_CHECK_JS = """(() => {
+  const box = document.querySelector('.pl-summary'), last = (PX.core.store.state.assess || []).slice(-1)[0] || null;
+  if (!box || !last) return null;
+  const names = (PX.ui.measure && PX.ui.measure.names) || {}, panels = [...box.querySelectorAll('.pl-panel')];
+  const next = box.querySelector('.pl-next'), status = next ? next.textContent.trim() : '';
+  return { kind: last.kind, named: panels.some((p) => p.textContent.indexOf(names[last.kind] || '?') >= 0),
+    probes: box.querySelectorAll('li[data-probe]').length, nRes: Object.keys(last.results || {}).length,
+    next: status.length > 20, meter: !!(next && next.querySelector('.px-ms-meter, [data-meter]')) || /meter|likely|unclear/i.test(status) };
+})()"""
 MODES = ['train', 'path', 'speed', 'threshold', 'free', 'daily', 'check']
 PROTOCOLS = ['track-standard', 'span-length', 'spin-deadline']
 RIGHT = 0.75            # share of right answers
@@ -532,7 +542,13 @@ class Bot:
         m['sessions'] = m.get('sessions', 0) + 1
         ok = res == 'end'
         if mode == 'check':
-            ok = ok and s1['summary'] and 'Check saved' in s1['h1'] and out['checks'] == 1
+            # Design A's end screen (v1.2, W2-measure; js/ui/check.js renderEnd): "Saved", a panel named for the occasion
+            # (Baseline 1, Baseline 2, 4-weekly check, …) with one row per probe the entry holds, and the Next panel with
+            # the status line (and the meter once the trend runs)
+            end = self.ev(END_CHECK_JS)
+            out['end'] = end
+            ok = ok and s1['summary'] and s1['h1'] == 'Saved' and out['checks'] == 1 and bool(end) and end['named'] \
+                and end['probes'] >= 5 and end['probes'] == end['nRes'] and end['next'] and (end['meter'] or end['kind'] in ('B1', 'B2'))
         elif out['rows'] > 0:
             ok = ok and (s1['summary'] or s1['daily'])
         if not ok:
