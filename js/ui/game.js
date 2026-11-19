@@ -52,6 +52,8 @@
     try { return !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
   }
   function stimOn() { return !!(doc.body && doc.body.classList.contains('px-stim')); }
+  // The device's screen class now (Track, Homing and Reckon keep a rating per class; E.game.displayFor).
+  function display() { try { return E().est.displayClass(win.innerWidth, win.innerHeight); } catch (e) { return 'large'; } }
   function moving() { return celebrate() !== 'quiet' && !reduced(); }
 
   /* ---------- the effect scheduler: between items only ---------- */
@@ -333,7 +335,7 @@
     var r = ctx.rec, now = ctx.now, st = null, fr = null, wr = null;
     try { st = E().notes.state(r, now); } catch (e) { st = null; }
     try { fr = G().fresh(r, now); } catch (e) { fr = null; }
-    try { wr = G().withinReach(r, now); } catch (e) { wr = null; }
+    try { wr = G().withinReach(r, now, null, display()); } catch (e) { wr = null; }
     // a player without a training session yet sees no notes: the first screen stays the two-minute start
     var practised = (Array.isArray(r.sessions) ? r.sessions : []).some(function (x) { return isObj(x) && x.mode !== 'check' && (x.trials || 0) > 0; });
     var offer = st && practised ? st.offer : [];
@@ -399,12 +401,13 @@
     var rows = [];
     G()._.reachDefs().concat(PX.ex.list('train').filter(function (d) { return d.pat === true; })).forEach(function (def) {
       var cv = [];
-      try { cv = E().stats.curve(r, def, { display: 'large' }); } catch (e) { cv = []; }
+      var dc = G().displayFor(r, def, display());
+      try { cv = E().stats.curve(r, def, { display: dc }); } catch (e) { cv = []; }
       if (cv.length < 2) return;
       var first = null;
       for (var i = 0; i < cv.length; i++) if (cv[i].hi - cv[i].lo <= 30) { first = cv[i]; break; }
       first = first || cv[0];
-      var lv = E().est.shown(r, def, { display: 'large' });
+      var lv = E().est.shown(r, def, { display: dc });
       if (!lv || first === cv[cv.length - 1]) return;
       rows.push({ def: def, from: first.level, to: lv.level });
     });
@@ -412,7 +415,7 @@
   }
 
   function progressPanel(ctx) {
-    var r = ctx.rec, now = ctx.now, K = PX.ui.kit, R = G().reach(r), gs = G().grades(r, now);
+    var r = ctx.rec, now = ctx.now, K = PX.ui.kit, R = G().reach(r), gs = G().grades(r, now, display());
     var p = K.panel({ title: 'Grades and Reach', className: 'px-panel gm-panel gm-progress', aside: 'the game layer' });
     p.el.setAttribute('data-gm', 'progress');
     var head = h('div.gm-reach-big', h('span.gm-k', 'Reach'), h('b.px-num', { 'data-reach': String(R.value) }, String(R.value)), h('span.px-meta', ' of ' + R.max));
@@ -466,7 +469,7 @@
     if (!ctx || !ctx.def || ctx.where !== 'page' || ctx.def.role !== 'train') return null;
     var def = ctx.def, r = ctx.rec, now = isNum(ctx.now) ? ctx.now : Date.now(), b = G().bestOf(r, def.id), at = G().atlas(r, def), wr = null;
     if (!b && !(at && at.tried)) return null;
-    try { wr = G().withinReach(r, now, def.id); } catch (e) { wr = null; }
+    try { wr = G().withinReach(r, now, def.id, display()); } catch (e) { wr = null; }
     var parts = [];
     if (b) parts.push('best whole block ' + b.level + (b.at ? ' (' + PX.util.fmtDate(b.at, 'short') + ')' : '') + ', grade ' + G().gradeOf(b.level));
     if (at) parts.push('Atlas ' + at.handled + ' of ' + at.total + ' cells handled');

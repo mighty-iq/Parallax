@@ -82,8 +82,10 @@
     var at = G().atlas(r, def), ad = G().atlasDims(def), K = PX.ui.kit;
     var p = K.panel({ title: nameOf(def), className: 'gm-panel gm-atlas-sheet', aside: h('span.px-num', at.handled + ' of ' + at.total + ' cells handled') });
     p.el.setAttribute('data-atlas', def.id);
-    var st = E().est.get(r, def, { display: 'large' }, now), aim = st && st.n > 0 ? E().est.bRef(def, st.mu) : null;
-    var ease = G().cellEase(def), wr = st && st.n > 0 ? G().withinReach(r, now, def.id) : null;
+    var dc = 'large';
+    try { dc = G().displayFor(r, def, E().est.displayClass(win.innerWidth, win.innerHeight)); } catch (e) { dc = 'large'; }
+    var st = E().est.get(r, def, { display: dc }, now), aim = st && st.n > 0 ? E().est.bRef(def, st.mu) : null;
+    var ease = G().cellEase(def), wr = st && st.n > 0 ? G().withinReach(r, now, def.id, dc) : null;
     var seen = uiRec().seen || (uiRec().seen = {}), seenAt = isNum(seen[def.id]) ? seen[def.id] : 0;
     var fresh = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return G().firstOk(f) && f.ex === def.id && !f.old && f.at > seenAt; }).map(function (f) { return f.cell; });
     var cols = at.cols, rows = at.rows;

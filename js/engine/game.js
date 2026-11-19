@@ -83,10 +83,24 @@
     var e = rec && isObj(rec.ex) ? rec.ex[id] : null, b = isObj(e) && isObj(e.best) && isObj(e.best.block) ? e.best.block : null;
     return b && isNum(b.level) && b.level >= 1 ? { level: Math.round(b.level), at: isNum(b.at) ? b.at : null } : null;
   }
-  function grades(rec, now) {
+  // The display class whose rating an exercise is read from. Track, Homing and Reckon keep one rating per
+  // screen class (perDisplay); the game layer reads the one the player trains on: `display` (the device's
+  // class now) when it has answers, else the class answered last. Every other exercise has one rating.
+  function displayFor(rec, def, display) {
+    if (!def || !def.perDisplay) return 'large';
+    var e = rec && isObj(rec.ex) ? rec.ex[def.id] : null, sm = isObj(e) && isObj(e.small) ? e.small : null;
+    var nL = isObj(e) && isNum(e.n) ? e.n : 0, nS = sm && isNum(sm.n) ? sm.n : 0;
+    if (display === 'small' && nS > 0) return 'small';
+    if (display === 'large' && nL > 0) return 'large';
+    if (!nS) return 'large';
+    if (!nL) return 'small';
+    var lL = isNum(e.last) ? e.last : -1, lS = isNum(sm.last) ? sm.last : -1;
+    return lS >= lL ? 'small' : 'large';
+  }
+  function grades(rec, now, display) {
     return trainDefs().map(function (def) {
       var b = bestOf(rec, def.id), lv = null;
-      try { lv = E.est.shown(rec, def, { display: 'large' }); } catch (e) { lv = null; }
+      try { lv = E.est.shown(rec, def, { display: displayFor(rec, def, display) }); } catch (e) { lv = null; }
       return { exId: def.id, pat: def.pat === true, grade: b ? gradeOf(b.level) : 0, best: b ? b.level : null, at: b ? b.at : null, level: lv && isNum(lv.level) ? lv.level : null };
     });
   }
@@ -246,8 +260,9 @@
     return out;
   }
   // "Within reach": the unhandled cell whose easiest item sits nearest the difficulty the level aims at
-  // (ties: the easier). exId: that exercise, else the exercises of the latest session, else every tried one.
-  function withinReach(rec, now, exId) {
+  // (ties: the easier). exId: that exercise, else the exercises of the latest session. display: the device's
+  // screen class (displayFor picks the rating of a perDisplay exercise).
+  function withinReach(rec, now, exId, display) {
     var ids = exId ? [exId] : [];
     if (!ids.length) {
       var ss = isArray(rec.sessions) ? rec.sessions : [];
@@ -257,7 +272,7 @@
     ids.forEach(function (id) {
       var def = defOf(id);
       if (!def || def.role !== 'train' || !atlasDims(def)) return;
-      var st = E.est.get(rec, def, { display: 'large' }, now);
+      var st = E.est.get(rec, def, { display: displayFor(rec, def, display) }, now);
       if (!st || !(st.n > 0)) return;
       var aim = E.est.bRef(def, st.mu), at = atlas(rec, def), ease = cellEase(def);
       Object.keys(ease).forEach(function (k) {
@@ -477,7 +492,7 @@
 
   E.game = {
     ATLAS: ATLAS, RANKS: RANKS, game: game, gradeOf: gradeOf, band: band, bestOf: bestOf, grades: grades, reach: reach, rank: rank,
-    atlasDims: atlasDims, cellOf: cellOf, tail: tail, handledBy: handledBy, atlas: atlas, cellEase: cellEase,
+    atlasDims: atlasDims, cellOf: cellOf, tail: tail, handledBy: handledBy, atlas: atlas, cellEase: cellEase, displayFor: displayFor,
     withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair, firstOk: firstOk, pending: pending,
     _: { tally: tally, seedAtlas: seedAtlas, slotOf: slotOf, chanceOf: chanceOf, atlasMode: atlasMode, trainDefs: trainDefs, reachDefs: reachDefs, defOf: defOf, near: near },
   };
