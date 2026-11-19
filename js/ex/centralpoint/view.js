@@ -450,7 +450,11 @@
     var late = !!(result && result.late) || st.late;
     // the best answer point itself, or only close enough (fresh-player test: "you · best" beside
     // "Within 1 %" left a player unsure which)
-    st.verdict.textContent = !spot ? cap('noAnswer') : late ? cap('late') : e < 1e-12 ? cap('bestSpot') : e <= item.band ? cap('within', { band: bandWord(item.band) }) : cap('outside', { band: bandWord(item.band) });
+    // v1.2 (W3-exfix, fresh-player test g3: "Incorrect" beside "Round score 57"): a miss close enough to earn round
+    // points (credit > 0: within four times the band) says so; right or wrong for the rating is unchanged
+    var near = !!(result && !result.correct && isNum(result.credit) && result.credit > 0);
+    st.verdict.textContent = !spot ? cap('noAnswer') : late ? cap('late') : e < 1e-12 ? cap('bestSpot') : e <= item.band ? cap('within', { band: bandWord(item.band) })
+      : near ? cap('near', { band: bandWord(item.band), pct: pctText(e) }) : cap('outside', { band: bandWord(item.band) });
     st.controls.hidden = true;
     st.result.hidden = false;
     clear(st.L.map);
