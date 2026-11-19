@@ -88,3 +88,76 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   over four pages. Morgan & Glennerster 1991 has no link (its DOI in C1 is marked unchecked).
 - 2026-11-19 12:50 UTC, CHANGELOG: the 1.2.0 entry ("unreleased": the lead dates it at release). Its
   Missing View line ("moves to profile solids") assumes W1-band-B's phase B lands before release.
+
+## Self-check 1: claims and the code behind each (guide, README, About, Library notes, CHANGELOG)
+Numbers are the code's at HEAD (19 Nov) unless a note is named; "sim" = the simulation report named.
+- 20 training exercises, 9 probes (8 in the Check, Balance in the Lab): js/ex/*/gen.js `role`; single.py counts.
+- Nine bets, labels and lines; calibration new (grade D), its transfer the untested part: js/engine/bets.js INFO,
+  GRADES; note T1 lines 21, 175. Bet per exercise: each gen.js `bet` (registry dump, scripts/dims.mjs).
+- Add-ons per exercise (comparison: Spin, Nets, Orient, Central Point; bridge: Central Point; produce: Fold,
+  Slice, Views; calib: Homing, Reckon, Central Point): def.layers; bets.js addonsLine (bets.test checks the guide).
+- Period of at least 4 weeks and 8 sessions: config.bets periodDays 28, periodSessions 8 (bets.test).
+- First session: tour.js LIST ['spin']; Baseline 1 46 items, 11.5 min: assess.js config.measure.full
+  (16 + 3×5 + 2×5 + 5) × secPerItem 15 s; B2 from b2Hours 12; blocks 14 items (6 + 2×2 + 1×2 + 2), 3.5 min;
+  blocksPerWeek 4; gapHours 8; everyDays 28; weekDays 4; the week block 28 items, about 7 min (measure.js hint).
+- Probe ladder (near otherway; mid cubematch, viewmatch, patterns; far mechanisms, motiongraphs; level alone;
+  wordlinks control): config.measure.rungs. Items aim at k 0.6 (Pattern Memory measureK 0.35); first two of a new
+  version at 0.85 (easyFirst 2, easyK 0.85); one free skip per probe (measure.js); "6 to 8 in 10 right" (measure.js).
+- Meter and words: assess.js meter() line; trend.js milestones (days 14, 28, every 28); 0.975 / 0.95; "likely no
+  change" from day 56 at P(gain < 0.2 SD) ≥ 0.90 (ENGINE §21; measure-sim.md §1); ranges 90 % (measure.js units line).
+- How soon (1.64 / 1.27 SD central, 1.26 / 0.97 optimistic; false "likely gain" 5.9 % ever by week 8):
+  docs/dev/v1.2/measure-sim.md §0. Familiarity: plateau prior 0.65 SD, tail 0.045 SD / 16 items, state 0.5 SD
+  half shared, 55 % kept after > 56 days: trend.js config, ENGINE §21.
+- Per-setting offsets from 100 answers, window 400, cap 0.75 logit, lead every fifth target item: dims.js config
+  (ENGINE §19); 93.8 % (86.5) and 96.0 % (97.3): progress-sim.md §2.
+- Plateaus: window 640, z 1.645, δ 0.15 logit / 100 answers, 8 sessions on 8 days, gap 14 days, trial 3 sessions
+  and 120 answers, rest 3.5 days, eight rows: plateau.js config, ENGINE §20; detection 86.9 / 87.9 % within 800,
+  false alarms 4.8 / 4.5 % at 0.20: plateau-sim.md.
+- Styles k 0.85 / 0.70 / 0.55; mix easy 0.10, stretch 0.10, noStretchBefore 10: model.js config. Similar groups
+  (Angles and Central Point in none): model.js groups.
+- Simulations of the engine for 1.2 (77.7 vs 77.0 %, coverage 96.8 / 98.7 / 92.8 %, Path S1 about 96 %, S5 about
+  53 %, S10 about 5 %): ENGINE §18 and §24.
+- Central Point: board 7 × 7, answers on 13 × 13, bands 1 / 0.5 / 0.25 %, credit to 0 at four bands, targets 4–8,
+  pace startMs 20 000, minMs 2 500, maxMs 30 000, target 0.85, round score pace 1 → ½: centralpoint/gen.js (BANDS,
+  PACE, roundScore); 60 / 33 / 20 % floor: gen.js comment (C1 addendum); cell extrinsic-static, LE Vz: gen.js.
+- Game layer: Reach over 14 exercises (0–1,400), grades by tenths, Atlas p 0.1, Daily ramp k points (36),
+  Climb 20 rungs, second miss ends, three attempts, sounds while Sound is on, Summit; field notes keep 2 of 3; fresh
+  start after 7 days; effects ≤ 700 ms, medium by default: game.js, climb.js, fieldnotes.js, daily.js config,
+  ENGINE §24, game.js settings (celebrate medium, climbSound on, rankTitles off). 22 achievements:
+  achievements.js (Summit new; Top tenth outside the Daily, DECISIONS 19 Nov).
+- Daily pool of 11 (Track, Homing, Reckon and the six DAT-style out): daily.js epochs[1].pool; share line text:
+  ENGINE §24 / daily.js.
+- DAT-style: letters (optionKeys in the six views), nOptions (Openings 5, Hole Punch 5, Painted Cubes 5, others 4),
+  range tags and notes: def.testRange (scripts/range.mjs dump); Painted Cubes sets 2–4, five painted sides on a
+  quarter of figures from 10 cubes, tally pad: DECISIONS 19 Nov (W3-bandA); Section mini 30 / 20 min, full 90 / 60:
+  section.js SIZES and PACE_MS 40 000; Back, Mark, Strike, Next/Skip: ui/section.js buttons.
+- Validity correlations .16–.36: note R3 §4.1 (ADA 2026), unchanged from 1.1.
+- Reckon v2 (final turn 30–150°, legs level, 15° / 20 % tolerance, walks back 3–20 m, 40 s with Gentle motion):
+  reckon/gen.js dims, DECISIONS 19 Nov (W1-fixes), plan Defaults. Motion comfort 3 / 5 / 5 minutes: play.js MOTION;
+  gentle 2/3 speed, 0.6 s ramps: homing/view.js lib.gentle comment.
+- Shortcut check level by level on 19 of 20 exercises: tests/node/shortcut-levels.test.mjs (16 exports + hidden,
+  span built in) and centralpoint.test.mjs per cell; Views pooled plus its starter level (views.test.mjs).
+  Scoped exceptions: E.dims.scoped (ENGINE §19) and DECISIONS (Cube Match, Pattern Memory cap + 25).
+- Record format 4, six trial columns, 26 CSV columns: store.VERSION, ENGINE §23. Community export contents and
+  ticks: lab.js pooledDialog. Events and dose CSVs: bets.js. Learning curves first 60 answers: config.measure.curves.
+  Balance 12 items, no results shown: config.measure.lab.balance, DECISIONS 19 Nov. Self-experiment groups:
+  model.js lab; its checks as the app says them (lab.js).
+- Modes "right when" lines: library.js MODE_WHEN, quoted word for word; suggestion hidden 14 days: ENGINE §18.
+- Settings sections: settings.js, game.js, measure.js, bets.js panels; Confirm taps (O22): settings.js.
+- No IQ-point conversion anywhere (O24): scan below.
+
+## Figures and the PDF (2026-11-19 13:09 UTC)
+- tools/shots.py run in four passes (every exercise and probe, every app screen; failures fixed: the player's
+  hooks, Section's 1.2 end, Reckon's phone item). New: ex20-centralpoint(-feedback), pr6-otherway, pr7-motiongraphs.
+  Looked at: ex20 (both), ex14, ex15, ex18, pr6, pr7, app-progress (the meter panel), app-summary, app-today,
+  app-homing-phone, app-reckon-phone. Unused by the guide now: app-check, app-lab, app-settings (still made).
+- tools/build-pdf.py: 57 sheets, no overflow after trims (pages 5-8, 11-12, 18, 21-22, 26-29, 32-36, 46-50); a
+  long citation span (white-space: nowrap) had squeezed Central Point's panels; split. Pages looked at: 3, 20,
+  21, 23, 28, 32, 35, 36, 39, 45, 46. PDF metadata: /Author "the Chimera community (https://discord.gg/chmr)",
+  /Subject "… Version 1.2.0.", dates in UTC.
+
+## Self-check 2: quote scan (scripts outside the repository, /tmp/w3voice/scripts/quotescan.py)
+- Six-word runs shared with BRIEF.md: README 2, CHANGELOG 1.2.0 entry 2, about.js 3, library.js 0, bets.js 0,
+  guide 3; every one is the fixed Chimera line ("built by the Chimera community on Discord"), which rule 1
+  requires. Two guide phrases that matched the lead's own question texts in BRIEF ("a deadline that tightens as you
+  improve", "weeks in a row at your goal") were reworded. O24: no "IQ point" anywhere (grep).
