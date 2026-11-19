@@ -29,8 +29,9 @@ CASES = {  # name: (params, seed); version 3's kinds
     'plain': ('solid:0,marks:1,view:0,foil:0', 5),  # no marks, two kinds of solid (the wrong pick: another kind)
     'plainsizes': ('solid:1,marks:1,view:1,foil:1', 8),  # no marks, one kind in four proportions
     'shaded': ('solid:1,marks:2,view:1,foil:0', 6),  # two shaded faces
-    'half': ('solid:2,marks:4,view:2,foil:1', 8),  # two shaded and a half mark
-    'prism': ('solid:3,marks:3,view:1,foil:0', 9),  # an L-, T- or U-prism (O51), on a side, a shade and a half mark
+    'apart': ('solid:2,marks:3,view:0,foil:1', 7),  # two shades that meet on the solid, apart in the pattern (the net-adjacency lure)
+    'half': ('solid:2,marks:5,view:2,foil:1', 8),  # two shaded and a half mark
+    'prism': ('solid:3,marks:4,view:1,foil:0', 9),  # an L-, T- or U-prism (O51), on a side, a shade and a half mark
 }
 PLAIN = {'plain', 'plainsizes'}
 DONE = """() => {
@@ -169,7 +170,7 @@ def normal_speed(b, cons):
         page.evaluate("""(pat) => { const list = PX.ex.view('form').demoSteps(__harness.item), s = list.find((x) => (x.caption || '').indexOf(pat) === 0); if (s) s.enter(); }""", pat)
         page.screenshot(path=str(DIR / f'form_plain_example_{name}.png'))
     # the worked example of a half mark (any item with one): three captions, the half mark's corner, the mirror image, the solid that keeps it
-    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=2, p='solid:0,marks:3,view:0,foil:0', fast=1))
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=2, p='solid:0,marks:4,view:0,foil:0', fast=1))
     page.wait_for_function(READY, timeout=60000)
     x = page.evaluate("""() => { const it = __harness.item, list = PX.ex.view('form').demoSteps(it), out = { corner: 0, mirror: 0 };
         list.forEach((s) => { s.enter(); const t = s.caption || '';

@@ -525,12 +525,17 @@
   // plain (no marks: the options differ in shape or proportions, as in the official sample), shaded (two
   // whole faces shaded; a foil's shade may sit on a face of another shape, see buildMarked), then the half
   // marks, which only prep sources document (partial shading, last; marks moved to congruent faces only).
-  var MARKS = [['F'], [], ['F', 'F'], ['F', 'H'], ['F', 'F', 'H'], ['F', 'H', 'H']];
-  var MARK_LABELS = ['one shaded (starter)', 'plain', 'shaded faces', 'shaded and half', 'two shaded and half', 'shaded and two halves'];
+  // The net distance (R3 §8.6, O51): 'shaded faces' keeps two shades that meet on the solid joined by a fold
+  // line in the pattern; 'shaded, apart in the pattern' puts two shades that meet on the solid on pieces
+  // apart in the pattern (folding between them takes two hinges or more), the right solid shows them
+  // meeting, and one wrong solid is the net-adjacency lure: the shades it shows do not meet (one in view,
+  // or two apart), as the false rule "apart in the pattern, apart on the solid" expects.
+  var MARKS = [['F'], [], ['F', 'F'], ['F', 'F'], ['F', 'H'], ['F', 'F', 'H'], ['F', 'H', 'H']];
+  var MARK_LABELS = ['one shaded (starter)', 'plain', 'shaded faces', 'shaded, apart in the pattern', 'shaded and half', 'two shaded and half', 'shaded and two halves'];
   // Tags that describe format features only (note D1 §6.0): below the test (the starter band and its
   // scaffolds: dashed fold lines), the documented test range, or beyond it (half marks: prep sources only).
   // Never the real test's difficulty or a forecast.
-  var LEVEL_TAGS = { solid: ['test', 'test', 'test', 'test'], marks: ['below', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] };
+  var LEVEL_TAGS = { solid: ['test', 'test', 'test', 'test'], marks: ['below', 'test', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] };
   function rangeOf(params) {
     var p = cleanParams(params), out = 'test';
     Object.keys(LEVEL_TAGS).forEach(function (k) { var t = LEVEL_TAGS[k][p[k]]; if (t === 'below') out = 'below'; else if (t === 'beyond' && out !== 'below') out = 'beyond'; });
@@ -671,7 +676,7 @@
   var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, nets: 0, noView: 0, noMarks: 0, fewOrbits: 0, fewFoils: 0, noSet: 0, lastInvalid: null, lastError: null };
   var FOILS = ['shape', 'marks'];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
-  function cleanParams(params) { return { solid: lvl(params, 'solid', 4), marks: lvl(params, 'marks', 6), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
+  function cleanParams(params) { return { solid: lvl(params, 'solid', 4), marks: lvl(params, 'marks', 7), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
   /* ------------------------------------------------------------ the starter band (v1.2) */
   // One shaded face and no half mark (note D2 §3.5). With one shade a mark foil can only move it to a
   // face of another shape (on these solids a turn carries every face onto each congruent one), so face
@@ -859,11 +864,28 @@
   function buildItem(rng, p) {
     if (p.marks === 0) return buildBand(rng, p);
     if (p.marks === 1) return buildPlain(rng, p);
-    if (p.marks === 2) return buildMarked(rng, p, ['F', 'F']);
     return buildMarked(rng, p, MARKS[p.marks]);
   }
   // Marked items (shaded faces, half marks): marks moved only to congruent faces, so face shapes never
   // tell a mark foil from the key (RV-B §1); each foil is a different marked solid.
+  // Faces that share an edge, as a set of 'f,g' keys (f < g).
+  function adjSet(s) { var o = {}; adjacency(s).forEach(function (e) { o[Mth.min(e.f, e.g) + ',' + Mth.max(e.f, e.g)] = 1; }); return o; }
+  // The shaded kinds' two shades (version 3), the first on a face the key's picture shows: 'shaded faces'
+  // keeps shades that meet on the solid joined by a fold line in the pattern; apart, they meet on the
+  // solid, lie on pieces not joined in the pattern, and the key's picture shows both.
+  function shadePair(rng, S, net, kv, apart) {
+    var seen = seenFaces(S, kv), ok = markable(S, kv), adj = adjSet(S), hinge = {}, out = [];
+    net.forEach(function (n) { if (n.parent >= 0) hinge[Mth.min(n.face, n.parent) + ',' + Mth.max(n.face, n.parent)] = 1; });
+    for (var f = 0; f < S.faces.length; f++) for (var g = f + 1; g < S.faces.length; g++) {
+      if (!ok[f] || !ok[g]) continue;
+      var k = f + ',' + g, sf = seen.indexOf(f) >= 0, sg = seen.indexOf(g) >= 0;
+      if (apart ? adj[k] && !hinge[k] && sf && sg : (!adj[k] || hinge[k]) && (sf || sg)) out.push([f, g]);
+    }
+    if (!out.length) return null;
+    var pick = rpick(rng, out), m = S.faces.map(function () { return 0; });
+    m[pick[0]] = 1; m[pick[1]] = 1;
+    return m;
+  }
   function buildMarked(rng, p, setup) {
     // a rectangular pyramid has one four-sided face, too few for two half marks
     var halves = setup.filter(function (x) { return x === 'H'; }).length;
@@ -873,7 +895,8 @@
     if (!net) { stats.nets++; return null; }
     var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, isNC(S) ? null : all1, p.view);
     if (!kv) { stats.noView++; return null; }
-    var M = randomMarks(rng, S, setup, seenFaces(S, kv), markable(S, kv));
+    var shadedKind = p.marks === 2 || p.marks === 3, apart = p.marks === 3;
+    var M = shadedKind ? shadePair(rng, S, net, kv, apart) : randomMarks(rng, S, setup, seenFaces(S, kv), markable(S, kv));
     if (!M) { stats.noMarks++; return null; }
     // Mark foils: each mark moved to a congruent face, one foil per different marked solid (turns of
     // the solid carry arrangements of one marked solid onto each other); the mirror image is one of them.
@@ -882,7 +905,7 @@
     // the shaded kind (whole shades only): on these symmetric solids moves to congruent faces leave at most
     // a mirror pair, so a shade may also move to a face of another shape, where the shaded face's shape
     // tells the foil (the band's method, now with two shades and plain fold lines; DECISIONS)
-    var anyFace = p.marks === 2;
+    var anyFace = shadedKind;
     arrangements(S, M, anyFace).forEach(function (cfg) {
       var c = canon(S, A, cfg);
       if (c === kc) return;
@@ -892,17 +915,35 @@
     if (names.length < (p.foil === 0 ? 2 : 3)) { stats.fewOrbits++; return null; }
     names = rshuffle(rng, names);
     if (mc !== kc && groups[mc]) names = [mc].concat(names.filter(function (c) { return c !== mc; }));
+    // apart: marked solids whose two shades do not meet come first (lures are among them)
+    var adjS = adjSet(S);
+    function meets(cfg) { var f = []; cfg.forEach(function (x, g) { if (x) f.push(g); }); return f.length === 2 && adjS[f[0] + ',' + f[1]]; }
+    if (apart) { // up to three that do not meet (lures) and five that do
+      var apartN = names.filter(function (c) { return !meets(groups[c][0]); }).slice(0, 3), meetN = names.filter(function (c) { return meets(groups[c][0]); }).slice(0, 5);
+      names = apartN.concat(meetN);
+    }
     var key = { kind: 'key', solid: S, marks: M, view: kv }, pool = [];
     names.slice(0, 8).forEach(function (c) {
       var reps = rshuffle(rng, groups[c]), got = 0;
       for (var r = 0; r < reps.length && r < 6 && got < 2; r++) {
-        var v = randomView(rng, S, reps[r], p.view);
-        if (v && !possible(S, M, S, reps[r], v, maps)) { pool.push({ kind: c === mc ? 'mirror' : 'marks', solid: S, marks: reps[r], view: v, orbit: c }); got++; }
+        // apart: a wrong solid whose shades meet shows both, as the right one does (the marks a picture
+        // shows never tell them apart); a lure may show any
+        var v = null;
+        for (var tv = 0; tv < (apart ? 4 : 1) && !v; tv++) { var vv = randomView(rng, S, reps[r], p.view); if (vv && (!apart || !meets(reps[r]) || markedSeen(S, reps[r], vv) === 2)) v = vv; }
+        if (v && !possible(S, M, S, reps[r], v, maps)) {
+          // the lure: its shades in view do not meet (one in view, or two apart), as the false rule expects
+          var sv = seenFaces(S, v).filter(function (g) { return reps[r][g]; }), lure = apart && !(sv.length === 2 && adjS[Mth.min(sv[0], sv[1]) + ',' + Mth.max(sv[0], sv[1])]);
+          pool.push({ kind: c === mc ? 'mirror' : 'marks', solid: S, marks: reps[r], view: v, orbit: c, lure: lure }); got++;
+        }
       }
     });
+    if (apart && !pool.some(function (o) { return o.lure; })) { stats.fewFoils++; return null; }
+    // apart, foil level 0: the solid in other proportions is the lure (one shade in view), so that neither
+    // the marks a picture shows nor its sizes single out the right solid among the other three
     if (p.foil === 0) for (var s = 0; s < 3; s++) {
-      var st = stretched(rng, S), sv = st && randomView(rng, st, M, p.view);
-      if (sv && !possible(S, M, st, M, sv)) pool.push({ kind: 'shape', solid: st, marks: M, view: sv, orbit: 'shape' + s });
+      var st = stretched(rng, S), sv = null;
+      for (var tw = 0; tw < (apart ? 6 : 1) && st && !sv; tw++) { var vw = randomView(rng, st, M, p.view); if (vw && (!apart || markedSeen(st, M, vw) < 2)) sv = vw; }
+      if (sv && !possible(S, M, st, M, sv)) pool.push({ kind: 'shape', solid: st, marks: M, view: sv, orbit: 'shape' + s, lure: apart });
     }
     var nShape = pool.filter(function (o) { return o.kind === 'shape'; }).length, nOrb = {};
     pool.forEach(function (o) { if (o.kind !== 'shape') nOrb[o.orbit] = 1; });
@@ -914,6 +955,7 @@
       var tri = [idx[a], idx[b], idx[c]], set = tri.map(function (i) { return pool[i]; });
       if (set[0].orbit === set[1].orbit || set[0].orbit === set[2].orbit || set[1].orbit === set[2].orbit) continue;
       if (set.filter(function (o) { return o.kind === 'shape'; }).length !== (p.foil === 0 ? 1 : 0)) continue;
+      if (apart && set.filter(function (o) { return o.lure; }).length !== 1) continue; // one lure; the others show both shades
       var sh = shares([kf].concat(tri.map(function (i) { return pf[i]; }))), score = 0;
       for (var k = 0; k < sh.length; k++) score += WEIGHTS[k] * Mth.abs(sh[k] - want[k]);
       if (set.some(function (o) { return o.kind === 'mirror'; })) score -= 0.15;
@@ -1215,7 +1257,7 @@
       }
       if (lv === 0) return validBand(item);
       if (lv === 1) return validPlain(item);
-      if (lv === 2) return validShaded(item);
+      if (lv === 2 || lv === 3) return validShaded(item);
       return true;
     } catch (e) { return 'validate threw: ' + (e && e.message); }
   }
@@ -1291,7 +1333,23 @@
       if (z.n) other++;
     }
     if (other !== (p.foil === 0 ? 1 : 0)) return 'shaded: wrong number of solids in other proportions for the level';
-    return true;
+    // the net distance, checked on what is stored (own code): faces sharing an edge from the corner lists,
+    // pieces joined by a fold line from the stored parents, faces in view from the validator's own cosines
+    // (and rays on non-convex prisms)
+    function edgeSet(S) { var e = {}, out = {}; S.faces.forEach(function (F, f) { for (var i = 0; i < F.length; i++) { var a = F[i], b = F[(i + 1) % F.length], k = Mth.min(a, b) + '-' + Mth.max(a, b); if (e[k] !== undefined) out[Mth.min(e[k], f) + ',' + Mth.max(e[k], f)] = 1; else e[k] = f; } }); return out; }
+    function shaded(m) { var f = []; m.forEach(function (x, g) { if (x === 1) f.push(g); }); return f; }
+    function inView(o) { var c = faceCos(o.solid, o.view), sh = isNC(o.solid) ? shownShare(o.solid, o.view) : null; return function (g) { return c[g] >= SEEN && (!sh || sh[g] >= 0.8); }; }
+    var pair = shaded(item.marks), E = edgeSet(item.solid), k0 = pair[0] + ',' + pair[1], joined = item.net.some(function (n) { return n.parent >= 0 && Mth.min(n.face, n.parent) + ',' + Mth.max(n.face, n.parent) === k0; });
+    if (p.marks === 2) return !E[k0] || joined ? true : 'shaded: two shades that meet on the solid are joined by a fold line in the pattern';
+    if (!E[k0] || joined) return 'apart: the two shades meet on the solid and lie apart in the pattern';
+    var K = item.options[item.key], seenK = inView(K), kp = shaded(K.marks);
+    if (!kp.every(seenK)) return 'apart: the right solid shows both shades';
+    var lure = item.options.some(function (o, i) {
+      if (i === item.key) return false; // at foil level 0 the lure is the solid in other proportions
+      var q = shaded(o.marks).filter(inView(o));
+      return q.length < 2 || !edgeSet(o.solid)[q[0] + ',' + q[1]];
+    });
+    return lure ? true : 'apart: one wrong solid shows shades that do not meet (the net-adjacency lure)';
   }
   function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
 
@@ -1326,7 +1384,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [1543916583, 3094203016, 1597406505, 2157057468, 2472903096, 4107320250];
+  var TUTORIAL = [1543916583, 3094203016, 1597406505, 2157057468, 2472903096, 2150001115];
   function stemSig(item) { return PX.rng.hash('form-stem', JSON.stringify([item.solid.kind, item.solid.verts, item.net, item.marks])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params);
@@ -1346,7 +1404,8 @@
   // half mark, Δ = −1.5 against today's level 0 (hand-set, to be refitted from pooled exports): the floor
   // moves from −2.2 to −3.7 and older combinations keep their exact difficulty. Range 5.5.
   // v1.2 (version 3; PLAN milestone 8, note D1 §6.4): 'marks' becomes the test's kinds of item: the starter
-  // band (−1.5), plain (−0.9), shaded faces (−0.4), then the half marks at their old steps (0, 0.6, 1.2);
+  // band (−1.5), plain (−0.9), shaded faces (−0.4), shaded faces apart in the pattern with the
+  // net-adjacency lure (−0.15; the net distance, R3 §8.6), then the half marks at their old steps (0, 0.6, 1.2);
   // bevelled boxes join the first solids; L-, T- and U-prisms are a fourth solid level (O51; +1.5, the
   // step's 0.5 on); the band's wrong sizes are 40 % off or more. Hand-set, to be refitted from pooled
   // exports. The range grows to −3.7 … 2.3 (the new top); js/engine/rebase.js re-bases stored levels.
@@ -1357,7 +1416,7 @@
     starter: { dim: 'marks', levels: 1 },
     dims: [
       { key: 'solid', label: 'Solid', levels: ['boxes and prisms', 'wedges and pyramids', 'frusta and five-sided', 'L-, T- and U-prisms'], step: 0.5 },
-      { key: 'marks', label: 'Marks', levels: MARK_LABELS.slice(), step: 0.6, at: [-1.5, -0.9, -0.4, 0, 0.6, 1.2] },
+      { key: 'marks', label: 'Marks', levels: MARK_LABELS.slice(), step: 0.6, at: [-1.5, -0.9, -0.4, -0.15, 0, 0.6, 1.2] },
       { key: 'view', label: 'Pictures', levels: ['upright', 'on a side', 'upside down'], step: 0.5 },
       // version 3: 'close' is the same kind of solid in every option (sizes nearer, or only the marks differ),
       // 'clear' another kind, a size well off or the marks (the old labels named marks, which the plain kind lacks)
