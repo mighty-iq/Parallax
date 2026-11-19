@@ -115,6 +115,12 @@
     return r.ui;
   }
   function seenMap() { var u = uiRec(); if (!isObj(u.seen)) u.seen = {}; return u.seen; }
+  // A kind of item, for the new-kind line (round 9): its variant (a draw-the-answer item, pick two…) and whether it
+  // is part of a figure set. markKind keeps it in rec.ui.seen (no save of its own: the answer's save carries it).
+  function kindKey(item, cfg) {
+    return (item && item.params && typeof item.params.variant === 'string' ? item.params.variant : '') + (cfg && isObj(cfg.set) ? ':set' : '');
+  }
+  function markKind(exId, key) { if (exId) seenMap()['kind:' + exId + ':' + key] = now(); }
   function isSeen(k) { return !!seenMap()[k]; }
   function markSeen(k) { var s = seenMap(); if (!s[k]) { s[k] = now(); save(); } }
   function tourRec() { var r = rec(); if (!isObj(r.tour)) r.tour = { done: false, seen: {} }; if (!isObj(r.tour.seen)) r.tour.seen = {}; return r.tour; }
@@ -346,6 +352,13 @@
         var fbHidden = P.el.feedback.hidden;
         if (fbHidden) { P.el.feedback.hidden = false; P.el.actions.hidden = true; }
         var caption = opts.caption || function (text) { P.el.caption.textContent = text; };
+        // round 9 (Slice's Watch at 390 x 844: the page jumped when Your turn came): on a phone the item's own caption
+        // line plays pinned in the bar, so when the walkthrough ends its last words would drop back into the item and
+        // push the answers down; the line gets back the words it had before (end, below), the item keeps its height
+        var capEls = [].slice.call(P.el.host.querySelectorAll('.ex-caption')), capWas = capEls.map(function (e) { return e.textContent; });
+        // a Watch demo ends with Your turn; where Watch, Try, Go sized the item to leave that strip's room (makeRoom, a
+        // tall screen) nothing more is needed
+        var turnPx = P.demoing && P.demoCfg && P.demoCfg.turn && !P.turnRoomed ? turnRoom() : 0;
         var t0 = timing.now();
         function dur() { return Math.max(1, (steps[i].ms || 0) * scale); }
         function safe(fn, k) { try { if (fn) fn(k); } catch (e) { log('show-me step failed', e); } }
@@ -356,7 +369,12 @@
           var s = steps[i];
           if (s.caption) caption(s.caption);
           safe(s.enter); safe(s.update, 0);
-          if (k === 0 || group[k] !== group[k - 1]) label(); // a new caption: the button's words follow it at once
+          if (k === 0 || group[k] !== group[k - 1]) {
+            label(); // a new caption: the button's words follow it at once
+            // round 9 (Fold's Watch at 360 x 640: its large sheet came mid-demo and the page jumped at Your turn): a demo
+            // whose item grows keeps it above the bar and the Your turn room as each caption comes
+            if (k > 0 && turnPx) stageIntoView(P, true, turnPx);
+          }
         }
         function finish() { var s = steps[i]; safe(s.update, 1); safe(s.exit); }
         function label() {
@@ -386,24 +404,48 @@
           P.el.pAuto.hidden = !tapped;
           P.el.pAuto.setAttribute('aria-pressed', autoplay() ? 'true' : 'false');
           P.el.player.toggleAttribute('data-waiting', !!waiting);
+          // round 9 (fresh-player batch: after a wrong scored answer, three or more taps reached the next item): a
+          // walkthrough after a scored answer has the strip's own Next item in its bar, in Close's place, and moves on
+          // in one tap; Next step still walks through the captions for those who want them
+          // (phones: the strip's own row waits under the item meanwhile, css/play.css; wide screens keep that row, so
+          // the bar's copy shows on phones only). Round 9 (a desktop fresh run: Space and Enter stepped the walkthrough
+          // instead of going on): there Enter and Space go to the next item, and → steps, as Next step's key says
+          var direct = answered && !!(P.cfg && !P.cfg.practice);
+          P.el.pSkip.hidden = !direct;
+          P.el.player.toggleAttribute('data-direct', direct);
+          if (direct) P.el.pSkip.firstChild.textContent = P.el.nextBtn.firstChild.textContent === 'Finish' ? 'Finish' : 'Next item';
+          P.el.pNext.classList.toggle('px-btn--primary', !direct);
+          P.el.pNext.classList.toggle('px-btn--secondary', direct);
+          var kb = P.el.pNext.querySelector('.px-kbd');
+          if (kb) kb.textContent = direct ? '→' : 'Enter';
+          P.el.pNext.setAttribute('aria-keyshortcuts', direct ? 'ArrowRight' : 'Enter');
         }
         function wait() {
           waited = i; waiting = true; paused = true; label();
+          // a demo's Next takes the focus (Enter and Space step it); after an answer the focus stays where the player
+          // left it (round 9: Next step held it, so Space and Enter stepped the walkthrough instead of going on; the
+          // walkthrough's own keys stay on its buttons once the player picks one of them)
+          if (answered) return;
           try { P.el[tapMode() ? 'pNext' : 'pPause'].focus({ preventScroll: true }); } catch (e) { /* ignore */ }
         }
         function end() {
           if (done) return;
           done = true;
+          // where the page stood while the walkthrough's layout did (read before anything below changes it: the state's
+          // own room under the item goes at once; Your turn keeps this place, keepScroll)
+          try { P.endY = win.pageYOffset || 0; } catch (e) { P.endY = null; }
           P.played.finished++;
           P.played.ms = Math.round(timing.now() - t0);
           P.played.last = { steps: seen, of: steps.length, replays: replays, closed: closed, ms: P.played.ms, tap: endTap };
+          var pinned = capEls.map(function (e) { try { return e.isConnected && win.getComputedStyle(e).position === 'fixed'; } catch (x) { return false; } });
           if (closed) { try { caption(''); } catch (e) { /* the view's caption */ } } // round 4: no caption left beside the answer after Close
+          capEls.forEach(function (e, k) { if (pinned[k] && e.textContent !== capWas[k]) e.textContent = capWas[k]; }); // a phone: as it was before
           if (stop) stop();
           cur = null;
           P.el.player.hidden = true;
           if (fbHidden) { P.el.actions.hidden = false; if (prev !== 'reveal' && prev !== 'showme') P.el.feedback.hidden = true; }
           waiting = false; paused = false; label();
-          P.el.pNext.hidden = true; P.el.pAuto.hidden = true; P.el.pStep.hidden = false;
+          P.el.pNext.hidden = true; P.el.pAuto.hidden = true; P.el.pStep.hidden = false; P.el.pSkip.hidden = true; P.el.player.removeAttribute('data-direct');
           if (P.state === 'showme') P.setState(prev === 'showme' ? 'reveal' : prev);
           if (answered && !FAST) P.nextLockUntil = timing.now() + AFTER_SHOWME_LOCK_MS; // a tap meant for the walkthrough's Next
           resolve();
@@ -469,7 +511,7 @@
         enter(0);
         // Phones pin the caption and the show-me bar to the bottom (css/play.css): keep the stage
         // above them for a show-me after an answer too, as Watch does for its demo (B2's gap).
-        stageIntoView(P, true);
+        stageIntoView(P, true, turnPx);
         stop = timing.loop(function (dt) { return frame(dt); });
       });
     }
@@ -584,9 +626,11 @@
     el.pauseText = h('p.pl-pause-text');
     el.pauseNote = h('p.pl-pause-note.px-meta', 'A skipped item counts nowhere and is replaced.'); // the Spatial Check rewords it
     el.pauseExtra = h('div.pl-pause-extra'); // playtest mode's note button (W1-rules' request, CONTRACT-v1.2 G)
+    // round 9 (fresh-player batch: End session landed in a different place at each pause): the buttons come first,
+    // in one order (Resume, End session, then Skip this item when there is an item), and css/play.css pins the sheet
     el.pause = h('div.pl-pause', { hidden: true },
-      h('div.pl-pause-in', h('p.pl-pause-title', 'Paused'), el.pauseText,
-        h('div.pl-pause-actions', el.resume, el.skip, el.end), el.pauseNote, el.pauseExtra));
+      h('div.pl-pause-in', h('p.pl-pause-title', 'Paused'),
+        h('div.pl-pause-actions', el.resume, el.end, el.skip), el.pauseText, el.pauseNote, el.pauseExtra));
     // Playtest notes during a session go through the pause sheet (the floating note button hides
     // while an item is on screen); null when playtest mode is off.
     function pauseExtras() {
@@ -596,6 +640,8 @@
       if (nb) el.pauseExtra.appendChild(nb);
     }
     el.trial = h('section.pl-trial', { 'aria-label': 'Item', tabindex: '-1' }, el.host, el.grid, el.limit, el.confirmRow, el.pause);
+    // round 9: the line for a kind of item the player has not met yet (setNewKind; placed in el.trial per item)
+    el.newKind = h('p.pl-newkind', { hidden: true, 'data-newkind': '' });
     el.verdict = h('div.pl-verdict', { role: 'status', 'aria-live': 'polite' });
     el.notes = h('div.pl-notes');
     el.caption = h('p.pl-caption', { 'aria-live': 'polite' });
@@ -603,6 +649,7 @@
     el.pStep = ui.button('Step', { kind: 'secondary', small: true, key: '→', onClick: function () { runner.cmd('step'); } });
     el.pReplay = ui.button('Replay', { kind: 'secondary', small: true, key: 'r', onClick: function () { runner.cmd('replay'); } });
     el.pClose = ui.button('Close', { kind: 'ghost', small: true, key: 'Escape', onClick: function () { runner.cmd('close'); } });
+    el.pClose.setAttribute('data-showme-close', '');
     // a Watch demo's own two: Next (each caption waits for it, or for a tap on the figure) and Auto-play
     el.pNext = ui.button('Next', { kind: 'primary', small: true, key: 'Enter', onClick: function () { runner.cmd('next'); } });
     el.pNext.setAttribute('data-showme-next', '');
@@ -611,8 +658,12 @@
     el.pAuto.setAttribute('data-showme-auto', '');
     el.pAuto.setAttribute('aria-pressed', 'false');
     el.pAuto.hidden = true;
+    // round 9: after a scored answer, the strip's Next item in the walkthrough's bar (it ends the walkthrough and goes on)
+    el.pSkip = ui.button('Next item', { kind: 'primary', small: true, onClick: function () { goNext(); } });
+    el.pSkip.setAttribute('data-showme-skip', '');
+    el.pSkip.hidden = true;
     el.player = h('div.pl-showme', { hidden: true, role: 'group', 'aria-label': 'Show me controls' }, el.caption,
-      h('div.pl-showme-buttons', el.pPause, el.pStep, el.pReplay, el.pClose, el.pAuto, el.pNext));
+      h('div.pl-showme-buttons', el.pPause, el.pStep, el.pReplay, el.pClose, el.pAuto, el.pNext, el.pSkip));
     el.showBtn = ui.button('Show me', { kind: 'secondary', key: 's', onClick: function () { showMe(false); } });
     el.showBtn.setAttribute('data-showme', '');
     el.nextBtn = ui.button('Next', { kind: 'primary', key: 'Space', onClick: function () {
@@ -874,6 +925,11 @@
             P.armed = -1; // O22: nothing marked by a first tap yet
           }
         } catch (e) { log('drawing the options failed (' + P.exId + ')', e); el.trial.style.visibility = ''; failTrial(token); return; }
+        // round 9 (fresh-player batch: Fold's draw-the-answer item came as scored item 4 with no word): practice items
+        // (Watch, Try) show their kind of item; a scored item of a kind the player has not met carries cfg.newKind (the
+        // session's newKindLine), one line under the question (above an item with its own input), set before it paints
+        if (cfg.practice) markKind(P.exId, kindKey(item, cfg));
+        setNewKind(cfg.newKind || null);
         el.confirmRow.hidden = type !== 'multi' || P.layout !== 'stem+options'; // an item with its own input confirms there
         el.confirm.disabled = true;
         el.confirmText.textContent = type === 'multi' ? 'Pick ' + nCorrect(def, item) + ', then confirm.' : '';
@@ -1208,8 +1264,10 @@
       var d;
       P.demoing = true;
       P.demoCfg = cfg;
+      P.endY = null; // set by the runner as this demo ends
       try { d = Promise.resolve(P.view.demo(item, P.ctx, null)); } catch (e) { d = Promise.reject(e); }
       d.catch(function (e) { log('demo failed (' + P.exId + ')', e); }).then(function () {
+        var y0 = P.endY; // where the page stood as the demo ended (Your turn keeps it: keepScroll)
         P.demoing = false;
         P.played.demos++;
         if (tok !== P.token || P.last) return;
@@ -1218,16 +1276,28 @@
         P.paintTs = timing.now(); P.pausedMs = 0; P.pauseStart = 0;
         if (P.grid) P.grid.lock(false);
         if (typeof cfg.onDemoEnd === 'function') cfg.onDemoEnd();
-        if (cfg.turn) yourTurn(cfg.turn, function () { playDemo(item, cfg, tok); });
+        if (cfg.turn) yourTurn(cfg.turn, function () { playDemo(item, cfg, tok); }, y0);
       });
     }
     P.demo = demo;
+    // Round 9 (Watch at 360 x 640: the page moved back up to 34 px when Your turn came): the demo's pinned bar kept room
+    // under the item; when the strip takes its place the document keeps at least the height the screen showed (the
+    // player's --pl-keep, css/play.css), so the page stays where it was
+    function keepScroll(y0) {
+      if (!isNum(y0)) return;
+      try {
+        el.root.style.removeProperty('--pl-keep');
+        var se = doc.scrollingElement || doc.documentElement, short = Math.ceil(y0 + (win.innerHeight || 0) - se.scrollHeight);
+        if (short > 0) el.root.style.setProperty('--pl-keep', short + 'px');
+        if (Math.abs((win.pageYOffset || 0) - y0) >= 1) win.scrollTo(0, y0);
+      } catch (e) { /* cosmetic */ }
+    }
 
     // After a Watch demo the next step is said where the demo's controls were (the reading strip),
     // so the screen is never a dead end: answer it as the demo did, or go on (RV-play-dat).
     // v1.2 (W1-fixes' request, fresh-player retests): the strip says it loudly, the HUD says it
     // too, and "Watch again" replays the demo until the first answer.
-    function yourTurn(o, again) {
+    function yourTurn(o, again, y0) {
       if (P.state !== 'respond') return;
       ui.clear(el.verdict);
       el.verdict.setAttribute('data-kind', 'turn');
@@ -1249,6 +1319,7 @@
       setMeta('Your turn');
       el.actions.hidden = true;
       el.feedback.hidden = false;
+      keepScroll(y0);
       marksIntoView();
     }
 
@@ -1414,6 +1485,22 @@
     }
     function setProgress(v, max) { el.bar.set(v, Math.max(1, max)); el.bar.setAttribute('aria-valuetext', Math.min(v, max) + ' of ' + max); }
     function setGoal(text) { el.goal.textContent = text || ''; el.goal.hidden = !text; syncGuide(); }
+    // The new-kind line (round 9): under the stem of a stem+options item, above an item with its own input; on phones
+    // the item gives up the line's height (--pl-nk, css/play.css), so it still fits one screen
+    function setNewKind(text) {
+      if (!text) { el.newKind.hidden = true; el.root.classList.remove('has-newkind'); el.root.style.removeProperty('--pl-nk'); return; }
+      el.newKind.textContent = text;
+      var before = P.layout === 'custom' ? el.host : el.grid;
+      if (el.newKind.parentNode !== el.trial || el.newKind.nextSibling !== before) el.trial.insertBefore(el.newKind, before);
+      el.newKind.hidden = false;
+      el.root.classList.add('has-newkind');
+      try {
+        var cs = win.getComputedStyle(el.newKind), gap = parseFloat(win.getComputedStyle(el.trial).rowGap) || 0;
+        var hh = el.newKind.getBoundingClientRect().height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0) + gap;
+        el.root.style.setProperty('--pl-nk', Math.ceil(hh) + 'px');
+      } catch (e) { /* the line keeps its room unmeasured */ }
+    }
+    P.setNewKind = setNewKind;
     function setTip(t) {
       ui.clear(el.tip);
       el.tip.hidden = !t;
@@ -1460,7 +1547,7 @@
             row('Esc', 'Pause; during a moving display the exercise pauses itself'),
             row('S', 'Show me the solution'),
             row('?', 'This list')),
-          h('p.px-meta', 'While a solution plays: Space pauses, → steps, R replays and Esc closes it.'),
+          h('p.px-meta', 'While a solution plays: → shows its next step, R replays it and Esc closes it. After an answer, Space goes on to the next item while it plays; after a scored answer, Enter does too.'),
         ],
         actions: [{ label: 'Close', kind: 'secondary' }],
       });
@@ -1469,13 +1556,18 @@
 
     /* ---------- keys, events ---------- */
     var popKeys = keys.push({
+      // Round 9 (a desktop fresh run): after an answer, Space goes on to the next item, as the strip's Next says, while
+      // the walkthrough plays too; after a scored answer Enter does as well (in practice it shows the next step, as Next
+      // step's key says). A key on a focused walkthrough button stays with that button (PX.core.keys).
       Enter: function () {
         if (P.state === 'respond') return confirmMulti('key') ? undefined : false;
         if (P.state === 'reveal') { goNext(); return undefined; }
-        if (P.state === 'showme') { if (runner.tapMode()) runner.cmd('next'); return undefined; } // a demo's Next; after an answer, Next waits until show me ends or is closed
+        if (P.state === 'showme' && P.last && P.cfg && !P.cfg.practice && !P.demoing) { goNext(); return undefined; }
+        if (P.state === 'showme') { if (runner.tapMode()) runner.cmd('next'); return undefined; } // a demo's Next, or a practice walkthrough's next step
         return false;
       },
       Space: function () {
+        if (P.state === 'showme' && P.last && !P.demoing) { goNext(); return undefined; }
         if (P.state === 'showme') { runner.cmd('pause'); return undefined; }
         if (P.state === 'reveal') { goNext(); return undefined; }
         return false;
@@ -1815,6 +1907,9 @@
     try { rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16; } catch (e) { /* default */ }
     return Math.round(6.75 * rem);
   }
+  // The Your turn strip's room after a Watch demo on a short portrait phone, where the strip shows its word and its
+  // buttons without the line (css/play.css): the answer strip's room covers it
+  function turnRoom() { return stripRoom(); }
   function isPhone() {
     try { return !!(win.matchMedia && win.matchMedia('(max-width: 719px), (max-height: 500px)').matches); } catch (e) { return false; }
   }
@@ -1824,7 +1919,9 @@
   // (the strip and the goal may scroll away above it then). Under the sticky header on wide screens.
   // When both cannot hold, the top wins. pinned: a demo or show-me runs, or is about to (before its
   // bar is up, phones keep 7.5rem for it). Watch, Try, Go's own header may scroll away above.
-  function stageIntoView(P, pinned) {
+  // turn: the room a Watch demo's Your turn strip will take at the bottom when the demo ends (round 9: the page jumped
+  // when it came), so the item is placed above it from the start and Your turn moves nothing
+  function stageIntoView(P, pinned, turn) {
     try {
       var vh = win.innerHeight || 640, top = 0, rem = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16;
       var head = doc.querySelector('.px-header');
@@ -1835,6 +1932,12 @@
         var r = e.getBoundingClientRect();
         if (r.height) { bottom = Math.max(bottom, r.bottom); itemTop = Math.min(itemTop, r.top); }
       });
+      // round 9: a walkthrough after an answer keeps the verdict's one row (it flows under the item on a phone) above
+      // the pinned caption too, where the item's top allows it, so the row is never half covered
+      if (pinned && P.last && P.el.verdict.firstChild && bottom) {
+        var vr = P.el.verdict.getBoundingClientRect();
+        if (vr.height && vr.top >= bottom - 1 && win.getComputedStyle(P.el.feedback).position === 'static') bottom = Math.max(bottom, vr.bottom);
+      }
       if (!bottom || !hud.height) return;
       var anchor = pinned ? itemTop - 8 : hud.top;
       var limit = vh - 8;
@@ -1848,10 +1951,17 @@
           if (r.height && r.top > top && r.top < vh) { limit = Math.min(limit, r.top - 4); found = true; }
         });
         if (!found && isPhone()) limit = Math.min(limit, vh - 7.5 * rem);
+        if (turn > 0) limit = Math.min(limit, vh - turn);
       }
       var by = 0;
       if (bottom > limit) by = Math.min(bottom - limit, anchor - top);
       else if (anchor < top) by = Math.max(anchor - top, bottom - limit);
+      // round 9: as at an answer (marksIntoView), a scroll that would cut Watch, Try, Go's header in half takes it away
+      // whole, as far as the item's top allows (Homing's Watch at 390 x 844, placed above the Your turn room)
+      if (pinned && by > 0) {
+        var wt = P.el.root.previousElementSibling, wr = wt && wt.classList && wt.classList.contains('pl-wtg') ? wt.getBoundingClientRect() : null;
+        if (wr && wr.height && wr.top - top >= -1 && by > wr.top - top + 1 && by < wr.bottom - top) by = Math.min(Math.ceil(wr.bottom - top), Math.max(by, anchor - top));
+      }
       if (Math.abs(by) >= 1) win.scrollBy(0, by);
     } catch (e) { /* cosmetic */ }
   }
@@ -1954,7 +2064,8 @@
         // Your turn: the strip with its word, a wrapped line and its buttons (Painted Cubes fresh test: 1.5rem more
         // than the answer strip was 7 px short at 390 x 844)
         var more = hh + (demo && strip ? guide + strip + 2 * rem - 4 * rem : 0);
-        if (more > 0 && strip && (win.innerHeight || 640) - 4.5 * rem - extra - more >= WTG_MIN_REM * rem) extra += more;
+        P.turnRoomed = false;
+        if (more > 0 && strip && (win.innerHeight || 640) - 4.5 * rem - extra - more >= WTG_MIN_REM * rem) { extra += more; P.turnRoomed = !!demo; }
         host.style.setProperty('--pl-extra', Math.round(extra) + 'px');
       } catch (e) { /* the item keeps its usual size */ }
     }
@@ -2159,7 +2270,7 @@
       p = CH.route(ch);
     }
     var mode = hasOwn.call(E().modes.MODES, p.mode) && p.mode !== 'check' ? String(p.mode) : 'train';
-    var S = { mode: mode, plan: null, step: null, res: null, done: false, ended: false, answered: 0, voidRun: 0, skipRun: 0,
+    var S = { mode: mode, plan: null, step: null, res: null, done: false, ended: false, answered: 0, voidRun: 0, skipRun: 0, kinds: {},
       misses: {}, offered: {}, noticed: false, hidden: false, named: false, challenge: typeof p.challenge === 'string' ? p.challenge : null,
       params: routeParams(p), itemNo: 1, inputs: {}, offs: [], clock: null, viewport: viewport(),
       // v1.2: round scores per exercise ([rounds, total]); motion this session (CONTRACT-v1.2 F)
@@ -2216,9 +2327,11 @@
         // A time-boxed session counts down its active minutes ("item 1 of about 105" reads as a
         // mountain); the bar shows the time used.
         var act = S.clock ? S.clock.activeMs() : pl.activeMs || 0;
-        txt = MODE_NAMES[mode] + ' · ' + (pl.lastServed ? 'last item' : CK.fmtLeft(pl.budgetMs - act));
+        // round 9 (fresh-player batch: "Train · about 19 min left" and its bar did not say what they measure): the
+        // label names the session's time ("Today’s session · about 19 min left"); the bar is that time used
+        txt = (mode === 'train' ? 'Today’s session' : MODE_NAMES[mode] + ' session') + ' · ' + (pl.lastServed ? 'last item' : CK.fmtLeft(pl.budgetMs - act));
         P.setProgress(Math.round(Math.min(act, pl.budgetMs) / 1000), Math.round(pl.budgetMs / 1000));
-        P.el.bar.setAttribute('aria-valuetext', CK.fmtMinutes(act) + ' of ' + CK.fmtMinutes(pl.budgetMs) + ' practised');
+        P.el.bar.setAttribute('aria-valuetext', 'Session time: ' + CK.fmtMinutes(act) + ' of ' + CK.fmtMinutes(pl.budgetMs) + ' used');
         P.setMeta(txt, shortMeta(txt));
         return;
       } else if (mode === 'threshold') {
@@ -2415,9 +2528,45 @@
           S.firstSeen[def.id] = true;
           if (!P.use(step.exId)) { skipStep(step); return null; }
           hud(step, def, item);
-          return P.run(item, cfgFor(step, def, item)).then(function (tr) { return afterTrial(step, def, item, tr); });
+          var cfg1 = cfgFor(step, def, item);
+          cfg1.newKind = newKindLine(step, def, item, cfg1);
+          return P.run(item, cfg1).then(function (tr) { return afterTrial(step, def, item, tr); });
         });
       }).catch(function (e) { log('trial failed', e); end(); });
+    }
+
+    // Round 9 (fresh-player batch): the first item of a session of a kind the player has not met (not in a practice
+    // item, not in the log: its variant, or a figure set) gets one line saying what to do; once per kind and exercise.
+    // Every mode with feedback (Train, Path, Speed, Threshold, Free play, the Daily); never a check or a challenge code.
+    function newKindLine(step, def, item, cfg) {
+      if (mode === 'check' || step.feedback === false || S.challenge) return null;
+      var key = kindKey(item, cfg);
+      if (kindSeen(def, key)) return null;
+      markKind(def.id, key);
+      if (S.kinds[def.id]) S.kinds[def.id][key] = 1;
+      var g = goalOf(PX.ex.learn(def.id), item), t;
+      if (cfg && isObj(cfg.set) && cfg.set.n > 1) t = cfg.set.n + ' questions about this figure, one at a time.';
+      else if (g) t = g.charAt(0).toLowerCase() + g.slice(1);
+      else t = answerType(def, item) === 'multi' ? 'pick ' + nCorrect(def, item) + ', then confirm.' : 'answer on the item itself.';
+      return 'New kind of item: ' + t;
+    }
+    // Met before: a practice item showed it (rec.ui.seen), or the log has an answer of it (its variant decoded from
+    // the row's settings, a figure set from the row's kind); the log is read once per exercise and session
+    function kindSeen(def, key) {
+      if (seenMap()['kind:' + def.id + ':' + key]) return true;
+      var known = S.kinds[def.id];
+      if (!known) {
+        known = S.kinds[def.id] = {};
+        try {
+          var Lg = E().log, r = rec(), setCode = Lg.KINDS.indexOf('set'), kc = Lg.COL.kind;
+          Lg.scan(r, function (row, exId, modeName, ver) {
+            if (exId !== def.id) return;
+            var pp = Lg.rowParams(def, row, ver);
+            known[(pp && typeof pp.variant === 'string' ? pp.variant : '') + (isNum(kc) && row[kc] === setCode ? ':set' : '')] = 1;
+          });
+        } catch (e) { /* nothing known from the log */ }
+      }
+      return !!known[key];
     }
 
     // An exercise that cannot be shown: logged as skipped (counts nowhere), never a dead end.
