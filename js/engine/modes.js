@@ -45,7 +45,9 @@
   var MODES = {};
   var RATED = { train: true, path: true, speed: true };
   // Modes whose items carry an exercise's Quick deadline (def.pace) when no other deadline is set (v1.2).
-  var PACED = { train: true, path: true, free: true, daily: true };
+  // Not the Daily (W3-game's request, note G1 §2.1): its points are challenge points under the same
+  // conditions for everyone, so its items stay untimed; the Climb is untimed too.
+  var PACED = { train: true, path: true, free: true };
 
   function isNum(x) { return typeof x === 'number' && isFin(x); }
   function isObj(x) { return !!x && typeof x === 'object' && !isArray(x); }
