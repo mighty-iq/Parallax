@@ -7,10 +7,13 @@
 
   PX.ex.learn('patterns', {
     goal: 'Remember the pattern, then mark the squares that were filled.',
+    // the card's text (the instruction folds away under "More about this task"); version 2 scores every square
+    brief: ['A pattern of filled squares shows for 3 seconds, then the grid empties. Mark the squares that were filled. Every square you mark right counts, and a wrong mark costs as much as a missed one, so mark the squares you remember.'],
     instruction: [
       'A pattern of filled squares appears for 3 seconds. Then the grid empties.',
       'Mark every square that was filled, in any order: tap it, or move with the arrow keys and press Space. Tap again to unmark. Confirm with Enter or the Confirm button.',
-      'The bar shows the time left to mark. The Check does not show whether an answer was right.',
+      'Every square you mark right counts, and a wrong mark costs as much as a missed square.',
+      'The bar shows the time left to mark. The Check does not show how many squares were right.',
     ],
     parts: [
       { id: 'grid', label: 'Grid', text: 'Squares from 3 × 3 up to 6 × 6; about half of them are filled.' },
