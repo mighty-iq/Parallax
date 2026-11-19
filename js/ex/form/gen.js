@@ -2,19 +2,30 @@
    (pure; ARCHITECTURE.md §5; design: docs/research/v1.1/R3-dat-pat.md §8.6.)
 
    Solids (convex, so every face facing the viewer is wholly seen): boxes with three different
-   sides, prisms on a triangle, trapezoid or "house" pentagon, pyramids on a rectangle or a
-   triangle, rectangular frusta (dim 'solid'). Never a cube: oriented marks on cubes belong to the
+   sides, prisms on a triangle, trapezoid or "house" pentagon, bevelled boxes (a box with one long
+   edge cut away, version 3), pyramids on a rectangle or a triangle, rectangular frusta (dim
+   'solid'). Never a cube: oriented marks on cubes belong to the
    Spatial Check's Cube Match probe (R3 §5.3). Built as vertices and faces (CCW from outside), sizes
    on a half-unit lattice.
    Net: the solid edge-unfolded along a random spanning tree of its faces (each child face swung
-   flat about the edge it shares with its parent), kept only when no two faces overlap. The pattern
-   is the outside surface; fold lines are dashed, cut edges solid.
-   Marks (dim 'marks'): one shaded face and one half-shaded face; two shaded and one half; one shaded
-   and two halves. A half-shaded face is a four-sided face shaded on one side of a diagonal: oriented,
-   so it can tell a solid from its mirror image. A mark is a tone plus a hatch, never colour alone.
+   flat about the edge it shares with its parent), kept only when no two faces overlap; from the plain
+   kind on, also only when no cut edge lies along another face, so every line inside the pattern
+   folds. The pattern is the outside surface; fold lines are dashed on the starter band and drawn
+   plain, like cut edges, from the plain kind on (the test's look; note D1 §6.4, addendum A.1).
+   Marks (dim 'marks', version 3: the test's kinds of item, note D1 §6.4): the starter band (one
+   shaded face); plain (no marks: shapes and sizes decide); shaded faces (two whole faces); then the
+   half marks, which lie beyond the test's range (prep sources only): one shaded face and one
+   half-shaded; two shaded and one half; one shaded and two halves. A half-shaded face is a
+   four-sided face shaded on one side of a diagonal: oriented, so it can tell a solid from its mirror
+   image. A mark is a tone plus a hatch, never colour alone. Cube nets with whole faces shaded are
+   left out: with one tone on six squares only two nets give one right picture, and the count of
+   shaded faces seen in proportion to the pattern names it every time (DECISIONS).
    Options: four pictures of solids, each turned its own way (dim 'view': upright, on a side, upside
-   down), showing at least three faces clearly. Foils (dim 'foil'): at level 0 one proportion foil
-   (one size off by at least a quarter) with two mark foils; at level 1 three mark foils. A mark foil
+   down), showing at least three faces clearly. Foils (dim 'foil', 'clear' or 'close'): on marked
+   kinds above the band, at level 0 one proportion foil (one size off by at least a quarter) with two
+   mark foils; at level 1 three mark foils. The plain kind: at level 0 two kinds of solid, two of each
+   (one length apart by half again or more within each pair); at level 1 the pattern's kind four
+   times, each foil one or two lengths a quarter or more off. A mark foil
    moves marks only to congruent faces (R3 §8.6), a half mark possibly turned, so face shapes never
    tell a mark foil from the key; each foil is a different marked solid (the mirror image is one of
    them when it differs). A face counts as evidence only when it faces the viewer clearly (cos ≥ 0.2);
@@ -85,6 +96,9 @@
     trap: function (d) { return prism('trap', d, [[-d[0] / 2, 0], [d[0] / 2, 0], [d[1] / 2, d[2]], [-d[1] / 2, d[2]]], d[3]); },
     wedge: function (d) { return prism('wedge', d, [[0, 0], [d[0], 0], [0, d[1]]], d[2]); },
     house: function (d) { return prism('house', d, [[-d[0] / 2, 0], [d[0] / 2, 0], [d[0] / 2, d[1]], [0, d[1] + d[2]], [-d[0] / 2, d[1]]], d[3]); },
+    // v1.2 (version 3): a box with one long top edge bevelled away (a five-sided prism): d = [width,
+    // height, bevel, length], the bevel cutting `bevel` off the width and the height
+    bevel: function (d) { return prism('bevel', d, [[-d[0] / 2, 0], [d[0] / 2, 0], [d[0] / 2, d[1] - d[2]], [d[0] / 2 - d[2], d[1]], [-d[0] / 2, d[1]]], d[3]); },
     pyr: function (d) { return pyramid('pyr', d, [[-d[0] / 2, -d[1] / 2], [d[0] / 2, -d[1] / 2], [d[0] / 2, d[1] / 2], [-d[0] / 2, d[1] / 2]], [0, d[2], 0]); },
     tet: function (d) { return pyramid('tet', d, [[-d[0] / 2, -d[1] / 3], [d[0] / 2, -d[1] / 3], [0, 2 * d[1] / 3]], [0, d[2], 0]); },
     frus: function (d) {
@@ -94,7 +108,7 @@
   };
   // dim 'solid'. The three-sided pyramid ('tet') is built but not used: it has no four-sided face for
   // the half mark that every level now carries.
-  var KINDS = [['box', 'tri', 'trap'], ['wedge', 'pyr'], ['frus', 'house']];
+  var KINDS = [['box', 'tri', 'trap', 'bevel'], ['wedge', 'pyr'], ['frus', 'house']];
   // Sizes per kind, in units (half-unit lattice); the solid is never a cube.
   function randomDims(rng, kind) {
     var d;
@@ -105,6 +119,7 @@
     if (kind === 'house') return [half(rng, 2, 3), half(rng, 1.5, 2.5), half(rng, 1, 1.5), half(rng, 2, 3.5)];
     if (kind === 'pyr') { do { d = [half(rng, 2, 3.5), half(rng, 2, 3.5), half(rng, 1.5, 3)]; } while (d[0] === d[1]); return d; }
     if (kind === 'tet') return [half(rng, 2.5, 4), half(rng, 2, 3.5), half(rng, 1.5, 3)];
+    if (kind === 'bevel') { do { d = [half(rng, 2, 3.5), half(rng, 2, 3.5), half(rng, 1, 1.5), half(rng, 2, 4)]; } while (d[2] > Mth.min(d[0], d[1]) - 1 || d[0] === d[3]); return d; }
     return [half(rng, 2, 3.5), half(rng, 2, 3.5), half(rng, 1.5, 2.5), 0.5];
   }
   function build(kind, dims) { return BUILD[kind](dims); }
@@ -114,11 +129,19 @@
       var d = s.dims.slice(), i = rint(rng, 0, s.kind === 'frus' ? 2 : d.length - 1), f = rpick(rng, [0.6, 0.7, 1.4, 1.5]);
       d[i] = Mth.round(d[i] * f * 2) / 2;
       if (d[i] < 1 || Mth.abs(d[i] - s.dims[i]) < Mth.max(0.5, 0.25 * s.dims[i])) continue;
-      if (s.kind === 'trap' && !(d[1] <= d[0] - 1)) continue;
-      if (s.kind === 'box' && (d[0] === d[1] || d[1] === d[2] || d[0] === d[2])) continue;
+      if (!okDims(s.kind, d)) continue;
       return build(s.kind, d);
     }
     return null;
+  }
+  // The sizes a kind of solid allows (a trapezoid's top narrower than its base by a unit or more; a box
+  // never a cube; a bevel at least a unit short of the width and the height).
+  function okDims(kind, d) {
+    if (d.some(function (x) { return !(x >= 1); })) return false;
+    if (kind === 'trap') return d[1] <= d[0] - 1;
+    if (kind === 'box') return d[0] !== d[1] && d[1] !== d[2] && d[0] !== d[2];
+    if (kind === 'bevel') return d[2] <= Mth.min(d[0], d[1]) - 1;
+    return true;
   }
   function mirrored(s) { // reflected through x = 0, faces reoriented
     return { kind: s.kind, dims: s.dims, mirror: true, verts: s.verts.map(function (v) { return [-v[0], v[1], v[2]]; }), faces: s.faces.map(function (f) { return f.slice().reverse(); }) };
@@ -161,7 +184,9 @@
     return P.map(function (p) { var d = sub(p, P[0]); return [dot(d, ex), dot(d, ey)]; });
   }
   // Unfold along a random spanning tree; null when two faces overlap.
-  function unfold(rng, s) {
+  // strict (every level whose fold lines are drawn plain): no two faces may touch along a stretch of edge
+  // except at their hinge, since a cut lying inside the outline would read as a fold line
+  function unfold(rng, s, strict) {
     var E = adjacency(s), nF = s.faces.length, root = rint(rng, 0, nF - 1), placed = {}, net = [], queue = [root];
     placed[root] = flat(s, root);
     net.push({ face: root, poly: placed[root], parent: -1, hinge: null });
@@ -180,10 +205,29 @@
         queue.push(g);
       });
     }
-    if (net.length !== nF || overlapping(net)) return null;
+    if (net.length !== nF || overlapping(net) || (strict && touchesOffHinge(net))) return null;
     // Rounded to a thousandth of a unit (stored); the validator folds what is stored.
     net.forEach(function (n) { n.poly = n.poly.map(function (p) { return [Mth.round(p[0] * 1000) / 1000, Mth.round(p[1] * 1000) / 1000]; }); });
     return net;
+  }
+  // The longest stretch of polygon A's outline lying on polygon B's (collinear edges that overlap).
+  function sharedRun(A, B) {
+    var best = 0;
+    for (var k = 0; k < A.length; k++) for (var m = 0; m < B.length; m++) {
+      var p = A[k], q = A[(k + 1) % A.length], r = B[m], t = B[(m + 1) % B.length], dx = q[0] - p[0], dy = q[1] - p[1], L = Mth.sqrt(dx * dx + dy * dy);
+      if (L < 1e-9) continue;
+      if (Mth.abs((r[0] - p[0]) * dy - (r[1] - p[1]) * dx) / L > 0.01 || Mth.abs((t[0] - p[0]) * dy - (t[1] - p[1]) * dx) / L > 0.01) continue;
+      var ur = ((r[0] - p[0]) * dx + (r[1] - p[1]) * dy) / L, ut = ((t[0] - p[0]) * dx + (t[1] - p[1]) * dy) / L;
+      best = Mth.max(best, Mth.min(L, Mth.max(ur, ut)) - Mth.max(0, Mth.min(ur, ut)));
+    }
+    return best;
+  }
+  function touchesOffHinge(net) {
+    for (var i = 0; i < net.length; i++) for (var j = i + 1; j < net.length; j++) {
+      if (net[i].parent === net[j].face || net[j].parent === net[i].face) continue;
+      if (sharedRun(net[i].poly, net[j].poly) > 0.05) return true;
+    }
+    return false;
   }
   function segCross(p, q, r, t) { // proper crossing of segments pq and rt (shared ends do not count)
     function o(a, b, c) { var v = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]); return v > 1e-7 ? 1 : v < -1e-7 ? -1 : 0; }
@@ -264,8 +308,24 @@
   // solids (a box with one or two shaded faces has only one); the half mark, which is oriented, is what
   // makes three wrong arrangements possible.
   // Level 0 (v1.2, the starter band; note D2 §3.5): one shaded face and no half mark.
-  var MARKS = [['F'], ['F', 'H'], ['F', 'F', 'H'], ['F', 'H', 'H']];
-  var MARK_LABELS = ['one shaded (starter)', 'shaded and half', 'two shaded and half', 'shaded and two halves'];
+  // v1.2 (version 3; note D1 §6.4, addendum A.1 row 10): the test's kinds of item after the starter band:
+  // plain (no marks: the options differ in shape or proportions, as in the official sample), shaded (two
+  // whole faces shaded; a foil's shade may sit on a face of another shape, see buildMarked), then the half
+  // marks, which only prep sources document (partial shading, last; marks moved to congruent faces only).
+  var MARKS = [['F'], [], ['F', 'F'], ['F', 'H'], ['F', 'F', 'H'], ['F', 'H', 'H']];
+  var MARK_LABELS = ['one shaded (starter)', 'plain', 'shaded faces', 'shaded and half', 'two shaded and half', 'shaded and two halves'];
+  // Tags that describe format features only (note D1 §6.0): below the test (the starter band and its
+  // scaffolds: dashed fold lines), the documented test range, or beyond it (half marks: prep sources only).
+  // Never the real test's difficulty or a forecast.
+  var LEVEL_TAGS = { solid: ['test', 'test', 'test'], marks: ['below', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] };
+  function rangeOf(params) {
+    var p = cleanParams(params), out = 'test';
+    Object.keys(LEVEL_TAGS).forEach(function (k) { var t = LEVEL_TAGS[k][p[k]]; if (t === 'below') out = 'below'; else if (t === 'beyond' && out !== 'below') out = 'beyond'; });
+    return out;
+  }
+  // Fold lines are drawn dashed only in the starter band (a scaffold); in the test range every line of
+  // the pattern is plain, as on the official sheet (addendum A.1 row 9).
+  function plainFolds(item) { return cleanParams(item && item.params).marks >= 1; }
   function quads(s) { return s.faces.map(function (F, f) { return F.length === 4 ? f : -1; }).filter(function (f) { return f >= 0; }); }
   // A face's shape whichever way it is turned or flipped: corner count, then its sides and diagonals,
   // sorted. Squared lengths ×16 are whole numbers here (corners on a quarter-unit lattice), so the key
@@ -280,8 +340,8 @@
   function shapeClasses(s) { return s.faces.map(function (_, f) { return shapeKey(s, f); }); }
   // Marks for the level. The first lands on a face of `seen` (the key's picture shows it); faces with a
   // congruent partner are preferred, so a marked face's shape alone rarely names it.
-  function randomMarks(rng, s, level, seen) {
-    var setup = rshuffle(rng, MARKS[level]), m = s.faces.map(function () { return 0; }), cls = shapeClasses(s);
+  function randomMarks(rng, s, setup0, seen) {
+    var setup = rshuffle(rng, setup0), m = s.faces.map(function () { return 0; }), cls = shapeClasses(s);
     function partnered(f) { return cls.some(function (c, g) { return g !== f && c === cls[f]; }); }
     for (var i = 0; i < setup.length; i++) {
       var cand = s.faces.map(function (F, f) { return !m[f] && (setup[i] === 'F' || F.length === 4) && (i > 0 || !seen || seen.indexOf(f) >= 0) ? f : -1; }).filter(function (f) { return f >= 0; });
@@ -291,15 +351,16 @@
     }
     return m;
   }
-  // Every arrangement with each mark moved to a congruent face (a half mark turned any way).
-  function arrangements(s, m) {
+  // Every arrangement with each mark moved to a congruent face (a half mark turned any way). anyFace (the
+  // shaded kind, v1.2): a whole shade may move to a face of another shape too.
+  function arrangements(s, m, anyFace) {
     var cls = shapeClasses(s), out = [s.faces.map(function () { return 0; })];
     m.forEach(function (x, f) {
       if (!x) return;
       var next = [];
       out.forEach(function (cfg) {
         s.faces.forEach(function (_, g) {
-          if (cls[g] !== cls[f] || cfg[g]) return;
+          if ((!anyFace && cls[g] !== cls[f]) || cfg[g]) return;
           if (typeof x !== 'object') { var c1 = cfg.slice(); c1[g] = 1; next.push(c1); return; }
           for (var h = 0; h < 4; h++) { var c2 = cfg.slice(); c2[g] = { h: h }; next.push(c2); }
         });
@@ -348,7 +409,7 @@
     for (var t = 0; t < 24; t++) {
       var v = { yaw: rint(rng, 0, 11), tilt: rpick(rng, TILT_SETS[level]), el: rint(rng, 0, 1) }, c = facing(s, v);
       if (c.some(function (x) { return x > SEEN - BAND && x < SEEN + BAND; })) continue;
-      if (c.filter(function (x) { return x >= SEEN; }).length >= 3 && markedSeen(s, m, v) >= 1) return v;
+      if (c.filter(function (x) { return x >= SEEN; }).length >= 3 && (!m || !m.some(function (x) { return x; }) || markedSeen(s, m, v) >= 1)) return v;
     }
     return null;
   }
@@ -387,7 +448,7 @@
   var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, nets: 0, noView: 0, noMarks: 0, fewOrbits: 0, fewFoils: 0, noSet: 0, lastInvalid: null, lastError: null };
   var FOILS = ['shape', 'marks'];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
-  function cleanParams(params) { return { solid: lvl(params, 'solid', 3), marks: lvl(params, 'marks', 4), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
+  function cleanParams(params) { return { solid: lvl(params, 'solid', 3), marks: lvl(params, 'marks', 6), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
   /* ------------------------------------------------------------ the starter band (v1.2) */
   // One shaded face and no half mark (note D2 §3.5). With one shade a mark foil can only move it to a
   // face of another shape (on these solids a turn carries every face onto each congruent one), so face
@@ -395,11 +456,13 @@
   // Foil level 0: one mark foil and two wrong-size solids, one size off by at least 40 % (both the same
   // stretched solid: one with the pattern's shade, one with the mark foil's), so the options form a
   // 2 × 2 of right or wrong size and right or wrong shaded face, and neither alone finds the key.
-  // Foil level 1 keeps that design with the sizes closer, 25 to 39 % off: "marks only" cannot be built
+  // Foil level 1 keeps that design with the sizes closer (BAND_OFF below): "marks only" cannot be built
   // with one shade, since upright pictures never show the base, so a solid has at most two other face
   // shapes a picture can carry the shade on (DECISIONS).
   var BAND_KINDS = [['box', 'tri'], ['wedge', 'pyr'], ['frus', 'house']];
-  var BAND_OFF = [[0.4, 0.6], [0.25, 0.4]]; // per foil level: a size off by [at least, under] this share
+  // v1.2 (version 3, PLAN milestone 8: wrong-size foils at least 40 % off; a fresh player found a size
+  // 25 % off hard to see on a phone): level 0 half again or more, level 1 40 to 49 %
+  var BAND_OFF = [[0.5, 0.8], [0.4, 0.5]]; // per foil level: a size off by [at least, under] this share
   function classCount(s) { var c = {}; shapeClasses(s).forEach(function (k) { c[k] = 1; }); return Object.keys(c).length; }
   function stretchedBand(rng, s, foil) {
     var lo = BAND_OFF[foil][0], hi = BAND_OFF[foil][1];
@@ -412,8 +475,7 @@
       if (!cand.length) continue;
       var d = s.dims.slice();
       d[i] = rpick(rng, cand);
-      if (s.kind === 'trap' && !(d[1] <= d[0] - 1)) continue;
-      if (s.kind === 'box' && (d[0] === d[1] || d[1] === d[2] || d[0] === d[2])) continue;
+      if (!okDims(s.kind, d)) continue;
       return build(s.kind, d);
     }
     return null;
@@ -424,7 +486,7 @@
     if (!net) { stats.nets++; return null; }
     var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, all1, p.view);
     if (!kv) { stats.noView++; return null; }
-    var M = randomMarks(rng, S, 0, seenFaces(S, kv));
+    var M = randomMarks(rng, S, MARKS[0], seenFaces(S, kv));
     if (!M) { stats.noMarks++; return null; }
     // per other face shape, the shade on each face of that shape in turn (a view must show it)
     var cls = shapeClasses(S), maps = autos(S).map(function (a) { return a.v; }), byCls = {}, others = [];
@@ -467,22 +529,138 @@
     };
   }
 
+  /* ------------------------------------------------------------ the plain kind (v1.2, version 3) */
+  // No marks (note D1 §6.4 kind 1; the official sample: a bevelled box and solids of the same kind in
+  // other proportions, addendum A.1 row 10). Foil level 0: one solid of the same kind with a size half
+  // again or more off and two solids of other kinds; level 1: three of the same kind, each with one or
+  // two sizes off by a quarter or more. Face shapes and sizes decide: the format's own method (Kaplan's
+  // first landmark; DECISIONS), reported, not bounded; the size cues a solver can read without folding
+  // (the largest or smallest solid, the one most like the others in its sizes) are balanced by the
+  // choice of foils.
+  function volume(s) {
+    var v = 0;
+    s.faces.forEach(function (F) { var a = s.verts[F[0]]; for (var k = 1; k + 1 < F.length; k++) v += dot(a, cross(s.verts[F[k]], s.verts[F[k + 1]])) / 6; });
+    return Mth.abs(v);
+  }
+  // Sizes of s with `n` of them (one or two) changed by at least `lo` of their value (on the half lattice).
+  function resized(rng, s, n, lo) {
+    var nd = s.kind === 'frus' ? 3 : s.dims.length;
+    for (var t = 0; t < 16; t++) {
+      var d = s.dims.slice(), idx = rshuffle(rng, Array.from({ length: nd }, function (_, i) { return i; })).slice(0, n), ok = true;
+      idx.forEach(function (i) {
+        var cand = [];
+        for (var k = -6; k <= 6; k++) { var x = s.dims[i] + k / 2, off = Mth.abs(x - s.dims[i]) / s.dims[i]; if (k && x >= 1 && off >= lo - 1e-9 && off <= 0.9) cand.push(x); }
+        if (!cand.length) ok = false; else d[i] = rpick(rng, cand);
+      });
+      if (ok && okDims(s.kind, d)) return build(s.kind, d);
+    }
+    return null;
+  }
+  // Two solids of one kind that differ in exactly one length, by half again or more (the larger over the smaller).
+  function pairedSizes(a, b) {
+    if (a.kind !== b.kind) return false;
+    var n = 0, far = true;
+    for (var i = 0; i < a.dims.length; i++) {
+      var r = Mth.max(a.dims[i], b.dims[i]) / Mth.min(a.dims[i], b.dims[i]);
+      if (r > 1 + 1e-9) { n++; if (r < 1.5 - 1e-9) far = false; }
+    }
+    return n === 1 && far;
+  }
+  function plainFeats(o) {
+    return { seen: seenFaces(o.solid, o.view).length, marked: 0, halves: 0, shape: o.solid.kind + o.solid.dims.join(','), vol: volume(o.solid), kind: o.solid.kind, dims: o.solid.dims };
+  }
+  // How far apart two solids' sizes are (log ratios summed; another kind counts as far).
+  function sizeDist(a, b) {
+    if (a.kind !== b.kind) return 6;
+    var d = 0;
+    for (var i = 0; i < a.dims.length; i++) d += Mth.abs(Mth.log(a.dims[i] / b.dims[i]));
+    return d;
+  }
+  var PLAIN_SOLVERS = ['largest solid', 'smallest solid', 'most faces seen', 'fewest faces seen', 'most like the others in size', 'least like the others in size'];
+  function plainShares(F) {
+    var sum = F.map(function (a) { var t = 0; F.forEach(function (b) { t += sizeDist(a, b); }); return t; });
+    function col(k) { return F.map(function (x) { return x[k]; }); }
+    return [pickShare(col('vol'), true), pickShare(col('vol'), false), pickShare(col('seen'), true), pickShare(col('seen'), false), pickShare(sum, false), pickShare(sum, true)];
+  }
+  function buildPlain(rng, p) {
+    var kind = rpick(rng, KINDS[p.solid]), S = build(kind, randomDims(rng, kind)), net = null;
+    for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S, true);
+    if (!net) { stats.nets++; return null; }
+    var M = S.faces.map(function () { return 0; }), kv = randomView(rng, S, null, p.view);
+    if (!kv) { stats.noView++; return null; }
+    var pool = [], seenSolid = {};
+    function add(solid, kindName) {
+      if (!solid) return;
+      var sk = solid.kind + solid.dims.join(',');
+      if (seenSolid[sk] || sk === S.kind + S.dims.join(',')) return;
+      var zero = solid.faces.map(function () { return 0; }), v = randomView(rng, solid, null, p.view);
+      if (!v || possible(S, M, solid, zero, v)) return;
+      seenSolid[sk] = 1;
+      pool.push({ kind: kindName, solid: solid, marks: zero, view: v, orbit: sk });
+    }
+    if (p.foil === 0) {
+      // two kinds of solid, two of each: the pattern's kind (the key and one in other proportions) and one
+      // other kind in two proportions, so counting kinds never points at the key
+      for (var a = 0; a < 3; a++) add(resized(rng, S, 1, 0.5), 'shape');
+      var others = rshuffle(rng, [].concat.apply([], KINDS).filter(function (k) { return k !== S.kind; }));
+      others.slice(0, 3).forEach(function (k) { var O = build(k, randomDims(rng, k)); add(O, 'other'); for (var r = 0; r < 2; r++) add(resized(rng, O, 1, 0.5), 'other'); });
+    } else {
+      // more candidates than places: the key is the middle of its own resizings unless the triple is
+      // chosen with care (the solver "most like the others in its sizes")
+      for (var b = 0; b < 6; b++) add(resized(rng, S, 1, 0.25), 'shape');
+      for (var c = 0; c < 6; c++) add(resized(rng, S, 2, 0.25), 'shape');
+    }
+    var key = { kind: 'key', solid: S, marks: M, view: kv }, kf = plainFeats(key), pf = pool.map(plainFeats);
+    var want = PLAIN_SOLVERS.map(function () { return rng.chance(0.25) ? 1 : 0; }), best = null, bestScore = INF;
+    var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 12);
+    for (var i = 0; i < idx.length; i++) for (var j = i + 1; j < idx.length; j++) for (var k = j + 1; k < idx.length; k++) {
+      var tri = [idx[i], idx[j], idx[k]], set = tri.map(function (x) { return pool[x]; });
+      var nSame = set.filter(function (o) { return o.kind === 'shape'; }).length;
+      if (p.foil === 0) {
+        var ot = set.filter(function (o) { return o.kind === 'other'; });
+        if (nSame !== 1 || ot.length !== 2 || !pairedSizes(ot[0].solid, ot[1].solid)) continue;
+      }
+      var sh = plainShares([kf].concat(tri.map(function (x) { return pf[x]; }))), score = 0;
+      for (var q = 0; q < sh.length; q++) score += Mth.abs(sh[q] - want[q]);
+      if (score < bestScore - 1e-9) { bestScore = score; best = set; }
+    }
+    if (!best) { stats.noSet++; return null; }
+    var perm = rshuffle(rng, [0, 1, 2, 3]), all = [key].concat(best);
+    function pubSolid(s0) { return { kind: s0.kind, dims: s0.dims, verts: s0.verts, faces: s0.faces }; }
+    return {
+      solid: pubSolid(S), net: net, marks: M, key: perm.indexOf(0),
+      options: perm.map(function (x) { var o = all[x]; return { kind: o.kind === 'other' ? 'shape' : o.kind, solid: pubSolid(o.solid), marks: o.marks, view: o.view }; }),
+    };
+  }
+
   function buildItem(rng, p) {
     if (p.marks === 0) return buildBand(rng, p);
+    if (p.marks === 1) return buildPlain(rng, p);
+    if (p.marks === 2) return buildMarked(rng, p, ['F', 'F']);
+    return buildMarked(rng, p, MARKS[p.marks]);
+  }
+  // Marked items (shaded faces, half marks): marks moved only to congruent faces, so face shapes never
+  // tell a mark foil from the key (RV-B §1); each foil is a different marked solid.
+  function buildMarked(rng, p, setup) {
     // a rectangular pyramid has one four-sided face, too few for two half marks
-    var kinds = KINDS[p.solid].filter(function (k) { return p.marks < 3 || k !== 'pyr'; });
+    var halves = setup.filter(function (x) { return x === 'H'; }).length;
+    var kinds = KINDS[p.solid].filter(function (k) { return halves < 2 || k !== 'pyr'; });
     var kind = rpick(rng, kinds), S = build(kind, randomDims(rng, kind)), net = null;
-    for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S);
+    for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S, true);
     if (!net) { stats.nets++; return null; }
     var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, all1, p.view);
     if (!kv) { stats.noView++; return null; }
-    var M = randomMarks(rng, S, p.marks, seenFaces(S, kv));
+    var M = randomMarks(rng, S, setup, seenFaces(S, kv));
     if (!M) { stats.noMarks++; return null; }
     // Mark foils: each mark moved to a congruent face, one foil per different marked solid (turns of
     // the solid carry arrangements of one marked solid onto each other); the mirror image is one of them.
     var A = autos(S), maps = A.map(function (a) { return a.v; }), kc = canon(S, A, M), R = reflection(S);
     var mc = R ? canon(S, A, carry(S, R, M)) : null, groups = {}, names = [];
-    arrangements(S, M).forEach(function (cfg) {
+    // the shaded kind (whole shades only): on these symmetric solids moves to congruent faces leave at most
+    // a mirror pair, so a shade may also move to a face of another shape, where the shaded face's shape
+    // tells the foil (the band's method, now with two shades and plain fold lines; DECISIONS)
+    var anyFace = p.marks === 2;
+    arrangements(S, M, anyFace).forEach(function (cfg) {
       var c = canon(S, A, cfg);
       if (c === kc) return;
       if (!groups[c]) { groups[c] = []; names.push(c); }
@@ -680,6 +858,31 @@
     });
   }
   // The fold lines found in the layout are exactly the hinges the pattern draws dashed.
+  // Points every 0.02 units along each edge of one face that lie on another face's outline, faces not
+  // joined by a hinge: a run of four or more is a cut inside the pattern (the validator's own check).
+  function cutInside(net) {
+    function onOutline(P, x, y) {
+      for (var k = 0; k < P.length; k++) {
+        var a = P[k], b = P[(k + 1) % P.length], vx = b[0] - a[0], vy = b[1] - a[1], ll = vx * vx + vy * vy;
+        var u = ll ? Mth.max(0, Mth.min(1, ((x - a[0]) * vx + (y - a[1]) * vy) / ll)) : 0;
+        if (Mth.hypot(x - a[0] - u * vx, y - a[1] - u * vy) < 0.006) return true;
+      }
+      return false;
+    }
+    for (var i = 0; i < net.length; i++) for (var j = 0; j < net.length; j++) {
+      if (i === j || net[i].parent === net[j].face || net[j].parent === net[i].face) continue;
+      var A = net[i].poly;
+      for (var k = 0; k < A.length; k++) {
+        var a = A[k], b = A[(k + 1) % A.length], n = Mth.max(2, Mth.ceil(Mth.hypot(b[0] - a[0], b[1] - a[1]) / 0.02)), run = 0;
+        for (var s0 = 1; s0 < n; s0++) {
+          var x = a[0] + (b[0] - a[0]) * s0 / n, y = a[1] + (b[1] - a[1]) * s0 / n;
+          run = onOutline(net[j].poly, x, y) ? run + 1 : 0;
+          if (run >= 4) return true;
+        }
+      }
+    }
+    return false;
+  }
   function linesMatchHinges(item, lines) {
     var hinge = {};
     item.net.forEach(function (n, i) { if (n.parent >= 0) hinge[i] = n.parent; });
@@ -692,26 +895,30 @@
     try {
       if (!item || !okSolid(item.solid) || item.solid.mirror) return 'the solid is not a closed convex solid';
       if (item.solid.kind === 'box' && new Set(item.solid.dims.slice(0, 3)).size < 3) return 'a box must not be a cube';
-      if (!okMarks(item.solid, item.marks) || !item.marks.some(function (x) { return x; })) return 'bad marks';
+      var lv = cleanParams(item.params).marks;
+      if (!okMarks(item.solid, item.marks) || (lv !== 1 && !item.marks.some(function (x) { return x; }))) return 'bad marks';
       var vn = validNet(item);
       if (vn !== true) return vn;
       if (!Array.isArray(item.options) || item.options.length !== 4) return 'needs 4 options';
       if (!(Number.isInteger(item.key) && item.key >= 0 && item.key < 4)) return 'key out of range';
       var lines = foldLines(item.net);
       if (!linesMatchHinges(item, lines)) return 'the fold lines in the layout are not the drawn hinges';
+      if (plainFolds(item) && cutInside(item.net)) return 'a cut edge lies along another face (it would read as a fold line)';
       for (var i = 0; i < 4; i++) {
         var o = item.options[i];
         if (!o || !okSolid(o.solid) || !okMarks(o.solid, o.marks) || !o.view || !YAW[o.view.yaw] || !TILTS[o.view.tilt] || !VIEWS[o.view.el]) return 'option ' + i + ' is malformed';
         var c = facing(o.solid, o.view);
         if (c.filter(function (x) { return x >= SEEN; }).length < 3) return 'option ' + i + ' shows fewer than three faces clearly';
         if (c.some(function (x) { return x > SEEN - BAND && x < SEEN + BAND; })) return 'option ' + i + ' has a face at the edge of being seen';
-        if (!markedSeen(o.solid, o.marks, o.view)) return 'option ' + i + ' shows no mark';
+        if (lv !== 1 && !markedSeen(o.solid, o.marks, o.view)) return 'option ' + i + ' shows no mark';
         var ok = possible(item.solid, item.marks, o.solid, o.marks, o.view);
         if (ok !== foldsOnto(item, o, lines)) return 'option ' + i + ': the two checks disagree';
         if (i === item.key && !ok) return 'the key is not the folded net';
         if (i !== item.key && ok) return 'option ' + i + ' could also be the folded net';
       }
-      if (cleanParams(item.params).marks === 0) return validBand(item);
+      if (lv === 0) return validBand(item);
+      if (lv === 1) return validPlain(item);
+      if (lv === 2) return validShaded(item);
       return true;
     } catch (e) { return 'validate threw: ' + (e && e.message); }
   }
@@ -732,11 +939,61 @@
       var off = o.solid.dims.map(function (d, k) { return Mth.abs(d - d0[k]); }), n = off.filter(function (x) { return x > 1e-9; }).length;
       if (n > 1) return 'starter: option ' + i + ' differs in more than one size';
       if (n === 1) {
-        var k1 = off.findIndex(function (x) { return x > 1e-9; }), need = p.foil === 0 ? 0.4 : 0.25;
+        var k1 = off.findIndex(function (x) { return x > 1e-9; }), need = BAND_OFF[p.foil][0];
         if (off[k1] < need * d0[k1] - 1e-9) return 'starter: option ' + i + '\'s size is off by less than ' + Mth.round(need * 100) + ' %';
       }
     }
     if (p.solid === 0 && item.solid.kind !== 'box' && item.solid.kind !== 'tri') return 'starter: a box or a triangular prism';
+    return true;
+  }
+  // v1.2 (version 3): every option's corners are its stated sizes (rebuilt here); how many sizes differ
+  // from the pattern's solid, and the least share by which a differing size is off.
+  function sizeOff(item, o) {
+    var R = BUILD[o.solid.kind](o.solid.dims);
+    if (R.verts.length !== o.solid.verts.length || R.verts.some(function (v, k) { return len(sub(v, o.solid.verts[k])) > 1e-9; })) return null;
+    if (o.solid.kind !== item.solid.kind) return { other: true };
+    var d0 = item.solid.dims, n = 0, least = INF;
+    o.solid.dims.forEach(function (d, k) { var off = Mth.abs(d - d0[k]) / d0[k]; if (off > 1e-9) { n++; least = Mth.min(least, off); } });
+    return { n: n, least: least };
+  }
+  // The plain kind: no mark anywhere; foil level 0: two kinds of solid, two of each (one foil of the pattern's
+  // kind with one length half again or more off; two of one other kind whose lengths differ in the same way);
+  // level 1: every option of the pattern's kind, each foil with one or two lengths off by a quarter or more.
+  function validPlain(item) {
+    function none(m) { return !m.some(function (x) { return x; }); }
+    if (!none(item.marks)) return 'plain: the pattern carries no mark';
+    var p = cleanParams(item.params), same = 0, other = [];
+    for (var i = 0; i < 4; i++) {
+      var o = item.options[i];
+      if (!none(o.marks)) return 'plain: option ' + i + ' carries a mark';
+      var z = sizeOff(item, o);
+      if (!z) return 'plain: option ' + i + '\'s corners are not its stated sizes';
+      if (i === item.key) continue;
+      if (z.other) { other.push(o.solid); continue; }
+      if (z.n < 1 || z.n > 2) return 'plain: option ' + i + ' must differ in one or two sizes';
+      if (z.least < (p.foil === 0 ? 0.5 : 0.25) - 1e-9) return 'plain: option ' + i + '\'s sizes are too close to the pattern\'s';
+      if (p.foil === 0 && z.n !== 1) return 'plain: option ' + i + ' must differ in one size';
+      same++;
+    }
+    if (p.foil === 1) return other.length ? 'plain: every option is the pattern\'s kind at this level' : true;
+    if (same !== 1 || other.length !== 2) return 'plain: one foil of the pattern\'s kind and two of another kind';
+    if (!pairedSizes(other[0], other[1])) return 'plain: the two other solids are one kind, one length apart by half again or more';
+    return true;
+  }
+  // The shaded kind: two or three whole faces shaded on the pattern and on every option, no half mark;
+  // foil level 1: every option the pattern's own solid; level 0: exactly one in other proportions.
+  function validShaded(item) {
+    function whole(m) { var n = m.filter(function (x) { return x === 1; }).length; return !m.some(function (x) { return x && typeof x === 'object'; }) ? n : -1; }
+    var n0 = whole(item.marks);
+    if (n0 < 2 || n0 > 3) return 'shaded: two or three whole faces shaded';
+    var p = cleanParams(item.params), other = 0;
+    for (var i = 0; i < 4; i++) {
+      var o = item.options[i], z = sizeOff(item, o);
+      if (whole(o.marks) !== n0) return 'shaded: option ' + i + ' must carry the same whole shades';
+      if (!z || z.other) return 'shaded: option ' + i + ' must be the pattern\'s kind of solid at its stated sizes';
+      if (z.n) other++;
+    }
+    if (other !== (p.foil === 0 ? 1 : 0)) return 'shaded: wrong number of solids in other proportions for the level';
     return true;
   }
   function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
@@ -772,7 +1029,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [1543916583, 3094203016, 1597406505, 2449352435, 4114434130, 1387240999];
+  var TUTORIAL = [1543916583, 3094203016, 1597406505, 2157057468, 2472903096, 4107320250];
   function stemSig(item) { return PX.rng.hash('form-stem', JSON.stringify([item.solid.kind, item.solid.verts, item.net, item.marks])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params);
@@ -791,20 +1048,30 @@
   // v1.2 (version 2; note D2 §3.5, §3.8): a starter level in front of 'marks', one shaded face and no
   // half mark, Δ = −1.5 against today's level 0 (hand-set, to be refitted from pooled exports): the floor
   // moves from −2.2 to −3.7 and older combinations keep their exact difficulty. Range 5.5.
+  // v1.2 (version 3; PLAN milestone 8, note D1 §6.4): 'marks' becomes the test's kinds of item: the starter
+  // band (−1.5), plain (−0.9), shaded faces (−0.4), then the half marks at their old steps (0, 0.6, 1.2);
+  // bevelled boxes join the first solids; the band's wrong sizes are 40 % off or more. Hand-set, to be
+  // refitted from pooled exports; the range stays −3.7 to 1.8, so stored levels keep their numbers.
   PX.ex.define({
-    id: 'form', version: 2, code: 'EX-19', name: 'Form', short: 'Form',
+    id: 'form', version: 3, code: 'EX-19', name: 'Form', short: 'Form',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 4, pat: true,
     bet: 'format', format: 'form:pattern-to-solid', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     starter: { dim: 'marks', levels: 1 },
     dims: [
       { key: 'solid', label: 'Solid', levels: ['boxes and prisms', 'wedges and pyramids', 'frusta and five-sided'], step: 0.5 },
-      { key: 'marks', label: 'Marks', levels: MARK_LABELS.slice(), step: 0.6, at: [-1.5, 0, 0.6, 1.2] },
+      { key: 'marks', label: 'Marks', levels: MARK_LABELS.slice(), step: 0.6, at: [-1.5, -0.9, -0.4, 0, 0.6, 1.2] },
       { key: 'view', label: 'Pictures', levels: ['upright', 'on a side', 'upside down'], step: 0.5 },
-      { key: 'foil', label: 'Foils', levels: ['shape and marks', 'marks only'], step: 0.8 },
+      // version 3: 'close' is the same kind of solid in every option (sizes nearer, or only the marks differ),
+      // 'clear' another kind, a size well off or the marks (the old labels named marks, which the plain kind lacks)
+      { key: 'foil', label: 'Foils', levels: ['clear', 'close'], step: 0.8 },
     ],
     base: -2.2,
+    levelTags: LEVEL_TAGS, // v1.2: below the test, test range or beyond it, per level (format features only)
     generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
+      LEVEL_TAGS: LEVEL_TAGS, rangeOf: rangeOf, plainFolds: plainFolds, MARK_LABELS: MARK_LABELS, BAND_OFF: BAND_OFF, okDims: okDims,
+      buildPlain: buildPlain, buildMarked: buildMarked, volume: volume, resized: resized, sizeDist: sizeDist, plainFeats: plainFeats,
+      plainShares: plainShares, PLAIN_SOLVERS: PLAIN_SOLVERS, pairedSizes: pairedSizes, touchesOffHinge: touchesOffHinge, sharedRun: sharedRun, cutInside: cutInside, sizeOff: sizeOff, validPlain: validPlain, validShaded: validShaded,
       TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
       KINDS: KINDS, VIEW: VIEW, VIEWS: VIEWS, YAW: YAW, TILTS: TILTS, TILT_SETS: TILT_SETS, SEEN: SEEN, SOLVERS: SOLVERS, MARKS: MARKS, stats: stats,
       build: build, randomDims: randomDims, stretched: stretched, mirrored: mirrored, adjacency: adjacency, flat: flat, unfold: unfold, overlapping: overlapping,
