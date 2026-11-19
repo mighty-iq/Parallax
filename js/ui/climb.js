@@ -219,7 +219,7 @@
       X.P.note(note);
       if (K.height > h0) GU().fx.run(mini, 'gm-fx-step', 200);
     }
-    hud(X, def);
+    try { X.P.setProgress(K.height, K.R); } catch (e) { log('progress', e); } // the counter keeps this rung's number until the next item
     // the game feel after a verdict (the plotter tick), as the session screen gives it (CONTRACT-v1.2 R item:reveal)
     if (tr.outcome === 'right' || tr.outcome === 'wrong') {
       try { if (PX.ui.hooks) PX.ui.hooks.collect('item:reveal', { mode: 'climb', step: step, def: def, item: item, tr: tr, out: out, verdict: X.P.el.verdict, P: X.P }); } catch (e) { log('item:reveal', e); }
