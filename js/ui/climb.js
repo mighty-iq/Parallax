@@ -104,7 +104,7 @@
     rules.body.appendChild(h('ul.gm-rules',
       h('li', 'A right answer clears the rung. A miss leaves a notch and the same rung comes again with another item; the second miss ends the run.'),
       h('li', 'Untimed: take the time you need. The items never change your levels.'),
-      h('li', 'Three attempts a week, each with its own items, the same for everyone; your best counts. After three, runs are practice.'),
+      h('li', plural(E().climb.letters().length, 'attempt', 'attempts') + ' a week, each with its own items, the same for everyone; your best counts. After them, runs are practice.'),
       h('li', 'A run you leave goes on where you stopped. A new Climb comes every Monday; a missed week costs nothing.')));
     X.wrap.appendChild(rules.el);
     try { go.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
@@ -271,12 +271,12 @@
     p.body.appendChild(GU().scale({ max: c.rungs, value: c.height, notches: c.notches, best: c.weekBest, width: 320 }));
     var lines = [];
     if (c.partial) lines.push('The run is kept: it goes on at rung ' + (c.height + 1) + ' whenever you open the Climb this week.');
-    else if (c.practice) lines.push('A practice run: this week’s three attempts are climbed, so it changes nothing.');
+    else if (c.practice) lines.push('A practice run: this week’s ' + E().climb.letters().length + ' attempts are climbed, so it changes nothing.');
     else {
       if (c.summit) lines.push('All ' + c.rungs + ' rungs cleared.');
       else if (c.newPb) lines.push('Your highest run so far' + (isNum(c.pbBefore) ? ' (before: ' + c.pbBefore + ')' : '') + '.');
       else if (c.newWeekBest) lines.push('Your best this week' + (isNum(c.weekBefore) ? ' (before: ' + c.weekBefore + ')' : '') + '.');
-      lines.push(c.left ? plural(c.left, 'attempt', 'attempts') + ' left this week.' : 'All three attempts climbed; a new Climb comes on Monday.');
+      lines.push(c.left ? plural(c.left, 'attempt', 'attempts') + ' left this week.' : 'All ' + E().climb.letters().length + ' attempts climbed; a new Climb comes on Monday.');
     }
     lines.forEach(function (t) { p.body.appendChild(h('p.gm-line', t)); });
     X.wrap.appendChild(p.el);

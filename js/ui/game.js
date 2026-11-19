@@ -319,9 +319,9 @@
     try { st = E().climb.state(r, now); } catch (e) { return null; }
     var K = PX.ui.kit, p = K.panel({ title: 'Weekly Climb', className: 'px-slot gm-slot gm-slot--climb', aside: h('span.px-num', '#' + st.number) });
     p.el.setAttribute('data-gm', 'climb');
-    var used = E().climb.letters().length - st.left;
+    var all = E().climb.letters().length, used = all - st.left;
     var status = st.partial ? 'Attempt ' + st.partial + ' is waiting where you stopped (rung ' + (st.attempts[st.partial].h + 1) + ')' :
-      st.left === 3 ? 'Three attempts this week' : st.left ? plural(st.left, 'attempt', 'attempts') + ' left this week' : 'All three attempts climbed this week';
+      st.left === all ? plural(all, 'attempt', 'attempts') + ' this week' : st.left ? plural(st.left, 'attempt', 'attempts') + ' left this week' : 'All ' + all + ' attempts climbed this week';
     p.body.appendChild(h('p.px-status', { 'data-climb-left': String(st.left) }, status, st.best !== null ? h('span.px-num', ' · best ' + st.best + ' of ' + st.rungs) : null));
     if (st.best !== null) p.body.appendChild(scale({ max: st.rungs, value: st.best, best: st.pb ? st.pb.h : null }));
     p.body.appendChild(h('p.px-slot-text', st.rungs + ' rungs from easy to hard, the same for everyone this week. Untimed; a miss leaves a notch and the second miss ends the run.' + (used === 0 && st.last !== null ? ' Last week’s best: ' + st.last + '.' : '')));
@@ -485,7 +485,7 @@
     function set(key, v) { var R = rec(); R.settings[key] = v; save(); PX.bus.emit('settings', { key: key, value: v }); }
     p.body.appendChild(h('p.px-meta', 'Celebrations between items'));
     p.body.appendChild(K.segmented({ key: 'celebrate', value: celebrate(), options: [{ value: 'quiet', label: 'Quiet' }, { value: 'medium', label: 'Medium' }, { value: 'strong', label: 'Strong' }],
-      hint: 'Quiet: marks appear, nothing moves. Medium: ticks draw themselves, the needle sweeps, the grade stamp presses in. Strong: medium, with a sound at the stamp and a ring on each right answer to a stretch item. Never while an item is on screen.',
+      hint: 'Quiet: marks appear, nothing moves. Medium: ticks draw themselves, a ring marks a right answer to a stretch item, the needle sweeps, the grade stamp presses in. Strong: medium, with a ring on every right answer and a sound at the stamp (while Sound is on). Never while an item is on screen.',
       onChange: function (v) { set('celebrate', v); } }));
     p.body.appendChild(K.toggle({ key: 'climbSound', label: 'Climb sounds', checked: s.climbSound !== false,
       hint: 'Rising tones as you climb and a short reward when a run beats your best. They play while Sound (above) is on.', onChange: function (v) { set('climbSound', !!v); } }));
