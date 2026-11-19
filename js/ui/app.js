@@ -686,16 +686,18 @@
     store.save();
     store.flush();
     function step(n, name, text) { return h('li.px-offer-step', h('span.px-num', n), h('b', name), h('span', text)); }
+    // the length from each tutorial's own estimate (PX.ui.tour.minutes; fresh-player round 4)
+    var tm = PX.ui.tour && typeof PX.ui.tour.minutes === 'function' ? PX.ui.tour.minutes() : { words: 'a few minutes', short: '' };
     return ui.modal({
       title: 'New here?',
       className: 'px-offer',
       body: [
-        h('p', 'Watch, Try, Go walks you through Rotate, Fold and Track in about 3 minutes. You can skip any step.'),
+        h('p', 'Watch, Try, Go walks you through Rotate, Fold and Track in about ' + tm.words + '. You can skip any step.'),
         h('ol.px-offer-steps', step('1', 'Watch', 'A slow demo of the solution'), step('2', 'Try', 'Practice items that don’t count'), step('3', 'Go', 'Your sessions start with easy items that count')),
       ],
       actions: [
         { label: 'Skip', value: 'skip', kind: 'secondary', className: 'px-offer-skip' },
-        { label: 'Watch, Try, Go (3 min)', value: 'tour', kind: 'primary', autofocus: true, className: 'px-offer-go' },
+        { label: 'Watch, Try, Go' + (tm.short ? ' (' + tm.short + ')' : ''), value: 'tour', kind: 'primary', autofocus: true, className: 'px-offer-go' },
       ],
       onClose: function (v) {
         if (v === 'tour') startTour();

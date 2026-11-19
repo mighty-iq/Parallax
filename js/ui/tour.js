@@ -1,5 +1,5 @@
 /* PX.ui.tour: the first-run tour (PLAN §8; ARCHITECTURE §9). The shell's first-run offer
-   ("New here? Watch, Try, Go (3 min)") calls PX.ui.tour.start(), which opens the play screen in
+   ("New here? Watch, Try, Go (N min)", from each tutorial's own length) calls PX.ui.tour.start(), which opens the play screen in
    mode 'tour': Watch, Try, Go for Rotate, Fold and Track (each one a slow demo with captions and
    a few practice items that never count; exercises this device cannot show are left out), then
    "Measure your starting point" (its time from the config, as the check says it; no feedback) or Later. Every step can be skipped;
@@ -7,7 +7,7 @@
    Chimera invite (v1.2, gap C6).
    Flags: store.state.tour.done (true once the tour ended, finished or left) and
    store.state.ui.tour = { started, finished, done: [ids], skipped: [ids], baseline: 'now' | 'later' }.
-   PX.ui.tour = { start(), run(host, route, ctx) → cleanup, LIST } */
+   PX.ui.tour = { start(), run(host, route, ctx) → cleanup, LIST, minutes() → { minutes, words, short } } */
 (function (PX) {
   'use strict';
 
@@ -30,6 +30,19 @@
     r.tour.done = true;
     state().finished = state().finished || Date.now();
     save();
+  }
+
+  // The tour's length in words, from each tutorial's own estimate (PX.ui.play.tutorialSeconds), for the
+  // exercises this device can show; 'about N minutes' and 'N min' for the button.
+  function minutes() {
+    var P = PX.ui.play, sec = 0;
+    LIST.forEach(function (id) {
+      var def = PX.ex.get(id);
+      if (!def || (P && typeof P.canRun === 'function' && !P.canRun(def, true))) return;
+      sec += P && typeof P.tutorialSeconds === 'function' ? P.tutorialSeconds(PX.ex.learn(id)) : 60;
+    });
+    var m = Math.max(1, Math.round(sec / 60));
+    return { minutes: m, words: P && typeof P.minutesWords === 'function' ? P.minutesWords(sec) : m + ' minutes', short: m + ' min' };
   }
 
   function start() {
@@ -110,5 +123,5 @@
     };
   }
 
-  PX.ui.tour = { start: start, run: run, LIST: LIST };
+  PX.ui.tour = { start: start, run: run, LIST: LIST, minutes: minutes };
 })(window.PX);
