@@ -1616,6 +1616,12 @@
   function invite(kind, opts) {
     try { return PX.ui.chimera && typeof PX.ui.chimera.invite === 'function' ? PX.ui.chimera.invite(kind, opts || {}) || null : null; } catch (e) { log('invite failed', e); return null; }
   }
+  // PLAN milestone 5's needle sweep (W3-game: PX.ui.game.sweep): where a shown level moves on a bar (a block's
+  // level note, a summary row), once the bar is in the page; the game module decides whether it plays
+  // (never at the quiet level, under reduced motion or during a stimulus).
+  function sweep(bar, before, after) {
+    try { if (bar && bar.isConnected && PX.ui.game && typeof PX.ui.game.sweep === 'function') PX.ui.game.sweep(bar, before, after); } catch (e) { log('sweep failed', e); }
+  }
   // The one invite of a summary goes to the highest kind (CONTRACT-v1.2 R): lower ranks first.
   var INVITE_ORDER = ['best', 'path', 'grade', 'plateau', 'achievement', 'check'];
   function INVITE_RANK(kind) { var r = INVITE_ORDER.indexOf(kind); return r < 0 ? INVITE_ORDER.length : r; }
@@ -2370,6 +2376,12 @@
       if (tr.end) S.ended = true;
       if (tr.outcome === 'skipped' || tr.error) { loop(); return null; }
       notes(step, def, item, tr, out);
+      // PLAN milestone 5's game feel (CONTRACT-v1.2 R, item:reveal; W3-game mounts 'game.reveal'): after the
+      // verdict is drawn, in every mode whose item gives feedback; it touches only the verdict and ends before
+      // the next item paints
+      if (step.feedback !== false && (tr.outcome === 'right' || tr.outcome === 'wrong')) {
+        hookCollect('item:reveal', { mode: mode, step: step, def: def, item: item, tr: tr, out: out, verdict: P.el.verdict, P: P });
+      }
       return P.waitNext({ label: out.done || S.ended ? 'Finish' : 'Next item' }).then(function (w) { // round 3: not the walkthrough's "Next step"
         if (w === 'end') S.ended = true; // End on a pause between items (O4)
         if (w !== 'abort') loop();
@@ -2386,8 +2398,11 @@
         var last5 = S.plan.log.filter(function (x) { return x.exId === def.id && (x.oc === 0 || x.oc === 1); }).slice(-5).map(function (x) { return x.oc; });
         var st0 = null;
         try { st0 = E().est.starter(def, E().est.get(rec(), def, { display: S.plan.display, timed: timed })); } catch (e) { st0 = null; }
-        P.note(levelNote(def, out.blockEnd, { first: first, timed: timed, last5: last5, starter: st0 }));
+        var ln = levelNote(def, out.blockEnd, { first: first, timed: timed, last5: last5, starter: st0 });
+        P.note(ln);
         panels++;
+        var bb = out.blockEnd.before, ba = out.blockEnd.after;
+        if (!first && bb && ba && bb.level !== ba.level) sweep(ln.querySelector('.px-bar'), bb.level, ba.level);
       }
       if (out.path) P.note(pathNote(def, out.path));
       if (mode === 'speed' && out.rated) {
@@ -2774,7 +2789,7 @@
 
   /* ---------- the session summary (results against the person's own past) ---------- */
 
-  function resultRow(r, timed, rounds) { // timed: Speed's own level, labelled so; rounds: [n, total] (Quick)
+  function resultRow(r, timed, rounds, sweeps) { // timed: Speed's own level, labelled so; rounds: [n, total] (Quick); sweeps: [[bar, before, after]]
     var def = PX.ex.get(r.exId) || { code: '', short: r.exId, abilities: [] }, lv = r.level;
     // O7: the median is of the right answers' times, and says so
     var stats = r.n + (r.n === 1 ? ' item' : ' items') + ' · ' + r.right + ' right' + (isNum(r.rtMed) ? ' · median time of right answers ' + fmtRt(r.rtMed) : '');
@@ -2788,6 +2803,7 @@
       var moved = lv.before !== null && lv.before !== undefined && lv.before !== lv.after;
       var bar = ui.bar(lv.after, 100, { band: [lv.lo, lv.hi], label: (def.short || def.name) + ' level', kind: 'signal' });
       bar.setAttribute('aria-valuetext', levelText(lv.after) + ', likely between ' + lv.lo + ' and ' + lv.hi);
+      if (moved && Array.isArray(sweeps)) sweeps.push([bar, lv.before, lv.after]);
       kids.push(h('div.pl-res-level',
         h('p.pl-res-lv', h('span.pl-res-lvk', timed === true ? 'Speed level' : 'Level'), h('b.px-num', moved ? lv.before + ' → ' + lv.after : String(lv.after)),
           lv.after <= 1 ? h('span.pl-res-starter', ' · starter items') : null, h('span.px-num.pl-res-range', 'likely ' + lv.lo + '–' + lv.hi)),
@@ -2825,8 +2841,10 @@
       if (sm.lines && sm.lines[0] && E().modes.RATED[mode]) p1.body.appendChild(h('p.px-meta.pl-sum-noise', sm.lines[0]));
       if (mode === 'free') p1.body.appendChild(h('p.px-meta', 'Free play is logged; it does not change your levels.'));
       var rounds = res && res.session && isObj(res.session.rounds) ? res.session.rounds : S.rounds || {};
-      p1.body.appendChild(h('ul.pl-results', sm.per.map(function (r) { return resultRow(r, mode === 'speed', rounds[r.exId]); })));
+      var sweeps = [];
+      p1.body.appendChild(h('ul.pl-results', sm.per.map(function (r) { return resultRow(r, mode === 'speed', rounds[r.exId], sweeps); })));
       out.appendChild(p1.el);
+      sweeps.forEach(function (x) { sweep(x[0], x[1], x[2]); }); // the bars are in the page now (milestone 5's needle)
     }
     var extra = modeExtras(mode, res);
     if (extra) out.appendChild(extra);
@@ -2983,13 +3001,19 @@
     var marks = outs.map(function (o) { return o === 1 ? 1 : o === 0 ? 0 : null; });
     var today = false;
     try { today = d.day === E().daily.day(now()); } catch (e) { today = false; }
-    var p = K.panel({ title: d.partial && d.scored ? (today ? 'Today’s attempt so far' : 'An attempt left open') : d.scored ? 'Today’s score' : 'Practice round', className: 'pl-panel', aside: d.day });
+    // Daily v2 (milestone 5, W3-game): a ramp of points (item k is worth k, 36 in all); a past Daily from the archive
+    var ramp = !!d.ramp && isNum(d.points), worth = Array.isArray(d.worth) ? d.worth : [];
+    var p = K.panel({ title: d.partial && d.scored ? (today ? 'Today’s attempt so far' : 'An attempt left open') : d.archive && d.scored ? 'From the archive' : d.scored ? 'Today’s score' : 'Practice round', className: 'pl-panel', aside: d.day });
     p.body.appendChild(h('p.pl-daily-score', h('b.px-num', d.right + '/' + d.n), h('span', ' right'),
+      ramp ? h('span.pl-daily-points', ' · ', h('b.px-num', d.points + ' of ' + (isNum(d.max) ? d.max : 36)), ' points') : null,
       d.partial ? h('span.px-meta', ' · ' + (isNum(d.answered) ? d.answered : outs.filter(function (o) { return o !== null; }).length) + ' of ' + d.n + ' answered') : null));
     p.body.appendChild(h('ol.pl-marks', { 'aria-label': 'Items: right, wrong or not answered' }, D.items.map(function (it, i) {
       var def = PX.ex.get(it.exId), o = marks[i], cls = o === 1 ? 'is-right' : o === 0 ? 'is-wrong' : 'is-open';
+      var w = ramp && isNum(worth[i]) && worth[i] > 0 ? worth[i] : null;
       return h('li', { class: cls }, h('span.pl-mark-g', { 'aria-hidden': 'true' }, o === 1 ? '✓' : o === 0 ? '✗' : '–'),
-        h('span.pl-mark-n.px-num', String(i + 1)), h('span.pl-mark-x', def ? def.short || def.name : it.exId), h('span.px-sr', o === 1 ? ': right' : o === 0 ? ': wrong' : ': not answered'));
+        h('span.pl-mark-n.px-num', String(i + 1)), h('span.pl-mark-x', def ? def.short || def.name : it.exId),
+        w ? h('span.pl-mark-w.px-num', { 'data-worth': String(w) }, ' · ' + w + (w === 1 ? ' point' : ' points')) : null,
+        h('span.px-sr', o === 1 ? ': right' : o === 0 ? ': wrong' : ': not answered'));
     })));
     if (d.partial && d.scored && !today) { // its day is over: it can no longer be finished
       p.body.appendChild(h('p', 'This attempt was left open on ' + d.day + ', so it has no score. A new challenge opens every day.'));
@@ -3010,12 +3034,13 @@
       p.body.appendChild(h('p.px-meta', 'A practice round: today’s scored result stays ' + (prev ? prev.right + '/' + prev.n : 'as it was') + '.'));
     }
     out.appendChild(p.el);
-    var line = d.scored ? d.share : (rec().daily && rec().daily[d.day] ? E().daily.share(d.number, rec().daily[d.day].right, rec().daily[d.day].n) : d.share);
+    var prevR = rec().daily && rec().daily[d.day], ED = E().daily;
+    var line = d.scored ? d.share : (prevR ? (typeof ED.shareOf === 'function' ? ED.shareOf(d.day, prevR) : ED.share(d.number, prevR.right, prevR.n)) : d.share);
     var ps = K.panel({ title: 'Share', className: 'pl-panel' });
     ps.body.appendChild(h('p', 'Your share line. Paste it in the Chimera Discord to compare notes.'));
     ps.body.appendChild(K.copyField(line, { rows: 1, ariaLabel: 'Daily share line', label: 'Copy' }));
     var card = ui.button('Share card', { kind: 'secondary', onClick: function () {
-      openShare({ kind: 'daily', title: 'Daily Challenge #' + d.number, label: 'Daily #' + d.number, lines: [d.right + ' of ' + d.n + ' right'], footer: d.day, marks: marks.map(function (m) { return m === 1 ? 1 : 0; }), text: line });
+      openShare({ kind: 'daily', title: 'Daily Challenge #' + d.number, label: 'Daily #' + d.number, lines: [d.right + ' of ' + d.n + ' right'].concat(ramp ? [d.points + ' of ' + (isNum(d.max) ? d.max : 36) + ' points'] : []), footer: d.day, marks: marks.map(function (m) { return m === 1 ? 1 : 0; }), text: line });
     } });
     card.setAttribute('data-share', '');
     ps.body.appendChild(h('div.pl-summary-actions', card));

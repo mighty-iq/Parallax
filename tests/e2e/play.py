@@ -1263,12 +1263,48 @@ def run_produce(b, C):
     ctx.close()
 
 
+def run_gamefeel(b, C):
+    """PLAN milestone 5's call sites (W3-game's requests): item:reveal after each verdict, with the step, the
+    logged outcome and the verdict element; the needle sweep where a level moves (the block's level note and
+    the summary row), called once the bar is in the page."""
+    tag = 'game feel'
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate(HOOKS_JS)
+    page.evaluate("PX.ui.hooks.mute((id) => id === 'test.reveal'); PX.ui.play.config.budgetMs = 60000;")
+    page.evaluate("""() => { window.__rv = []; window.__sw = [];
+      PX.ui.hooks.on('item:reveal', (c) => { __rv.push({ mode: c.mode, ex: c.def.id, outcome: c.tr.outcome, oc: c.out ? c.out.outcome : null,
+        verdict: !!(c.verdict && c.verdict.querySelector('.pl-verdict-word')), step: !!(c.step && c.step.exId), P: !!c.P }); return null; }, { id: 'test.reveal' });
+      PX.ui.game = PX.ui.game || {};
+      PX.ui.game.sweep = (bar, before, after) => { __sw.push({ before, after, inPage: bar.isConnected,
+        where: bar.closest('.pl-note--level') ? 'note' : bar.closest('.pl-res') ? 'summary' : '?' }); };
+      PX.core.store.state.ex.htest = { mu: 0.3, sd: 0.35, n: 30, nRight: 18, last: Date.now() - 86400000, seen: {}, best: {}, hist: [] }; }""")  # mid-range: a level that moves
+    go(page, {'mode': 'train', 'exId': 'htest', 'count': 1})
+    ok = drive(page, '!!document.querySelector(".pl-summary") || __rv.length >= 12', right=1.0, limit=400)
+    if not page.evaluate('!!document.querySelector(".pl-summary")'):
+        page.evaluate('__play.end()')
+        page.wait_for_selector('.pl-summary', timeout=8000)
+    rv = page.evaluate('__rv')
+    C.ok(ok and len(rv) >= 10 and all(x['verdict'] and x['step'] and x['P'] and x['mode'] == 'train' and x['oc'] in (0, 1) for x in rv),
+         f'{tag}: item:reveal runs after each verdict with the step, the logged outcome and the verdict ({len(rv)} items; {rv[:1]})')
+    sw = page.evaluate('__sw')
+    note = [x for x in sw if x['where'] == 'note']
+    summ = [x for x in sw if x['where'] == 'summary']
+    C.ok(note and all(x['inPage'] and x['before'] != x['after'] for x in note), f'{tag}: the needle sweeps the block\'s level note where the level moved ({note[:2]})')
+    C.ok(summ and all(x['inPage'] and x['before'] != x['after'] for x in summ), f'{tag}: and the summary row ({summ[:2]})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

@@ -251,6 +251,8 @@
     var res = st.result, part = st.partial, n = PX.engine.config.daily.items;
     var p = K.panel({ title: 'Daily Challenge', className: 'px-slot px-slot--daily', aside: st.number ? h('span.px-num', '#' + st.number) : null });
     var score = res && typeof res.right === 'number' && typeof res.n === 'number' ? res.right + ' of ' + res.n : null;
+    // Daily v2 (milestone 5): the points of a played ramp, beside the right answers
+    if (score && st.ramp && typeof st.points === 'number') score += ' right · ' + st.points + ' of ' + (typeof st.max === 'number' ? st.max : 36) + ' points';
     p.body.appendChild(h('p.px-status', { 'data-daily': res ? 'done' : part ? 'partial' : 'open' },
       res ? 'Played today' + (score ? ': ' : '') : part ? 'Started: ' : 'Not played yet',
       score ? h('span.px-num', score) : part ? h('span.px-num', part.answered + ' of ' + part.n + ' answered') : null));
@@ -260,9 +262,8 @@
     return p.el;
   }
 
-  // The next Spatial Check in words, for Today and Progress alike, from the engine's one rule
-  // (PX.engine.assess.nextCheck): baselines 2 and 3 come 12 hours or more after the one before;
-  // a regular check after 14 days and 8 practice sessions (10 answers or 5 minutes each).
+  // The next Spatial Check in words, for Today and Progress alike: W2-measure's words (PX.ui.measure.status,
+  // Design A) when js/ui/measure.js is loaded, else the engine's rule (PX.engine.assess.nextCheck).
   // → { kind, ready, status, text, label (null: nothing to start yet), dueAt }
   function checkStatus(rec, now) {
     // v1.2 wave 2 (Design A, W2-measure's request): the words come from js/ui/measure.js when it is

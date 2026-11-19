@@ -105,6 +105,9 @@
   }
   // The reserved game container: Reach never falls (the larger high mark); the rest from the newer side.
   function mergeGame(theirs, mine, info) {
+    // milestone 5's own merge once js/engine/game.js is loaded (W3-game's request): cells, firsts, Climb runs
+    // and field notes as well as Reach's high mark
+    if (E.game && typeof E.game.merge === 'function') return E.game.merge(theirs, mine, info);
     var a = repair('game')(theirs), b = repair('game')(mine);
     if (!a && !b) return undefined;
     var out = copy(info && info.newer === 'mine' ? (b || a) : (a || b));
