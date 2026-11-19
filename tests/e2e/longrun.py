@@ -99,6 +99,8 @@ BOT_JS = r'''() => {
         played: P ? P.played.started + '/' + P.played.finished : '', wtg: !!q('[data-wtg]'),
         sess: S ? { answered: S.answered, done: S.done, voidRun: S.voidRun } : null,
         devnotice: !!q('.pl-notice'), volatile: !!PX.core.store.volatile,
+        // v1.2 wave 2 (W2-bets): a draw-the-answer item's own input (Fold, Views, Slice) while it takes an answer
+        produce: (() => { const d = q('.bets-draw'); return d && vis(d) && P && P.state === 'respond' ? d.getAttribute('data-produce') : null; })(),
       };
     },
     // Fast mode only for what follows an answer (reveal, show me); never while a stimulus plays.
@@ -109,6 +111,46 @@ BOT_JS = r'''() => {
       return PX.debug.answer(!!c);
     },
     next() { PX.debug.fast(false); return __play.next(); },
+    // v1.2 wave 2 (W2-bets): the points to tap for a draw-the-answer item (client px of this frame): the right
+    // set, or the right set less one part plus one wrong part; null when the input is not up
+    produce(right) {
+      const P = PX.ui.play.current(), it = P && P.item, d = q('.bets-draw');
+      if (!it || !d || !Array.isArray(it.key)) return null;
+      d.scrollIntoView({ block: 'center' });
+      const kind = d.getAttribute('data-produce'), key = it.key.slice();
+      let want = key.slice();
+      if (!right) { want = key.slice(1); }
+      if (kind === 'fold') {
+        const r = q('.bets-fold-board svg').getBoundingClientRect(), u = r.width / 8.12;
+        if (!right) { const spare = [...Array(64).keys()].find((c) => key.indexOf(c) < 0); want.push(spare); }
+        return { kind, pts: want.map((c) => [r.left + (0.06 + (c % 8) + 0.5) * u, r.top + (0.06 + Math.floor(c / 8) + 0.5) * u]) };
+      }
+      if (kind === 'views') {
+        const r = q('.bets-views-board svg').getBoundingClientRect();
+        return { kind, pts: want.map((e) => {
+          const c = e >> 1, x = c % 16, y = (c - x) / 16, v = e & 1, bx = v ? x : x + 0.5, by = v ? y + 0.5 : y;
+          return [r.left + (bx + 0.3) / 4.6 * r.width, r.top + (4 - by + 0.3) / 4.6 * r.height];
+        }) };
+      }
+      if (kind === 'slice') {
+        const D = PX.ui.betsDraw && PX.ui.betsDraw.slice, n = PX.ex.get('slice').lib.markEdges(it.solid).E.length;
+        if (!D) return null;
+        if (!right) { const spare = [...Array(n).keys()].find((e) => key.indexOf(e) < 0); if (spare !== undefined) want.push(spare); }
+        const pts = [];
+        for (const i of want) {
+          for (const t of [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8]) { const p = D.at(i, t); if (p && D.nearest(p[0], p[1]) === i) { pts.push(p); break; } }
+        }
+        return { kind, pts };
+      }
+      return null;
+    },
+    // a comparison round's or a bridge set's card: 'new' the first time the bot sees this card
+    betsSeen() {
+      const c = q('[data-card-box]');
+      if (!c || c.getAttribute('data-bot-seen')) return false;
+      c.setAttribute('data-bot-seen', '1');
+      return true;
+    },
     fast(on) { return PX.debug.fast(!!on); },
     size() {
       let json = -1, ls = -1;
@@ -322,8 +364,33 @@ class Bot:
         else:
             self.press('Escape')
 
+    def on_bets_card(self, s):
+        """v1.2 wave 2 (W2-bets): a comparison round or a bridge set between items: a random pick from the enabled
+        statements or choices, then Next (the round's Next item, the set's Next and Back to training)."""
+        cid = s['card']
+        if self.ev('__bot.betsSeen()'):
+            self.st({'bets-compare': 'betsRounds', 'bets-bridge': 'betsBridges'}.get(cid, 'betsCards'))
+        opts = self.f.locator('[data-card-box] .px-bets-opt:not([disabled])')
+        n = opts.count()
+        if n:
+            k = self.R.randrange(n)
+            try:
+                if self.touch:
+                    opts.nth(k).tap(timeout=4000)
+                else:
+                    opts.nth(k).click(timeout=4000)
+                self.st('betsPicks')
+            except Exception as e:
+                self.note('bets pick failed: %s' % str(e).split('\n')[0][:120])
+            return
+        if self.try_click('[data-card-box] [data-bets="round-next"], [data-card-box] [data-bets="bridge-next"]'):
+            self.st('betsNext')
+
     def on_card(self, s):
         cid, opts = s['card'], s['cards']
+        if cid and cid.startswith('bets-'):
+            self.on_bets_card(s)
+            return
         R = self.R.random()
         choice = None
         if cid == 'wtg-offer':
@@ -418,6 +485,22 @@ class Bot:
         r['tries'] += 1
         if r['tries'] > 3:
             r['right'] = not r['right']  # no wrong (or right) response exists for this item: the other one
+        # v1.2 wave 2 (W2-bets): a draw-the-answer item takes its answer through its own input (taps, then Check)
+        # about two times in three, in the page's own frame (the srcdoc host's frame offsets its coordinates)
+        if s.get('produce') and r['tries'] == 1 and self.f == self.page.main_frame and self.R.random() < 0.67:
+            plan = self.ev('__bot.produce(%s)' % ('true' if r['right'] else 'false'))
+            if plan and plan.get('pts'):
+                for (x, y) in plan['pts']:
+                    self.page.mouse.click(x, y)
+                    self.page.wait_for_timeout(25)
+                # as __bot.answer does: fast mode for what follows the answer (reveal, show me) when there is feedback
+                self.ev('(() => { const P = PX.ui.play.current(); if (P && P.cfg && P.cfg.feedback !== false) PX.debug.fast(true); })()')
+                if self.try_click('.bets-draw-actions .px-btn--primary'):
+                    self.st('produce:' + plan['kind'] + ':taps')
+                    r['at'] = n + 1.0
+                    return
+        if s.get('produce'):
+            self.st('produce:' + s['produce'] + ':api')
         self.ev('__bot.answer(%s)' % ('true' if r['right'] else 'false'))
         r['at'] = n + 1.0  # if the answer did not land, try again in a second
         self.st('answers')
@@ -483,6 +566,17 @@ class Bot:
             v['showT'] = now()
             v['cut'] = self.R.random() < 0.25
         el = now() - v['showT']
+        # a walkthrough that waits for Next at each caption (a Watch demo; show me when fast mode is off): Next
+        if el > 1.2 and not v['cut'] and v.get('nextAt', 0) <= now():
+            nb = self.f.locator('[data-showme-next]:visible')
+            if nb.count():
+                v['nextAt'] = now() + 0.6
+                try:
+                    nb.first.click(timeout=2000)
+                    self.st('showMeNext')
+                except Exception:
+                    pass
+                return
         if v['cut'] and el > 0.4:  # close it early: Esc or Next
             v['cut'] = False
             if self.R.random() < 0.5:
@@ -519,6 +613,7 @@ class Bot:
             r = self.step()
             if r == 'end':
                 res = 'end'
+                self.on_summary_bets()
                 break
             if r == 'off':
                 res = 'off'
@@ -563,6 +658,17 @@ class Bot:
             pass
         self.check_errors('session ' + mode)
         return out
+
+    def on_summary_bets(self):
+        """v1.2 wave 2 (W2-bets): the summary's expectation rating, when it is asked: a rating 1-5 about two times in three."""
+        try:
+            btns = self.f.locator('[data-bets="expect"] .px-bets-scale button:not([disabled])')
+            n = btns.count()
+            if n and self.R.random() < 0.67:
+                btns.nth(self.R.randrange(n)).click(timeout=4000)
+                self.st('betsExpect')
+        except Exception as e:
+            self.note('expectation rating: %s' % str(e).split('\n')[0][:120])
 
     def snap_sess(self):
         try:
@@ -619,6 +725,23 @@ class Bot:
             self.ev(f'void PX.core.router.go("exercise/{exId}")')
             self.st('navFallback')
         self.page.wait_for_timeout(300)
+        self.offscreen()
+
+    def offscreen(self):
+        """v1.2 wave 2 (W2-bets): now and then the exercise page's off-screen challenge: opened, and sometimes "I did it"."""
+        try:
+            if self.R.random() >= 0.4:
+                return
+            box = self.f.locator('details.px-bets-off summary:visible')
+            if box.count():
+                box.first.click(timeout=4000)
+                self.st('offscreenSeen')
+            did = self.f.locator('[data-bets="offscreen-did"]:visible')
+            if did.count() and self.R.random() < 0.5:
+                did.first.click(timeout=4000)
+                self.st('offscreenDid')
+        except Exception as e:
+            self.note('off-screen challenge: %s' % str(e).split('\n')[0][:120])
 
     def practise(self, exId, what):
         """Library → the exercise → Practise → `what` (path, speed, free, threshold:<id>)."""
