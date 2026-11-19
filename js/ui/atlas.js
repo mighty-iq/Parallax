@@ -87,7 +87,8 @@
     var seen = uiRec().seen || (uiRec().seen = {}), seenAt = isNum(seen[def.id]) ? seen[def.id] : 0;
     var fresh = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return G().firstOk(f) && f.ex === def.id && !f.old && f.at > seenAt; }).map(function (f) { return f.cell; });
     var cols = at.cols, rows = at.rows;
-    var grid = h('div.gm-atlas-grid', { role: 'grid', 'aria-label': nameOf(def) + ': ' + ad.dims[0].label + (ad.dims[1] ? ' by ' + ad.dims[1].label : ''), style: '--cols:' + cols });
+    // a static chart, not a widget: table semantics (a screen reader reads each cell's words)
+    var grid = h('div.gm-atlas-grid', { role: 'table', 'aria-label': nameOf(def) + ': ' + (ad.dims[0].label || ad.dims[0].key) + (ad.dims[1] ? ' by ' + (ad.dims[1].label || ad.dims[1].key) : ''), style: '--cols:' + cols });
     var animated = 0;
     for (var j = rows - 1; j >= 0; j--) {
       var row = h('div.gm-atlas-row', { role: 'row' });
@@ -96,7 +97,7 @@
         var key = i + '.' + j, c = at.cells[key], e = ease[key];
         var state = c && c.handled ? 'handled' : c ? 'tried' : 'unseen';
         var band = aim !== null && e && Math.abs(e.b - aim) <= 0.5;
-        var cell = h('div.gm-cell', { role: 'gridcell', 'data-cell': key, 'data-state': state, 'aria-label': GU().cellText(def, i, j) + ': ' + (state === 'handled' ? 'handled' : state === 'tried' ? 'tried, ' + c.r + ' of ' + c.n + ' right' : e ? 'not tried yet' : 'not in the automatic mix') },
+        var cell = h('div.gm-cell', { role: 'cell', 'data-cell': key, 'data-state': state, 'aria-label': GU().cellText(def, i, j) + ': ' + (state === 'handled' ? 'handled' : state === 'tried' ? 'tried, ' + c.r + ' of ' + c.n + ' right' : e ? 'not tried yet' : 'not in the automatic mix') },
           h('span.gm-cell-mark', { 'aria-hidden': 'true' }));
         if (!e) cell.classList.add('is-out');
         if (band) cell.classList.add('is-band');
