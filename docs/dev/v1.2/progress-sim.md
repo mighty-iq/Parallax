@@ -10,7 +10,7 @@ Written 2026-11-19 (UTC) by the W2-progress builder. Sources: docs/dev/PLAN.md m
 | no dimension level more than 5 points off (cells of ≥ 200 items where the pool reaches the target) | observed −6.6 (Track speed level 22; before: −15.5); expected 3.6 (Slice cut 0) | observed −6.6 (Track speed 25; before: −4.8); expected −4.8 (Track speed 33) | **fails on observed answers, on Track's speed levels only** (every other cell within 3.8 and 4.1 points); passes on the true success of the items chosen (§3) |
 | the overall within ±1 point | +0.1 | +0.5 | pass |
 | about 95 % coverage (93–97 %, the band tests/node/sim.mjs checks) | 97.8 % (before: 97.2 %) | 98.1 % (before: 98.3 %) | **above the band by 0.8 and 1.1 points**: intervals on the wide side (rms z 0.84 and 0.82), as they were before the change (§4) |
-| shortcut solvers within chance + 10 at every dimension level | 12 of the 20 training exercises checked | | **9 pass; Fold (2 cells), Nets (4) and Slice (3) fail**; 8 exercises wait for their owners' exports (§5) |
+| shortcut solvers within chance + 10 at every dimension level | 12 of the 20 training exercises checked | | pass since 19 Nov ~02:00 UTC, with scoped exceptions in Nets, Slice and Fold (§5); 8 exercises wait for their owners' exports |
 | fluency items within ±2 points of their deadline target (after each exercise's first 10) | 78.1 vs 77.2 % in time | 78.1 vs 77.1 % | pass (+0.9, +1.0) |
 | nothing else moves | | | pass: tests/node/sim.mjs's four runs agree with and without dims.js within sampling noise, every hard check passes in both (§6) |
 
@@ -72,12 +72,12 @@ tests/node/shortcut-levels.test.mjs generates at least 10,000 items of each exer
 |---|---|
 | Track, Rotate, Spin, Orient, Span, Hidden, Homing, Reckon | pass at every level (Track: from speed level 15 up, as its own test bounds it; the slowest third reported) |
 | Knots | pass; three pull cues at rope level 7 +10.3 over 252 items, within two standard errors |
-| Fold | **fails** at one fold: "most symmetric about the first fold line" +19.4, "a hole under every punch" +15.3 (2,016 items) |
-| Nets | **fails**: "farthest along the net" at the 1-4-1 shape +18.3, "most central option" at the 2-3-1 shape +22.8, "exactly 4 in a row" (cube) at the 1-4-1 shape +19.6 (1,120 items each), "close in the flat net means they meet" (edges, a threshold) at 2–4 squares carried +26.6 (672 items) |
-| Slice | **fails**: "roundest" +14.3 and "fullest" +16.5 at cut level 0, "roundest" at structure level 1 +12.3 (3,336 items each) |
+| Fold | first run: over at one fold ("most symmetric about the first fold line" +19.4, "a hole under every punch" +15.3, 2,016 items). Since 19 Nov (507e597): a scoped exception, structural (a foil symmetric about the crease always lacks a hole under a punch, so both cannot be under 41.7 %), held at 48 %; "most like the others" at three punches and five folds +11.0 and +10.2 → +2.0 and +2.9 |
+| Nets | first run: over in four cells (+18.3 to +26.6). Since 19 Nov (a8ec289): every level within chance + 10 (worst +8.8); one scoped combination, 1-4-1 with three faces between, where "farthest along the net" finds the key in at least half the items by structure (held at 55 %) |
+| Slice | first run: over in three cells (+12.3 to +16.5). Since 19 Nov (8515626): every other solver within chance + 10 at every level (worst +9.5); "the roundest" and "the fullest" at the first cut level and for joined solids a scoped exception at 36–37 % (chance 25 %), held at 40 % |
 | Views, Openings, Missing View, Angles, Hole Punch, Painted Cubes, Form, Central Point | pending: their owners have not exported per-item scores yet |
 
-Each failing generator passes its own pooled bounds; the cheap rule pays at one level, mostly the easiest. The cells sit in the test's KNOWN list (printed every run, failed if they grow by 2 points; any new cell fails) and in docs/dev/v1.2/requests.md (18 Nov 23:47 UTC). Levers: the owner balances distractors at those levels; or the lead scopes an exception where the rule is the format's own method at its easiest level (a DECISIONS line); meanwhile `config.dims.spread[exId][dimKey]` set small holds that dimension's offset near 0. What it costs to leave them: a player who uses the rule does better at that level than the model expects, which tilts that dimension's offset (at the easiest level, towards "this dimension is hard").
+Each of the three generators passed its own pooled bounds, while the cheap rule paid at one level, mostly the easiest. On 19 Nov (review RV-wave2 #2) the generators were rebalanced where the signal could be removed, and the rest became scoped exceptions with a structural proof or a cap in the exercise's own test and in the check's SCOPED list (DECISIONS 19 Nov, three lines); the KNOWN list is empty. What a scoped cell costs: a player who uses the rule does better at that level than the model expects, which tilts that dimension's offset a little; `config.dims.spread[exId][dimKey]` set small would hold an offset near 0 if pooled data show it.
 
 ## 6. Nothing else moves (tests/node/sim.mjs, 100 learners × 60 days, seed 1)
 
