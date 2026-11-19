@@ -1,7 +1,7 @@
 """E2E: the dev harness with Mechanisms (PR-3).
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_mechanisms.py   (two browser slots per machine)
 
-1. desktop 1366 × 768 and phone 412 × 880 (DPR 2, touch), light and dark, each question type and a
+1. desktop 1366 × 768 and phone 412 × 880 (DPR 2, touch), light and dark, each structure level (version 2) and a
    jam: the drawing has non-blank pixels, every gear has teeth, meshing teeth interleave at every
    contact point (loop-closing meshes excepted), the DRIVER and MARKED labels are there and cover
    no mesh contact point; a right answer by keyboard and a wrong one by pointer (tap on the phone)
@@ -23,8 +23,9 @@ DIR = OUT / EX
 DIR.mkdir(parents=True, exist_ok=True)
 READY = "() => window.__harness && __harness.state === 'respond'"
 STATE = "(s) => window.__harness && __harness.state === s"
-LEVELS = [('chain_dir', 'gears:0,structure:0,question:0', 3), ('branches_lift', 'gears:1,structure:1,question:1', 11),
-          ('belts_speed', 'gears:2,structure:2,question:2', 4), ('jams_dir', 'gears:3,structure:3,question:0', 12)]
+# version 2 (v1.2): one question with five answers at every level, so the levels are the structures
+LEVELS = [('chain', 'gears:0,structure:0', 3), ('branches', 'gears:1,structure:1', 11),
+          ('belts', 'gears:2,structure:2', 4), ('jams', 'gears:3,structure:3', 12)]
 
 # Teeth interleave: tooth phase u (0 = tooth centre facing the other gear) of A and B sum to 1/2;
 # labels never cover a mesh contact point.
@@ -82,7 +83,7 @@ def answer_keyboard(page, frame, tag):
 
 def answer_pointer(page, frame, tag, tap=False):
     key = frame.evaluate('() => __harness.key')
-    cell = frame.locator('.hx-grid .px-choice').nth((key + 1) % 3)
+    cell = frame.locator('.hx-grid .px-choice').nth((key + 1) % 5)
     cell.tap() if tap else cell.click()
     frame.wait_for_function(STATE, arg='reveal', timeout=10000)
     r = frame.evaluate('() => __harness.last')
@@ -141,8 +142,8 @@ def normal_speed(b, cons):
     page = ctx.new_page()
     cons.append(Console(page))
     times = {}
-    for lv, p, seed, rm in (('lift', 'gears:1,structure:1,question:1', 11, 0), ('lift', 'gears:1,structure:1,question:1', 11, 1),
-                            ('jam', 'gears:3,structure:3,question:0', 12, 0)):
+    for lv, p, seed, rm in (('belts', 'gears:1,structure:2', 11, 0), ('belts', 'gears:1,structure:2', 11, 1),
+                            ('jam', 'gears:3,structure:3', 12, 0)):
         page.goto(file_url('tests/dev/harness.html', ex=EX, seed=seed, p=p, rm=rm))
         page.wait_for_function(READY, timeout=60000)
         page.evaluate('() => __harness.answer(false)')
@@ -159,8 +160,8 @@ def normal_speed(b, cons):
         pl = page.evaluate('() => __harness.played')
         times[f'{lv}{"_rm" if rm else ""}'] = {'planned': round(pl['plannedMs'] / 1000, 2), 'steps': len(steps), 'longest': max(steps)}
         C.ok(steps and max(steps) <= 4000 and sum(steps) >= 2000, f'show me ({lv}): every step ≤ 4 s ({steps})')
-    C.ok(times['lift_rm']['planned'] < times['lift']['planned'], f'reduced motion makes show me shorter ({times})')
-    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=6, p='gears:2,structure:1,question:0'))
+    C.ok(times['belts_rm']['planned'] < times['belts']['planned'], f'reduced motion makes show me shorter ({times})')
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=6, p='gears:2,structure:1'))
     page.wait_for_function(READY, timeout=60000)
     page.evaluate('() => __harness.answer(true)')
     page.wait_for_function(STATE, arg='reveal', timeout=10000)
@@ -185,7 +186,7 @@ def normal_speed(b, cons):
 
 
 def sandboxed(b, cons):
-    doc = harness_single(EX, {'seed': 21, 'p': 'gears:1,structure:2,question:1', 'fast': True})
+    doc = harness_single(EX, {'seed': 21, 'p': 'gears:1,structure:2', 'fast': True})
     host = srcdoc_host(f'harness_{EX}', doc)
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})
     page = ctx.new_page()
