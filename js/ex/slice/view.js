@@ -246,14 +246,15 @@
     }
     return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, hw: Math.max(1e-3, (x1 - x0) / 2), hh: Math.max(1e-3, (y1 - y0) / 2) };
   }
-  // A frame { center (3D), half (half height in world units) } that fits the extent in W × H px.
+  // A frame { center (3D), half (half height in world units), dy } that fits the extent in W × H px;
+  // dy (px, from clearLabels) moves the picture down from the stage's middle.
   function fitFrame(ex, b, W, H) {
     var aspect = W / Math.max(1, H), half = Math.max(ex.hh, ex.hw / aspect) * MARGIN;
-    return { center: add(mul(b.right, ex.cx), mul(b.up, ex.cy)), half: half };
+    return { center: add(mul(b.right, ex.cx), mul(b.up, ex.cy)), half: half, dy: 0 };
   }
   function placeCam(cam, b, fr, W, H) {
-    var aspect = W / Math.max(1, H), c = fr.center;
-    cam.left = -fr.half * aspect; cam.right = fr.half * aspect; cam.top = fr.half; cam.bottom = -fr.half;
+    var aspect = W / Math.max(1, H), c = fr.center, s = 2 * (fr.dy || 0) / Math.max(1, H);
+    cam.left = -fr.half * aspect; cam.right = fr.half * aspect; cam.top = fr.half * (1 + s); cam.bottom = fr.half * (s - 1);
     cam.position.set(c[0] + b.dir[0] * CAM_D, c[1] + b.dir[1] * CAM_D, c[2] + b.dir[2] * CAM_D);
     cam.up.set(b.up[0], b.up[1], b.up[2]);
     cam.lookAt(c[0], c[1], c[2]);
@@ -262,6 +263,82 @@
   }
   // CSS px per world unit for a frame in a stage H px high.
   function pxPerUnit(fr, H) { return H / (2 * fr.half); }
+
+  /* ---------- the labels' corner (v1.2, W3-exfix: fresh-player test, 19 Nov) ----------
+     "Solid" and "Cutting plane" sit on the stage's top edge. A frame fitted to the whole stage drew
+     the plane's square under them on many items (the plane's words crossed the tinted plane), so
+     every frame is checked against the labels: the picture (the convex hull of its points) moves
+     down until no point lies under a label, and where the stage has no room below for that, the
+     picture is drawn smaller in the stage under the labels' line. */
+  var LABEL_GAP = 4;   // px between a label's bottom and the picture
+  var LABEL_SIDE = 14; // px of slack beside each label (a pointed label grows by '▸ ' in the Watch)
+  var FOOT = 6;        // px kept free at the stage's bottom when the picture moves down
+
+  // Convex hull (monotone chain) of [[x, y], …].
+  function hull2(p) {
+    var s = p.slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }), lo = [], up = [], i;
+    function turn(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+    for (i = 0; i < s.length; i++) { while (lo.length > 1 && turn(lo[lo.length - 2], lo[lo.length - 1], s[i]) <= 0) lo.pop(); lo.push(s[i]); }
+    for (i = s.length - 1; i >= 0; i--) { while (up.length > 1 && turn(up[up.length - 2], up[up.length - 1], s[i]) <= 0) up.pop(); up.push(s[i]); }
+    lo.pop(); up.pop();
+    return lo.concat(up);
+  }
+  // The hull of a flat point list in the (right, up) coordinates of basis b.
+  function hullIn(flat, b) {
+    var p = [];
+    for (var i = 0; i + 2 < flat.length; i += 3) { var q = [flat[i], flat[i + 1], flat[i + 2]]; p.push([dot(q, b.right), dot(q, b.up)]); }
+    return p.length > 2 ? hull2(p) : p;
+  }
+  // The labels' boxes on the stage { x0, x1, y1 } (px from the stage's top left), once per stage size.
+  function labelBoxes(W, H) {
+    var k = W + 'x' + H;
+    if (st.lb && st.lb.k === k) return st.lb.boxes;
+    var boxes = [];
+    Object.keys(st.labels).forEach(function (n) {
+      var el = st.labels[n];
+      if (!el || !el.offsetWidth || !el.offsetHeight) return;
+      boxes.push({ x0: el.offsetLeft - LABEL_SIDE, x1: el.offsetLeft + el.offsetWidth + LABEL_SIDE, y1: el.offsetTop + el.offsetHeight });
+    });
+    st.lb = { k: k, boxes: boxes };
+    return boxes;
+  }
+  // The lowest y (px, down) of a convex polygon inside the strip x0 ≤ x ≤ x1 is its top there:
+  // clip the polygon to the strip, then take the least y. null when it misses the strip.
+  function topIn(P, x0, x1) {
+    function clip(poly, keep, cut) {
+      var out = [];
+      for (var i = 0; i < poly.length; i++) {
+        var a = poly[i], b = poly[(i + 1) % poly.length], ka = keep(a), kb = keep(b);
+        if (ka) out.push(a);
+        if (ka !== kb) out.push(cut(a, b));
+      }
+      return out;
+    }
+    function atX(x) { return function (a, b) { return [x, a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0])]; }; }
+    var c = clip(P, function (q) { return q[0] >= x0; }, atX(x0));
+    c = c.length ? clip(c, function (q) { return q[0] <= x1; }, atX(x1)) : c;
+    if (!c.length) return null;
+    var top = Infinity;
+    c.forEach(function (q) { if (q[1] < top) top = q[1]; });
+    return top;
+  }
+  // Frame fr (basis b) with the picture's hull kept clear of the labels: → { center, half, dy }.
+  function clearLabels(fr, hull, b, W, H) {
+    var boxes = labelBoxes(W, H), dy = fr.dy || 0;
+    if (!boxes.length || hull.length < 3) return fr;
+    var k = pxPerUnit(fr, H), cx = dot(fr.center, b.right), cy = dot(fr.center, b.up), need = 0, bottom = -Infinity;
+    var P = hull.map(function (q) { return [W / 2 + (q[0] - cx) * k, H / 2 + dy - (q[1] - cy) * k]; });
+    P.forEach(function (q) { if (q[1] > bottom) bottom = q[1]; });
+    boxes.forEach(function (bx) { var top = topIn(P, bx.x0, bx.x1); if (top !== null) need = Math.max(need, bx.y1 + LABEL_GAP - top); });
+    if (need <= 0) return fr;
+    if (bottom + need <= H - FOOT) return { center: fr.center, half: fr.half, dy: dy + need };
+    // no room below: the hull's box goes into the stage under the labels' line, as large as fits
+    var y0 = LABEL_GAP, x0 = Infinity, x1 = -Infinity, ya = Infinity, yb = -Infinity;
+    boxes.forEach(function (bx) { y0 = Math.max(y0, bx.y1 + LABEL_GAP); });
+    hull.forEach(function (q) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); ya = Math.min(ya, q[1]); yb = Math.max(yb, q[1]); });
+    var Ha = Math.max(1, H - FOOT - y0), k2 = Math.min(k, Ha / Math.max(1e-6, yb - ya), W / (Math.max(1e-6, x1 - x0) * MARGIN));
+    return { center: add(mul(b.right, (x0 + x1) / 2), mul(b.up, (ya + yb) / 2)), half: H / (2 * k2), dy: y0 + Ha / 2 - H / 2 };
+  }
 
   /* ---------- the item's scene ---------- */
 
@@ -322,7 +399,7 @@
     var view = item.view, vb = { dir: view.dir, right: view.right, up: view.up };
     st.it = {
       item: item, root: root, pms: pms, quad: quad, corners: corners, edges: edges, soft: soft, planeBars: planeBars, meet: meet,
-      embedded: embedded, n: n, f: { n: n, u: f.u, v: f.v }, vb: vb, ext: extent(pts, vb), rc: rc,
+      embedded: embedded, n: n, f: { n: n, u: f.u, v: f.v }, vb: vb, ext: extent(pts, vb), hull: hullIn(pts, vb), tf: null, rc: rc,
       angles: viewAngles(view.dir), cut: null, sm: null, last: {},
     };
   }
@@ -367,10 +444,12 @@
     if (!v.width || !v.height) v.resize();
     return { W: v.width || 1, H: v.height || 1 };
   }
-  // The trial frame: the validator's camera, fitted to the solid and the plane's square.
+  // The trial frame: the validator's camera, fitted to the solid and the plane's square, clear of
+  // the labels (kept per stage size).
   function trialFrame() {
-    var s = stageSize();
-    return fitFrame(st.it.ext, st.it.vb, s.W, s.H);
+    var s = stageSize(), it = st.it, k = s.W + 'x' + s.H;
+    if (!it.tf || it.tf.k !== k) it.tf = { k: k, fr: clearLabels(fitFrame(it.ext, it.vb, s.W, s.H), it.hull, it.vb, s.W, s.H) };
+    return it.tf.fr;
   }
   function render() {
     if (!st || !st.v3 || !st.it) return;
@@ -431,7 +510,7 @@
     root.appendChild(desc);
     ctx.host.appendChild(root);
     st = { ctx: ctx, root: root, stage: stage, labels: labels, caption: caption, desc: desc,
-      v3: null, scene: null, cam: null, mats: null, it: null, optItem: null, opts: [], offs: [], fly: null, edgeW: 0.01 };
+      v3: null, scene: null, cam: null, mats: null, it: null, optItem: null, opts: [], offs: [], fly: null, edgeW: 0.01, lb: null };
     if (!S3.available()) {
       stage.appendChild(h('p.ex-unavailable', { role: 'alert' }, 'This exercise needs 3D graphics, which are not available here: ' + S3.reason() + '.'));
       return;
@@ -670,7 +749,7 @@
       it.pms.forEach(function (pm) { for (var i = 0; i < pm.V.length; i++) pts.push(pm.V[i]); });
       var fr = fitFrame(extent(pts, b), b, W, H);
       fr.half = Math.max(fr.half, trialFrame().half);
-      sm.headOn = { k: k, b: b, fr: fr };
+      sm.headOn = { k: k, b: b, fr: clearLabels(fr, hullIn(pts, b), b, W, H) };
     }
     return sm.headOn;
   }
@@ -683,7 +762,7 @@
     var a0 = it.angles, daz = ((item.frame.az - a0.az + 540) % 360) - 180;
     var b = basis(a0.az + daz * s.cam, a0.el + (item.frame.el - a0.el) * s.cam);
     var F0 = trialFrame(), F1 = headOnFrame(it, size.W, size.H).fr;
-    var fr = { center: lerp3(F0.center, F1.center, s.cam), half: F0.half + (F1.half - F0.half) * s.cam };
+    var fr = { center: lerp3(F0.center, F1.center, s.cam), half: F0.half + (F1.half - F0.half) * s.cam, dy: (F0.dy || 0) + ((F1.dy || 0) - (F0.dy || 0)) * s.cam };
     it.camB = b; it.camF = fr;
     st.edgeW = EDGE_PX / pxPerUnit(fr, size.H);
     it.pms.forEach(function (pm) { pm.full.visible = false; });
@@ -718,7 +797,7 @@
     return {
       a: k / nm.s,
       e: r.left + size.W / 2 + (dot(pc, item.frame.u) + nm.cx) * k,
-      f: r.top + size.H / 2 - (dot(pc, item.frame.v) + nm.cy) * k,
+      f: r.top + size.H / 2 + (fr.dy || 0) - (dot(pc, item.frame.v) + nm.cy) * k,
     };
   }
   function optionMap(i) {
@@ -894,7 +973,7 @@
     project: function (X) {
       if (!st || !st.it || !st.v3) return null;
       var s = stageSize(), fr = trialFrame(), b = st.it.vb, c = fr.center, k = pxPerUnit(fr, s.H);
-      return [s.W / 2 + (dot(X, b.right) - dot(c, b.right)) * k, s.H / 2 - (dot(X, b.up) - dot(c, b.up)) * k];
+      return [s.W / 2 + (dot(X, b.right) - dot(c, b.right)) * k, s.H / 2 + (fr.dy || 0) - (dot(X, b.up) - dot(c, b.up)) * k];
     },
     size: function () { return st && st.v3 ? stageSize() : null; },
     trial: function () { if (st && st.it) { reset(); showTrial(); } },
@@ -949,8 +1028,17 @@
     // for tests: what the 3D picture draws now (outline bars, the plane's meet line)
     inspect: function () {
       if (!st || !st.it) return null;
-      var it = st.it;
-      return { edges: it.edges.count, soft: it.soft.count, meet: it.meet.visible ? it.meet.count : 0, edgeOrder: it.edges.renderOrder, planeOrder: it.quad.renderOrder };
+      var it = st.it, out = { edges: it.edges.count, soft: it.soft.count, meet: it.meet.visible ? it.meet.count : 0, edgeOrder: it.edges.renderOrder, planeOrder: it.quad.renderOrder };
+      // v1.2 (W3-exfix): the trial picture's room under the labels (px; ≥ 0: no point of it under a label)
+      if (st.v3) {
+        var s = stageSize(), fr = trialFrame(), b = it.vb, k = pxPerUnit(fr, s.H), cx = dot(fr.center, b.right), cy = dot(fr.center, b.up), gap = null;
+        var P = it.hull.map(function (q) { return [s.W / 2 + (q[0] - cx) * k, s.H / 2 + (fr.dy || 0) - (q[1] - cy) * k]; });
+        labelBoxes(s.W, s.H).forEach(function (bx) { var top = topIn(P, bx.x0 + LABEL_SIDE, bx.x1 - LABEL_SIDE); if (top !== null) gap = gap === null ? top - bx.y1 : Math.min(gap, top - bx.y1); });
+        var lo = -Infinity;
+        P.forEach(function (q) { if (q[1] > lo) lo = q[1]; });
+        out.labels = { gap: gap, dy: fr.dy || 0, bottom: lo, H: s.H, scale: k };
+      }
+      return out;
     },
   });
 })(window.PX);
