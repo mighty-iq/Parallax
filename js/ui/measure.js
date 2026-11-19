@@ -198,8 +198,9 @@
     }
     // A kind's one line (learn.kinds[variant], else learn.explain[variant][0]) for the first item of each kind inside a
     // probe of several kinds
-    // (Other Way Round's strands, Motion Graphs' and Balance's kinds): shown under the item's own question, with
-    // HINT_MS more time, instead of a card before the item (fresh-player run of 19 Nov: five cards in six items).
+    // (Other Way Round's strands, Motion Graphs' and Balance's kinds): shown under the item's own question instead
+    // of a card before the item (fresh-player run of 19 Nov: five cards in six items). The item keeps its time
+    // limit, so a time-out's time and the card's "Each item has … seconds" stay the definition's.
     function kindLine(def, step) {
       if (def.cycle !== 'variant') return null;
       var learn = PX.ex.learn(def.id) || {}, v = step.params && step.params.variant;
@@ -221,8 +222,8 @@
       var ex = step.probe && step.probe.example, canDemo = !!(ex && P.view && P.view.demo);
       // a probe of several kinds: the count, and where each kind's line will be (under the first item of the kind)
       if (!again && def.cycle === 'variant' && Array.isArray(def.variants) && def.variants.length > 1 && step.probe && step.probe.of) {
-        var kinds = WORDNUM[def.variants.length] || String(def.variants.length);
-        lines.push(step.probe.of + ' items, ' + kinds + ' kinds in turn. The first item of each kind adds one line on how to read it.');
+        var kinds = WORDNUM[def.variants.length] || String(def.variants.length), named = /kinds of question/.test(lines.join(' '));
+        lines.push(step.probe.of + ' items' + (named ? '' : ', ' + kinds + ' kinds in turn') + '. The first item of each kind adds one line on how to read it.');
       }
       var lim = limitRange(def);
       if (again) { var ms = def.timeLimit ? def.timeLimit(step.params) : null; lim = ms ? { lo: Math.round(ms / 1000), hi: Math.round(ms / 1000) } : null; }
@@ -323,10 +324,10 @@
           if (r === 'stop') { stop(true); return null; }
           var item = fresh(def, step);
           if (!item) { E().modes.answer(plan, rec(), step, { correct: false, outcome: 'skipped' }, now()); loop(); return null; }
-          if (newKind) { item.hint = newKind; item.extraMs = HINT_MS; }
+          if (newKind) item.hint = newKind;
           P.setLabel(def);
           progress(step);
-          var limit = def.timeLimit ? def.timeLimit(item.params) + (item.extraMs || 0) : null;
+          var limit = def.timeLimit ? def.timeLimit(item.params) : null;
           return P.run(item, { feedback: false, limitMs: limit || null, limitBar: false, goal: Play.goalOf(PX.ex.learn(def.id), item) }).then(function (tr) {
             if (S.done || tr.outcome === 'aborted') return null;
             if (tr.end) { stop(true); return null; }
@@ -671,7 +672,6 @@
 
   // The schedule in words, from the config (RV-wave2 finding 15: no number typed beside the constant that sets it).
   var WORDNUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
-  var HINT_MS = 10000;     // more time for the first item of a kind, which carries the kind's line
   var REPEAT_TRIES = 8;    // seeds tried for an item whose stem this run already showed
   function scheduleText(r) {
     var MX = E().config.measure, T = E().trend && E().trend.config ? E().trend.config.milestones : null, n = 0, m;

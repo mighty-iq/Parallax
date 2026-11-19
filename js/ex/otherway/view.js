@@ -241,7 +241,7 @@
   /* ---------- the countdown bar ---------- */
 
   function timerStart(item) {
-    var ms = def.timeLimit(item.params) + (item.extraMs > 0 ? item.extraMs : 0); // extraMs: the Check's time for a kind's line
+    var ms = def.timeLimit(item.params);
     st.timer.hidden = !ms;
     st.timer.classList.remove('is-running', 'is-stopped');
     if (!ms) return;
