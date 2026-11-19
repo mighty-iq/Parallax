@@ -43,6 +43,7 @@ export async function run(t0) {
   trendInput(t);
   meterAndVerdicts(t);
   container(t);
+  curves(t);
 }
 
 /* ---------- helpers ---------- */
@@ -354,4 +355,87 @@ function container(t) {
   t.eq(rec.sessions.map((s) => s.kind), ['baseline', 'check', 'block', 'week'], 'session kinds: baseline, check, block, week');
   const g = S.guard(JSON.parse(JSON.stringify(rec)));
   t.ok(g.assess.length === 4 && g.assess[2].kind === 'block' && Array.isArray(g.assess[2].items.otherway) && g.assess[2].bi === 0, 'entries survive the store’s repair with their items and block index');
+}
+
+/* ---------- new-exercise learning curves (Lab; note T1 §5.2) ---------- */
+
+function curves(t) {
+  t.section('measure: learning curves on new exercises');
+  const PX = t.mk({ store: true }), E = PX.engine, A = E.assess, S = PX.core.store, CC = E.config.measure.curves;
+  E.fields().forEach((f) => S.field(f.key, f.def, f.fix));
+  A.wire();
+  // the fit: simulated players aimed at their edge as they improve (b follows θ), so the share right stays flat
+  const R = PX.rng(11);
+  function sim(slope) {
+    const rows = [];
+    for (let k = 0; k < CC.n; k++) {
+      const x = k / (CC.n - 1), th = -0.5 + slope * x, b = th - 0.4 + R.normal() * 0.5, g = 0.25;
+      const P = g + (1 - g - 0.03) / (1 + Math.exp(-(th - b)));
+      rows.push({ b, g, y: R.next() < P ? 1 : 0 });
+    }
+    return A._.fitCurve(rows, CC);
+  }
+  for (const slope of [0, 1.5]) {
+    const est = [];
+    let cover = 0, pos = 0;
+    for (let i = 0; i < 400; i++) {
+      const f = sim(slope);
+      est.push(f.slope);
+      if (Math.abs(f.slope - slope) <= 1.96 * f.se) cover++;
+      if (f.slope - 1.96 * f.se > 0) pos++;
+    }
+    const mean = est.reduce((a, b) => a + b, 0) / est.length;
+    t.ok(Math.abs(mean - slope) < 0.25, `slope ${slope}: the mean estimate ${mean.toFixed(2)} is within 0.25 (little shrinkage, for pooling)`);
+    t.ok(cover / 400 >= 0.88 && cover / 400 <= 0.995, `slope ${slope}: ±1.96 se covers ${(cover / 4).toFixed(1)} %`);
+    if (slope === 0) t.ok(pos / 400 <= 0.06, `no learning: a clear rise in ${(pos / 4).toFixed(1)} % of players (≤ 6 %)`);
+    else t.ok(pos / 400 >= 0.12, `learning of 1.5 logits: a clear rise in ${(pos / 4).toFixed(1)} % of single players (one curve is rough: pooling is the point)`);
+  }
+  // the record: Train sessions on the fixture exercises; Fold stands in for an exercise added in an update
+  const keep = CC.ex;
+  CC.ex = ['fold', 'nets'];
+  try {
+    const L = new Learner(PX, 5), rec = newRecord(PX, T0);
+    t.eq(A.curves(rec), [], 'no rated answers: no curve');
+    let day = 0, guard = 0;
+    while (guard++ < 60) {
+      playSession(PX, rec, L, 'train', { now: T0 + day * DAY, minutes: 10 }, day);
+      day++;
+      const c = A.curves(rec).find((x) => x.ex === 'fold');
+      if (c && c.done) break;
+    }
+    const list = A.curves(rec), c = list.find((x) => x.ex === 'fold');
+    t.ok(c && c.done && c.n === CC.n && c.ver === 1 && Number.isFinite(c.slope) && c.se > 0 && c.se < 2, `Fold's curve: its first ${CC.n} rated answers (${c && c.slope} ± ${c && c.se})`);
+    t.ok(c && c.p0 > 0 && c.p0 < 1 && c.p1 > 0 && c.p1 < 1 && typeof c.exposure === 'object', 'the chance of a right answer at the start and now, and the exposure before');
+    const firstFold = (() => { let at = null; E.log.scan(rec, (row, ex, mode) => { if (at === null && ex === 'fold' && mode === 'train') at = row[0]; }); return at; })();
+    t.ok(c && c.first === firstFold, 'the curve starts at the first rated Fold answer');
+    // exposure: rated answers of other exercises before that one
+    let before = 0;
+    E.log.scan(rec, (row, ex, mode) => { if (row[0] < firstFold && mode === 'train' && (row[5] === 0 || row[5] === 1) && ex !== 'fold') before++; });
+    const sum = Object.values(c.exposure).reduce((a, b) => a + b, 0);
+    t.ok(sum <= before, `exposure counts only answers before the first (${sum} of ${before})`);
+    t.ok(!(rec.measure && rec.measure.curves), 'reading files nothing');
+    A.curves(rec, { keep: true });
+    t.ok(rec.measure.curves['fold@1'] && rec.measure.curves['fold@1'].done, 'keep: a finished curve is filed under fold@1');
+    // the trial cap folds the rows away: the filed curve stands in
+    const r2 = JSON.parse(JSON.stringify(rec));
+    r2.trials = [];
+    t.eq(A.curves(r2).find((x) => x.ex === 'fold'), rec.measure.curves['fold@1'], 'rows folded away: the filed curve is reported');
+    // repair and merge
+    const g = S.guard(JSON.parse(JSON.stringify(rec)));
+    t.ok(g.measure.curves['fold@1'] && g.measure.curves['fold@1'].n === CC.n, 'the store’s repair keeps it');
+    t.eq(A._.checkMeasure({ v: 1, curves: { 'fold@1': { ex: 'nets' }, 'x@y': {}, 'nets@1': { ex: 'nets', done: true, n: 60, slope: 1, se: 0.5, first: 5 } } }),
+      { v: 1, curves: { 'nets@1': { ex: 'nets', done: true, n: 60, slope: 1, se: 0.5, first: 5 } } }, 'the repair drops broken curves');
+    const m = A._.mergeMeasure({ v: 1, curves: { 'fold@1': { ex: 'fold', done: true, n: 60, slope: 1, se: 0.5, first: 9 } } },
+      { v: 1, curves: { 'fold@1': { ex: 'fold', done: true, n: 60, slope: 2, se: 0.5, first: 7 }, 'nets@1': { ex: 'nets', done: true, n: 60, slope: 0, se: 0.5, first: 3 } } }, {});
+    t.ok(m.curves['fold@1'].slope === 2 && m.curves['nets@1'].slope === 0, 'two tabs: both curves, the earlier start where both have one');
+    // Free play and other versions do not count
+    const free = JSON.parse(JSON.stringify(rec));
+    const fi = free.idx.mode.indexOf('free') >= 0 ? free.idx.mode.indexOf('free') : free.idx.mode.push('free') - 1;
+    const ti = free.idx.mode.indexOf('train');
+    free.trials.forEach((row) => { if (row[2] === ti) row[2] = fi; });
+    delete free.measure.curves;
+    t.eq(A.curves(free), [], 'Free play answers give no curve');
+  } finally {
+    CC.ex = keep;
+  }
 }

@@ -554,6 +554,17 @@
 
   /* ---------- hooks: the session summary ---------- */
 
+  // Finished learning curves are filed at each session's end (and when the Lab opens), before the trial cap can fold
+  // their first answers away; no panel.
+  PX.ui.hooks.on('summary:panels', function (ctx) {
+    try {
+      var r = ctx.rec || rec(), n0 = r.measure && r.measure.curves ? Object.keys(r.measure.curves).length : 0;
+      A().curves(r, { keep: true });
+      if ((r.measure && r.measure.curves ? Object.keys(r.measure.curves).length : 0) > n0) save();
+    } catch (e) { log('curves failed', e); }
+    return null;
+  }, { id: 'measure.curves-keep', order: 99 });
+
   PX.ui.hooks.on('summary:panels', function (ctx) {
     var s = ctx.plan && ctx.plan.id ? SESSIONS[ctx.plan.id] : null;
     if (!s || !s.saved) return null;
@@ -651,6 +662,36 @@
     else p.body.appendChild(h('p.px-meta', 'The ladder fills in once your training has begun after your two starting points.'));
     return { el: p.el, after: 'crossover' };
   }, { id: 'measure.ladder', order: 40 });
+
+  // Learning curves on exercises added in an update (note T1 §5.2): exploratory, for the pooled exports. Reading the
+  // panel files finished curves in rec.measure.curves (A().curves keep), so they outlive the trial cap.
+  function pc(p, lo, hi) {
+    var r = function (x) { return Math.round(x * 100); };
+    return r(p) + ' %' + (typeof lo === 'number' && typeof hi === 'number' ? ' (' + r(lo) + '–' + r(hi) + ')' : '');
+  }
+  PX.ui.hooks.on('lab:panels', function (ctx) {
+    var K = PX.ui.kit, CC = E().config.measure.curves, list = [];
+    var before = ctx.rec && ctx.rec.measure && ctx.rec.measure.curves ? Object.keys(ctx.rec.measure.curves).length : 0;
+    try { list = A().curves(ctx.rec, { keep: true }); } catch (e) { log('curves failed', e); }
+    var after = ctx.rec && ctx.rec.measure && ctx.rec.measure.curves ? Object.keys(ctx.rec.measure.curves).length : 0;
+    if (after > before) save();
+    var names = CC.ex.map(function (id) { var d = PX.ex.get(id); return d ? d.short || d.name : null; }).filter(Boolean);
+    var p = K.panel({ title: 'Learning new exercises', className: 'px-lab-section px-ms-curves' });
+    p.el.setAttribute('data-section', 'curves');
+    p.body.appendChild(h('p', 'Every exercise added in an update is a task nobody has practised. Your first ' + CC.n + ' rated answers on one give a learning curve, and the community\'s pooled exports set many curves beside what each player practised before, to test whether practice with one kind of task helps people pick up the next one faster. Exploratory: one player\'s curve is rough, so the Lab keeps it for pooling and draws no verdict from it.'));
+    if (!list.length) p.body.appendChild(h('p.px-meta', 'A curve shows here after ' + CC.min + ' rated answers on ' + (names.length > 1 ? names.slice(0, -1).join(', ') + ' or ' + names[names.length - 1] : names[0] || 'a new exercise') + '.'));
+    else {
+      var ul = h('ul.px-ms-curve-list');
+      list.forEach(function (c) {
+        var d = PX.ex.get(c.ex), nm = d ? d.short || d.name : c.ex;
+        ul.appendChild(h('li', { 'data-curve': c.ex },
+          h('b', nm), ' · ', c.done ? 'your first ' + c.n + ' rated answers' : c.n + ' of ' + CC.n + ' rated answers so far',
+          ': on items of the same difficulty, about ' + pc(c.p0, c.p0lo, c.p0hi) + ' right at the start and ' + pc(c.p1, c.p1lo, c.p1hi) + ' at answer ' + c.n + '.'));
+      });
+      p.body.appendChild(ul);
+    }
+    return { el: p.el, after: 'ladder' };
+  }, { id: 'measure.curves', order: 41 });
 
   PX.ui.measure = { quiet: false, play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows,
     _: { limitRange: limitRange, sessions: SESSIONS, askExpect: askExpect, askOverlap: askOverlap, offer: offer } };

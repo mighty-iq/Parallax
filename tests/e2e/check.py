@@ -191,6 +191,10 @@ def desktop(b, C):
     page.wait_for_selector('[data-section="ladder"]', timeout=8000)
     C.ok(page.locator('[data-section="ladder"] .px-fp-row[data-rung]').count() >= 3, f'{tag}: the Lab: the transfer ladder with its rungs')
     page.locator('[data-section="ladder"]').screenshot(path=str(OUT / 'lab_ladder_1366.png'))
+    cv = page.locator('[data-section="curves"]')
+    C.ok(cv.count() == 1 and 'Central Point' in cv.inner_text() and 'Exploratory' in cv.inner_text(), f'{tag}: the Lab: learning curves on new exercises (none yet: what brings one)')
+    order = page.evaluate('[...document.querySelectorAll("[data-section]")].map((e) => e.getAttribute("data-section"))')
+    C.ok(order.index('curves') == order.index('ladder') + 1, f'{tag}: right after the ladder ({order})')
 
     # the check screen on its own
     go(page, {'mode': 'check', 'kind': 'week'})
