@@ -151,6 +151,10 @@
   .ex-fp .ex-fp-hint { display: none; }
   /* the circle's words would be under 12 px here: the readout says the same */
   .ex-fp .ex-fp-dial-side, .ex-fp .ex-fp-dial-name { display: none; }
+  /* v1.2 (W3-exfix): after the answer the fine buttons leave the layout (not only the view), so the verdict
+     and the notes fit above the result bar without pushing the view under the copy of Pause (view.js
+     showAboveBar) */
+  .ex-fp.is-revealed .ex-fp-fine { display: none; }
 }
 /* taller phones (≥ 700 px): a larger circle on its own row, the four buttons under it. Its size is what
    the height leaves: --pl-avail − the view (75vw − 24 px) − the rest of the controls (13rem with a margin). */

@@ -30,3 +30,22 @@ tests/node/<id>*.test.mjs and tests/e2e/harness_<id>*.py. Source: fresh players 
   with fewer unmarked than marked spheres says it, and the motion line says "Follow them, or the unmarked ones."
 - Checks: node track 343/0 (new: a 5-of-6 Try item with its tip; the cue captions); harness_track 199/0; fit.py track
   360 × 640 30/30, 390 × 844 2/2; the cue line at 360 × 640 and 390 × 844 (three lines at 360 px, no scroll) looked at.
+
+## Homing and Reckon (items 4, 5, 8, 9)
+- Dial: taps on the circle always worked (the harness taps at 80 % of the radius); the fresh player tapped beside the
+  word "right", outside the circle's box. Now a tap anywhere in the circle's row sets the arrow towards it (tap only:
+  a swipe still scrolls).
+- Copy of Pause over the map: on phones the fine buttons leave the layout after the answer, so at 390 × 844 no scroll
+  is needed for the notes and the title row stays (checked in the app: stage at 64 px, no copy of Pause). At 360 × 640
+  the player's stageIntoView still scrolls the stage to 8 px during show me: request to W2-core.
+- Landmarks: drawn and visible at 390 × 844 (one in every walk screenshot of g3; one or two of three in the 74° view by
+  design; mast and spire 3–4 px wide). Not changed.
+- Frame (Reckon, item 5): "The top of the circle is the way you face now." in the hint where turning starts, the Watch's
+  last caption and the heading Try's tip; the heading show me keeps that frame (it had swept your own arrow through
+  the turn made, from the top).
+- Walk toggle (item 8): Walk, Back, ↑ and ↓ toggle on a tap or a press under 250 ms; holds as before; the line says so.
+- First scored items (item 9): no starter band; the legs dim is not the number of legs; 40 of 40 simulated newcomers
+  start on a two-leg route, as Try 3 and Try 4 teach; the tester skipped those after Try 2's walk failed. No change.
+- Checks: node homing + reckon 442/0; harness_homing 173/0 (new: a tap beside the circle; a drag there changes
+  nothing); harness_reckon 106/0 (new: click, ↑ press, hold, Back and turn-round toggles; the heading show me's frame;
+  the hint's line); fit.py homing + reckon 360 × 640 46/46, 390 × 844 3/3 (screenshots looked at).

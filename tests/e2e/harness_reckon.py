@@ -125,9 +125,13 @@ def turn_to(page, deg, touch=None):
     return st(page)['value']
 
 
+TOGGLE_MS = 250  # js/ex/reckon/view.js: a shorter press of Walk or Back is a tap, which leaves the walk going
+
+
 def walk_back(page, dist, speed, touch=None):
-    """Hold Walk about dist / speed seconds, then correct with short holds of Walk or Back (closed loop)."""
-    def hold(sel, ms):
+    """Hold Walk about dist / speed seconds, then correct with short moves of Walk or Back (closed loop). A move
+    shorter than a hold (v1.2: a tap leaves the walk going) is a tap to start and another to stop."""
+    def press(sel, ms):
         if touch:
             touch.hold(sel, ms)
         else:
@@ -136,6 +140,14 @@ def walk_back(page, dist, speed, touch=None):
             page.mouse.down()
             page.wait_for_timeout(ms)
             page.mouse.up()
+
+    def hold(sel, ms):
+        if ms >= TOGGLE_MS + 50:
+            press(sel, ms)
+        else:
+            press(sel, 20)
+            page.wait_for_timeout(ms)
+            press(sel, 20)
         page.wait_for_timeout(350)
     hold('.ex-reckon-walk', int(1000 * dist / speed))
     for _ in range(6):
@@ -942,6 +954,101 @@ def v12_shots(b, cons):
     ctx.close()
 
 
+def exfix(b, cons):
+    """v1.2 (W3-exfix): Walk and Back are toggles as well as holds (desktop fresh run d1: a click and single ↑
+    presses moved nothing); the heading item's show me keeps one frame (fresh-player test g3: it swept the
+    player's own arrow through the turn made, from the top); the line where turning starts states the frame."""
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto(url('exfix', seed=52, p='route:0,flow:0,speed:0,tolerance:0', v='return', fast=True))
+    page.wait_for_function(READY, timeout=90000)
+    hint = page.locator('.ex-fp-hint').inner_text()
+    C.ok('top of the circle is the way you face now' in hint and 'Tap or drag the circle' in hint, f'the hint under the controls states the frame and the tap ({hint!r})')
+    phase = page.locator('.ex-fp-phase').inner_text()
+    C.ok('tap it to start and stop' in phase, f'the return item\'s line says Walk can be tapped ({phase!r})')
+    wb = page.locator('.ex-reckon-walk').bounding_box()
+    cx, cy = wb['x'] + wb['width'] / 2, wb['y'] + wb['height'] / 2
+    page.mouse.click(cx, cy)  # a tap: the walk starts and goes on
+    page.wait_for_timeout(700)
+    s1 = st(page)
+    page.wait_for_timeout(500)
+    s2 = st(page)
+    pressed = page.locator('.ex-reckon-walk').get_attribute('aria-pressed')
+    C.ok(s1['dist'] > 0.4 and s2['dist'] > s1['dist'] + 0.3 and s2['latch'] == 1 and pressed == 'true',
+         f'a click on Walk starts the walk and it goes on ({s1["dist"]:.2f} → {s2["dist"]:.2f} m, latch {s2["latch"]}, aria-pressed {pressed})')
+    page.mouse.click(cx, cy)  # the second tap stops it
+    page.wait_for_timeout(700)
+    s3 = st(page)
+    page.wait_for_timeout(400)
+    s4 = st(page)
+    C.ok(s3['dir'] == 0 and s4['dist'] == s3['dist'] and s4['latch'] == 0 and page.locator('.ex-reckon-walk').get_attribute('aria-pressed') == 'false',
+         f'a second click stops it ({s3["dist"]:.2f} m, then {s4["dist"]:.2f} m)')
+    page.keyboard.press('ArrowUp')  # a short key press: the same toggle
+    page.wait_for_timeout(700)
+    k1 = st(page)
+    page.keyboard.press('ArrowUp')
+    page.wait_for_timeout(700)
+    k2 = st(page)
+    page.wait_for_timeout(300)
+    k3 = st(page)
+    C.ok(k1['dist'] > s4['dist'] + 0.4 and k1['dir'] == 1 and k2['dir'] == 0 and k3['dist'] == k2['dist'],
+         f'one ↑ press starts the walk and the next stops it ({s4["dist"]:.2f} → {k1["dist"]:.2f} → {k2["dist"]:.2f} m)')
+    page.keyboard.down('ArrowUp')  # a hold still walks while held and stops at the release
+    page.wait_for_timeout(700)
+    page.keyboard.up('ArrowUp')
+    page.wait_for_timeout(600)
+    h1 = st(page)
+    page.wait_for_timeout(300)
+    h2 = st(page)
+    C.ok(h1['dist'] > k3['dist'] + 0.4 and h1['dir'] == 0 and h2['dist'] == h1['dist'] and h1['latch'] == 0, f'a held ↑ walks and stops at the release ({k3["dist"]:.2f} → {h1["dist"]:.2f} m)')
+    bb = page.locator('.ex-reckon-back').bounding_box()
+    page.mouse.click(bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] / 2)  # Back toggles too
+    page.wait_for_timeout(600)
+    g1 = st(page)
+    page.mouse.click(cx, cy)  # Walk while Back is on: the walk turns round
+    page.wait_for_timeout(600)
+    g2 = st(page)
+    page.mouse.click(cx, cy)
+    page.wait_for_timeout(600)
+    C.ok(g1['dist'] < h2['dist'] and g1['latch'] == -1 and g2['latch'] == 1 and g2['dist'] > g1['dist'] and st(page)['dir'] == 0,
+         f'Back toggles, and Walk while Back is on turns the walk round ({h2["dist"]:.2f} → {g1["dist"]:.2f} → {g2["dist"]:.2f} m)')
+    page.keyboard.press('Enter')
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    C.ok(page.evaluate('() => __harness.last.response.z !== undefined') and st(page)['latch'] == 0, 'Enter is Here after toggled walking')
+    # the heading item's show me: your arrow stays where you answered; the filled arrow sweeps to the turn back
+    page.evaluate("() => __harness.next({ variant: 'point', task: 'heading', route: 0, flow: 0, speed: 0, tolerance: 0 }, 35)")
+    page.wait_for_function(READY, timeout=90000)
+    T = page.evaluate('() => __harness.item.turns[0]')
+    turn_to(page, 60 if T < 0 else -60)  # the wrong way, as the fresh player did
+    page.keyboard.press('Enter')
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    ARROWS = "() => ({ yours: document.querySelector('.ex-fp-arrow').getAttribute('transform'), yv: document.querySelector('.ex-fp-arrow').getAttribute('visibility'), key: document.querySelector('.ex-fp-key').getAttribute('transform'), h: PX.ex.view('reckon').pose().h, h0: __harness.item.startHeading })"
+    a0 = page.evaluate(ARROWS)
+    page.evaluate('() => { __harness.config.fast = false; PX.debug.fast(false); }')
+    before = page.evaluate('() => __harness.played.finished')
+    page.evaluate('() => { __harness.showMe(); }')
+    page.wait_for_timeout(900)
+    a1 = page.evaluate(ARROWS)
+    page.evaluate('() => { __harness.config.fast = true; PX.debug.fast(true); }')
+    for _ in range(12):
+        if page.evaluate('(n) => __harness.played.finished > n', before):
+            break
+        page.keyboard.press('ArrowRight')
+        page.wait_for_timeout(400)
+    page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=60000)
+    a2 = page.evaluate(ARROWS)
+    back = (-T) % 360
+    kr = float(a2['key'].replace('rotate(', '').replace(')', '')) if a2['key'] else None
+    C.ok(a1['yours'] == a0['yours'] and a1['yv'] == 'visible' and a2['yours'] == a0['yours'],
+         f'heading show me: your arrow stays where you answered ({a0["yours"]} → {a1["yours"]} → {a2["yours"]})')
+    C.ok(kr is not None and abs(((kr - back) + 540) % 360 - 180) < 1 and abs(((a2['h'] - a2['h0']) + 540) % 360 - 180) < 1,
+         f'heading show me: the filled arrow ends at the turn back ({kr} vs {back}) and the view faces as at the start ({a2["h"]:.1f} vs {a2["h0"]:.1f})')
+    errs = page.evaluate('() => __harness.errors')
+    C.ok(not errs, f'exfix: no harness errors ({errs})')
+    ctx.close()
+
+
 def main():
     cons = []
     only = set(sys.argv[1:])
@@ -956,6 +1063,8 @@ def main():
                 reveal_sizes(b, cons)
             if 'shots' in only:
                 v12_shots(b, cons)
+            if 'exfix' in only:
+                exfix(b, cons)
             b.close()
             errors = [e for c in cons for e in c.errors()]
             C.ok(not errors, f'no console errors ({errors[:5]})')
@@ -971,6 +1080,7 @@ def main():
         demo_bias_srcdoc(b, cons)
         v12(b, cons)
         v12_shots(b, cons)
+        exfix(b, cons)
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')
