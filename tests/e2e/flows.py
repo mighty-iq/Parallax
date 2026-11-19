@@ -1,8 +1,9 @@
 """E2E tests of the flows around the player (Phase 3, Builder A: js/ui/tour.js, check.js, play.js).
 
-- First run: the shell's offer → the tour (Watch, Try, Go for Rotate, Fold and Track; one
-  exercise skipped) → "Measure your starting point" or Later; tour flags; the motion notice is
-  remembered per person (after a reload Track starts without it).
+- First run: the shell's offer → the first-run tutorial (Watch, Try, Go for Spin) → the starting
+  point offered with Later → Train with Spin; tour flags (the baseline's part with every hook on:
+  play.py run_firstrun); the motion notice is remembered per person (after a reload Track starts
+  without it).
 - The Spatial Check from Today: intro, the expectations question once, per probe the instruction
   and its worked example (never logged), items with no feedback, a pause that stops the probe's
   own time bar, a time-out scored wrong with rt = the limit, the end note; Stop the check asks
@@ -49,34 +50,44 @@ def run_tour(b, C):
     page.evaluate('PX.debug.fast(true)')
     page.locator('.px-offer-go').click()
     page.wait_for_timeout(200)
-    C.ok(page.evaluate('PX.core.router.current().params.mode') == 'tour' and page.locator('[data-wtg="rotate"]').count() == 1, f'{tag}: Watch, Try, Go starts with Rotate')
+    C.ok(page.evaluate('PX.core.router.current().params.mode') == 'tour' and page.locator('[data-wtg="spin"]').count() == 1, f'{tag}: Watch, Try, Go teaches one exercise, Spin')
     page.wait_for_function('__play.played && __play.played.demos >= 1', timeout=10000)
     C.ok(True, f'{tag}: the Watch demo played')
     shot(page, 'flows_tour_watch.png')
-    # Rotate: answer the demo item and the practice items; then skip Fold
-    ok = drive(page, '!!document.querySelector("[data-wtg=fold]")', limit=200)
-    C.ok(ok, f'{tag}: Rotate done, Fold next')
-    C.ok(page.evaluate('PX.core.store.state.trials.length') == 0, f'{tag}: practice items are never logged')
-    page.locator('[data-wtg-skip]').click()
-    page.wait_for_timeout(200)
-    C.ok(page.locator('[data-wtg="track"]').count() == 1, f'{tag}: Skip this exercise moves on to Track')
-    nb = page.locator('.ex-track-notice:not([hidden]) .px-btn')
-    page.wait_for_timeout(300)
-    C.ok(nb.count() == 1 and nb.first.is_visible(), f'{tag}: Track shows the motion notice the first time')
+    # Spin: the demo, then the practice items; the end screen offers the starting point
     ok = drive(page, '!!document.querySelector("[data-card-box=baseline]")', limit=300)
-    C.ok(ok, f'{tag}: the tour ends with the baseline offer')
+    C.ok(ok, f'{tag}: the tutorial ends with the baseline offer')
+    C.ok(page.evaluate('PX.core.store.state.trials.length') == 0, f'{tag}: practice items are never logged')
     shot(page, 'flows_tour_end.png')
-    t = page.evaluate('({ tour: PX.core.store.state.tour, ui: PX.core.store.state.ui.tour, notice: !!PX.core.store.state.ui.seen.motionNotice })')
-    C.ok(t['tour']['done'] is True and t['ui']['done'] == ['rotate', 'track'] and t['ui']['skipped'] == ['fold'], f'{tag}: tour flags {t["ui"]}')
-    C.ok(t['notice'] is True, f'{tag}: the motion notice is remembered')
+    t = page.evaluate('({ tour: PX.core.store.state.tour, ui: PX.core.store.state.ui.tour })')
+    C.ok(t['tour']['done'] is True and t['ui']['done'] == ['spin'] and t['ui']['skipped'] == [], f'{tag}: tour flags {t["ui"]}')
     click_card(page, 'later')
-    C.ok(page.evaluate('PX.core.router.current().name') == 'home', f'{tag}: Later goes to Today')
+    rp = page.evaluate('PX.core.router.current().params')
+    # (the builders' hooks are muted here: the baseline's part of the path is tests/e2e/play.py run_firstrun)
+    C.ok(rp.get('mode') == 'train' and rp.get('exId') == 'spin' and rp.get('baseline') == 'later' and page.evaluate('PX.core.store.state.ui.tour.baseline') == 'later',
+         f'{tag}: Later starts training with Spin ({rp})')
     page.wait_for_timeout(1200)  # the debounced save
     page.reload()
     page.wait_for_function(READY, timeout=20000)
     page.keyboard.press('Escape')
     page.wait_for_timeout(150)
     C.ok(page.locator('.px-offer').count() == 0, f'{tag}: no offer on the next open')
+    # Track's motion notice: shown the first time, remembered after a reload (its own Watch, Try, Go marked seen)
+    page.evaluate('PX.debug.fast(true); PX.core.store.state.tour.seen.track = true')
+    go(page, {'mode': 'free', 'exId': 'track', 'trials': 2, 'run': '1'})
+    page.wait_for_timeout(400)
+    nb = page.locator('.ex-track-notice:not([hidden]) .px-btn')
+    C.ok(nb.count() == 1 and nb.first.is_visible(), f'{tag}: Track shows the motion notice the first time')
+    if nb.count():
+        nb.first.click()
+    page.wait_for_timeout(200)
+    C.ok(page.evaluate('!!PX.core.store.state.ui.seen.motionNotice'), f'{tag}: the motion notice is remembered')
+    page.evaluate('PX.core.store.flush ? PX.core.store.flush() : PX.core.store.save()')
+    page.wait_for_timeout(1200)
+    page.reload()
+    page.wait_for_function(READY, timeout=20000)
+    page.keyboard.press('Escape')
+    page.wait_for_timeout(150)
     page.evaluate('PX.debug.fast(true)')
     go(page, {'mode': 'free', 'exId': 'track', 'trials': 2, 'run': '1'})
     page.wait_for_timeout(400)

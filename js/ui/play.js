@@ -1836,9 +1836,6 @@
     var demoSpec = P.view.demo ? demos.filter(function (d) { return o.variant && d.params && d.params.variant === o.variant; })[0] || demos[0] || null : null;
     // Practice entries: plain params, or { params, assist, tip, seed } (v1.2)
     var practice = (Array.isArray(learn.practice) ? learn.practice : []).slice(0, 5).map(function (x) { return isObj(x) && isObj(x.params) ? x : { params: x }; });
-    // round 4 (first-session test): in the tour, attention practice (Track) keeps every Try item at the first
-    // entry's settings; its ladder (more targets, a turning view) belongs to its own Watch, Try, Go
-    if (o.tour && def.practice === 'attention' && practice.length) practice = practice.map(function () { return { params: practice[0].params }; });
     var rules = (Array.isArray(learn.rules) ? learn.rules : []).map(function (r) {
       return typeof r === 'string' ? { text: r } : isObj(r) && typeof r.text === 'string' ? r : null;
     }).filter(Boolean);
@@ -1868,12 +1865,11 @@
     partsBtn.setAttribute('aria-expanded', 'false');
     partsBtn.setAttribute('aria-controls', parts.id);
     function partsOn(on) { parts.hidden = !on; partsBtn.hidden = !on; }
-    var skipBtn = ui.button(o.tour ? 'Skip this exercise' : 'Skip', { kind: 'ghost', small: true, onClick: function () { skipped = true; closeCards(); P.abort(); } });
+    // the first-run tutorial is one exercise (js/ui/tour.js), so its one way out is Skip the tutorial
+    var skipBtn = ui.button(o.tour ? 'Skip the tutorial' : 'Skip', { kind: 'ghost', small: true, onClick: function () { skipped = true; closeCards(); P.abort(); } });
     skipBtn.setAttribute('data-wtg-skip', '');
-    var endBtn = o.tour ? ui.button('End the tour', { kind: 'ghost', small: true, onClick: function () { skipped = true; ended = true; closeCards(); P.abort(); } }) : null;
-    if (endBtn) endBtn.setAttribute('data-tour-end', '');
     var head = h('section.pl-wtg', { 'aria-label': 'Watch, Try, Go: ' + (def.short || def.name), 'data-wtg': exId },
-      h('div.pl-wtg-top', h('ol.pl-wtg-steps', marks), h('div.pl-wtg-tools', partsBtn, skipBtn, endBtn)), text, parts);
+      h('div.pl-wtg-top', h('ol.pl-wtg-steps', marks), h('div.pl-wtg-tools', partsBtn, skipBtn)), text, parts);
     partsOn(false);
     if (o.lead) head.insertBefore(h('p.pl-wtg-lead.px-meta', o.lead), head.firstChild);
     host.insertBefore(head, P.el.root);
@@ -2263,9 +2259,13 @@
     // tapped ('closed' when the session ends under it); clock.pause/resume(reason) hold the session
     // clock ('measure': a measurement is never practice time); end(msg) ends the session after the
     // hook, with msg on the summary. The player resumes 'measure' when the point's run ends.
+    // params: the route's plain params as the session started (the first-run tutorial's end card adds
+    // baseline: 'now' | 'later', js/ui/tour.js; js/ui/measure.js reads it).
+    var hookParams = {};
+    Object.keys(p).forEach(function (k) { var v = p[k]; if (v === null || typeof v !== 'object') hookParams[k] = v; });
     function hookCtx(extra) {
       var c = {
-        mode: mode, plan: S.plan, rec: rec(), now: now(), P: P, wrap: wrap,
+        mode: mode, plan: S.plan, rec: rec(), now: now(), P: P, wrap: wrap, params: hookParams,
         card: function (o) {
           o = isObj(o) ? o : {};
           var id = typeof o.id === 'string' && o.id ? o.id : 'hook';
@@ -2609,7 +2609,8 @@
   // The route params worth keeping for "Again" (plain values; never the restore marker).
   function routeParams(p) {
     var out = {};
-    for (var k in p) if (hasOwn.call(p, k) && k !== 'restore' && k !== 'setup') { var v = p[k]; if (v === null || typeof v !== 'object' || k === 'params') out[k] = v; }
+    // (the first-run tutorial's baseline choice belongs to the one session it opens: Again never repeats it)
+    for (var k in p) if (hasOwn.call(p, k) && k !== 'restore' && k !== 'setup' && k !== 'baseline') { var v = p[k]; if (v === null || typeof v !== 'object' || k === 'params') out[k] = v; }
     return out;
   }
   // The finished session's summary, kept in the record (store.state.ui.lastSummary) so that a

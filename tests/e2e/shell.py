@@ -416,7 +416,7 @@ def run_later(b):
     page.goto(INDEX.as_uri()); ready(page)
     page.keyboard.press('Escape'); page.wait_for_timeout(200)
     page.click('.px-offer-go'); page.wait_for_timeout(600)
-    page.get_by_role('button', name='End the tour').first.click()
+    page.locator('[data-wtg-skip]').first.click()  # the first-run tutorial is one exercise: Skip the tutorial ends it
     page.wait_for_selector('[data-invite="tutorial"]', timeout=8000)
     inv = page.locator('[data-invite="tutorial"]')
     R.check(f'{tag}: the tour ends with the Chimera invite', inv.count() == 1

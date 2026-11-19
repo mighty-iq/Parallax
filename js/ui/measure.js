@@ -410,7 +410,8 @@
 
   // ctx: the player's hook context (card, P, wrap, clock). → Promise<'end' | null>
   var SESSIONS = {}; // plan id → the measurement that opened the session (for its summary panel)
-  function offer(ctx, nm, where) {
+  // asked: the player already chose Start on another card (the first-run tutorial's end, js/ui/tour.js), so no offer card
+  function offer(ctx, nm, where, asked) {
     var name = NAMES[nm.kind] || 'Check', m = minutes(nm.minutes), full = nm.kind !== 'block';
     var lines = [nm.why];
     if (nm.kind === 'B1') lines.push('It is measured once, before training changes it. There is no feedback: the items adapt to your answers, so expect roughly 6 to 8 in 10 right. Guess when you are unsure.');
@@ -418,7 +419,8 @@
     else lines.push('No feedback; it is not practice time.');
     var actions = nm.kind === 'block' ? [{ label: 'Skip this time', value: 'skip' }, { label: 'Start', value: 'start', primary: true }] :
       [{ label: 'Later', value: 'later' }, { label: 'Start', value: 'start', primary: true }];
-    return ctx.card({ id: 'measure-offer', title: name + ' · ' + m, lines: lines, actions: actions }).then(function (v) {
+    var ask = asked ? Promise.resolve('start') : ctx.card({ id: 'measure-offer', title: name + ' · ' + m, lines: lines, actions: actions });
+    return ask.then(function (v) {
       if (v === 'closed') return null;
       if (v !== 'start') {
         try { A().later(rec(), nm.kind, now()); save(); } catch (e) { log('later failed', e); }
@@ -535,10 +537,16 @@
 
   /* ---------- hooks: the session ---------- */
 
+  // The first-run tutorial's end card (js/ui/tour.js) asks about Baseline 1 and opens Train with params.baseline:
+  // 'now' plays it here first, without a second ask; 'later' (put off on that card) leaves this session alone, and
+  // the next one opens with it (W2-core, 19 Nov: the owner's first-session choice A; requests.md).
+  function tourChoice(ctx, nm) { var b = ctx.params && ctx.params.baseline; return nm && nm.kind === 'B1' && (b === 'now' || b === 'later') ? b : null; }
   PX.ui.hooks.on('session:start', function (ctx) {
     if (!SESSION_MODES[ctx.mode] || !ctx.P || quiet()) return null;
-    var nm = next(rec(), now());
-    if (!nm || !nm.due || nm.when !== 'session-start') return null;
+    var nm = next(rec(), now()), tour = tourChoice(ctx, nm);
+    if (!nm || !nm.due || tour === 'later') return null;
+    if (tour === 'now') return offer(ctx, nm, 'start', true);
+    if (nm.when !== 'session-start') return null;
     return offer(ctx, nm, 'start');
   }, { id: 'measure.session', order: 10 });
 
@@ -546,7 +554,7 @@
   PX.ui.hooks.on('item:before', function (ctx) {
     if (!SESSION_MODES[ctx.mode] || !ctx.P || !(ctx.afterTutorial || ctx.first) || quiet()) return null;
     var nm = next(rec(), now());
-    if (!nm || !nm.due || nm.kind !== 'B1' || nm.when !== 'after-tutorial') return null;
+    if (!nm || !nm.due || nm.kind !== 'B1' || nm.when !== 'after-tutorial' || tourChoice(ctx, nm)) return null;
     ctx.clock.pause('measure');
     return offer(ctx, nm, 'item');
   }, { id: 'measure.b1', order: 10 });
