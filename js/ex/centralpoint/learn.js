@@ -110,6 +110,7 @@
       bestSpot: 'You found the best spot.',
       within: 'Not the best spot, but within {band} % of its total: close enough to count as right.',
       outside: 'More than {band} % farther in total than the best spot.',
+      near: 'A near miss: {pct} % farther in total than the best spot, where right needs {band} %. Close spots still earn round points.',
       late: 'Time ran out with the marker here: it still earns part of its closeness.',
       noAnswer: 'No answer in time. The best spot is marked.',
       you: 'you',

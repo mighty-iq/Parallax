@@ -49,3 +49,8 @@ tests/node/<id>*.test.mjs and tests/e2e/harness_<id>*.py. Source: fresh players 
 - Checks: node homing + reckon 442/0; harness_homing 173/0 (new: a tap beside the circle; a drag there changes
   nothing); harness_reckon 106/0 (new: click, ↑ press, hold, Back and turn-round toggles; the heading show me's frame;
   the hint's line); fit.py homing + reckon 360 × 640 46/46, 390 × 844 3/3 (screenshots looked at).
+
+## Central Point (item 6)
+- The view's line after a miss that earns round points now reads as a near miss; the verdict word is play.js's:
+  requested from W2-core (requests.md). Checks: node centralpoint + layers-centralpoint 393/0; harness_centralpoint
+  227/0 (new: a miss 1.3–2.5 bands off earns credit and reads "near miss"; a far miss does not).

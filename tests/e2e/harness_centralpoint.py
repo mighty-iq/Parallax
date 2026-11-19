@@ -158,6 +158,37 @@ def why_steps_ok(page, tag):
         C.ok(st[-1]['at'] == [key['x'], key['y']] if between else True, f"{tag}: Why? ends on the best answer point beside the balance point ({st[-1]['at']} vs {key}; {st[-1]['cap'][:40]!r})")
 
 
+NEAR = """() => { const L = PX.ex.get('centralpoint').lib, it = __harness.item, s = L.solve(it), out = [];
+    for (let y = 0; y < L.N; y++) for (let x = 0; x < L.N; x++) { const e = s.S[y * L.N + x] / s.best - 1; if (e > it.band * 1.3 && e < it.band * 2.5) out.push({ x, y, e }); }
+    out.sort((a, b) => a.e - b.e); return out[0] || null; }"""
+
+
+def near_miss(page, touch, tag):
+    """v1.2 (W3-exfix, fresh-player test g3: "Incorrect" beside a round score): a miss close enough to earn round
+    points says it is a near miss; one farther off does not."""
+    page.evaluate("() => __harness.next({ variant: 'quick', targets: 2, band: 0 }, 11)")
+    page.wait_for_function(READY, timeout=20000)
+    q = page.evaluate(NEAR)
+    if not q:
+        C.ok(True, f'{tag}: no answer point between 1.3 and 2.5 bands on this item')
+        return
+    tap(page, touch, q['x'], q['y'])
+    tap(page, touch, q['x'], q['y'])
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    r = page.evaluate("() => ({ res: __harness.last.result, note: document.querySelector('.ex-cp-note').textContent })")
+    C.ok(r['res']['correct'] is False and r['res']['credit'] > 0 and 'near miss' in r['note'].lower() and 'round points' in r['note'],
+         f'{tag}: a miss {100 * q["e"]:.2f} % off earns credit and reads as a near miss ({r["note"]!r})')
+    page.evaluate("() => __harness.next({ variant: 'quick', targets: 2, band: 0 }, 11)")
+    page.wait_for_function(READY, timeout=20000)
+    key = page.evaluate('() => __harness.key')
+    far = far_point(key)
+    tap(page, touch, far['x'], far['y'])
+    tap(page, touch, far['x'], far['y'])
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    r2 = page.evaluate("() => ({ res: __harness.last.result, note: document.querySelector('.ex-cp-note').textContent })")
+    C.ok(r2['res']['credit'] == 0 and 'near miss' not in r2['note'].lower(), f'{tag}: a far miss earns nothing and says so ({r2["note"]!r})')
+
+
 def run_viewport(b, name, vp, touch, themes):
     for theme in themes:
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if touch else 1, has_touch=touch, is_mobile=touch)
@@ -183,6 +214,13 @@ def run_viewport(b, name, vp, touch, themes):
         shot(page, f'cp_{name}_{theme}_map.png')
         if theme == themes[0]:
             why_steps_ok(page, tag)
+            near_miss(page, touch, tag)
+            page.evaluate("() => __harness.next({ variant: 'quick', targets: 2, band: 0 }, 11)")
+            page.wait_for_function(READY, timeout=20000)
+            k3 = page.evaluate('() => __harness.key')
+            tap(page, touch, k3['x'], k3['y'])
+            tap(page, touch, k3['x'], k3['y'])
+            page.wait_for_function(STATE, arg='reveal', timeout=10000)
         # Why? (show me): fast mode runs it in a few frames
         before = page.evaluate('() => __harness.played.finished')
         page.evaluate('() => __harness.showMe()')
