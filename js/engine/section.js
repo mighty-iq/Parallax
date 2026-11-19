@@ -13,7 +13,8 @@
      shape(size, opts) → { size, parts: [id], missing: [{ id, why }], perPart, items, budgetMs }
    Alternate forms: form k of a size is the same for everyone with the same exercise versions. Its
    items sit in the middle band of each exercise's difficulty range (35–65 %; v1.2: the range without
-   the exercise's starter levels), stratified across the band, with shared seeds from
+   the exercise's starter levels, and for an exercise with a test range only its 'test' settings), stratified
+   across the band, with shared seeds from
    hash('px-section', size, k, exId, j).
      nextForm(rec, size) → k         formItems(size, k, exId, n) → [{ params, seed, code, b, g }]
    A run is plain JSON, kept in rec.section.live between items so that a reload can resume it:
@@ -133,11 +134,19 @@
   // The band is taken from the range the exercise spans without its starter levels (v1.2: a first band in
   // front, note D2 §3.0 A, must not make test-conditions practice easier; W1-band-A's request). For an
   // exercise without starter levels this is M.range(def), so its forms are unchanged.
+  // v1.2 (PLAN milestone 8, CONTRACT-v1.2 W3; W1-band-B's request): an exercise that declares a test range is
+  // dealt at its test-range settings only (PX.ex.rangeTag 'test': the features the official instructions show),
+  // so starter levels and anything tagged below or beyond the format stay out (Missing View's cube stacks among
+  // them); the middle band is then taken within those settings. Forms stay seeded and the same for everyone.
   function band(def) {
     var starters = isArray(def.starters) ? def.starters : def.starter ? [def.starter] : [];
     var all = M.pool(def), list = all.filter(function (c) {
       return starters.every(function (st) { return !(c.params[st.dim] < st.levels); });
     });
+    if (def.testRange && PX.ex.rangeTag) {
+      var inRange = all.filter(function (c) { return PX.ex.rangeTag(def, c.params) === 'test'; });
+      if (inRange.length) list = inRange;
+    }
     if (!list.length) list = all;
     var min = Infinity, max = -Infinity, inList = {};
     list.forEach(function (c) { if (c.b < min) min = c.b; if (c.b > max) max = c.b; inList[c.key] = true; });
