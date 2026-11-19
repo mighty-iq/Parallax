@@ -238,6 +238,7 @@ function itemScores(L, it, p) {
   const out = {}, band = p.features === 0;
   const add = (name, v, required) => { out[name] = { hit: v, chance: CHANCE, req: required }; };
   const R = it.options.map((o) => L.polyRaster(o.poly)), key = it.key;
+  'ABCDE'.split('').forEach((c, j) => add('always ' + c, key === j ? 1 : 0, true)); // always the same letter
   const area = R.map((x) => x.r.reduce((s, v) => s + v, 0)), corners = it.options.map((o) => o.poly.length);
   const dims = it.options.map((o) => [o.w, o.h]);
   const O = it.options.map((o) => [0, 1, 2, 3, 4, 5, 6, 7].map((k) => L.polyRaster(o.poly, k)));

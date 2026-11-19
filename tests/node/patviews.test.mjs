@@ -279,6 +279,7 @@ function itemScores(L, it) {
   const out = {}, add = (name, v) => { out[name] = v; };
   {
     const g = it.options.map((o) => L.grid(o.drawing)), c = g.map(L.counts), key = it.key;
+    'ABCD'.split('').forEach((ch, j) => add('always ' + ch, key === j ? 1 : 0)); // always the same letter
     const sum = g.map((a, i) => g.reduce((s, b, j) => s + (i === j ? 0 : L.gdist(a, b)), 0));
     const sumL = g.map((a, i) => g.reduce((s, b, j) => s + (i === j ? 0 : linesApart(a, b)), 0));
     add('like the others (lines only)', shareOf(sumL, key, false));

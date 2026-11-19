@@ -406,6 +406,8 @@ function itemScores(L, it, p) {
     put('of the most common kind', it.options.map((o) => kc[o.solid.kind]), true);
     put('of the least common kind', it.options.map((o) => kc[o.solid.kind]), false);
   }
+  // always the same letter (the lead's check after a fresh player saw five keys in a row at one letter)
+  'ABCD'.split('').forEach((c, j) => { out['always ' + c] = { hit: key === j ? 1 : 0, chance: 0.25, info: false }; });
   const F = it.options.map((o) => L.feats(o));
   put('most faces seen', F.map((x) => x.seen), true);
   put('fewest faces seen', F.map((x) => x.seen), false);
