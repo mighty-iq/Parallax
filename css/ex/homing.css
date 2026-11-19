@@ -102,9 +102,17 @@
 .ex-fp .ex-fp-tick { stroke: var(--rule-strong, #7B838A); stroke-width: 0.9; }
 .ex-fp .ex-fp-ahead-line { stroke: var(--ink-3, #5D646C); stroke-width: 0.9; stroke-dasharray: 2.5 2; }
 .ex-fp .ex-fp-dial text { font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); }
-.ex-fp .ex-fp-dial-name { font-size: 7px; font-weight: 600; fill: var(--ink, #1A1D21); text-anchor: middle; }
-/* dial units: 6.5 ≈ 12.5 px on the wide layout's 15rem circle */
-.ex-fp .ex-fp-dial-side { font-size: 6.5px; font-weight: 500; fill: var(--ink-2, #454B52); }
+.ex-fp .ex-fp-dial-name { font-size: 7.4px; font-weight: 600; fill: var(--ink, #1A1D21); text-anchor: middle; }
+.ex-fp .ex-fp-dial-side { font-size: 7.4px; font-weight: 500; fill: var(--ink-2, #454B52); }
+/* v1.2 O41 (W3-phones): the circle's words are 12 px or more on the screen at any circle size. Their size is
+   in dial units (the circle's box is 132 units wide), so it steps up as the circle gets smaller: 7.4 units
+   are 12.3 px on a circle of 220 px, 9.2 on 176 px, 11.9 on 136 px; under 136 px the words go (the readout
+   under the circle says the same). The words may reach past the circle's box (the SVG shows its overflow);
+   layouts with buttons beside the circle hide them (below). */
+.ex-fp .ex-fp-dialbox { container: fpdial / inline-size; }
+@container fpdial (max-width: 219.98px) { .ex-fp .ex-fp-dial-name, .ex-fp .ex-fp-dial-side { font-size: 9.2px; } }
+@container fpdial (max-width: 175.98px) { .ex-fp .ex-fp-dial-name, .ex-fp .ex-fp-dial-side { font-size: 11.9px; } }
+@container fpdial (max-width: 135.98px) { .ex-fp .ex-fp-dialbox .ex-fp-dial-name, .ex-fp .ex-fp-dialbox .ex-fp-dial-side { display: none; } }
 .ex-fp .ex-fp-hub { fill: var(--stim-ground, #F7F8F7); stroke: var(--signal, #0B6A86); stroke-width: 0.9; }
 .ex-fp .ex-fp-hub-you { fill: var(--signal, #0B6A86); }
 .ex-fp .ex-fp-arrow-line { stroke: var(--ink, #1A1D21); stroke-width: 2.4; stroke-linecap: round; }
@@ -149,7 +157,7 @@
 @media (max-width: 42rem) and (min-height: 43.75rem) {
   .ex-fp .ex-fp-turnrow { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "dial dial dial dial" "l5 l1 r1 r5"; gap: var(--s2, 0.5rem); }
   .ex-fp .ex-fp-dialbox { width: clamp(8.5rem, calc(var(--pl-avail, 100vh) - 75vw - 13rem), 13rem); }
-  .ex-fp .ex-fp-dial-side, .ex-fp .ex-fp-dial-name { display: inline; font-size: 8.5px; } /* 8.5 dial units ≥ 12 px on a circle of 187 px or more (360 × 700 and taller) */
+  .ex-fp .ex-fp-dial-side, .ex-fp .ex-fp-dial-name { display: inline; } /* their size steps with the circle (O41, above) */
 }
 
 /* phones on their side: the view at full height on the left, the controls on the right */
