@@ -19,7 +19,7 @@ export async function run(t) {
   if (!def) return;
   const L = def.lib;
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat, def.perDisplay, def.practice],
-    ['angles', 2, 'EX-16', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version 2 (starter band), code, LE, no cell, choice of 4, pat, per display, perceptual practice');
+    ['angles', 3, 'EX-16', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version 3 (level-2 items keep a foil with both ends), code, LE, no cell, choice of 4, pat, per display, perceptual practice');
   t.eq(def.dims.map((d) => d.key), ['gap', 'size', 'resolve', 'pose'], 'dims');
   t.eq(def.dims[0].levels, [9, 6, 5, 4, 3, 2], 'gaps: the 9° starter level in front of 6 … 2°');
   t.eq(def.starter, { dim: 'gap', levels: 1 }, 'starter: the 9° level');
@@ -34,6 +34,12 @@ export async function run(t) {
   for (const p of all) if (p.gap > 0) { n11++; if (Math.abs(def.difficulty(p) - (OLD_FLOOR + 0.55 * (p.gap - 1) + 0.3 * p.size + 0.45 * p.resolve + 0.3 * p.pose)) < 1e-9) same11++; }
   t.eq(same11, n11, `every 1.1 combination keeps its 1.1 difficulty (${n11})`);
   t.ok(all.filter((p) => p.gap === 0).every((p) => Math.abs(def.difficulty(p) - def.difficulty({ ...p, size: 0 })) < 1e-12), 'at 9° the size class is ignored, so it is priced as near-right');
+  // The Atlas and the settings texts (lead's fresh-player run, 19 Nov): the 9° level ignores the size
+  // class, so the Atlas pairs the gap with the pose, and def.ignores names the unused dim.
+  t.eq(def.atlas, ['gap', 'pose'], 'the Atlas pairs the closest gap with the pose (gap × size would name 9° cells never dealt)');
+  t.ok(all.every((p) => JSON.stringify(def.ignores(p)) === JSON.stringify(p.gap === 0 ? ['size'] : [])), 'ignores: the size class at 9°, nothing at the other gaps');
+  const strip = (it) => { const c = JSON.parse(JSON.stringify(it)); delete c.params; return JSON.stringify(c); };
+  t.ok([0, 1, 2].every((r) => [3, 77].every((sd) => strip(def.generate(PX.rng(sd), { gap: 0, size: 1, resolve: r, pose: 1 })) === strip(def.generate(PX.rng(sd), { gap: 0, size: 0, resolve: r, pose: 1 })))), 'at 9° the size param changes nothing in the item (what ignores says)');
   const easiest11 = all.filter((p) => p.gap > 0).reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
   const pBeginner = 0.25 + (1 - 0.25 - 0.03) / (1 + Math.exp(def.difficulty(easiest11)));
   t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the pre-1.2 floor (6°) is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
@@ -53,6 +59,7 @@ export async function run(t) {
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, fallbacks = 0, firstBad = null, n = 0;
   const keyPos = [0, 0, 0, 0], cues = {}, bandCues = {}, items = [];
+  const keyAt = {}; // `${dim}=${level}` → the right answer's letter counts (A–D)
   let bandClass = 0, nBand = 0;
   let minArmPx = Infinity, sumScale = 0, labelOff = 0, firstLabel = null, longShort = 0, phoneShort = 0, nAngles = 0;
   // The reveal labels round each measured angle to 0.1° (view.js fmtDeg); with degrees on a 0.1°
@@ -72,6 +79,7 @@ export async function run(t) {
       if (n % 50 === 0 && deepDiff(JSON.parse(JSON.stringify(item)), item) !== null) nonJson++;
       if (n % 8 === 0) items.push({ seed, params, item });
       keyPos[item.key]++;
+      for (const d of def.dims) (keyAt[d.key + '=' + params[d.key]] = keyAt[d.key + '=' + params[d.key]] || [0, 0, 0, 0])[item.key]++;
       sumScale += item.scale;
       const ms = L.measure(item);
       ms.forEach((m) => {
@@ -107,6 +115,26 @@ export async function run(t) {
   t.eq(nonJson, 0, 'items survive JSON round trips');
   t.eq(fallbacks, 0, 'no item needed the fallback construction');
   t.ok(keyPos.every((c) => Math.abs(c / n - 0.25) < Math.max(0.03, 3 * Math.sqrt(0.25 * (1 - 0.25) / n))), `keys spread over the four positions (${keyPos.join(', ')})`);
+  // The right answer's letter (lead's fresh-player run, 19 Nov: B five times in a row) per level of
+  // every dimension: each letter within four standard errors of one in four (56 cells, so four, not
+  // three: a fair generator then fails about one run in 250; a scratch run of 10,000 items per level
+  // found every share within 1.0 point). The letter is the last draw of an item.
+  const leans = Object.entries(keyAt).filter(([, c]) => { const m = c.reduce((x, y) => x + y, 0); return c.some((k) => Math.abs(k / m - 0.25) > 4 * Math.sqrt(0.25 * 0.75 / m) + 0.005); });
+  t.ok(leans.length === 0, `the right answer's letter is even over A–D at every level of every dimension (${Object.keys(keyAt).length} levels${leans.length ? '; leaning: ' + leans.map(([k, c]) => k + ' ' + c.join('/')).join(', ') : ''})`);
+  // Items as the engine deals them: consecutive training seeds (select.seed: a counter mixed with the
+  // record's salt), at one level. The letter of one item says nothing about the next one's.
+  {
+    const mix31 = PX.engine.select.mix31, SALTS = Math.max(20, Math.round(N_ITEMS / 100)), LEN = 20;
+    let same = 0, pairs = 0, runs = 0, windows = 0;
+    for (let k = 0; k < SALTS; k++) {
+      const salt = PX.rng.hash('angles-salt', k) & 0x7fffffff, page = PX.rng.hash('angles-page', k) % 1024, ks = [];
+      for (let i = 0; i < LEN; i++) ks.push(def.generate(PX.rng(mix31((salt + i * 1024 + page) & 0x7fffffff)), { gap: 0, size: 0, resolve: i % 3, pose: i % 2 }).key);
+      for (let i = 1; i < LEN; i++) { pairs++; if (ks[i] === ks[i - 1]) same++; }
+      for (let i = 0; i + 5 <= LEN; i++) { windows++; if (ks.slice(i, i + 5).every((x) => x === ks[i])) runs++; }
+    }
+    const rate = same / pairs, slack = 3 * Math.sqrt(0.25 * 0.75 / pairs);
+    t.ok(Math.abs(rate - 0.25) <= slack + 0.01, `consecutive engine seeds: the next item repeats the letter one time in four (${(100 * rate).toFixed(1)} % of ${pairs}; five in a row in ${runs} of ${windows} windows, about 1 in 256 by chance)`);
+  }
   t.eq(labelOff, 0, 'the reveal labels (0.1°) differ by exactly the stated gaps' + (firstLabel ? ` (${firstLabel})` : ''));
   t.eq(longShort, 0, `every longer arm is at least ${L.LONG_MIN}·L (RV-dat-style-A §7; info: ${(100 * phoneShort / nAngles).toFixed(1)} % of longer arms are under 90 px in a 155 px phone cell)`);
   t.eq(bandClass, 0, `every 9° item is near-right, whatever the size param (${nBand} items)`);
@@ -228,12 +256,14 @@ function testRange(t, PX, def) {
   if (!R || !PX.ex.rangeTag) return;
   t.eq(R.dims.gap, ['below', 'test', 'test', 'test', 'test', 'test'], 'gap: the 9° starter level below the test, 6–2° inside it');
   t.eq(R.dims.pose, ['below', 'test'], 'pose: one arm lying flat below the test, angles turned every way inside it');
-  t.ok(!R.dims.size && !R.dims.resolve, 'the size class and the pair that decides carry no tag (every level is a format feature)');
+  t.eq(R.dims.resolve, ['test', 'test', 'test'], 'the pair that decides: every level inside the test range, with a note on the format\'s answer sets');
+  t.ok(!R.dims.size, 'the size class carries no tag (every class is a format feature)');
   const all = PX.ex.enumerate(def), tag = (p) => PX.ex.rangeTag(def, p);
   t.ok(all.every((p) => tag(p) === (p.gap === 0 || p.pose === 0 ? 'below' : 'test')), 'rangeTag: below for the starter gap or the aligned pose, else test range; never beyond');
   t.ok(all.filter((p) => tag(p) === 'test').length === 5 * 3 * 3, 'every combination of 6–2°, any size class, any pair, turned angles is inside the test range (45)');
   const notes = Object.values(R.notes || {});
-  t.ok(notes.length === 2 && notes.every((x) => typeof x === 'string' && x.length <= 240), 'a note for the gap and the pose, each 240 characters or fewer');
+  t.ok(notes.length === 3 && notes.every((x) => typeof x === 'string' && x.length <= 240), 'a note for the gap, the pair that decides and the pose, each 240 characters or fewer');
+  t.ok(/official sample/.test(R.notes.resolve) && /middle pair/.test(R.notes.resolve), 'the resolve note: the official sample settled by the ends, test takers report the middle pair too (R3 §3.3)');
   t.ok(/not documented officially/.test(R.notes.gap), 'the gap\'s note says the test\'s gaps are not documented officially (note D1 addendum A.4 row 7)');
   t.ok(!/scor|predict|difficult|easier|harder|forecast/i.test(notes.join(' ')), 'the notes describe format features only: no score, prediction or difficulty of the real test');
 }
@@ -368,7 +398,7 @@ function testLearn(t, PX, def) {
   // which also keeps the two apart (RV-play-dat found digits on both confusing).
   const angleTexts = [L.parts.find((p) => p.id === 'angles').text, L.parts.find((p) => p.id === 'options').text, L.captions.angles, L.captions.options].join(' ');
   t.ok(/numbered 1 to 4/.test(angleTexts) && /A to D/.test(angleTexts) && !/lettered A to D/.test(angleTexts), 'the angles are numbered 1–4 in the texts and the answers lettered A–D');
-  t.ok(/A–D/.test(L.parts.find((p) => p.id === 'answer').text), 'the answer part names the letter keys');
+  t.ok(/A–D/.test(L.parts.find((p) => p.id === 'answer').text) && !/1–4/.test(L.parts.find((p) => p.id === 'answer').text), 'the answer part names the letter keys alone (the angles\' own numbers are 1–4; lead\'s fresh-player run, 19 Nov)');
   const ADA = 'DAT® and Dental Admission Test are marks of the American Dental Association. Parallax is not affiliated with or endorsed by the ADA. Every item is generated by the app; none is taken from the DAT.';
   const strings = [];
   (function walk(x) { if (typeof x === 'string') strings.push(x); else if (x && typeof x === 'object') Object.values(x).forEach(walk); })(L);
@@ -381,9 +411,20 @@ function testLearn(t, PX, def) {
 /* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
 // Every rule this file bounds, per item: its chance of picking the key (ties shared) against the
 // bound's base, one in four. No rule is exempt.
+// Lead's fresh-player run (19 Nov): the letter rules ("always the same letter", "the letter the last
+// item had": the stream comes per combination in order, so the last item is one at the same
+// level) are bounded like the others; "smallest first, largest last" (the format's own method:
+// it needs the smallest and the largest angle judged, and two orderings at most keep both, so it
+// is never below one in two) is reported per level, not bounded.
+let lastKey = null;
 export function shortcutScores(PX, def, item) {
   const L = def.lib, out = {};
   for (const [name, hit] of Object.entries(solverHits(L, item))) out[name] = { hit, chance: 0.25 };
+  for (let k = 0; k < 4; k++) out['always ' + 'ABCD'[k]] = { hit: item.key === k ? 1 : 0, chance: 0.25 };
+  if (lastKey !== null) out['the letter the last item had'] = { hit: item.key === lastKey ? 1 : 0, chance: 0.25 };
+  lastKey = item.key;
+  const ends = item.options.filter((o) => o[0] === item.order[0] && o[3] === item.order[3]).length;
+  out['smallest first, largest last'] = { hit: 1 / ends, chance: 0.25, info: true };
   return out;
 }
 export const SHORTCUT_EXEMPT = [];

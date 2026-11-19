@@ -7,8 +7,8 @@
    size would be a cue), each in its own square cell (coordinates in cell units, x right, y down).
    The options are four orderings of the angles, smallest first ("3 – 1 – 4 – 2"), lettered A–D;
    exactly one is true. That is the format's labelling (v1.2 milestone 8; note D1 §2.3, §6.2,
-   addendum A.1 row 2); 1.1 lettered the angles and numbered the answers. The items themselves
-   did not change, so the version stays 2 (note D1 §6.2).
+   addendum A.1 row 2); 1.1 lettered the angles and numbered the answers. Version 3 (19 Nov):
+   level-2 items keep a foil that shares both ends (see `resolve`); levels and range as in 2.
 
    Test range (CONTRACT-v1.2 W3; DECISIONS 19 Nov): the 9° starter gap and the aligned pose (one arm
    lying flat, a shared base) are below the test; the other gaps and the free pose are inside the
@@ -31,7 +31,16 @@
         largest angle: the extremes alone separate the key;
      1  the closest pair sits at one end, and one foil swaps only the middle pair (its gap κ·δ);
         no foil hinges on the closest pair;
-     2  one foil swaps only the closest pair (gap δ), so that pair has to be judged.
+     2  the closest pair is the middle one and one foil swaps only it (gap δ), so that pair has to
+        be judged. Version 2 put the closest pair anywhere; at an end its swap changes the smallest
+        or the largest angle, so the ends settled two level-2 items in three. Requiring the middle
+        swap as well there made the key the list most like the others (41 %, rule 5), so version 3
+        puts the closest pair in the middle.
+   The answer letter is the item's last draw, even over A–D whatever came before (the node test
+   checks every level). How the levels sit against the format: on the official sample every wrong
+   answer gets the smallest or the largest angle wrong (level 0's structure); a test taker (2011,
+   R3 §3.3) put such items at about a third. With the three levels dealt alike, a third of items
+   are settled by the ends alone (version 2: 55 %, as level 2 often was).
 
    The foils. Answer-only rules read the four lists and never the angles (RV-dat-style-A §3): most
    like the others or odd one out (Kendall distance), a list with a twin one swap away, the first
@@ -82,7 +91,7 @@
    Levi 1996), resolve 0 → 2 (0.45), pose aligned → free (0.3). Base −2.2: the pre-1.2 floor (6°)
    is about 90 % right at θ = 0 with 4 options; the range is 4.95 logits (−3.15 … 1.8).
 
-   Item: { ex: 'angles', v: 2, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
+   Item: { ex: 'angles', v: 3, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
    cell, lettered A–D on screen), deg: [design degrees by cell], order: [cells, smallest first],
    options: [[cells, smallest first] × 4], gaps: [three adjacent gaps by rank], close: index of the
    closest gap, scale }. */
@@ -209,10 +218,12 @@
       return true;
     });
   }
+  // The foils a resolve level requires: at 1 the middle swap (a wide gap); at 2 the closest pair's
+  // swap, which is the middle swap since version 3 (the closest pair sits in the middle there).
   function mustHave(res, close) {
-    if (res === 1) return [0, 2, 1, 3];
-    if (res === 2) { var s = [0, 1, 2, 3]; s[close] = close + 1; s[close + 1] = close; return s; }
-    return null;
+    if (res === 1) return [[0, 2, 1, 3]];
+    if (res === 2) { var s = [0, 1, 2, 3]; s[close] = close + 1; s[close + 1] = close; return [s]; }
+    return [];
   }
   // Answer-only heuristics read the four lists and never the angles. Tables over the 24 orderings
   // (Kendall distance, positions in common, ordered neighbour pairs as bits) keep them cheap.
@@ -288,10 +299,10 @@
   // key's only near twin, and the first and last letters do not point to the key.
   function chooseFoils(r, res, close) {
     var cand = allowedFoils(res, close), need = mustHave(res, close), K0 = PERM_ID['0,1,2,3'];
-    var ids = cand.map(function (o) { return PERM_ID[o.join()]; }), needId = need ? PERM_ID[need.join()] : -1;
+    var ids = cand.map(function (o) { return PERM_ID[o.join()]; }), needIds = need.map(function (o) { return PERM_ID[o.join()]; });
     var scored = [], minCost = Infinity, a, b, c;
     for (a = 0; a < ids.length; a++) for (b = a + 1; b < ids.length; b++) for (c = b + 1; c < ids.length; c++) {
-      if (needId >= 0 && ids[a] !== needId && ids[b] !== needId && ids[c] !== needId) continue;
+      if (!needIds.every(function (x) { return ids[a] === x || ids[b] === x || ids[c] === x; })) continue;
       var four = [K0, ids[a], ids[b], ids[c]], h = answerHits(four), cost = 0;
       for (var q = 0; q < h.length; q++) cost += abs(h[q] - 0.25);
       // Lists that are each other's reverse turn opposite cues (the tip distance grows with the
@@ -381,7 +392,7 @@
 
   function build(r, p) {
     var delta = GAPS[p.gap], cls = classOf(p), res = p.resolve, aligned = POSES[p.pose] === 'aligned';
-    var close = res === 0 ? 1 : res === 1 ? (r.next() < 0.5 ? 0 : 2) : rint(r, 3);
+    var close = res === 1 ? (r.next() < 0.5 ? 0 : 2) : 1; // version 3: the middle at level 2 too
     var gaps = [0, 1, 2].map(function (k) {
       return k === close ? delta : rnd(delta * (KAPPA[0] + r.next() * (KAPPA[1] - KAPPA[0])), 10);
     });
@@ -407,7 +418,7 @@
     var toCells = function (o) { return o.map(function (k) { return cellOfRank[k]; }); };
     var opts = [[0, 1, 2, 3]].concat(foils).map(toCells), perm = shuffle(r, [0, 1, 2, 3]);
     return {
-      ex: 'angles', v: 2, seed: 0, params: p, key: perm.indexOf(0),
+      ex: 'angles', v: 3, seed: 0, params: p, key: perm.indexOf(0),
       angles: angles, deg: deg, order: toCells([0, 1, 2, 3]), options: perm.map(function (i) { return opts[i]; }),
       gaps: gaps, close: close, scale: rnd(L, 1e4),
     };
@@ -501,7 +512,10 @@
       if (close === 1) return 'resolve 1: the closest pair must sit at one end';
       if (!foils.some(function (op) { return same(op, swapAt(1)); })) return 'resolve 1: no foil swaps the middle pair';
       if (foils.some(function (op) { return widestWrong(op, degOf) < minGap + TOL; })) return 'resolve 1: a foil hinges on the closest pair';
-    } else if (!foils.some(function (op) { return same(op, swapAt(close)); })) return 'resolve 2: no foil swaps the closest pair';
+    } else {
+      if (close !== 1) return 'resolve 2: the closest pair must be the middle one (version 3)';
+      if (!foils.some(function (op) { return same(op, swapAt(close)); })) return 'resolve 2: no foil swaps the closest pair';
+    }
     return true;
   }
 
@@ -514,7 +528,7 @@
   }
 
   PX.ex.define({
-    id: 'angles', version: 2, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
+    id: 'angles', version: 3, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
     abilities: ['LE'], cell: null, role: 'train', pat: true, perDisplay: true,
     bet: 'format', format: 'angles:rank-four-angles', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     practice: 'perception', // shown as perceptual-judgement practice, not visuospatial training
@@ -528,12 +542,19 @@
     base: BASE,
     starter: { dim: 'gap', levels: 1 },
     testRange: {
-      dims: { gap: ['below', 'test', 'test', 'test', 'test', 'test'], pose: ['below', 'test'] },
+      dims: { gap: ['below', 'test', 'test', 'test', 'test', 'test'], resolve: ['test', 'test', 'test'], pose: ['below', 'test'] },
       notes: {
         gap: 'How close the angles come on the test is not documented officially. 9° is a starter level of near right angles.',
+        resolve: 'On the official sample every wrong answer gets the smallest or the largest angle wrong. A test taker (2011) put such items at about a third; on the rest the middle pair has to be ordered too.',
         pose: 'One arm lying flat gives the angles a shared base: a starter help. On the test the angles point every way.',
       },
     },
+    // The Atlas (CONTRACT-v1.2 S): the closest gap with the pose. Not the size class, which the 9°
+    // level does not use (every angle near-right there), so its cells would name settings never dealt.
+    atlas: ['gap', 'pose'],
+    // The dims the generator does not use at these params (the 9° level ignores the size class), for
+    // texts that name a setting (requests.md, 19 Nov: W2-core's settings words, W3-game's Atlas).
+    ignores: function (params) { return params && params.gap === 0 ? ['size'] : []; },
     difficulty: difficulty,
     chance: 0.25,
     generate: generate,
