@@ -16,8 +16,8 @@
    (the stimulus target colour). Sounds (Web Audio tones, nothing downloaded) play only while the global
    Sound switch is on; the Climb's also need its own switch, on by default (CONTRACT-v1.2 M).
 
-   PX.ui.game = { fx, sound, counter(el, from, to), stamp(def, grade), scale(o), cellText(def, i, j), share(o),
-                  celebrate(), reduced(), names } */
+   PX.ui.game = { fx, sound, counter(el, from, to), stamp(def, grade), scale(o), cellText(def, i, j), firstText(first)
+                  (null for a first of another version of its exercise), share(o), celebrate(), reduced(), names } */
 (function (PX) {
   'use strict';
 
@@ -189,18 +189,21 @@
     return h('p.px-meta.gm-told', { 'data-told': key }, text);
   }
 
+  function lowFirst(s) { s = String(s || ''); return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
   function settingsLine(def, settingsObj) {
     var X = PX.ui.exinfo, P = PX.ui.play;
     try { if (X && X.settingsText) return X.settingsText(def, settingsObj); } catch (e) { /* below */ }
     try { if (P && P.settingsText) return P.settingsText(def, settingsObj); } catch (e) { /* none */ }
     return '';
   }
-  // The grade stamp: "GRADE 6 · FOLD" in ink, its band and typical settings beneath.
+  // The grade stamp: "GRADE 6 · FOLD" in ink, its band and an example of its settings beneath. The band deals
+  // neighbouring settings too, so they are an example, worded as the player words a level's settings ("At this
+  // level, for example: …"; W2-core's request after the lead's fresh-player run, 19 Nov).
   function stamp(def, grade, opts) {
     var b = G().band(def, grade), st = settingsLine(def, b.settings);
     var el = h('div.gm-stamp-wrap', { 'data-grade': String(b.grade), 'data-ex': def.id },
       h('div.gm-stamp', { role: 'img', 'aria-label': 'Grade ' + b.grade + ' on ' + nameOf(def) }, h('span.gm-stamp-k', 'Grade'), h('b.px-num', String(b.grade)), h('span.gm-stamp-x', nameOf(def))),
-      h('p.gm-stamp-band.px-meta', 'Levels ' + b.lo + '–' + b.hi + (st ? '. Typical: ' + st + '.' : '.')));
+      h('p.gm-stamp-band.px-meta', 'Levels ' + b.lo + '–' + b.hi + (st ? '. For example: ' + lowFirst(st) + '.' : '.')));
     if (!(opts && opts.still)) {
       if (fx.run(el, 'gm-fx-stamp', 550) && celebrate() === 'strong') sound.thud();
     } else el.classList.add('gm-fx-done');
@@ -235,18 +238,32 @@
     return spare < 1 ? 'no spare' : left > 1 ? left + ' spares' : left === 1 ? 'one spare' : spare > 1 ? 'spares used' : 'spare used';
   }
 
-  // "4 folds with 3 punches": a cell of an exercise's Atlas in its own words.
+  // "4 folds with 3 punches": a cell of an exercise's Atlas in its own words. A dim the exercise does not use at
+  // the cell's settings (def.ignores, read on the cell's easiest combination) is left out, so the words never name
+  // a setting that is not dealt (W3-bandA's request on Angles' 9° level, 19 Nov).
   function cellText(def, i, j) {
-    var ad = G().atlasDims(def), X = PX.ui.exinfo;
+    var ad = G().atlasDims(def), X = PX.ui.exinfo, e = null, skip = [];
     if (!ad) return '';
+    try { e = G().cellEase(def)[i + '.' + j]; } catch (x) { e = null; }
+    try { if (e && e.p && PX.ex.ignored) skip = PX.ex.ignored(def, e.p) || []; } catch (x) { skip = []; }
     function one(dim, k) {
       var v = dim.levels[k];
-      try { if (X && X.dimText) return X.dimText(def, dim, v); } catch (e) { /* below */ }
+      try { if (X && X.dimText) return X.dimText(def, dim, v); } catch (x) { /* below */ }
       return (dim.label || dim.key) + ' ' + v;
     }
-    return one(ad.dims[0], i) + (ad.dims[1] ? ' with ' + one(ad.dims[1], j) : '');
+    var parts = [];
+    if (skip.indexOf(ad.keys[0]) < 0) parts.push(one(ad.dims[0], i));
+    if (ad.dims[1] && skip.indexOf(ad.keys[1]) < 0) parts.push(one(ad.dims[1], j));
+    return parts.length ? parts.join(' with ') : one(ad.dims[0], i);
   }
   function cellOfKey(def, key) { var p = String(key).split('.'); return cellText(def, +p[0], +p[1]); }
+  // A first in words, read with its exercise's current Atlas pair; a first saved under another version of the
+  // exercise (its cells had another pair: Angles before version 3) is left out of the lists (null).
+  function firstText(f) {
+    var d = f && typeof f.ex === 'string' ? PX.ex.get(f.ex) : null;
+    if (!d || !G().firstOk(f) || f.v !== (d.version || 1)) return null;
+    return cellOfKey(d, f.cell);
+  }
 
   function share(o) {
     var S = PX.ui.share;
@@ -282,7 +299,7 @@
   function summaryPanel(ctx) {
     var res = ctx && ctx.res, gm = res && res.game;
     if (!gm) return null;
-    var grades = gm.grades || [], reach = gm.reach, firsts = (gm.firsts || []).filter(function (f) { return !f.old; }), nearList = gm.near || [], notes = gm.notes || [];
+    var grades = gm.grades || [], reach = gm.reach, firsts = (gm.firsts || []).filter(function (f) { return !f.old && firstText(f) !== null; }), nearList = gm.near || [], notes = gm.notes || [];
     var moved = reach && reach.delta > 0;
     if (!grades.length && !moved && !firsts.length && !nearList.length && !notes.length) return null;
     var title = grades.length ? (grades.length > 1 ? 'New grades' : 'New grade') : moved ? 'Reach' : firsts.length ? (firsts.length > 1 ? 'Firsts' : 'A first') : 'Records';
@@ -309,7 +326,7 @@
       if (t2) p.body.appendChild(t2);
     }
     if (firsts.length) {
-      var lis = firsts.slice(0, 3).map(function (f) { var d = PX.ex.get(f.ex); return h('li', h('span.gm-first-k', 'First'), ' ', cellOfKey(d, f.cell), h('span.px-meta', ' · ' + nameOf(d))); });
+      var lis = firsts.slice(0, 3).map(function (f) { var d = PX.ex.get(f.ex); return h('li', h('span.gm-first-k', 'First'), ' ', firstText(f), h('span.px-meta', ' · ' + nameOf(d))); });
       var ul = h('ul.gm-firsts', { 'data-firsts': String(firsts.length) }, lis);
       if (firsts.length > 3) ul.appendChild(h('li.px-meta', 'and ' + plural(firsts.length - 3, 'more first', 'more firsts') + ' in the Atlas'));
       p.body.appendChild(ul);
@@ -521,10 +538,10 @@
     var list = [];
     try { list = G().pending(ctx.plan, ctx.rec); } catch (e) { list = []; }
     var shown = ctx.plan.gameFirsts || (ctx.plan.gameFirsts = {});
-    var fresh = list.filter(function (f) { var k = f.ex + ':' + f.cell; if (shown[k]) return false; shown[k] = 1; return true; });
+    var fresh = list.filter(function (f) { var k = f.ex + ':' + f.cell; if (shown[k] || firstText(f) === null) return false; shown[k] = 1; return true; });
     if (!fresh.length) return null;
     var el = h('p.pl-note.gm-block-firsts', { 'data-gm': 'block-firsts' }, h('span.gm-first-k', fresh.length > 1 ? 'Firsts ' : 'First '),
-      fresh.slice(0, 3).map(function (f) { var d = PX.ex.get(f.ex); return cellOfKey(d, f.cell); }).join('; ') + (fresh.length > 3 ? '; and ' + (fresh.length - 3) + ' more' : '') + '.');
+      fresh.slice(0, 3).map(firstText).join('; ') + (fresh.length > 3 ? '; and ' + (fresh.length - 3) + ' more' : '') + '.');
     return el;
   }
 
@@ -575,7 +592,7 @@
     Hk.on('item:notes', function (ctx) { return blockFirsts(ctx); }, { id: 'game.firsts', order: 60 });
   }
 
-  PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, sweep: sweep, firstTime: firstTime, climbWords: climbWords, spareLeft: spareLeft, cellText: cellText, share: share, shareButton: shareButton,
+  PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, sweep: sweep, firstTime: firstTime, climbWords: climbWords, spareLeft: spareLeft, cellText: cellText, firstText: firstText, share: share, shareButton: shareButton,
     celebrate: celebrate, reduced: reduced, moving: moving, noteText: noteText, gradeCard: gradeCard, reachWords: reachWords, LINK: LINK,
     _: { summaryPanel: summaryPanel, climbSlot: climbSlot, notesSlot: notesSlot, progressPanel: progressPanel, startNow: startNow, exerciseLines: exerciseLines, blockFirsts: blockFirsts } };
 })(window.PX);

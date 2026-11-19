@@ -87,7 +87,8 @@
     var st = E().est.get(r, def, { display: dc }, now), aim = st && st.n > 0 ? E().est.bRef(def, st.mu) : null;
     var ease = G().cellEase(def), wr = st && st.n > 0 ? G().withinReach(r, now, def.id, dc) : null;
     var seen = uiRec().seen || (uiRec().seen = {}), seenAt = isNum(seen[def.id]) ? seen[def.id] : 0;
-    var fresh = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return G().firstOk(f) && f.ex === def.id && !f.old && f.at > seenAt; }).map(function (f) { return f.cell; });
+    // firsts of this version only: a first saved under another version names a cell of another pair (Angles before 3)
+    var fresh = (r.game && Array.isArray(r.game.firsts) ? r.game.firsts : []).filter(function (f) { return G().firstOk(f) && f.ex === def.id && f.v === (def.version || 1) && !f.old && f.at > seenAt; }).map(function (f) { return f.cell; });
     var cols = at.cols, rows = at.rows;
     // a static chart, not a widget: table semantics (a screen reader reads each cell's words)
     var grid = h('div.gm-atlas-grid', { role: 'table', 'aria-label': nameOf(def) + ': ' + (ad.dims[0].label || ad.dims[0].key) + (ad.dims[1] ? ' by ' + (ad.dims[1].label || ad.dims[1].key) : ''), style: '--cols:' + cols });

@@ -362,7 +362,15 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     C.ok(inv == 'grade' and st.count() == 1 and 'levels 51–60' in txt.lower() and '406' in txt and 'fold, best block 49 → 55' in txt.lower(), f'{name}: the grade stamp, its band, Reach with its cause and the invite kind ({inv}, {txt[:120]!r})')
     rot = page.evaluate('getComputedStyle(document.querySelector(".gm-summary .gm-stamp")).transform')
     C.ok(rot not in ('none', ''), f'{name}: the stamp sits at its slight angle ({rot})')
+    band = page.locator('.gm-summary .gm-stamp-band').first.inner_text()
+    C.ok(band.startswith('Levels 51–60. For example: ') and 'typical' not in band.lower(), f'{name}: the stamp gives its band\'s settings as an example, as the player does ({band!r})')
     page.screenshot(path=str(OUT / f'{name}-grade.png'), full_page=False)
+    # Angles (version 3): a first names its cell by gap × pose (def.atlas); a first saved under version 2 (gap × size,
+    # whose 9° level ignores the size) stays in the record but out of the list
+    af = page.evaluate('''(() => { const x = PX.ui.game._.summaryPanel({ res: { game: { grades: [], reach: { before: 1, after: 1, delta: 0, causes: [] },
+      firsts: [{ ex: 'angles', v: PX.ex.get('angles').version, cell: '0.0', at: Date.now() }, { ex: 'angles', v: 2, cell: '0.1', at: Date.now() }], near: [], notes: [] } } });
+      return x ? Array.from(x.el.querySelectorAll('.gm-firsts li')).map(li => li.textContent) : null; })()''')
+    C.ok(af and len(af) == 1 and af[0].count('right angle') == 1 and '9°' in af[0], f'{name}: an Angles first reads once, and one of version 2 is left out ({af})')
     # quiet and reduced motion: effects show their end state at once (fx.run refuses to animate)
     q = page.evaluate('''(() => { const S = PX.core.store.state.settings, keep = [S.celebrate, S.reducedMotion], out = [];
       const el = () => { const d = document.createElement('div'); document.body.appendChild(d); return d; };

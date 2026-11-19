@@ -256,7 +256,8 @@
     return { exId: def.id, keys: ad.keys, dims: ad.dims, cols: cols, rows: rows, cells: cells, handled: handled, tried: tried, total: cols * rows };
   }
 
-  // The easiest pool entry of each cell (the exercise's automatic variants), cached per definition.
+  // The easiest pool entry of each cell (the exercise's automatic variants), cached per definition: its
+  // difficulty b, the cell and its settings p (texts read def.ignores on them).
   var easyCache = {};
   function cellEase(def) {
     var ck = def.id + '@' + (def.version || 1);
@@ -265,7 +266,7 @@
     M.pool(def).forEach(function (c) {
       if (tv && def.variants && tv.indexOf(c.params.variant) < 0) return;
       var cell = cellOf(def, c.params);
-      if (cell && (!hasOwn.call(out, cell.key) || c.b < out[cell.key].b)) out[cell.key] = { b: c.b, i: cell.i, j: cell.j };
+      if (cell && (!hasOwn.call(out, cell.key) || c.b < out[cell.key].b)) out[cell.key] = { b: c.b, i: cell.i, j: cell.j, p: c.params };
     });
     easyCache[ck] = out;
     return out;

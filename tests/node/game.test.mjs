@@ -56,6 +56,35 @@ function testGuessing(t) {
   t.eq(G._.tally(gm, fold, p, true, g, T0 + 2, false), null, 'a cell counts once');
 }
 
+// The Atlas names only settings that are dealt (W3-bandA's request, 19 Nov: Angles' 9° level ignores the size
+// class, so a gap × size pair named cells never dealt and its "A first" line said "near a right angle" twice).
+function testAtlasDealt(t) {
+  t.section('the Atlas names only settings that are dealt');
+  const PX = mk(t), G = PX.engine.game, M = PX.engine.model;
+  const never = [], ignored = [];
+  PX.ex.list('train').forEach((def) => {
+    const ad = G.atlasDims(def);
+    if (!ad) return;
+    const seen = new Set();
+    M.pool(def).forEach((c) => {
+      const cell = G.cellOf(def, c.params);
+      if (cell) seen.add(cell.key);
+      const skip = PX.ex.ignored(def, c.params);
+      if (ad.keys.some((k) => k && skip.includes(k))) ignored.push(def.id + ' ' + JSON.stringify(c.params));
+    });
+    const cols = ad.dims[0].levels.length, rows = ad.dims[1] ? ad.dims[1].levels.length : 1;
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) if (!seen.has(i + '.' + j)) never.push(def.id + ' ' + i + '.' + j);
+  });
+  t.eq(never, [], 'every cell of every Atlas is a combination the exercise deals');
+  t.eq(ignored.slice(0, 5), [], 'no Atlas pair holds a dim its exercise ignores at some settings (def.ignores)');
+  const an = PX.ex.get('angles');
+  if (an) {
+    t.eq(G.atlasDims(an).keys, ['gap', 'pose'], 'Angles\' own pair (def.atlas: gap × pose) wins over the table\'s gap × size');
+    const e = G.cellEase(an)['0.0'];
+    t.ok(e && e.p && e.p.gap === 0 && e.p.pose === 0, 'a cell keeps the settings of its easiest combination, for texts that read def.ignores');
+  }
+}
+
 /* ============================================================ sessions: Atlas, Reach, grades */
 
 function weekOf(PX, rec, L, days, mode = 'train', extra = {}) {
@@ -508,6 +537,7 @@ function testStimGuard(t) {
 export async function run(t) {
   testGrades(t);
   testGuessing(t);
+  testAtlasDealt(t);
   testSessions(t);
   testSeeding(t);
   testPending(t);
