@@ -39,3 +39,12 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
   "Against the test format" block reads both exercises' tags and notes (screenshots in tests/e2e/out/cubes/library_*).
   The set tip moved first in learn.tips (the player shows the first unseen match, one an item). Guide request filed
   (29abdb0): the guide's Angles and Painted Cubes pages describe 1.1's labels and "five painted sides never asked".
+- 12:09 UTC: the lead's fresh-player run of Angles (19 Nov, six findings). 1. Letters: even per level (10,000 items per level,
+  every share within 1.0 point; consecutive engine seeds repeat the letter 24.9 %): the five B's were chance, the generator
+  unchanged; always A–D and the letter the last item had bounded per level (Angles), the latter in Painted Cubes too (its
+  letters are its counts: no letter above 28.9 % at any level, e44a673). 2–3. Numbers in a strip under each drawing, sizes
+  at its right end, Try 1's mark a ring (47d650c; harness_angles 298/0 with strip checks at three sizes, fit angles 16/0,
+  section.py 165/0). 4. The Atlas pairs gap × pose, def.ignores names the size class at 9°; the settings texts and
+  "Typical at this level" are W2-core's (requests e3b0127). 5. Version 3: level 2's closest pair in the middle, the ends
+  settle a third of items (55 % before); "smallest first, largest last" reported per level. 6. The answer part names A–D
+  alone; letter-only keys requested from W2-core. DECISIONS ca9aef0.
