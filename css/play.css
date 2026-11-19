@@ -397,6 +397,11 @@
   .pl-wtg-step:not(.is-current) .pl-wtg-name { display: none; }
   .pl-wtg-tools { flex-wrap: nowrap; gap: 0; }
   .pl-wtg-tools .px-btn--small { padding-left: var(--s2); padding-right: var(--s2); }
+  /* round 4 (the tour at 390 px: "1 Watch | 2 | [" cut): the steps keep their width, the tools take
+     the rest and wrap their words */
+  .pl-wtg-steps { flex: 0 0 auto; }
+  .pl-wtg-tools { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+  .pl-wtg-tools .px-btn { white-space: normal; text-align: center; line-height: 1.15; }
   .pl-wtg-text { font-size: var(--fs-sm); }
   .pl-wtg:not(.is-parts-open) .pl-parts { display: none; }
   .pl-wtg.is-parts-open .pl-parts { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s1); }
@@ -543,3 +548,11 @@
     background: var(--surface); box-shadow: var(--lift);
   }
 }
+/* round 4 (the tour's Track: two buttons named Pause at once): while a view shows its own Pause on its
+   stage (Track during its cue and motion), the title row's Pause steps aside; Esc and the view's own
+   button pause the item */
+.pl-player:has(.pl-host .ex-track-pause:not([hidden])) > .pl-hud [data-pause],
+.pl-player:has(.pl-host .ex-track-pause:not([hidden])) > .pl-float-pause { visibility: hidden; }
+/* round 4 (the tour's Track: the cube's top edge ran through "TRACK · 2 OF 6 · 5 S"): on a 3D stage the
+   printed label sits on a chip of the page's surface, so no line of the scene crosses its words */
+.pl-trial.ex-track .pl-host .ex-label { background: var(--surface); padding: 0.125rem 0.375rem; border-radius: 2px; }

@@ -325,7 +325,13 @@
           // round 3: "Skip ahead" read as skipping the whole demo; the tap finishes the caption's steps.
           // At the last caption a demo hands the item over; a walkthrough after an answer is done.
           var lastTap = tap && waiting && i === steps.length - 1;
-          P.el.pNext.firstChild.textContent = tapped && tap && !waiting ? 'Finish step' : lastWait ? 'Your turn' : lastTap ? 'Done' : 'Next step';
+          // round 4 (first-session test: "Finish step" moved on a caption per tap): while steps play, the words
+          // say what a tap does: a still caption's steps finish and wait there; a moving one goes on
+          var gEnd = i;
+          while (gEnd + 1 < steps.length && group[gEnd + 1] === group[i]) gEnd++;
+          var stays = !!(steps[gEnd] && steps[gEnd].hold && !FAST) || waitsAt(gEnd), playing = tapped && tap && !waiting;
+          P.el.pNext.firstChild.textContent = playing ? (stays ? 'Finish step' : gEnd + 1 >= steps.length ? (demo ? 'Your turn' : 'Done') : 'Next step')
+            : lastWait ? 'Your turn' : lastTap ? 'Done' : 'Next step';
           if (lastWait && !lastNoted) {
             lastNoted = true;
             try { if (P.demoCfg && typeof P.demoCfg.onLastWait === 'function') P.demoCfg.onLastWait(); } catch (e) { log('onLastWait failed', e); }
@@ -344,6 +350,7 @@
           P.played.finished++;
           P.played.ms = Math.round(timing.now() - t0);
           P.played.last = { steps: seen, of: steps.length, replays: replays, closed: closed, ms: P.played.ms };
+          if (closed) { try { caption(''); } catch (e) { /* the view's caption */ } } // round 4: no caption left beside the answer after Close
           if (stop) stop();
           cur = null;
           P.el.player.hidden = true;
@@ -1602,11 +1609,20 @@
   var openCards = [];
   function closeCards() { openCards.slice().forEach(function (done) { done('closed'); }); }
 
-  // The offer card's estimate (O6): learn.minutes, else about two minutes with the teaching template.
-  function wtgMinutes(learn) {
-    var m = learn && isNum(learn.minutes) && learn.minutes > 0 ? Math.round(learn.minutes) : learn && Array.isArray(learn.rules) && learn.rules.length ? 2 : 1;
+  // A tutorial's length (O6; fresh-player round 4: the tour's "3 min" hid three demos and a dozen Try
+  // items): learn.minutes where the exercise measured it, else from its content: about 30 s for the demo,
+  // 20 s for each Try item (at most 5 play), 20 s for a rules card and 15 s for a strategy card.
+  function wtgSeconds(learn) {
+    if (learn && isNum(learn.minutes) && learn.minutes > 0) return learn.minutes * 60;
+    var L = learn || {}, rules = Array.isArray(L.rules) && L.rules.length > 0;
+    var tries = Array.isArray(L.practice) ? Math.min(5, L.practice.length) : 0;
+    return 30 + 20 * tries + (rules ? 20 : 0) + (rules || typeof L.strategyFirst === 'string' ? 15 : 0);
+  }
+  function minutesWords(sec) {
+    var m = Math.max(1, Math.round(sec / 60));
     return m === 1 ? 'a minute' : m === 2 ? 'two minutes' : m === 3 ? 'three minutes' : m + ' minutes';
   }
+  function wtgMinutes(learn) { return minutesWords(wtgSeconds(learn)); }
   // The Chimera line every share text ends with (the full link; PX.ui.chimera.LINE when present).
   function chimeraLine() {
     var L = PX.ui.chimera && typeof PX.ui.chimera.LINE === 'string' && PX.ui.chimera.LINE ? PX.ui.chimera.LINE : '';
@@ -1809,6 +1825,9 @@
     var demoSpec = P.view.demo ? demos.filter(function (d) { return o.variant && d.params && d.params.variant === o.variant; })[0] || demos[0] || null : null;
     // Practice entries: plain params, or { params, assist, tip, seed } (v1.2)
     var practice = (Array.isArray(learn.practice) ? learn.practice : []).slice(0, 5).map(function (x) { return isObj(x) && isObj(x.params) ? x : { params: x }; });
+    // round 4 (first-session test): in the tour, attention practice (Track) keeps every Try item at the first
+    // entry's settings; its ladder (more targets, a turning view) belongs to its own Watch, Try, Go
+    if (o.tour && def.practice === 'attention' && practice.length) practice = practice.map(function () { return { params: practice[0].params }; });
     var rules = (Array.isArray(learn.rules) ? learn.rules : []).map(function (r) {
       return typeof r === 'string' ? { text: r } : isObj(r) && typeof r.text === 'string' ? r : null;
     }).filter(Boolean);
@@ -3315,7 +3334,7 @@
     homePlan: homePlan, homeLevels: homeLevels, fast: setFast, showCard: showCard, closeCards: closeCards, setChrome: setChrome,
     fillParams: fillParams, responseFor: responseFor, openShare: openShare, screenHead: screenHead,
     goalOf: goalOf, specOf: specOf, tagOf: tagOf, fmtRt: fmtRt, MODE_NAMES: MODE_NAMES, levelText: levelText,
-    firstStrategy: firstStrategy, gentleMotion: gentleMotion, MOTION: MOTION,
+    firstStrategy: firstStrategy, gentleMotion: gentleMotion, MOTION: MOTION, tutorialSeconds: wtgSeconds, minutesWords: minutesWords,
     bootRoute: bootRoute, sound: sound, thresholdText: thresholdText,
     isFast: function () { return FAST; },
     config: CONFIG,
