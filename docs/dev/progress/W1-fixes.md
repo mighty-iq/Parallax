@@ -44,7 +44,13 @@ calibration detail, the guide's Reckon page), then Homing O42 and the simulation
   turn-only answers ≤ 50 % + 3 SE in every legs-decide cell and never right for both alternatives), homing 297, core,
   engine-v11, record4, bets, shortcut-levels, section: all pass.
 - The simulation: tests/node/sim-reckon.mjs with tests/node/fixtures/learner-reckon.mjs (results in
-  docs/dev/v1.2/reckon-sim.md).
+  docs/dev/v1.2/reckon-sim.md): no floor effect where the legs decide (true step 0 / 0.4 / 1.2: +3 / −1 / −10
+  points against the target, the level kept on 34–46 % of leg-cell items); items with a turn of 140° or more sit
+  about 18 points under the target if A3 #2's +1.5 logits holds (coverage 76–87 %); without that error 87–94 % of
+  items lie within ±0.10 and coverage is 98–99 %.
+- Browser: harness_reckon.py 95/0 (version 2 at 360 × 640, 390 × 844 and 1366 × 768 with screenshots; Free play
+  passes no calibration layer, so its reveal has no habit line or chart); harness_homing.py map 2/0 (O42 at
+  360 × 640 and 1366 × 768, worst landmark direction error under 0.5°).
 
 ## In progress
 - Nothing. Scored items of the retest were not played (the driver, not the app, stalled); the flow did not change,
