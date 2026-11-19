@@ -18,7 +18,9 @@ measurement or a comparison round cannot get in the way; the engine hooks all ru
     both sizes, in ink and green, never the accent (cards in tests/e2e/out/game/card-<kind>-<size>.png);
   - every panel fits the width; no page or console errors.
 O14 (390 x 844, with phone390 or --only resume): a test build's save in the middle of a Daily (positions only, no
-seeds) loads with the seeds of its date and goes on by seed: the answered items never come again.
+seeds) loads with the seeds of its date and goes on by seed: the answered items never come again. Review RV-code-1.2
+M2 (same runs): two answers into a Daily, the record as saved before any pagehide (what a discarded tab leaves) holds
+the attempt part-way, and a new page goes on with it.
 Run: tests/e2e/pwslot.sh python3 tests/e2e/game.py [--only desktop,phone390,phone360,resume]
 Report: tests/e2e/out/game.json; screenshots in tests/e2e/out/game/.
 """
@@ -494,6 +496,51 @@ def run_daily_resume(p, C, name, ctx_opts):
     b.close()
 
 
+def run_daily_discard(p, C, name, ctx_opts):
+    """Review RV-code-1.2 M2: a phone that discards a background tab fires no pagehide, so the session never finishes.
+    Two answers into the Daily, the saved record is taken as it stands (what a killed tab leaves on disk) into a new
+    browser context, whose page finds the attempt part-way and goes on with it."""
+    import json
+    b = launch(p)
+    ctx = b.new_context(**ctx_opts)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "daily" }, { force: true })')
+    n = 0
+    for _ in range(6):  # two answers that count (a voided item comes back)
+        if n >= 2 or to_respond(page, C, name, 'daily') is not True:
+            break
+        page.evaluate('PX.debug.fast(true)')
+        page.evaluate(f'PX.debug.answer({"true" if n == 0 else "false"})')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
+        if page.evaluate('__play.last ? __play.last.outcome : null') != 'stutter':
+            n += 1
+        page.evaluate('PX.debug.fast(false)')
+        if n < 2:
+            page.evaluate('__play.next()')
+    page.wait_for_timeout(2500)  # the save that follows each answer (debounced 1 s); no pagehide has fired
+    saved = page.evaluate('localStorage.getItem(PX.core.store.KEY)')
+    ctx2 = b.new_context(**ctx_opts)  # its own storage: the old tab's later pagehide cannot reach it
+    ctx2.add_init_script('if (!sessionStorage.getItem("px-test-disk")) { localStorage.setItem("parallax.v1", ' + json.dumps(saved) + '); sessionStorage.setItem("px-test-disk", "1"); }')
+    page2 = ctx2.new_page()
+    con2 = Console(page2)
+    page2.goto(INDEX.as_uri())
+    page2.wait_for_function(READY, timeout=30000)
+    page2.evaluate(MUTE)
+    dismiss(page2)
+    st = page2.evaluate('(() => { const D = PX.engine.daily, day = D.day(Date.now()), e = PX.core.store.state.daily[day]; return e ? { partial: e.partial, answered: e.answered, right: e.right, seeds: D.seedsOk(day, e) } : null; })()')
+    C.ok(n == 2 and st and st['partial'] is True and st['answered'] == 2 and st['right'] == 1 and st['seeds'], f'{name}: two answers in, before any pagehide, the saved record holds the Daily part-way with its seeds ({st})')
+    page2.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "daily" }, { force: true })')
+    page2.wait_for_timeout(600)
+    intro = page2.evaluate('document.body.innerText')
+    C.ok('goes on where it stopped: 2 of 8 answered' in intro, f'{name}: a new page goes on with the attempt ({" ".join(intro.split())[:120]!r})')
+    page2.screenshot(path=str(OUT / f'{name}-daily.png'), full_page=False)
+    errs = con.errors() + con2.errors()
+    C.ok(not errs, f'{name}: no page or console errors ({errs[:3]})')
+    b.close()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--only', default='desktop,phone390,phone360')
@@ -507,6 +554,7 @@ def main():
             run_viewport(p, C, 'phone390', {'viewport': {'width': 390, 'height': 844}, 'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True}, rnd)
         if 'phone390' in args.only or 'resume' in args.only:
             run_daily_resume(p, C, 'resume390', {'viewport': {'width': 390, 'height': 844}, 'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True})
+            run_daily_discard(p, C, 'discard390', {'viewport': {'width': 390, 'height': 844}, 'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True})
         if 'phone360' in args.only:
             run_viewport(p, C, 'phone360', {'viewport': {'width': 360, 'height': 640}, 'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True}, rnd)
     return C.summary()
