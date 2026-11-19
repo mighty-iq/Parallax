@@ -244,13 +244,30 @@
     return best;
   }
   function centroid(pts) { var x = 0, y = 0; pts.forEach(function (p) { x += p[0]; y += p[1]; }); return [x / pts.length, y / pts.length]; }
-  function label(group, pts, text, size, kind) {
-    var c = centroid(pts), g = SV.el('g', { class: 'fm-tag' + (kind ? ' fm-tag--' + kind : '') });
-    g.appendChild(SV.el('circle', { cx: c[0], cy: c[1], r: size * 0.78 }));
+  // plain (v1.2 O54, on the solids): the letter with a halo and no disc, so the face's mark shows around it;
+  // placed: the centres of the letters already on that solid, which a new one moves away from (thin faces)
+  function label(group, pts, text, size, kind, plain, placed) {
+    var c = centroid(pts);
+    if (placed) {
+      for (var t = 0; t < 3; t++) {
+        var moved = false;
+        placed.forEach(function (p) {
+          var dx = c[0] - p[0], dy = c[1] - p[1], d = Math.sqrt(dx * dx + dy * dy), min = size * 0.95;
+          if (d >= min) return;
+          if (d < 1e-6) { dx = 0; dy = 1; d = 1; }
+          c = [p[0] + dx / d * min, p[1] + dy / d * min]; moved = true;
+        });
+        if (!moved) break;
+      }
+      placed.push(c);
+    }
+    var g = SV.el('g', { class: 'fm-tag' + (kind ? ' fm-tag--' + kind : '') + (plain ? ' fm-tag--plain' : '') });
+    if (!plain) g.appendChild(SV.el('circle', { cx: c[0], cy: c[1], r: size * 0.78 }));
     g.appendChild(SV.text(c[0], c[1], text, { style: 'font-size:' + size.toFixed(3) + 'px' }));
     group.appendChild(g);
   }
-  function optUnit(i) { var r = st.opts[i].svg.getBoundingClientRect(); return st.E / Math.max(1, Math.min(r.width, r.height)); }
+  // A letter's size on solid i, in its units: 13 px on the screen on a phone's small solid, up to 15 px
+  function optLetter(i) { var r = st.opts[i].svg.getBoundingClientRect(), side = Math.max(1, Math.min(r.width, r.height)); return st.E / side * Math.max(13, Math.min(15, side * 0.12)); }
   function clearMarks() {
     showFold(false);
     PX.ui.clear(st.netLabels);
@@ -267,14 +284,14 @@
   function focusOption(i) { var b = st.opts[i] && st.opts[i].el.closest ? st.opts[i].el.closest('.px-choice') : null; if (b) b.classList.add('ex-focus'); }
   // Faces f of the solid (with letters) shown in the pattern and, through the map, in option i.
   function tagFaces(item, i, map, list, kind) {
-    var u = optUnit(i), sNet = 15 / st.k, sOpt = 15 * u;
+    var sNet = 15 / st.k, sOpt = optLetter(i), placed = [];
     list.forEach(function (x) {
       var n = st.netG[x.f];
       if (n) { label(st.netLabels, n.pts, x.t, sNet, kind); n.g.classList.add('is-pointed'); }
       var g = null;
       Object.keys(map.back).forEach(function (k) { if (map.back[k] === x.f) g = +k; });
       var of = g !== null ? st.opts[i].faces[g] : null;
-      if (of) { label(st.opts[i].labels, of.pts, x.t, sOpt, kind); of.g.classList.add('is-pointed'); }
+      if (of) { label(st.opts[i].labels, of.pts, x.t, sOpt, kind, true, placed); of.g.classList.add('is-pointed'); }
     });
   }
   // The edge of a wrong-size solid that differs most from the pattern's, preferring one on a face the
@@ -314,8 +331,8 @@
       enter: function () {
         clearMarks(); focusOption(i);
         if (pm && g >= 0) {
-          var u = optUnit(i), of = st.opts[i].faces[g], nf = st.netG[pm.back[g]];
-          if (of) { label(st.opts[i].labels, of.pts, '✗', 15 * u, 'bad'); of.g.classList.add('is-pointed'); }
+          var of = st.opts[i].faces[g], nf = st.netG[pm.back[g]];
+          if (of) { label(st.opts[i].labels, of.pts, '✗', optLetter(i), 'bad', true); of.g.classList.add('is-pointed'); }
           if (nf) { label(st.netLabels, nf.pts, '✗', 15 / st.k, 'bad'); nf.g.classList.add('is-pointed'); }
         }
       },
@@ -460,7 +477,7 @@
       item.options.forEach(function (o, i) {
         if (i === key || o.kind === 'shape') return;
         var pm = bestMap(item, i), g = pm && pm.bad.length ? pm.bad[0] : -1, of = g >= 0 ? st.opts[i].faces[g] : null;
-        if (of) { label(st.opts[i].labels, of.pts, '✗', 15 * optUnit(i), 'bad'); of.g.classList.add('is-pointed'); }
+        if (of) { label(st.opts[i].labels, of.pts, '✗', optLetter(i), 'bad', true); of.g.classList.add('is-pointed'); }
       });
     }
     var sizes = { ms: 2600, caption: cap('sizes'), enter: function () { clearMarks(); markSizes(item); } };

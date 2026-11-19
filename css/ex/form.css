@@ -30,6 +30,9 @@
 }
 .ex-form .fm-tag--bad circle { stroke: var(--wrong, #B33A2F); stroke-dasharray: 3 2; }
 .ex-form .fm-tag--bad text { fill: var(--wrong, #B33A2F); }
+/* v1.2 O54 (W3-phones): on the solids a letter (or ✗) carries a halo instead of a disc, so the marks of the
+   face it names stay in view on a phone's small solid; the face itself is outlined (is-pointed) */
+.ex-form .fm-tag--plain text { paint-order: stroke; stroke: var(--surface, #FFFFFF); stroke-width: 0.3em; stroke-linejoin: round; }
 
 .ex-form .fm-under {
   display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2, 0.5rem) var(--s4, 1rem);
