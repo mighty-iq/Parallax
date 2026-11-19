@@ -48,14 +48,16 @@
       { params: { cubes: 1, height: 1, asked: 0 }, seed: 108 },
     ],
     tips: [
+      // version 3: a figure's later questions (params.ask 1–3) come one at a time, the figure unchanged.
+      // First in the list: the player shows one tip an item, the first unseen match, and this one
+      // belongs to the first later question a player meets.
+      { id: 'set', when: { dim: 'ask', levels: [1, 2, 3] }, text: 'Same figure, new question: every cube keeps the number of painted sides you gave it, so count the cubes with the new number.' },
       { id: 'flat', when: { dim: 'height', levels: [0] }, text: 'A flat figure: every cube is in view, and each one has 5 painted sides minus the cubes it touches.' },
       { id: 'hidden', when: { dim: 'height', levels: [1, 2, 3] }, text: 'Cubes stand on cubes now. A cube you cannot see holds up the ones above it: it counts too, and its sides follow from its neighbours.' },
       { id: 'tall', when: { dim: 'height', levels: [2, 3] }, text: 'Three high: a cube in the middle of a column has no painted top, only the sides no cube touches.' },
       { id: 'few', when: { dim: 'asked', levels: [1] }, text: 'Cubes with one or two painted sides sit inside the figure or under other cubes. Check the hidden ones too.' },
       { id: 'bottom', when: { dim: 'cubes', levels: [2] }, text: 'The bottom is never painted: a cube on the ground has at most five painted sides, and only if nothing touches it.' },
       { id: 'big', when: { dim: 'cubes', levels: [3, 4] }, text: 'Many cubes now: go column by column and keep a tally, so no cube is counted twice or missed.' },
-      // version 3: a figure's later questions (params.ask 1–3) come one at a time, the figure unchanged
-      { id: 'set', when: { dim: 'ask', levels: [1, 2, 3] }, text: 'Same figure, new question: every cube keeps the number of painted sides you gave it, so count the cubes with the new number.' },
     ],
     // Prep courses teach a tally table (rows cubes, columns 0–5 painted sides) filled column by column
     // and re-checked from another direction, plus learning common positions; the classic errors are

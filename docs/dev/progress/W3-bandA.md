@@ -19,7 +19,7 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
 - 09:32 UTC: started; read CLAUDE.md, PLAN milestone 8, notes D1 (§2–§3, §6, addendum) and D2 (§1.2–1.3, §3.2–3.3, addendum),
   W1-band-A's log, CONTRACT-v1.2 (no "Wave 3" section yet), the two exercises' code and tests, rebase.js.
 - 09:41 UTC: request to W2-core: figure sets in the planner (8e7de90).
-- 10:05 UTC: Angles' per-level shortcut export (9b13e1e): 514 cells within chance + 10, closest +6.3; O58 decided: 2° stays
+- 09:48 UTC: Angles' per-level shortcut export (9b13e1e): 514 cells within chance + 10, closest +6.3; O58 decided: 2° stays
   (DECISIONS 13cd5ab).
 - 10:37 UTC: Painted Cubes version 3 generator: figure sets of 1–4 questions from the seed (def.set.size; mean 2.49
   above the band), five painted sides on built figures (peakFigure; counts 1–3 evenly, 356/376/361), every question held on
@@ -34,3 +34,8 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
   390 x 844, 1366 x 768: the answers keep their place when the pad opens and at the reveal; the tally survives the figure's
   next question). Node: angles, cubes, wave3, section, firstband, core, rebase, formats, bets 1904/0; shortcut-levels 196/0.
   (Correction: Angles' node test had 379 checks at 9f509c8, not the 384 its commit message says.)
+- 11:01 UTC: fit.py --ex cubes,angles at 360 x 640 (angles 18/18, cubes 17/17 items), 390 x 844 and 844 x 390: 18/0;
+  section.py 130/0 and sideways 14/0 (Painted Cubes' Section items now show "Question i about this figure"); the Library's
+  "Against the test format" block reads both exercises' tags and notes (screenshots in tests/e2e/out/cubes/library_*).
+  The set tip moved first in learn.tips (the player shows the first unseen match, one an item). Guide request filed
+  (29abdb0): the guide's Angles and Painted Cubes pages describe 1.1's labels and "five painted sides never asked".
