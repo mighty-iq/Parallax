@@ -122,7 +122,7 @@ function testEstMs(t, PX, def) {
 /* ================================================================ learn data */
 const VIEW_CAPTIONS = ['notice', 'cue', 'track', 'pick', 'full', 'keys', 'keys10', 'keysStim', 'right', 'wrong', 'legend',
   'paused', 'voidJump', 'voidLost', 'voidPaused', 'voidFallback', 'smStart', 'smForward', 'smSwap', 'smClose', 'smToEnd', 'smAll',
-  'smCompare', 'dSpheres', 'dTargets', 'dFollow', 'dPick', 'dAnswer'];
+  'smCompare', 'dSpheres', 'dTargets', 'dFollow', 'dPick', 'dAnswer', 'cueOne', 'cueFew', 'trackFew'];
 
 function testLearn(t, PX, def) {
   t.section('learn data');
@@ -138,8 +138,16 @@ function testLearn(t, PX, def) {
     t.ok(def.validate(it) === true && it.params.variant === d.kind && !it.fallback, `demo seed ${d.seed} gives a valid ${d.kind} item`);
   }
   t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5, '3–5 practice items');
-  t.ok(L.practice.every((p) => PX.ex.validParams(def, p) === true), 'practice params are valid');
-  t.ok(L.practice.every((p, i) => i === 0 || def.difficulty(p) >= def.difficulty(L.practice[i - 1])), 'practice goes from easy to harder');
+  const pp = (L.practice || []).map((p) => (p && p.params ? p.params : p)); // entries may be { params, tip } (v1.2)
+  t.ok(pp.every((p) => PX.ex.validParams(def, p) === true), 'practice params are valid');
+  t.ok(pp.every((p, i) => i === 0 || def.difficulty(p) >= def.difficulty(pp[i - 1])), 'practice goes from easy to harder');
+  // v1.2 (W3-exfix, fresh-player test g2): a newcomer's first scored item can be 5 of 6 (priced by the one unmarked
+  // sphere), so a Try item asks exactly that, with the tip that teaches following the unmarked ones
+  const few = (L.practice || []).find((p) => p && p.params && p.params.targets === 3 && p.params.spheres === 0);
+  const tipOf = (id) => (L.tips || []).find((x) => x.id === id) || {};
+  t.ok(!!few && few.tip === 'others' && /unmarked/.test(tipOf('others').text || '') && /all the others/.test(tipOf('others').text || ''),
+    'a Try item is 5 of 6 and its tip teaches following the unmarked spheres');
+  t.ok(/\{m\}/.test((L.captions || {}).cueFew || '') && /unmarked/.test((L.captions || {}).cueOne || ''), 'the cue line of a 4 or 5 of 6 item offers the unmarked ones ({m})');
   const dims = Object.fromEntries(def.dims.map((d) => [d.key, d.levels.length]));
   const tipOk = (x) => !!(x.id && x.text && x.when) && ((x.when.variant && def.variants.includes(x.when.variant)) ||
     (x.when.dim in dims && Array.isArray(x.when.levels) && x.when.levels.length > 0 && x.when.levels.every((v) => Number.isInteger(v) && v >= 0 && v < dims[x.when.dim])));

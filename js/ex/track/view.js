@@ -56,6 +56,13 @@
     return s.replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] !== undefined ? String(vars[k]) : m; });
   }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  // v1.2 (W3-exfix, fresh-player test g2): when fewer spheres are unmarked than marked (4 or 5 of 6, 5 of 8; the
+  // items gen.js DIFF prices by the unmarked ones), the cue line offers following those instead.
+  function fewOthers(item) { return item.n - item.k < item.k; }
+  function cueText(item) {
+    var m = item.n - item.k;
+    return !fewOthers(item) ? cap('cue', { k: item.k }) : cap(m === 1 ? 'cueOne' : 'cueFew', { k: item.k, m: m });
+  }
 
   /* ---------- framing: the cube's image over every azimuth (image plane, focal length 1) ---------- */
 
@@ -370,7 +377,7 @@
     colourTargets(run.item, true);
     pose(run, 0);
     ringTargets(run, 'cue');
-    setPhase(run, 'cue', cap('cue', { k: run.item.k }));
+    setPhase(run, 'cue', cueText(run.item));
     var left = run.item.cue * 1000 / run.rate;
     run.stop = timing.loop(function (dt) {
       if (run.cancelled) return false;
@@ -389,7 +396,7 @@
     var item = run.item, rate = run.rate;
     clearMarks(run);
     colourTargets(item, false);
-    setPhase(run, 'track', cap('track'));
+    setPhase(run, 'track', fewOthers(item) ? cap('trackFew') : cap('track'));
     run.t = 0;
     pose(run, 0);
     run.monitor = timing.monitor();

@@ -27,16 +27,20 @@
     demo: [
       { params: { speed: 0, targets: 0, spheres: 0, time: 0, variant: 'still' }, seed: 1, kind: 'still' },
     ],
+    // v1.2 (W3-exfix, fresh-player test g2): Try 2 is 5 of 6 with the trick on its tip. The difficulty model
+    // prices 4 or 5 of 6 and 5 of 8 by the fewer unmarked spheres (gen.js DIFF, Keff), so a newcomer's first
+    // scored item is 5 of 6 at the slowest speed (the warm-up's easiest cell): the tutorial now teaches what
+    // that item asks, and the cue line says it on every such item (captions cueOne, cueFew).
     practice: [
       { speed: 0, targets: 0, spheres: 0, time: 0, variant: 'still' },
-      { speed: 4, targets: 0, spheres: 0, time: 0, variant: 'still' },
+      { params: { speed: 0, targets: 3, spheres: 0, time: 0, variant: 'still' }, tip: 'others' },
       { speed: 4, targets: 1, spheres: 1, time: 0, variant: 'still' },
       { speed: 6, targets: 1, spheres: 1, time: 1, variant: 'orbit' },
     ],
     tips: [
       { id: 'orbit', when: { variant: 'orbit' }, text: 'The view turns slowly while the spheres move. Keep following the targets, not the cube.' },
       { id: 'shape', when: { dim: 'targets', levels: [2] }, text: 'Four targets: try seeing them as the corners of one shape that stretches and turns as they move.' },
-      { id: 'others', when: { dim: 'targets', levels: [3] }, text: 'Five targets: when fewer spheres are not targets, follow those instead and pick everything else.' },
+      { id: 'others', when: { dim: 'targets', levels: [3] }, text: 'Most spheres marked? Follow the few unmarked ones instead: the targets are all the others. Five of six is then one sphere to follow.' },
       { id: 'crowd', when: { dim: 'spheres', levels: [2] }, text: 'Ten spheres: close passes happen more often. When a sphere comes near a target, watch both until they part.' },
       { id: 'fast', when: { dim: 'speed', levels: [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45] }, text: 'Fast spheres: rest your eyes near the middle of the targets and follow them with your attention, not your eyes.' },
       { id: 'long', when: { dim: 'time', levels: [2] }, text: 'Twelve seconds of motion: if a target feels lost, keep going and pick your best guess at the end.' },
@@ -80,7 +84,11 @@
     captions: {
       notice: 'Many spheres move at once, for up to 12 seconds. Press Esc or Pause to stop at any time; that trial will not count.',
       cue: 'Watch the {k} marked spheres.',
+      // fewer unmarked than marked (4 or 5 of 6, 5 of 8): the easier way, on every such item (v1.2, W3-exfix)
+      cueOne: 'Watch the {k} marked spheres, or follow the one unmarked sphere: the targets are all the others.',
+      cueFew: 'Watch the {k} marked spheres, or follow the {m} unmarked ones: the targets are all the others.',
       track: 'Follow them.',
+      trackFew: 'Follow them, or the unmarked ones.',
       pick: 'Pick the {k} targets · {p} of {k} picked.',
       full: 'Already {k} picked: tap a picked sphere (or press its number) to unpick it.',
       keys: 'Keys 1–{n} pick · Enter confirms · Backspace undoes',
