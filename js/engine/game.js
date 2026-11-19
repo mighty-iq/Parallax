@@ -107,11 +107,20 @@
 
   /* ---------- Reach: the sum of best block levels (never falls) ---------- */
 
+  // Each exercise's part is the highest of its best block and the part kept in rec.game.reach.bests (the best
+  // seen so far, on the current scale: a range change converts it with the best, E.rebase.register below), so
+  // Reach never falls and rises with every new best; reach.high is the sum at its highest (kept for two tabs).
+  function storedParts(rec) { var r = rec && isObj(rec.game) && isObj(rec.game.reach) ? rec.game.reach : null; return r && isObj(r.bests) ? r.bests : {}; }
+  function partOf(rec, id, stored) {
+    var b = bestOf(rec, id), k = stored || storedParts(rec), v = isNum(k[id]) ? k[id] : 0;
+    return Math.max(b ? b.level : 0, v);
+  }
   function reach(rec) {
-    var parts = reachDefs().map(function (def) { var b = bestOf(rec, def.id); return { exId: def.id, best: b ? b.level : 0 }; });
+    var k = storedParts(rec);
+    var parts = reachDefs().map(function (def) { return { exId: def.id, best: partOf(rec, def.id, k) }; });
     var sum = parts.reduce(function (s, p) { return s + p.best; }, 0);
     var high = rec && isObj(rec.game) && isObj(rec.game.reach) && isNum(rec.game.reach.high) ? rec.game.reach.high : 0;
-    return { value: Math.max(sum, high), sum: sum, high: high, parts: parts, max: 100 * parts.length };
+    return { value: sum, sum: sum, high: high, parts: parts, max: 100 * parts.length };
   }
   // Optional rank titles (setting rankTitles, off by default): one per config.game.rankStep of Reach, in the
   // survey's words; none implies mastery or a norm (note G1 §2.2).
@@ -352,14 +361,20 @@
         if (f) out.firsts.push(f);
       });
     }
-    // Reach and grades move only with a new best block (res.bests: Train and Path)
-    var bests = isArray(res.bests) ? res.bests : [], R = reach(rec);
-    var causes = bests.filter(function (b) { var d = defOf(b.exId); return d && d.pat !== true; })
-      .map(function (b) { return { exId: b.exId, from: isNum(b.previous) ? b.previous : 0, to: b.level }; });
-    var delta = causes.reduce(function (s, c) { return s + (c.to - c.from); }, 0);
-    var before = Math.max(R.sum - delta, g.reach.high);
-    g.reach.high = Math.max(g.reach.high, R.sum);
-    var after = Math.max(R.sum, g.reach.high);
+    // Reach and grades move only with a new best block (res.bests: Train and Path): each part before this
+    // session is the larger of its kept part and its best before (b.previous for this session's new bests)
+    var bests = isArray(res.bests) ? res.bests : [], k = isObj(g.reach.bests) ? g.reach.bests : (g.reach.bests = {});
+    var prevBest = {};
+    bests.forEach(function (b) { prevBest[b.exId] = isNum(b.previous) ? b.previous : 0; });
+    var before = 0, after = 0, causes = [];
+    reachDefs().forEach(function (def) {
+      var id = def.id, kept = isNum(k[id]) ? k[id] : 0, now1 = partOf(rec, id, k);
+      var was = Math.max(kept, hasOwn.call(prevBest, id) ? prevBest[id] : now1);
+      before += was; after += now1;
+      if (now1 > was) causes.push({ exId: id, from: was, to: now1 });
+      if (now1 > 0) k[id] = now1;
+    });
+    g.reach.high = Math.max(g.reach.high, after);
     out.reach = { before: before, after: after, delta: after - before, causes: causes, high: g.reach.high };
     bests.forEach(function (b) {
       var from = gradeOf(b.previous), to = gradeOf(b.level), def = defOf(b.exId);
@@ -402,6 +417,10 @@
   // (it never throws; unknown keys stay).
   function repair(v) {
     if (!isObj(v)) return undefined;
+    if (v.reach.bests !== undefined) {
+      if (!isObj(v.reach.bests)) delete v.reach.bests;
+      else Object.keys(v.reach.bests).forEach(function (id) { var x = v.reach.bests[id]; if (!(isNum(x) && x >= 1 && x <= 100 && Math.round(x) === x)) delete v.reach.bests[id]; });
+    }
     Object.keys(v.atlas).forEach(function (id) {
       var a = v.atlas[id];
       if (!isObj(a) || !int(a.v, 1) || !isObj(a.c)) { delete v.atlas[id]; return; }
@@ -438,6 +457,10 @@
     var newer = info && info.newer === 'mine' ? b : a, older = newer === a ? b : a;
     var out = U.deepCopy(newer);
     out.reach.high = Math.max(a.reach.high, b.reach.high);
+    if (isObj(a.reach.bests) || isObj(b.reach.bests)) { // each part the larger
+      var kb = out.reach.bests = isObj(out.reach.bests) ? out.reach.bests : {}, ob = isObj(older.reach.bests) ? older.reach.bests : {};
+      Object.keys(ob).forEach(function (id) { if (!(kb[id] >= ob[id])) kb[id] = ob[id]; });
+    }
     Object.keys(older.atlas).forEach(function (id) {
       var o = older.atlas[id], m = out.atlas[id];
       if (!isObj(m) || m.v !== o.v) { if (!isObj(m) || o.v > m.v) out.atlas[id] = U.deepCopy(o); return; }
@@ -473,6 +496,18 @@
     return out;
   }
 
+  // A changed level scale (E.rebase.register: after the exercise's best block is converted): its kept Reach
+  // part moves with the same conversion, and the high mark becomes the sum of the parts on the new scales. A
+  // record whose parts were never kept takes them from the (converted) best blocks first.
+  function convertReach(rec, id, cv) {
+    if (!isObj(rec) || !isObj(rec.game) || !isObj(rec.game.reach)) return;
+    var r = rec.game.reach;
+    if (!isObj(r.bests)) { r.bests = {}; reachDefs().forEach(function (def) { var b = bestOf(rec, def.id); if (b) r.bests[def.id] = b.level; }); }
+    else if (isNum(r.bests[id])) r.bests[id] = cv(r.bests[id]);
+    r.high = reachDefs().reduce(function (s, def) { return s + partOf(rec, def.id, r.bests); }, 0);
+  }
+  if (E.rebase && typeof E.rebase.register === 'function') E.rebase.register(convertReach);
+
   // The start hook seeds the Atlas of a record from before the game layer, before its first item (so a
   // block end can name this session's firsts); the finish hook (after the session is stored, before the
   // weekly goal and achievements; CONTRACT Q) counts the session.
@@ -494,6 +529,6 @@
     ATLAS: ATLAS, RANKS: RANKS, game: game, gradeOf: gradeOf, band: band, bestOf: bestOf, grades: grades, reach: reach, rank: rank,
     atlasDims: atlasDims, cellOf: cellOf, tail: tail, handledBy: handledBy, atlas: atlas, cellEase: cellEase, displayFor: displayFor,
     withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair, firstOk: firstOk, pending: pending,
-    _: { tally: tally, seedAtlas: seedAtlas, slotOf: slotOf, chanceOf: chanceOf, atlasMode: atlasMode, trainDefs: trainDefs, reachDefs: reachDefs, defOf: defOf, near: near },
+    _: { tally: tally, seedAtlas: seedAtlas, slotOf: slotOf, chanceOf: chanceOf, atlasMode: atlasMode, trainDefs: trainDefs, reachDefs: reachDefs, defOf: defOf, near: near, convertReach: convertReach },
   };
 })(window.PX);
