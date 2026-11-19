@@ -30,7 +30,7 @@ Times are UTC.
 - Found while testing: a reload in the same tab may run a script from the browser's memory cache while the server's
   max-age (600 s on Pages) holds; that is the browser, not the worker (a new page, no-cache or the cache disabled
   show the update), so the browser test launches each time in a new page with the browser cache off.
-- Tests: tests/e2e/sw.py 51/0 (offline launch with the server stopped: boot, the saved record, a Rotate item played
+- Tests: tests/e2e/sw.py 52/0 (offline launch with the server stopped, then a same-tab reload: boot, the saved record, a Rotate item played
   and logged; the copy's 213 files and names; updates with and without a new version number; a new sw.js keeps the
   copy; never registered from file://, a same-origin frame, srcdoc frames, the single-file build at the top or from
   file://; no console errors anywhere). tests/node/sw.test.mjs 29/0 (the same rules on fakes, for CI: what it answers,

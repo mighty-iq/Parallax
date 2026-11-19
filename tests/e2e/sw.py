@@ -243,6 +243,10 @@ def part_offline(b, C, single):
          f'{tag}: the saved record is untouched and still saved in this browser')
     play_one(page, C, tag)
     page.screenshot(path=str(OUT / 'offline_rotate_390.png'))
+    page.reload()
+    boot(page)
+    C.ok(page.evaluate('!!navigator.serviceWorker.controller') and page.evaluate('PX.version') == version and page.evaluate('PX.core.store.state.trials.length') == 1,
+         f'{tag}: a reload in the same tab, still offline, boots too, with the answer kept')
     errs = errors_of(cons)
     C.ok(not errs, f'{tag}: no console errors, online or offline', str(errs[:4]))
     # a page of the scope that is not the app goes to the network: offline it does not load
