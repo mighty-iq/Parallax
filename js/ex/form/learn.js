@@ -89,6 +89,10 @@
       matchAlone: '3/3 · Check each solid left: only solid {n} has the same faces beside A. Folded up, the pattern is solid {n}.',
       halfCorner: '2/3 · A half-shaded face also shows which way it is turned: its shaded corner (dotted) touches the same faces once folded.',
       matchHalf: '3/3 · Only solid {n} has the half mark turned that way. Folded up, the pattern is solid {n}.',
+      // the worked example of a half mark, numbered on its own
+      exHalf: '1/3 · A half-shaded face also shows which way it is turned: its shaded corner (dotted) touches the same faces once folded.',
+      exMirror: '2/3 · Solid {n} is the mirror image: its half mark is turned the other way (see {f}).',
+      exMatch: '3/3 · Only solid {n} has the half mark turned that way. Folded up, the pattern is solid {n}.',
       whyShape: 'Solid {n} is the wrong size: the marked edge is {dir} than the same edge in the pattern.',
       whyShapeAny: 'Solid {n} is the wrong size: one of its edges has another length than in the pattern.',
       whyMarks: 'Solid {n}: the face marked {f} cannot look like that once the pattern is folded.',
