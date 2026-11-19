@@ -62,3 +62,12 @@ lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.md.
   chance + 10 at single levels (KNOWN list, requests.md 18 Nov 23:47 UTC); 8 exercises without exports (owners).
 - ENGINE.md §19 written (before §20). Open: the lead's call on the cap (0.75 kept, recommended) and on the KNOWN
   cells; W2-core's lastRated and Speed reference time (requests 22:11 UTC).
+
+## 2026-11-19 02:03 UTC: the lead's task from review RV-wave2 #2 (Nets, Slice, Fold)
+- Nets a8ec289: 'opposite' by class weights per shape × faces-between cell (grid search), concave corners a tenth of
+  the first squares-carried level's yes pairs, long rows rarer at the 1-4-1 cube level; worst level +8.8; scoped:
+  1-4-1 with three faces between (structural, held at 55 %).
+- Slice 8515626: larger foil pool, heavier weights; others within +9.5; scoped: "the roundest"/"the fullest" at the
+  first cut level and for joined solids (36–37 %, held at 40 %).
+- Fold 507e597: half a rank for key ties at the extremes ("most like the others" +11.0 → +2.0); scoped: one fold
+  (structural, held at 48 %). shortcut-levels 37/0 on 12 exercises; KNOWN empty; no version bumps.
