@@ -1272,7 +1272,12 @@
   // calibrated (30 Oct, 1 080 items over all levels) so that each solver lands on the key about one
   // time in four over the pool: items where a solver cannot be stopped from picking the key (a
   // square or circular key is always among the roundest) are offset by lower targets elsewhere.
-  var BAL = { t: [0.3, 0.18, 0.05, 0.15, 0.15, 0, 0.05], w: [1.5, 2, 3, 1, 1, 4, 2] };
+  var BAL = { t: [0.3, 0.18, 0.05, 0.15, 0.15, 0, 0.05], w: [1.5, 2.5, 4, 1.5, 1.5, 5, 3], cuts: 12, sols: 8, pool: 13 };
+  var BAL0 = { t: BAL.t, w: [1.5, 2.5, 4, 1.5, 1.5, 7, 5], cuts: 12, sols: 8, pool: 13 };
+  // v1.2: the targets per setting (structure × cut × curved, in that order), calibrated so that each solver
+  // lands on the key about one time in four at every level of every dimension (tests/node/shortcut-levels
+  // .test.mjs); lib._balance(table) replaces them for a recalibration.
+  var BAL_T = [];
   // Tie tolerances of the shortcut solvers (IoU, summed raster agreement, aspect ratio); the
   // descriptor distances tie within 3 % of the largest.
   var TIE = { sil: 0.03, raster: 0.03, aspect: 0.06, fill: 0.03 };
@@ -1296,8 +1301,12 @@
     if (pr.proj) admit(pr.proj);
     // Neighbouring problems: the same solid cut through the same point at other angles, related
     // solids cut by the same plane; each followed by its egocentric view.
-    var cuts = r2.shuffle(neighbourNormals(r2, pr.structure)).slice(0, 9), sols = r2.shuffle(relatedSolids(pr.solid, r2.fork('related'))).slice(0, 5);
-    for (var q = 0; q < Mth.max(cuts.length, sols.length) && pool.length < 9; q++) {
+    // v1.2 (rule 5 per level): at the first cut level the key is often a rectangle or a round outline (a cut
+    // along an axis), which "the fullest" and "the roundest" find unless a foil ties with it; there the pool
+    // takes more neighbours (BAL0) and the pair choice weighs those two solvers more.
+    var B = pr.cut === 0 ? BAL0 : BAL, Wt = B.w;
+    var cuts = r2.shuffle(neighbourNormals(r2, pr.structure)).slice(0, B.cuts), sols = r2.shuffle(relatedSolids(pr.solid, r2.fork('related'))).slice(0, B.sols);
+    for (var q = 0; q < Mth.max(cuts.length, sols.length) && pool.length < B.pool; q++) {
       var o = null;
       if (q < sols.length) {
         var s2 = sols[q], c = cutSolid(s2, solidMeshes(s2, memo), pr.p, pr.n, s2.structure === 'embedded' ? 2 : 1, 0.06);
@@ -1317,12 +1326,13 @@
     // Shortcut targets, drawn per item: each cheap solver should land on the key one time in four
     // over the pool, so the pair of foils is chosen to make each solver pick the key (or not) as drawn.
     var T = shortcutTables(pool, silhouetteGrid(pr.solid, SMALL)), want = [], k;
-    for (k = 0; k < SHORTCUTS.length; k++) want.push(r2.chance(BAL.t[k]) ? 1 : 0);
+    var tgt = BAL_T[(pr.structure * 3 + pr.cut) * 2 + pr.curved] || B.t;
+    for (k = 0; k < SHORTCUTS.length; k++) want.push(r2.chance(tgt[k]) ? 1 : 0);
     var idx = r2.shuffle(pool.map(function (_, i) { return i; }).slice(2)), pairs = [];
     for (var a = 0; a < idx.length; a++) {
       for (var b = a + 1; b < idx.length; b++) {
         var sh = shortcutShares([0, 1, idx[a], idx[b]], T), score = pool[idx[a]].kind === pool[idx[b]].kind ? 0.1 : 0;
-        for (k = 0; k < sh.length; k++) score += BAL.w[k] * Mth.abs(sh[k] - want[k]);
+        for (k = 0; k < sh.length; k++) score += Wt[k] * Mth.abs(sh[k] - want[k]);
         pairs.push({ set: [0, 1, idx[a], idx[b]], score: score, order: pairs.length });
       }
     }
@@ -1657,6 +1667,7 @@
     lib: {
       markOk: markOk, markEdges: markEdges, markCut: markCut, produceOk: markOk, // v1.2 wave 2 (W2-bets): the mark variant
       VIEW: VIEW, DIFF: DIFF, GRID: GRID, GRID_R: GRID_R, stats: stats,
+      _balance: function (table) { var old = BAL_T; BAL_T = table || []; return old; }, // v1.2: recalibration of BAL_T
       sincos: sincos, atan2: atan2, solidRot: solidRot, solidMeshes: solidMeshes, primitiveMesh: primitiveMesh,
       meshSection: meshSection, planeFrame: planeFrame, sectionOf: sectionOf, flatLoops: flatLoops,
       normalize: normalize, describe: describe, distinct: distinct, ddist: ddist, obb: obb, hull: hull, area2: area2,
