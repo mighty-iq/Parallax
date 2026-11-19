@@ -1,4 +1,15 @@
-/* PR-1 Cube Match (probe): are two drawings of a cube with oriented symbols the same cube?
+/* PR-1 Cube Match (probe), version 2 (v1.2, W2-measure; PLAN milestone 6's probe upgrades, note M1 §4.3): which of four
+   drawings shows the reference cube, turned? One option is the cube turned by a turn of the level's class; each of the
+   other three is a turned drawing with one difference of the level's kind (two drawn faces swapped, or one shared
+   symbol turned), so no cube that agrees with the reference fits it. Against cheap answers (tests/node/cubematch.test):
+   where the class has four or more turns (quarter, two-step), every option comes from a different turn, so the key is
+   not the centre of the others; for spin (two turns) and flip (three) the options come as two pairs one difference
+   apart (the key and a foil on one turn; a foil and a second foil made from it on another turn), so both pairs look
+   alike. Version 1 (1.0–1.1) asked "same or different?" of one pair of drawings; its range is in def.past, and the
+   trend keeps the two versions apart (CONTRACT-v1.2; js/engine/trend.js). The notes below describe the shared
+   machinery (cube, symbols, turns, differences, the independent solver).
+
+   Version 1's task, kept for the record: are two drawings of a cube with oriented symbols the same cube?
    Pure (ARCHITECTURE.md §5); PLAN.md §4; research/B-tasks.md §3 and §14b (P1). Never trained, no feedback.
 
    Task. A cube carries six different symbols, one per face, each with a visible orientation. Two drawings
@@ -312,27 +323,129 @@
     return null;
   }
 
+  var N_OPT = 4;
+  // What a glance at one option against the reference gives without turning anything: how many shared symbols sit
+  // in their reference slot, and how many point as they did there. A foil keeps its own turned drawing's values, so
+  // these never single out the key. Spin and flip with swaps are tight: three faces (spin) or two traded faces (flip)
+  // leave few arrangements, so a spin swap takes two swaps to keep the first value, and the pairs still make "how
+  // like the other options" find the key about half the time at those two cells (a scoped exception, DECISIONS
+  // 2026-11-19; tests/node/cubematch.test.mjs reports them; pooled over the probe every cheap answer stays within
+  // chance + 10 points, as in version 1).
+  function feats(ref, v) {
+    var st = 0, la = 0;
+    SLOTS.forEach(function (s2) {
+      var at = null;
+      SLOTS.forEach(function (u) { if (ref[u].sym === v[s2].sym) at = u; });
+      if (at === null) return;
+      if (at === s2) st++;
+      if (ref[at].rot === v[s2].rot) la++;
+    });
+    return st + ':' + la;
+  }
+  function rotsInPlace(ref, v) { return SLOTS.filter(function (s2) { return v[s2].rot === ref[s2].rot; }).length; }
+  function applyChange(v, c) {
+    var o = copyView(v);
+    if (c.kind === 'swap') { var t = o[c.slots[0]]; o[c.slots[0]] = o[c.slots[1]]; o[c.slots[1]] = t; }
+    else o[c.slot].rot = (o[c.slot].rot + c.by) % 360;
+    return o;
+  }
+  // A foil from drawing v (base: the turned drawing whose glance values it must keep): one difference of the kind,
+  // or for swaps, when no single one keeps the values, two. Returns { view, changes } or null.
+  function alterLike(r, ref, v, base, kind, plain) {
+    var want = feats(ref, base), singles = [];
+    if (kind === 'swap') {
+      [['top', 'front'], ['top', 'right'], ['front', 'right']].forEach(function (pr) {
+        if (inView(ref, v[pr[0]].sym) || inView(ref, v[pr[1]].sym)) singles.push({ kind: 'swap', slots: pr });
+      });
+    } else {
+      SLOTS.forEach(function (s2) {
+        if (!inView(ref, v[s2].sym)) return;     // a symbol never seen before may point anywhere
+        [90, 180, 270].forEach(function (by) {
+          if (strokeDiff(v[s2].sym, by / 90, v[s2].sym) >= MIN_TURN) singles.push({ kind: 'turn', slot: s2, by: by });
+        });
+      });
+    }
+    var cands = r.shuffle(singles).map(function (c) { return [c]; });
+    if (plain) { // quarter and two-step turns: one difference, as in version 1 (four different turns already hide the key);
+      // first choice for swaps: one that keeps the count of faces turned as in the reference's same place
+      for (var pp = 0; pp < 2; pp++) {
+        for (var q = 0; q < cands.length; q++) {
+          var x = applyChange(v, cands[q][0]);
+          if (fits(ref, x).length || (pp === 0 && kind === 'swap' && rotsInPlace(ref, x) !== rotsInPlace(ref, v))) continue;
+          return { view: x, changes: [cands[q][0]] };
+        }
+      }
+      return null;
+    }
+    if (kind === 'swap') {
+      var doubles = [];
+      singles.forEach(function (a) { singles.forEach(function (b) { if (a !== b) doubles.push([a, b]); }); });
+      cands = cands.concat(r.shuffle(doubles));
+    }
+    var spinSwap = kind === 'swap' && SLOTS.every(function (s2) { return inView(ref, base[s2].sym); }) && feats(ref, base).charAt(0) === '0';
+    for (var pass = 0; pass < (spinSwap ? 2 : 1); pass++) {
+      for (var i = 0; i < cands.length; i++) {
+        var w = v;
+        cands[i].forEach(function (c) { w = applyChange(w, c); });
+        if (sameView(w, v) || fits(ref, w).length) continue;
+        var f = feats(ref, w);
+        if (pass === 0 ? f !== want : f.split(':')[1] !== want.split(':')[1]) continue;
+        return { view: w, changes: cands[i].map(function (c) { return c.kind === 'swap' ? { kind: 'swap', slots: c.slots.slice() } : { kind: 'turn', slot: c.slot, by: c.by }; }) };
+      }
+    }
+    return null;
+  }
   function generateOnce(r, p) {
-    var pool = POOL_KEYS[p.glyphs], cls = ROT_LEVELS[p.rotation];
+    var pool = POOL_KEYS[p.glyphs], cls = ROT_LEVELS[p.rotation], kind = CHANGE_LEVELS[p.change];
     var symbols = r.shuffle(POOLS[pool]).slice(0, 6);
     var cube = symbols.map(function (sym, f) { return { sym: sym, up: r.pick(perpDirs(f)).slice() }; });
-    var M = r.pick(CLASS_ROTS[cls]);
-    var v1 = drawView(cube, I3), v2 = drawView(cube, M), change = null;
-    var same = r.chance(0.5);
-    if (!same) {
-      var alt = alter(r, v1, v2, CHANGE_LEVELS[p.change]);
-      if (!alt) return null;
-      v2 = alt.view;
-      change = alt.change;
+    var ref = drawView(cube, I3), rots = CLASS_ROTS[cls], key, i, a;
+    var opts = new Array(N_OPT), turns = new Array(N_OPT), changes = new Array(N_OPT);
+    if (rots.length >= N_OPT) { // four different turns: the key is not the centre of the others
+      var pick = r.shuffle(rots.slice()).slice(0, N_OPT);
+      key = r.int(0, N_OPT - 1);
+      for (i = 0; i < N_OPT; i++) {
+        turns[i] = pick[i];
+        var v = drawView(cube, pick[i]);
+        if (i === key) { opts[i] = v; changes[i] = null; continue; }
+        a = alterLike(r, ref, v, v, kind, true);
+        if (!a) return null;
+        opts[i] = a.view; changes[i] = a.changes;
+      }
+    } else { // spin and flip: two pairs one difference apart (the key and a foil; a foil and one made from it)
+      var Ma = r.pick(rots), Mb = r.pick(rots.filter(function (M) { return M !== Ma; }));
+      var pos = r.shuffle([0, 1, 2, 3]);
+      key = pos[0];
+      var va = drawView(cube, Ma), vb = drawView(cube, Mb), fa = alterLike(r, ref, va, va, kind), b1 = alterLike(r, ref, vb, vb, kind);
+      if (!fa || !b1) return null;
+      var b2 = alterLike(r, ref, b1.view, vb, kind);
+      if (!b2 || sameView(b2.view, vb)) return null;
+      opts[pos[0]] = va; turns[pos[0]] = Ma; changes[pos[0]] = null;
+      opts[pos[1]] = fa.view; turns[pos[1]] = Ma; changes[pos[1]] = fa.changes;
+      opts[pos[2]] = b1.view; turns[pos[2]] = Mb; changes[pos[2]] = b1.changes;
+      opts[pos[3]] = b2.view; turns[pos[3]] = Mb; changes[pos[3]] = b1.changes.concat(b2.changes);
     }
-    return { key: same, pool: pool, symbols: symbols.slice().sort(), views: [v1, v2], cube: cube, turn: { cls: classOf(M), m: M.slice() }, change: change };
+    for (i = 0; i < N_OPT; i++) for (var j = i + 1; j < N_OPT; j++) if (sameView(opts[i], opts[j])) return null;
+    return { key: key, pool: pool, symbols: symbols.slice().sort(), ref: ref, options: opts, cube: cube,
+      turn: { cls: classOf(turns[key]), m: turns[key].slice() }, turns: turns.map(function (M) { return M.slice(); }), changes: changes };
   }
 
   /* ------------------------------------------------------------------ validate and score */
   var ROT_VALUES = [0, 90, 180, 270];
+  function viewProblem(v, syms, what) {
+    var seen = {};
+    for (var j = 0; j < 3; j++) {
+      var face = v && v[SLOTS[j]];
+      if (!face || syms.indexOf(face.sym) < 0) return what + ' shows a symbol that is not on the cube';
+      if (ROT_VALUES.indexOf(face.rot) < 0) return what + ' has a bad rot';
+      if (seen[face.sym]) return what + ' shows a symbol twice';
+      seen[face.sym] = true;
+    }
+    return null;
+  }
   function validate(item) {
     if (!item || item.ex !== 'cubematch') return 'not a cubematch item';
-    var p = cleanParams(item.params), pool = POOL_KEYS[p.glyphs], cls = ROT_LEVELS[p.rotation], syms = item.symbols, i, j, k;
+    var p = cleanParams(item.params), pool = POOL_KEYS[p.glyphs], cls = ROT_LEVELS[p.rotation], kind = CHANGE_LEVELS[p.change], syms = item.symbols, i, j, k;
     if (item.pool !== pool) return 'the pool does not match the glyphs level';
     if (!Array.isArray(syms) || syms.length !== 6) return 'a cube needs six symbols';
     for (i = 0; i < 6; i++) {
@@ -341,40 +454,31 @@
       for (k = 1; k < 4; k++) if (strokeDiff(syms[i], k, syms[i]) < MIN_TURN) return 'symbol ' + syms[i] + ' looks the same turned';
       for (j = i + 1; j < 6; j++) if (glyphDist(syms[i], syms[j]) < MIN_PAIR[pool]) return 'symbols ' + syms[i] + ' and ' + syms[j] + ' are too alike';
     }
-    if (!Array.isArray(item.views) || item.views.length !== 2) return 'two drawings are needed';
-    for (i = 0; i < 2; i++) {
-      var seen = {};
-      for (j = 0; j < 3; j++) {
-        var face = item.views[i] && item.views[i][SLOTS[j]];
-        if (!face || syms.indexOf(face.sym) < 0) return 'drawing ' + (i + 1) + ' shows a symbol that is not on the cube';
-        if (ROT_VALUES.indexOf(face.rot) < 0) return 'drawing ' + (i + 1) + ' has a bad rot';
-        if (seen[face.sym]) return 'drawing ' + (i + 1) + ' shows a symbol twice';
-        seen[face.sym] = true;
+    if (!Array.isArray(item.options) || item.options.length !== N_OPT) return 'four options are needed';
+    if (!Number.isInteger(item.key) || item.key < 0 || item.key >= N_OPT) return 'the key is not an option';
+    var bad = viewProblem(item.ref, syms, 'the reference');
+    if (bad) return bad;
+    for (i = 0; i < N_OPT; i++) { bad = viewProblem(item.options[i], syms, 'option ' + (i + 1)); if (bad) return bad; }
+    if (!Array.isArray(item.cube) || item.cube.length !== 6 || !sameView(drawView(item.cube, I3), item.ref)) return 'the reference does not show the cube';
+    for (i = 0; i < N_OPT; i++) {
+      var o = item.options[i], shared = SLOTS.filter(function (s2) { return inView(item.ref, o[s2].sym); }).length;
+      if (shared !== SHARED[cls]) return 'option ' + (i + 1) + ' shares ' + shared + ' symbols; level ' + cls + ' needs ' + SHARED[cls];
+      var hits = solve(item.ref, o);
+      if (i === item.key) {
+        if (hits.length !== 1) return 'the key fits ' + hits.length + ' turns';
+        if (LEVEL_CLASSES[cls].indexOf(classOf(hits[0])) < 0) return 'the key\'s turn is a ' + classOf(hits[0]) + ' turn, not level ' + cls;
+        if (!item.turn || !sameView(drawView(item.cube, item.turn.m), o)) return 'the key is not the cube turned';
+      } else {
+        if (hits.length) return 'option ' + (i + 1) + ' fits a turn of the cube';
+        var ch = item.changes && item.changes[i];
+        if (!Array.isArray(ch) || !ch.length || !ch.every(function (c) { return c && c.kind === kind; })) return 'option ' + (i + 1) + ' needs a ' + kind + ' difference';
       }
-    }
-    var v1 = item.views[0], v2 = item.views[1];
-    if (!Array.isArray(item.cube) || item.cube.length !== 6 || !sameView(drawView(item.cube, I3), v1)) return 'the first drawing does not show the cube';
-    var shared = SLOTS.filter(function (s) { return inView(v1, v2[s].sym); }).length;
-    if (shared !== SHARED[cls]) return 'the drawings share ' + shared + ' symbols; level ' + cls + ' needs ' + SHARED[cls];
-    var hits = solve(v1, v2), same = hits.length > 0;
-    if (same !== item.key) return 'the key says ' + (item.key ? 'same' : 'different') + ' but ' + hits.length + ' turns fit';
-    if (same) {
-      if (hits.length !== 1) return 'more than one turn fits';
-      if (LEVEL_CLASSES[cls].indexOf(classOf(hits[0])) < 0) return 'the fitting turn is a ' + classOf(hits[0]) + ' turn, not level ' + cls;
-      if (item.change !== null) return 'a same item has a change';
-      if (!sameView(drawView(item.cube, item.turn.m), v2)) return 'the second drawing does not show the cube turned';
-    } else {
-      var c = item.change, kind = CHANGE_LEVELS[p.change];
-      if (!c || c.kind !== kind) return 'a different item needs a ' + kind + ' change';
-      if (kind === 'turn') {
-        if (!inView(v1, v2[c.slot].sym)) return 'the turned symbol is not shared';
-        if (strokeDiff(v2[c.slot].sym, c.by / 90, v2[c.slot].sym) < MIN_TURN) return 'the turn is not visible';
-      } else if (!inView(v1, v2[c.slots[0]].sym) && !inView(v1, v2[c.slots[1]].sym)) return 'the swap moves no shared symbol';
+      for (j = i + 1; j < N_OPT; j++) if (sameView(o, item.options[j])) return 'options ' + (i + 1) + ' and ' + (j + 1) + ' are the same drawing';
     }
     return true;
   }
 
-  function score(item, response) { return { correct: response === item.key }; }
+  function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
 
   var stats = { tries: 0, nulls: 0, invalid: 0, fallbacks: 0, lastInvalid: null };
   function attempt(r, p) {
@@ -406,17 +510,20 @@
   }
 
   PX.ex.define({
-    id: 'cubematch', version: 1, code: 'PR-1', name: 'Cube Match', short: 'Cube Match',
-    abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'yesno',
-    format: 'cubematch:symbol-cubes-same-different', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
+    id: 'cubematch', version: 2, code: 'PR-1', name: 'Cube Match', short: 'Cube Match',
+    abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: N_OPT,
+    format: 'cubematch:symbol-cubes-four-options', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
+    // version 1 (same or different, 1.0–1.1): its difficulty range, so the trend can read 1.1's entries (js/engine/assess.js)
+    past: { 1: { min: -2.1, max: 2.1 } },
     // Hand-set item model (DJ, no pilot yet): base + Σ step × level, 4.2 logits wide.
     dims: [
       { key: 'rotation', label: 'Rotation', levels: ['spin, 3 faces shared', 'quarter turn, 2 shared', 'edge flip, 2 shared', 'two-step turn, 1 shared'], step: 0.7 },
       { key: 'change', label: 'Difference', levels: ['swapped symbols', 'turned symbol'], step: 0.8 },
       { key: 'glyphs', label: 'Symbols', levels: ['shapes', 'letters', 'similar'], step: 0.65 },
     ],
-    base: -2.1,
-    timeLimit: function () { return 30000; },
+    base: -1.8,
+    chance: function () { return 0.25; },
+    timeLimit: function () { return 40000; },
     generate: generate,
     validate: validate,
     score: score,
@@ -425,7 +532,7 @@
       DIRS: DIRS, SLOTS: SLOTS, SLOT_DIR: SLOT_DIR, FRAME: FRAME, ROT_LEVELS: ROT_LEVELS, CHANGE_LEVELS: CHANGE_LEVELS,
       SHARED: SHARED, LEVEL_CLASSES: LEVEL_CLASSES, ROTS: ROTS, VROTS: VROTS, CLASS_ROTS: CLASS_ROTS, classOf: classOf, drawView: drawView,
       upOf: upOf, slotRot: slotRot, fits: fits, solve: solve, strokeDiff: strokeDiff, glyphDist: glyphDist,
-      cleanParams: cleanParams, generateOnce: generateOnce, fallback: fallback, stats: stats,
+      cleanParams: cleanParams, generateOnce: generateOnce, fallback: fallback, stats: stats, N_OPT: N_OPT, sameView: sameView,
     },
   });
 })(window.PX);

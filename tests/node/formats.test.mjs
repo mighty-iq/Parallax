@@ -24,7 +24,8 @@ export const RESERVED = {
   },
   mechanisms: { 'mechanisms:gears-belts-pulleys': 'gears, belts and pulleys' },
   level: { 'level:liquid-plumb-tilted-frame': 'liquid surfaces and plumb lines in tilted frames' },
-  cubematch: { 'cubematch:symbol-cubes-same-different': 'cubes with oriented symbols, same or different' },
+  cubematch: { 'cubematch:symbol-cubes-same-different': 'cubes with oriented symbols, same or different (version 1)',
+    'cubematch:symbol-cubes-four-options': 'cubes with oriented symbols: which of four is the reference turned (version 2)' },
   viewmatch: { 'viewmatch:scene-from-marked-spot': 'perspective pictures of a scene from a marked spot' },
   patterns: { 'patterns:grid-pattern-recall': 'grid patterns shown briefly, then recalled' },
   wordlinks: { 'wordlinks:word-analogy': 'word analogies' },
@@ -55,7 +56,7 @@ export async function run(t) {
   const PX = env.PX;
   const all = new Map();
   for (const [probe, ids] of Object.entries(RESERVED)) for (const id of Object.keys(ids)) all.set(id, probe);
-  t.ok(all.size === 17 && [...all.keys()].every((id) => /^[a-z]+:[a-z-]+$/.test(id) && id.startsWith(all.get(id) + ':')), 'the frozen list: 17 ids, each named after its probe');
+  t.ok(all.size === 18 && [...all.keys()].every((id) => /^[a-z]+:[a-z-]+$/.test(id) && id.startsWith(all.get(id) + ':')), 'the frozen list: 18 ids (Cube Match keeps its version-1 format), each named after its probe');
 
   t.section('probes declare their reserved formats');
   const probes = PX.ex.list('probe');
