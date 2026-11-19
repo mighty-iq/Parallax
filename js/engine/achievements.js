@@ -179,7 +179,10 @@
       // Five targets only count among ten spheres: with fewer, five targets is the same task as
       // tracking the fewer distractors.
       if (id === 'track' && vals.targets >= 5 && vals.spheres >= 10) s.track5 = 1;
-      if (!s.hardest) {
+      // v1.2 (W3-game): not from the Daily, whose ramp deals an item from the hardest tenth to everyone every
+      // day (a guess there would pay for coming back, not for skill); Train, Path, Speed, Free play and the Climb
+      // reach it only through the player's own level
+      if (!s.hardest && mode !== 'daily') {
         var rg = E.model.range(def);
         if (def.difficulty(p) >= rg.min + 0.9 * (rg.max - rg.min) - 1e-9) s.hardest = 1;
       }
