@@ -44,3 +44,14 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   chapter 1 rewritten as "What Parallax is" (trains, bets, measures; what the numbers and labels mean; how we word
   claims). The run head reads 1.2.0. Page references to pages still to write (ex-centralpoint, dims, plateaus,
   check) read "?" until those pages exist.
+- 2026-11-19 12:34 UTC, guide step 2: chapter 2 (the first session: one tutorial, then Baseline 1 or
+  Later, then Train; Baseline 2 and the blocks; a first week; a session with the stretch ring, cards between items
+  and the 1.2 summary; phones: Progress tabs, the pinned reading strip, Confirm taps; Settings as the app's
+  sections). Chapter 3: the ability codes (LE for Central Point, MA for both far probes), the 2 × 2 now reaches all
+  four cells (Central Point's def.cell is extrinsic-static; Pattern Memory and Level stay untrained there), a
+  "Bet" line on every card (def.bet and the hosted layers), Views' starter level, Homing's map from the start,
+  Reckon version 2 and motion comfort on the navigation page (play.js MOTION 180 000 / 300 000 ms; gentle 2/3 speed,
+  0.6 s ramps, 40 s), Central Point's page (new: card, the method, why the average is not the answer, what is known),
+  the DAT-style section (range tags; the focus; one limit with the validity study as context) with the six formats as
+  full cards, two a page (version 3 of Openings, Angles, Hole Punch, Painted Cubes and Form from the definitions'
+  dims and testRange; Missing View drafted from the working copy's version 3, to be checked last).
