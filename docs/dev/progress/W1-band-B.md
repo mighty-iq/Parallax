@@ -82,6 +82,15 @@ Design source: docs/research/v1.2/D2-first-band.md §3.0, §3.4–3.9, §4. Requ
   level in all four (10 000+ items per level, every share within 1 point of chance, smallest p above the
   Bonferroni line; Missing View rerun at version 3 below).
 - 12:21 UTC: Missing View phase B step 1 (8135ac4): profile solids built and validated (dormant).
+- 12:57–13:10 UTC: Missing View version 3 dealt (0f8a7cd, c59a9d8; DECISIONS cae4cf6, d7e7b49): cube stacks below the format,
+  profile solids in the test range (steps and notches, a hole through, slopes, round holes), the 2 × 2 options, the
+  format's look, show me's pictorial; node patviews 378/0 (8,064 solids: cheap solvers 24–26 %), shortcut-levels
+  193/0, harness 237/0, fit 360 × 640 and 390 × 844 17/17; the key's letter uniform per level (two runs of 70,056).
+- 13:24 UTC: the Library's phrases for Openings' turn, Hole Punch's sheets and the version 3 dims of Missing View and
+  Form (7b8697e, at the coordinator's word; flows.py today 12/0).
+- 13:44 UTC: O29 (84e50bc, DECISIONS 51de229): Openings' validator checks feature visibility by featuresShown (fill
+  the feature in, cast rays), independent of featuresSeen, which is now conservative; node openings 346/0,
+  shortcut-levels openings 193/0, harness_openings 154/0, harness_starter_b 66/0.
 
 ## Next
 - Form's fresh-player rerun (the lead's); fix what it finds once.
