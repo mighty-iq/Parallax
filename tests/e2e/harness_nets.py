@@ -48,8 +48,9 @@ def net_ok(target, tag):
     }""")
     C.ok(d['n'] == 6 and d['names'] == d['want'], f'{tag}: six named squares ({d["names"]})')
     C.ok(d['hinges'] == 5 if not d['block'] else d['hinges'] > 5, f'{tag}: every join of two squares drawn as a dashed fold ({d["hinges"]})')
-    want = {'opposite': (1, 0, 0), 'edges': (0, 2, 1), 'cube': (0, 0, 0)}[d['variant']]
-    C.ok((d['marked'], d['edges'], d['base']) == want, f'{tag}: the variant\'s marks (frame, thick edges, shaded base: {(d["marked"], d["edges"], d["base"])})')
+    # v1.2 (W3-exfix): the square that stays down is shaded in 'opposite' too (no thick frame: one name, one look)
+    want = {'opposite': (0, 0, 1), 'edges': (0, 2, 1), 'cube': (0, 0, 0)}[d['variant']]
+    C.ok((d['marked'], d['edges'], d['base']) == want, f'{tag}: the variant\'s marks (old frame, thick edges, shaded square: {(d["marked"], d["edges"], d["base"])})')
 
 
 def options_ok(target, tag):

@@ -1,6 +1,6 @@
 /* EX-05 Nets: drawing for the add-on layers (v1.2 wave 2, W2-bets; js/ex/nets/layers.js).
    PX.ui.betsViews.nets.solved(host, item, opts) draws a solved 'opposite' net: six named squares, the
-   marked one shaded, its opposite ringed and ticked; mark(true) draws the Z of four squares from one to
+   shaded square shaded, its opposite ringed and ticked; mark(true) draws the Z of four squares from one to
    the other. Ink and green only (never the accent). */
 (function (PX) {
   'use strict';
@@ -23,7 +23,7 @@
       var side = Math.max(w, hgt) + 0.6;
       var vb = [x0 - (side - w) / 2, y0 - (side - hgt) / 2, side, side].map(function (v) { return v.toFixed(3); }).join(' ');
       var svg = E('svg', { viewBox: vb, class: 'px-bets-fig bets-nets', role: 'img',
-        'aria-label': 'A net of six squares: the marked square ' + sq[item.marked].name + ' and its opposite square ' + (opp >= 0 ? sq[opp].name : '') + ', ticked' });
+        'aria-label': 'A net of six squares: the shaded square ' + sq[item.marked].name + ' and its opposite square ' + (opp >= 0 ? sq[opp].name : '') + ', ticked' });
       sq.forEach(function (q, i) { svg.appendChild(E('rect', { x: q.x, y: q.y, width: 1, height: 1, class: 'bets-nets-sq' + (i === item.marked ? ' is-marked' : '') })); });
       // the rule under the names: the Z of four squares
       var markG = E('g', { class: 'bets-nets-markg' });

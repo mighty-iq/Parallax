@@ -1,7 +1,8 @@
 /* EX-05 Nets: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
    layout 'stem+options': the stem is the net (six coloured, named squares; folds dashed, cut
-   edges solid) with the variant's marks: 'opposite' a thick frame on the marked square and four
-   face swatches as options; 'edges' the shaded base square and two thick edges, Yes / No;
+   edges solid) with the variant's marks: 'opposite' the shaded square (it stays on the table) and four
+   face swatches as options; 'edges' the shaded square and two thick edges, Yes / No (v1.2, W3-exfix:
+   one name and one look for that square; 'opposite' drew a thick frame and called it the marked face);
    'cube' the bare net, Yes / No. Yes/no items are 2-option choices (item.format 'yesno',
    option 1 = Yes); the grid sizes itself from item.options.length.
    - Show me folds the net into a cube along the item's own fold tree (def.lib.foldPose, the
@@ -68,7 +69,7 @@
       at[q.x + ',' + q.y] = i;
       var g = S.el('g', { class: 'ex-nets-sqg', 'data-sq': i });
       g.appendChild(S.el('rect', { x: q.x, y: q.y, width: 1, height: 1, class: 'ex-nets-sq ex-nets-c' + q.colour }));
-      if (v === 'edges' && i === item.base) g.appendChild(S.el('rect', { x: q.x, y: q.y, width: 1, height: 1, fill: 'url(#' + hatch + ')', class: 'ex-nets-base' }));
+      if (v !== 'cube' && i === item.base) g.appendChild(S.el('rect', { x: q.x, y: q.y, width: 1, height: 1, fill: 'url(#' + hatch + ')', class: 'ex-nets-base' }));
       g.appendChild(S.text(q.x + 0.5, q.y + 0.5, q.name, { class: nameCls('ex-nets-name', q.name) }));
       svg.appendChild(g);
       return g;
@@ -85,9 +86,10 @@
     svg.appendChild(S.el('path', { d: hinges, class: 'ex-nets-hinge' }));
     svg.appendChild(S.el('path', { d: cuts, class: 'ex-nets-cut' }));
     var marks = S.el('g', { class: 'ex-nets-marks' });
-    if (v === 'opposite') {
-      var mq = item.squares[item.marked];
-      marks.appendChild(S.el('rect', { x: mq.x + 0.09, y: mq.y + 0.09, width: 0.82, height: 0.82, class: 'ex-nets-marked' }));
+    // the shaded square's frame shows only while the Watch points at it (.is-base)
+    if (v !== 'cube') {
+      var bq = item.squares[item.base];
+      marks.appendChild(S.el('rect', { x: bq.x + 0.09, y: bq.y + 0.09, width: 0.82, height: 0.82, class: 'ex-nets-baseframe' }));
     }
     if (v === 'edges') item.edges.forEach(function (e) { marks.appendChild(line(sideSeg(item.squares[e.sq], e.side, 0.07), 'ex-nets-edge')); });
     svg.appendChild(marks);
@@ -96,7 +98,7 @@
 
   function describe(item) {
     var base = 'A net of six squares, ' + item.squares.map(function (q) { return q.name; }).join(', ') + '. ';
-    if (item.variant === 'opposite') return base + 'Square ' + item.squares[item.marked].name + ' is marked. Which face is opposite it once the net is folded into a cube?';
+    if (item.variant === 'opposite') return base + 'Square ' + item.squares[item.marked].name + ' is shaded. Which face is opposite it once the net is folded into a cube?';
     if (item.variant === 'edges') {
       var e = item.edges.map(function (x) { return 'the ' + { N: 'top', E: 'right', S: 'bottom', W: 'left' }[x.side] + ' edge of square ' + item.squares[x.sq].name; });
       return base + 'Square ' + item.squares[item.base].name + ' is shaded. Do ' + e[0] + ' and ' + e[1] + ' meet once the net is folded into a cube?';
@@ -208,7 +210,7 @@
   /* ---------- reveal: the truth in place, ≤ 700 ms ---------- */
 
   function verdictText(item) {
-    if (item.variant === 'opposite') return '✓ Face ' + item.options[item.key].name + ' is opposite the marked face.';
+    if (item.variant === 'opposite') return '✓ Face ' + item.options[item.key].name + ' is opposite the shaded square.';
     var yes = item.key === 0;
     if (item.variant === 'edges') return yes ? '✓ Yes: the two thick edges meet.' : '✓ No: the two thick edges end up apart.';
     if (yes) return '✓ Yes: it folds into a cube.';
@@ -329,17 +331,16 @@
       f.poly = S.el('polygon', { class: 'ex-nets-sq ex-nets-face-poly ex-nets-c' + q.colour });
       f.shade = S.el('polygon', { class: 'ex-nets-shade' });
       g.appendChild(f.poly); g.appendChild(f.shade);
-      if (item.variant === 'edges' && i === item.base) { f.base = S.el('polygon', { class: 'ex-nets-base', fill: 'url(#' + hatch + ')' }); g.appendChild(f.base); }
+      if (item.variant !== 'cube' && i === item.base) { f.base = S.el('polygon', { class: 'ex-nets-base', fill: 'url(#' + hatch + ')' }); g.appendChild(f.base); }
       f.label = S.el('text', { x: 50, y: 50, class: nameCls('ex-nets-name3d', q.name), 'text-anchor': 'middle', 'dominant-baseline': 'central' }, q.name);
       g.appendChild(f.label);
-      if (item.variant === 'opposite' && i === item.marked) { f.mark = S.el('polygon', { class: 'ex-nets-marked' }); g.appendChild(f.mark); }
       f.hl = S.el('polygon', { class: 'ex-nets-hl' });
       g.appendChild(f.hl);
       if (item.variant === 'edges') item.edges.forEach(function (e) { if (e.sq === i) { var l = S.el('line', { class: 'ex-nets-edge' }); g.appendChild(l); f.edges.push({ side: e.side, el: l }); } });
       facesG.appendChild(g);
       return f;
     });
-    // On top: what may be hidden behind the cube, dashed (the marked face, the marked edges,
+    // On top: what may be hidden behind the cube, dashed (the shaded square, the thick edges,
     // the side a non-net leaves open).
     var xray = [];
     if (item.variant === 'edges') item.edges.forEach(function (e) { var l = S.el('line', { class: 'ex-nets-edge ex-nets-xray' }); top.appendChild(l); xray.push({ edge: e, el: l }); });
@@ -372,7 +373,6 @@
         f.label.setAttribute('transform', 'matrix(' + m.map(function (v, k) { return (k < 4 ? v / 100 : v).toFixed(4); }).join(' ') + ')');
         f.label.removeAttribute('visibility');
       }
-      if (f.mark) f.mark.setAttribute('points', inset(q, 0.09));
       f.hl.setAttribute('points', inset(q, 0.1));
       f.hl.setAttribute('visibility', cube.final && cube.hl.indexOf(o.i) >= 0 ? 'visible' : 'hidden');
       f.edges.forEach(function (e) { setLine(e.el, edgeSeg(q, e.side, 0.07)); });
@@ -427,7 +427,7 @@
       };
     }
     out.push({
-      ms: 1300, caption: cap(item.variant === 'opposite' ? 'marked' : item.variant === 'edges' ? 'base' : 'net'),
+      ms: 1300, caption: cap(item.variant === 'cube' ? 'net' : 'base'),
       enter: function () { var c = show3d(item); c.final = false; focusOption(-1); drawCube(c, S0[0], B[0]); },
     });
     out.push(tween(0, 1100, cap('tilt')));
@@ -484,17 +484,21 @@
   // Tutorial: the parts of the screen first (on the flat net), then the same folding.
   function demo(item, ctx, caption) {
     if (!st || st.item !== item) return Promise.resolve();
-    function pointAt(on, marks) {
-      st.label.classList.toggle('is-pointed', on && !marks);
-      if (st.net) st.net.marks.classList.toggle('is-pointed', !!(on && marks));
+    // what: 'label' (the stage's name), 'base' (the shaded square's frame) or 'marks' (the thick edges)
+    function pointAt(on, what) {
+      st.label.classList.toggle('is-pointed', !!on && what === 'label');
+      if (st.net) {
+        st.net.marks.classList.toggle('is-pointed', !!on && what === 'marks');
+        st.net.marks.classList.toggle('is-base', !!on && what === 'base');
+      }
     }
-    function part(ms, text, marks) {
-      return { ms: ms, caption: text, enter: function () { showNet(); focusOption(-1); pointAt(true, marks); }, exit: function () { pointAt(false); } };
+    function part(ms, text, what) {
+      return { ms: ms, caption: text, enter: function () { showNet(); focusOption(-1); pointAt(true, what); }, exit: function () { pointAt(false); } };
     }
-    var v = item.variant, intro = [part(1800, cap('net'), false)];
-    if (v === 'opposite') intro.push(part(1800, cap('marked'), true), part(1600, cap('options'), false));
-    else if (v === 'edges') intro.push(part(1800, cap('base'), false), part(1800, cap('edges'), true));
-    else intro.push(part(1600, cap('question'), false));
+    var v = item.variant, intro = [part(1800, cap('net'), 'label')];
+    if (v === 'opposite') intro.push(part(1800, cap('base'), 'base'), part(1600, cap('options'), null));
+    else if (v === 'edges') intro.push(part(1800, cap('base'), 'base'), part(1800, cap('edges'), 'marks'));
+    else intro.push(part(1600, cap('question'), 'label'));
     return play(intro.concat(steps(item)), ctx, { name: 'demo', caption: caption || null }).then(function () { if (st) focusOption(-1); });
   }
 
