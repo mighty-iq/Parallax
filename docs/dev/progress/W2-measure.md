@@ -92,3 +92,21 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   commit through a private index (requests.md line).
 - Still open: the probe upgrades as new versions (Cube Match 4 options, Mechanisms 4 natural options, Pattern Memory
   by cells).
+
+## 2026-11-19 00:50 UTC: the probe upgrades, not built (notes for whoever builds them)
+- Version change: each upgrade bumps def.version and records v1's range in `def.past` ({ 1: { min, max } }), so 1.1
+  entries still convert; the trend keeps 'id@v' apart and folds versions once per rung. Cost: a record whose
+  baselines used v1 gets a v2 trend with no pre-training anchor, so that probe adds little to its gain for weeks; new
+  records lose nothing. Decision for the lead: switch everyone (the plan's line) or pin v1 per record until its next
+  baseline-like occasion (no loss, but two item formats per probe to keep). I lean to switching: blocks rotate the
+  mid probes, so one probe's weaker anchor costs the composite little (measure-sim can confirm in minutes).
+- Cube Match with 4 options (×1.84 information): drawing the four options from one turn makes the key the centre of
+  the others (a "most like the others" vote finds it); and "look-alike" (every shared symbol keeps its turn) singles out
+  the key on spin × turned-symbol items. Remedy to test: options on distinct turns where the class has 4 or more
+  (quarter, two-step); for spin and flip, two pairs one change apart (key + foil on one turn, foil + foil on the
+  other); swap and turn foils mixed within an item so look-alike ties. Time limit about 40 s.
+- Mechanisms with 4 natural options (×1.42): direction × speed (clockwise or not, faster or slower), on items where
+  wheel size alone does not give the speed (a compound gear or belt on the path) and parity alone does not give the
+  direction; validate's exact propagation already gives both.
+- Pattern Memory by cells (×2 assumed in note M1, unverified): the trend model takes binary items; cells need a
+  binomial per item or a correlation-aware weight. Simulate it in measure-sim before building.
