@@ -145,6 +145,30 @@ def run_viewport(p, C, name, ctx_opts, rnd):
         page.screenshot(path=str(OUT / f'{name}-summary.png'), full_page=False)
         fits(page, C, name, '.gm-summary', vw)
 
+    # Daily v2 (desktop): today's Daily is a ramp with points; its share line carries them and the mark row
+    if name == 'desktop':
+        page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "daily" }, { force: true })')
+        n = 0
+        for i in range(12):
+            r = to_respond(page, C, name, 'daily')
+            if r is not True:
+                break
+            page.evaluate('PX.debug.fast(true)')
+            page.evaluate(f'PX.debug.answer({"true" if i % 3 else "false"})')
+            page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
+            if page.evaluate('__play.last ? __play.last.outcome : null') != 'stutter':  # a voided item comes back
+                n += 1
+            page.evaluate('PX.debug.fast(false); __play.next()')
+        try:
+            page.wait_for_selector('.pl-daily', timeout=15000)
+            line = page.evaluate('''Array.from(document.querySelectorAll('textarea, input')).map(e => e.value).filter(v => /Parallax Daily/.test(v))[0] || ""''')
+            pts = page.evaluate('(() => { const r = PX.core.store.state.daily[PX.engine.daily.day(Date.now())]; return r ? [r.points, r.right, r.outcomes] : null; })()')
+            want = sum(i + 1 for i, o in enumerate(pts[2]) if o == 1) if pts else None
+            C.ok(n == 8 and pts and pts[0] == want and f'{want} of 36 points' in line and 'https://discord.gg/chmr' in line, f'{name}: the Daily ramp: {n} items, points {pts and pts[0]} (1 + 2 + … for the right items), share line {line!r}')
+            page.screenshot(path=str(OUT / f'{name}-daily.png'), full_page=False)
+        except Exception as e:  # noqa: BLE001
+            C.ok(False, f'{name}: the Daily ended with its share line ({e})')
+
     # The Climb
     page.evaluate('void PX.core.router.go("climb", {}, { force: true })')
     page.wait_for_selector('[data-climb-start]', timeout=10000)
