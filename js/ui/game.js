@@ -278,7 +278,7 @@
   function reachWords() { return 'the sum of your best levels in Parallax ' + version(); }
   function gradeCard(def, g, best) {
     var b = G().band(def, g);
-    return { kind: 'level', label: 'Grade ' + g + ' · ' + nameOf(def), title: 'Grade ' + g + ' on ' + nameOf(def), lines: ['Best whole block of 10: level ' + best, 'Grade ' + g + ' is levels ' + b.lo + '–' + b.hi + ' of 1–100'], footer: 'Parallax ' + version(),
+    return { kind: 'grade', pic: { grade: g, best: best }, label: 'Grade ' + g + ' · ' + nameOf(def), title: 'Grade ' + g + ' on ' + nameOf(def), lines: ['Best whole block of 10: level ' + best, 'Grade ' + g + ' is levels ' + b.lo + '–' + b.hi + ' of 1–100'], footer: 'Parallax ' + version(),
       text: 'Parallax · grade ' + g + ' on ' + nameOf(def) + ' (best block ' + best + ', levels ' + b.lo + '–' + b.hi + ') · ' + LINK };
   }
 
@@ -489,11 +489,14 @@
       var sl = h('ul.gm-startnow', sn.slice(0, 8).map(function (x) { return h('li', h('b', nameOf(x.def)), h('span.px-num', ' ' + x.from + ' → ' + x.to)); }));
       p.body.appendChild(h('div.gm-sn', h('h3.gm-h3', 'Start versus now'), sl, h('p.px-meta', 'From your first settled level to now. Early gains include getting used to the task.')));
       p.body.appendChild(h('div.px-slot-foot', shareButton('Share start versus now', function () {
-        return { kind: 'session', label: 'Start versus now', title: 'Start versus now', lines: sn.slice(0, 5).map(function (x) { return nameOf(x.def) + ': level ' + x.from + ' → ' + x.to; }).concat(['Early gains include getting used to the task.']), footer: 'Parallax ' + version() };
+        // the picture names each exercise with its two levels; the card's line keeps the limit, and the text says it all
+        var top = sn.slice(0, 5);
+        return { kind: 'startnow', label: 'Start versus now', title: 'Start versus now', pic: { rows: top.map(function (x) { return [nameOf(x.def), x.from, x.to]; }) }, lines: ['Early gains include getting used to the task.'], footer: 'Parallax ' + version(),
+          text: ['Parallax · start versus now'].concat(top.map(function (x) { return nameOf(x.def) + ': level ' + x.from + ' → ' + x.to; }), ['Early gains include getting used to the task.', (PX.ui.chimera && PX.ui.chimera.LINE) || LINK]).join('\n') };
       }, 'startnow')));
     }
     p.body.appendChild(h('div.px-slot-foot', ui.button('Open the Atlas', { kind: 'secondary', small: true, go: 'atlas' }), ui.button('Weekly Climb', { kind: 'ghost', small: true, go: 'climb' }),
-      shareButton('Share Reach', { kind: 'session', label: 'Reach ' + R.value, title: 'Reach ' + R.value, lines: ['Reach ' + R.value + ': ' + reachWords() + '.'], footer: 'Parallax ' + version(), text: 'Parallax · Reach ' + R.value + ' (' + reachWords() + ') · ' + LINK }, 'reach')));
+      shareButton('Share Reach', { kind: 'reach', pic: { max: R.max, parts: R.parts.map(function (x) { return x.best; }) }, label: 'Reach ' + R.value, title: 'Reach ' + R.value, lines: ['Reach ' + R.value + ': ' + reachWords() + '.'], footer: 'Parallax ' + version(), text: 'Parallax · Reach ' + R.value + ' (' + reachWords() + ') · ' + LINK }, 'reach')));
     return { el: p.el, after: 'levels', order: 40 };
   }
 

@@ -305,9 +305,9 @@
       var ps = K.panel({ title: 'Share', className: 'gm-panel' });
       ps.body.appendChild(h('p', 'Your share line. Everyone climbs the same rungs this week, so heights compare fairly.'));
       ps.body.appendChild(K.copyField(text, { rows: 1, ariaLabel: 'Climb share line', label: 'Copy' }));
-      ps.body.appendChild(h('div.pl-summary-actions', GU().shareButton('Share card', { kind: 'session', label: 'Weekly Climb #' + c.number, title: 'Height ' + c.height + ' of ' + c.rungs,
+      ps.body.appendChild(h('div.pl-summary-actions', GU().shareButton('Share card', { kind: 'climb', label: 'Weekly Climb #' + c.number, title: 'Height ' + c.height + ' of ' + c.rungs,
         lines: ['Attempt ' + c.attempt + (c.notches.length ? ' · notches at ' + c.notches.join(', ') : ' · no miss'), isNum(c.weekBest) ? 'Best this week: ' + c.weekBest : ''].filter(Boolean),
-        marks: Array.apply(null, { length: c.height }).map(function () { return 1; }).concat(c.notches.length > c.spare ? [0] : []), footer: 'Week of ' + c.week, text: text }, 'climb')));
+        pic: { height: c.height, rungs: c.rungs, notches: c.notches.slice(), best: isNum(c.weekBest) ? c.weekBest : null }, footer: 'Week of ' + c.week, text: text }, 'climb')));
       X.wrap.appendChild(ps.el);
       var C = PX.ui.chimera, kind = ach.length ? 'achievement' : c.newPb || c.summit ? 'best' : null;
       if (kind && C && typeof C.invite === 'function') { var inv = C.invite(kind, { host: X.wrap }); if (inv) X.wrap.appendChild(inv); }

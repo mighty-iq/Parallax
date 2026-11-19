@@ -13,6 +13,9 @@ measurement or a comparison round cannot get in the way; the engine hooks all ru
     record's game.climb entry, the next attempt offered;
   - the Atlas: the grid of Fold with its handled cells, the legend; Progress: Reach and the grades table;
     Settings: the Game layer section (celebrations, Climb sounds, rank titles);
+  - the Log names the Climb's sessions "Weekly Climb" (rows and the mode filter);
+  - desktop: the game layer's card kinds (grade, climb, reach, atlas, startnow) each draw their own picture in
+    both sizes, in ink and green, never the accent (cards in tests/e2e/out/game/card-<kind>-<size>.png);
   - every panel fits the width; no page or console errors.
 O14 (390 x 844, with phone390 or --only resume): a test build's save in the middle of a Daily (positions only, no
 seeds) loads with the seeds of its date and goes on by seed: the answered items never come again.
@@ -84,6 +87,39 @@ def fits(page, C, name, sel, vw):
     boxes = page.evaluate(f'''Array.from(document.querySelectorAll({sel!r})).map(e => {{ const r = e.getBoundingClientRect(); return [r.left, r.right, e.scrollWidth - e.clientWidth]; }})''')
     bad = [b for b in boxes if b[0] < -1 or b[1] > vw + 1]
     C.ok(boxes and not bad, f'{name}: {sel} fits the width ({len(boxes)} boxes, {bad[:2]})')
+
+
+CARD_PICS = {
+    'grade': "{ grade: 6, best: 55 }",
+    'climb': "{ height: 13, rungs: 20, notches: [9, 14], best: 13 }",
+    'reach': "{ max: 1400, parts: [31, 45, 22, 0, 55, 40, 12, 60, 18, 33, 0, 27, 41, 9] }",
+    'atlas': "{ cols: 5, rows: 3, cells: { '0.0': 2, '1.0': 2, '2.0': 1, '0.1': 2, '1.1': 1, '3.2': 1 } }",
+    'startnow': "{ rows: [['Fold', 22, 41], ['Rotate', 30, 38], ['Central Point', 18, 35], ['Spin', 44, 40], ['Nets', 12, 29]] }",
+}
+
+
+def cards(page, C, name):
+    """The game layer's card kinds (share.js PICS): each draws its own picture in both sizes, never in the accent."""
+    import base64
+    for kind, pic in CARD_PICS.items():
+        for size in ('wide', 'square'):
+            res = page.evaluate(f'''(async () => {{
+              const o = {{ kind: '{kind}', size: '{size}', theme: 'light', title: 'A {kind} card', lines: ['One line under the picture.'], footer: 'Parallax 1.2', pic: {pic} }};
+              const a = await PX.ui.share.card(o), b = await PX.ui.share.card(Object.assign({{}}, o, {{ pic: null }}));
+              const W = a.width, H = a.height, g = a.getContext('2d').getImageData(0, 0, W, H).data;
+              const top = {size == 'wide' and 280 or 360}, bot = {size == 'wide' and 470 or 860};
+              let accent = 0, ink = 0;
+              for (let y = top; y < bot; y += 2) for (let x = 72; x < W - 72; x += 2) {{
+                const i = (y * W + x) * 4, r = g[i], gg = g[i + 1], bb = g[i + 2];
+                if (Math.abs(r - 11) < 14 && Math.abs(gg - 106) < 14 && Math.abs(bb - 134) < 14) accent++;
+                if (r < 60 && gg < 60 && bb < 70) ink++;
+              }}
+              return {{ w: W, h: H, differs: a.toDataURL() !== b.toDataURL(), accent, ink, url: a.toDataURL('image/png') }};
+            }})()''')
+            want = (1200, 630) if size == 'wide' else (1080, 1080)
+            C.ok((res['w'], res['h']) == want and res['differs'] and res['ink'] > 200 and res['accent'] == 0,
+                 f'{name}: the {kind} card ({size}) draws its own picture in ink, never the accent ({res["ink"]} ink, {res["accent"]} accent samples)')
+            (OUT / f'card-{kind}-{size}.png').write_bytes(base64.b64decode(res['url'].split(',', 1)[1]))
 
 
 def run_viewport(p, C, name, ctx_opts, rnd):
@@ -259,6 +295,7 @@ def run_viewport(p, C, name, ctx_opts, rnd):
         alt = page.evaluate('document.querySelector(".px-share-img").getAttribute("alt")')
         C.ok('height' in alt.lower() and 'discord.gg/chmr' in alt, f'{name}: the Climb card draws, with its text and the Chimera line ({alt[:120]!r})')
         if name == 'phone390':
+            page.wait_for_timeout(500)  # the sheet's fade-in ends first
             page.screenshot(path=str(OUT / f'{name}-climb-card.png'), full_page=False)
     except Exception as e:  # noqa: BLE001
         C.ok(False, f'{name}: the Climb card draws ({e})')
@@ -320,6 +357,16 @@ def run_viewport(p, C, name, ctx_opts, rnd):
              f'{name}: a practice run ends without a share line, card or invite')
         page.evaluate('void PX.core.router.go("home", {}, { force: true })')
         page.wait_for_timeout(400)
+
+    # The Log names the Climb's sessions "Weekly Climb", in its rows and its mode filter
+    page.evaluate('void PX.core.router.go("log", {}, { force: true })')
+    page.wait_for_timeout(600)
+    lg = page.evaluate('''(() => ({ rows: Array.from(document.querySelectorAll('.px-sess[data-mode="climb"] .px-sess-mode')).map(e => e.textContent),
+      opts: Array.from(document.querySelectorAll('select option')).map(o => o.textContent) }))()''')
+    C.ok(lg['rows'] and all(r.startswith('Weekly Climb') for r in lg['rows']) and 'Weekly Climb' in lg['opts'], f'{name}: the Log calls the Climb "Weekly Climb" ({lg["rows"][:2]}, filter {[o for o in lg["opts"] if "Climb" in o]})')
+    if lg['rows']:
+        page.locator('.px-sess[data-mode="climb"]').first.scroll_into_view_if_needed()
+        page.screenshot(path=str(OUT / f'{name}-log.png'), full_page=False)
 
     # The Atlas, Progress, Settings
     page.evaluate('void PX.core.router.go("atlas", { ex: "fold" }, { force: true })')
@@ -388,6 +435,8 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.wait_for_timeout(750)
     done = page.evaluate('(() => { const b = document.querySelectorAll(".px-wrap > .px-bar"); const x = b[b.length - 1]; return [x.classList.contains("gm-fx-sweep"), x.classList.contains("gm-fx-done")]; })()')
     C.ok(sw[0] is True and sw[1] is True and sw[2].strip() == '0.8' and done == [False, True], f'{name}: the needle sweeps from 40 to 50 and ends within 700 ms ({sw}, {done})')
+    if name == 'desktop':
+        cards(page, C, name)
     errs = con.errors()
     C.ok(not errs, f'{name}: no page or console errors ({errs[:3]})')
     b.close()
