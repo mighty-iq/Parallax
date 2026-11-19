@@ -55,3 +55,9 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   the DAT-style section (range tags; the focus; one limit with the validity study as context) with the six formats as
   full cards, two a page (version 3 of Openings, Angles, Hole Punch, Painted Cubes and Form from the definitions'
   dims and testRange; Missing View drafted from the working copy's version 3, to be checked last).
+- 2026-11-19 12:36 UTC, guide step 3: chapter 4. The modes table (Train on every setting and plateaus;
+  Daily v2's ramp and points from release day, share line from daily.js; the weekly Climb; Section practice under
+  test conditions); the engine page (set questions unrated, stretch1 before 10 answers, starter items at level 1,
+  Angles and Central Point in no similar group: model.js groups); a new page "Your edge on every setting" and
+  "Plateaus get a change" (ENGINE §19, §20; progress-sim.md §0, §2; plateau-sim numbers); "Which mode, when" in
+  the app's MODE_WHEN words; the simulation panel with 1.2's runs (ENGINE §18, §24).
