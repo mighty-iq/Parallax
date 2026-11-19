@@ -892,7 +892,8 @@
      are inline, so no <script src> names js/core/px.js) and never where the browser has no service workers.
      It waits until the page has loaded and no stimulus is on screen. No error reaches the player: a refusal or
      a failure is kept in PX.ui.app.sw ({ state: 'off' | 'waiting' | 'registering' | 'registered' | 'failed',
-     why, scope }), which the tests read (tests/e2e/sw.py). */
+     why, scope }), which the tests read (tests/e2e/sw.py). http://localhost is a secure context: the tests
+     register there (the lead's yes, 19 Nov). */
   var sw = { state: 'idle', why: null, scope: null };
   function swWhyNot() {
     var loc = window.location, nav = window.navigator;
@@ -927,6 +928,41 @@
     } catch (e) { swFail(e); }
   }
   bus.on('app:ready', registerSw);
+
+  /* Installing on this device. Once the Pages copy is installable, Chrome may show its own install bar, which
+     can cover the answer area at the bottom of a phone screen in the middle of a block. So the browser's
+     beforeinstallprompt is held (preventDefault) and kept, and offered in one quiet place only: the row
+     "Install Parallax on this device" in Settings → Your data, shown while PX.ui.app.install.available holds.
+     PX.ui.app.install = { available, prompt() → Promise of 'accepted' | 'dismissed' | 'unavailable' }: a held
+     event prompts once (from the row's tap); appinstalled clears it; bus 'install:change' { available }. */
+  var held = null;
+  var install = {
+    available: false,
+    prompt: function () {
+      var e = held;
+      holdInstall(null);
+      if (!e || typeof e.prompt !== 'function') return Promise.resolve('unavailable');
+      try {
+        return Promise.resolve(e.prompt()).then(function () { return e.userChoice; }).then(function (c) {
+          return c && c.outcome === 'accepted' ? 'accepted' : 'dismissed';
+        }, function () { return 'unavailable'; });
+      } catch (x) { return Promise.resolve('unavailable'); }
+    },
+  };
+  function holdInstall(e) {
+    var was = install.available;
+    held = e || null;
+    install.available = !!held;
+    if (was !== install.available) { try { bus.emit('install:change', { available: install.available }); } catch (x) { /* a listener failed */ } }
+  }
+  try {
+    window.addEventListener('beforeinstallprompt', function (e) {
+      try { e.preventDefault(); } catch (x) { /* not cancelable */ }
+      holdInstall(e);
+    });
+    window.addEventListener('appinstalled', function () { holdInstall(null); });
+  } catch (e) { /* no window events here */ }
+  bus.on('app:ready', function () { if (PX.ui.app) PX.ui.app.install = install; });
 
   // Chart labels (Progress and Lab curves) keep 13 px on a phone: each chart gets its drawing units
   // per CSS px as --px-u once it is laid out, and css/screens.css sizes the labels from it.
