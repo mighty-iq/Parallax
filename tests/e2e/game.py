@@ -272,7 +272,15 @@ def run_viewport(p, C, name, ctx_opts, rnd):
         page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
         page.evaluate('PX.debug.fast(false); __play.next()')
     to_respond(page, C, name, 'climb B 3')
+    # a page kept in the back/forward cache (pagehide with persisted) comes back to a live run, header hidden
+    # only while the run goes on
+    page.evaluate("window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }))")
+    live = page.evaluate('(() => { const s = __climb.state(); return [s && s.done, document.documentElement.getAttribute("data-chrome"), __play.state]; })()')
+    C.ok(live[0] is False and live[1] == 'focus' and live[2] == 'respond', f'{name}: after a back/forward-cache pagehide the run goes on ({live})')
     hb = page.evaluate('(() => { const s = __climb.state(); return s && s.plan ? s.plan.height : null; })()')
+    page.evaluate("window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))")
+    gone = page.evaluate('(() => { const s = __climb.state(); return [s && s.done, document.documentElement.getAttribute("data-chrome")]; })()')
+    C.ok(gone[0] is True and gone[1] is None, f'{name}: a page that really goes ends the run and gives the header back ({gone})')
     page.reload()
     page.wait_for_function(READY, timeout=30000)
     page.evaluate(MUTE)

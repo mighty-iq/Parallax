@@ -50,7 +50,13 @@
     host.appendChild(X.wrap);
     current = X;
     intro(X, route.params || {});
-    function onHide() { if (!X.done) stop(X, 'closed'); }
+    // A page kept in the back/forward cache (persisted) may come back: the run goes on where it was, its
+    // answers already written through; only a page that really goes ends the run (as the session screen does).
+    function onHide(e) {
+      if (X.done || !X.plan) return;
+      if (!(e && e.persisted)) stop(X, 'closed');
+      try { if (typeof store.flush === 'function') store.flush({ evenIfHeld: true }); } catch (x) { /* nothing more while the page goes */ }
+    }
     win.addEventListener('pagehide', onHide);
     X.offs.push(function () { win.removeEventListener('pagehide', onHide); });
     return function cleanup() { leave(X); };
@@ -239,9 +245,9 @@
     X.res = res;
     if (res && res.session) emit('play:session', { mode: 'climb', ended: how || 'complete', practiceMs: res.session.practiceMs, answered: res.session.trials, right: res.session.right, exIds: res.session.exs });
     if (X.clock) { try { X.clock.destroy(); } catch (e) { /* gone */ } X.clock = null; }
-    if (how === 'closed') return;
     if (X.P) { try { X.P.destroy(); } catch (e) { /* gone */ } X.P = null; }
-    if (typeof Play().setChrome === 'function') Play().setChrome(false);
+    if (typeof Play().setChrome === 'function') Play().setChrome(false); // never leave the app's header hidden
+    if (how === 'closed') return;
     endScreen(X, res);
   }
 
