@@ -55,8 +55,9 @@ export async function run(t) {
   t.section('patfold: items');
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, optCount = 0, fallbacks = 0, firstBad = null, n = 0;
-  const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0 };
-  const band = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, gate: 0, oneFold: 0, shareUnder: 0, symFoil: 0 };
+  const ALW = { always0: 0, always1: 0, always2: 0, always3: 0, always4: 0 };
+  const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, ...ALW };
+  const band = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, gate: 0, oneFold: 0, shareUnder: 0, symFoil: 0, ...ALW };
   let sheetsOk = 0;
   const keyPos = [0, 0, 0, 0, 0], holesHist = {}, whyHist = {}, items = [], cs = {};
   for (let ci = 0; ci < all.length; ci++) {
@@ -179,7 +180,7 @@ export async function run(t) {
   t.section('patfold: shortcut solvers');
   const bound = 0.2 + 0.10;
   const pct = (x) => (100 * x / acc.count).toFixed(1) + ' %';
-  for (const k of ['under', 'sym1', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest']) {
+  for (const k of ['under', 'sym1', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest', 'always0', 'always1', 'always2', 'always3', 'always4']) {
     t.ok(acc[k] / acc.count <= bound, `"${NAMES[k]}" ≤ chance + 10 (${pct(acc[k])}, chance 20 %)`);
   }
   console.log(`       info  ${NAMES.layers}: ${pct(acc.layers)} (a third where counts may differ, a fifth where they may not)`);
@@ -208,7 +209,8 @@ export async function run(t) {
 // DECISIONS): reported, not bounded. One implementation for this file and tests/node/shortcut-levels.test.mjs.
 const NAMES = { sym1: 'most symmetric about the first crease', low1: 'least symmetric about the first crease', symAny: 'most symmetric about any sheet axis',
   like: 'most like the others', odd: 'odd one out', under: 'a hole under the punch', count2: 'the hole count 2^folds', most: 'the most holes', fewest: 'the fewest holes',
-  layers: 'as many holes as layers under the punch (the format\'s method, reported)' };
+  layers: 'as many holes as layers under the punch (the format\'s method, reported)',
+  always0: 'always A', always1: 'always B', always2: 'always C', always3: 'always D', always4: 'always E' };
 function itemScores(A, lib, item) {
   const opts = item.options, k = item.key, masks = opts.map((o) => A.maskOf(o)), out = {};
   const L1 = item.folds[0].line;
@@ -226,6 +228,7 @@ function itemScores(A, lib, item) {
   out.most = pickBest(opts.map((o) => o.length), k);
   out.fewest = pickBest(opts.map((o) => o.length), k, false);
   out.layers = pickBest(opts.map((o) => (o.length === item.holes ? 1 : 0)), k); // the layers under the punch are the true hole count
+  for (let j = 0; j < 5; j++) out['always' + j] = k === j ? 1 : 0; // always the same letter
   return out;
 }
 function shortcuts(A, lib, item, acc) {
