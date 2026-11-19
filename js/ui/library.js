@@ -41,6 +41,7 @@
     point: 'point home', 'return': 'walk back home',
     pull: 'pull the ends', untie: 'which crossing unties it', tie: 'which crossing ties it', link: 'linked or apart',
     quick: 'quick estimate, against a clock', exact: 'exact answer, no clock', // Central Point
+    choose: 'choose from the options', mark: 'mark it yourself', draw: 'draw it yourself', // draw-the-answer (W2-bets)
   };
   // A few words after the name on cards and pages (R1 §8.1 d: Homing is the stage with landmarks).
   var NAME_TAIL = { homing: 'with landmarks', reckon: 'no landmarks' };
