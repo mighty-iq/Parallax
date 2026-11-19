@@ -6,7 +6,8 @@
    once). Every export also offers Copy, because downloads are blocked in sandboxed previews.
    v1.2: gentle motion (Homing and Reckon), Sharing and privacy (the nickname, the only name a card
    or an export may carry; device details in exports, off by default) and Playtest mode (its
-   switch, Copy playtest report, Clear the log).
+   switch, Copy playtest report, Clear the log). Your data has "Install Parallax on this device" while the
+   browser offers it (PX.ui.app.install; W3-misc).
    Test hooks: [data-setting="<key>"] on each control, [data-action="…"] on each data button. */
 (function (PX) {
   'use strict';
@@ -249,6 +250,20 @@
     csv.setAttribute('data-action', 'export-csv');
     p.body.appendChild(h('div.px-setting', status, h('div.px-data-row', bk, csv),
       h('p.px-field-hint', 'On iPhone and iPad, Safari may clear site data after 7 days without a visit. Adding Parallax to your home screen, or backing up, avoids losing progress.')));
+
+    // Installing on this device (W3-misc, after O21): shown only while the browser offers it (PX.ui.app.install
+    // in js/ui/app.js, which holds the browser's own install bar so that it never covers an item)
+    var inst = ui.button('Install Parallax on this device', {
+      kind: 'secondary',
+      onClick: function () { var I = PX.ui.app && PX.ui.app.install; if (I) I.prompt(); },
+    });
+    inst.setAttribute('data-action', 'install');
+    var instRow = h('div.px-setting.px-install', inst,
+      h('p.px-field-hint', 'Puts Parallax on your home screen or app list. It opens in its own window and keeps the same progress.'));
+    p.body.appendChild(K.live(instRow, ['install:change'], function () {
+      var I = PX.ui.app && PX.ui.app.install;
+      instRow.hidden = !(I && I.available);
+    }));
 
     // import
     var msg = h('p.px-import-msg', { role: 'status', 'aria-live': 'polite' });

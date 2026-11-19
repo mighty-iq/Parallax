@@ -13,6 +13,10 @@ the folder in SW_APP_ROOT. Parts:
   that fetched it (that launch still runs on the old files), then a new version number (the copy's name
   follows PX.version); the older copy is dropped each time; a new sw.js takes over and keeps the copy, which
   still starts the app offline;
+- install (the lead's follow-up): a synthetic beforeinstallprompt is held (preventDefault) and kept in
+  PX.ui.app.install; Settings → Your data shows "Install Parallax on this device" only while it is available (44 px,
+  no sideways scroll at 360 px); the tap prompts once and the row goes; a dismissed prompt, appinstalled and a
+  prompt with nothing held; nothing in the player when the browser offers install during a session;
 - never registered: index.html from file://; the app in a same-origin frame; the single-file build
   (tools/build-single.mjs) in a sandboxed srcdoc frame as the previews show it, in a same-origin srcdoc frame,
   served at the top over http://localhost and opened from file://. Each: PX.ui.app.sw says why, register() is
@@ -321,12 +325,77 @@ def part_updates(b, C):
     ctx.close()
 
 
+# A synthetic beforeinstallprompt, as Chrome fires it once the page is installable: prompt() counts its calls.
+OFFER = '''(outcome) => {
+  const e = new Event('beforeinstallprompt', { cancelable: true });
+  window.__prompts = window.__prompts || 0;
+  e.prompt = () => { window.__prompts++; return Promise.resolve(); };
+  e.userChoice = Promise.resolve({ outcome, platform: 'web' });
+  window.dispatchEvent(e);
+  return e.defaultPrevented;
+}'''
+INSTALL = 'PX.ui.app.install'
+
+
+def part_install(b, C):
+    tag = 'install'
+    site = Site('install')
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    cons = []
+    page = launch_page(ctx, site.url, cons)
+    sw_state(page)
+    C.ok(page.evaluate(f'!!{INSTALL} && {INSTALL}.available === false && typeof {INSTALL}.prompt === "function"'),
+         f'{tag}: PX.ui.app.install is there, not available before the browser offers it')
+    C.ok(page.evaluate(f'{INSTALL}.prompt()') == 'unavailable', f'{tag}: prompt() with nothing held says unavailable')
+    page.evaluate('void PX.core.router.go("settings")')
+    page.wait_for_timeout(250)
+    row = page.locator('[data-action="install"]')
+    C.ok(row.count() == 1 and not row.is_visible(), f'{tag}: Settings: the row is there and hidden')
+    C.ok(page.evaluate(OFFER, 'accepted') is True and page.evaluate(f'{INSTALL}.available') is True,
+         f'{tag}: the browser\'s beforeinstallprompt is held (preventDefault: no install bar of its own) and kept')
+    page.wait_for_timeout(100)
+    C.ok(row.is_visible() and row.inner_text().strip() == 'Install Parallax on this device', f'{tag}: the row "Install Parallax on this device" shows in Your data')
+    row.scroll_into_view_if_needed()
+    bb = row.bounding_box() or {}
+    C.ok(bb.get('height', 0) >= 44 and bb.get('width', 0) >= 44 and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),
+         f'{tag}: a 44 px target, no sideways scroll at 360 px ({round(bb.get("width", 0))} x {round(bb.get("height", 0))})')
+    C.ok(page.evaluate('!!document.querySelector(\'[data-section="data"] [data-action="install"]\')'), f'{tag}: in the Your data section')
+    page.screenshot(path=str(OUT / 'install_row_360.png'))
+    row.click()
+    page.wait_for_function(f'!{INSTALL}.available', timeout=5000)
+    page.wait_for_timeout(100)
+    C.ok(page.evaluate('window.__prompts') == 1 and not row.is_visible(), f'{tag}: a tap shows the browser\'s prompt once; the row goes (a held event prompts once)')
+    page.evaluate(OFFER, 'dismissed')
+    C.ok(page.evaluate(f'{INSTALL}.prompt()') == 'dismissed' and page.evaluate(f'{INSTALL}.available') is False, f'{tag}: a dismissed prompt says so and clears it')
+    page.evaluate(OFFER, 'accepted')
+    page.wait_for_timeout(100)
+    shown = row.is_visible()
+    page.evaluate('window.dispatchEvent(new Event("appinstalled"))')
+    page.wait_for_timeout(100)
+    C.ok(shown and page.evaluate(f'{INSTALL}.available') is False and not row.is_visible(), f'{tag}: appinstalled clears it and the row goes')
+    # during a session: held, nothing in the player, no prompt
+    page.evaluate('''PX.ui.hooks && PX.ui.hooks.mute(true); PX.debug.fast(true);
+      PX.ex.list('train').forEach(d => { PX.core.store.state.tour.seen[d.id] = true; });''')
+    page.evaluate('void PX.core.router.go("play", { mode: "train", exId: "rotate", count: 1 }, { force: true })')
+    page.wait_for_function('__play.state === "respond"', timeout=15000)
+    n0 = page.evaluate('window.__prompts')
+    held = page.evaluate(OFFER, 'accepted')
+    page.wait_for_timeout(300)
+    C.ok(held and page.evaluate('__play.state') == 'respond' and page.locator('[data-action="install"]').count() == 0 and page.evaluate('window.__prompts') == n0,
+         f'{tag}: offered during an item: held, the item stays up, nothing of it in the player, no prompt')
+    errs = errors_of(cons)
+    C.ok(not errs, f'{tag}: no console errors', str(errs[:4]))
+    ctx.close()
+    site.stop()
+
+
 def never(C, tag, target, page, why):
     """target (a page or frame running the app): never registered, says why; the origin has no registration."""
     st = sw_state(target)
     target.wait_for_timeout(3500)  # past the 1.5 s after load at which the app would register
     C.ok(st.get('state') == 'off' and st.get('why') in why, f'{tag}: not registered ({st.get("why")})', str(st))
     C.ok(target.evaluate('window.__swCalls') == 0, f'{tag}: register() never called')
+    C.ok(target.evaluate(OFFER, 'accepted') is True and target.evaluate('PX.ui.app.install.available') is True, f'{tag}: an install offer is held here too (no error)')
     C.ok(page.evaluate(REGS) == [], f'{tag}: no service worker on the origin')
 
 
@@ -369,7 +438,7 @@ def main():
     subprocess.run(['node', str(SRC / 'tools' / 'build-single.mjs'), '--out', str(single)], cwd=str(SRC), check=True, capture_output=True)
     with sync_playwright() as p:
         b = launch(p)
-        for part in (lambda: part_offline(b, C, single), lambda: part_updates(b, C), lambda: part_never(b, C, single)):
+        for part in (lambda: part_offline(b, C, single), lambda: part_updates(b, C), lambda: part_install(b, C), lambda: part_never(b, C, single)):
             try:
                 part()
             except Exception as e:  # one part's failure must not hide the others' results

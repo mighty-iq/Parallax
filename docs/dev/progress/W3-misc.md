@@ -37,3 +37,11 @@ Times are UTC.
   ETag and byte comparison, a host failing part-way, a full disk, other tools' caches kept). shell.py 274/0.
 - Other runs: single.py 15/2: both failures count the exercises of the tracked dist/Parallax.html (built 18 Nov, 25
   exercises) against today's index.html (29); the build is redone at release, and sw.py builds its own.
+
+## 2026-11-19 14:37: the install bar (the lead's follow-up)
+- Done: js/ui/app.js holds beforeinstallprompt (preventDefault, kept) and exposes PX.ui.app.install { available, prompt() },
+  cleared after its one prompt, on a dismissal and on appinstalled; js/ui/settings.js (the granted row) shows "Install
+  Parallax on this device" in Your data only while available. Nothing in the player.
+- Tests: tests/e2e/sw.py 71/0: a synthetic offer is held and the row shows (44 px, no sideways scroll at 360 px), a tap
+  prompts once and the row goes, dismissed and appinstalled clear it, an offer during an item shows nothing in the
+  player; in every never-register case an offer is held without an error.
