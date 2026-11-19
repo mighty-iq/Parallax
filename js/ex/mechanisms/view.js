@@ -561,6 +561,11 @@
       (res.cycles || []).filter(function (c) { return !c.odd; }).slice(0, 1).forEach(function (c) {
         steps.push({ ms: 1400 * f, caption: cap('evenLoop'), enter: function () { reset(); ringAxles(c.axles, 'is-on'); } });
       });
+      // a question about speed: how to tell faster from slower, on the route's last pair (round 3 of the first session)
+      var lastLink = m.route.length ? m.route[m.route.length - 1] : null;
+      if ((item.question === 'speed' || item.question === 'dirspeed') && lastLink) {
+        steps.push({ ms: 2200 * f, caption: cap('speed'), enter: function () { reset(); ringAxles([lastLink.from, lastLink.to], 'is-on'); } });
+      }
       var turnT = turnOf(m, item, item.target);
       if (item.rope) {
         var reel = (item.rope.side === 'left' ? -1 : 1) * turnT < 0;
