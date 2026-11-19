@@ -76,3 +76,13 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   2006, Ginns 2018, Kao 2024 [abstract], Rodrigues 2022, Dai 2014, Silverman & Barasch 2023, Milkman 2021); the game
   layer table with the harm each element avoids (ENGINE §24; DECISIONS W3-game 18-19 Nov); what it leaves out; the
   weekly goal (the owner's kept weeks-in-a-row count), 22 achievements (achievements.js), feedback after an answer.
+- 2026-11-19 12:49 UTC, guide step 6: chapter 7 gains a 1.2 page (teaching, measurement, bets, Central
+  Point, dead reckoning, the game layer; numbers from notes D2 addendum, P1 addendum, M1 addendum A.1-A.2, T1 §3,
+  C1 §2.1 and addendum, N1 addendum A1-A2, G1 §1). Chapter 8 rewritten as "Playing fair: test hygiene and precision"
+  (opens with the formats tests share; scoped shortcut exceptions from E.dims.scoped and DECISIONS; precision with
+  the meter; hand-set steps refitted together; open questions; accessibility with motion comfort). Chapters 9 to 11
+  brought to 1.2 (format 4, the trial CSV's 26 columns, the community, events and dose exports; the Lab's bets,
+  ladder, learning curves and Balance; contributors: engine files, hooks, shards, the game and bets browser tests).
+  References: 25 added from the notes, the validity study linked (O26), the ADA instruction sheet and candidate
+  guide cited; three no longer cited dropped (Kivetz 2006, Perkins & Salomon 1988, Sailer et al. 2017); 119 in all,
+  over four pages. Morgan & Glennerster 1991 has no link (its DOI in C1 is marked unchecked).
