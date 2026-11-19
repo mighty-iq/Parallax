@@ -613,8 +613,10 @@
       if (!pick) continue;
       var placed = placeOptions(rng, keyNet, pick);
       return { strand: 'netback', cells: shape.cells, base: base, cube: cube, options: placed.options, why: placed.why, key: placed.key, group: shape.group,
-        // the two pictures: [top, left-front, right-front]; the second is the cube turned over (T↔B through a half turn)
-        views: [[cube[1], cube[4], cube[3]], [cube[0], cube[5], cube[2]]] };
+        // the two pictures: [top, left-front, right-front]; the second is the cube turned over (T↔B through a half turn).
+        // Version 2: left and right as a net folded with its letters outside shows them (version 1 drew the mirror cube,
+        // so the two mirror foils were the nets that fold into the pictures; fresh-player run of 19 Nov)
+        views: [[cube[1], cube[3], cube[4]], [cube[0], cube[2], cube[5]]] };
     }
     return null;
   }
@@ -632,7 +634,7 @@
     // the pictures show the cube
     var cube = [];
     f3.forEach(function (f, i) { cube[f] = it.options[it.key][i]; });
-    var pic = [[cube[1], cube[4], cube[3]], [cube[0], cube[5], cube[2]]];
+    var pic = [[cube[1], cube[3], cube[4]], [cube[0], cube[2], cube[5]]];
     if (JSON.stringify(pic) !== JSON.stringify(it.views)) return 'the pictures show the answer\'s cube';
     var hits = 0;
     for (var i = 0; i < 4; i++) {
@@ -803,9 +805,26 @@
   }
   function score(item, response) { return { correct: response === item.key }; }
   function difficulty(params) { return BASE + OFFSET[strandOf(params)] + STEP * levelOf(params); }
+  // What the player sees above the options, as a string: two items with the same stem look like a repeat even when
+  // their options differ, so the Check draws another seed for such an item (js/ui/measure.js; small pools at the
+  // easy levels, such as the one-fold sheets of fold back).
+  function stemKey(item) {
+    var k = item && item.strand, x;
+    if (k === 'turn') x = [item.fig, item.axis, item.q];
+    else if (k === 'foldback') x = [item.n, item.holes];
+    else if (k === 'cutback') x = item.face;
+    else if (k === 'netback') x = item.views;
+    else if (k === 'viewfrom') x = [item.h, item.view];
+    else if (k === 'whereami') x = [item.marks, item.shown, item.rel];
+    else return null;
+    return k + ':' + JSON.stringify(x);
+  }
 
   PX.ex.define({
-    id: 'otherway', version: 1, code: 'PR-6', name: 'Other Way Round', short: 'Other Way Round',
+    id: 'otherway', version: 2, code: 'PR-6', name: 'Other Way Round', short: 'Other Way Round',
+    // version 2: net back's pictures as a net folded with its letters outside shows them (version 1 drew the mirror
+    // cube); version 1's level range, for the trend model's earlier entries
+    past: { 1: { min: -1.2, max: 1.1 } },
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 4,
     format: FORMAT, // v1.2 (W2-measure): reserved formats, never in training material (tests/node/formats.test.mjs)
     variants: STRANDS.slice(),
@@ -815,7 +834,7 @@
     base: BASE, difficulty: difficulty,
     chance: function () { return 0.25; },
     timeLimit: function (params) { return LIMIT[strandOf(params)]; },
-    generate: generate, validate: validate, score: score,
+    generate: generate, validate: validate, score: score, stemKey: stemKey,
     lib: {
       STRANDS: STRANDS, OFFSET: OFFSET, FORMAT: FORMAT, DIRS: DIRS, TOL: TOL, FN: FN, LABELS: LABELS,
       iso: iso, isoPt: isoPt, picDiff: picDiff, rotate: rotate, mirror: mirror, canon: canon, norm: norm, key3: key3,

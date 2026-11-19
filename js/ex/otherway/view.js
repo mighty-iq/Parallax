@@ -15,7 +15,7 @@
     turn: 'Turn the figure the way the arrow shows. Which picture shows it afterwards?',
     foldback: 'This sheet was folded, punched once and opened. Which plan made it?',
     cutback: 'This is a cut face, seen straight on. Which solid, cut along its shaded plane, gives it?',
-    netback: 'Both pictures show one cube (the second one turned over). Which net folds into it?',
+    netback: 'Both pictures show one cube: the second, turned over, shows its other three faces. Which net folds into it?',
     viewfrom: 'The flat drawing shows the cubes from one side. Which side?',
     whereami: 'The circle shows what you see around you: ahead is up. Where on the map are you standing?',
   };
@@ -186,7 +186,7 @@
   /* ---------- where am I ---------- */
 
   var SHAPES = ['circle', 'square', 'triangle', 'diamond', 'hexagon', 'cross', 'star'];
-  function markShape(s, i, x, y, r) {
+  function markShape(s, i, x, y, r, fsz) {
     var k = SHAPES[i % SHAPES.length], pts = [];
     function ngon(n, rot, rr) { var out = []; for (var j = 0; j < n; j++) { var a = rot + j * 2 * Math.PI / n; out.push([x + rr * Math.cos(a), y + rr * Math.sin(a)]); } return out; }
     if (k === 'circle') s.appendChild(SV.el('circle', { cx: x, cy: y, r: r * 1.1, class: 'ow-mark' }));
@@ -196,15 +196,20 @@
     else if (k === 'hexagon') s.appendChild(poly(ngon(6, 0, r * 1.15), 'ow-mark'));
     else if (k === 'cross') { pts = [[-1, -0.35], [-0.35, -0.35], [-0.35, -1], [0.35, -1], [0.35, -0.35], [1, -0.35], [1, 0.35], [0.35, 0.35], [0.35, 1], [-0.35, 1], [-0.35, 0.35], [-1, 0.35]]; s.appendChild(poly(pts.map(function (p) { return [x + p[0] * r * 1.15, y + p[1] * r * 1.15]; }), 'ow-mark')); }
     else { for (var j = 0; j < 10; j++) { var a = -Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? r * 0.55 : r * 1.3; pts.push([x + rr * Math.cos(a), y + rr * Math.sin(a)]); } s.appendChild(poly(pts, 'ow-mark')); }
-    s.appendChild(SV.text(x, y + r * 0.08, MARK[i], { class: 'ow-marklab', 'font-size': r * 1.3 }));
+    s.appendChild(SV.text(x, y + r * 0.08, MARK[i], { class: 'ow-marklab', 'font-size': fsz || r * 1.3 }));
   }
   function map(item) {
     var s = SV.el('svg', { viewBox: '0 0 100 100', class: 'ow-map', 'aria-hidden': 'true', focusable: 'false' });
     s.appendChild(poly([[0, 0], [100, 0], [100, 100], [0, 100]], 'ow-ground2'));
     s.appendChild(SV.text(50, 6, 'N', { class: 'ow-north' }));
-    item.marks.forEach(function (m, i) { markShape(s, i, m[0], m[1], 5.6); });
+    // a landmark may stand 12 units from a spot (the generator's least distance), where full-size shapes touch: the
+    // map's shapes shrink together until the closest pair keeps a gap (fresh-player run of 19 Nov: 1 covered D)
+    var dmin = Infinity;
+    item.marks.forEach(function (m) { item.options.forEach(function (p) { dmin = Math.min(dmin, Math.hypot(m[0] - p[0], m[1] - p[1])); }); });
+    var sc = Math.max(0.74, Math.min(1, dmin / 16));
+    item.marks.forEach(function (m, i) { markShape(s, i, m[0], m[1], 5.6 * sc, 5.6 * 1.3); }); // labels keep their size
     item.options.forEach(function (p, i) {
-      s.appendChild(SV.el('circle', { cx: p[0], cy: p[1], r: 6.2, class: 'ow-spot', 'data-spot': i }));
+      s.appendChild(SV.el('circle', { cx: p[0], cy: p[1], r: 6.2 * sc, class: 'ow-spot', 'data-spot': i }));
       s.appendChild(SV.text(p[0], p[1] + 0.4, SPOT[i], { class: 'ow-spotlab' }));
     });
     return s;
@@ -223,10 +228,20 @@
     return s;
   }
 
+  // The first item of a kind in the Check carries the kind's one line (item.hint, set by js/ui/measure.js): shown under
+  // the question, marked as new, so the task runs without a card between items.
+  function kindHint(el, item) {
+    var t = item && typeof item.hint === 'string' ? item.hint : '';
+    PX.ui.clear(el);
+    if (t) { el.appendChild(h('b', 'New kind. ')); el.appendChild(document.createTextNode(t)); }
+    el.hidden = !t;
+    if (st && st.root) st.root.classList.toggle('has-kindhint', !!t); // the picture gives up the line's height
+  }
+
   /* ---------- the countdown bar ---------- */
 
   function timerStart(item) {
-    var ms = def.timeLimit(item.params);
+    var ms = def.timeLimit(item.params) + (item.extraMs > 0 ? item.extraMs : 0); // extraMs: the Check's time for a kind's line
     st.timer.hidden = !ms;
     st.timer.classList.remove('is-running', 'is-stopped');
     if (!ms) return;
@@ -244,14 +259,14 @@
   }
 
   function mount(ctx) {
-    var prompt = h('p.ow-prompt'), pic = h('div.ow-pic');
+    var prompt = h('p.ow-prompt'), hint = h('p.ex-kindhint', { hidden: true }), pic = h('div.ow-pic');
     var verdict = h('div.ex-verdict.ow-verdict', { hidden: true, role: 'status' });
-    var stage = h('div.ex-stage.ow-stage', prompt, pic, verdict);
+    var stage = h('div.ex-stage.ow-stage', prompt, hint, pic, verdict);
     var timer = h('div.pr-timer', { 'aria-hidden': 'true', hidden: true }, h('div.pr-timer-fill'));
     var caption = h('p.ex-caption', { 'aria-live': 'polite' }), desc = h('p.px-sr');
     var root = h('div.ex-otherway-stem', stage, timer, caption, desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, stage: stage, prompt: prompt, pic: pic, verdict: verdict, timer: timer, timerFill: timer.firstChild,
+    st = { ctx: ctx, root: root, stage: stage, prompt: prompt, hint: hint, pic: pic, verdict: verdict, timer: timer, timerFill: timer.firstChild,
       caption: caption, desc: desc, item: null, opts: [] };
   }
 
@@ -261,6 +276,7 @@
     PX.ui.clear(st.pic);
     st.root.setAttribute('data-strand', item.strand);
     st.prompt.textContent = PROMPT[item.strand];
+    kindHint(st.hint, item);
     var k = item.strand;
     if (k === 'turn') st.pic.appendChild(turnStem(item));
     else if (k === 'foldback') st.pic.appendChild(sheet(item));
@@ -284,7 +300,7 @@
     if (k === 'turn') box = h('span.ex-answer.ow-answer', cubes(o));
     else if (k === 'foldback') box = h('span.ex-answer.ow-answer', plan(o, item.n));
     else if (k === 'cutback') box = h('span.ex-answer.ow-answer', solidPic(o));
-    else if (k === 'netback') box = h('span.ex-answer.ow-answer', net(item.cells, o));
+    else if (k === 'netback') box = h('span.ex-answer.ow-answer.ow-netbox', net(item.cells, o));
     else if (k === 'viewfrom') box = h('span.ex-answer.ow-answer.ow-text', sideIcon(o), h('span.ex-answer-text', SIDE[o]));
     else box = h('span.ex-answer.ow-answer.ow-text', h('span.ex-answer-text.ow-spotname', SPOT[i]));
     el.appendChild(box);

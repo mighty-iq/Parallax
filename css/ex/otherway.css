@@ -7,6 +7,9 @@
 .ex-otherway .ow-prompt {
   margin: 0; max-width: 38rem; font-size: var(--fs-md, 1rem); line-height: 1.4; color: var(--ink, #1A1D21);
 }
+/* the first item of a kind in the Check: the kind's line under the question (js/ui/measure.js, item.hint) */
+.ex-otherway .ex-kindhint { margin: 0.35rem 0 0; max-width: 38rem; font-size: 0.9375rem; line-height: 1.4; color: var(--ink-2, #454B52); }
+.ex-otherway .ex-kindhint b { color: var(--ink, #1A1D21); }
 .ex-otherway .ow-pic { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem 1.25rem; width: 100%; }
 .ex-otherway .ow-pic svg { display: block; height: clamp(7.5rem, 26vh, 12.5rem); width: auto; max-width: 100%; }
 .ex-otherway .ex-otherway-stem[data-strand="netback"] .ow-pic svg { height: clamp(5.5rem, 18vh, 8.5rem); }
@@ -14,11 +17,35 @@
 .ex-otherway .ex-otherway-stem[data-strand="whereami"] .ow-pic svg.ow-map { height: clamp(10rem, 30vh, 15rem); }
 .ex-otherway .ex-otherway-stem[data-strand="whereami"] .ow-pic svg.ow-circle { height: clamp(7.5rem, 20vh, 9.5rem); }
 .ex-otherway .ex-otherway-stem[data-strand="cutback"] .ow-pic svg { height: auto; max-height: clamp(6rem, 22vh, 10rem); }
+@media (min-height: 481px) { /* portrait phones and larger; phones held sideways keep their own sizes */
+  /* the first item of a kind carries its line: the picture gives up about the line's height (360 x 640 keeps it all) */
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-pic svg { height: clamp(6rem, 18vh, 11rem); }
+  .ex-otherway .ex-otherway-stem.has-kindhint[data-strand="netback"] .ow-pic svg { height: clamp(4.75rem, 13vh, 7.5rem); }
+  .ex-otherway .ex-otherway-stem.has-kindhint[data-strand="viewfrom"] .ow-pic svg.ow-flat { height: clamp(3.5rem, 9vh, 5.5rem); }
+  .ex-otherway .ex-otherway-stem.has-kindhint[data-strand="whereami"] .ow-pic svg.ow-map { height: clamp(8.5rem, 23vh, 13rem); }
+  .ex-otherway .ex-otherway-stem.has-kindhint[data-strand="whereami"] .ow-pic svg.ow-circle { height: clamp(6rem, 15vh, 8rem); }
+  .ex-otherway .ex-otherway-stem.has-kindhint[data-strand="cutback"] .ow-pic svg { height: auto; max-height: clamp(5rem, 16vh, 8.5rem); }
+  /* … and the words drawn in the smaller pictures grow back to 13 px or more on a 360 x 640 phone */
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-angle { font-size: 0.63px; }
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-side { font-size: 0.8px; }
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-map .ow-north { font-size: 9.4px; }
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-map .ow-marklab { font-size: 9.2px; }
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-map .ow-spotlab { font-size: 9.2px; }
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-circle .ow-aheadlab { font-size: 16.5px; }
+  .ex-otherway .ex-otherway-stem.has-kindhint .ow-circle .ow-marklab { font-size: 16px; }
+}
 .ex-otherway .ow-verdict { margin-top: 0.4rem; max-width: 38rem; text-align: left; }
 
 .ex-otherway .ow-answer { display: flex; align-items: center; justify-content: center; min-height: 2.75rem; width: 100%; }
 .ex-otherway .ow-answer svg { display: block; height: clamp(4.75rem, 15vh, 7.5rem); width: auto; max-width: 100%; }
 .ex-otherway .ow-answer.ow-text { gap: 0.5rem; }
+/* a net is wide: room above it for the option's number (fresh-player run of 19 Nov: numbers touched the nets) */
+.ex-otherway .ow-answer.ow-netbox { padding: 0.95rem 0.35rem 0.1rem; }
+.ex-otherway .ow-answer.ow-netbox svg { max-width: calc(100% - 0.5rem); }
+@media (min-height: 481px) {
+  .ex-otherway .ow-answer.ow-netbox svg { height: clamp(4.25rem, 13vh, 7rem); }
+  .ex-otherway .ow-answer.ow-netbox .ow-lab { font-size: 0.86px; } /* five squares tall on a 360 x 640 phone: still 13 px */
+}
 .ex-otherway .ow-answer.ow-text svg { height: 1.75rem; }
 .ex-otherway .ow-spotname { font-family: var(--font-mono, ui-monospace, Menlo, Consolas, monospace); font-size: var(--fs-lg, 1.125rem); font-weight: 600; }
 
@@ -90,6 +117,9 @@
   .ex-otherway .ow-map .ow-marklab { font-size: 8.6px; }
   .ex-otherway .ow-circle .ow-marklab { font-size: 13.6px; }
   .ex-otherway .ow-spotlab { font-size: 8.8px; }
+  /* a kind's line on the first item: a smaller line, and the map a little shorter (its words stay 13 px) */
+  .ex-otherway .ex-kindhint { font-size: 0.875rem; line-height: 1.3; margin-top: 0.2rem; }
+  .ex-otherway .ex-otherway-stem.has-kindhint[data-strand="whereami"] .ow-pic svg.ow-map { height: 9.6rem; }
 }
 
 /* The item's time limit: one slow linear sweep (no ticks, no colour change). */

@@ -2,7 +2,11 @@
    10 002 seeds over the six strands and three levels: every item validates (exactly one right answer, foils visibly
    different, the strand's independent check), keys are spread evenly, items are deterministic, no fallback items.
    Shortcut solvers (CLAUDE.md rule 5) stay within chance + 10 points on every strand and level; the analytic
-   methods that are the strand's own skill are reported, not limited. A probe block reads every strand once. */
+   methods that are the strand's own skill are reported, not limited. A probe block reads every strand once.
+   Net back, physically (version 2): each option's net folded with its letters outside (one square on top, the flaps
+   folded down, x east, y north, z up) and each picture read as a person sees it (top, left, right going round
+   counterclockwise from outside; the second picture the opposite corner): the key, and only the key, folds into the
+   pictured cube (version 1 drew the mirror cube; fresh-player run of 19 Nov). */
 import { newRecord } from './fixtures/learner.mjs';
 
 const SEEDS = 10002;
@@ -17,20 +21,28 @@ export async function run(t) {
   t.eq(d.role, 'probe', 'a probe');
   t.eq(d.variants, ['turn', 'foldback', 'cutback', 'netback', 'viewfrom', 'whereami'], 'six strands, as variants');
   t.eq(d.cycle, 'variant', 'a block reads the strands in turn');
+  t.ok(d.version === 2 && d.past && d.past[1] && d.past[1].min === PX.ex.minDifficulty(d) && d.past[1].max === PX.ex.maxDifficulty(d),
+    'version 2 (net back drawn the right way round); version 1 had the same range, kept in def.past');
 
   t.section('Other Way Round: 10 002 seeds');
   const per = {}, t0 = Date.now();
-  let bad = [], fb = 0;
+  let bad = [], fb = 0, nets = 0, netWrong = [];
   for (let i = 0; i < SEEDS; i++) {
     const strand = S[i % 6], level = Math.floor(i / 6) % 3, k = strand + level;
     const it = d.generate(PX.rng(7000 + i), { variant: strand, level });
     const v = d.validate(it);
     if (v !== true) bad.push(`${k} seed ${7000 + i}: ${v}`);
+    if (strand === 'netback' && v === true) {
+      nets++;
+      const fit = it.options.map((o) => physicalMatch(foldOut(it.cells, o), it.views));
+      if (!fit[it.key] || fit.filter(Boolean).length !== 1) netWrong.push(`seed ${7000 + i}: ${fit.map(Number).join('')} key ${it.key}`);
+    }
     if (it.fallback) fb++;
     const p = per[k] || (per[k] = { n: 0, keys: [0, 0, 0, 0] });
     p.n++; p.keys[it.key]++;
   }
   t.eq(bad.slice(0, 5), [], `every item validates (${bad.length} bad)`);
+  t.eq(netWrong.slice(0, 5), [], `net back: the key and only the key folds, letters outside, into the pictured cube (${nets} items, ${netWrong.length} not)`);
   t.eq(fb, 0, 'no fallback items');
   for (const [k, p] of Object.entries(per)) {
     const lo = Math.min(...p.keys) / p.n, hi = Math.max(...p.keys) / p.n;
@@ -163,3 +175,40 @@ function PXnets(it) {
 }
 function area(poly) { let a = 0; for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; }
 export { SOLVERS, NETS };
+
+/* ---------- net back, physically (independent of js/ex/otherway and js/ex/nets) ---------- */
+
+const MUL = (A, B) => A.map((r) => [0, 1, 2].map((j) => r[0] * B[0][j] + r[1] * B[1][j] + r[2] * B[2][j]));
+const APPLY = (A, v) => [0, 1, 2].map((i) => A[i][0] * v[0] + A[i][1] * v[1] + A[i][2] * v[2]);
+// a flap across an edge folds down, its letter side outward: east Rot_y(+90°) (up → east), west Rot_y(−90°),
+// north (up the page) Rot_x(−90°) (up → north), south Rot_x(+90°)
+const FLAP = [[1, 0, [[0, 0, 1], [0, 1, 0], [-1, 0, 0]]], [-1, 0, [[0, 0, -1], [0, 1, 0], [1, 0, 0]]],
+  [0, -1, [[1, 0, 0], [0, 0, 1], [0, -1, 0]]], [0, 1, [[1, 0, 0], [0, 0, -1], [0, 1, 0]]]];
+// cells [col, row] (rows down the page); labels[i] on cell i → { label: outward normal }
+function foldOut(cells, labels) {
+  const at = new Map(cells.map((c, i) => [c[0] + ',' + c[1], i])), Q = cells.map(() => null), queue = [0];
+  Q[0] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  while (queue.length) {
+    const i = queue.shift();
+    for (const [dx, dy, R] of FLAP) {
+      const j = at.get((cells[i][0] + dx) + ',' + (cells[i][1] + dy));
+      if (j === undefined || Q[j]) continue;
+      Q[j] = MUL(Q[i], R); queue.push(j);
+    }
+  }
+  const n = {};
+  labels.forEach((lab, i) => { n[lab] = Q[i] ? APPLY(Q[i], [0, 0, 1]).map(Math.round) : null; });
+  return n;
+}
+const DET = (a, b, c) => a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0]);
+const DOT = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+// a picture [top, left, right]: three faces round a corner, top → left → right counterclockwise from outside
+function corner(n, pic) {
+  const [a, b, c] = pic.map((l) => n[l]);
+  return !!(a && b && c) && DOT(a, b) === 0 && DOT(b, c) === 0 && DOT(a, c) === 0 && DET(a, b, c) === 1;
+}
+function physicalMatch(n, views) {
+  if (!corner(n, views[0]) || !corner(n, views[1])) return false;
+  const first = views[0].map((l) => n[l].join(','));
+  return views[1].every((l) => first.includes(n[l].map((x) => -x).join(','))); // the second picture: the opposite corner
+}
