@@ -120,17 +120,22 @@
     // the starter level (note D2 §3.6): one fold, outside the test's format ('1 (starter)')
     'patfold.folds': function (v) { var n = parseInt(v, 10); return /starter/.test(String(v)) ? 'one fold (starter: outside the test’s format)' : n === 1 ? 'one fold' : n + ' folds'; },
     'patfold.idle': function (v) { return v === 0 ? 'every fold matters' : 'up to ' + (v === 1 ? 'one fold' : v + ' folds') + ' the punch misses'; },
+    // Hole Punch version 3 (W1-band-B, PLAN milestone 8): whether a wrong sheet may show another hole count
+    'patfold.sheets': function (v) { return /differ/.test(String(v)) ? 'wrong sheets may have other hole counts' : 'every sheet with the right number of holes'; },
     // Openings: the cuts dealt over the three faces, the outline that fits, the wrong openings
-    'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 1 ? 'one cut, on one face (starter)' : n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },
+    'openings.features': function (v) { var n = String(v).split('+').reduce(function (a, x) { return a + (parseInt(x, 10) || 0); }, 0); return n === 1 ? 'one cut, on one face (starter)' : n === 2 ? 'two cuts, on two faces' : n === 3 ? 'one cut on each face' : n + ' cuts over the three faces'; },
     'openings.edges': function (v) { return v === 'chamfers' ? 'slanted cuts too' : 'right-angled cuts only'; },
     'openings.keyview': function (v) { return v === 'front, side or top' ? 'any of the three outlines fits' : 'mostly the ' + String(v).split(',')[0] + ' outline fits (sometimes the side)'; },
     'openings.pose': function (v) { return v === 'lying' ? 'solid shown lying on its side' : 'solid shown upright'; },
     'openings.foils': function (v) { return v === 'proportion' ? 'one wrong opening with the wrong proportions' : 'wrong openings differ in a cut'; },
+    // Openings version 3 (W1-band-B, PLAN milestone 8): the openings against the face they fit
+    'openings.turn': function (v) { return v === 'as seen' ? 'openings drawn as their face is seen' : v === 'turned' ? 'openings turned in quarter turns' : 'openings turned or flipped'; },
     // Missing View
-    'patviews.cubes': function (v) { return v + ' cubes'; },
-    'patviews.grid': function (v) { return 'on a ' + v + ' grid'; },
+    // version 3 (W1-band-B, PLAN milestone 8): the object is a cube stack ('cube stack, 4–7') or a solid block ('solid: slopes')
+    'patviews.cubes': function (v) { var s = String(v), m = /^cube stack, (\S+)(.*)$/.exec(s); return m ? m[1] + ' cubes' + m[2] : 'a solid block with ' + s.replace(/^solid: /, ''); },
+    'patviews.grid': function (v) { return /^small/.test(String(v)) ? 'small (a 3 × 3 grid, or one or two cuts)' : 'large (a 4 × 4 grid, or two or three cuts)'; },
     'patviews.missing': function (v) { return 'the ' + v + ' view to find'; },
-    'patviews.foil': function (v) { return v === 'same outline' ? 'wrong drawings with the same outline' : v === 'solid or dotted' ? 'wrong drawings that differ in one line (solid or dotted)' : 'wrong drawings with another outline'; },
+    'patviews.foil': function (v) { return v === 'same outline' ? 'wrong drawings with the same outline' : v === 'solid or dotted' ? 'wrong drawings that differ in solid or dotted, or in one line' : 'wrong drawings with another outline or other lines'; },
     // Angles (size ranges from the generator)
     // the starter level (9°) ignores the size class: all near a right angle (note D2 §3.2)
     'angles.gap': function (v) { return 'closest two angles ' + v + '° apart' + (v === 9 ? ', all near a right angle' : ''); },
@@ -149,7 +154,7 @@
     'form.solid': function (v) { return v === 'frusta and five-sided' ? 'cut-off pyramids and five-sided prisms' : String(v); },
     'form.marks': function (v) { return FORM_MARKS[v] || 'marks: ' + v; },
     'form.view': function (v) { return 'solids pictured ' + v; },
-    'form.foil': function (v) { return v === 'marks only' ? 'wrong solids differ only in their marks' : 'wrong solids differ in size or in marks'; },
+    'form.foil': function (v) { return v === 'close' ? 'wrong solids that differ only a little' : v === 'clear' ? 'wrong solids that differ clearly' : v === 'marks only' ? 'wrong solids differ only in their marks' : 'wrong solids differ in size or in marks'; },
     'views.view': function (v) { return v + ' view'; },
     'views.cubes': function (v) { return v + ' cubes'; }, // the starter level's value is a range ('3–4')
     // Central Point (EX-20): right within a share of the best total distance
@@ -170,6 +175,9 @@
   var FORM_MARKS = {
     'shaded and half': 'one shaded face and one half-shaded', 'two shaded and half': 'two shaded faces and one half-shaded',
     'shaded and two halves': 'one shaded face and two half-shaded',
+    // Form version 3 (W1-band-B, PLAN milestone 8)
+    'one shaded (starter)': 'one shaded face (starter)', 'plain': 'plain solids, no marks', 'shaded faces': 'two shaded faces',
+    'shaded, apart in the pattern': 'two shaded faces that meet on the solid but lie apart in the pattern',
   };
   function dimText(def, dim, v) {
     var f = def && PHRASE[def.id + '.' + dim.key];

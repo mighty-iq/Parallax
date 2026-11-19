@@ -71,6 +71,18 @@ Design source: docs/research/v1.2/D2-first-band.md §3.0, §3.4–3.9, §4. Requ
   timed pace with Auto-play): Form 3 / 14.6 s, Openings 5 / 16.3 s, Missing View 5 / 17.4 s, Hole Punch
   7 / 22.7 s.
 
+## Milestone 8: the DAT-style rebuild toward the real formats (19 Nov)
+- 09:35–10:50 UTC: Form version 3 (c29d655, 73adbbf, 83cf4b3, 5bcc8ef): the test's kinds (plain, shaded, half
+  shaded), bevelled boxes, L-, T- and U-prisms with real visibility, the net distance and the net-adjacency lure,
+  letters A–D and the format's look (Wave 3). Cube nets left out (DECISIONS).
+- 11:13 UTC: Openings version 3 (10afcf1): a turn dim (as seen, turned, turned or flipped), a test-range start at
+  two features, the plain look. 11:25 UTC: Hole Punch version 3 (3e1ebfb): wrong sheets whose hole count may
+  differ, the same-count level kept beyond, the format's look. 11:31 UTC: Missing View lettered (7c0f142).
+- 11:39 UTC: "always the same letter" in every per-level shortcut run (6846afc). The key's letter is uniform per
+  level in all four (10 000+ items per level, every share within 1 point of chance, smallest p above the
+  Bonferroni line; Missing View rerun at version 3 below).
+- 12:21 UTC: Missing View phase B step 1 (8135ac4): profile solids built and validated (dormant).
+
 ## Next
 - Form's fresh-player rerun (the lead's); fix what it finds once.
 
