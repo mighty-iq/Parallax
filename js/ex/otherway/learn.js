@@ -7,7 +7,7 @@
   'use strict';
 
   PX.ex.learn('otherway', {
-    goal: 'Six short tasks that ask familiar skills the other way round.',
+    goal: 'Six kinds of question that ask familiar skills the other way round.',
     instruction: {
       title: 'Other Way Round',
       lines: [
@@ -27,7 +27,7 @@
     ],
     explain: {
       turn: ['The line is the axis; the curved arrow shows which way the figure turns about it, and how far.', 'Picture the turn, then look for the arm that moves the most: only one picture has every arm where the turn puts it.'],
-      foldback: ['Each plan folds along its dashed creases in order (one dot marks the first, two dots the second), the arrows showing which part goes over, and punches once where the big dot is.', 'Unfold the plan in your head: every fold that the punch goes through mirrors the hole across its crease. One plan gives exactly these holes.'],
+      foldback: ['Each plan folds along its dashed creases in order (one tick marks the first, two ticks the second), the arrows showing which part goes over, and punches once where the big dot is.', 'Unfold the plan in your head: every fold that the punch goes through mirrors the hole across its crease. One plan gives exactly these holes.'],
       cutback: ['The face is drawn at true size. Each solid shows one flat cut as a shaded shape.', 'Compare the cut\'s corners and side lengths with the face: one cut matches it, the others have other proportions.'],
       netback: ['The first picture shows three faces of the cube; turned over, the second shows the other three.', 'Faces opposite each other on the cube are never next to each other on a net, and the order of faces around a corner must match.'],
       viewfrom: ['The flat drawing shows how tall the cubes stand when you look from one side, column by column.', 'Walk round the cubes in your head: from the back, left and right swap; only one side gives these columns in this order.'],

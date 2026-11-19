@@ -41,7 +41,7 @@
 .ex-otherway .ow-folded { fill: var(--surface-3, #DDE1DE); stroke: var(--ink, #1A1D21); stroke-width: 0.06; }
 .ex-otherway .ow-crease { stroke: var(--ink, #1A1D21); stroke-width: 0.07; stroke-dasharray: 0.22 0.14; }
 .ex-otherway .ow-flap { stroke: var(--ink, #1A1D21); stroke-width: 0.1; }
-.ex-otherway .ow-stepdot { fill: var(--ink, #1A1D21); }
+.ex-otherway .ow-steptick { stroke: var(--ink, #1A1D21); stroke-width: 0.1; stroke-linecap: round; }
 .ex-otherway .ow-punch { fill: var(--ink, #1A1D21); stroke: var(--surface, #FBFCFB); stroke-width: 0.06; }
 
 /* solids and cuts */
@@ -64,6 +64,8 @@
 .ex-otherway .ow-ground { stroke: var(--ink, #1A1D21); stroke-width: 0.06; }
 .ex-otherway .ow-foot { fill: var(--surface-3, #DDE1DE); stroke: var(--ink, #1A1D21); stroke-width: 0.1; }
 .ex-otherway .ow-sidearrow { stroke: var(--ink, #1A1D21); stroke-width: 0.16; }
+/* the side options' little plans (the footprint, an arrow from that side): large enough to read */
+.ex-otherway .ow-sideicon { display: block; width: 2rem; height: 2rem; flex: none; }
 
 /* where am I */
 .ex-otherway .ow-ground2 { fill: var(--surface, #FBFCFB); stroke: var(--rule-strong, #7B838A); stroke-width: 0.6; }
@@ -82,7 +84,8 @@
 /* short screens (phones on their side): the drawings are smaller, so their labels are drawn larger (13 px or more) */
 @media (max-height: 480px) {
   .ex-otherway .ow-lab { font-size: 0.9px; }
-  .ex-otherway .ow-side { font-size: 0.82px; }
+  .ex-otherway .ow-side { font-size: 0.9px; }
+  .ex-otherway .ow-angle { font-size: 0.62px; }
   .ex-otherway .ow-north { font-size: 8.8px; }
   .ex-otherway .ow-map .ow-marklab { font-size: 8.6px; }
   .ex-otherway .ow-circle .ow-marklab { font-size: 13.6px; }
