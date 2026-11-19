@@ -160,11 +160,14 @@ export async function run(t) {
       if (Math.abs(num - C.si(x, 0, k, s).S) > 1e-5) scoreOk = false;
     }
     if (Math.abs(tot - 1) > 1e-9) sumsOk = false;
-    if (Math.abs(info - T._.cellInfo(x, k, tau, lapse)) > 1e-3 * Math.max(1, info)) infoOk = false;
+    if (Math.abs(info - T._.cellInfoAt(x, k, tau, lapse)) > 1e-9 * Math.max(1, info)) infoOk = false;
+    const xo = x + 0.0437; // between the table's places
+    let io = 0; for (let s = 0; s <= k; s++) { const pd = T._.cellPD(xo, k, s, tau, lapse); io += pd.D * pd.D / pd.P; }
+    if (Math.abs(io - T._.cellInfo(xo, k, tau, lapse)) > 5e-3 * io + 1e-6) infoOk = false;
   }
   t.ok(sumsOk, 'P(s) sums to 1 over s = 0…k');
   t.ok(scoreOk, 'the score is d/dθ log P(s) (numerical derivative)');
-  t.ok(infoOk, 'the information table matches Σ D²/P');
+  t.ok(infoOk, 'the expected information is Σ D²/P, and its table reads it within 0.5 % between places');
   // Δ(k, tau): the whole pattern half the time at θ = b (lapse aside)
   const whole = [4, 8, 18].map((k) => (T._.cellPD(0, k, k, tau, lapse).P - lapse / (k + 1)) / (1 - lapse));
   t.ok(whole.every((p) => Math.abs(p - 0.5) < 1e-6), `the whole pattern half the time at θ = b (${whole.map((p) => p.toFixed(4)).join(', ')})`);
