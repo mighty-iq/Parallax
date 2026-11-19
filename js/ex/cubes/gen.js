@@ -368,7 +368,9 @@
       if (frac > pc.best) pc.best = frac;
       pc.any += shown[j];
     });
-    return { cubes: cubes, faces: faces, perCube: perCube, G: G };
+    // img: the raster itself (the owning face per pixel, -1 for none), for the view's badges, which sit
+    // on the most interior point of a face's visible pixels (fresh-player run, 19 Nov: badges at joins).
+    return { cubes: cubes, faces: faces, perCube: perCube, G: G, img: { own: own, W: W, H: Ht, x0: x0, y0: y0, scale: SCALE } };
   }
   // What the picture shows: the top-face share of every column's top cube, the hidden cubes, and
   // how many painted faces each cube shows clearly (for the novice-error shortcut).
