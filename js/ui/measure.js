@@ -182,7 +182,10 @@
     // of several formats (Other Way Round) brings each format's example before that format's first item (again).
     function instruct(step, def, again) {
       var learn = PX.ex.learn(def.id) || {}, ins = learn.instruction || {};
-      var lines = (Array.isArray(ins) ? ins : ins.lines || []).slice();
+      // only what the first item needs on the card (learn.brief, else the first two lines); the rest folds away under
+      // "More about this task" (fresh-player run, item 5: up to eight paragraphs before a task)
+      var all = (Array.isArray(ins) ? ins : ins.lines || []).slice(), brief = Array.isArray(learn.brief) && learn.brief.length ? learn.brief.slice() : null;
+      var lines = brief || all.slice(0, 2), more = brief ? all : all.slice(2);
       if (!lines.length && learn.goal) lines.push(learn.goal);
       var v = step.params && step.params.variant, expl = v && learn.explain && learn.explain[v];
       if (again) lines = expl && expl.length ? [expl[0]] : [];
@@ -198,8 +201,10 @@
       if (block && !canDemo) lines = lines.slice(0, 1).concat(lim ? [lines[lines.length - 1]] : []); // a known task: its goal and its time
       var bg = again ? null : background(def);
       if (bg) lines = lines.concat(bg.lines);
+      if (!again && !block && more.length) lines.push(h('details.px-ms-more', h('summary', 'More about this task'), more.map(function (t) { return h('p', t); })));
+      // no "PR-6 · Vz" spec line: the codes mean nothing to a player (fresh-player run, item 6)
       return o.card({
-        id: again ? 'probe-format' : 'probe-intro', title: again ? 'Next in ' + (ins.title || nameOf(def)) + ': a new kind of question' : 'Task ' + (probes.indexOf(def.id) + 1) + ' of ' + probes.length + ': ' + (ins.title || nameOf(def)), def: again ? null : def,
+        id: again ? 'probe-format' : 'probe-intro', title: again ? 'Next in ' + (ins.title || nameOf(def)) + ': a new kind of question' : 'Task ' + (probes.indexOf(def.id) + 1) + ' of ' + probes.length + ': ' + (ins.title || nameOf(def)), def: null,
         lines: lines.concat(canDemo ? ['First, one worked example. It is never scored.'] : []),
         actions: canDemo ? [{ label: 'Skip the example', value: 'skip' }, { label: 'Show the example', value: 'example', primary: true }] : [{ label: 'Start', value: 'start', primary: true }],
       }).then(function (v) {

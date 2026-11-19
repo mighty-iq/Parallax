@@ -16,6 +16,8 @@
 
   PX.ex.learn('cubematch', {
     goal: 'Which drawing shows the reference cube, turned?',
+    // the task card's lines (the runner folds instruction.lines away under "More about this task")
+    brief: ['Find the drawing that shows the reference cube turned. Every face has its own symbol, and a symbol keeps its place on the cube and the way it points.'],
     parts: [
       { id: 'first', label: 'Reference', text: 'A cube seen from one corner: you see three of its six faces.' },
       { id: 'options', label: 'Drawings 1 to 4', text: 'One is the reference cube turned. In each of the others two symbols have swapped places or one points another way. Faces you cannot see in the reference may carry any of the other symbols.' },
