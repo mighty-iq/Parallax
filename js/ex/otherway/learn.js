@@ -11,7 +11,7 @@
     instruction: {
       title: 'Other Way Round',
       lines: [
-        'Six short tasks, one after another: turn a figure, unfold a sheet, find a cut, fold a net, name a side, find your place on a map.',
+        'The kinds: turn a figure, unfold a sheet, find a cut, fold a net, name a side, find your place on a map.',
         'Each asks a skill you may know from the training the other way round, so read each question line first.',
         'There is no feedback in this check. Answer as well as you can; a guess is fine when you are unsure.',
       ],

@@ -66,6 +66,15 @@ def to_item(page, ms=30000):
     return False
 
 
+def show_check_tab(page):
+    """Progress may show one section at a time (phones, W3-phones' O20 tabs): pick the Spatial Check's."""
+    page.wait_for_selector('.px-ms-progress', state='attached', timeout=8000)
+    jump = page.locator('[data-jump="check"]')
+    if not page.locator('.px-ms-progress').is_visible() and jump.count():
+        jump.first.click()
+    page.wait_for_selector('.px-ms-progress', timeout=8000)
+
+
 def no_hscroll(page):
     return page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
 
@@ -172,7 +181,7 @@ def desktop(b, C):
 
     # Progress, Settings, the Lab
     page.evaluate('void PX.core.router.go("progress")')
-    page.wait_for_selector('.px-ms-progress', timeout=8000)
+    show_check_tab(page)
     pg = page.evaluate('''(() => { const x = document.querySelector('.px-ms-progress'); return [x.id, x.getAttribute('data-section'), document.querySelectorAll('[data-section="check"]').length,
       x.querySelector('[data-status]').getAttribute('data-status'), x.querySelectorAll('.px-fp-row[data-rung]').length, !!x.querySelector('.px-ms-meter')]; })()''')
     C.ok(pg[:3] == ['px-prog-check', 'check', 1] and pg[3] == 'trend' and pg[4] >= 3 and pg[5], f'{tag}: Progress: the panel in place of the check section, the meter and the rung rows ({pg})')
@@ -225,7 +234,7 @@ def phones(b, C, state):
         page.locator('.px-today > [data-measure]').screenshot(path=str(OUT / f'today_slot_{w}.png'))
         C.ok(no_hscroll(page), f'{tag}: Today: no horizontal scroll')
         page.evaluate('void PX.core.router.go("progress")')
-        page.wait_for_selector('.px-ms-progress', timeout=8000)
+        show_check_tab(page)
         page.locator('.px-ms-progress').screenshot(path=str(OUT / f'progress_{w}.png'))
         C.ok(no_hscroll(page), f'{tag}: Progress: no horizontal scroll')
         errs = [e for e in con.errors() if 'favicon' not in e]
@@ -267,7 +276,7 @@ def balance_lab(b, C, w, hgt, n_items):
     while time.time() - t0 < 240 and len(fits) < n_items:
         cid = card(page)
         if cid:
-            if cid == 'probe-format' and 'bus stop' in page.locator('[data-card-box]').inner_text():
+            if cid == 'probe-format' and 'bus stop' in page.locator('[data-card-box]').inner_text() and 'New kind of question' in page.locator('[data-card-box]').inner_text():
                 seen['median-card'] = True
             if cid == 'probe-intro' and 'balance point' in page.locator('[data-card-box]').inner_text():
                 seen['centroid-card'] = True
@@ -297,7 +306,7 @@ def balance_lab(b, C, w, hgt, n_items):
         page.wait_for_timeout(150)
     bad = [f for f in fits if f['hscroll'] or not f['svgIn'] or not f['btnIn'] or f['small']]
     C.ok(len(fits) >= n_items and not bad, f'{tag}: {len(fits)} items fit (figure and Confirm on the screen, no sideways scroll, text 13 px or more) {bad[:2]}')
-    C.ok(seen.get('centroid-card') and seen.get('median-card'), f'{tag}: each kind\'s own line before its first item ({seen})')
+    C.ok(seen.get('centroid-card') and seen.get('median-card'), f'{tag}: the first kind on the task card, the second on a light "New kind of question" card ({seen})')
     if n_items >= 12:
         page.wait_for_selector('.px-ms-balance-end', timeout=20000)
         end = page.locator('.px-ms-balance-end').inner_text()

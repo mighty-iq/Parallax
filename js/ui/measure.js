@@ -172,6 +172,12 @@
       right.forEach(function (i) { g.mark(i, 'right'); });
       return right.length > 0;
     }
+    function newKind(def, step) {
+      var learn = PX.ex.learn(def.id) || {}, v = step.params && step.params.variant, expl = v && learn.explain && learn.explain[v];
+      if (!expl || !expl.length) return Promise.resolve(null);
+      return o.card({ id: 'probe-format', title: 'New kind of question', lines: [expl[0]], actions: [{ label: 'Go on', value: 'go', primary: true }] })
+        .then(function (x) { return x === 'closed' ? 'stop' : null; });
+    }
     // The probe's instruction card; on first contact (or in a full check) its worked example, never scored. A probe
     // of several formats (Other Way Round) brings each format's example before that format's first item (again).
     function instruct(step, def, again) {
@@ -182,6 +188,10 @@
       if (again) lines = expl && expl.length ? [expl[0]] : [];
       var ex = step.probe && step.probe.example, canDemo = !!(ex && P.view && P.view.demo);
       if (!again && !canDemo && expl && expl.length && def.cycle === 'variant') lines.push(expl[0]); // no worked example: the first kind's own line
+      if (!again && def.cycle === 'variant' && Array.isArray(def.variants) && def.variants.length > 1 && step.probe && step.probe.of) {
+        var kinds = WORDNUM[def.variants.length] || String(def.variants.length);
+        lines.unshift(step.probe.of + ' items: ' + kinds + ' kinds of question in turn. Each new kind opens with one line about it.');
+      }
       var lim = limitRange(def);
       if (again) { var ms = def.timeLimit ? def.timeLimit(step.params) : null; lim = ms ? { lo: Math.round(ms / 1000), hi: Math.round(ms / 1000) } : null; }
       if (lim) lines.push((lim.lo === lim.hi ? 'Each item has up to ' + lim.lo + ' seconds' : 'Each item has ' + lim.lo + ' to ' + lim.hi + ' seconds (harder items get more)') + ', shown as a slow bar under it.');
@@ -272,7 +282,9 @@
         var first = step.probe && step.probe.index === 0 && !S.instructed[def.id];
         if (first) S.instructed[def.id] = true;
         var again = !first && step.probe && (step.probe.example || step.probe.newVariant);
-        (first || again ? instruct(step, def, !first) : Promise.resolve(null)).then(function (r) {
+        // a new kind of question inside a probe (Other Way Round's strands, Motion Graphs' kinds, Balance's two) gets a
+        // light card: its one line and Go on (fresh-player run, item 2); only the probe's first card offers an example
+        (first ? instruct(step, def, false) : again ? newKind(def, step) : Promise.resolve(null)).then(function (r) {
           if (S.done) return null;
           if (r === 'stop') { stop(true); return null; }
           var item;
