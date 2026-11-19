@@ -884,6 +884,50 @@
     } catch (e) { /* not available */ }
   }
 
+  /* ---------- the offline start (O21, PLAN milestone 9; sw.js) ----------
+     sw.js keeps a complete copy of the app's files, so the GitHub Pages copy (and its home-screen icon) starts
+     without a connection. It is registered only by the multi-file app at the top of a secure http(s) page (GitHub
+     Pages; http://localhost in the tests) and only from the app's index: never from file://, never in a frame
+     (sandboxed or srcdoc previews included), never from the single-file build wherever it is hosted (its scripts
+     are inline, so no <script src> names js/core/px.js) and never where the browser has no service workers.
+     It waits until the page has loaded and no stimulus is on screen. No error reaches the player: a refusal or
+     a failure is kept in PX.ui.app.sw ({ state: 'off' | 'waiting' | 'registering' | 'registered' | 'failed',
+     why, scope }), which the tests read (tests/e2e/sw.py). */
+  var sw = { state: 'idle', why: null, scope: null };
+  function swWhyNot() {
+    var loc = window.location, nav = window.navigator;
+    if (loc.protocol !== 'https:' && loc.protocol !== 'http:') return 'protocol'; // file:, about:srcdoc, blob:
+    if (env.framed || env.opaque) return 'frame';
+    if (window.isSecureContext !== true) return 'insecure'; // plain http other than localhost
+    if (!nav || !('serviceWorker' in nav) || !nav.serviceWorker || typeof nav.serviceWorker.register !== 'function') return 'unsupported';
+    if (!doc.querySelector('script[src$="js/core/px.js"]') || !doc.querySelector('link[rel="stylesheet"][href$="css/base.css"]')) return 'single-file';
+    if (!/\/(index\.html)?$/.test(loc.pathname)) return 'not-index'; // the dev harness, a test page
+    return null;
+  }
+  function swFail(e) { sw.state = 'failed'; sw.why = String((e && e.message) || e || 'error').slice(0, 200); }
+  function registerSw() {
+    try {
+      if (sw.state !== 'idle') return;
+      if (PX.ui.app) PX.ui.app.sw = sw;
+      var why = swWhyNot();
+      if (why) { sw.state = 'off'; sw.why = why; return; }
+      sw.state = 'waiting';
+      var go = function () {
+        try {
+          if (doc.body && doc.body.classList.contains('px-stim')) { window.setTimeout(go, 5000); return; } // after the stimulus
+          sw.state = 'registering';
+          window.navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' }).then(function (reg) {
+            sw.state = 'registered';
+            sw.scope = reg && reg.scope ? String(reg.scope) : null;
+          }, swFail);
+        } catch (e) { swFail(e); }
+      };
+      var soon = function () { window.setTimeout(go, 1500); };
+      if (doc.readyState === 'complete') soon(); else window.addEventListener('load', soon);
+    } catch (e) { swFail(e); }
+  }
+  bus.on('app:ready', registerSw);
+
   // Chart labels (Progress and Lab curves) keep 13 px on a phone: each chart gets its drawing units
   // per CSS px as --px-u once it is laid out, and css/screens.css sizes the labels from it.
   function chartUnits() {
