@@ -23,8 +23,8 @@ export async function run(t) {
     const v = d.validate(it);
     if (v !== true) bad.push(`${variant}${level} seed ${30000 + i}: ${v}`);
     if (it.fallback) fb++;
-    if (variant === 'centroid') pulls.centroid.push(Math.hypot(it.key[0] - it.core[0], it.key[1] - it.core[1]));
-    else pulls.median.push(Math.abs(it.mean - it.key));
+    if (variant === 'centroid') pulls.centroid.push(Math.hypot(it.key.x - it.core.x, it.key.y - it.core.y));
+    else pulls.median.push(Math.abs(it.mean - it.key.x));
     if (i < 600) items.push(it);
   }
   t.eq(bad.slice(0, 5), [], `every item validates (${bad.length} bad)`);
@@ -34,7 +34,7 @@ export async function run(t) {
   t.ok(med(pulls.median) >= 12.5, `the mean sits ${med(pulls.median).toFixed(1)} units from the middle house (median)`);
   const a = d.generate(PX.rng(9), { variant: 'centroid', level: 2 }), b = d.generate(PX.rng(9), { variant: 'centroid', level: 2 });
   t.eq(JSON.stringify(a), JSON.stringify(b), 'items are deterministic');
-  const sides = items.filter((it) => it.params.variant === 'median').map((it) => it.key < 50);
+  const sides = items.filter((it) => it.params.variant === 'median').map((it) => it.key.x < 50);
   t.ok(sides.filter(Boolean).length / sides.length > 0.35 && sides.filter(Boolean).length / sides.length < 0.65, 'the crowd sits at either end');
 
   t.section('Balance: shortcut answers');
@@ -53,7 +53,7 @@ export async function run(t) {
     } else {
       const ch = L.cheapMedian(it.houses);
       for (const [name, x] of Object.entries(ch)) tally('median ' + name, d.score(it, { x }).correct);
-      const others = it.houses.filter((x) => x !== it.key);
+      const others = it.houses.filter((x) => x !== it.key.x);
       tally('median another house', d.score(it, { x: others[R.int(0, others.length - 1)] }).correct);
     }
   }
@@ -67,19 +67,20 @@ export async function run(t) {
 
   t.section('Balance: the score and the pull');
   const c = d.generate(PX.rng(123), { variant: 'centroid', level: 1 });
-  let s = d.score(c, { x: c.key[0], y: c.key[1] });
+  let s = d.score(c, c.key);
   t.ok(s.correct && s.value === 0 && Math.abs(s.value2 - 1) < 0.01, 'the balance point: right, distance 0, pull 1 (far dots at full weight)');
-  s = d.score(c, { x: c.core[0], y: c.core[1] });
+  s = d.score(c, c.core);
   t.ok(!s.correct && Math.abs(s.value2) < 0.01, 'the cluster\'s own mean: wrong, pull 0 (far dots ignored)');
-  const over = [c.core[0] + 1.5 * (c.key[0] - c.core[0]), c.core[1] + 1.5 * (c.key[1] - c.core[1])];
+  const over = [c.core.x + 1.5 * (c.key.x - c.core.x), c.core.y + 1.5 * (c.key.y - c.core.y)];
   t.ok(Math.abs(d.score(c, { x: over[0], y: over[1] }).value2 - 1.5) < 0.01, 'half again as far: pull 1.5 (far dots overweighted)');
-  const tol = d.score(c, { x: c.key[0] + L.TOL.centroid - 0.01, y: c.key[1] });
-  t.ok(tol.correct && !d.score(c, { x: c.key[0] + L.TOL.centroid + 0.1, y: c.key[1] }).correct, 'right within ' + L.TOL.centroid + ' units, wrong beyond');
+  const tol = d.score(c, { x: c.key.x + L.TOL.centroid - 0.01, y: c.key.y });
+  t.ok(tol.correct && !d.score(c, { x: c.key.x + L.TOL.centroid + 0.1, y: c.key.y }).correct, 'right within ' + L.TOL.centroid + ' units, wrong beyond');
   const m = d.generate(PX.rng(124), { variant: 'median', level: 2 });
-  s = d.score(m, { x: m.key });
+  s = d.score(m, m.key);
   t.ok(s.correct && s.value2 === 0, 'the middle house: right, pull 0');
   s = d.score(m, { x: m.mean });
   t.ok(!s.correct && Math.abs(s.value2 - 1) < 0.01, 'the mean of the houses: wrong, pull 1');
   t.ok(d.score(m, null).correct === false && d.score(c, {}).correct === false, 'no answer: wrong');
+  t.ok(!d.score(c, c.wrongResponse).correct && !d.score(m, m.wrongResponse).correct, 'each item carries a wrong answer for the test drivers');
   t.ok(d.difficulty({ variant: 'median', level: 0 }) > d.difficulty({ variant: 'centroid', level: 0 }) && d.difficulty({ variant: 'centroid', level: 2 }) > d.difficulty({ variant: 'centroid', level: 0 }), 'the bus stop is harder; more dots or houses are harder');
 }

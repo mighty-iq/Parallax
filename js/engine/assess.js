@@ -43,7 +43,7 @@
   var FORMS = ['A', 'B', 'C'];
   var TRAINING = { train: true, path: true, speed: true, threshold: true, free: true };
   var FULL = { B1: true, B2: true, B3: true, regular: true, delayed: true };
-  var SESSION_KIND = { B1: 'baseline', B2: 'baseline', B3: 'baseline', regular: 'check', delayed: 'check', block: 'block', week: 'week' };
+  var SESSION_KIND = { B1: 'baseline', B2: 'baseline', B3: 'baseline', regular: 'check', delayed: 'check', block: 'block', week: 'week', balance: 'lab' };
 
   function isNum(x) { return typeof x === 'number' && isFin(x); }
   function isObj(x) { return !!x && typeof x === 'object' && !isArray(x); }
@@ -74,6 +74,9 @@
     // slope, only against separation: pooled exports combine slopes with their se, so they must not be shrunk much
     // (60 answers give one player's slope an se of about 1.3 logits)
     curves: { ex: ['centralpoint', 'reckon', 'knots', 'openings', 'patviews', 'angles', 'patfold', 'cubes', 'form'], n: 60, min: 20, startSd: 3, slopeSd: 5 },
+    // Lab checks outside the ladder (note T1 §5.2): Balance, the check of Central Point's calibrate bet; its entries
+    // go to rec.measure.balance (at most `keep`), never to rec.assess, so the schedule and the meter never see them
+    lab: { balance: { items: 12, keep: 24 } },
   });
 
   /* ---------- the grid posterior of one probe ---------- */
@@ -434,18 +437,19 @@
     wire();
     opts = opts || {};
     var occ = occasions(rec), full = checks(rec);
-    var kind = typeof opts.kind === 'string' && (FULL[opts.kind] || opts.kind === 'block' || opts.kind === 'week') ? opts.kind : due(rec, now).kind;
+    var lab = opts.kind === 'balance' && isObj(C.measure.lab) && isObj(C.measure.lab.balance);
+    var kind = lab ? 'balance' : typeof opts.kind === 'string' && (FULL[opts.kind] || opts.kind === 'block' || opts.kind === 'week') ? opts.kind : due(rec, now).kind;
     var can = function (def) { return def && def.role === 'probe' && (!plan.can || plan.can(def)); };
-    var mix = mixOf(kind, rec, opts, can);
+    var mix = lab ? (can(PX.ex.get('balance')) ? [{ id: 'balance', items: C.measure.lab.balance.items }] : []) : mixOf(kind, rec, opts, can);
     if (!mix.length) { plan.unavailable = 'The Spatial Check needs its probe exercises.'; return; }
     // the record's first form, drawn at B1 (records with an earlier check keep 'A': js/engine/record.js)
     if (kind === 'B1' && isObj(rec.measure) && FORMS.indexOf(rec.measure.form0) < 0 && !full.length) rec.measure.form0 = drawForm0(rec);
-    var block = !FULL[kind], f = occ.length ? fit(rec) : null;
-    var fm = block ? { form: null, cycle: blockIndex(rec) } : form(full.length, rec);
+    var block = !FULL[kind] && !lab, f = occ.length && !lab ? fit(rec) : null, labN = lab ? balanceList(rec).length : 0;
+    var fm = lab ? { form: null, cycle: labN } : block ? { form: null, cycle: blockIndex(rec) } : form(full.length, rec);
     var seen = {};
     occ.forEach(function (a) { Object.keys(a.results).forEach(function (id) { seen[keyOf(id, isObj(a.pv) ? a.pv[id] : 1)] = true; }); });
     var probes = mix.map(function (m) {
-      var def = PX.ex.get(m.id), fresh = !seen[keyOf(m.id, def.version)];
+      var def = PX.ex.get(m.id), fresh = lab ? labN === 0 : !seen[keyOf(m.id, def.version)];
       // items aim at the trend model's prediction for the probe (B1: the middle of its range); the stored posterior
       // keeps the standard prior N(middle, 1.5²), so every entry stays comparable
       return { id: m.id, v: def.version, n: 0, items: m.items, lw: newPost(def, centerOf(rec, def, f, now), C.measure.targetSd), lwS: newPost(def), right: 0, rts: [], recent: [], voids: 0, log: [],
@@ -453,7 +457,7 @@
     });
     plan.exs = probes.map(function (p) { return p.id; });
     // a B1 after rated training began is marked late (its baseline already holds some training)
-    plan.check = { index: full.length, form: fm.form, cycle: fm.cycle, kind: kind, block: block, probes: probes, cur: 0,
+    plan.check = { index: full.length, form: fm.form, cycle: fm.cycle, kind: kind, block: block, lab: lab, probes: probes, cur: 0,
       late: kind === 'B1' && trainedBefore(rec, now) };
     plan.total = itemsOfMix(mix);
     plan.budgetMs = Infinity;
@@ -495,10 +499,13 @@
     // the worked example once per probe, before its first item: in every full check (1.1), in a block only for a
     // probe (version) met for the first time; a probe of several formats has one per format (learn.demo with
     // params.variant), each before that format's first item
-    var example = null;
+    var example = null, newVariant = null;
     if (cyc) {
       if (!pr.exampledV) pr.exampledV = {};
-      if (!pr.exampledV[cyc] && (!pc.block || pr.fresh)) example = ex.filter(function (d) { return d.params && d.params.variant === cyc; })[0] || null;
+      if (!pr.exampledV[cyc] && (!pc.block || pr.fresh)) {
+        example = ex.filter(function (d) { return d.params && d.params.variant === cyc; })[0] || null;
+        if (!ex.length) newVariant = cyc; // a probe without worked examples (Balance): the kind's own line instead
+      }
       pr.exampledV[cyc] = true;
     } else {
       example = !pr.exampled && ex.length && (!pc.block || pr.fresh) ? ex[0] : null;
@@ -506,7 +513,7 @@
     }
     return E.modes._.makeStep(plan, rec, def, r, 'probe', {
       seed: seed, noNote: true, feedback: false, banner: pr.n === 0, newRun: pr.n === 0,
-      probe: { id: pr.id, index: pr.n, of: pr.items, form: pc.form, control: pr.id === C.assess.control, example: example, kind: pc.kind },
+      probe: { id: pr.id, index: pr.n, of: pr.items, form: pc.form, control: pr.id === C.assess.control, example: example, newVariant: newVariant, kind: pc.kind },
     });
   }
 
@@ -532,10 +539,17 @@
     }
     updatePost(pr.lw, step.b, step.g, ok);
     if (pr.lwS) updatePost(pr.lwS, step.b, step.g, ok);
+    if (plan.check.lab) { // Balance: [b, g, ok, rtMs, distance, pull, kind (0 balance point, 1 bus stop), x, y]
+      var at = result && isArray(result.at) ? result.at : [];
+      pr.log.push([U.round(step.b, 3), U.round(step.g, 3), ok ? 1 : 0, rt, isNum(result && result.value) ? result.value : null,
+        isNum(result && result.value2) ? result.value2 : null, step.params && step.params.variant === 'median' ? 1 : 0, isNum(at[0]) ? at[0] : null, isNum(at[1]) ? at[1] : null]);
+      return;
+    }
     pr.log.push([U.round(step.b, 3), U.round(step.g, 3), ok ? 1 : 0, rt]);
   }
 
   function finish(plan, rec, now, res) {
+    if (plan.check.lab) return finishLab(plan, rec, now, res);
     var results = {}, items = {}, pv = {};
     plan.check.probes.forEach(function (pr) {
       if (!pr.n) return;
@@ -566,6 +580,35 @@
     var verdict = settle(rec, now);
     res.check = { kind: plan.check.kind, form: plan.check.form, block: plan.check.block, results: results, report: report(rec, now), meter: meter(rec, now), verdict: verdict };
   }
+
+  /* ---------- Balance, the Lab check of the calibrate bet (note T1 §5.2) ---------- */
+  function balanceList(rec) { return rec && isObj(rec.measure) && isArray(rec.measure.balance) ? rec.measure.balance : []; }
+  function finishLab(plan, rec, now, res) {
+    var pr = plan.check.probes[0];
+    if (!pr || !pr.n) return;
+    if (!isObj(rec.measure)) rec.measure = {};
+    if (!isArray(rec.measure.balance)) rec.measure.balance = [];
+    var entry = { date: new Date(now).toISOString(), form: plan.check.cycle, v: pr.v, n: pr.n, right: pr.right, items: pr.log.slice() };
+    rec.measure.balance.push(entry);
+    var keep = C.measure.lab.balance.keep || 24;
+    if (rec.measure.balance.length > keep) rec.measure.balance.splice(0, rec.measure.balance.length - keep);
+    res.check = { kind: 'balance', lab: true, form: null, results: { balance: { right: pr.right, n: pr.n, rtMed: pr.rts.length ? Math.round(U.median(pr.rts)) : null } },
+      balance: balanceSummary(entry) };
+  }
+  // One entry in words and numbers: per kind its items, right answers, mean distance and mean pull (balance point:
+  // 1 = far dots at full weight; bus stop: 0 = the middle house, 1 = the mean).
+  function balanceSummary(entry) {
+    var out = { date: entry.date, n: entry.n };
+    [['centroid', 0], ['median', 1]].forEach(function (k) {
+      var rows = (isArray(entry.items) ? entry.items : []).filter(function (r) { return isArray(r) && r[6] === k[1] && isNum(r[4]); });
+      var pulls = rows.map(function (r) { return r[5]; }).filter(isNum);
+      out[k[0]] = { n: rows.length, right: rows.filter(function (r) { return r[2] === 1; }).length,
+        dist: rows.length ? U.round(U.mean(rows.map(function (r) { return r[4]; })), 1) : null,
+        pull: pulls.length ? U.round(U.median(pulls), 2) : null };
+    });
+    return out;
+  }
+  function balanceReport(rec) { return balanceList(rec).map(balanceSummary).reverse(); }
 
   /* ---------- the meter and the verdicts (Design A) ---------- */
 
@@ -800,6 +843,10 @@
   function checkMeasure(v) {
     if (!isObj(v)) return undefined;
     if (hasOwn.call(v, 'later') && !isNum(v.later)) delete v.later;
+    if (hasOwn.call(v, 'balance')) {
+      if (!isArray(v.balance)) delete v.balance;
+      else v.balance = v.balance.filter(function (e) { return isObj(e) && typeof e.date === 'string' && isNum(e.n) && isArray(e.items); });
+    }
     if (hasOwn.call(v, 'curves')) {
       if (!isObj(v.curves)) delete v.curves;
       else Object.keys(v.curves).forEach(function (k) { if (!curveOk(k, v.curves[k])) delete v.curves[k]; });
@@ -833,6 +880,10 @@
       Object.keys(x.curves).forEach(function (k) { if (!cv[k] || x.curves[k].first < cv[k].first) cv[k] = x.curves[k]; });
     });
     if (Object.keys(cv).length) out.curves = cv; else delete out.curves;
+    var bl = {}, lists = [a, b].map(function (x) { return x && isArray(x.balance) ? x.balance : []; });
+    lists[0].concat(lists[1]).forEach(function (e) { if (!bl[e.date]) bl[e.date] = e; });
+    var ball = Object.keys(bl).sort().map(function (d) { return bl[d]; });
+    if (ball.length) out.balance = ball.slice(-((C.measure.lab && C.measure.lab.balance && C.measure.lab.balance.keep) || 24)); else delete out.balance;
     return out;
   }
 
@@ -959,7 +1010,7 @@
     start: start, next: next, answer: answer, void: voidStep, finish: finish, due: due, nextCheck: nextCheck, report: report,
     form: form, checks: checks, occasions: occasions, composite: composite, needB3: needB3, expect: expect,
     nextMeasure: nextMeasure, meter: meter, later: later, trendInput: trendInput, fit: fit, settle: settle, wire: wire,
-    mix: mixOf, FULL: FULL, curves: curves,
+    mix: mixOf, FULL: FULL, curves: curves, balanceReport: balanceReport, balanceSummary: balanceSummary,
     _: { fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0,
       checkMeasure: checkMeasure, mergeMeasure: mergeMeasure, hAt: hAt, fromPosterior: fromPosterior, blockMix: blockMix, fullMix: fullMix },
   };

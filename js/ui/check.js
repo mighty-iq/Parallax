@@ -15,7 +15,7 @@
   'use strict';
 
   var win = window, ui = PX.ui, h = ui.h, store = PX.core.store, router = PX.core.router;
-  var KINDS = { B1: 1, B2: 1, regular: 1, delayed: 1, week: 1, block: 1 };
+  var KINDS = { B1: 1, B2: 1, regular: 1, delayed: 1, week: 1, block: 1, balance: 1 };
 
   function E() { return PX.engine; }
   function rec() { return store.state; }
@@ -55,8 +55,15 @@
       if (S.done) return Promise.resolve('closed');
       return Play.showCard(wrap, P.el.root, Object.assign({}, o, { hide: P.el.root }));
     }
-    var m = Math.round(items * E().config.measure.secPerItem / 30) / 2, baseline = /^B/.test(kind), block = kind === 'block' || kind === 'week';
+    var m = Math.round(items * E().config.measure.secPerItem / 30) / 2, baseline = /^B/.test(kind), block = kind === 'block' || kind === 'week', lab = kind === 'balance';
     function intro() {
+      if (lab) return card({
+        id: 'check-intro', title: 'Lab · ' + name(kind), lines: [
+          items + ' items, about ' + minutes(m) + ': the balance point of some dots, and the best spot for a bus stop on a street. One tap each, no feedback.',
+          'It tests one bet: whether Central Point\'s practice with the point of least total distance carries over to the bus stop, and leaves the balance point alone. It is not part of the Spatial Check; the Lab keeps each run, and the community\'s pooled exports set them side by side.',
+        ],
+        actions: [{ label: 'Back', value: 'later' }, { label: 'Start', value: 'start', primary: true }],
+      });
       var lines = [
         mix.length + ' short tasks that Parallax never trains, ' + items + ' items in all: about ' + minutes(m) + '.',
         'There is no feedback. The items adapt to your answers, so expect roughly 6 to 8 in 10 right, depending on the task: the difficulty you reach carries the information, not the count.',
@@ -85,12 +92,12 @@
       if (v !== 'start') {
         S.done = true;
         if (v === 'later' && kind === 'B1') { try { E().assess.later(rec(), 'B1', now()); store.save(); } catch (e) { log('later failed', e); } }
-        P.destroy(); Play.setChrome(false); router.go('home');
+        P.destroy(); Play.setChrome(false); router.go(lab ? 'lab' : 'home');
         return null;
       }
       var Mq = M()._;
       return Promise.resolve(baseline ? Mq.askExpect(ctx, { kind: kind }) : null).then(function () {
-        return !baseline && !block || kind === 'B2' ? Mq.askOverlap(ctx) : null;
+        return !baseline && !block && !lab || kind === 'B2' ? Mq.askOverlap(ctx) : null;
       }).then(function (ov) {
         if (S.done) return null;
         var started = M().play({ P: P, wrap: wrap, kind: kind, card: card, clock: null, standalone: true, optional: p.optional === '1' || p.optional === true, extra: ov ? { overlapAnswer: ov } : null });
@@ -124,7 +131,7 @@
 
   function renderEnd(wrap, res) {
     var K = PX.ui.kit, Play = PX.ui.play, c = res && res.check, Mx = M();
-    wrap.appendChild(Play.screenHead('Spatial Check · ' + K.fmtWhen(now()), c ? 'Saved' : 'Check ended', null));
+    wrap.appendChild(Play.screenHead((c && c.lab ? 'Lab' : 'Spatial Check') + ' · ' + K.fmtWhen(now()), c ? 'Saved' : 'Check ended', null));
     var out = h('div.pl-summary');
     wrap.appendChild(out);
     if (!c) {
@@ -132,6 +139,7 @@
       out.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' })));
       return;
     }
+    if (c.lab) { renderLab(out, c); return; }
     var p = K.panel({ title: name(c.kind), className: 'pl-panel', aside: c.form ? 'form ' + c.form : null });
     p.body.appendChild(h('ul.pl-list.pl-check-list', Object.keys(c.results).map(function (id) {
       var def = PX.ex.get(id), r = c.results[id];
@@ -148,6 +156,15 @@
     pn.body.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' }), ui.button('See Progress', { kind: 'secondary', go: 'progress' })));
     out.appendChild(pn.el);
     checkInvite(out);
+  }
+
+  // Balance (a Lab check): its two kinds in numbers, no verdict.
+  function renderLab(out, c) {
+    var K = PX.ui.kit, b = c.balance || {}, p = K.panel({ title: name(c.kind), className: 'pl-panel px-ms-balance-end' });
+    p.body.appendChild(M().balanceRows(b));
+    p.body.appendChild(h('p', 'One run is rough; the Lab keeps every run, so later runs show whether the bus stop moves toward the middle house while the balance point stays put.'));
+    p.body.appendChild(h('div.pl-summary-actions', ui.button('Back to the Lab', { kind: 'primary', go: 'lab' }), ui.button('Back to Today', { kind: 'secondary', go: 'home' })));
+    out.appendChild(p.el);
   }
 
   // W1-rules (v1.2, gap C8): a finished check is a natural point to invite the player in.

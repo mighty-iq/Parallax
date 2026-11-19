@@ -22,7 +22,7 @@
   'use strict';
 
   var win = window, ui = PX.ui, h = ui.h, U = PX.util;
-  var NAMES = { B1: 'Baseline 1', B2: 'Baseline 2', B3: 'Baseline 3', regular: '4-weekly check', delayed: 'Delayed check', block: 'Short check', week: 'Measurement week' };
+  var NAMES = { B1: 'Baseline 1', B2: 'Baseline 2', B3: 'Baseline 3', regular: '4-weekly check', delayed: 'Delayed check', block: 'Short check', week: 'Measurement week', balance: 'Balance check' };
   var WORDS = {
     'likely gain': 'Likely gain: your probe results rose more than familiarity with the tasks predicts.',
     'likely no change': 'Likely no change: any rise beyond familiarity is small at this precision.',
@@ -57,6 +57,7 @@
       Object.keys(M.rungs).forEach(function (r) { M.rungs[r].forEach(function (id) { rung[id] = r; }); });
       rung[M.control] = 'control';
       (M.alone || []).forEach(function (id) { rung[id] = 'alone'; });
+      Object.keys(M.lab || {}).forEach(function (id) { rung[id] = 'lab'; });
       PX.ex.list('probe').forEach(function (d) { out[d.id + '@' + d.version] = rung[d.id] || 'alone'; });
       var list = ctx && ctx.rec && Array.isArray(ctx.rec.assess) ? ctx.rec.assess : [];
       list.forEach(function (a) {
@@ -180,6 +181,7 @@
       var v = step.params && step.params.variant, expl = v && learn.explain && learn.explain[v];
       if (again) lines = expl && expl.length ? [expl[0]] : [];
       var ex = step.probe && step.probe.example, canDemo = !!(ex && P.view && P.view.demo);
+      if (!again && !canDemo && expl && expl.length && def.cycle === 'variant') lines.push(expl[0]); // no worked example: the first kind's own line
       var lim = limitRange(def);
       if (again) { var ms = def.timeLimit ? def.timeLimit(step.params) : null; lim = ms ? { lo: Math.round(ms / 1000), hi: Math.round(ms / 1000) } : null; }
       if (lim) lines.push((lim.lo === lim.hi ? 'Each item has up to ' + lim.lo + ' seconds' : 'Each item has ' + lim.lo + ' to ' + lim.hi + ' seconds (harder items get more)') + ', shown as a slow bar under it.');
@@ -269,7 +271,7 @@
         progress(step);
         var first = step.probe && step.probe.index === 0 && !S.instructed[def.id];
         if (first) S.instructed[def.id] = true;
-        var again = !first && step.probe && step.probe.example;
+        var again = !first && step.probe && (step.probe.example || step.probe.newVariant);
         (first || again ? instruct(step, def, !first) : Promise.resolve(null)).then(function (r) {
           if (S.done) return null;
           if (r === 'stop') { stop(true); return null; }
@@ -283,6 +285,11 @@
             if (S.done || tr.outcome === 'aborted') return null;
             if (tr.end) { stop(true); return null; }
             var result = { correct: !!(tr.result && tr.result.correct), rt: tr.rtMs, timeout: !!tr.timeout, input: tr.source };
+            if (tr.result) { // a placed answer's numbers (Balance: distance, pull, where)
+              if (typeof tr.result.value === 'number' && isFinite(tr.result.value)) result.value = tr.result.value;
+              if (typeof tr.result.value2 === 'number' && isFinite(tr.result.value2)) result.value2 = tr.result.value2;
+              if (Array.isArray(tr.result.at)) result.at = tr.result.at.slice(0, 2);
+            }
             if (tr.outcome === 'stutter') { result.outcome = 'stutter'; result.voided = true; }
             else if (tr.outcome === 'skipped' && !S.freeSkip[def.id]) { S.freeSkip[def.id] = true; result.outcome = 'skipped'; skipLabel(true); }
             if (item.fallback === true) result.fallback = true;
@@ -693,6 +700,44 @@
     return { el: p.el, after: 'ladder' };
   }, { id: 'measure.curves', order: 41 });
 
-  PX.ui.measure = { quiet: false, play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows,
+  // Balance (a Lab check of the calibrate bet; note T1 §5.2): its rows, and its Lab section with a Start button and
+  // the runs so far. The pull: balance point 1 = far dots at full weight (the right answer), lower = far dots count
+  // for less; bus stop 0 = the middle house (the right answer), 1 = the mean of the houses.
+  function balanceRows(b) {
+    function row(label, x, pullText) {
+      if (!x || !x.n) return null;
+      return h('li', h('b', label), ': ' + x.right + ' of ' + x.n + ' within the mark' + (isNum(x.dist) ? ', ' + x.dist.toFixed(1) + ' units off on average' : '') +
+        (isNum(x.pull) ? '; ' + pullText(x.pull) : '') + '.');
+    }
+    return h('ul.pl-list.px-ms-balance', [
+      row('Balance point', b.centroid, function (t) { return 'the far dots counted at ' + Math.round(t * 100) + ' % of their weight'; }),
+      row('Bus stop', b.median, function (t) { return Math.round(t * 100) + ' % of the way from the middle house to the mean'; }),
+    ].filter(Boolean));
+  }
+  PX.ui.hooks.on('lab:panels', function (ctx) {
+    var K = PX.ui.kit, def = PX.ex.get('balance');
+    if (!def || !(E().config.measure.lab || {}).balance) return null;
+    var list = [];
+    try { list = A().balanceReport(ctx.rec); } catch (e) { log('balance report failed', e); }
+    var p = K.panel({ title: 'Balance: a check of one bet', className: 'px-lab-section px-ms-balance-lab' });
+    p.el.setAttribute('data-section', 'balance');
+    p.body.appendChild(h('p', 'Central Point practises the point of least total distance. This short check asks two related questions it never trains: the balance point of some dots, and the best spot for a bus stop on a street. The bet: the bus stop moves toward the middle house with practice while the balance point stays put; if the far dots started to count for less in the balance point, practice would be pulling the wrong way. About 3 minutes; run it now and again, for example every few weeks.'));
+    if (list.length) {
+      var last = list[0];
+      p.body.appendChild(h('p.px-meta', 'Latest run, ' + when(Date.parse(last.date)) + (list.length > 1 ? ' (' + list.length + ' runs kept)' : '') + ':'));
+      p.body.appendChild(balanceRows(last));
+      if (list.length > 1) {
+        var first = list[list.length - 1];
+        p.body.appendChild(h('p.px-meta', 'First run, ' + when(Date.parse(first.date)) + ':'));
+        p.body.appendChild(balanceRows(first));
+      }
+    } else p.body.appendChild(h('p.px-meta', 'No run yet.'));
+    var b = ui.button(list.length ? 'Run it again' : 'Start the Balance check', { kind: 'secondary', onClick: function () { PX.core.router.go('play', { mode: 'check', kind: 'balance' }); } });
+    b.setAttribute('data-balance-start', '');
+    p.body.appendChild(h('div.px-ms-actions', b));
+    return { el: p.el, after: 'curves' };
+  }, { id: 'measure.balance', order: 42 });
+
+  PX.ui.measure = { quiet: false, play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows, balanceRows: balanceRows,
     _: { limitRange: limitRange, sessions: SESSIONS, askExpect: askExpect, askOverlap: askOverlap, offer: offer } };
 })(window.PX);

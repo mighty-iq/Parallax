@@ -14,7 +14,7 @@
 - Phones (390 x 844 and 360 x 640): Today's slot and the Progress panel, no horizontal scroll.
 Screenshots: tests/e2e/out/check/. Run: tests/e2e/pwslot.sh python3 tests/e2e/check.py
 """
-import json, pathlib, sys
+import json, pathlib, sys, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from playwright.sync_api import sync_playwright
 from common import launch, Console, Checks, OUT as OUT_ROOT
@@ -233,12 +233,94 @@ def phones(b, C, state):
         ctx.close()
 
 
+BAL_FIT_JS = r"""() => {
+  const W = innerWidth, H = innerHeight, root = document.querySelector('.ex-balance-stem');
+  if (!root) return null;
+  const r = (el) => el ? el.getBoundingClientRect() : null, svg = r(root.querySelector('.bl-svg')), btn = r(root.querySelector('.bl-actions .px-btn'));
+  const small = [...root.querySelectorAll('p, span, b, button, li, text')].filter((e) => e.offsetParent !== null && e.textContent.trim()
+    && parseFloat(getComputedStyle(e).fontSize) < 12.95).map((e) => e.className || e.tagName);
+  return { kind: root.getAttribute('data-kind'), hscroll: document.documentElement.scrollWidth > W + 1,
+    svgIn: !!svg && svg.top >= 0 && svg.bottom <= H + 1 && svg.width >= 200, btnIn: !!btn && btn.bottom <= H + 1 && btn.height >= 44, small };
+}"""
+
+
+def balance_lab(b, C, w, hgt, n_items):
+    """The Lab's Balance check at one size: it starts from the Lab, every item fits (the figure and Confirm on the
+    screen, no horizontal scroll, text 13 px or more), a tap places the marker, and the run is kept."""
+    tag = f'balance {w}x{hgt}'
+    mobile = w < 900
+    ctx = b.new_context(viewport={'width': w, 'height': hgt}, device_scale_factor=2, has_touch=mobile, is_mobile=mobile)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    page.evaluate('PX.ui.hooks.mute(false)')
+    page.evaluate('void PX.core.router.go("lab", null, { force: true })')
+    page.wait_for_selector('[data-section="balance"]', timeout=8000)
+    sec = page.locator('[data-section="balance"]')
+    C.ok('No run yet' in sec.inner_text(), f'{tag}: the Lab section, no run yet')
+    sec.locator('[data-balance-start]').click()
+    until_card(page, 'check-intro')
+    C.ok('Balance check' in page.locator('[data-card-box="check-intro"]').inner_text(), f'{tag}: its intro card')
+    click_card(page, 'start')
+    fits, seen, t0 = [], {}, time.time()
+    while time.time() - t0 < 240 and len(fits) < n_items:
+        cid = card(page)
+        if cid:
+            if cid == 'probe-format' and 'bus stop' in page.locator('[data-card-box]').inner_text():
+                seen['median-card'] = True
+            if cid == 'probe-intro' and 'balance point' in page.locator('[data-card-box]').inner_text():
+                seen['centroid-card'] = True
+            page.locator('[data-card-box] .px-btn--primary').first.click()
+            page.wait_for_timeout(150)
+            continue
+        if page.evaluate('__play.state') != 'respond':
+            page.wait_for_timeout(100)
+            continue
+        m = page.evaluate(BAL_FIT_JS)
+        if m:
+            fits.append(m)
+            if len(fits) <= 2:
+                page.screenshot(path=str(OUT / f'balance_{m["kind"]}_{w}x{hgt}.png'))
+        if len(fits) == 1:  # one real tap: the marker lands where the finger does
+            box = page.locator('.bl-svg').bounding_box()
+            x, y = box['x'] + box['width'] * 0.3, box['y'] + box['height'] * 0.6
+            if mobile:
+                page.touchscreen.tap(x, y)
+            else:
+                page.mouse.click(x, y)
+            mk = page.evaluate("!!document.querySelector('.bl-marker')")
+            C.ok(mk and page.locator('.bl-actions .px-btn').is_enabled(), f'{tag}: a tap places the marker and enables Confirm')
+            page.locator('.bl-actions .px-btn').click()
+        else:
+            page.evaluate('__play.answer(Math.random() < 0.6).catch(() => 0)')
+        page.wait_for_timeout(150)
+    bad = [f for f in fits if f['hscroll'] or not f['svgIn'] or not f['btnIn'] or f['small']]
+    C.ok(len(fits) >= n_items and not bad, f'{tag}: {len(fits)} items fit (figure and Confirm on the screen, no sideways scroll, text 13 px or more) {bad[:2]}')
+    C.ok(seen.get('centroid-card') and seen.get('median-card'), f'{tag}: each kind\'s own line before its first item ({seen})')
+    if n_items >= 12:
+        page.wait_for_selector('.px-ms-balance-end', timeout=20000)
+        end = page.locator('.px-ms-balance-end').inner_text()
+        C.ok('Balance point' in end and 'Bus stop' in end, f'{tag}: the end screen gives both kinds')
+        n = page.evaluate('(PX.core.store.state.measure.balance || []).length')
+        C.ok(n == 1 and page.evaluate('PX.core.store.state.assess.length') == 0, f'{tag}: the run is kept in the Lab, not in the Spatial Check ({n})')
+        page.evaluate('void PX.core.router.go("lab", null, { force: true })')
+        page.wait_for_selector('[data-section="balance"]', timeout=8000)
+        C.ok('Latest run' in page.locator('[data-section="balance"]').inner_text(), f'{tag}: the Lab shows the latest run')
+        page.locator('[data-section="balance"]').screenshot(path=str(OUT / f'lab_balance_{w}.png'))
+    errs = [e for e in con.errors() if 'favicon' not in e]
+    C.ok(not errs, f'{tag}: no console errors {errs[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('check')
     with sync_playwright() as p:
         b = launch(p)
         state = desktop(b, C)
         phones(b, C, state)
+        balance_lab(b, C, 360, 640, 12)
+        balance_lab(b, C, 844, 390, 4)
+        balance_lab(b, C, 1366, 768, 2)
         b.close()
     sys.exit(C.summary())
 
