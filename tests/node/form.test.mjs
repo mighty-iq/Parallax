@@ -47,8 +47,9 @@ function testDefinition(t, PX, def) {
   t.eq(def.dims[1].levels, ['one shaded (starter)', 'plain', 'shaded faces', 'shaded, apart in the pattern', 'shaded and half', 'two shaded and half', 'shaded and two halves'], 'marks: the starter band, then the test\'s kinds (plain, shaded, shaded apart in the pattern: the net distance; partial shading last)');
   t.eq(def.dims[1].at, [-1.5, -0.9, -0.4, -0.15, 0, 0.6, 1.2], 'marks: the band, plain, shaded and shaded apart in front, the half marks at their 1.1 difficulty (step 0.6)');
   // test-range tags describe format features only (note D1 §6.0)
-  t.eq(def.levelTags, { solid: ['test', 'test', 'test', 'test'], marks: ['below', 'test', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] }, 'level tags: the band below the test, half marks beyond it (prep sources only)');
-  t.eq([def.lib.rangeOf({ solid: 0, marks: 0, view: 0, foil: 0 }), def.lib.rangeOf({ solid: 2, marks: 2, view: 2, foil: 1 }), def.lib.rangeOf({ solid: 0, marks: 4, view: 0, foil: 0 })], ['below', 'test', 'beyond'], 'an item\'s range: below wins, then beyond');
+  t.eq(def.testRange && def.testRange.dims, { solid: ['test', 'test', 'test', 'test'], marks: ['below', 'test', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] }, 'test range (CONTRACT-v1.2 W3): the band below the test, half marks beyond it (prep sources only), the rest in it');
+  t.eq([PX.ex.rangeTag(def, { solid: 0, marks: 0, view: 0, foil: 0 }), PX.ex.rangeTag(def, { solid: 3, marks: 3, view: 2, foil: 1 }), PX.ex.rangeTag(def, { solid: 0, marks: 4, view: 0, foil: 0 }), def.lib.rangeOf({ solid: 2, marks: 1, view: 1, foil: 0 })], ['below', 'test', 'beyond', 'test'], 'an item\'s range, from the registry\'s rule');
+  t.ok(Object.values(def.testRange.notes || {}).every((x) => typeof x === 'string' && x.length <= 240 && !/score|predict|harder than|easier than|DAT/i.test(x)), 'range notes describe format features only (no score, forecast or difficulty claim; no mark named)');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(Math.abs(lo + 3.7) < 1e-9, `the floor moves to −3.7 (${lo.toFixed(2)}; note D2 §3.5)`);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${(hi - lo).toFixed(2)})`);
@@ -545,7 +546,7 @@ function testLearn(t, PX, def) {
   t.ok(P[0].marks === 0 && P[1].marks === 0 && items[0].solid.kind === 'box' && items[1].solid.kind !== 'box', 'Try 1 (a box) and Try 2 (a prism) are at the starter band');
   t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, 'Try 3 is the plain kind (no marks; fold lines drawn plain)');
   t.ok(P[3].marks === 2 && items[3].marks.filter((m) => m === 1).length === 2, 'Try 4: the shaded kind (two shaded faces)');
-  t.eq(L.practice[0].assist, { letters: true }, 'Try 1 has its second step done (the shaded face\'s neighbours lettered)');
+  t.eq(L.practice[0].assist, { letters: true }, 'Try 1 has its second step done (the shaded face\'s neighbours numbered)');
   t.ok(L.practice[2].tip === 'plain' && L.practice[3].tip === 'shaded' && !L.practice[2].assist && !L.practice[3].assist, 'Try 3 and Try 4 bring their kinds with their tips');
   t.ok(twoKinds(items[2]) && otherSeen(items[2]), 'Try 3: two solids of another kind (each showing a face the pattern lacks) and one of the pattern\'s kind in other proportions');
   t.ok(['plain', 'shaded', 'apart', 'half', 'two', 'halves'].every((id, j) => { const x = (L.tips || []).find((tp) => tp.id === id); return x && x.when.dim === 'marks' && x.when.levels.join() === String(j + 1); }), 'the kinds\' tips sit at their levels (plain 1, shaded 2, apart 3, the half marks 4–6)');

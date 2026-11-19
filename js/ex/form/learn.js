@@ -12,11 +12,11 @@
       { id: 'pattern', label: 'Pattern', text: 'The outside surface of a solid, cut open and laid flat. Every line inside it folds: dashed in starter items, plain after that, as in the test. The outline is cut; its edges meet once folded.' },
       { id: 'marks', label: 'Marks', text: 'Shaded faces carry a tone and a hatch. A half-shaded face is shaded on one side of its diagonal, so it also shows which way the face is turned. With no marks, shapes and sizes decide.' },
       { id: 'solids', label: 'Solids', text: 'Four solids, each turned its own way. Only the faces turned toward you count; hidden faces may carry anything.' },
-      { id: 'answer', label: 'Answer', text: 'Exactly one solid folds from the pattern: right shape, right sizes, marks in the right places. Tap it or press its key (1–4).' },
+      { id: 'answer', label: 'Answer', text: 'Exactly one solid folds from the pattern: right shape, right sizes, marks in the right places. Tap it or press its letter (A–D; 1–4 work too).' },
     ],
     // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.5): the rules card first, the
     // Watch at the starter band (one shaded face, a box, upright), the card "Shape, then one landmark"
-    // before Try 1, Try 1 with the shaded face's neighbours lettered. Version 3 (the test's kinds, note D1
+    // before Try 1, Try 1 with the shaded face's neighbours numbered (options are lettered A–D). Version 3 (the test's kinds, note D1
     // §6.4): Try 3 is the plain kind (no marks, fold lines drawn plain) after a worked example on a sister
     // item that lights the fold lines (note D2 addendum C change 4); Try 4 the shaded kind (two shaded
     // faces). Half marks lie beyond the test's range: their tip, and show me's dotted corner, teach them
@@ -88,10 +88,10 @@
     captions: {
       // the card's steps in its order and words (note D2 addendum C); the Watch has three captions
       sizes: '1/3 · Sizes first: a solid whose faces differ from the pattern\'s is out (the marked edge).',
-      landmark: '2/3 · Pick the shaded face, A. Once folded, {list} share its edges.',
-      landmarkAlone: '2/3 · Pick the shaded face, A, and the faces that share its edges once folded.',
-      match: '3/3 · Check each solid left: only solid {n} has {list} beside A. Folded up, the pattern is solid {n}.',
-      matchAlone: '3/3 · Check each solid left: only solid {n} has the same faces beside A. Folded up, the pattern is solid {n}.',
+      landmark: '2/3 · Pick the shaded face, face 1. Once folded, faces {list} share its edges.',
+      landmarkAlone: '2/3 · Pick the shaded face, face 1, and the faces that share its edges once folded.',
+      match: '3/3 · Check each solid left: only solid {n} has faces {list} beside face 1. Folded up, the pattern is solid {n}.',
+      matchAlone: '3/3 · Check each solid left: only solid {n} has the same faces beside face 1. Folded up, the pattern is solid {n}.',
       halfCorner: '2/3 · A half-shaded face also shows which way it is turned: its shaded corner (dotted) touches the same faces once folded.',
       matchHalf: '3/3 · Only solid {n} has the half mark turned that way. Folded up, the pattern is solid {n}.',
       // the worked example of a half mark, numbered on its own
@@ -113,7 +113,7 @@
       whyShapeAny: 'Solid {n} is the wrong size: one of its edges has another length than in the pattern.',
       whyMarks: 'Solid {n}: the face marked {f} cannot look like that once the pattern is folded.',
       whyMirror: 'Solid {n} is the mirror image of the folded pattern: see the face marked {f}.',
-      assist: 'Lettered for you: the faces that meet the shaded face once folded.',
+      assist: 'Numbered for you: the faces that meet the shaded face once folded.',
       assistHalf: 'New: a half-shaded face. Its shaded corner is dotted: that corner must touch the same faces once folded.',
     },
     bridge: 'Folding patterns into solids is everyday work in packaging and sheet-metal design. Practising here improves this task and often similar ones; it has not been shown to improve grades or job performance. The format also appears in the Perceptual Ability Test of the Dental Admission Test (DAT®). Parallax has not measured any effect on DAT scores, and PAT scores relate only modestly to dental-school grades. ' + ADA,
