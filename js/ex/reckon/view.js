@@ -11,6 +11,8 @@
        return: turn, then hold Walk (↑) to walk straight on, Back (↓) to step back, Here (Enter) to stop;
                turning locks while you are away from the route's end (Back to it to turn again);
        distance: hold Walk to walk the same distance again (no turning), Here.
+       v1.2 (W3-exfix): Walk and Back (and ↑ ↓) are also toggles: a tap or a short key press (under TOGGLE_MS)
+       starts the walk and leaves it going until the next tap or press of either; a hold walks while held.
      The walk back runs at the item's walkSpeed (1.05–1.95 m/s) with eased starts and stops; no counter
      shows the distance walked. Response: degrees (point, heading) or { x, z } in the frame 'end'.
    - reveal: the flag appears at the start (distance: at the end of the same distance) and the view
@@ -31,7 +33,8 @@
   var BACK_SHARE = 0.6;    // Back moves at this share of the walk speed
   var MAX_WALK = 40;       // m: the walk back stops here
   var HERE_MIN = 0.5;      // m: Here needs at least this much walking
-  var STEP_M = 0.5;        // m: one keyboard or screen-reader activation of Walk or Back
+  var TOGGLE_MS = 250;     // ms: a press of Walk or Back (pointer or key) shorter than this is a tap: the walk goes
+                           // on after it until the next tap (v1.2, W3-exfix: a driver, or a player, who cannot hold)
   var CHART_N = 20;
   var VIEW_MIN = 4;        // m: at reveal the view stands at least this far from the flag
 
@@ -81,14 +84,14 @@
     var el = kit.layout(ctx, { id: 'reckon', cap: cap, keysText: cap('hintKeys') });
     el.keysWalk = h('span.ex-fp-keys.ex-reckon-keyswalk', ' ' + cap('hintKeysWalk'));
     el.hint.appendChild(el.keysWalk);
-    st = { ctx: ctx, el: el, kit: kit, item: null, value: null, raw: 0, dist: 0, v: 0, dir: 0, live: false, playing: false, done: false, walking: false,
+    st = { ctx: ctx, el: el, kit: kit, item: null, value: null, raw: 0, dist: 0, v: 0, dir: 0, latch: 0, keyPress: null, live: false, playing: false, done: false, walking: false,
       paused: false, hostPause: false, voided: null, voidStats: null, frames: null, respond: null, popKeys: null, W: null, walkStop: null, input: null, mode: null,
       gentle: false, mv: null, motionMs: 0, walkMs: 0 }; // mv: the item as it moves (gentle or not); motionMs: motion reported; walkMs: the walk back's, not yet reported
     st.S = kit.stage(ctx, el.stage, { cap: cap, hfov: HFOV, pitch: PITCH, eye: EYE, fog: [18, 190] });
     st.D = kit.dial({ cap: cap, onAngle: function (a, e) { if (canTurn()) setValue(a, 'dial', e); } });
     el.dialbox.appendChild(st.D.svg);
     st.F = kit.fine({ cap: cap, onTurn: function (d, e) { if (canTurn()) turnBy(d, 'fine', e); } });
-    kit.turnRow(el, st.F);
+    kit.turnRow(el, st.F, st.D);
     st.M = kit.mapper(st.S, st.D, { cap: cap, landmarks: false, tools: el.tools });
     el.hide.addEventListener('click', function () { st.M.close(); });
     st.confirm = PX.ui.button(cap('confirm') || 'Confirm', { kind: 'primary', key: 'Enter', className: 'ex-fp-confirm', disabled: true,
@@ -104,18 +107,24 @@
     kit.drag(el.stage, { enabled: canTurn, onTurn: function (d, e) { turnBy(d, 'drag', e, true); } });
     el.chart = h('div.ex-reckon-chart', { hidden: true });
     el.notes.parentNode.appendChild(el.chart);
-    // a held key that loses its keyup (focus moved) stops by itself; keyup stops it at once
-    st.onKeyUp = function (e) { if ((e.key === 'ArrowUp' && st.dir > 0) || (e.key === 'ArrowDown' && st.dir < 0)) setDir(0); };
+    // a held key that loses its keyup (focus moved) stops by itself; keyup ends the press (a hold stops, a short
+    // press leaves the walk going: v1.2 toggle)
+    st.onKeyUp = function (e) {
+      var d = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0, kp = st.keyPress;
+      if (!d || !kp || kp.dir !== d) return;
+      st.keyPress = null;
+      pressEnd(d, kp);
+    };
     st.offLost = PX.bus && PX.bus.on ? PX.bus.on('stage3d:lost', function () { if (st) st.lostDuring = true; }) : null;
     window.addEventListener('keyup', st.onKeyUp);
     st.onBlur = function () { setDir(0); };
     window.addEventListener('blur', st.onBlur);
     document.addEventListener('visibilitychange', st.onBlur);
   }
-  // Walk and Back: hold to move (pointer), keys ↑ ↓ (see collect).
+  // Walk and Back: hold to move (pointer), keys ↑ ↓ (see collect); a tap or a short press toggles (v1.2).
   function holdButton(label, cls, dir) {
-    var b = h('button.px-btn.px-btn--secondary.ex-reckon-hold.' + cls, { type: 'button', disabled: true }, label);
-    var id = null;
+    var b = h('button.px-btn.px-btn--secondary.ex-reckon-hold.' + cls, { type: 'button', disabled: true, 'aria-pressed': 'false' }, label);
+    var id = null, pr = null;
     b.addEventListener('pointerdown', function (e) {
       if (b.disabled || (e.button !== undefined && e.button > 0)) return;
       e.preventDefault();
@@ -123,21 +132,42 @@
       try { b.setPointerCapture(e.pointerId); } catch (err) { /* optional */ }
       st.input = K().inputOf(e) || st.input;
       st.mode = 'walk';
-      setDir(dir);
+      pr = pressStart(dir);
     });
-    function up(e) { if (e.pointerId === id) { id = null; setDir(0); } }
-    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { b.addEventListener(ev, up); });
-    // Enter or Space on the focused button, or a screen reader's activation (a click with detail 0): one
-    // step of STEP_M, eased like a hold
+    // a release ends the press (a tap leaves the walk going); a pointer the browser took (a cancel) stops it
+    b.addEventListener('pointerup', function (e) { if (e.pointerId === id) { id = null; pressEnd(dir, pr); pr = null; } });
+    ['pointercancel', 'lostpointercapture'].forEach(function (ev) { b.addEventListener(ev, function (e) { if (e.pointerId === id) { id = null; pr = null; if (st && st.dir === dir) setDir(0); } }); });
+    // Enter or Space on the focused button, or a screen reader's activation (a click with detail 0): a tap
     b.addEventListener('click', function (e) {
       if (e.detail !== 0 || b.disabled || !st || !live()) return;
       st.input = 'key'; st.mode = 'walk';
-      setDir(dir);
-      var v = speedBack() * (dir < 0 ? BACK_SHARE : 1);
-      window.setTimeout(function () { if (st && st.dir === dir) setDir(0); }, Math.round(1000 * STEP_M / v));
+      pressEnd(dir, pressStart(dir), true);
     });
     b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     return b;
+  }
+  // A press of Walk (dir 1) or Back (−1) begins: the second tap of a toggle stops the walk; otherwise the walk
+  // starts that way (the control law is the hold's: setDir and the eased speed). → the press, for pressEnd.
+  function pressStart(dir) {
+    if (!st || !st.item) return null;
+    if (st.latch === dir) { setDir(0); return { dir: dir, stop: true }; }
+    st.latch = 0;
+    setDir(dir);
+    return { dir: dir, stop: false, t0: timing.now() };
+  }
+  // The press ends: a short one (a tap; tap: a click without a press) leaves the walk going until the next press of
+  // Walk, Back, ↑ or ↓ (or Here); a longer one was a hold, and the walk stops.
+  function pressEnd(dir, p, tap) {
+    if (!st || !p || p.stop) return;
+    if (st.dir !== dir) return;
+    if (tap || timing.now() - p.t0 < TOGGLE_MS) { st.latch = dir; showLatch(); }
+    else setDir(0);
+  }
+  // Walk or Back shows that it is on (aria-pressed; css/ex/reckon.css)
+  function showLatch() {
+    if (!st || !st.walk) return;
+    st.walk.setAttribute('aria-pressed', st.latch === 1 ? 'true' : 'false');
+    st.back.setAttribute('aria-pressed', st.latch === -1 ? 'true' : 'false');
   }
 
   /* ---------- the walk ---------- */
@@ -292,6 +322,7 @@
     if (dir !== 0 && !live()) dir = 0;
     if (dir < 0 && st.dist <= 0) dir = 0;
     st.dir = dir;
+    if (st.latch && st.latch !== dir) { st.latch = 0; showLatch(); }
     if (dir !== 0) st.kit.hintOff(st.S);
     if (dir !== 0) {
       if (st.value === null) { st.value = 0; st.raw = 0; st.D.set(0, st.kit.sideText(cap, 0)); }
@@ -321,13 +352,13 @@
       st.S.render();
       readout();
       controls();
-      if (st.dir === 0 && st.v === 0) { st.walkStop = null; walkReport(); return false; }
+      if (st.dir === 0 && st.v === 0) { st.walkStop = null; if (st.latch) { st.latch = 0; showLatch(); } walkReport(); return false; }
       return true;
     });
   }
   function stopWalkBack() {
     if (st && st.walkStop) { st.walkStop(); st.walkStop = null; }
-    if (st) { st.dir = 0; st.v = 0; walkReport(); }
+    if (st) { st.dir = 0; st.v = 0; st.latch = 0; st.keyPress = null; showLatch(); walkReport(); }
   }
   // Each stretch of walking back goes to the player's motion count when it stops.
   function walkReport() {
@@ -336,11 +367,13 @@
     st.walkMs = 0;
     st.motionMs += K().reportMotion(st.ctx, ms);
   }
-  // ↑ / ↓ walk while held: keyup (or the window losing focus, or the page hiding) stops it.
+  // ↑ / ↓ walk while held: keyup (or the window losing focus, or the page hiding) stops it; a short press starts
+  // the walk and the next press stops it (v1.2 toggle). The key's auto-repeat changes nothing.
   function keyWalk(dir, e) {
     if (!live() || !isReturn(st.item)) return false;
     st.input = 'key'; st.mode = 'walk';
-    if (st.dir !== dir) setDir(dir);
+    if (e && e.repeat) return undefined;
+    st.keyPress = pressStart(dir);
     return undefined;
   }
   function response() {
@@ -548,13 +581,26 @@
     if (!st || st.item !== item) return Promise.resolve();
     var kit = st.kit, S = st.S, steps;
     if (item.task === 'heading') {
-      var T = item.turns[0], back = kit.norm360(-T), ts = sideOf(T);
+      // v1.2 (W3-exfix, fresh-player test g3): one frame throughout, the answer's: the circle's top is the way
+      // you faced at the end of the turn. The view replays the turn (your arrow stays where you answered, as the
+      // line under the circle says), then turns back while the filled arrow sweeps to the turn back. Before, the
+      // first step swept your own arrow through the turn made, from the top: the start's frame on the same circle.
+      var T = item.turns[0], back = kit.norm360(-T), ts = sideOf(T), E = endOf(item), h0 = item.startHeading, meter = kit.motionMeter();
+      var turnMs = Math.max(1800, Math.round(1000 * Math.abs(T) / 60)); // at most 60°/s (the item turned at 30°/s)
+      var look = function (hd) { S.stopLook(); S.setPose(E.x, E.y, hd); S.render(); };
       steps = [
-        { ms: 1800, caption: cap('headingWas', { deg: ts.deg, side: kit.sideText(cap, T).replace(/^\d+° /, '') }), enter: function () { st.D.key(null); st.D.wedge(null); },
-          update: function (k) { st.D.set(kit.sweep(kit.norm360(T), kit.ease(k))); } },
-        { ms: 1800, caption: cap('demoTurnHeading', { deg: sideOf(back).deg, side: sideOf(back).side }), enter: function () { st.D.set(null); },
-          update: function (k) { st.D.key(kit.sweep(back, kit.ease(k))); }, exit: function () { st.D.wedge(back, item.tolerance); } },
+        { ms: turnMs, motion: true, caption: cap('headingWas', { deg: ts.deg, side: kit.sideText(cap, T).replace(/^\d+° /, '') }),
+          enter: function () { st.D.key(null); st.D.wedge(null); look(h0); meter.tick(false); },
+          update: function (k) { meter.tick(k > 0 && k < 1); look(h0 + T * kit.ease(k)); } },
+        { ms: turnMs, motion: true, caption: cap('demoTurnHeading', { deg: sideOf(back).deg, side: sideOf(back).side }),
+          enter: function () { st.D.key(0); st.D.wedge(null); look(h0 + T); meter.tick(false); },
+          update: function (k) { meter.tick(k > 0 && k < 1); look(h0 + T - T * kit.ease(k)); st.D.key(kit.sweep(back, kit.ease(k))); },
+          exit: function () { look(h0); st.D.key(back); st.D.wedge(back, item.tolerance); } },
       ];
+      return kit.play(S, steps, ctx, { name: 'show-me' }).then(function (v) {
+        if (st) st.motionMs += kit.reportMotion(ctx, meter.take());
+        return v;
+      });
     } else if (item.task === 'distance') {
       steps = [{ ms: 2000, caption: cap('phaseRevealDistance'), enter: function () { S.render(); } }];
     } else {
@@ -649,7 +695,7 @@
     pose: function () { return st && st.S ? { x: st.S.pose.x, y: st.S.pose.y, h: st.S.pose.h } : null; },
     state: function () {
       return st ? { walking: st.walking, paused: st.paused, hostPause: st.hostPause, voided: st.voided, voidStats: st.voidStats, live: st.live,
-        value: st.value, dist: Math.round(st.dist * 1000) / 1000, speed: st.v, dir: st.dir, flag: !!(st.S.flag && st.S.flag.visible), ring: !!(st.S.ring && st.S.ring.visible),
+        value: st.value, dist: Math.round(st.dist * 1000) / 1000, speed: st.v, dir: st.dir, latch: st.latch, flag: !!(st.S.flag && st.S.flag.visible), ring: !!(st.S.ring && st.S.ring.visible),
         map: st.M.shown(), frames: st.frames, input: st.input, mode: st.mode, fade: [st.S.fadeU.value.x, st.S.fadeU.value.y],
         ground: st.S.spec ? st.S.spec.kind : null, dots: st.S.dots ? st.S.dots.count : 0, hist: hist().length,
         gentle: st.gentle, fix: !st.S.fix.hidden, motionMs: st.motionMs, walkSpeed: st.mv ? st.mv.walkSpeed : null, fit: st.mv && st.mv.gentle ? st.mv.fit : null } : null;

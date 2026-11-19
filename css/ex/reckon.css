@@ -10,6 +10,10 @@
 .ex-reckon .ex-fp-actions > .ex-reckon-back { flex: 1 1 0; }
 .ex-reckon .ex-fp-actions > .ex-reckon-here { flex: 1.2 1 0; min-height: 4rem; }
 .ex-reckon .ex-reckon-hold:active:not(:disabled) { background: var(--surface-2, #E9ECEE); }
+/* v1.2 (W3-exfix): Walk or Back left on by a tap shows that it is on (a word on the button would move it) */
+.ex-reckon .ex-reckon-hold[aria-pressed="true"]:not(:disabled) {
+  background: var(--surface-2, #E9ECEE); border-color: var(--ink, #1A1D21); box-shadow: inset 0 0 0 1px var(--ink, #1A1D21);
+}
 /* away from the route's end the direction is set: the circle and the fine turns rest */
 .ex-reckon .ex-fp.is-answering.is-walked .ex-fp-dialbox, .ex-reckon .ex-fp.is-answering.is-distance .ex-fp-dialbox { opacity: 0.45; }
 .ex-reckon .ex-fp.is-walked.is-answering .ex-fp-stage, .ex-reckon .ex-fp.is-distance.is-answering .ex-fp-stage { cursor: default; }

@@ -187,6 +187,33 @@ def phone_fit(page, tag, size):
     C.ok(d['confirm'][1] >= 44 and min(d['fine']) >= 44 and d['dial'] >= 96, f'{tag}: targets large enough (Confirm {d["confirm"][:2]}, fine {min(d["fine"]):.0f}, circle {d["dial"]:.0f} px)')
 
 
+def dial_reach(page, tag, phone):
+    """v1.2 (W3-exfix, fresh-player test g3: taps beside the circle, on its word "right", did nothing): a tap in the
+    circle's row outside its box sets the arrow towards the tap; a swipe there changes nothing."""
+    g = page.evaluate("""() => { const r = document.querySelector('.ex-fp-dial').getBoundingClientRect(), row = document.querySelector('.ex-fp-turnrow').getBoundingClientRect();
+        return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, right: r.right, left: r.left, rowR: row.right, rowL: row.left }; }""")
+    x, y = (g['right'] + g['rowR']) / 2, g['cy'] + 10  # beside the circle, a little below its middle: about 100° right
+    if x <= g['right'] + 4:
+        C.ok(True, f'{tag}: no room beside the circle in this layout')
+        return
+    want = math.degrees(math.atan2(x - g['cx'], -(y - g['cy']))) % 360
+    if phone:
+        page.touchscreen.tap(x, y)
+    else:
+        page.mouse.click(x, y)
+    page.wait_for_timeout(250)
+    v = page.evaluate("() => Number(document.querySelector('.ex-fp-dial').getAttribute('aria-valuenow'))")
+    C.ok(adiff(v, want) <= 1, f'{tag}: a tap beside the circle, in its row, sets the arrow towards it ({v}° for {want:.0f}°)')
+    if not phone:
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x, y + 40, steps=6)
+        page.mouse.up()
+        page.wait_for_timeout(200)
+        v2 = page.evaluate("() => Number(document.querySelector('.ex-fp-dial').getAttribute('aria-valuenow'))")
+        C.ok(v2 == v, f'{tag}: a drag that starts beside the circle changes nothing ({v2}° after {v}°)')
+
+
 def desktop_and_phone(b, cons):
     for vp, tag, kw in [((1366, 768), '1366', {}), ((412, 880), '412', PHONE)]:
         ctx = b.new_context(viewport={'width': vp[0], 'height': vp[1]}, **kw)
@@ -216,6 +243,7 @@ def desktop_and_phone(b, cons):
                 show_me(page, name + ' (Show me button)', click=page.locator('.hx-feedback-actions .px-btn').first)
                 final_map(page, name + ' (2)')
             else:
+                dial_reach(page, name, phone)
                 x, y = dial_point(page, 200)
                 (page.touchscreen.tap(x, y) if phone else page.mouse.click(x, y))
                 page.locator('.ex-fp-confirm').click()

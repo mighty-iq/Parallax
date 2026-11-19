@@ -427,6 +427,35 @@
     svg.addEventListener('pointercancel', up);
     svg.addEventListener('lostpointercapture', up);
     D.angleAt = angleAt;
+    // v1.2 (W3-exfix, fresh-player test g3): a tap beside the circle, in its row (on its words or the space
+    // round it), sets the arrow towards the tap as a tap on the circle does. Only a tap counts there (released
+    // within TAP_SLOP px, not cancelled), so a swipe that starts beside the circle still scrolls and changes
+    // nothing; buttons in the row keep their own taps. el: the element round the circle (the turn row).
+    D.reach = function (el) {
+      var t = null; // { id, x, y }
+      function inRow(e) {
+        var r = svg.getBoundingClientRect();
+        return r.height > 0 && e.clientY >= r.top && e.clientY <= r.bottom;
+      }
+      el.addEventListener('pointerdown', function (e) {
+        t = null;
+        if (!D.live || (e.button !== undefined && e.button > 0) || svg.contains(e.target)) return;
+        if (e.target && e.target.closest && e.target.closest('button')) return;
+        if (!inRow(e)) return;
+        t = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      });
+      el.addEventListener('pointermove', function (e) {
+        if (t && e.pointerId === t.id && Math.hypot(e.clientX - t.x, e.clientY - t.y) > TAP_SLOP) t = null;
+      });
+      el.addEventListener('pointercancel', function () { t = null; });
+      el.addEventListener('pointerup', function (e) {
+        var tap = t && e.pointerId === t.id && Math.hypot(e.clientX - t.x, e.clientY - t.y) <= TAP_SLOP;
+        t = null;
+        if (!tap || !D.live) return;
+        var a = angleAt(e);
+        if (a !== null) opts.onAngle(a, e);
+      });
+    };
     return D;
   }
 
@@ -865,8 +894,12 @@
     ctx.host.appendChild(el.root);
     return el;
   }
-  // The four fine buttons round the circle in the turn row.
-  function turnRow(el, F) { [F.l5, F.l1, el.dialbox, F.r1, F.r5].forEach(function (x) { el.turnrow.appendChild(x); }); }
+  // The four fine buttons round the circle in the turn row; D (the dial): taps beside the circle in its row
+  // set the arrow too (v1.2, W3-exfix).
+  function turnRow(el, F, D) {
+    [F.l5, F.l1, el.dialbox, F.r1, F.r5].forEach(function (x) { el.turnrow.appendChild(x); });
+    if (D && D.reach) D.reach(el.turnrow);
+  }
 
   // v1.2 O36, motion comfort (docs/research/v1.2/N1-reckon.md §5.4; CONTRACT-v1.2 F). ctx.gentleMotion (set by
   // the player per item: the Gentle motion setting, or reduced motion while it is on 'auto') shows the route
@@ -924,6 +957,9 @@
   // After a reveal in the player, the explanation must not wait under its sticky result bar on a phone
   // (RV-play-nav-knots 4): scroll just enough that `last` ends above the bar, never pushing the top of `first`
   // out of view. Without the player's bar (the dev harness) nothing moves. Called once the bar has appeared.
+  // v1.2 (W3-exfix, fresh-player test g3): on phones the fine buttons leave the layout after the answer
+  // (homing.css), so at 390 × 844 the notes fit above the bar of an answer's walkthrough without this scroll,
+  // which had taken the title row away and brought the player's copy of Pause over the map show me draws.
   function showAboveBar(root, first, last, ctx) {
     try {
       var player = root.closest && root.closest('.pl-player'), bar = player && player.querySelector('.pl-feedback');
@@ -1012,7 +1048,7 @@
     st.D = dial({ cap: cap, onAngle: function (a, e) { setValue(a, 'dial', e); } });
     el.dialbox.appendChild(st.D.svg);
     st.F = fine({ cap: cap, onTurn: function (d, e) { turnBy(d, 'fine', e); } });
-    turnRow(el, st.F);
+    turnRow(el, st.F, st.D);
     st.M = mapper(st.S, st.D, { cap: cap, landmarks: true, tools: el.tools });
     el.hide.addEventListener('click', function () { st.M.close(); });
     st.confirm = PX.ui.button(cap('confirm') || 'Confirm', { kind: 'primary', key: 'Enter', className: 'ex-fp-confirm', disabled: true, onClick: function (e) { st.input = inputOf(e) || st.input; confirm(); } });
