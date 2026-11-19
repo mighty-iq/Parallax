@@ -62,15 +62,17 @@
       arc.push(lib.isoPt(p));
     }
     var A = lib.isoPt(tail), B = lib.isoPt(tip);
-    var s = cubes(cells, { pts: arc.concat([A, B]) });
+    // the angle beside the arc, clear of it: right of its rightmost point, level with its top; its box is in the frame
+    // (fresh-player run: "90°" was cut to "9")
+    var ax = Math.max.apply(null, arc.map(function (p) { return p[0]; })), ay = Math.min.apply(null, arc.map(function (p) { return p[1]; }));
+    var lx = ax + 0.75, ly = ay + 0.15;
+    var s = cubes(cells, { pts: arc.concat([A, B, [lx - 0.8, ly - 0.4], [lx + 0.8, ly + 0.4]]) });
     s.appendChild(line(A, B, 'ow-axis'));
     s.appendChild(SV.path(arc, false, { class: 'ow-arc' }));
     var n = arc.length, p1 = arc[n - 1], p0 = arc[n - 3], dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.sqrt(dx * dx + dy * dy) || 1;
     var ux = dx / L, uy = dy / L, hs = 0.28;
     s.appendChild(poly([[p1[0] + ux * hs, p1[1] + uy * hs], [p1[0] - uy * hs * 0.8, p1[1] + ux * hs * 0.8], [p1[0] + uy * hs * 0.8, p1[1] - ux * hs * 0.8]], 'ow-arrowhead'));
-    // the angle beside the arc, clear of it: right of its rightmost point, level with its top
-    var ax = Math.max.apply(null, arc.map(function (p) { return p[0]; })), ay = Math.min.apply(null, arc.map(function (p) { return p[1]; }));
-    s.appendChild(SV.text(ax + 0.62, ay + 0.15, item.q === 2 ? '180°' : '90°', { class: 'ow-angle' }));
+    s.appendChild(SV.text(lx, ly, item.q === 2 ? '180°' : '90°', { class: 'ow-angle' }));
     return s;
   }
 
@@ -98,10 +100,12 @@
       s.appendChild(line(from, to, 'ow-flap'));
       var ux = (to[0] - from[0]) / 1.5, uy = (to[1] - from[1]) / 1.5;
       s.appendChild(poly([[to[0] + ux * 0.3, to[1] + uy * 0.3], [to[0] - uy * 0.22, to[1] + ux * 0.22], [to[0] + uy * 0.22, to[1] - ux * 0.22]], 'ow-arrowhead'));
-      // the fold's place in the order: one dot for the first fold, two for the second, three for the third
+      // the fold's place in the order: one tick for the first fold, two for the second, three for the third (ticks, not
+      // dots, so they never look like the punch)
       for (var j = 0; j <= i; j++) {
-        var off2 = (j - i / 2) * 0.34, at = f.k === 'v' ? [f.c + off2, R[1] - 0.32] : [R[0] - 0.32, f.c + off2];
-        s.appendChild(SV.el('circle', { cx: at[0], cy: at[1], r: 0.13, class: 'ow-stepdot' }));
+        var off2 = (j - i / 2) * 0.3;
+        if (f.k === 'v') s.appendChild(line([f.c + off2, R[1] - 0.55], [f.c + off2, R[1] - 0.12], 'ow-steptick'));
+        else s.appendChild(line([R[0] - 0.55, f.c + off2], [R[0] - 0.12, f.c + off2], 'ow-steptick'));
       }
     });
     s.appendChild(SV.el('circle', { cx: pl.punch[0] + 0.5, cy: pl.punch[1] + 0.5, r: 0.3, class: 'ow-punch' }));
@@ -152,9 +156,11 @@
   /* ---------- view from ---------- */
 
   function structure(item) {
-    var cells = lib.cellsOfHeights(item.h), G = item.h.length, s = cubes(cells, { pts: [lib.isoPt([0, G + 0.9, 0]), lib.isoPt([G + 0.9, 0, 0])] });
-    // name the two sides the picture shows (front: the lower left faces; right: the lower right faces)
-    var f = lib.isoPt([G / 2, G + 0.55, 0]), r = lib.isoPt([G + 0.55, G / 2, 0]);
+    // name the two sides the picture shows (front: the lower left faces; right: the lower right faces), set off from
+    // the cubes and inside the frame (fresh-player run: "Right" ran over the drawing)
+    var cells = lib.cellsOfHeights(item.h), G = item.h.length;
+    var f = lib.isoPt([G / 2, G + 1.3, 0]), r = lib.isoPt([G + 1.3, G / 2, 0]);
+    var s = cubes(cells, { pts: [lib.isoPt([0, G + 0.9, 0]), lib.isoPt([G + 0.9, 0, 0]), [f[0] - 1.1, f[1] - 0.45], [f[0] + 1.1, f[1] + 0.45], [r[0] - 1.1, r[1] - 0.45], [r[0] + 1.1, r[1] + 0.45]] });
     s.appendChild(SV.text(f[0], f[1], 'Front', { class: 'ow-side' }));
     s.appendChild(SV.text(r[0], r[1], 'Right', { class: 'ow-side' }));
     return s;
