@@ -281,7 +281,8 @@
     var out = { kind: nc.kind, ready: !!nc.ready, dueAt: nc.dueAt, status: '', text: '', label: null };
     if (nc.kind === 'B1') {
       out.status = 'Starting point not measured yet';
-      out.text = 'Two baseline checks on tasks you never practise show where you started. Each takes 15 to 25 minutes and gives no feedback; the second comes 12 hours or more after the first.';
+      var about = PX.ui.measure && PX.ui.measure.aboutMinutes ? PX.ui.measure.aboutMinutes('B1', rec) : null;
+      out.text = 'Two baseline checks on tasks you never practise show where you started. Each takes ' + (about || 'a few minutes') + ' and gives no feedback; the second comes 12 hours or more after the first.';
       out.label = 'Take baseline 1';
     } else if (nc.kind === 'B2' || nc.kind === 'B3') {
       var name = nc.kind === 'B2' ? 'Baseline 2' : 'Baseline 3';
