@@ -3,10 +3,14 @@
    written independently of the generators (Math.sin/cos/atan2 on the stored legs and turns).
    Shortcut bounds (RV-reckon-homing B1, the lead's decision (a), 13 Nov 2026): the answers that need no
    integration (a fixed angle or place, turn around, the mirror, the turns reversed, heading not updated)
-   stay within chance + 10 points in every route/tolerance cell; a fixed answer is exempt only where R1's
-   item rules leave no room (EXEMPT_FIXED). Turn-only answers (the legs taken as equal, the net-turn prior)
-   are printed per cell as information, not bounded: they integrate every turn, which is partial path
-   integration, and on 2-leg and small-turn routes the start always lies on the side of the net turn. Return items also print "true direction + average distance" (it needs the direction solved). */
+   stay within chance + 10 points in every route/tolerance cell. v1.2 (version 2; note
+   docs/research/v1.2/N1-reckon.md §3.3–3.4, §6 #6–11): every rated route ends with a turn on the spot of
+   30–150°, so no cell is exempt any more (1.1's EXEMPT_FIXED is gone); where the legs decide (cells marked
+   /L) the turn-only answers are held to at most half the items by construction (two alternatives per item,
+   checked here) and at most 50 % + 3 standard errors per cell in the sample. Elsewhere turn-only answers
+   (the legs taken as equal, the net-turn prior) are printed per cell as information, not bounded: they
+   integrate every turn, which is partial path integration. Return items also print "true direction +
+   average distance" (it needs the direction solved). */
 import { deepDiff } from './run.mjs';
 import { checkLearn, shortcutReport, boundShortcuts, checkGentle } from './homing.test.mjs';
 import { performance } from 'node:perf_hooks';
@@ -81,33 +85,50 @@ export async function run(t) {
   if (!t.ok(def, 'reckon is defined (on top of Homing\'s route model)')) return;
   const L = def.lib, H = L.homing;
   t.ok(H === X.get('homing').lib && typeof H.search === 'function', 'it reuses Homing\'s route model (lib.homing is Homing\'s lib)');
-  t.eq([def.code, def.version, def.abilities, def.cell, def.role, def.answer, def.perDisplay, def.experimental], ['EX-12', 1, ['NAV'], 'extrinsic-dynamic', 'train', 'angle', true, true], 'code, version, abilities, cell, role, answer, perDisplay, experimental');
+  t.eq([def.code, def.version, def.abilities, def.cell, def.role, def.answer, def.perDisplay, def.experimental], ['EX-12', 2, ['NAV'], 'extrinsic-dynamic', 'train', 'angle', true, true], 'code, version (2: v1.2 turns on the spot, the legs dim, a fourth tolerance), abilities, cell, role, answer, perDisplay, experimental');
   t.ok(/experimental/i.test(def.name) && def.short === 'Reckon', 'named "Reckon (experimental)", short "Reckon"');
   t.eq([def.variants, def.answers, def.extraParams], [['point', 'return'], { point: 'angle', return: 'position' }, ['task']], 'variants point (angle) and return (position); task is an extra param');
-  t.eq(def.dims.map((d) => d.key), ['route', 'flow', 'speed', 'tolerance'], 'dims: route, flow, speed, tolerance');
+  t.eq(def.dims.map((d) => d.key), ['route', 'flow', 'speed', 'tolerance', 'legs'], 'dims: route, flow, speed, tolerance, legs');
+  t.eq([def.dims[4].levels.length, L.ROT, L.LEG2, L.PATH2, L.D_MIN_RETURN], [2, [30, 150], [3, 15], [10, 28], 3], 'v1.2: legs dim of two levels; turns on the spot of 30–150°; leg-level legs 3–15 m and routes 10–28 m; walks back from 3 m');
   t.eq([def.dims[0].levels.length, def.dims[1].levels, def.dims[2].levels], [8, ['textured', 'sparse', 'short-lived dots'], ['steady', 'varied between legs', 'varied within legs']], 'Homing\'s 8 routes; flow and speed levels');
-  t.eq([L.TOL_POINT, L.TOL_RETURN], [[40, 30, 20], [0.5, 0.35, 0.25]], 'tolerance: 40/30/20° or 50/35/25 % of the way back');
-  let modelOk = true;
+  t.eq([L.TOL_POINT, L.TOL_RETURN], [[40, 30, 20, 15], [0.5, 0.35, 0.25, 0.2]], 'tolerance: 40/30/20/15° or 50/35/25/20 % of the way back');
+  // the leg cells, written out here independently of gen.js (note N1 §3.4 #1; 2 and 3 legs with large turns and 4 legs
+  // with large turns from 30°)
+  const LEGCELL = { 2: [1, 2, 3], 3: [0, 1, 2, 3], 5: [1, 2, 3], 6: [0, 1, 2, 3], 7: [1, 2, 3] };
+  const isLeg = (p) => p.legs === 1 && (LEGCELL[p.route] || []).includes(p.tolerance);
+  let modelOk = true, cellsOk = true;
   for (const p of X.enumerate(def)) {
-    const r = L.ROUTES[p.route], want = -2.25 + 0.55 * (r.legs - 2) + 0.4 * r.turns + 0.35 * p.flow + 0.3 * p.speed + 0.9 * p.tolerance + (p.variant === 'return' ? 0.5 : 0);
+    const r = L.ROUTES[p.route], want = -2.25 + 0.3 + 0.55 * (r.legs - 2) + 0.4 * r.turns + 0.35 * p.flow + 0.3 * p.speed + 0.9 * p.tolerance + (p.variant === 'return' ? 0.5 : 0) + (isLeg(p) ? 0.4 : 0);
     if (Math.abs(def.difficulty(p) - want) > 1e-9) modelOk = false;
+    if (L.legCell(L.normParams(p)) !== isLeg(p)) cellsOk = false;
   }
-  t.ok(modelOk, 'difficulty: −2.25 + 0.55/leg + 0.4/turn size + 0.35/flow + 0.3/speed + 0.9/tolerance + 0.5 for return (R1 §8.4)');
+  t.ok(modelOk, 'difficulty: −2.25 + 0.3 (the turn on the spot) + 0.55/leg (a placeholder) + 0.4/turn size + 0.35/flow + 0.3/speed + 0.9/tolerance + 0.5 for return + 0.4 where the legs decide');
+  t.ok(cellsOk, 'the legs decide on routes 3 and 6 at every tolerance, and on routes 2, 5 and 7 from 30°; elsewhere the level costs nothing');
   const lo = X.minDifficulty(def), hi = X.maxDifficulty(def);
-  t.ok(Math.abs(lo + 1.85) < 1e-9 && Math.abs(hi - 3.25) < 1e-9 && hi - lo >= 4, `range −1.85 to 3.25 (${lo.toFixed(2)} to ${hi.toFixed(2)}, ≥ 4 logits)`);
-  t.ok(Math.abs(def.base - def.difficulty({ variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 })) < 1e-12, 'base is the easiest point item');
-  const cRet = [0.5, 0.35, 0.25].map((x) => 2 * Math.asin(x) * 180 / Math.PI / 360);
-  t.ok([0, 1, 2].every((k) => Math.abs(def.chance({ variant: 'point', tolerance: k }) - [80, 60, 40][k] / 360) < 1e-12 && Math.abs(def.chance({ variant: 'return', tolerance: k }) - cRet[k]) < 1e-9),
+  t.ok(Math.abs(lo + 1.55) < 1e-9 && Math.abs(hi - 4.85) < 1e-9 && hi - lo >= 4, `range −1.55 to 4.85 (${lo.toFixed(2)} to ${hi.toFixed(2)}; 1.1: −1.85 to 3.25; stored levels are re-based)`);
+  t.ok(Math.abs(def.base - def.difficulty({ variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0, legs: 0 })) < 1e-12, 'base is the easiest point item');
+  const cRet = [0.5, 0.35, 0.25, 0.2].map((x) => 2 * Math.asin(x) * 180 / Math.PI / 360);
+  t.ok([0, 1, 2, 3].every((k) => Math.abs(def.chance({ variant: 'point', tolerance: k }) - [80, 60, 40, 30][k] / 360) < 1e-12 && Math.abs(def.chance({ variant: 'return', tolerance: k }) - cRet[k]) < 1e-9),
     `chance: point 2τ/360; return 2·asin(τ)/360 (${cRet.map(pct).join(', ')})`);
   const g0 = def.chance({ variant: 'point', tolerance: 0 }), pB = g0 + (1 - g0 - 0.03) / (1 + Math.exp(lo));
-  t.ok(pB > 0.85 && pB < 0.93, `easiest ≈ 87 % for a beginner (${pct(pB)})`);
+  t.ok(pB > 0.82 && pB < 0.9, `easiest ≈ 84 % for a beginner (${pct(pB)}; the turn on the spot costs 0.3 logit)`);
   t.ok(X.enumerate(def).every((p) => Number.isFinite(def.estMs(p)) && def.estMs(p) > 5000), 'estMs(params) gives a time for every combination');
+
+  t.section('reckon: version 2 re-bases stored levels (js/engine/rebase.js)');
+  {
+    // The final turn on the spot (+0.3), the fourth tolerance level and the legs level move the range, so levels
+    // saved by 1.1 (V11: version 1) are converted once on load: the same item difficulty, a new level number.
+    const Q = t.context({}).PX, E = Q.engine, d2 = Q.ex.get('reckon'), r = E.model.range(d2), v11 = E.rebase.V11.reckon;
+    t.ok(d2.version === 2 && v11[2] === 1 && !E.rebase.sameRange([v11[0], v11[1]], [r.min, r.max]), `version 2 with a new range (1.1: ${v11[0]}…${v11[1]}; now ${r.min.toFixed(2)}…${r.max.toFixed(2)}), so 1.1's stored levels are re-based`);
+    const conv = E.rebase.conv([v11[0], v11[1]], [r.min, r.max]);
+    t.ok(conv(1) >= 1 && conv(100) <= 100 && conv(50) < 50 && conv(1) <= conv(50) && conv(50) <= conv(100), `1.1's levels 1, 50 and 100 read ${conv(1)}, ${conv(50)} and ${conv(100)} on the new scale`);
+  }
 
   t.section('reckon: 10 000 items per variant');
   const combos = X.enumerate(def), items = [], counts = { point: 0, return: 0 };
   const perCombo = Math.ceil(10000 / (combos.length / 2));
   let thrown = 0, invalid = 0, firstInvalid = null, keyWrong = 0, edgeWrong = 0, overRight = 0, junkRight = 0, notJson = 0, geoBad = 0, firstGeo = null;
-  let speedBad = 0, firstSpeed = null, groundBad = 0, stayRight = 0;
+  let speedBad = 0, firstSpeed = null, groundBad = 0, stayRight = 0, altBad = 0, firstAlt = null, legItems = 0;
   const groundSeeds = new Set();
   L.stats.fallbacks = L.stats.builds = L.stats.onTarget = L.stats.full = 0;
   for (const p of combos) {
@@ -121,7 +142,7 @@ export async function run(t) {
       if (v !== true) { invalid++; firstInvalid = firstInvalid || `${X.paramsKey(p)} seed ${seed}: ${v}`; continue; }
       if (deepDiff(JSON.parse(JSON.stringify(it)), it) !== null) notJson++;
       const w = walk(it.startHeading, it.legs, it.turns), n = it.legs.length, rt = L.ROUTES[p.route], band = L.TURNS[rt.turns], d = w.distance;
-      const tol = p.variant === 'point' ? [40, 30, 20][p.tolerance] : [0.5, 0.35, 0.25][p.tolerance];
+      const tol = p.variant === 'point' ? [40, 30, 20, 15][p.tolerance] : [0.5, 0.35, 0.25, 0.2][p.tolerance];
       const tolDeg = p.variant === 'point' ? tol : 2 * Math.asin(tol / 2) * 180 / Math.PI;
       // scoring
       if (p.variant === 'point') {
@@ -147,17 +168,30 @@ export async function run(t) {
         if (def.score(it, at(w.key + 180, d)).correct || def.score(it, at(w.key, d * (1 + tol + 0.05))).correct) overRight++;
         if ([NaN, null, undefined, 120, { x: 1 }, { x: 'a', z: 1 }].some((x) => def.score(it, x).correct)) junkRight++;
       }
-      // independent geometry
+      // independent geometry (v1.2: every route ends with a turn on the spot of 30–150°; where the legs decide, legs
+      // 3–15 m and routes 10–28 m; walks back from 3 m)
+      const lc = isLeg(p), LG = lc ? [3, 15] : [4, 12], PT = lc ? [10, 28] : [12, 28], dMin = p.variant === 'return' ? 3 : 5;
       const ok = adiff(w.key, it.keyDeg) < 0.02 && Math.abs(d - it.distance) < 0.002 && adiff(w.heading, it.heading) < 0.02
         && w.path.every((q, i) => Math.hypot(q[0] - it.path[i][0], q[1] - it.path[i][1]) < 0.003)
         && adiff(w.key, 0) >= Math.max(20, (tolDeg + 2) / 2) && adiff(w.key, 180) >= Math.max(20, (tolDeg + 2) / 2)
-        && d >= 5 && d <= 20 + 1e-9 && sumOf(it.legs) >= 12 - 1e-9 && sumOf(it.legs) <= 28 + 1e-9
+        && d >= dMin - 1e-9 && d <= 20 + 1e-9 && sumOf(it.legs) >= PT[0] - 1e-9 && sumOf(it.legs) <= PT[1] + 1e-9
         && w.path.slice(1, -1).every((q, i) => segDist([0, 0], q, w.path[i + 2]) >= 3 - 1e-6)
-        && n === rt.legs && it.legs.every((l) => l >= 4 && l <= 12) && it.turns.length === n - 1
-        && it.turns.every((x) => Math.abs(x) >= band.lo && Math.abs(x) <= band.hi)
+        && n === rt.legs && it.legs.every((l) => l >= LG[0] && l <= LG[1]) && it.turns.length === n
+        && it.turns.slice(0, n - 1).every((x) => Math.abs(x) >= band.lo && Math.abs(x) <= band.hi) && Math.abs(it.turns[n - 1]) >= 30 && Math.abs(it.turns[n - 1]) <= 150
         && (p.variant === 'point' ? it.answer === 'angle' && it.key === it.keyDeg : it.answer === 'position' && Math.hypot(it.key.x - at(w.key, d).x, it.key.z - at(w.key, d).z) < 0.003)
         && Math.abs(it.duration - closedDuration(it)) < 0.011 && it.duration <= 30 + 1e-9 && it.experimental === true && it.frame === 'end';
       if (!ok) { geoBad++; firstGeo = firstGeo || `${X.paramsKey(p)} seed ${seed}`; }
+      // the two alternatives, re-derived here from their own legs and the item's turns (note N1 §3.4 #2): both keys
+      // follow from their legs, lie more than 2·w + 8° apart (w: tolerance, or asin(τ) for walks back), one is shown
+      if (lc) {
+        const A = it.alts || [], wHalf = p.variant === 'point' ? tol : Math.asin(tol) * 180 / Math.PI;
+        const ks = A.map((a) => walk(it.startHeading, a.legs, it.turns).key);
+        const aok = A.length === 2 && ks.every((k, i) => adiff(k, A[i].key) < 0.02) && adiff(ks[0], ks[1]) > 2 * wHalf + 8
+          && (it.alt === 0 || it.alt === 1) && A[it.alt].legs.every((l, i) => l === it.legs[i]) && adiff(ks[it.alt], w.key) < 0.02
+          && A.every((a) => a.legs.every((l) => l >= 3 && l <= 15) && sumOf(a.legs) >= 10 - 1e-9 && sumOf(a.legs) <= 28 + 1e-9);
+        if (!aok) { altBad++; firstAlt = firstAlt || `${X.paramsKey(p)} seed ${seed}`; }
+        legItems++;
+      } else if (it.alts !== undefined) { altBad++; firstAlt = firstAlt || `${X.paramsKey(p)} seed ${seed}: alternatives outside a leg cell`; }
       // speeds by level, within the comfort limits
       const flat = it.speeds.flat(), sOk = flat.every((v2) => v2 >= 0.5 - 1e-9 && v2 <= 2 + 1e-9) && it.turnRates.every((w2) => w2 >= 30 && w2 <= 45)
         && (p.speed === 0 ? it.speeds.every((v2) => v2.length === 1 && v2[0] === it.speeds[0][0] && v2[0] >= 1.62 - 1e-9 && v2[0] <= 1.98 + 1e-9) && it.turnRates.every((w2) => w2 === 45)
@@ -179,39 +213,74 @@ export async function run(t) {
   t.eq(stayRight, 0, 'return: staying at the end of the route is never right (the disk never holds the end)');
   t.eq(junkRight, 0, 'malformed responses score wrong');
   t.eq(notJson, 0, 'items survive a JSON round trip unchanged');
-  t.ok(geoBad === 0, 'independent geometry agrees: path, key, distance 5–20 m, heading, gap from ahead/behind, never near the start before the end, legs 4–12 m, routes 12–28 m, turns, answer key, duration (closed form) ≤ 30 s' + (firstGeo ? ` (first bad: ${firstGeo})` : ''));
+  t.ok(geoBad === 0, 'independent geometry agrees: path, key, home distance 5–20 m (walks back 3–20 m), heading, gap from ahead/behind, never near the start before the end, legs 4–12 m and routes 12–28 m (where the legs decide 3–15 m and 10–28 m), turns in their band, a last turn on the spot of 30–150°, answer key, duration (closed form) ≤ 30 s' + (firstGeo ? ` (first bad: ${firstGeo})` : ''));
+  t.ok(altBad === 0 && legItems > 3000, `where the legs decide, both alternatives follow from their legs, lie more than 2·w + 8° apart and one is shown (${legItems} items)` + (firstAlt ? ` (first bad: ${firstAlt})` : ''));
   t.ok(speedBad === 0, 'speeds by level: steady 1.8 ± 10 % at 45°/s; varied 0.5–2.0 m/s at 30–45°/s; within legs two speeds ≥ 0.4 m/s apart; walk back 1.05–1.95 m/s' + (firstSpeed ? ` (first bad: ${firstSpeed})` : ''));
   t.ok(groundBad === 0, 'the ground matches the flow level; no landmarks or objects in any item');
   t.ok(groundSeeds.size >= items.length * 0.999, `the ground is re-seeded every item (${groundSeeds.size} seeds for ${items.length} items)`);
   t.ok(L.stats.fallbacks <= items.length / 1000, `fallback construction rarely needed (${L.stats.fallbacks})`);
   // Shortcuts per cell (RV B1, the lead's decision (a)): the no-integration answers within chance + 10 in every
-  // cell (a fixed answer except in the structural cells, EXEMPT_FIXED); the turn-only family as information.
-  // The cells where answers can spread (3–4 legs, medium or large turns) sit a few points under the bound for a
-  // fixed angle (at 40° the axis gap alone allows 29 % against 32.2 %), and a CV estimate from ~420 items moves
-  // by about 2 points, so their point items get 2 000 more each for this check.
+  // cell, with no exemptions since v1.2 (the final turn on the spot spreads the key); the turn-only family as
+  // information outside the cells where the legs decide (/L), bounded there (below). The main sample has about
+  // 160 point items per /L cell and its twin, and a CV estimate from so few moves by about 3 points, so the
+  // routes with leg cells get 600 more point items per legs level and tolerance for this check.
   const extra = [];
-  for (const route of [3, 5, 6, 7]) for (let tol = 0; tol < 3; tol++) for (let k = 0; k < 2000; k++) {
-    const p = { variant: 'point', route, flow: k % 3, speed: Math.floor(k / 3) % 3, tolerance: tol };
-    extra.push({ p, it: def.generate(PX.rng(PX.rng.hash('reckon-shortcuts', route, tol, k)), p) });
+  for (const route of [2, 3, 5, 6, 7]) for (let tol = 0; tol < 4; tol++) for (const legs of [0, 1]) for (let k = 0; k < 600; k++) {
+    const p = { variant: 'point', route, flow: k % 3, speed: Math.floor(k / 3) % 3, tolerance: tol, legs };
+    extra.push({ p, it: def.generate(PX.rng(PX.rng.hash('reckon-shortcuts', route, tol, legs, k)), p) });
   }
-  boundShortcuts(t, shortcutReport(def, items.concat(extra), 'Reckon'));
+  const isL = (x) => (L.legCell(L.normParams(x.p)) ? 1 : 0);
+  const scRows = shortcutReport(def, items.concat(extra), 'Reckon', { cell: isL, levels: [0, 1, 2, 3] });
+  boundShortcuts(t, scRows, []);
+  // Where the legs decide (N1 §3.4 #2; PLAN milestone 8's acceptance): turn-only answers right in at most half the
+  // items. By construction: each item's two alternatives share its turns and their keys lie more than 2·w + 8°
+  // apart, so one answer from the turns (a direction, or a place: it lies within asin(τ) of the key it hits) can
+  // be right for one of them only, and which one is shown is a fair coin (checked above, per item). In the
+  // sample: every turn-only answer of shortcutReport (equal legs, 180 − ΣT/2, the net-turn prior, back along the
+  // leg before the last turn) at most 50 % + 3 standard errors in every /L cell.
+  {
+    const lRows = scRows.filter((r) => r.legs === 1), worst = { d: -1, s: '' };
+    for (const r of lRows) for (const [nm, v] of Object.entries(r.I)) {
+      if (nm === 'true direction + average distance') continue; // needs the direction solved: not turn-only
+      const lim = 0.5 + 3 * Math.sqrt(0.25 / r.n);
+      if (v - lim > worst.d) { worst.d = v - lim; worst.s = `${r.cell} ${nm} ${pct(v)} (limit ${pct(lim)}, n ${r.n})`; }
+    }
+    t.ok(lRows.length >= 30 && worst.d <= 0, `where the legs decide, turn-only answers ≤ 50 % (+ 3 SE) in every cell (${lRows.length} cells; closest: ${worst.s})`);
+    // and on both alternatives at once: never both right for any turn-only direction
+    let both = 0, checked = 0;
+    for (const x of items.concat(extra)) {
+      if (!isL(x)) continue;
+      const it = x.it, ret = x.p.variant === 'return', T = sumOf(it.turns), ks = it.alts.map((a) => walk(it.startHeading, a.legs, it.turns).key);
+      const halfW = ret ? Math.asin(it.tolerance) * 180 / Math.PI : it.tolerance;
+      for (const a of [walk(it.startHeading, it.legs.map(() => 1), it.turns).key, 180 - T / 2, 180 - T, 180 - it.turns.at(-1), 90, 270]) {
+        checked++; if (ks.every((k) => adiff(a, k) <= halfW)) both++;
+      }
+    }
+    t.ok(both === 0 && checked > 50000, `no turn-only direction lies within the tolerance of both alternatives (${checked} answer × item pairs)`);
+  }
   // RV-play-nav-knots 3: the generator never leaves the level's description (the stage text is the player's)
   {
-    const all = items.concat(extra), off = all.filter((x) => { const rt = L.ROUTES[x.p.route], band = L.TURNS[rt.turns]; return x.it.legs.length !== rt.legs || x.it.turns.length !== rt.legs - 1 || !x.it.turns.every((v) => Math.abs(v) >= band.lo - 1e-9 && Math.abs(v) <= band.hi + 1e-9); });
-    t.ok(off.length === 0, `every route matches its level: its number of legs and every turn within its band (${all.length} items, fallbacks included${off.length ? `; ${off.length} off, first at route ${off[0].p.route}` : ''})`);
+    const all = items.concat(extra), off = all.filter((x) => { const rt = L.ROUTES[x.p.route], band = L.TURNS[rt.turns], n = rt.legs, R = x.it.turns[n - 1]; return x.it.legs.length !== n || x.it.turns.length !== n || !x.it.turns.slice(0, n - 1).every((v) => Math.abs(v) >= band.lo - 1e-9 && Math.abs(v) <= band.hi + 1e-9) || !(Math.abs(R) >= 30 - 1e-9 && Math.abs(R) <= 150 + 1e-9); });
+    t.ok(off.length === 0, `every route matches its level: its number of legs, every turn between legs within its band, and a last turn on the spot of 30–150° (${all.length} items, fallbacks included${off.length ? `; ${off.length} off, first at route ${off[0].p.route}` : ''})`);
+    const rots = all.map((x) => x.it.turns.at(-1)), right = rots.filter((v) => v > 0).length / rots.length, big = rots.filter((v) => Math.abs(v) >= 140).length / rots.length;
+    t.ok(Math.abs(right - 0.5) < 0.02 && big > 0.05 && big < 0.12, `the turn on the spot goes either way (${pct(right)} clockwise) and is 140° or more in about one route in 12 (${pct(big)})`);
   }
-  // time as a cue to leg length (RV S1): above 'steady' a leg's walking time says little about its length
-  {
-    const byLevel = [0, 1, 2].map((lv) => {
+  // time as a cue to leg length (RV S1): above 'steady' a leg's walking time says little about its length.
+  // v1.2: where the legs decide, legs span 3–15 m (5 : 1) against speeds of 0.5–2 m/s (4 : 1), so a 3 m leg and a
+  // 15 m leg can never take the same time: there time carries part of the length by construction (N1 §3.4 #2;
+  // DECISIONS). The bound applies to the other items; the legs-decide items are reported.
+  const legTime = (list) => [0, 1, 2].map((lv) => {
       const T = [], Ls = [], Vm = [];
-      items.filter((x) => x.p.speed === lv).forEach((x) => {
+      list.filter((x) => x.p.speed === lv).forEach((x) => {
         let i = 0;
         H.plan(x.it, 0).segs.forEach((sg) => { if (sg.kind === 'walk') { T.push(sg.dur); Ls.push(x.it.legs[i]); Vm.push(x.it.legs[i] / sg.dur); i++; } });
       });
       return { r: pearson(T, Ls), rv: pearson(Vm, Ls), n: T.length };
     });
+  {
+    const byLevel = legTime(items.filter((x) => !isL(x))), byL = legTime(items.filter((x) => isL(x)));
     t.ok(byLevel[0].r > 0.9 && Math.abs(byLevel[1].r) <= 0.5 && Math.abs(byLevel[2].r) <= 0.5,
-      `leg time vs leg length: r ${byLevel.map((b) => b.r.toFixed(2)).join(' / ')} at steady / between legs / within legs (≤ 0.5 above steady; steady keeps one speed); r(mean speed, length) ${byLevel.map((b) => b.rv.toFixed(2)).join(' / ')}; ${byLevel.map((b) => b.n).join(' / ')} legs`);
+      `leg time vs leg length: r ${byLevel.map((b) => b.r.toFixed(2)).join(' / ')} at steady / between legs / within legs (≤ 0.5 above steady; steady keeps one speed); r(mean speed, length) ${byLevel.map((b) => b.rv.toFixed(2)).join(' / ')}; ${byLevel.map((b) => b.n).join(' / ')} legs; where the legs decide (reported): r ${byL.map((b) => b.r.toFixed(2)).join(' / ')}`);
   }
   const rightSide = items.filter((x) => x.it.keyDeg < 180).length / items.length;
   t.ok(Math.abs(rightSide - 0.5) < 0.03, `the start lies to the right ≈ 50 % (${pct(rightSide)})`);
@@ -250,12 +319,14 @@ export async function run(t) {
   }
   t.ok(fbOk, 'the fallback construction is valid at every combination' + (fbFirst ? ` (${fbFirst})` : ''));
   L.stats.fallbacks = 0;
-  const tm = timeP95((s) => def.generate(PX.rng(9000 + s), { variant: 'return', route: 7, flow: 2, speed: 2, tolerance: 2 }), 400);
-  t.ok(tm.cpu < 20, `generation p95 < 20 ms at the hardest level (CPU ${tm.cpu.toFixed(2)} ms, wall ${tm.wall.toFixed(2)} ms)`);
+  const tm = timeP95((s) => def.generate(PX.rng(9000 + s), { variant: 'return', route: 7, flow: 2, speed: 2, tolerance: 3, legs: 1 }), 400);
+  const tm2 = timeP95((s) => def.generate(PX.rng(9500 + s), { variant: 'point', route: 7, flow: 2, speed: 2, tolerance: 3, legs: 0 }), 400);
+  t.ok(tm.cpu < 20 && tm2.cpu < 20, `generation p95 < 20 ms at the hardest level (CPU ${tm.cpu.toFixed(2)} ms, wall ${tm.wall.toFixed(2)} ms) and at the slowest cell, 4 large turns at ±15° (CPU ${tm2.cpu.toFixed(2)} ms)`);
 
   t.section('reckon: validate rejects broken items');
   const clone = (x) => JSON.parse(JSON.stringify(x));
-  const baseP = items.find((x) => x.p.variant === 'point' && L.ROUTES[x.p.route].legs === 3 && x.p.speed === 2).it;
+  const baseP = items.find((x) => x.p.variant === 'point' && L.ROUTES[x.p.route].legs === 3 && x.p.speed === 2 && !L.legCell(L.normParams(x.p))).it;
+  const baseL = items.find((x) => x.p.variant === 'point' && L.legCell(L.normParams(x.p))).it;
   const baseR = items.find((x) => x.p.variant === 'return' && x.p.speed === 0).it;
   const rejects = (what, it, pattern) => {
     const v = def.validate(it);
@@ -271,13 +342,21 @@ export async function run(t) {
   m = clone(baseP); m.walkSpeed = 2.5; rejects('a walk back faster than the range', m, /walkSpeed/);
   m = clone(baseP); m.answer = 'position'; rejects('the wrong answer type for the variant', m, /answer type/);
   m = clone(baseP); m.duration += 1; rejects('a duration that does not match the motion', m, /duration/);
-  { // Hand-made: a route whose turns cancel, so "heading not updated" lands on the key.
-    const legs = [6, 7, 6], turns = [100, -95], h0 = 10, w = walk(h0, legs, turns), k = Math.round(w.key * 100) / 100 % 360;
+  m = clone(baseP); m.turns.pop(); m.turnRates.pop(); rejects('a route without its turn on the spot at the end', m, /turns/);
+  m = clone(baseP); m.turns[m.turns.length - 1] = 10; rejects('a turn on the spot of less than 30°', m, /turn on the spot/);
+  m = clone(baseL); delete m.alts; rejects('a legs-decide item without its two alternatives', m, /alternatives/);
+  m = clone(baseL); m.alts[1 - m.alt].key = norm360(m.alts[1 - m.alt].key + 30); rejects('an alternative whose key does not follow from its legs', m, /follow from its legs/);
+  m = clone(baseL); m.alts[1 - m.alt] = clone(m.alts[m.alt]); rejects('two alternatives with the same answer', m, /within/);
+  m = clone(baseL); m.alt = 1 - m.alt; rejects('an item that shows another alternative than its legs', m, /does not show/);
+  m = clone(baseP); m.alts = clone(baseL.alts); m.alt = 0; rejects('alternatives on an item where the turns tell a lot', m, /only a legs-decide/);
+  { // Hand-made: a route whose turns cancel (the turn on the spot included), so "heading not updated" lands on the key.
+    const legs = [6, 7, 6], turns = [100, -60, -40], h0 = 10, w = walk(h0, legs, turns), k = Math.round(w.key * 100) / 100 % 360;
     const it = clone(baseP);
-    Object.assign(it, { params: Object.assign({}, it.params, { route: 3, speed: 0, tolerance: 0 }), legs, turns, startHeading: h0, key: k, keyDeg: k, tolerance: 40, tolDeg: 40,
+    Object.assign(it, { params: Object.assign({}, it.params, { route: 3, speed: 0, tolerance: 0, legs: 0 }), legs, turns, startHeading: h0, key: k, keyDeg: k, tolerance: 40, tolDeg: 40,
       path: w.path.map((q) => [Math.round(q[0] * 1000) / 1000, Math.round(q[1] * 1000) / 1000]), heading: Math.round(w.heading * 100) / 100 % 360,
       distance: Math.round(w.distance * 1000) / 1000, returnBearing: Math.round(compass(-w.path.at(-1)[0], -w.path.at(-1)[1]) * 100) / 100 % 360, pathLength: 19,
-      speeds: [[1.8], [1.8], [1.8]], splits: [null, null, null], turnRates: [45, 45] });
+      speeds: [[1.8], [1.8], [1.8]], splits: [null, null, null], turnRates: [45, 45, 45] });
+    delete it.alts; delete it.alt;
     it.duration = Math.round(closedDuration(it) * 100) / 100;
     rejects('turns that cancel out (heading not updated would be right)', it, /shortcut/);
   }
@@ -294,7 +373,7 @@ export async function run(t) {
     'turns only, legs taken as equal': (it) => walk(it.startHeading, it.legs.map(() => 1), it.turns).key,
   };
   const hit = (x, a, r) => def.score(x.it, x.p.variant === 'point' ? a : at(a, r === undefined ? x.it.distance : r)).correct;
-  const cellOf = (x) => `${x.p.variant}/${x.p.route}/${x.p.tolerance}`;
+  const cellOf = (x) => `${x.p.variant}/${x.p.route}/${x.p.tolerance}` + (isL(x) ? '/L' : '');
   const report = [`hardest p95 ${tm.cpu.toFixed(2)} ms CPU`];
   for (const [name, fn] of Object.entries(dirSolvers)) {
     const cells = {};
@@ -326,7 +405,7 @@ export async function run(t) {
     return (h2(B, bestFixed(A)[1]) + h2(A, bestFixed(B)[1])) / list.length;
   };
   const cvs = [];
-  for (const variant of ['point', 'return']) for (const ti of [0, 1, 2]) {
+  for (const variant of ['point', 'return']) for (const ti of [0, 1, 2, 3]) {
     const list = items.filter((x) => x.p.variant === variant && x.p.tolerance === ti && L.spreads(x.p)), cv = cvFixed(list);
     // information only: the per-cell bound on larger samples (shortcutReport, boundShortcuts) is the check
     cvs.push(`${variant[0]}${ti} ${pct(cv)}`);
@@ -341,18 +420,25 @@ export async function run(t) {
   report.push(`[info] encoding-error model answer, point: ${pct(encHit)}`);
 
   t.section('reckon: distance heuristics (return items, with the true direction)');
-  const ret = items.filter((x) => x.p.variant === 'return');
+  const ret = items.filter((x) => x.p.variant === 'return'), retN = ret.filter((x) => !isL(x)), retL = ret.filter((x) => isL(x));
   const outTime = (it) => it.duration - it.turns.reduce((s, x2, i) => s + Math.abs(x2) / it.turnRates[i] + it.ramp, 0); // time spent walking
   const radial = (list, rOf) => list.filter((x) => Math.abs(rOf(x.it) - x.it.distance) <= x.tol * x.it.distance - 1e-9).length / list.length;
   const bestC = (list, f) => { let b = 0, bc = 0; for (let c = 0.05; c <= 1.5; c += 0.01) { const h2 = radial(list, (it) => c * f(it)); if (h2 > b) { b = h2; bc = c; } } return [b, bc]; };
   const dRows = [];
   for (const sl of [0, 1, 2]) {
-    const list = ret.filter((x) => x.p.speed === sl);
+    const list = retN.filter((x) => x.p.speed === sl), listL = retL.filter((x) => x.p.speed === sl);
     const lastLeg = radial(list, (it) => it.legs.at(-1));
     const [byPath] = bestC(list, (it) => it.pathLength), [byTime] = bestC(list, (it) => outTime(it)), [fixed] = bestC(list, () => 10);
-    dRows.push(`speed ${sl}: last leg ${pct(lastLeg)}, ∝ path ${pct(byPath)}, ∝ walking time ${pct(byTime)}, best fixed ${pct(fixed)}`);
+    const [byTimeL] = bestC(listL, (it) => outTime(it)), [fixedL] = bestC(listL, () => 10);
+    // v1.2: per route, each with its own factor and its own fixed distance (the player sees how many legs a route
+    // has; since 1.2 the home distance's spread differs more between routes, so one factor over all routes reads
+    // the route, not the walk: within routes r(walking time, home distance) stays about 0.1)
+    const perRoute = (f) => { let h = 0, n = 0; for (let ri = 0; ri < 8; ri++) { const l = list.filter((x) => x.p.route === ri); if (l.length) { h += bestC(l, f)[0] * l.length; n += l.length; } } return h / n; };
+    const byTimeR = perRoute((it) => outTime(it)), fixedR = perRoute(() => 10);
+    dRows.push(`speed ${sl}: last leg ${pct(lastLeg)}, ∝ path ${pct(byPath)}, ∝ walking time ${pct(byTime)}, best fixed ${pct(fixed)}, per route ∝ walking time ${pct(byTimeR)} vs fixed ${pct(fixedR)} (where the legs decide: ∝ walking time ${pct(byTimeL)}, best fixed ${pct(fixedL)})`);
     // above 'steady', holding Walk for a multiple of the outbound walking time does no better than one fixed distance
-    if (sl > 0) t.ok(byTime <= fixed + 0.03, `speed level ${sl}: walking time is no better an odometer than a fixed distance (${pct(byTime)} vs ${pct(fixed)})`);
+    // per route (v1.2: outside the legs level; there, see the leg-time note above)
+    if (sl > 0) t.ok(byTimeR <= fixedR + 0.03, `speed level ${sl}: walking time is no better an odometer than a fixed distance, per route (${pct(byTimeR)} vs ${pct(fixedR)}; over all routes ${pct(byTime)} vs ${pct(fixed)}; where the legs decide, reported: ${pct(byTimeL)} vs ${pct(fixedL)})`);
     const corr = (() => { const a = list.map((x) => outTime(x.it)), b = list.map((x) => x.it.distance), ma = sumOf(a) / a.length, mb = sumOf(b) / b.length;
       let sab = 0, saa = 0, sbb = 0; a.forEach((v2, i) => { sab += (v2 - ma) * (b[i] - mb); saa += (v2 - ma) ** 2; sbb += (b[i] - mb) ** 2; }); return sab / Math.sqrt(saa * sbb); })();
     dRows.push(`r(walking time, home distance) ${corr.toFixed(2)}`);
@@ -362,7 +448,7 @@ export async function run(t) {
   const combos2 = { 'turns reversed + last leg': (it) => at(norm360(180 - sumT(it)), it.legs.at(-1)), 'turn around + half the route': (it) => at(180, it.pathLength / 2) };
   for (const [name, fn] of Object.entries(combos2)) {
     let worst = -1, wc = '';
-    for (const ti of [0, 1, 2]) for (let ri = 0; ri < 8; ri++) {
+    for (const ti of [0, 1, 2, 3]) for (let ri = 0; ri < 8; ri++) {
       const l = ret.filter((x) => x.p.tolerance === ti && x.p.route === ri), hh = l.filter((x) => def.score(x.it, fn(x.it)).correct).length / l.length, ch = def.chance({ variant: 'return', tolerance: ti });
       if (hh - ch > worst) { worst = hh - ch; wc = `route ${ri} tol ${ti}: ${pct(hh)} vs ${pct(ch)}`; }
     }

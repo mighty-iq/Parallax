@@ -18,7 +18,7 @@
     },
     parts: [
       { id: 'why', label: 'No landmarks', text: 'Navigators correct dead-reckoning errors with fixes: a landmark, a star, a satellite. Here there are none, so the errors of every turn and every metre add up. The skill is to keep them small.' },
-      { id: 'view', label: 'View', text: 'You see the walk through your own eyes: straight legs, with turns on the spot between them.' },
+      { id: 'view', label: 'View', text: 'You see the walk through your own eyes: straight legs, with turns on the spot between them and one more turn on the spot at the end.' },
       { id: 'start', label: 'Start ring', text: 'You begin inside a ring on the ground. It disappears once you step out of it, for good.' },
       { id: 'ground', label: 'Ground', text: 'Its marks slide past as you move, so they show how far and how fast you turn and walk. Nothing on it marks a place, and speeds change, so count what you see, not seconds.' },
       { id: 'turn', label: 'Turn', text: 'At the end, drag the view sideways, drag the arrow circle, or use the ◀ ▶ buttons (keys: ← and →, Shift for 1°). The top of the circle is the way you face now.' },
@@ -28,16 +28,17 @@
     // v1.2 O36: the one-time notice before the first route outside Watch, Try, Go (the player shows it once,
     // rec.ui.seen.walkNotice; docs/research/v1.2/N1-reckon.md §5.4 #1)
     motionNotice: 'The view moves on its own. If you feel unwell, pause or stop. Gentle motion is in Settings.',
-    // 2 legs, medium turn, textured ground, steady speed, 40°: seed 34 walks 8.0 m, turns 100.6° right,
-    // walks 10.2 m; the start is 138° to the right, 11.7 m away.
+    // 2 legs, medium turn, textured ground, steady speed, 40° (v1.2, version 2: every route ends with a turn on
+    // the spot): seed 44 walks 8.6 m, turns 96° right, walks 8.1 m, turns 57.6° right on the spot; the start is
+    // 72.5° to the right, 11.2 m away.
     demo: [
-      { params: { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 }, seed: 34, kind: 'right' },
+      { params: { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0, legs: 0 }, seed: 44, kind: 'right' },
     ],
     practice: [
-      { variant: 'point', task: 'heading', route: 0, flow: 2, speed: 0, tolerance: 0 }, // short-lived dots: no ground pattern to match
-      { variant: 'return', task: 'distance', route: 0, flow: 0, speed: 0, tolerance: 1 },
-      { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0 },
-      { variant: 'return', route: 0, flow: 0, speed: 0, tolerance: 0 },
+      { variant: 'point', task: 'heading', route: 0, flow: 2, speed: 0, tolerance: 0, legs: 0 }, // short-lived dots: no ground pattern to match
+      { variant: 'return', task: 'distance', route: 0, flow: 0, speed: 0, tolerance: 1, legs: 0 },
+      { variant: 'point', route: 0, flow: 0, speed: 0, tolerance: 0, legs: 0 },
+      { variant: 'return', route: 0, flow: 0, speed: 0, tolerance: 0, legs: 0 },
     ],
     // The player shows the first tip whose `when` fits the item. The two tutorial rungs come first (their items
     // carry params.task): a turn on the spot has no start to point at, and a straight walk no turn to keep
@@ -47,6 +48,8 @@
       { id: 'headingTurn', when: { dim: 'task', levels: ['heading'] }, text: 'Watch the ground slide past as you turn: it shows how far round you go, even with nothing else to see.' },
       { id: 'distanceFlow', when: { dim: 'task', levels: ['distance'] }, text: 'The second walk goes at another speed: judge the distance by how much ground slides past, not by counting seconds.' },
       { id: 'walkback', when: { variant: 'return' }, text: 'Turn first, then hold Walk. Your speed changes from item to item, so judge the distance by the ground, not by counting.' },
+      // v1.2 (version 2): the legs level, where the same turns can end in places far apart (gen.js LEG_CELLS)
+      { id: 'legsDecide', when: { dim: 'legs', levels: [1] }, text: 'Watch the length of every leg too: here the same turns can end in places far apart.' },
       { id: 'update', when: { dim: 'route', levels: [0, 1, 2] }, text: 'After each turn, say to yourself where the start is now: behind, behind-left, left…' },
       { id: 'speeds', when: { dim: 'speed', levels: [1] }, text: 'Speeds change from leg to leg now: watch the ground flow, not the seconds.' },
       { id: 'speedsWithin', when: { dim: 'speed', levels: [2] }, text: 'Speeds may now change within a leg too: watch the ground flow, not the seconds.' },
@@ -59,6 +62,9 @@
     // configural picture the more accurate one on long paths (Wiener, Berthoz & Wolbers 2011, abstract;
     // He & McNamara 2018b): R1 §8.1(b). No training study of either strategy was found [gap]: the cards
     // describe ways to do the task, not a proven method.
+    // v1.2 (note docs/research/v1.2/N1-reckon.md §2.5, §6 #10): the analytic card's `when` says what was found
+    // (quicker answers; the picture more accurate on the longer path of one walking study); switching is marked
+    // as our suggestion.
     strategies: [
       {
         id: 'imagery', title: 'Picture the shape from above',
@@ -78,7 +84,7 @@
           'A turn of 90° to the right swings it 90° round the other way: from straight behind you to your right.',
           'Walking on swings it further round behind you; once it is beside or behind you, it also gets further away.',
         ],
-        when: 'Quick and steady when there is nothing to steer by and the turns come fast.',
+        when: 'Quicker to answer; on longer routes, the picture was more accurate in one walking study.',
       },
       {
         id: 'switch', title: 'When to switch',
@@ -88,7 +94,7 @@
           'If you lose the direction, rebuild it from the picture.',
           'After two misses in a row, watch the next route with the other method.',
         ],
-        when: 'After two misses in a row, try the other way on the next route.',
+        when: 'Our suggestion, not a finding: after two misses in a row, try the other way on the next route.',
       },
     ],
     captions: {
@@ -122,7 +128,7 @@
       voidTurned: 'The screen changed shape during the walk, so this answer will not count.',
       voidTurnedAnswer: 'The screen changed shape while you answered, so this answer will not count.',
       voidLost: 'The 3D view was interrupted, so this answer will not count.',
-      describe: 'A first-person view of a walk across an empty plain with nothing to steer by: {legs} straight legs with turns between them. Then turn to face where you started with the left and right arrow keys (5°, with Shift 1°){walk}, and confirm with Enter. The top of the circle is the way you face.',
+      describe: 'A first-person view of a walk across an empty plain with nothing to steer by: {legs} straight legs with turns between them and a last turn on the spot. Then turn to face where you started with the left and right arrow keys (5°, with Shift 1°){walk}, and confirm with Enter. The top of the circle is the way you face.',
       describeWalk: ', walk back by holding the up arrow (the down arrow steps back)',
       describeHeading: 'A first-person view: you stand in a ring and turn on the spot. Then turn back until you face the same way as at the start, with the left and right arrow keys, and confirm with Enter.',
       describeDistance: 'A first-person view: you walk straight across an empty plain. Then walk the same distance again by holding the up arrow, and confirm with Enter.',
@@ -198,8 +204,8 @@
       mapYou: 'your answer', // the arrow of your answer, not where you are (v1.2 O40)
       // the demo
       demoStart: 'You start here, inside the ring. Nothing else will ever mark this spot.',
-      demoWalk: 'Watch the walk: straight legs with turns on the spot between them. The ground shows every metre and every degree.',
-      demoEnd: 'The walk ends here. The start is somewhere off the screen, and nothing points to it.',
+      demoWalk: 'Watch the walk: straight legs with turns on the spot between them, and one last turn on the spot at the end. The ground shows every metre and every degree.',
+      demoEnd: 'The walk ends here, after the last turn. The start is somewhere off the screen, and nothing points to it.',
       demoTurn: 'Turn {deg}° to the {side}: now you face the start.',
       demoTurnHeading: 'Turn {deg}° to the {side}: now you face the same way as at the start.',
       demoAnswer: 'To answer, drag the view or the circle, or use ◀ ▶ (keys ← →). Then Confirm (Enter).',

@@ -372,7 +372,8 @@ export async function run(t) {
 // 20° off the axis) leave no room to spread the answer past chance + 10 for one fixed angle: minimax over
 // route pools (B3's progress notes): routes 0, 1, 4 at every tolerance, route 2 at 40° and 30°.
 export const EXEMPT_FIXED = ['0/0', '0/1', '0/2', '1/0', '1/1', '1/2', '4/0', '4/1', '4/2', '2/0', '2/1'];
-export function shortcutReport(def, items, label) {
+// opts (v1.2, Reckon): { cell(x) → 0 | 1 (Reckon: the two-answer construction applies), levels: tolerance level indices }.
+export function shortcutReport(def, items, label, opts = {}) {
   const sgn = (x) => (x >= 0 ? 1 : -1), sum = (a) => a.reduce((x, y) => x + y, 0);
   const at = (a, r) => ({ x: r * Math.sin(rad(a)), z: r * Math.cos(rad(a)) });
   const eqKey = (it, len) => walk(it.startHeading, it.legs.map(() => len || 1), it.turns);
@@ -383,8 +384,8 @@ export function shortcutReport(def, items, label) {
     let h = 0; for (const y of B) if (hit(y, ca)) h++; for (const y of A) if (hit(y, cb)) h++;
     return h / list.length;
   };
-  const cells = new Map();
-  for (const x of items) { const k = `${x.p.variant || 'point'}/${x.p.route}/${x.p.tolerance}`; (cells.get(k) || cells.set(k, []).get(k)).push(x); }
+  const cells = new Map(), con = opts.cell || (() => 0), levels = opts.levels || [0, 1, 2];
+  for (const x of items) { const k = `${x.p.variant || 'point'}/${x.p.route}/${x.p.tolerance}` + (con(x) ? '/L' : ''); (cells.get(k) || cells.set(k, []).get(k)).push(x); }
   const rows = [];
   for (const [k, list] of cells) {
     const [variant] = k.split('/'), ch = def.chance(list[0].p), ret = variant === 'return';
@@ -418,11 +419,11 @@ export function shortcutReport(def, items, label) {
       I['net-turn prior'] = cvBest(list, sgrid, (x, g) => hitP(x, at(180 - sgn(T(x.it)) * g[0], g[1])));
       I['true direction + average distance'] = rate((x) => hitP(x, at(keyOf(x.it), meanD)));
     }
-    rows.push({ cell: k, rt: k.split('/').slice(1).join('/'), n: list.length, chance: ch, B, I });
+    rows.push({ cell: k, rt: `${list[0].p.route}/${list[0].p.tolerance}`, route: list[0].p.route, tol: list[0].p.tolerance, legs: con(list[0]) ? 1 : 0, n: list.length, chance: ch, B, I });
   }
   rows.sort((a, b) => a.cell.localeCompare(b.cell, 'en', { numeric: true }));
   const lines = [`       ${label}: shortcuts per route/tolerance cell (bounded at chance + 10 points; n per cell ${Math.min(...rows.map((r) => r.n))}–${Math.max(...rows.map((r) => r.n))})`];
-  const mat = (rv, f) => [0, 1, 2].map((ti) => rv.filter((r) => r.cell.endsWith('/' + ti)).map((r) => String(Math.round(100 * f(r))).padStart(3)).join('')).join(' |');
+  const mat = (rv, f) => levels.map((ti) => rv.filter((r) => r.tol === ti).sort((a, b) => a.route - b.route).map((r) => String(Math.round(100 * f(r))).padStart(3)).join('')).join(' |');
   for (const v of [...new Set(rows.map((r) => r.cell.split('/')[0]))]) {
     const rv = rows.filter((r) => r.cell.startsWith(v + '/'));
     for (const [kind, key] of [['bounded', 'B'], ['info', 'I']]) {
@@ -432,20 +433,24 @@ export function shortcutReport(def, items, label) {
       }
     }
     const fixedName = v === 'return' ? 'fixed place' : 'fixed angle';
-    lines.push(`         ${v} · ${fixedName} by route 0–7 (rows: tolerance level 0 | 1 | 2), %: ${mat(rv, (r) => r.B[fixedName])}`);
-    lines.push(`         ${v} · equal legs by route 0–7, %: ${mat(rv, (r) => r.I['equal legs'])}`);
-    lines.push(`         ${v} · chance + 10 by tolerance level, %: ${[0, 1, 2].map((ti) => pct(rv.find((r) => r.cell.endsWith('/' + ti)).chance + 0.1)).join(' / ')}`);
+    for (const lg of [...new Set(rv.map((r) => r.legs))].sort()) {
+      const rl = rv.filter((r) => r.legs === lg), tag = lg ? ' (two answers: routes ' + [...new Set(rl.map((r) => r.route))].join(', ') + ')' : '';
+      lines.push(`         ${v} · ${fixedName}${tag} by route (rows: tolerance level ${levels.join(' | ')}), %: ${mat(rl, (r) => r.B[fixedName])}`);
+      lines.push(`         ${v} · equal legs${tag} by route, %: ${mat(rl, (r) => r.I['equal legs'])}`);
+    }
+    lines.push(`         ${v} · chance + 10 by tolerance level, %: ${levels.map((ti) => pct(rv.find((r) => r.tol === ti).chance + 0.1)).join(' / ')}`);
   }
   console.log(lines.join('\n'));
   return rows;
 }
 
-export function boundShortcuts(t, rows) {
+// exempt: the route/tolerance cells where a fixed answer is reported, not bounded (Homing: EXEMPT_FIXED; Reckon v1.2: none).
+export function boundShortcuts(t, rows, exempt = EXEMPT_FIXED) {
   for (const nm of [...new Set(rows.flatMap((r) => Object.keys(r.B)))]) {
     const fixed = nm.startsWith('fixed'), mine = rows.filter((r) => nm in r.B);
-    const over = mine.filter((r) => r.B[nm] > r.chance + 0.10 && !(fixed && EXEMPT_FIXED.includes(r.rt)));
-    const ex = fixed ? mine.filter((r) => EXEMPT_FIXED.includes(r.rt)).map((r) => `${r.cell} ${pct(r.B[nm])}`).join(', ') : '';
-    t.ok(over.length === 0, `${nm}: within chance + 10 in every cell${fixed ? ' (structural exceptions, reported: ' + ex + ')' : ''}` + (over.length ? ` — over: ${over.map((r) => r.cell + ' ' + pct(r.B[nm])).join(', ')}` : ''));
+    const over = mine.filter((r) => r.B[nm] > r.chance + 0.10 && !(fixed && exempt.includes(r.rt)));
+    const ex = fixed && exempt.length ? mine.filter((r) => exempt.includes(r.rt)).map((r) => `${r.cell} ${pct(r.B[nm])}`).join(', ') : '';
+    t.ok(over.length === 0, `${nm}: within chance + 10 in every cell${ex ? ' (structural exceptions, reported: ' + ex + ')' : ''}` + (over.length ? ` — over: ${over.map((r) => r.cell + ' ' + pct(r.B[nm])).join(', ')}` : ''));
   }
 }
 

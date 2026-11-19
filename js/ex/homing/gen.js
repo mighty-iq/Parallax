@@ -185,11 +185,12 @@
   function sumTurns(turns) { return sum(turns); }
   // The two shortcut answers.
   function shortcuts(turns) { return { around: 180, reversed: norm360(180 - sumTurns(turns)) }; }
-  // opts: { gap (default AXIS_GAP), dMax (default none) }
+  // opts: { gap (default AXIS_GAP), dMax (default none), dMin (default END_MIN; v1.2: Reckon's walks back from 3 m) }
   function routeOk(g, opts) {
     var gap = opts && isNum(opts.gap) ? opts.gap : AXIS_GAP, dMax = opts && isNum(opts.dMax) ? opts.dMax : Infinity;
+    var dMin = opts && isNum(opts.dMin) ? opts.dMin : END_MIN;
     if (adiff(g.key, 0) < gap || adiff(g.key, 180) < gap) return false;
-    if (g.distance < END_MIN || g.distance > dMax) return false;
+    if (g.distance < dMin || g.distance > dMax) return false;
     for (var i = 1; i < g.path.length - 1; i++) if (segDist([0, 0], g.path[i], g.path[i + 1]) < NEAR_START) return false;
     return true;
   }
@@ -497,17 +498,21 @@
   }
   // The checks Homing and Reckon share: legs, turns, the path from them, distances and the motion's
   // comfort limits. Returns true or a reason; g (the recomputed route) is put on out.g.
-  function checkRoute(item, n, band, out) {
+  // opts (v1.2, Reckon): { leg: [m, m], path: [m, m] (default LEG, PATH), dMin (default END_MIN), rot: [deg, deg]
+  // (one more turn on the spot after the last leg, of that size either way; default none) }.
+  function checkRoute(item, n, band, out, opts) {
+    var o = opts || {}, leg = o.leg || LEG, pth = o.path || PATH, dMin = isNum(o.dMin) ? o.dMin : END_MIN, m = n - 1 + (o.rot ? 1 : 0);
     if (!Array.isArray(item.legs) || item.legs.length !== n) return 'the route needs ' + n + ' legs';
-    if (!Array.isArray(item.turns) || item.turns.length !== n - 1) return 'the route needs ' + (n - 1) + ' turns';
-    for (var i = 0; i < n; i++) if (!isNum(item.legs[i]) || item.legs[i] < LEG[0] - 1e-9 || item.legs[i] > LEG[1] + 1e-9) return 'leg ' + i + ' is too short to see or too long';
+    if (!Array.isArray(item.turns) || item.turns.length !== m) return 'the route needs ' + m + ' turns';
+    for (var i = 0; i < n; i++) if (!isNum(item.legs[i]) || item.legs[i] < leg[0] - 1e-9 || item.legs[i] > leg[1] + 1e-9) return 'leg ' + i + ' is too short to see or too long';
     var total = sum(item.legs);
-    if (total < PATH[0] - 1e-9 || total > PATH[1] + 1e-9) return 'the route is shorter than ' + PATH[0] + ' m or longer than ' + PATH[1] + ' m';
+    if (total < pth[0] - 1e-9 || total > pth[1] + 1e-9) return 'the route is shorter than ' + pth[0] + ' m or longer than ' + pth[1] + ' m';
     if (!isNum(item.pathLength) || Math.abs(item.pathLength - total) > 0.006) return 'pathLength does not match the legs';
     for (i = 0; i < n - 1; i++) {
       var t = item.turns[i];
       if (!isNum(t) || Math.abs(t) < band.lo - 1e-9 || Math.abs(t) > band.hi + 1e-9) return 'turn ' + i + ' is outside the ' + band.name + ' band';
     }
+    if (o.rot && !(isNum(item.turns[m - 1]) && Math.abs(item.turns[m - 1]) >= o.rot[0] - 1e-9 && Math.abs(item.turns[m - 1]) <= o.rot[1] + 1e-9)) return 'the turn on the spot at the end is outside ' + o.rot.join('–') + '°';
     if (!isNum(item.startHeading)) return 'startHeading missing';
     var g = route(item.startHeading, item.legs, item.turns);
     if (!Array.isArray(item.path) || item.path.length !== n + 1) return 'path has the wrong length';
@@ -516,7 +521,7 @@
       if (!Array.isArray(q) || Math.abs(q[0] - g.path[i][0]) > 0.002 || Math.abs(q[1] - g.path[i][1]) > 0.002) return 'path point ' + i + ' does not follow from the legs and turns';
     }
     var E = item.path[n], back = compass(-E[0], -E[1]), dist = Math.sqrt(E[0] * E[0] + E[1] * E[1]);
-    if (dist < END_MIN) return 'the route ends too close to the start';
+    if (dist < dMin - 1e-9) return 'the route ends too close to the start';
     if (Math.abs(dist - item.distance) > 0.002) return 'distance does not match the route';
     for (i = 1; i < n; i++) if (segDist([0, 0], item.path[i], item.path[i + 1]) < NEAR_START - 1e-6) return 'leg ' + i + ' passes within ' + NEAR_START + ' m of the start';
     if (adiff(item.heading, item.startHeading + sumTurns(item.turns)) > 0.02 || adiff(item.returnBearing, back) > 0.02) return 'heading or returnBearing does not match the route';
