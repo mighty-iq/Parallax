@@ -89,7 +89,7 @@
   TABLE.source =
     'honey bee, milk cow/goat/sheep/cattle/buffalo, wool sheep/lamb/goat/llama/alpaca, *silk silkworm/caterpillar/moth/worm, ' +
     '*pearl oyster/clam/mussel, bacon pig/hog, ham pig/hog, beef cow/bull/cattle/ox, pork pig/hog, *mutton sheep, *venison deer, *ivory elephant/walrus/tusk; ' +
-    '*acorn oak/tree, *conker chestnut/tree, flour wheat/grain/corn, sugar cane/beet/sugarcane, *rubber tree/sap, ' +
+    '*acorn oak/tree, *pinecone pine/tree, flour wheat/grain/corn, sugar cane/beet/sugarcane, *rubber tree/sap, ' +
     'chocolate cocoa/cacao/bean/beans, coffee bean/beans';
   // A is used to B.
   TABLE.tool =

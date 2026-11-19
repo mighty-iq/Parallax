@@ -22,6 +22,12 @@
   var st = null;
 
   function learn() { return PX.ex.learn('patterns') || {}; }
+  // No keyboard at hand (PX.core.keys.present(), as the key hints use; else a touch-only pointer): captions leave keys out.
+  function touchOnly() {
+    var K = PX.core.keys;
+    if (K && typeof K.present === 'function') { try { return !K.present(); } catch (e) { /* the media query */ } }
+    try { return !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches); } catch (e2) { return false; }
+  }
   function cap(key, vars) {
     return String((learn().captions || {})[key] || '').replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] !== undefined ? vars[k] : m; });
   }
@@ -284,7 +290,7 @@
       { ms: item.exposureMs, caption: cap('look'), enter: function () { paint(item, 'pattern', null); showCursor(item, false); } },
       { ms: 1500, caption: cap('empty'), enter: function () { demoMarks = {}; paint(item, 'empty', demoMarks); } },
       {
-        ms: 600 * order.length, caption: cap('mark'),
+        ms: 600 * order.length, caption: cap(touchOnly() ? 'markTouch' : 'mark'),
         enter: function () { demoMarks = {}; paint(item, 'empty', demoMarks); },
         update: function (k) {
           var n = Math.min(order.length, Math.floor(k * order.length + 1e-9));

@@ -43,7 +43,7 @@
       options: 'Four drawings show a cube from the same corner. One of them is the reference cube turned.',
       turn: 'Watch the reference turn so that it faces the way the matching drawing does.',
       match: 'Turned like this, every face matches drawing {a}.',
-      answer: 'So the answer is drawing {a} (key {a}). In each of the others, two symbols have swapped places or one points another way.',
+      answer: 'So the answer is drawing {a}. In each of the others, two symbols have swapped places or one points another way.',
       verdict: 'Drawing {a} is the reference cube turned',
     },
   });

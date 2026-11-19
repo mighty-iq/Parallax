@@ -23,7 +23,8 @@
   var st = null;
 
   function learn() { return PX.ex.learn('viewmatch') || {}; }
-  function cap(key, a) { return String((learn().captions || {})[key] || '').replace('{a}', a === undefined ? '' : a); }
+  function cap(key, a) { return String((learn().captions || {})[key] || '').replace(/\{a\}/g, a === undefined ? '' : a); }
+  var LABEL_YOURS = 'Overview · seen from your side', LABEL_FLAG = 'Overview · seen from the flag';
 
   /* ---------- the scene, from the item ---------- */
 
@@ -146,7 +147,7 @@
   function mount(ctx) {
     var root = h('div.ex-viewmatch-stem');
     var stage = h('div.ex-stage.ex-viewmatch-stage');
-    var label = h('span.ex-label', 'Overview · seen from your side');
+    var label = h('span.ex-label', LABEL_YOURS);
     var verdict = h('div.ex-verdict.vm-verdict', { hidden: true, role: 'status' });
     // px-keep-motion: base.css's reduced-motion rule would empty the bar at once, and the slow
     // sweep is information (the time left), not decoration.
@@ -207,6 +208,7 @@
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
     st.label.classList.remove('is-pointed');
+    st.label.textContent = LABEL_YOURS;
     if (st.v3) {
       var p = stemPose(item);
       setCam(st.stemCam, p.pos, p.target, p.fov);
@@ -266,6 +268,7 @@
       var p = walkPose(item, k);
       setCam(st.stemCam, p.pos, p.target, p.fov);
       st.sc.flag.visible = k < 0.75; // close to the flag the camera stands where it is
+      st.label.textContent = k < 0.5 ? LABEL_YOURS : LABEL_FLAG; // the label says whose view the overview shows
       renderStem();
     }
     return [
@@ -277,6 +280,7 @@
     var p = stemPose(item);
     setCam(st.stemCam, p.pos, p.target, p.fov);
     st.sc.flag.visible = true;
+    st.label.textContent = LABEL_YOURS;
     focusOption(-1);
     renderStem();
   }

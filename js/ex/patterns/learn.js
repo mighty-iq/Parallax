@@ -28,6 +28,7 @@
       look: 'Look at the pattern. It stays for 3 seconds.',
       empty: 'Now the grid is empty.',
       mark: 'Mark each square that was filled: tap it, or use the arrow keys and Space.',
+      markTouch: 'Mark each square that was filled: tap it.',
       confirm: 'When you are done, press Enter or Confirm.',
       again: 'Here is the pattern again.',
       right: 'All {k} squares marked, and no others.',
