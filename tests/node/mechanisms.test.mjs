@@ -1,8 +1,10 @@
-/* PR-3 Mechanisms: geometry, solver, generator, shortcut solvers (≥ 10 000 seeds over every level). */
+/* PR-3 Mechanisms, version 2 (v1.2, W2-measure; PLAN milestone 6's probe upgrades): geometry, solver, generator,
+   shortcut solvers (≥ 10 000 seeds over every level). One question with five answers: which way the marked part
+   turns and whether faster or slower than the driver, or "it cannot turn". */
 import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
 
-const SEEDS_PER_COMBO = 210; // 48 combinations → 10 080 items
+const SEEDS_PER_COMBO = 630; // 16 combinations → 10 080 items
 
 // An independent direction solver for the tests: meshes by brute force from the geometry (same
 // layer, centre distance = sum of radii), belts as given, signs propagated by BFS; a sign conflict
@@ -37,6 +39,7 @@ function independent(item) {
     }
   }
   const turn = sign[item.target] * item.driver.dir, sp = speed[item.target];
+  if (item.question === 'dirspeed') return jam ? 'jam' : (turn > 0 ? 'cw' : 'ccw') + '-' + (Math.abs(sp - 1) < 1e-9 ? 'same' : sp > 1 ? 'faster' : 'slower');
   if (item.question === 'speed') return jam ? 'jam?' : Math.abs(sp - 1) < 1e-9 ? 'same' : sp > 1 ? 'faster' : 'slower';
   if (jam) return 'jam';
   if (item.question === 'dir') return turn > 0 ? 'cw' : 'ccw';
@@ -50,12 +53,13 @@ export async function run(t) {
   t.section('mechanisms: definition');
   t.ok(def, 'mechanisms is registered');
   if (!def) return;
-  t.eq([def.code, def.role, def.answer, def.cell, def.nOptions, def.version, [...def.abilities]], ['PR-3', 'probe', 'choice', 'intrinsic-dynamic', 3, 1, ['MA']], 'contract fields');
+  t.eq([def.code, def.role, def.answer, def.cell, def.nOptions, def.version, [...def.abilities]], ['PR-3', 'probe', 'choice', 'intrinsic-dynamic', 5, 2, ['MA']], 'contract fields (version 2, five answers)');
+  t.eq(def.past && def.past[1], { min: -2.1, max: 2.1 }, 'version 1\'s range is kept (the trend reads 1.1\'s entries with it)');
   const range = PX.ex.maxDifficulty(def) - PX.ex.minDifficulty(def);
   t.ok(range >= 4, `difficulty range ≥ 4 logits (got ${range.toFixed(2)})`);
   const H = def.helpers, combos = PX.ex.enumerate(def);
-  t.eq(combos.length, 48, '4 route lengths × 4 structures × 3 questions');
-  t.ok(combos.every((p) => [0.5, 1 / 3].includes(def.chance(p))), 'chance is 1/2 (no jam possible) or 1/3');
+  t.eq(combos.length, 16, '4 route lengths × 4 structures');
+  t.ok(combos.every((p) => def.chance(p) === (p.structure < 2 ? 0.25 : 0.2)), 'chance is 1/4 (no jam possible) or 1/5');
 
   t.section('mechanisms: geometry helpers');
   {
@@ -100,7 +104,7 @@ export async function run(t) {
       const v = def.validate(item);
       if (v !== true) { invalid++; firstBad = firstBad || `${lv} seed ${seed}: ${v}`; continue; }
       if (!def.score(item, item.key).correct) keyWrong++;
-      for (let i = 0; i < 3; i++) if (i !== item.key && def.score(item, i).correct) otherRight++;
+      for (let i = 0; i < item.options.length; i++) if (i !== item.key && def.score(item, i).correct) otherRight++;
       if (independent(item) !== item.answers[item.key]) { disagree++; firstBad = firstBad || `${lv} seed ${seed}: independent solver says ${independent(item)}`; }
       if (s % 8 === 0 && JSON.stringify(def.generate(PX.rng(seed), p)) !== JSON.stringify(item)) nondet++;
 
@@ -116,7 +120,7 @@ export async function run(t) {
       const K = keys[q] || (keys[q] = { n: 0, by: {}, jam: [0, 1, 2, 3].map(() => [0, 0]) });
       K.n++; K.by[a] = (K.by[a] || 0) + 1;
       K.jam[p.structure][0] += a === 'jam' ? 1 : 0; K.jam[p.structure][1]++;
-      for (const name of Object.keys(H.shortcuts)) note(name + ':' + (q === 'speed' ? 'speed' : 'turn'), H.shortcuts[name](item), item);
+      for (const name of Object.keys(H.shortcuts2)) note(name, H.shortcuts2[name](item), item);
       forms[lv][s % 3].push(item.axles.length + item.belts.length);
     }
   }
@@ -135,11 +139,10 @@ export async function run(t) {
   t.ok(p95 < 20 && p95h < 20, `generation p95 < 20 ms CPU (all ${p95.toFixed(2)} ms, longest route at the jams level ${p95h.toFixed(2)} ms; wall ${p95w.toFixed(2)} ms)`);
 
   t.section('mechanisms: answers');
-  const share = (K, a) => (K.by[a] || 0) / K.n;
-  t.ok(Math.abs(share(keys.dir, 'cw') - share(keys.dir, 'ccw')) < 0.05, `clockwise and counter-clockwise keys balance (${(100 * share(keys.dir, 'cw')).toFixed(1)} / ${(100 * share(keys.dir, 'ccw')).toFixed(1)} %)`);
-  t.ok(Math.abs(share(keys.lift, 'up') - share(keys.lift, 'down')) < 0.05, 'up and down keys balance');
-  t.ok(['faster', 'same', 'slower'].every((a) => Math.abs(share(keys.speed, a) - 1 / 3) < 0.04), 'speed keys about one third each');
-  const jamShare = (s) => ['dir', 'lift'].reduce((acc, q) => [acc[0] + keys[q].jam[s][0], acc[1] + keys[q].jam[s][1]], [0, 0]);
+  const K2 = keys.dirspeed, turns = ['cw-faster', 'cw-slower', 'ccw-faster', 'ccw-slower'], nTurn = turns.reduce((a, x) => a + (K2.by[x] || 0), 0);
+  t.ok(turns.every((a) => Math.abs((K2.by[a] || 0) / nTurn - 0.25) < 0.03), `the four turns are each about a quarter of the turning keys (${turns.map((a) => (100 * (K2.by[a] || 0) / nTurn).toFixed(1)).join(' / ')} %)`);
+  t.ok(!K2.by.same && Object.keys(K2.by).every((a) => turns.includes(a) || a === 'jam'), 'no item turns at the driver\'s own speed');
+  const jamShare = (s) => [K2.jam[s][0], K2.jam[s][1]];
   t.ok(jamShare(0)[0] + jamShare(1)[0] === 0, 'no jams at the chain and branches levels');
   const j2 = jamShare(2), j3 = jamShare(3);
   t.ok(Math.abs(j2[0] / j2[1] - 1 / 3) < 0.05 && Math.abs(j3[0] / j3[1] - 1 / 2) < 0.05, `jams: ${(100 * j2[0] / j2[1]).toFixed(0)} % at the belts level, ${(100 * j3[0] / j3[1]).toFixed(0)} % at the jams level`);
@@ -150,7 +153,9 @@ export async function run(t) {
   for (const [name, c] of Object.entries(cut)) {
     const acc = c.right / c.n, meanChance = c.chance / c.n;
     const by = c.by.map(([r, m]) => (m ? pct(r / m) : '–')).join('/');
-    t.ok(acc <= 1 / 3 + 0.10, `${name}: ${pct(acc)} % over the pool ≤ 1/3 + 10 (mean chance ${pct(meanChance)} %; by structure ${by})`);
+    // per structure level against its own chance (1/4 below the belts level, 1/5 from it)
+    const over = c.by.map(([r, m], S) => (m && r / m > (S < 2 ? 0.25 : 0.2) + 0.10 ? S : -1)).filter((S) => S >= 0);
+    t.ok(acc <= meanChance + 0.10 && over.length === 0, `${name}: ${pct(acc)} % over the pool (mean chance ${pct(meanChance)} %); by structure ${by}, each within its chance + 10`);
     lines.push(`${name} ${pct(acc)} (${by})`);
   }
 

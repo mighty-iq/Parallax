@@ -7,27 +7,26 @@
   'use strict';
 
   PX.ex.learn('mechanisms', {
-    goal: 'When the driver turns, how does the marked part move?',
-    // The three kinds of question, each named, so no item asks something the screen never showed.
+    goal: 'When the driver turns, which way and how fast does the marked part turn?',
+    // Version 2 (v1.2): one question with five answers, named on the card, so no item asks something the screen never
+    // showed.
     // the task card's lines in a Spatial Check (js/ui/measure.js folds the instruction away under "More about this
     // task"): what the first item needs, its own question being on the screen with it
-    brief: ['The driver turns the way its arrow shows. Each picture asks one question about the part marked with a dashed ring: which way it turns, whether the weight goes up or down, or whether it turns faster or slower than the driver.'],
+    brief: ['The driver turns the way its arrow shows. For the part marked with a dashed ring, pick which way it turns and whether it turns faster or slower than the driver, or that it cannot turn at all.'],
     instruction: [
-      'Each picture shows gears, often belts, and sometimes a drum with a rope and a weight. The driver turns the way its arrow shows; the question is about the part marked with a dashed ring.',
-      'Which way? Does the marked part turn clockwise or counter-clockwise, or can it not turn at all? Gears that form a loop can jam.',
-      'Up or down? When the marked part is a drum, it winds the rope in (the weight goes up) or lets it out (the weight goes down), or it cannot move.',
-      'Faster or slower? Compared with the driver, does the marked part turn faster, at the same speed, or slower?',
+      'Each picture shows gears and often belts. The driver turns the way its arrow shows; the question is about the part marked with a dashed ring.',
+      'Which way, and how fast? The marked part turns clockwise or counter-clockwise, and faster or slower than the driver; or it cannot turn at all, because gears that form a loop can jam.',
       'Take the time you need: the bar under the picture shows the time left. The Check does not show whether an answer was right.',
     ],
     parts: [
       { id: 'driver', label: 'Driver', text: 'The wheel that is turned by hand. Its arrow shows the way it turns.' },
-      { id: 'marked', label: 'Marked', text: 'The part the question is about: a gear, a pulley or a winch drum.' },
+      { id: 'marked', label: 'Marked', text: 'The part the question is about: a gear or a pulley.' },
       { id: 'belt', label: 'Belts', text: 'An open belt keeps the direction; a crossed belt reverses it.' },
-      { id: 'answer', label: 'Answer', text: 'Three answers: keys 1 to 3, or tap one.' },
+      { id: 'answer', label: 'Answer', text: 'Five answers: keys 1 to 5, or tap one.' },
     ],
-    // The worked example: 3 axles, chain level, direction question. Seed 6: the driver gear meshes
-    // a gear that carries a pulley, and an open belt takes the turn to the marked pulley.
-    demo: [{ params: { gears: 0, structure: 0, question: 0 }, seed: 6, kind: 'ccw' }],
+    // The worked example (version 2): 3 axles, chain level, an open belt on the route; the marked part turns
+    // counter-clockwise and 4 times for every 3 turns of the driver.
+    demo: [{ params: { gears: 0, structure: 0 }, seed: 3, kind: 'ccw-faster' }],
     practice: [],
     tips: [],
     captions: {
@@ -46,8 +45,9 @@
       answerDir: 'So the marked part turns {answer}.',
       answerLift: 'So the weight goes {answer}.',
       answerSpeed: 'The marked part makes {n} turns for every {d} turns of the driver: {answer}.',
+      answerDirSpeed: 'The marked part makes {n} turns for every {d} turns of the driver: {answer}.',
       answerJam: 'Nothing can turn: the answer is “{answer}”.',
-      keys: 'Answer with the keys 1 to 3, or tap an answer.',
+      keys: 'Answer with the keys 1 to 5, or tap an answer.',
       cw: 'clockwise',
       ccw: 'counter-clockwise',
     },
@@ -55,6 +55,7 @@
       dir: 'Which way does the marked part turn?',
       lift: 'Does the weight go up or down?',
       speed: 'Compared with the driver, how fast does the marked part turn?',
+      dirspeed: 'Which way does the marked part turn, and is it faster or slower than the driver?',
     },
   });
 })(window.PX);

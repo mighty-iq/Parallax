@@ -1,5 +1,16 @@
 /* PR-3 Mechanisms (probe; pure; ARCHITECTURE.md §5, PLAN.md §4, research/B-tasks.md §9 and §14b).
 
+   Version 2 (v1.2, W2-measure; PLAN milestone 6's probe upgrades, note M1 §4.3): every item asks one question with
+   natural options: which way the marked axle turns AND whether it turns faster or slower than the driver (clockwise,
+   faster / clockwise, slower / counter-clockwise, faster / counter-clockwise, slower), with "it cannot turn" as a
+   fifth option on every item (right only at the belts and jams levels, where an odd loop can lock everything). The
+   weight-on-a-rope question of version 1 has no natural four-way form and is gone (DECISIONS 2026-11-19); so are
+   items where the marked axle turns at the driver's own speed. Against cheap answers: the route-parity rule names
+   the direction right half of the time and "the smaller wheel turns faster" names the speed right half of the time,
+   independently, so together they find the key one time in four. Version 1's range stays in def.past.
+
+   Version 1's notes follow (the machinery is shared).
+
    A 2D drawing of gears, belts and a winch. The driver turns one way (arrow); the player answers
    one question about the marked axle: which way it turns (clockwise / counter-clockwise / it cannot
    turn), whether the weight on its drum goes up or down (or cannot move), or whether it turns
@@ -46,6 +57,11 @@
     speed: ['faster', 'same speed', 'slower'],
   };
   var ANSWERS = { dir: ['cw', 'ccw', 'jam'], lift: ['up', 'down', 'jam'], speed: ['faster', 'same', 'slower'] };
+  // version 2: one question, five natural options (the four turns and "it cannot turn")
+  var V2Q = 'dirspeed';
+  OPTIONS.dirspeed = ['clockwise, faster', 'clockwise, slower', 'counter-clockwise, faster', 'counter-clockwise, slower', 'it cannot turn'];
+  ANSWERS.dirspeed = ['cw-faster', 'cw-slower', 'ccw-faster', 'ccw-slower', 'jam'];
+  function qOf(params) { return params && Number.isInteger(params.question) && QUEST[params.question] ? QUEST[params.question] : V2Q; }
 
   /* ---------- geometry ---------- */
 
@@ -276,6 +292,13 @@
 
   function answerOf(item, res) {
     var w = res.omega[item.target];
+    if (item.question === V2Q) {
+      if (res.jam) return 'jam';
+      var sp = speedClass(w.n, w.d);
+      if (sp === 'same') return { error: 'the marked part turns at the driver\'s speed' };
+      if (!sp) return { error: 'the speed difference is too small to see' };
+      return (w.s * item.driver.dir > 0 ? 'cw' : 'ccw') + '-' + sp;
+    }
     if (item.question === 'speed') {
       if (res.jam) return { error: 'speed questions never jam' };
       if (w.n === w.d) return 'same';
@@ -303,11 +326,11 @@
 
   function validate(item) {
     if (!item || item.ex !== 'mechanisms') return 'not a mechanisms item';
-    var p = item.params || {}, q = QUEST[p.question];
+    var p = item.params || {}, q = qOf(p);
     if (PATH[p.gears] === undefined || STRUCT[p.structure] === undefined || !q) return 'bad params';
     if (item.question !== q) return 'the question does not match the level';
     if (JSON.stringify(item.options) !== JSON.stringify(OPTIONS[q]) || JSON.stringify(item.answers) !== JSON.stringify(ANSWERS[q])) return 'wrong options';
-    if (!(Number.isInteger(item.key) && item.key >= 0 && item.key < 3)) return 'bad key';
+    if (!(Number.isInteger(item.key) && item.key >= 0 && item.key < item.options.length)) return 'bad key';
     if (!item.driver || (item.driver.dir !== 1 && item.driver.dir !== -1)) return 'the driver needs a direction';
     if ((q === 'lift') !== !!item.rope) return 'a lift question has a rope, the others none';
     return validateWith(item, analyse(item));
@@ -565,18 +588,19 @@
   // speed); whether the parity shortcut lands on the key (half of the time); the rope side; for speed
   // items the answer (uniform) and whether the size shortcut lands on it (one time in three).
   function targetsFor(rng, params) {
-    var q = QUEST[params.question], S = params.structure;
+    var q = qOf(params), S = params.structure, two = q === V2Q;
     return {
       dir: rng.chance(0.5) ? 1 : -1,
       jam: q !== 'speed' && S >= 2 && rng.chance(S === 2 ? 1 / 3 : 1 / 2),
       parityRight: rng.chance(0.5),
       side: rng.chance(0.5) ? 'left' : 'right',
-      want: rng.pick(ANSWERS.speed),
-      sizeRight: rng.chance(1 / 3),
+      // version 2: faster or slower only, and the size rule right half the time (two answers, not three)
+      want: two ? rng.pick(['faster', 'slower']) : rng.pick(ANSWERS.speed),
+      sizeRight: rng.chance(two ? 0.5 : 1 / 3),
     };
   }
   function attempt(rng, params, tg) {
-    var q = QUEST[params.question], S = params.structure, nPath = PATH[params.gears], nLinks = nPath - 1, i;
+    var q = qOf(params), S = params.structure, nPath = PATH[params.gears], nLinks = nPath - 1, i;
     tg = tg || targetsFor(rng, params);
     var dir = tg.dir, jam = tg.jam, parityRight = tg.parityRight;
     var nBelts = S <= 1 ? 1 : S === 2 ? Math.min(2, Math.ceil(nLinks / 2)) : (nLinks >= 4 && rng.chance(0.5) ? 2 : 1);
@@ -593,14 +617,18 @@
       if ((open % 2 === 0) !== parityRight) { var fl = rng.pick(pos); crossed[fl] = !crossed[fl]; }
     }
     var plan = routePlan(rng, types, S), want = null, sizeRight = null;
-    if (q === 'speed') {
+    if (q === 'speed' || (q === V2Q && !jam)) {
       // The size shortcut: the marked wheel smaller than the driver → faster.
       want = tg.want; sizeRight = tg.sizeRight;
       var found = false;
       for (i = 0; i < 400 && !found; i++) {
         drawRadii(rng, plan);
         var rt = ratioOf(plan);
-        found = speedClass(rt[0], rt[1]) === want && (sizeClass(plan[0].outR, plan[nLinks].inR) === want) === sizeRight;
+        // the size rule as a player would use it: version 2 compares the driver's own wheel (the one with the arrow)
+        // with the marked wheel; version 1 compared the driver's outgoing wheel
+        var rD = q === V2Q ? plan[0].inR : plan[0].outR;
+        found = speedClass(rt[0], rt[1]) === want && (sizeClass(rD, plan[nLinks].inR) === want) === sizeRight &&
+          (q !== V2Q || sizeClass(rD, plan[nLinks].inR) !== 'same'); // version 2: the rule always names a speed
       }
       if (!found) return miss('speed radii');
     } else drawRadii(rng, plan, q === 'lift');
@@ -675,7 +703,7 @@
       if (!rope) return miss('rope');
     }
     var item = {
-      ex: 'mechanisms', seed: rng.seed, params: { gears: params.gears, structure: params.structure, question: params.question },
+      ex: 'mechanisms', seed: rng.seed, params: q === V2Q ? { gears: params.gears, structure: params.structure } : { gears: params.gears, structure: params.structure, question: params.question },
       key: 0, question: q, options: OPTIONS[q].slice(), answers: ANSWERS[q].slice(), W: W, H: H,
       axles: st.axles.map(function (x) { return { id: x.id, x: x.x, y: x.y }; }),
       wheels: st.wheels.map(function (w) {
@@ -711,7 +739,7 @@
     for (var i = 0; i < 80; i++) {
       // Some speed targets cannot be met on some routes (equal end wheels with a pulley inside a
       // gear on the way): after 10 tries the size-shortcut target is drawn afresh each time.
-      if (i >= 10) tg.sizeRight = rng.fork('size' + i).chance(1 / 3);
+      if (i >= 10) tg.sizeRight = rng.fork('size' + i).chance(qOf(params) === V2Q ? 0.5 : 1 / 3);
       var item = attempt(rng.fork('retry' + i), params, tg);
       if (item) { item.seed = rng.seed; return item; }
     }
@@ -727,9 +755,25 @@
     return bfs(adj, item.driver.axle, null)[item.target];
   }
   function turnAnswer(item, turn) {
-    if (item.question === 'dir') return turn > 0 ? 'cw' : 'ccw';
+    if (item.question === 'dir' || item.question === V2Q) return turn > 0 ? 'cw' : 'ccw';
     return turn * (item.rope.side === 'left' ? -1 : 1) < 0 ? 'up' : 'down';
   }
+  // version 2: a direction rule and a speed rule together give a full answer (never "it cannot turn")
+  function sizeOf(item) {
+    var rOf = function (ax) { return item.wheels.filter(function (w) { return w.axle === ax; })[0].r; };
+    var c = sizeClass(rOf(item.driver.axle), rOf(item.target));
+    return c === 'same' ? 'faster' : c;
+  }
+  var shortcuts2 = {
+    'parity + size': function (item) { return shortcuts.parity(item) + '-' + sizeOf(item); },
+    'gear parity + size': function (item) { return shortcuts.gearParity(item) + '-' + sizeOf(item); },
+    'count + size': function (item) { return shortcuts.countAll(item) + '-' + sizeOf(item); },
+    'parity, always faster': function (item) { return shortcuts.parity(item) + '-faster'; },
+    'parity, always slower': function (item) { return shortcuts.parity(item) + '-slower'; },
+    'clockwise + size': function (item) { return 'cw-' + sizeOf(item); },
+    'same way as the driver + size': function (item) { return (item.driver.dir > 0 ? 'cw' : 'ccw') + '-' + sizeOf(item); },
+    'always the first': function (item) { return item.answers[0]; },
+  };
   var shortcuts = {
     // Shortest route length, every link (mesh or belt) taken as a reversal; never "cannot turn".
     parity: function (item) {
@@ -765,25 +809,26 @@
 
   // The shared model for the view and the tests (def.lib; def.helpers is the same object).
   var LIB = {
-    analyse: analyse, answerOf: answerOf, levelFacts: levelFacts, beltRuns: beltRuns, shortcuts: shortcuts, fallback: fallback,
+    analyse: analyse, answerOf: answerOf, levelFacts: levelFacts, beltRuns: beltRuns, shortcuts: shortcuts, shortcuts2: shortcuts2, fallback: fallback,
     OPTIONS: OPTIONS, ANSWERS: ANSWERS, PATH: PATH, STRUCT: STRUCT, QUEST: QUEST, stats: STATS, TOOTH: TOOTH,
   };
 
   PX.ex.define({
-    id: 'mechanisms', version: 1, code: 'PR-3', name: 'Mechanisms', short: 'Mechanisms',
-    abilities: ['MA'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 3,
+    id: 'mechanisms', version: 2, code: 'PR-3', name: 'Mechanisms', short: 'Mechanisms',
+    abilities: ['MA'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 5,
     format: 'mechanisms:gears-belts-pulleys', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
+    // version 1 (three question kinds with three answers each, 1.0–1.1): its range, for 1.1's entries (js/engine/assess.js)
+    past: { 1: { min: -2.1, max: 2.1 } },
     dims: [
-      { key: 'gears', label: 'Axles on the route', levels: PATH, step: 0.35 },
-      { key: 'structure', label: 'Structure', levels: STRUCT, step: 0.75 },
-      { key: 'question', label: 'Question', levels: QUEST, step: 0.45 },
+      { key: 'gears', label: 'Axles on the route', levels: PATH, step: 0.45 },
+      { key: 'structure', label: 'Structure', levels: STRUCT, step: 0.9 },
     ],
-    base: -2.1,
-    // Below the belts level nothing can jam, so "it cannot turn" is never right there: a test-wise
-    // guess is one in two. Elsewhere one in three.
-    chance: function (params) { return params && QUEST[params.question] !== 'speed' && params.structure < 2 ? 0.5 : 1 / 3; },
-    // Item time limit (a calm countdown in the view): 30 s, +5 s per extra route axle, +5 s for speed.
-    timeLimit: function (params) { var p = params || {}; return 30000 + 5000 * (p.gears || 0) + (QUEST[p.question] === 'speed' ? 5000 : 0); },
+    base: -0.9, // hand-set: version 1's speed question (-1.2) plus a second judgement
+    // Below the belts level nothing can jam, so "it cannot turn" is never right there: a test-wise guess is one in
+    // four. Elsewhere one in five.
+    chance: function (params) { return params && params.structure < 2 ? 0.25 : 0.2; },
+    // Item time limit (a calm countdown in the view): 35 s, +5 s per extra route axle.
+    timeLimit: function (params) { var p = params || {}; return 35000 + 5000 * (p.gears || 0); },
     generate: generate,
     validate: validate,
     score: function (item, response) { return { correct: response === item.key }; },
