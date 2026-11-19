@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-19 13:35 UTC.
+Updated 2026-11-19 16:35 UTC. PAUSED for the owner's weekly usage reset (wound down cleanly at 16:35 UTC; every builder idle, everything committed and pushed at 0748601). Resume when the owner says so.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -41,18 +41,19 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
 ## In progress (Phase 2): resumed 19 Nov 09:30 UTC on the owner's word
 - **Built and verified:** milestones 1–7 (6 complete with Mechanisms version 2 and Pattern Memory version 2); 10 complete (README, About, Library notes, the guide for 1.2 as a 57-page PDF; claims and the code behind them in progress/W3-voice.md); 8: Reckon version 2, Homing's map, "Wave 3" for the six DAT-style exercises (lettered options, plain drawings, test-range tags, figure sets), Angles, Painted Cubes, Openings and Hole Punch version 3, Form version 3 in part, Section practice under test conditions; 9 in part (O20 O22 O27 O28 O33 O41 O48 O54–O56 by W3-phones; the guide's O24 and O26).
 - **First session (choice A):** one tutorial (Spin, about 2 minutes), then Baseline 1 or Later, then Train. Baseline 1 now runs without stops between kinds. Other Way Round version 2 fixes its net items, which had been drawn mirrored, so the key was wrong (for everyone; only test records hold version 1).
-- **Running:** W1-band-B (Missing View phase B; then settings phrases for Openings' turn and Hole Punch's sheets; O29), band A (Painted Cubes' tutorial: the plain look, figure sets, badges; O30; Angles letters-only keys), W3-game-2 (open game-layer requests; O14 Daily resume by seed with a migration; share card kinds; the Log's Weekly Climb label), a fresh-player run of the first session.
+- **Since 13:35 UTC:** milestone 8 built (Missing View version 3 on profile solids, O29); milestone 9 built (O14 Daily by seed, O21 service worker and the install row, O30, leading items off scoped cells), except the full O31 review; test build 4 published (1.2.0-test.4, snapshot a434e64; single 17/0, preview 10/0, phone long run 24/0). Phase 3 began: fresh-player runs of every exercise but Track (phone; desktop for 8), four independent reviews of a434e64 (docs/dev/reviews/RV-code-1.2.md 0 high 2 medium 6 low; RV-claims-1.2.md 0/5/18; RV-items-1.2.md partial, keys right on about 70,000 items, 6 high shortcut cues; RV-a11y-1.2.md partial 0/4/5), and the first fix rounds (player screens and keys, Slice, Nets, Track, Homing, Reckon, Knots, Central Point, Missing View's repeated stems, Form's foils, the Atlas after a merge, the Daily written through).
+- **Running:** nothing (paused).
 
-## Next three steps
-1. Test build 4 after the first-session rerun and its fixes: px.js 1.2.0-test.4, snapshot, single and preview checks, long runs, publish to the private test page.
-2. The rest of milestone 9: O21 service worker (never registered from files), leading items kept off the scoped shortcut cells (dims.js), O31 accessibility and phone review by an agent that did not build the app.
-3. Milestone 11: two-minute start on every exercise (fresh-player runs of the rebuilt DAT-style tutorials), reviews of code, items, claims and the guide, long runs, the release checklist page; at release, px.js '1.2.0', playtest BUILD 'release', the guide's cover date and CHANGELOG's date, the Daily v2 start date, and a PDF rebuild if any card changed.
+## Next three steps (after the owner's resume)
+1. The fixes still open, with their owners: RV-items' six high cues (Hole Punch, Missing View, Openings: band B; Painted Cubes, Angles: band A; Spin), RV-code M2 (sessions saved on hide, recovered at boot), L2–L6, RV-a11y's mediums, the left-over items in docs/dev/progress/W1-band-B.md and W3-exfix.md, and the guide's final round (RV-claims M1–M3 and lows, every requests.md line to the guide, Nets, keys, Section, the service worker and the install row; then the PDF).
+2. The release candidate: px.js '1.2.0', playtest BUILD 'release', the Daily v2 start date, the CHANGELOG and guide dates, dist/Parallax.html and the PDF rebuilt and committed; the full node suite, the browser chunks, long runs on desktop and phone, the srcdoc and two-tab runs, sw.py; Form and Openings fresh-player reruns; a last independent check of the guide against the code.
+3. Release: docs/dev/VERIFY-v1.2.md (every "Fixed for every new tool" line and every BRIEF instruction against the built files), the owner's release checklist page, the Discord post, the build log and playbook lessons, the zip from tracked files through the privacy check; then the owner's yes and the merge to `main`.
 
 Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from. Not run: the O45 search for a randomised path-integration training study (Reckon's wording about training effects stays as it is).
 
 ## Last verified
 - **Live site** serves 1.1.0: px.js fetched on 14 Nov. The Pages build and CI passed on the release commit, and they rerun on b5ead08 after the rewrite.
-- **v1.2 build (19 Nov):** node 7,278/0 on 88a0363 (62 files, 44 min); single 17/0 and preview adapter 10/0 (8b1dd86); long runs on a phone and on desktop with every hook on 37/0 (7bb63ad); fresh-player runs: Angles version 3 10/10, Painted Cubes version 3 5/5 scored (first right answer about 11 actions in).
+- **v1.2 build (19 Nov):** node 7,278/0 on 88a0363 (62 files, 44 min); test build 4 (a434e64): single 17/0, preview adapter 10/0, long runs on a phone 24/0; each fix round ran its own node and browser checks (see the progress logs); fresh-player runs: Angles version 3 10/10, Painted Cubes version 3 5/5 scored, Rotate, Fold, Nets, Slice, Orient, Hidden and Hole Punch pass on a phone; Form and Openings to rerun after their fixes; Track, Homing and Reckon cannot be judged from screenshots (motion) and go to the owner's checklist.
 - **v1.1, before release:**
 
   | Check | Result |
