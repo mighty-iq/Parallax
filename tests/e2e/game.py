@@ -14,7 +14,9 @@ measurement or a comparison round cannot get in the way; the engine hooks all ru
   - the Atlas: the grid of Fold with its handled cells, the legend; Progress: Reach and the grades table;
     Settings: the Game layer section (celebrations, Climb sounds, rank titles);
   - every panel fits the width; no page or console errors.
-Run: tests/e2e/pwslot.sh python3 tests/e2e/game.py [--only desktop,phone390,phone360]
+O14 (390 x 844, with phone390 or --only resume): a test build's save in the middle of a Daily (positions only, no
+seeds) loads with the seeds of its date and goes on by seed: the answered items never come again.
+Run: tests/e2e/pwslot.sh python3 tests/e2e/game.py [--only desktop,phone390,phone360,resume]
 Report: tests/e2e/out/game.json; screenshots in tests/e2e/out/game/.
 """
 import argparse
@@ -391,6 +393,58 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     b.close()
 
 
+def run_daily_resume(p, C, name, ctx_opts):
+    """O14: a 1.2 test build's save in the middle of a Daily (positions only, no seeds) loads with its seeds and goes
+    on by seed: the three answered items never come again, the other five do, and the attempt is spent."""
+    b = launch(p)
+    ctx = b.new_context(**ctx_opts)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    # what test build 3 wrote after three answers (right, wrong, right) and End now
+    page.evaluate('''(() => { const R = PX.core.store.state, D = PX.engine.daily, day = D.day(Date.now());
+      R.daily[day] = { n: 8, answered: 3, right: 2, t: Date.now() - 3600e3, number: D.number(day), outcomes: [1, 0, 1, null, null, null, null, null], ep: D.epoch(day).n, partial: true };
+      PX.core.store.flush(); })()''')
+    page.reload()
+    page.wait_for_function(READY, timeout=30000)
+    page.evaluate(MUTE)
+    dismiss(page)
+    seeds = page.evaluate('(() => { const D = PX.engine.daily, day = D.day(Date.now()), e = PX.core.store.state.daily[day]; return [e.seeds || null, D.daySeeds(day)]; })()')
+    C.ok(seeds[0] == seeds[1], f'{name}: the save from a test build gets the seeds of its date when it loads ({seeds[0] and len(seeds[0])} seeds)')
+    t0 = page.evaluate('Math.floor(Date.now() / 1000)')
+    page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "daily" }, { force: true })')
+    page.wait_for_timeout(600)
+    intro = page.evaluate('document.body.innerText')
+    C.ok('goes on where it stopped: 3 of 8 answered' in intro, f'{name}: the Daily says it goes on where it stopped ({" ".join(intro.split())[:160]!r})')
+    page.screenshot(path=str(OUT / f'{name}-daily-resume.png'), full_page=False)
+    n = 0
+    for i in range(12):
+        r = to_respond(page, C, name, 'daily resumed')
+        if r is not True:
+            break
+        page.evaluate('PX.debug.fast(true)')
+        page.evaluate('PX.debug.answer(true)')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
+        n += 1
+        page.evaluate('PX.debug.fast(false); __play.next()')
+    try:
+        page.wait_for_selector('.pl-daily', timeout=15000)
+    except Exception as e:  # noqa: BLE001
+        C.ok(False, f'{name}: the resumed Daily ends on its result ({e})')
+    got = page.evaluate(f'''(() => {{ const R = PX.core.store.state, D = PX.engine.daily, day = D.day(Date.now()), e = R.daily[day], nm = PX.engine.log.names(R);
+      const rows = R.trials.filter((r) => r[0] >= {t0} && nm.mode[r[2]] === 'daily' && (r[5] === 0 || r[5] === 1)).map((r) => r[4]);
+      return {{ rows, all: D.daySeeds(day), entry: e }}; }})()''')
+    later = got['all'][3:]
+    C.ok(sorted(got['rows']) == sorted(later), f'{name}: it dealt the five unanswered items and none of the three answered ({len(got["rows"])} answers, {n} taps)')
+    e = got['entry']
+    C.ok(e and not e.get('partial') and e['answered'] == 8 and e['right'] == 2 + len(got['rows']) and e['seeds'] == got['all'] and e['outcomes'][:3] == [1, 0, 1],
+         f'{name}: the attempt is spent with its first three answers kept on their items ({e and {k: e[k] for k in ("answered", "right", "outcomes")}})')
+    page.screenshot(path=str(OUT / f'{name}-daily-resumed-end.png'), full_page=False)
+    errs = con.errors()
+    C.ok(not errs, f'{name}: no page or console errors in the resumed Daily ({errs[:3]})')
+    b.close()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--only', default='desktop,phone390,phone360')
@@ -402,6 +456,8 @@ def main():
             run_viewport(p, C, 'desktop', {'viewport': {'width': 1366, 'height': 768}}, rnd)
         if 'phone390' in args.only:
             run_viewport(p, C, 'phone390', {'viewport': {'width': 390, 'height': 844}, 'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True}, rnd)
+        if 'phone390' in args.only or 'resume' in args.only:
+            run_daily_resume(p, C, 'resume390', {'viewport': {'width': 390, 'height': 844}, 'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True})
         if 'phone360' in args.only:
             run_viewport(p, C, 'phone360', {'viewport': {'width': 360, 'height': 640}, 'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True}, rnd)
     return C.summary()
