@@ -89,13 +89,22 @@
         h('dd', h('span.px-bet-text', x.line), h('span.px-meta.px-bet-ex', ' ' + cap(exNames(id)) + (compact ? '' : '. Evidence so far: ' + gradeText(x.grade) + '.'))));
     }));
   }
-  var TRIALS_TEXT = 'To test a bet rather than an exercise, Parallax switches its add-ons on and off at random within each player: for each add-on, about half of the exercises that have it get it in one period and the rest in the next, and a period lasts at least 4 weeks and 8 sessions. Because each exercise gets each of its add-ons in one period of every two, pooled exports form randomised trials.';
+  // A period's length in words, from config.bets (RV-wave2 finding 15: numbers come from the config).
+  function periodWords() {
+    var c = (PX.engine && PX.engine.config && PX.engine.config.bets) || {}, d = c.periodDays, n = c.periodSessions;
+    var pl = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
+    return { time: d % 7 === 0 ? pl(d / 7, 'week', 'weeks') : pl(d, 'day', 'days'), sessions: pl(n, 'session', 'sessions') };
+  }
+  function trialsText() {
+    var w = periodWords();
+    return 'To test a bet rather than an exercise, Parallax switches its add-ons on and off at random within each player: for each add-on, about half of the exercises that have it get it in one period and the rest in the next, and a period lasts at least ' + w.time + ' and ' + w.sessions + '. Because each exercise gets each of its add-ons in one period of every two, pooled exports form randomised trials.';
+  }
   PX.ui.hooks.on('about:sections', function () {
     var sec = h('section.px-about-section.px-bets-about', { 'data-section': 'bets' },
       h('h2', 'Test the bets with us'),
       h('p', 'No theory of transfer has won yet, so Parallax spreads its bets. Each exercise names the one mechanism it bets on, and your record logs how much of each you got, so the community’s pooled exports can test the bets against each other. One bet, calibration, is new: no study has tested it.'),
       betList(false),
-      h('p', TRIALS_TEXT + ' “Join the bet trials” in Settings is on by default; switch it off and every add-on runs for every exercise.'),
+      h('p', trialsText() + ' “Join the bet trials” in Settings is on by default; switch it off and every add-on runs for every exercise.'),
       h('p', { 'data-bets': 'addons' }, addonsLine()),
       h('p', ui.button('The bets in the Lab', { kind: 'secondary', small: true, go: 'lab' })));
     return { el: sec, after: 'claims' };
@@ -109,7 +118,7 @@
     p.el.setAttribute('data-section', 'bettrials');
     p.body.appendChild(K.toggle({
       key: 'betTrials', label: 'Join the bet trials', checked: s.betTrials !== false,
-      hint: 'Switches each add-on on for about half of the exercises that have it and off for the rest, swapping every period of at least 4 weeks and 8 sessions, so pooled exports can test the bets. Off: every add-on runs for every exercise. ' + addonsLine() + ' Nothing leaves this device unless you export it.',
+      hint: 'Switches each add-on on for about half of the exercises that have it and off for the rest, swapping every period of at least ' + periodWords().time + ' and ' + periodWords().sessions + ', so pooled exports can test the bets. Off: every add-on runs for every exercise. ' + addonsLine() + ' Nothing leaves this device unless you export it.',
       onChange: function (v) {
         var S = store(), rec = S.state;
         rec.settings.betTrials = !!v;
@@ -155,7 +164,7 @@
     });
     var head = !b.joined(rec) ? 'You left the bet trials: every add-on runs for every exercise.' :
       !p.started ? 'Your first period starts with your next Train or Path session.' :
-      'Period ' + p.n + ', since ' + U.fmtDate(p.from, 'long') + '. It ends once it has lasted 4 weeks (' + U.fmtDate(p.until, 'long') + ') and held 8 sessions; then the halves swap.';
+      'Period ' + p.n + ', since ' + U.fmtDate(p.from, 'long') + '. It ends once it has lasted ' + periodWords().time + ' (' + U.fmtDate(p.until, 'long') + ') and held ' + periodWords().sessions + '; then the halves swap.';
     return [h('p', head), rows.length ? h('ul.px-bets-arms', rows) : h('p.px-meta', 'No add-on is available in this version yet.')];
   }
   function doseBlock(rec) {
@@ -182,7 +191,7 @@
     p.body.appendChild(h('p.px-lab-intro', 'Each exercise names the one mechanism it bets on. Your record logs how much of each bet you got, and which add-ons ran when, so pooled exports can test the bets against each other.'));
     p.body.appendChild(betList(true));
     p.body.appendChild(h('h3', 'Your bet trials'));
-    p.body.appendChild(h('p.px-meta', TRIALS_TEXT + ' ' + addonsLine()));
+    p.body.appendChild(h('p.px-meta', trialsText() + ' ' + addonsLine()));
     trialsNow(rec, now).forEach(function (el) { p.body.appendChild(el); });
     var set = ui.button('Bet trials in Settings', { kind: 'ghost', small: true, go: 'settings?section=bettrials' });
     p.body.appendChild(h('p', set));

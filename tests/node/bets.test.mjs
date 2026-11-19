@@ -518,6 +518,9 @@ function guide(t) {
   t.ok(sec.includes(line), 'the guide lists the add-ons of this build as the app does (' + line + ')');
   const off = R.ex.list('train').filter((d) => (BB.content(d.id) && BB.content(d.id).offscreen) || (R.ex.learn(d.id) && R.ex.learn(d.id).offscreen)).map((d) => d.short);
   t.ok(off.every((n) => sec.includes(n)) && off.length === 7, 'and the seven exercises with an off-screen challenge (' + off.join(', ') + ')');
+  // the guide's period length is the config's (RV-wave2 finding 15; the app builds its words from the config)
+  const c = R.engine.config.bets, m = /a period lasts at least (\d+) weeks and (\d+) sessions/.exec(sec);
+  t.ok(!!m && +m[1] * 7 === c.periodDays && +m[2] === c.periodSessions, 'the guide\'s period (' + (m ? m[1] + ' weeks, ' + m[2] + ' sessions' : 'not found') + ') is config.bets\' (' + c.periodDays + ' days, ' + c.periodSessions + ' sessions)');
 }
 
 function wholeTimes(t) {
