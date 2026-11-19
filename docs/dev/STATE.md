@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-19 03:25 UTC.
+Updated 2026-11-19 10:58 UTC.
 
 ## Phase
 - **v1.1 is RELEASED** on the owner's go (14 Nov).
@@ -38,16 +38,15 @@ Details: docs/dev/VERIFY-v1.1.md, DECISIONS.md, progress/, reviews/, CHANGELOG.m
   - docs/dev/RELEASE-v1.1.md: the checklist;
   - docs/dev/DISCORD-v1.1.md: the announcement, 1,987 characters.
 
-## In progress (Phase 2): paused for the night at the owner's request (19 Nov ~03:30 UTC)
-- **Built and verified:** milestones 1, 2 and Central Point (wave 1); 3 plateaus (detection within 800 answers 87–88 % against 90 %, a known miss); 4 bets and layers (comparison rounds, bridge sets, off-screen challenges, calibration detail, draw-the-answer variants for Views, Fold and Slice); 5 the game layer (grades, Reach, records, firsts and the Atlas, Daily v2 with its ramp off until release, the weekly Climb with Summit, field notes, game feel between items); 6 measurement (Design A occasions, meter and milestone words, Other Way Round, Motion Graphs, Balance kept untrained, learning curves, Cube Match version 2); 7 per-dimension progress (known misses on Track's speed levels; DECISIONS); 8 Reckon version 2 and Homing's map; 9 a phone subset (O20, O22, O27, O28, O33, O41, O48, O54–O56); rule 5 now holds at every level of Nets, Slice and Fold (three scoped exceptions).
-- **Reviews and tests:** an independent review of wave 2 (docs/dev/reviews/RV-wave2.md: 2 high, 6 medium, 13 low) is fixed in full; fresh-player reruns of Views, Central Point and Form pass; a new player's first session was run and its findings fixed (times now agree; the tour says about 6 minutes). Node suite 6,869/0 on a4990d2 (now in four CI shards); single 17/0, preview adapter 10/0 and long runs clean on the test-build snapshots.
-- **Test build 3 (1.2.0-test.3)** replaced test build 2 on the same private preview at 03:27 UTC, built from a committed snapshot (8b1dd86). Test gap found: longrun.py's bot stalls on a comparison round (desktop path); teach it the layer cards (comparison rounds, bridge sets, draw-the-answer items) or mute W2-bets' hooks there.
-- **Owner question (morning):** a new player's first session runs the tour (about 6 minutes), then Baseline 1 (about 11.5 minutes without feedback) before any training. Options: one two-minute tutorial before the baseline (recommended), training first with the baseline next session, or as is.
+## In progress (Phase 2): resumed 19 Nov 09:30 UTC on the owner's word ("A, resume")
+- **Built and verified before the pause:** milestones 1–7, Reckon version 2 and Homing's map (8), a phone subset of 9, rule 5 at every level of Nets, Slice and Fold; test build 3 (1.2.0-test.3) on the private preview. Details in DECISIONS and docs/dev/progress/.
+- **Since the resume:** the owner chose A for the first session, now built (one tutorial, Spin, about 2 minutes; then Baseline 1 or Later; then Train; play.py run_firstrun guards it). Milestone 6 is complete: Mechanisms version 2 and Pattern Memory version 2 (scored by cells), each a new version for everyone. CONTRACT-v1.2 "Wave 3" gives the six DAT-style exercises lettered options, a plain line-drawing look, test-range tags with Free play's "test range only", and figure sets.
+- **Running:** W1-band-B (Form version 3 done in part; then Missing View, Openings, Hole Punch), W3-bandA (Angles' labels and tags, Painted Cubes version 3 with figure sets), W1-fixes (Section practice under test conditions), W2-bets (teaching longrun.py's bot the layer cards).
 
-## Next three steps (after the owner's "resume")
-1. The owner's answer on the first session; his playtest reports from the preview's database (playtest/<device>).
-2. Milestone 8's DAT-style rebuild toward the real formats (lettered options, plain line drawings, test-range tags; Painted Cubes 2–4 questions a figure; Form's kinds; Missing View profile solids; Openings' test range), the Mechanisms and Pattern Memory probe upgrades, leading items kept off the scoped shortcut cells (dims.js).
-3. Milestone 10 (voice: About, README, Library notes, guide chapters 1, 5, 8; the guide's "15 to 25 minutes" lines; `--shard` in CLAUDE.md), then 11 (two-minute start on all exercises, reviews, long runs, the release checklist page, the owner's yes). The Daily v2 start date is set on release day.
+## Next three steps
+1. Finish milestone 8 (the six DAT-style exercises and Section practice), then fresh-player checks of the rebuilt tutorials and a test build 4.
+2. Leading items kept off the scoped shortcut cells (dims.js); the rest of milestone 9 (O14 partial Daily resumes, O21 service worker, O29–O31 checks and the accessibility review, O24 and O26).
+3. Milestone 10 (voice: About, README, Library notes, guide chapters 1, 5, 8; the guide's old minutes; `--shard` in CLAUDE.md), then 11 (two-minute start on all exercises, reviews, long runs, the release checklist page, the owner's yes; the Daily v2 start date on release day).
 
 Open owner items: papers he will send (ACCESS.md top 10); the history-cleanup finish (Support / recreate / leave); the v1.1.0 tag; optionally the name of the test Central Point comes from.
 
