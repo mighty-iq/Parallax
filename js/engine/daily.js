@@ -13,7 +13,8 @@
    the same items for a date whatever exercises a later version adds (gap C11):
      epoch 1 (from 1 Nov 2026): v1.1's rule: each item at the combination nearest the middle of its
              exercise's range; the score is right answers of 8; the pool frozen to 1.1's exercises.
-     epoch 2 (from 19 Nov 2026): a ramp from easy to hard: item k (1–8) at the combination nearest
+     epoch 2 (from the day v1.2 is released, set then in config.daily2.epochs[1].from; until it is set the
+             ramp is off, so a live 1.1 and 1.2 deal the same challenge under one number): a ramp from easy to hard: item k (1–8) at the combination nearest
              min + ((k − 0.5)/8)·(max − min) of its exercise's range; item k is worth k points, so a
              full Daily gives 1 + 2 + … + 8 = 36 points (challenge points: fixed items, scored once,
              untimed answers, nothing for time; note G1 §2.1). The pool adds Central Point.
@@ -45,7 +46,9 @@
   E.defaults('daily2', {
     epochs: [
       { n: 1, from: '2026-11-01', ramp: false, pool: ['rotate', 'spin', 'fold', 'nets', 'slice', 'views', 'orient', 'span', 'hidden', 'knots'] },
-      { n: 2, from: '2026-11-19', ramp: true, pool: ['rotate', 'spin', 'fold', 'nets', 'slice', 'views', 'orient', 'span', 'hidden', 'knots', 'centralpoint'] },
+      // from: the release day of v1.2 ('YYYY-MM-DD'), set at release (a line of the release checklist);
+      // null keeps the epoch off
+      { n: 2, from: null, ramp: true, pool: ['rotate', 'spin', 'fold', 'nets', 'slice', 'views', 'orient', 'span', 'hidden', 'knots', 'centralpoint'] },
     ],
     max: 36,     // 1 + 2 + … + 8
     archiveDays: 28,
@@ -125,18 +128,18 @@
     return 'Parallax Daily #' + n + (isObj(o) && o.archive ? ' (archive)' : '') + ' · ' + right + '/' + of + ' · ' + C.daily.link;
   }
   function shareOf(key, res) {
-    var ep = epoch(key);
     if (!isObj(res)) return null;
     var marks = isArray(res.outcomes) ? res.outcomes : null;
-    return ep && ep.ramp ? share(number(key), res.right, res.n, { points: pointsOf(res), max: C.daily2.max, marks: marks, archive: res.archive === 1 })
+    return onRamp(key, res) ? share(number(key), res.right, res.n, { points: res.points, max: C.daily2.max, marks: marks, archive: res.archive === 1 })
       : share(number(key), res.right, res.n, res.archive === 1 ? { archive: true } : undefined);
   }
-  // Points of a stored result: item k (1-based ramp position) is worth k when right.
-  function pointsOf(res) {
-    if (!isObj(res)) return 0;
-    if (isNum(res.points)) return res.points;
-    return isArray(res.outcomes) ? res.outcomes.reduce(function (s, o, i) { return s + (o === 1 ? i + 1 : 0); }, 0) : 0;
-  }
+  // Points of a stored result: only what was written with it (item k of a ramp is worth k when right). A
+  // result without points (Parallax 1.1, or another epoch's rule) has none: it is never scored again as a ramp.
+  function pointsOf(res) { return isObj(res) && isNum(res.points) ? res.points : null; }
+  // A stored result scored on the ramp of its date's epoch (it carries points and that epoch's number).
+  function onRamp(key, res) { var ep = epoch(key); return !!(ep && ep.ramp && isObj(res) && isNum(res.points) && res.ep === ep.n); }
+  // The epoch a stored result was written under (1.1 wrote none: epoch 1's rule).
+  function epOf(res) { return isObj(res) && isNum(res.ep) ? res.ep : 1; }
 
   function isPartial(res) { return isObj(res) && res.partial === true; }
 
@@ -145,10 +148,10 @@
     key = typeof key === 'string' && DAY_RE.test(key) ? key : day(now);
     var res = isObj(rec.daily) ? rec.daily[key] : null, part = isPartial(res), ep = epoch(key);
     if (!isObj(res)) res = null;
-    var ramp = !!(ep && ep.ramp), full = res && !part ? res : null;
+    var ramp = !!(ep && ep.ramp), full = res && !part ? res : null, scored = !!(full && onRamp(key, full));
     return {
       day: key, number: number(key), done: !!res && !part, partial: part ? res : null, result: full,
-      share: full ? shareOf(key, full) : null, ramp: ramp, points: full && ramp ? pointsOf(full) : null, max: ramp ? C.daily2.max : null,
+      share: full ? shareOf(key, full) : null, ramp: full ? scored : ramp, points: scored ? full.points : null, max: (full ? scored : ramp) ? C.daily2.max : null,
     };
   }
 
@@ -162,9 +165,8 @@
       if (!DAY_RE.test(k) || !isObj(r) || isPartial(r) || !isNum(r.right)) return;
       out.played += 1;
       if (r.archive === 1) out.archive += 1;
-      var ep = epoch(k);
-      if (ep && ep.ramp) {
-        var p = Math.max(0, Math.min(C.daily2.max, Math.round(pointsOf(r))));
+      if (onRamp(k, r)) {
+        var p = Math.max(0, Math.min(C.daily2.max, Math.round(r.points)));
         out.ramp.n += 1; out.ramp.hist[p] += 1; sum += p;
         if (out.ramp.best === null || p > out.ramp.best) out.ramp.best = p;
       } else {
@@ -183,7 +185,7 @@
       var k = U.addDays(today, -i);
       if (!epoch(k)) break;
       var r = isObj(rec.daily) ? rec.daily[k] : null, ep = epoch(k);
-      out.push({ day: k, number: number(k), state: !isObj(r) ? 'open' : isPartial(r) ? 'partial' : 'done', ramp: !!ep.ramp, points: isObj(r) && !isPartial(r) && ep.ramp ? pointsOf(r) : null });
+      out.push({ day: k, number: number(k), state: !isObj(r) ? 'open' : isPartial(r) ? 'partial' : 'done', ramp: !!ep.ramp, points: isObj(r) && !isPartial(r) && onRamp(k, r) ? r.points : null });
     }
     return out;
   }
@@ -194,11 +196,14 @@
     if (!epoch(key)) { plan.unavailable = 'The Daily Challenge starts on ' + C.daily.epoch + '.'; return; }
     var list = items(key).filter(function (it) { var d = PX.ex.get(it.exId); return d && (!plan.can || plan.can(d)); });
     if (!list.length) { plan.unavailable = 'The Daily Challenge needs at least one exercise this device can run.'; return; }
-    var prev = isObj(rec.daily) ? rec.daily[key] : null, part = isPartial(prev) && isArray(prev.outcomes);
-    var ep = epoch(key);
+    var ep = epoch(key), prev = isObj(rec.daily) ? rec.daily[key] : null;
+    // a part-way attempt goes on only under the rule it was started with (one from 1.1 on a ramp date
+    // starts again: its answers were to other items)
+    var part = isPartial(prev) && isArray(prev.outcomes) && epOf(prev) === ep.n;
+    if (isPartial(prev) && !part) prev = null;
     plan.daily = {
       day: key, number: number(key), items: list, at: 0, redo: [], right: 0, n: 0, outcomes: [], scored: !isObj(prev) || part, resumed: false,
-      ramp: !!ep.ramp, archive: key !== today, points: 0,
+      ramp: !!ep.ramp, archive: key !== today, points: 0, ep: ep.n,
     };
     if (part) { // the scored attempt goes on: answered items keep their outcomes and are not shown again
       var D = plan.daily;
@@ -258,7 +263,7 @@
     var outs = D.items.map(function (it, i) { return answered(D, i) ? D.outcomes[i] : null; });
     if (D.scored) {
       if (!isObj(rec.daily)) rec.daily = {};
-      var entry = { n: D.items.length, answered: D.n, right: D.right, t: now, number: D.number, outcomes: outs };
+      var entry = { n: D.items.length, answered: D.n, right: D.right, t: now, number: D.number, outcomes: outs, ep: D.ep };
       if (D.ramp) entry.points = D.points;
       if (D.archive) entry.archive = 1;
       if (!complete) entry.partial = true;
@@ -277,7 +282,7 @@
   }
 
   E.daily = {
-    day: day, number: number, epoch: epoch, items: items, share: share, shareOf: shareOf, pointsOf: pointsOf, marksText: marksText,
+    day: day, number: number, epoch: epoch, items: items, share: share, shareOf: shareOf, pointsOf: pointsOf, onRamp: onRamp, marksText: marksText,
     status: status, history: history, archive: archive,
     start: start, next: next, void: voidStep, answer: answer, over: over, finish: finish, pool: pool, poolFor: poolFor, nearestAt: nearestAt,
   };

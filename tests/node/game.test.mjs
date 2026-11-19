@@ -11,10 +11,15 @@ import { Learner, newRecord, playSession } from './fixtures/learner.mjs';
 const DAY = 86400000;
 const T0 = Date.UTC(2026, 10, 19, 10, 0, 0); // a Thursday in the first Climb week after its epoch Monday
 
-function mk(t) {
+// RAMP: the day Daily v2's ramp starts in these tests (config.daily2.epochs[1].from is set at release;
+// it ships null, so the ramp is off until then). mk(t, false) keeps the shipped setting.
+const RAMP = '2026-11-19';
+function mk(t, ramp = true) {
   const c = t.context();
   if (c.loadErrors && c.loadErrors.length) throw new Error('load errors: ' + c.loadErrors.join('; '));
-  return c.PX || c.window.PX;
+  const PX = c.PX || c.window.PX;
+  if (ramp) PX.engine.config.daily2.epochs[1].from = RAMP;
+  return PX;
 }
 
 /* ============================================================ grades and the guessing rule */
@@ -198,6 +203,30 @@ function testDaily(t) {
   for (let i = 0; i < 8; i++) { const s = E.modes.next(p8, r8, now + i); E.modes.answer(p8, r8, s, { correct: true, rt: 1500 }, now + i); }
   const f8 = E.modes.finish(p8, r8, now + 100);
   t.ok(!f8.achievements.some((a) => a.id === 'top-tenth'), 'a right answer to the Daily\'s top item does not earn Top tenth (it is dealt to everyone, not aimed at the player)');
+}
+
+function testDailyRelease(t) {
+  t.section('Daily v2 starts at release; older results are never scored again');
+  const P0 = mk(t, false), D0 = P0.engine.daily;
+  t.eq(P0.engine.config.daily2.epochs[1].from, null, 'the ramp ships off: its first day is set at release');
+  t.eq([D0.epoch('2026-11-21').n, D0.epoch('2027-06-01').n], [1, 1], 'until then every date deals 1.1\'s challenge, so one number means one challenge in 1.1 and 1.2');
+  t.ok(D0.items('2026-11-21').every((x) => x.points === 0), 'no ramp points before the release');
+  const PX = mk(t), E = PX.engine, D = E.daily, now = Date.UTC(2026, 10, 21, 12), key = '2026-11-21';
+  // a result written by 1.1 on a ramp date (no points, no epoch): read as 1.1 wrote it
+  const rec = newRecord(PX, T0);
+  rec.daily[key] = { n: 8, answered: 8, right: 6, t: now - 3600e3, number: 21, outcomes: [1, 1, 0, 1, 1, 0, 1, 1] };
+  const st = D.status(rec, now), h = D.history(rec);
+  t.ok(st.done && st.ramp === false && st.points === null && /6\/8/.test(st.share) && !/points/.test(st.share), 'status and the share line keep its x/8 (' + st.share + ')');
+  t.ok(h.played === 1 && h.ramp.n === 0 && h.plain.n === 1 && h.plain.best === 6, 'the history counts it as a plain result, outside the points histogram');
+  t.eq(D.pointsOf(rec.daily[key]), null, 'no points are made up from its outcomes');
+  // a part-way attempt from 1.1 on a ramp date starts again (its answers were to other items)
+  const r2 = newRecord(PX, T0);
+  r2.daily[key] = { n: 8, answered: 3, right: 3, t: now - 3600e3, number: 21, outcomes: [1, 1, 1, null, null, null, null, null], partial: true };
+  const p2 = E.modes.start(r2, 'daily', { now });
+  t.ok(p2.daily.scored && !p2.daily.resumed && p2.daily.n === 0 && p2.daily.points === 0, 'a part-way 1.1 attempt is not credited to the ramp');
+  // a ramp result carries its points and epoch
+  const r3 = newRecord(PX, T0), L = new Learner(PX, 4), f = playSession(PX, r3, L, 'daily', { now }, 2);
+  t.ok(r3.daily[key].ep === 2 && r3.daily[key].points === f.fin.daily.points && D.onRamp(key, r3.daily[key]), 'a ramp result is stored with its points and its epoch');
 }
 
 /* ============================================================ the Climb */
@@ -411,6 +440,7 @@ export async function run(t) {
   testPending(t);
   testDisplayClass(t);
   testDaily(t);
+  testDailyRelease(t);
   testClimb(t);
   testNotes(t);
   testContainer(t);
