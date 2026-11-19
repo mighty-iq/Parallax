@@ -545,7 +545,10 @@
         // v1.2 wave 2 (conflict 10): a target item dealt as another kind (lead, fluency, drill) uses up
         // room in its deck (E.dims.room: at most 3 of a deck's 8)
         if (dealt === 'target' && kind !== 'target') plan.deckChanged = (plan.deckChanged || 0) + 1;
-        var step = makeStep(plan, rec, def, r, kind, Object.assign({ stage: run.stage, banner: run.fresh ? run.banner : false, newRun: run.fresh }, extraFields(extra)));
+        // leading and fluency items (PLAN milestone 7) stay off the scoped shortcut cells that only the seed
+        // names (E.dims.scoped: a Painted Cubes figure asking five painted sides); their params already do
+        var sx = (kind === 'lead' || kind === 'fluency') && E.dims && E.dims.seedFor ? E.dims.seedFor(rec, def, r.params) : null;
+        var step = makeStep(plan, rec, def, r, kind, Object.assign({ stage: run.stage, banner: run.fresh ? run.banner : false, newRun: run.fresh }, extraFields(extra), sx !== null ? { seed: sx } : {}));
         // a fluency item (PLAN milestone 7) runs on the timed rating: its timed difficulty, prediction and target
         if (kind === 'fluency' && E.dims) E.dims.timedStep(plan, rec, def, step, now);
         run.fresh = false;

@@ -67,12 +67,10 @@ const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880];
 // printed on every run, not failed, so the suite stays usable while the generators are rebalanced; a known
 // cell fails again if it grows by more than 2 points, and any other cell over the bound fails. Delete an
 // entry when its generator is fixed. (gap: accuracy − chance at that run)
-// Scoped exceptions (CLAUDE.md rule 5: a DECISIONS line and a per-level test in the exercise's own test file):
-// these cells are held at the accuracy given here instead of chance + 10.
-const SCOPED = {
-  slice: { 'roundest|cut=0': 0.40, 'fullest|cut=0': 0.40, 'roundest|structure=1': 0.40, 'fullest|structure=1': 0.40 }, // DECISIONS 19 Nov
-  fold: { 'sym1|folds=0': 0.48, 'punchHoles|folds=0': 0.48 }, // DECISIONS 19 Nov
-};
+// Scoped exceptions (CLAUDE.md rule 5: a DECISIONS line and a cap): one list in the engine, E.dims.scoped
+// (js/engine/dims.js), which leading and fluency items also stay off. Each entry with a cell named by params
+// and a cap is checked here on the cell itself (every key of its when; at least MIN_CELL items), at its cap
+// instead of chance + 10; a level cell that a one-key entry covers is reported, not bounded.
 const KNOWN = {
 };
 
@@ -130,6 +128,10 @@ export async function run(t) {
     if (!sc) { pending.push(def.id); continue; }
     t.section('shortcut solvers per dimension level: ' + def.id + ' (' + sc.from + ')');
     const cells = new Map(); // `${solver}|${dim}=${level}` → { n, hit, ch, s, y } (s, y: threshold cues)
+    const scoped = ((PX.engine.dims && PX.engine.dims.scoped) || []).filter((e) => e.ex === def.id && e.when && (typeof e.cap === 'number' || typeof e.over === 'number'));
+    const covered = new Set(), ecells = scoped.map((e) => ({ e, per: {} }));
+    scoped.forEach((e) => { const ks = Object.keys(e.when); if (ks.length === 1) e.solvers.forEach((sv) => covered.add(sv + '|' + ks[0] + '=' + e.when[ks[0]])); });
+    const inCell = (w, p) => Object.keys(w).every((k) => p[k] === w[k]);
     let n = 0, bad = 0, firstErr = '';
     const src = sc.items ? sc.items(PX, def) : itemsOf(PX, def);
     const t0 = Date.now();
@@ -137,6 +139,16 @@ export async function run(t) {
       let s;
       try { s = sc.scores(PX, def, item, params); } catch (e) { bad++; if (!firstErr) firstErr = e.message; continue; }
       n++;
+      for (const ec of ecells) {
+        if (!inCell(ec.e.when, params)) continue;
+        for (const sv of ec.e.solvers) {
+          const v = s && s[sv];
+          if (!v || typeof v.chance !== 'number') continue;
+          const thr = typeof v.score === 'number' && typeof v.label === 'boolean', c = ec.per[sv] || (ec.per[sv] = { n: 0, hit: 0, ch: 0, s: thr ? [] : null, y: thr ? [] : null });
+          c.n++; c.ch += v.chance;
+          if (thr) { c.s.push(v.score); c.y.push(v.label); } else c.hit += v.hit;
+        }
+      }
       for (const [name0, v] of Object.entries(s || {})) {
         if (!v || typeof v.chance !== 'number') continue;
         const thr = typeof v.score === 'number' && typeof v.label === 'boolean';
@@ -165,11 +177,22 @@ export async function run(t) {
       nCells++;
       if (!worst || gap > worst.gap) worst = { key, gap, n: c.n };
       if (gap <= 0.10) continue;
-      const cap = (SCOPED[def.id] || {})[key];
-      if (cap !== undefined) { if (acc > cap) over.push(tag + ' (scoped cap ' + (100 * cap).toFixed(0) + ' %)'); else known.push(tag + ' (scoped, cap ' + (100 * cap).toFixed(0) + ' %)'); continue; }
+      if (covered.has(key)) { known.push(tag + ' (scoped)'); continue; }
       if (key in K) { (gap <= K[key] + 0.02 ? known : over).push(tag + (gap > K[key] + 0.02 ? ' (known at +' + (100 * K[key]).toFixed(1) + ')' : '')); continue; }
       (gap > 0.10 + 2 * se ? over : near).push(tag);
     }
+    // the scoped cells themselves, at their caps
+    const held = [], broke = [];
+    for (const ec of ecells) {
+      for (const [sv, c] of Object.entries(ec.per)) {
+        if (c.n < MIN_CELL) continue;
+        const acc = c.s ? cvThreshold(c.s, c.y) : c.hit / c.n, lim = typeof ec.e.cap === 'number' ? ec.e.cap : c.ch / c.n + ec.e.over;
+        const tag = sv + ' at ' + Object.entries(ec.e.when).map(([k, v]) => k + '=' + v).join('&') + ' ' + (100 * acc).toFixed(1) + ' % (cap ' + (100 * lim).toFixed(0) + ' %, ' + c.n + ')';
+        (acc <= lim ? held : broke).push(tag);
+      }
+    }
+    if (held.length) console.log('       ' + def.id + ': scoped cells (E.dims.scoped) within their caps: ' + held.join(', '));
+    if (scoped.length) t.ok(broke.length === 0, def.id + ': its scoped cells (E.dims.scoped) within their caps' + (held.length ? ': ' + held.join(', ') : '') + (broke.length ? '; over: ' + broke.join(', ') : ''));
     t.ok(over.length === 0, def.id + ': every solver within chance + 10 points at every dimension level (' + nCells + ' cells of ≥ ' + MIN_CELL + ' items' + (worst ? '; closest ' + worst.key + ' ' + (worst.gap >= 0 ? '+' : '') + (100 * worst.gap).toFixed(1) + ' over ' + worst.n : '') + ')' + (over.length ? '; over: ' + over.slice(0, 6).join(', ') : ''));
     if (near.length) console.log('       ' + def.id + ': over chance + 10 by less than two standard errors of the cell (sampling noise, not failed): ' + near.join(', '));
     if (known.length) console.log('       ' + def.id + ': KNOWN or scoped cells over chance + 10 (KNOWN: requests.md, 18 Nov 23:47 UTC; scoped: DECISIONS): ' + known.join(', '));

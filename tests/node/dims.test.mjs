@@ -49,6 +49,7 @@ export async function run(t) {
   readers(t);
   modesAndPaths(t);
   determinism(t);
+  scoped(t);
 }
 
 function config(t) {
@@ -279,4 +280,54 @@ function determinism(t) {
     return rec.trials.map((r) => [r[1], r[3], r[4], r[5], r[13]]);
   };
   t.eq(run(), run(), 'identical rows');
+}
+
+// The scoped shortcut cells (E.dims.scoped, CLAUDE.md rule 5): one list for the tests and the engine; leading
+// and fluency items stay off them, rated items of the ordinary pool may land there.
+function scoped(t) {
+  t.section('dims: leading and fluency items stay off the scoped shortcut cells');
+  const R = t.PX, ER = R.engine, list = ER.dims.scoped;
+  t.ok(Array.isArray(list) && list.length >= 18 && ['nets', 'slice', 'fold', 'cubes', 'homing', 'cubematch', 'patterns'].every((id) => list.some((e) => e.ex === id)),
+    'one list (' + list.length + ' cells: Nets, Slice, Fold, Painted Cubes, Homing, Cube Match, Pattern Memory)');
+  const bad = [];
+  for (const e of list) {
+    const def = R.ex.get(e.ex);
+    if (!def) { bad.push(e.ex + ': no such exercise'); continue; }
+    if (typeof e.from !== 'string' || !/^DECISIONS 2026-/.test(e.from)) bad.push(e.ex + ': no DECISIONS line');
+    if (!Array.isArray(e.solvers) || !e.solvers.length) bad.push(e.ex + ': no solvers');
+    if (!(e.when || typeof e.item === 'function')) bad.push(e.ex + ': neither when nor item');
+    for (const [k, v] of Object.entries(e.when || {})) {
+      const dm = def.dims.find((d) => d.key === k);
+      if (k === 'variant' ? !(def.variants || []).includes(v) : !(dm && Number.isInteger(v) && v >= 0 && v < dm.levels.length)) bad.push(`${e.ex}: ${k}=${v} is not a level`);
+    }
+  }
+  t.eq(bad, [], 'every entry names an exercise, its levels, solvers and the DECISIONS line');
+  const nets = R.ex.get('nets'), cubes = R.ex.get('cubes');
+  t.ok(ER.dims.isScoped(nets, { variant: 'opposite', carried: 2, shape: 0, between: 1 }) && !ER.dims.isScoped(nets, { variant: 'opposite', carried: 2, shape: 0, between: 0 })
+    && !ER.dims.isScoped(nets, { variant: 'edges', carried: 2, shape: 0, between: 1 }), 'a cell named by params: every key must match');
+  const cp = { cubes: 3, height: 2, asked: 0 }, seeds = [];
+  for (let s = 1; s < 400; s++) if (cubes.lib.setOf(cp, s).five) seeds.push(s);
+  t.ok(seeds.length > 0 && seeds.every((s) => ER.dims.isScoped(cubes, cp, s)) && !ER.dims.isScoped(cubes, cp), 'a cell named by the seed (a figure that asks five painted sides) needs the seed');
+  const rc = newRecord(R, T0 - DAY), drawn = Array.from({ length: 60 }, () => ER.dims.seedFor(rc, cubes, cp));
+  t.ok(drawn.every((s) => Number.isInteger(s) && !cubes.lib.setOf(cp, s).five) && new Set(drawn).size === drawn.length, 'seedFor draws fresh seeds outside it');
+  t.eq(ER.dims.seedFor(rc, nets, { variant: 'opposite', carried: 0, shape: 0, between: 0 }), null, 'and leaves the seed to the step where no cell needs it');
+  // In Train: the fixture Fold's one-fold level is a scoped cell (fold: folds 0); a learner near it.
+  const PX = mk(t), E = PX.engine, def = PX.ex.get('fold');
+  const { rec } = train(PX, ['fold'], 12);
+  const rows = rec.trials.map((r) => E.log.read(rec, r)).filter((r) => r.ex === 'fold');
+  const lv0 = (r) => PX.ex.decodeParams(def, r.code).folds === 0;
+  const lead = rows.filter((r) => r.kind === 'lead'), flu = rows.filter((r) => r.kind === 'fluency'), tgt = rows.filter((r) => r.kind === 'target' || r.kind === 'weak');
+  t.ok(lead.length > 20 && flu.length > 10, 'leading and fluency items still come (' + lead.length + ', ' + flu.length + ')');
+  t.eq(lead.filter(lv0).length + flu.filter(lv0).length, 0, 'none of them at one fold');
+  t.ok(tgt.some(lv0), 'target items may be (' + tgt.filter(lv0).length + ' of ' + tgt.length + ')');
+  // A cell that only the seed names: a test entry on the fixture Fold (odd seeds), removed afterwards.
+  const entry = { ex: 'fold', item: (d, p, seed) => seed % 2 === 1, solvers: ['test'], from: 'DECISIONS 2026-01-01 (test)' };
+  E.dims.scoped.push(entry);
+  try {
+    const { rec: r3 } = train(PX, ['fold'], 10, { seed: 3 });
+    const rows3 = r3.trials.map((r) => E.log.read(r3, r)).filter((r) => r.kind === 'lead' || r.kind === 'fluency');
+    t.ok(rows3.length > 10 && rows3.every((r) => r.seed % 2 === 0), 'leading and fluency items draw seeds outside a seed-named cell (' + rows3.length + ')');
+  } finally {
+    E.dims.scoped.splice(E.dims.scoped.indexOf(entry), 1);
+  }
 }

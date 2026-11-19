@@ -11,6 +11,7 @@ Written 2026-11-19 (UTC) by the W2-progress builder. Sources: docs/dev/PLAN.md m
 | the overall within ±1 point | +0.1 | +0.5 | pass |
 | about 95 % coverage (93–97 %, the band tests/node/sim.mjs checks) | 97.8 % (before: 97.2 %) | 98.1 % (before: 98.3 %) | **above the band by 0.8 and 1.1 points**: intervals on the wide side (rms z 0.84 and 0.82), as they were before the change (§4) |
 | shortcut solvers within chance + 10 at every dimension level | 12 of the 20 training exercises checked | | pass since 19 Nov ~02:00 UTC, with scoped exceptions in Nets, Slice and Fold (§5); 8 exercises wait for their owners' exports |
+| leading and fluency items off the scoped shortcut cells (`E.dims.scoped`; review RV-wave2 #2, 19 Nov) | 0 of 196,638 leading, 0 of 96,698 fluency (target items there: 6.9 %) | 0 of 203,360, 0 of 100,856 (7.0 %) | pass; the other lines unchanged within noise on the same learners and seed: within ±0.10 93.7 and 96.0 %, worst observed level −6.7 and −7.0 (Track's speed), overall +0.1 and +0.5, coverage 97.8 and 98.1 %, fluency 78.1 vs 77.2 and 77.1 |
 | fluency items within ±2 points of their deadline target (after each exercise's first 10) | 78.1 vs 77.2 % in time | 78.1 vs 77.1 % | pass (+0.9, +1.0) |
 | nothing else moves | | | pass: tests/node/sim.mjs's four runs agree with and without dims.js within sampling noise, every hard check passes in both (§6) |
 

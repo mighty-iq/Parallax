@@ -211,8 +211,8 @@ export async function run(t) {
       const p = { variant: 'opposite', carried: k % 5, shape: 0, between: 1 }, it = def.generate(PX.rng(PX.rng.hash('nets-exception', k)), p);
       ex.push(shortcutScores(PX, def, it, p).farGraph.hit);
     }
-    const capRate = ex.reduce((a, b) => a + b, 0) / ex.length;
-    t.ok(capRate <= 0.55, `scoped exception: "farthest along the net" at 1-4-1 with three faces between ≤ 55 % (${pct(capRate)}, chance 25 %)`);
+    const capRate = ex.reduce((a, b) => a + b, 0) / ex.length, cap = PX.engine.dims.scoped.find((e) => e.ex === 'nets' && e.solvers.includes('farGraph')).cap; // the one list (js/engine/dims.js)
+    t.ok(capRate <= cap, `scoped exception: "farthest along the net" at 1-4-1 with three faces between ≤ ${100 * cap} % (${pct(capRate)}, chance 25 %)`);
   }
   if (process.env.PX_REPORT) {
     console.log(`       nets: opposite straight2 ${pct(R.straight2)}, far ${pct(R.farEu)}, far-net ${pct(R.farGraph)}, central ${pct(R.central)}, marks ${pct(R.marks)} | edges close ${pct(R.closeBest)} @${R.closeAt}, far ${pct(R.farBest)} | cube row4 ${pct(R.row4)}, row4= ${pct(R.row4exact)}, block rule ${pct(R.block)} | CPU p95 ${p95.toFixed(2)} ms`);
