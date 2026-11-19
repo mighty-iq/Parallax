@@ -1,10 +1,11 @@
 /* PX.ui.share: share cards, the share sheet and same-seed friend challenges (PLAN §7, §9).
 
    card(opts) → Promise<HTMLCanvasElement>   a card drawn on a 2D canvas in the app's look
-     opts: { title, lines: [..], footer, kind: 'session' | 'daily' | 'check' | 'level' | 'challenge',
-             size: 'wide' (1200 × 630, default) | 'square' (1080 × 1080), theme: 'light' | 'dark'
-             (default: what the app shows), label (replaces the kind's label, e.g. 'Daily #12'),
-             marks: [1, 0, …] (a row of right/wrong squares, Daily), ruler: { value, lo, hi } (level) }
+     opts: { title, lines: [..], footer, kind: 'session' | 'daily' | 'check' | 'level' | 'challenge', or the game
+             layer's 'grade' | 'climb' | 'reach' | 'atlas' | 'startnow' (v1.2: each draws its own picture from
+             opts.pic, see PICS below), size: 'wide' (1200 × 630, default) | 'square' (1080 × 1080), theme:
+             'light' | 'dark' (default: what the app shows), label (replaces the kind's label, e.g. 'Daily #12'),
+             marks: [1, 0, …] (a row of right/wrong squares, Daily), ruler: { value, lo, hi } (level), pic }
      Every card carries "Parallax" and "Built by the Chimera community · discord.gg/chmr" (CARD_LINE),
      and the nickname the player typed in Settings, if any: the only name a card ever shows
      (opts.nickname overrides the setting; false leaves it out).
@@ -41,12 +42,13 @@
   var CHIMERA_LINE = (PX.ui.chimera && PX.ui.chimera.LINE) || 'Built by the Chimera community on Discord: ' + URL;
   var CARD_LINE = 'Built by the Chimera community · discord.gg/chmr';
   var SIZES = { wide: [1200, 630], square: [1080, 1080] };
-  var KIND = { session: 'Session', daily: 'Daily Challenge', check: 'Spatial Check', level: 'Level', challenge: 'Challenge' };
+  var KIND = { session: 'Session', daily: 'Daily Challenge', check: 'Spatial Check', level: 'Level', challenge: 'Challenge',
+    grade: 'Grade', climb: 'Weekly Climb', reach: 'Reach', atlas: 'Atlas', startnow: 'Start versus now' }; // v1.2: the game layer's kinds
 
   // The tokens of css/base.css, so a card looks the same whatever the page shows.
   var PAL = {
-    light: { paper: '#F2F4F3', surface: '#FFFFFF', surface2: '#E9ECEA', ink: '#1A1D21', ink2: '#454B52', ink3: '#5D646C', rule: '#D3D8D5', ruleStrong: '#7B838A', signal: '#0B6A86', signalInk: '#FFFFFF', wash: '#E0EEF2', gridMinor: 'rgba(11,106,134,0.05)', gridMajor: 'rgba(11,106,134,0.11)', wrong: '#B33A2F' },
-    dark: { paper: '#1B1F23', surface: '#23282D', surface2: '#2C3237', ink: '#E6E8EA', ink2: '#B4BBC1', ink3: '#99A0A7', rule: '#394047', ruleStrong: '#79818A', signal: '#5CC6E0', signalInk: '#0B1A1F', wash: '#1B3B45', gridMinor: 'rgba(92,198,224,0.04)', gridMajor: 'rgba(92,198,224,0.09)', wrong: '#F48777' },
+    light: { paper: '#F2F4F3', surface: '#FFFFFF', surface2: '#E9ECEA', ink: '#1A1D21', ink2: '#454B52', ink3: '#5D646C', rule: '#D3D8D5', ruleStrong: '#7B838A', signal: '#0B6A86', signalInk: '#FFFFFF', wash: '#E0EEF2', gridMinor: 'rgba(11,106,134,0.05)', gridMajor: 'rgba(11,106,134,0.11)', wrong: '#B33A2F', right: '#2A7239' },
+    dark: { paper: '#1B1F23', surface: '#23282D', surface2: '#2C3237', ink: '#E6E8EA', ink2: '#B4BBC1', ink3: '#99A0A7', rule: '#394047', ruleStrong: '#79818A', signal: '#5CC6E0', signalInk: '#0B1A1F', wash: '#1B3B45', gridMinor: 'rgba(92,198,224,0.04)', gridMajor: 'rgba(92,198,224,0.09)', wrong: '#F48777', right: '#74C98A' },
   };
   var SANS = '"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   var MONO = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
@@ -159,6 +161,111 @@
     return hgt + 12 + fs;
   }
 
+  /* ---------- the game layer's pictures (v1.2, PLAN milestone 5: cards at the high points) ----------
+     One painter per kind, drawn in ink and the right-answer green: celebrations never use the accent (the
+     stimulus target colour, CLAUDE.md rule 11). paint(ctx, x, y, w, room, pic, c, sq) draws within w × room and
+     returns the height it used. The data (opts.pic):
+       grade     { grade 1–10, best }                  ten segments, one per grade; the best block's level marked
+       climb     { height, rungs, notches: [r], best }   the Climb's ruled scale: the run, its notches, this week's best
+       reach     { max, parts: [best levels] }          the sum as a gauge, one segment per exercise
+       atlas     { cols, rows, cells: { 'i.j': 1 tried | 2 handled } }   the survey sheet's grid
+       startnow  { rows: [[name, from, to]] }           per exercise its first settled level and now, on 1–100 */
+  function isFiniteNum(x) { return typeof x === 'number' && isFinite(x); }
+  function tri(ctx, x, y, s, fill, up) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    if (up) { ctx.moveTo(x - s / 2, y + s); ctx.lineTo(x + s / 2, y + s); ctx.lineTo(x, y); } else { ctx.moveTo(x - s / 2, y); ctx.lineTo(x + s / 2, y); ctx.lineTo(x, y + s); }
+    ctx.closePath();
+    ctx.fill();
+  }
+  function ends(ctx, x, w, y, a, b, fs, c) { // the scale's two end labels, under it
+    ctx.font = '400 ' + fs + 'px ' + MONO; ctx.fillStyle = c.ink3; ctx.textBaseline = 'top';
+    ctx.fillText(a, x, y);
+    ctx.textAlign = 'right'; ctx.fillText(b, x + w, y); ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+  var PICS = {
+    grade: function (ctx, x, y, w, room, p, c, sq) {
+      var g = Math.max(1, Math.min(10, Math.round(p.grade) || 1)), hgt = sq ? 30 : 22, fs = sq ? 24 : 20, seg = w / 10, top = y + (sq ? 18 : 14);
+      for (var i = 0; i < 10; i++) {
+        ctx.fillStyle = i + 1 === g ? c.ink : c.surface2;
+        ctx.fillRect(Math.round(x + i * seg) + 2, top, Math.round(seg) - 4, hgt);
+      }
+      if (isFiniteNum(p.best)) tri(ctx, x + w * (Math.max(1, Math.min(100, p.best)) - 0.5) / 100, top - (sq ? 16 : 13), sq ? 14 : 11, c.right, false);
+      ctx.font = '500 ' + fs + 'px ' + MONO; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+      for (i = 0; i < 10; i++) { ctx.fillStyle = i + 1 === g ? c.ink : c.ink3; ctx.fillText(String(i + 1), x + (i + 0.5) * seg, top + hgt + 8); }
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      return top - y + hgt + 8 + fs;
+    },
+    climb: function (ctx, x, y, w, room, p, c, sq) {
+      var n = Math.max(1, Math.round(p.rungs) || 20), step = w / n, fs = sq ? 24 : 20, base = y + (sq ? 30 : 24);
+      function X(r) { return x + Math.max(0, Math.min(n, r)) * step; }
+      ctx.fillStyle = c.ruleStrong; ctx.fillRect(x, base, w, 2);
+      for (var r = 0; r <= n; r++) ctx.fillRect(Math.round(X(r)) - 1, base, 2, r % 5 ? 9 : 16);
+      var hgt = Math.max(0, Math.min(n, Math.round(p.height) || 0));
+      if (hgt > 0) { ctx.fillStyle = c.ink; ctx.fillRect(x, base - 7, X(hgt) - x, 8); }
+      tri(ctx, X(hgt), base - (sq ? 26 : 22), sq ? 16 : 13, c.ink, false);
+      (Array.isArray(p.notches) ? p.notches : []).forEach(function (v) { if (isFiniteNum(v)) tri(ctx, X(v), base + 19, sq ? 12 : 10, c.ink2, true); });
+      if (isFiniteNum(p.best) && p.best > 0) {
+        ctx.fillStyle = c.right;
+        for (var d = base - 20; d < base + 16; d += 6) ctx.fillRect(Math.round(X(p.best)) - 1, d, 3, 3);
+      }
+      ends(ctx, x, w, base + 34, '0', String(n), fs, c);
+      return base + 34 + fs - y;
+    },
+    reach: function (ctx, x, y, w, room, p, c, sq) {
+      var max = p.max > 0 ? p.max : 100, hgt = sq ? 30 : 22, fs = sq ? 24 : 20, at = x, top = y + 4;
+      ctx.fillStyle = c.surface2; ctx.fillRect(x, top, w, hgt);
+      (Array.isArray(p.parts) ? p.parts : []).forEach(function (v, i) {
+        var pw = isFiniteNum(v) && v > 0 ? w * v / max : 0;
+        if (!pw) return;
+        ctx.fillStyle = i % 2 ? c.ink2 : c.ink; ctx.fillRect(at, top, Math.min(pw, x + w - at), hgt);
+        at += pw;
+      });
+      ctx.fillStyle = c.ink3;
+      for (var k = 0; k <= max; k += 100) ctx.fillRect(Math.round(x + (w - 2) * k / max), top + hgt + 2, 2, k % 500 ? 6 : 12);
+      ends(ctx, x, w, top + hgt + 18, '0', String(max), fs, c);
+      return top - y + hgt + 18 + fs;
+    },
+    atlas: function (ctx, x, y, w, room, p, c, sq) {
+      var cols = Math.max(1, Math.round(p.cols) || 1), rows = Math.max(1, Math.round(p.rows) || 1), gap = sq ? 6 : 4;
+      var cell = Math.max(8, Math.floor(Math.min((w + gap) / cols, (room + gap) / rows, sq ? 76 : 44)) - gap), cells = p.cells || {};
+      for (var j = 0; j < rows; j++) {
+        for (var i = 0; i < cols; i++) {
+          var x0 = x + i * (cell + gap), y0 = y + (rows - 1 - j) * (cell + gap), st = cells[i + '.' + j];
+          ctx.strokeStyle = c.rule; ctx.lineWidth = 2; ctx.strokeRect(x0 + 1, y0 + 1, cell - 2, cell - 2);
+          if (st === 2) { ctx.fillStyle = c.ink; var m = Math.round(cell * 0.18); ctx.fillRect(x0 + m, y0 + m, cell - 2 * m, cell - 2 * m); }
+          else if (st === 1) { ctx.strokeStyle = c.ink2; ctx.lineWidth = sq ? 3 : 2; ctx.beginPath(); ctx.arc(x0 + cell / 2, y0 + cell / 2, cell * 0.28, 0, 2 * Math.PI); ctx.stroke(); }
+        }
+      }
+      return rows * (cell + gap) - gap;
+    },
+    startnow: function (ctx, x, y, w, room, p, c, sq) {
+      // as many rows as fit at a readable size (a wide card about three, a square one five; the text lists them all)
+      var fit = Math.max(1, Math.floor(room / (sq ? 56 : 36)));
+      var list = (Array.isArray(p.rows) ? p.rows : []).slice(0, Math.min(5, fit)), n = Math.max(1, list.length);
+      var rh = Math.max(30, Math.min(sq ? 72 : 46, Math.floor(room / n))), fs = Math.max(20, Math.min(sq ? 30 : 26, rh - 12));
+      var nameW = Math.round(w * 0.27), numW = Math.round(w * 0.17), tx = x + nameW, tw = w - nameW - numW;
+      function L(v) { return tx + tw * (Math.max(1, Math.min(100, v)) - 0.5) / 100; }
+      list.forEach(function (r, i) {
+        var cy = y + i * rh + rh / 2, from = +r[1], to = +r[2];
+        ctx.font = '400 ' + fs + 'px ' + SANS; ctx.fillStyle = c.ink2; ctx.textBaseline = 'middle';
+        ctx.fillText(wrap(ctx, String(r[0]), nameW - 16, 1)[0] || '', x, cy);
+        ctx.fillStyle = c.rule; ctx.fillRect(tx, cy - 1, tw, 2);
+        if (isFiniteNum(from) && isFiniteNum(to)) {
+          ctx.fillStyle = c.ink; ctx.fillRect(Math.min(L(from), L(to)), cy - 2, Math.abs(L(to) - L(from)), 4);
+          ctx.strokeStyle = c.ink3; ctx.lineWidth = 2; ctx.fillStyle = c.paper;
+          ctx.beginPath(); ctx.arc(L(from), cy, fs * 0.3, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = c.ink; ctx.beginPath(); ctx.arc(L(to), cy, fs * 0.3, 0, 2 * Math.PI); ctx.fill();
+          ctx.font = '500 ' + fs + 'px ' + MONO; ctx.textAlign = 'right'; ctx.fillStyle = c.ink;
+          ctx.fillText(from + ' → ' + to, x + w, cy); ctx.textAlign = 'left';
+        }
+        ctx.textBaseline = 'alphabetic';
+      });
+      return list.length * rh;
+    },
+  };
+
   function draw(canvas, o) {
     var size = SIZES[o.size] || SIZES.wide, W = size[0], H = size[1], sq = o.size === 'square';
     var c = PAL[o.theme === 'dark' || (o.theme !== 'light' && isDark()) ? 'dark' : 'light'];
@@ -200,6 +307,7 @@
     ctx.font = '600 ' + tSize + 'px ' + SANS; ctx.fillStyle = c.ink;
     wrap(ctx, o.title || 'Parallax', maxW, 2).forEach(function (l) { ctx.fillText(l, M, y + tSize * 0.8); y += tSize * 1.12; });
     y += sq ? 30 : 18;
+    var lSize = sq ? 38 : 32, lh = lSize * 1.34;
     if (o.marks && o.marks.length) {
       var ms = Math.min(sq ? 96 : 64, Math.floor(maxW / (o.marks.length * 1.28)));
       marks(ctx, M, y, o.marks.slice(0, 20), ms, c);
@@ -207,8 +315,11 @@
     } else if (o.ruler) {
       y += 6;
       y += ruler(ctx, M, y, maxW, o.ruler, c, sq ? 24 : 22) + (sq ? 40 : 26);
+    } else if (o.pic && typeof o.pic === 'object' && Object.prototype.hasOwnProperty.call(PICS, o.kind)) {
+      // the picture keeps room for the first line (on a square card the first three) below it
+      var keep = Math.min((o.lines || []).length, sq ? 3 : 1) * (lh + (sq ? 10 : 4)), gapP = sq ? 36 : 22;
+      try { y += PICS[o.kind](ctx, M, y, maxW, Math.max(40, bottom - y - keep - gapP), o.pic, c, sq) + gapP; } catch (e) { /* the lines say it */ }
     }
-    var lSize = sq ? 38 : 32, lh = lSize * 1.34;
     ctx.font = '400 ' + lSize + 'px ' + SANS; ctx.fillStyle = c.ink2;
     (o.lines || []).some(function (line) {
       var parts = wrap(ctx, line, maxW, 2);
@@ -316,7 +427,7 @@
       fig.setAttribute('aria-busy', 'true');
       fig.setAttribute('data-size', size);
       file = null;
-      return card({ title: o.title, lines: o.lines, footer: o.footer, kind: o.kind, size: size, theme: o.theme, label: o.label, marks: o.marks, ruler: o.ruler, nickname: o.nickname })
+      return card({ title: o.title, lines: o.lines, footer: o.footer, kind: o.kind, size: size, theme: o.theme, label: o.label, marks: o.marks, ruler: o.ruler, pic: o.pic, nickname: o.nickname })
         .then(function (cv) {
           canvas = cv;
           try { img.src = cv.toDataURL('image/png'); } catch (e) { img.removeAttribute('src'); }
@@ -530,7 +641,7 @@
   }
 
   PX.ui.share = {
-    card: card, open: open, text: text, nickname: nickname, CHIMERA_LINE: CHIMERA_LINE, CARD_LINE: CARD_LINE, SIZES: SIZES,
+    card: card, open: open, text: text, nickname: nickname, CHIMERA_LINE: CHIMERA_LINE, CARD_LINE: CARD_LINE, SIZES: SIZES, KINDS: KIND, PICS: Object.keys(PICS),
     challenge: { create: create, encode: encode, decode: decode, seedAt: seedAt, route: route, play: play, share: shareChallenge, box: box, text: challengeText },
   };
 })(window.PX);

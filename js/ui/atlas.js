@@ -132,7 +132,9 @@
     }
     var foot = h('div.px-slot-foot');
     foot.appendChild(ui.button('Practise ' + nameOf(def), { kind: 'secondary', small: true, go: 'play?mode=train&exId=' + def.id + '&count=1' }));
-    if (at.handled) foot.appendChild(GU().shareButton('Share this sheet', { kind: 'session', label: nameOf(def) + ' atlas', title: nameOf(def) + ' atlas: ' + at.handled + ' of ' + at.total + ' cells',
+    var picCells = {};
+    Object.keys(at.cells).forEach(function (k) { picCells[k] = at.cells[k].handled ? 2 : 1; });
+    if (at.handled) foot.appendChild(GU().shareButton('Share this sheet', { kind: 'atlas', pic: { cols: cols, rows: rows, cells: picCells }, label: nameOf(def) + ' atlas', title: nameOf(def) + ' atlas: ' + at.handled + ' of ' + at.total + ' cells',
       lines: [at.handled + ' of ' + at.total + ' pairs of settings handled'], footer: 'Parallax ' + (PX.version || ''), text: 'Parallax · ' + nameOf(def) + ' atlas: ' + at.handled + ' of ' + at.total + ' cells · ' + GU().LINK }, 'atlas'));
     p.body.appendChild(foot);
     seen[def.id] = Date.now();

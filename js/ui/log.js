@@ -24,6 +24,9 @@
 
   function E() { return PX.engine; }
   function X() { return PX.ui.exinfo; }
+  // Mode names in the Library's words; the game layer's Climb (v1.2) by its full name, as Today and Progress call it
+  var LOG_MODES = { climb: 'Weekly Climb' };
+  function modeName(m) { return Object.prototype.hasOwnProperty.call(LOG_MODES, m) ? LOG_MODES[m] : X().modeName(m); }
   function isNum(x) { return typeof x === 'number' && isFinite(x); }
 
   /* ---------- data ---------- */
@@ -203,7 +206,7 @@
     var d = h('details.px-sess', { 'data-session': s.id, 'data-mode': s.mode || '' },
       h('summary.px-sess-sum',
         h('span.px-sess-when.px-num', X().when(s.start)),
-        h('span.px-sess-mode', X().modeName(s.mode), s.done ? null : h('span.px-tag', 'not finished')),
+        h('span.px-sess-mode', modeName(s.mode), s.done ? null : h('span.px-tag', 'not finished')),
         h('span.px-sess-exs', s.exs.map(exName).join(', ') || '–'),
         h('span.px-sess-score.px-num', (s.right || 0) + ' of ' + (s.trials || 0) + ' right'),
         h('span.px-sess-len.px-num', mins || nRows + (nRows === 1 ? ' trial' : ' trials'))),
@@ -340,7 +343,7 @@
 
     var filters = h('div.px-log-filters',
       selectEl('px-log-ex', 'Exercise', [{ value: '', label: 'All exercises' }].concat(exIds.map(function (id) { return { value: id, label: exName(id) }; })), st.ex, function (v) { st.ex = v; st.shown = PAGE; draw(); }),
-      selectEl('px-log-mode', 'Mode', [{ value: '', label: 'All modes' }].concat(modes.map(function (m) { return { value: m, label: X().modeName(m) }; })), st.mode, function (v) { st.mode = v; st.shown = PAGE; draw(); }));
+      selectEl('px-log-mode', 'Mode', [{ value: '', label: 'All modes' }].concat(modes.map(function (m) { return { value: m, label: modeName(m) }; })), st.mode, function (v) { st.mode = v; st.shown = PAGE; draw(); }));
 
     var listPanel = K.panel({ title: 'Sessions', className: 'px-log-sessions', aside: folded ? h('span.px-num', folded + ' older trials kept as daily totals') : null });
     if (sess.length) listPanel.body.appendChild(filters);
