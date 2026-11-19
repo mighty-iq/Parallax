@@ -61,6 +61,9 @@
   var CUBES = [[4, 6], [4, 7], [5, 10], [7, 12], [9, 15]];
   var DRAWN = [[4, 6], [4, 5], [6, 7], [8, 9], [10, 12]]; // the first structure's cube count per level
   var CUBE_LABELS = ['4–6 (starter, structure shown)', '4–7', '5–10', '7–12', '9–15'];
+  // Version 3 (PLAN milestone 8, O49), in progress: the profile solids below are built and validated but not
+  // dealt yet (the definition still holds version 2's cube levels).
+  var NCUBE = 3, NOBJ = 7;
   var GRIDS = [3, 4];
   var FOILS = ['outline', 'lines', 'dashes'];
   var HMAX = 4;
@@ -631,7 +634,7 @@
   }
 
   /* ------------------------------------------------------------ generate */
-  var stats = { tries: 0, nulls: 0, over: 0, invalid: 0, errors: 0, fallbacks: 0, lastInvalid: null, lastError: null, nodes: 0, noFit: 0, fewCands: 0, noSet: 0 };
+  var stats = { tries: 0, nulls: 0, over: 0, invalid: 0, errors: 0, fallbacks: 0, lastInvalid: null, lastError: null, nodes: 0, noFit: 0, fewCands: 0, noSet: 0, noSpec: 0, closeSet: 0, levelMiss: 0, holeHidden: 0, noSquare: 0, noX: 0, apart: 0 };
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) {
     return { cubes: lvl(params, 'cubes', CUBES.length), grid: lvl(params, 'grid', GRIDS.length), missing: lvl(params, 'missing', MISSING.length), foil: lvl(params, 'foil', FOILS.length) };
@@ -859,6 +862,788 @@
       return true;
     } catch (e) { return 'validate threw: ' + (e && e.message); }
   }
+  /* ============================================================ profile solids (version 3; PLAN milestone 8, O49) */
+  // Object class (said on the rules card): a block in which every cut runs straight through, along the line
+  // of sight of one of the two views given. Such a solid is the intersection of two prisms, S = E1 ∩ E2,
+  // each a profile (polygons on a half-unit lattice; round holes as 32-gons) pushed straight through the box
+  // along one given view's axis. Every solid of the class is the intersection of the prisms of its own two
+  // outlines (S lies in the prism of each of its outlines, and each outline lies in its profile), so the two
+  // given views fix the solid, and with it the missing view: exactly one option can be right by construction.
+  // Axes 0 x (left → right), 1 y (up), 2 z (back → front); the box [0, W] × [0, H] × [0, D]. A profile seen
+  // along axis a has plane coordinates (u, v) = PLANE[a] (a 0: (z, y); 1: (x, z); 2: (x, y)).
+  //   profile { ax, loops: [{ pts: [[u, v], …], round?: { c: [u, v], r } }] } (even-odd; a round loop's points
+  //   are smooth: its wall shows a line only as a contour, where the view runs along its tangent)
+  //   solid   { W, H, D, prof: [profile, profile] }
+  // Drawings: { w, h, segs: [[u0, v0, u1, v1, style], …], solid: true } in the view's own frame (top (x, D − z),
+  // front (x, y), end (D − z, y)), maximal runs on each line, style 1 seen, 2 hidden (solid wins where both).
+  var PLANE = [[2, 1], [0, 2], [0, 1]];
+  var VAX = { end: 0, top: 1, front: 2 };
+  function num(a, b) { return a - b; }
+  function r6(x) { return Mth.round(x * 1e6) / 1e6 || 0; }
+  function r4(x) { return Mth.round(x * 1e4) / 1e4 || 0; }
+  function rectLoop(u0, v0, u1, v1) { return { pts: [[u0, v0], [u1, v0], [u1, v1], [u0, v1]] }; }
+  function roundLoop(cu, cv, r) {
+    var pts = [];
+    for (var i = 0; i < 32; i++) { var a = i * Mth.PI / 16; pts.push([r6(cu + r * Mth.cos(a)), r6(cv + r * Mth.sin(a))]); }
+    return { pts: pts, round: { c: [cu, cv], r: r } };
+  }
+  function inLoops(loops, u, v) {
+    var inside = false;
+    for (var l = 0; l < loops.length; l++) {
+      var P = loops[l].pts, n = P.length;
+      for (var i = 0, j = n - 1; i < n; j = i++) {
+        var a = P[i], b = P[j];
+        if ((a[1] > v) !== (b[1] > v) && u < (b[0] - a[0]) * (v - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+      }
+    }
+    return inside;
+  }
+  // Parameters t where the 2D line p + t·d crosses the loops (half-open by side, so parity holds at vertices).
+  function lineCross(loops, p, d) {
+    var out = [];
+    for (var l = 0; l < loops.length; l++) {
+      var P = loops[l].pts, n = P.length;
+      for (var i = 0, j = n - 1; i < n; j = i++) {
+        var a = P[j], b = P[i];
+        var sa = d[0] * (a[1] - p[1]) - d[1] * (a[0] - p[0]) > 0, sb = d[0] * (b[1] - p[1]) - d[1] * (b[0] - p[0]) > 0;
+        if (sa === sb) continue;
+        var e0 = b[0] - a[0], e1 = b[1] - a[1], den = d[0] * e1 - d[1] * e0;
+        if (den === 0) continue;
+        out.push(((a[0] - p[0]) * e1 - (a[1] - p[1]) * e0) / den);
+      }
+    }
+    return out.sort(num);
+  }
+  function pairs(c) { var iv = []; for (var j = 0; j + 1 < c.length; j += 2) if (c[j + 1] > c[j]) iv.push([c[j], c[j + 1]]); return iv; }
+  function andIv(A, B) {
+    var out = [], i = 0, j = 0;
+    while (i < A.length && j < B.length) {
+      var lo = Mth.max(A[i][0], B[j][0]), hi = Mth.min(A[i][1], B[j][1]);
+      if (hi > lo) out.push([lo, hi]);
+      if (A[i][1] < B[j][1]) i++; else j++;
+    }
+    return out;
+  }
+  function inIv(iv, t) { for (var i = 0; i < iv.length; i++) if (iv[i][0] < t && t < iv[i][1]) return true; return false; }
+  // The parameter intervals where X + t·dir is inside the solid.
+  function rayIn(S, X, dir) {
+    var res = null;
+    for (var i = 0; i < 2; i++) {
+      var pr = S.prof[i], pl = PLANE[pr.ax], p = [X[pl[0]], X[pl[1]]], d = [dir[pl[0]], dir[pl[1]]], iv;
+      if (Mth.abs(d[0]) + Mth.abs(d[1]) < 1e-12) { if (!inLoops(pr.loops, p[0], p[1])) return []; iv = [[-INF, INF]]; } else iv = pairs(lineCross(pr.loops, p, d));
+      res = res ? andIv(res, iv) : iv;
+    }
+    return res;
+  }
+  // The inside of a profile along the line where its plane coordinate k (0 u, 1 v) is w: intervals of the other.
+  function slice1(loops, k, w) { var p = [0, 0], d = [0, 0]; p[k] = w; d[1 - k] = 1; return pairs(lineCross(loops, p, d)); }
+  // Is there an edge of the solid along corner j of loop L, given where the other prism holds material around
+  // it (h 0 all round, 1 only at higher, −1 only at lower values of plane axis i3)? Yes unless the material
+  // around the corner line is nothing, everything or a half-plane.
+  var TAU = 2 * Mth.PI;
+  function arcParts(s, e) { s = ((s % TAU) + TAU) % TAU; e = ((e % TAU) + TAU) % TAU; if (e <= s) e += TAU; return e <= TAU ? [[s, e]] : [[s, TAU], [0, e - TAU]]; }
+  function sectorEdge(loops, L, j, i3, h) {
+    var P = L.pts, n = P.length, V = P[j], a = P[(j + 1) % n], b = P[(j + n - 1) % n];
+    var t1 = Mth.atan2(a[1] - V[1], a[0] - V[0]), t2 = Mth.atan2(b[1] - V[1], b[0] - V[0]), w = (((t2 - t1) % TAU) + TAU) % TAU, mid = t1 + w / 2;
+    var K = inLoops(loops, V[0] + 1e-5 * Mth.cos(mid), V[1] + 1e-5 * Mth.sin(mid)) ? arcParts(t1, t2) : arcParts(t2, t1);
+    if (h) {
+      var s0 = i3 === 0 ? (h > 0 ? -Mth.PI / 2 : Mth.PI / 2) : (h > 0 ? 0 : Mth.PI), H = arcParts(s0, s0 + Mth.PI), out = [];
+      K.forEach(function (p) { H.forEach(function (q) { var lo = Mth.max(p[0], q[0]), hi = Mth.min(p[1], q[1]); if (hi > lo + 1e-12) out.push([lo, hi]); }); });
+      K = out;
+    }
+    var tot = 0; K.forEach(function (p) { tot += p[1] - p[0]; });
+    if (tot < 1e-9 || tot > TAU - 1e-9) return false;
+    var arcs = K.length, has0 = K.some(function (p) { return p[0] < 1e-12; }), hasT = K.some(function (p) { return p[1] > TAU - 1e-12; });
+    if (has0 && hasT) arcs--;
+    return !(arcs === 1 && Mth.abs(tot - Mth.PI) < 1e-9);
+  }
+  function eachEdge(loops, fn) { loops.forEach(function (L) { var P = L.pts, n = P.length; for (var i = 0; i < n; i++) fn(P[i], P[(i + 1) % n], L); }); }
+  // The solid's edges (3D segments) for a view along dir: the corner lines of each profile along its axis where
+  // the solid has an edge, a round loop's contour lines (where its wall turns from facing the viewer to facing
+  // away), and the lines where a wall of one prism meets a wall of the other.
+  function solidEdges(S, dir) {
+    var out = [];
+    for (var i = 0; i < 2; i++) cornerLines(S.prof[i], S.prof[1 - i], dir, out);
+    wallLines(S.prof[0], S.prof[1], out);
+    return out;
+  }
+  function cornerLines(A, B, dir, out) {
+    var k1 = A.ax, pA = PLANE[k1], k3 = 3 - k1 - B.ax, pB = PLANE[B.ax], i3 = pA.indexOf(k3), j3 = pB.indexOf(k3);
+    A.loops.forEach(function (L) {
+      var P = L.pts, n = P.length;
+      for (var j = 0; j < n; j++) {
+        var V = P[j];
+        if (L.round) { // a contour only: one side of V faces the viewer, the other faces away
+          var e0 = dir[pA[0]], e1 = dir[pA[1]], a = P[(j + n - 1) % n], b = P[(j + 1) % n];
+          if (Mth.abs(e0) + Mth.abs(e1) < 1e-9) continue;
+          if (((V[1] - a[1]) * e0 - (V[0] - a[0]) * e1) * ((b[1] - V[1]) * e0 - (b[0] - V[0]) * e1) >= 0) continue;
+        }
+        var lo = slice1(B.loops, j3, V[i3] - 1e-6), hi = slice1(B.loops, j3, V[i3] + 1e-6), cuts = [];
+        lo.concat(hi).forEach(function (iv) { cuts.push(iv[0], iv[1]); });
+        cuts.sort(num);
+        for (var q = 0; q + 1 < cuts.length; q++) {
+          var s0 = cuts[q], s1 = cuts[q + 1];
+          if (s1 - s0 < 1e-6) continue;
+          var tm = (s0 + s1) / 2, inLo = inIv(lo, tm), inHi = inIv(hi, tm);
+          if (!inLo && !inHi) continue;
+          if (!L.round && !sectorEdge(A.loops, L, j, i3, inLo && inHi ? 0 : inHi ? 1 : -1)) continue;
+          var X0 = [0, 0, 0], X1 = [0, 0, 0];
+          X0[pA[0]] = X1[pA[0]] = V[0]; X0[pA[1]] = X1[pA[1]] = V[1]; X0[k1] = s0; X1[k1] = s1;
+          out.push([X0, X1]);
+        }
+      }
+    });
+  }
+  function wallLines(A, B, out) {
+    var k1 = A.ax, k2 = B.ax, k3 = 3 - k1 - k2, pA = PLANE[k1], pB = PLANE[k2];
+    var i2 = pA.indexOf(k2), i3 = pA.indexOf(k3), j1 = pB.indexOf(k1), j3 = pB.indexOf(k3);
+    eachEdge(A.loops, function (a0, a1) {
+      eachEdge(B.loops, function (b0, b1) {
+        var ca0 = a0[i3], ca1 = a1[i3], cb0 = b0[j3], cb1 = b1[j3], fa = Mth.abs(ca1 - ca0) < 1e-9, fb = Mth.abs(cb1 - cb0) < 1e-9;
+        if (fa && fb) return;
+        var X0 = [0, 0, 0], X1 = [0, 0, 0];
+        if (fa) {
+          if (ca0 < Mth.min(cb0, cb1) + 1e-9 || ca0 > Mth.max(cb0, cb1) - 1e-9) return; // at an end of e2: a corner line of B
+          X0[k1] = X1[k1] = b0[j1] + (b1[j1] - b0[j1]) * (ca0 - cb0) / (cb1 - cb0); X0[k3] = X1[k3] = ca0; X0[k2] = a0[i2]; X1[k2] = a1[i2];
+        } else if (fb) {
+          if (cb0 < Mth.min(ca0, ca1) + 1e-9 || cb0 > Mth.max(ca0, ca1) - 1e-9) return; // at an end of e1: a corner line of A
+          X0[k2] = X1[k2] = a0[i2] + (a1[i2] - a0[i2]) * (cb0 - ca0) / (ca1 - ca0); X0[k3] = X1[k3] = cb0; X0[k1] = b0[j1]; X1[k1] = b1[j1];
+        } else {
+          var lo = Mth.max(Mth.min(ca0, ca1), Mth.min(cb0, cb1)), hi = Mth.min(Mth.max(ca0, ca1), Mth.max(cb0, cb1));
+          if (hi - lo < 1e-9) return;
+          [X0, X1].forEach(function (X, q) {
+            var c = q ? hi : lo;
+            X[k3] = c; X[k2] = a0[i2] + (a1[i2] - a0[i2]) * (c - ca0) / (ca1 - ca0); X[k1] = b0[j1] + (b1[j1] - b0[j1]) * (c - cb0) / (cb1 - cb0);
+          });
+        }
+        out.push([X0, X1]);
+      });
+    });
+  }
+  // A view: the viewer at the far + end of dir; image U = X·right + ou, V = X·up + ov; depth X·dir.
+  function axisView(S, name) {
+    var D = S.D;
+    if (name === 'top') return { name: name, dir: [0, 1, 0], right: [1, 0, 0], up: [0, 0, -1], ou: 0, ov: D, w: S.W, h: D };
+    if (name === 'front') return { name: name, dir: [0, 0, 1], right: [1, 0, 0], up: [0, 1, 0], ou: 0, ov: 0, w: S.W, h: S.H };
+    return { name: name, dir: [1, 0, 0], right: [0, 0, -1], up: [0, 1, 0], ou: D, ov: 0, w: D, h: S.H };
+  }
+  function vdot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function projP(vw, X) { return [vdot(X, vw.right) + vw.ou, vdot(X, vw.up) + vw.ov]; }
+  function unproj(vw, U, V) { var a = U - vw.ou, b = V - vw.ov; return [vw.right[0] * a + vw.up[0] * b, vw.right[1] * a + vw.up[1] * b, vw.right[2] * a + vw.up[2] * b]; }
+  // Hidden: material strictly nearer the viewer than the point, on both sides of the line through it.
+  function hiddenAt(S, vw, a, b, M) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], L = Mth.hypot(dx, dy), nx = -dy / L, ny = dx / L, m = projP(vw, M), dM = vdot(M, vw.dir);
+    for (var s = -1; s <= 1; s += 2) {
+      var iv = rayIn(S, unproj(vw, m[0] + s * 1e-4 * nx, m[1] + s * 1e-4 * ny), vw.dir), occ = false;
+      for (var i = 0; i < iv.length; i++) if (iv[i][1] > dM + 1e-6 && iv[i][1] - Mth.max(iv[i][0], dM) > 1e-6) occ = true;
+      if (!occ) return false;
+    }
+    return true;
+  }
+  function cutParams(a, b, c, d, ts) {
+    var r0 = b[0] - a[0], r1 = b[1] - a[1], s0 = d[0] - c[0], s1 = d[1] - c[1], rr = r0 * r0 + r1 * r1;
+    var den = r0 * s1 - r1 * s0, w0 = c[0] - a[0], w1 = c[1] - a[1];
+    if (Mth.abs(den) < 1e-12 * Mth.sqrt(rr * (s0 * s0 + s1 * s1))) {
+      if (Mth.abs(w0 * r1 - w1 * r0) > 1e-9 * Mth.sqrt(rr)) return;
+      [c, d].forEach(function (p) { var t = ((p[0] - a[0]) * r0 + (p[1] - a[1]) * r1) / rr; if (t > 1e-9 && t < 1 - 1e-9) ts.push(t); });
+      return;
+    }
+    var t = (w0 * s1 - w1 * s0) / den, u = (w0 * r1 - w1 * r0) / den;
+    if (t > 1e-9 && t < 1 - 1e-9 && u > -1e-9 && u < 1 + 1e-9) ts.push(t);
+  }
+  // Pieces [[u0, v0], [u1, v1], style] → maximal runs on each line, solid winning over dotted.
+  function mergeRuns(pieces) {
+    var groups = {}, out = [];
+    pieces.forEach(function (q) {
+      var a = q[0], b = q[1], dx = b[0] - a[0], dy = b[1] - a[1], L = Mth.hypot(dx, dy);
+      if (L < 1e-7) return;
+      dx /= L; dy /= L;
+      if (dx < -1e-9 || (Mth.abs(dx) <= 1e-9 && dy < 0)) { dx = -dx; dy = -dy; }
+      var off = a[0] * dy - a[1] * dx, key = r6(dx) + ',' + r6(dy) + ',' + r6(off);
+      var g = groups[key] || (groups[key] = { dx: dx, dy: dy, off: off, iv: [] }), s0 = a[0] * dx + a[1] * dy, s1 = b[0] * dx + b[1] * dy;
+      g.iv.push([Mth.min(s0, s1), Mth.max(s0, s1), q[2]]);
+    });
+    Object.keys(groups).sort().forEach(function (k) {
+      var g = groups[k], xs = [], runs = [];
+      g.iv.forEach(function (iv) { xs.push(iv[0], iv[1]); });
+      xs.sort(num);
+      for (var i = 0; i + 1 < xs.length; i++) {
+        var s0 = xs[i], s1 = xs[i + 1];
+        if (s1 - s0 < 1e-7) continue;
+        var m = (s0 + s1) / 2, st = 0;
+        g.iv.forEach(function (iv) { if (iv[0] < m && m < iv[1]) st = st === 1 || iv[2] === 1 ? 1 : 2; });
+        if (!st) continue;
+        var last = runs[runs.length - 1];
+        if (last && last[2] === st && Mth.abs(last[1] - s0) < 1e-7) last[1] = s1; else runs.push([s0, s1, st]);
+      }
+      runs.forEach(function (r) {
+        if (r[1] - r[0] < 2e-3) return;
+        out.push([r4(r[0] * g.dx + g.off * g.dy), r4(r[0] * g.dy - g.off * g.dx), r4(r[1] * g.dx + g.off * g.dy), r4(r[1] * g.dy - g.off * g.dx), r[2]]);
+      });
+    });
+    return out.sort(function (p, q) { for (var i = 0; i < 5; i++) if (p[i] !== q[i]) return p[i] - q[i]; return 0; });
+  }
+  // The hidden-line drawing of a solid in a view (vw: axisView, or any view with the same fields).
+  function drawSolid(S, vw) {
+    if (typeof vw === 'string') vw = axisView(S, vw);
+    var segs = [], pieces = [];
+    solidEdges(S, vw.dir).forEach(function (e) {
+      var a = projP(vw, e[0]), b = projP(vw, e[1]);
+      if (Mth.hypot(b[0] - a[0], b[1] - a[1]) > 1e-7) segs.push([a, b, e[0], e[1]]);
+    });
+    segs.forEach(function (s) { s.push(Mth.min(s[0][0], s[1][0]) - 1e-7, Mth.max(s[0][0], s[1][0]) + 1e-7, Mth.min(s[0][1], s[1][1]) - 1e-7, Mth.max(s[0][1], s[1][1]) + 1e-7); });
+    segs.forEach(function (s, i) {
+      var ts = [0, 1];
+      for (var j = 0; j < segs.length; j++) {
+        var o = segs[j];
+        if (j !== i && o[4] <= s[5] && s[4] <= o[5] && o[6] <= s[7] && s[6] <= o[7]) cutParams(s[0], s[1], o[0], o[1], ts);
+      }
+      ts.sort(num);
+      for (var k = 0; k + 1 < ts.length; k++) {
+        var t0 = ts[k], t1 = ts[k + 1];
+        if (t1 - t0 < 1e-7) continue;
+        var tm = (t0 + t1) / 2, M = [0, 1, 2].map(function (c) { return s[2][c] + (s[3][c] - s[2][c]) * tm; });
+        var p0 = [s[0][0] + (s[1][0] - s[0][0]) * t0, s[0][1] + (s[1][1] - s[0][1]) * t0], p1 = [s[0][0] + (s[1][0] - s[0][0]) * t1, s[0][1] + (s[1][1] - s[0][1]) * t1];
+        pieces.push([p0, p1, hiddenAt(S, vw, s[0], s[1], M) ? 2 : 1]);
+      }
+    });
+    var runs = mergeRuns(pieces), solid = runs.filter(function (q) { return q[4] === 1; });
+    // a hidden line hugging a seen one (closer than a hundredth of a unit all along) cannot be seen apart from it
+    runs = runs.filter(function (q) {
+      if (q[4] !== 2) return true;
+      for (var k = 0; k <= 4; k++) {
+        var p = [q[0] + (q[2] - q[0]) * k / 4, q[1] + (q[3] - q[1]) * k / 4], near = false;
+        for (var j = 0; j < solid.length && !near; j++) if (segDist2(p, solid[j]) < 0.01) near = true;
+        if (!near) return true;
+      }
+      return false;
+    });
+    return { w: vw.w, h: vw.h, segs: runs, solid: true };
+  }
+  function segDist2(p, q) {
+    var dx = q[2] - q[0], dy = q[3] - q[1], L2 = dx * dx + dy * dy, t = L2 ? Mth.max(0, Mth.min(1, ((p[0] - q[0]) * dx + (p[1] - q[1]) * dy) / L2)) : 0;
+    return Mth.hypot(p[0] - q[0] - t * dx, p[1] - q[1] - t * dy);
+  }
+  function solidCode(g) { return g.w + 'x' + g.h + ':' + g.segs.map(function (q) { return q.join(','); }).join(';'); }
+  // ---- the class's profiles. A profile spec { ax, C, O, cs, feats } holds features in neutral coordinates:
+  // c along the shared axis (the missing view's line of sight; plane index cs), o along the other one.
+  //   corner cut  { kind: 'step' | 'slope', ch, oh (at the high end of c, of o), sc, so (sizes along c, o) }
+  //   notch       { kind: 'notch', side: 'c0' | 'c1' | 'o0' | 'o1' (the side at c = 0, c = C, o = 0, o = O),
+  //                 p0, p1 (its span along the side), d (its depth) }
+  //   hole        { kind: 'hole', c0, c1, o0, o1 }     round hole { kind: 'round', cc, oc, r }
+  // Sizes sit on a half-unit lattice (a round hole's extremes too), at least half a unit of material is
+  // left between any two features and the sides, and every line across the profile meets material
+  // (so each given view's outline is its profile, and the solid is one piece).
+  var HALF = 0.5;
+  function profExt(S, ax, miss) { var k3 = VAX[miss], pl = PLANE[ax], ext = [S.W, S.H, S.D], cs = pl.indexOf(k3); return { C: ext[k3], O: ext[pl[1 - cs]], cs: cs }; }
+  function uvOf(ps, c, o) { return ps.cs === 0 ? [c, o] : [o, c]; }
+  function profLoops(ps) {
+    var L = ps.cs === 0 ? ps.C : ps.O, M = ps.cs === 0 ? ps.O : ps.C, corner = [null, null, null, null], side = [null, null, null, null], holes = [];
+    var SIDE = ps.cs === 0 ? { c0: 3, c1: 1, o0: 0, o1: 2 } : { c0: 0, c1: 2, o0: 3, o1: 1 }, clash = false;
+    ps.feats.forEach(function (f) {
+      if (f.kind === 'step' || f.kind === 'slope') {
+        var uh = ps.cs === 0 ? f.ch : f.oh, vh = ps.cs === 0 ? f.oh : f.ch;
+        var ck = uh ? (vh ? 2 : 1) : (vh ? 3 : 0);
+        if (corner[ck]) clash = true;
+        corner[ck] = { kind: f.kind, a: ps.cs === 0 ? f.sc : f.so, b: ps.cs === 0 ? f.so : f.sc };
+      } else if (f.kind === 'notch') { if (side[SIDE[f.side]]) clash = true; side[SIDE[f.side]] = f; }
+      else holes.push(f);
+    });
+    if (clash) return null;
+    function cut(k) {
+      var f = corner[k], cx = k === 1 || k === 2 ? L : 0, cy = k >= 2 ? M : 0;
+      if (!f) return [[cx, cy]];
+      var su = cx ? -1 : 1, sv = cy ? -1 : 1, A = [cx + su * f.a, cy], B = [cx, cy + sv * f.b];
+      var first = k === 0 || k === 2 ? B : A, last = k === 0 || k === 2 ? A : B;
+      return f.kind === 'slope' ? [first, last] : [first, [cx + su * f.a, cy + sv * f.b], last];
+    }
+    function notch(s) {
+      var f = side[s];
+      if (!f) return [];
+      var p0 = f.p0, p1 = f.p1, d = f.d;
+      if (s === 0) return [[p0, 0], [p0, d], [p1, d], [p1, 0]];
+      if (s === 1) return [[L, p0], [L - d, p0], [L - d, p1], [L, p1]];
+      if (s === 2) return [[p1, M], [p1, M - d], [p0, M - d], [p0, M]];
+      return [[0, p1], [d, p1], [d, p0], [0, p0]];
+    }
+    var raw = [].concat(cut(0), notch(0), cut(1), notch(1), cut(2), notch(2), cut(3), notch(3)), pts = [];
+    raw.forEach(function (p) { var q = pts[pts.length - 1]; if (!q || Mth.abs(q[0] - p[0]) + Mth.abs(q[1] - p[1]) > 1e-9) pts.push(p); });
+    if (pts.length > 1 && Mth.abs(pts[0][0] - pts[pts.length - 1][0]) + Mth.abs(pts[0][1] - pts[pts.length - 1][1]) < 1e-9) pts.pop();
+    for (var changed = true; changed;) { // drop collinear points
+      changed = false;
+      for (var i = 0; i < pts.length && pts.length > 3; i++) {
+        var a = pts[(i + pts.length - 1) % pts.length], b = pts[i], c = pts[(i + 1) % pts.length];
+        if (Mth.abs((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])) < 1e-9) { pts.splice(i, 1); changed = true; break; }
+      }
+    }
+    var loops = [{ pts: pts }];
+    holes.forEach(function (f) {
+      if (f.kind === 'hole') { var A = uvOf(ps, f.c0, f.o0), B = uvOf(ps, f.c1, f.o1); loops.push(rectLoop(Mth.min(A[0], B[0]), Mth.min(A[1], B[1]), Mth.max(A[0], B[0]), Mth.max(A[1], B[1]))); }
+      else { var cc = uvOf(ps, f.cc, f.oc); loops.push(roundLoop(cc[0], cc[1], f.r)); }
+    });
+    return loops;
+  }
+  function segDist(p, a, b) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2 : 0;
+    t = Mth.max(0, Mth.min(1, t));
+    return Mth.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+  }
+  function segsCross(a, b, c, d) {
+    function o(p, q, r) { var v = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); return v > 1e-12 ? 1 : v < -1e-12 ? -1 : 0; }
+    return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+  }
+  // A profile of the class: simple outline inside its box touching all four sides, half a unit between
+  // features, material on every line across it.
+  function profOk(ps, loops) {
+    if (!loops) return false;
+    var L = ps.cs === 0 ? ps.C : ps.O, M = ps.cs === 0 ? ps.O : ps.C, P = loops[0].pts, i, j, k;
+    if (P.length < 4) return false;
+    var mn = [INF, INF], mx = [-INF, -INF];
+    for (i = 0; i < P.length; i++) for (k = 0; k < 2; k++) { if (P[i][k] < mn[k]) mn[k] = P[i][k]; if (P[i][k] > mx[k]) mx[k] = P[i][k]; }
+    if (Mth.abs(mn[0]) > 1e-9 || Mth.abs(mn[1]) > 1e-9 || Mth.abs(mx[0] - L) > 1e-9 || Mth.abs(mx[1] - M) > 1e-9) return false;
+    var E = [];
+    loops.forEach(function (lp, li) { var Q = lp.pts; for (var q = 0; q < Q.length; q++) E.push({ a: Q[q], b: Q[(q + 1) % Q.length], l: li, i: q, n: Q.length }); });
+    for (i = 0; i < E.length; i++) for (j = i + 1; j < E.length; j++) {
+      var e = E[i], f = E[j];
+      if (e.l === f.l && loops[e.l].round) continue;
+      var adj = e.l === f.l && (Mth.abs(e.i - f.i) === 1 || Mth.abs(e.i - f.i) === e.n - 1);
+      if (!adj && segsCross(e.a, e.b, f.a, f.b)) return false;
+    }
+    for (i = 0; i < loops.length; i++) for (var pi = 0; pi < loops[i].pts.length; pi++) for (j = 0; j < E.length; j++) {
+      var g = E[j];
+      if (g.l === i && (loops[i].round || g.i === pi || (g.i + 1) % g.n === pi)) continue;
+      if (segDist(loops[i].pts[pi], g.a, g.b) < HALF - 1e-9) return false;
+    }
+    for (k = 0; k < 2; k++) {
+      var ext = k ? M : L;
+      for (var w = 0.125; w < ext; w += 0.25) if (!slice1(loops, k, w).length) return false;
+    }
+    return true;
+  }
+  function lat(rng, lo, hi) { lo = Mth.ceil(lo * 2 - 1e-9); hi = Mth.floor(hi * 2 + 1e-9); return hi < lo ? null : rint(rng, lo, hi) / 2; }
+  // One random feature of a kind in a profile of extents C × O (null when it cannot fit).
+  // short: cuts at most a unit long along the sight line (the solid-or-dotted level: a cut at one end of the
+  // line of sight then rarely meets the other profile's cuts, so moving it to the other end changes only
+  // which of its lines are hidden).
+  function newFeat(rng, kind, C, O, short) {
+    var w, p0, side;
+    if (kind === 'step' || kind === 'slope') {
+      var f = { kind: kind, ch: rng.chance(0.5), oh: rng.chance(0.5), sc: lat(rng, 0.5, short ? 1 : C - 1), so: lat(rng, 0.5, O - 1) };
+      if (kind === 'slope' && rng.chance(0.3)) { if (rng.chance(0.5) && !short) f.sc = C; else f.so = O; } // a taper along a whole side
+      return f.sc && f.so ? f : null;
+    }
+    if (kind === 'notch') {
+      side = ['c0', 'c1', 'o0', 'o1'][rint(rng, 0, 3)];
+      var len = side[0] === 'c' ? O : C, deep = side[0] === 'c' ? C : O;
+      w = lat(rng, 0.5, Mth.min(1.5, len - 1.5)); if (!w) return null;
+      p0 = lat(rng, 0.5, len - 0.5 - w); var d = lat(rng, 0.5, short && side[0] === 'c' ? 1 : deep - 1);
+      return p0 === null || !d ? null : { kind: 'notch', side: side, p0: p0, p1: p0 + w, d: d };
+    }
+    if (kind === 'hole') {
+      var wc = lat(rng, 0.5, Mth.min(1.5, C - 1)), wo = lat(rng, 0.5, Mth.min(1.5, O - 1));
+      if (!wc || !wo) return null;
+      var c0 = lat(rng, 0.5, C - 0.5 - wc), o0 = lat(rng, 0.5, O - 0.5 - wo);
+      return c0 === null || o0 === null ? null : { kind: 'hole', c0: c0, c1: c0 + wc, o0: o0, o1: o0 + wo };
+    }
+    var r = rng.chance(0.5) ? 0.5 : 0.75, cc = lat(rng, 0.5, C - 0.5 - 2 * r), oc = lat(rng, 0.5, O - 0.5 - 2 * r);
+    return cc === null || oc === null ? null : { kind: 'round', cc: cc + r, oc: oc + r, r: r };
+  }
+  function copyFeat(f) { var g = {}; for (var k in f) g[k] = f[k]; return g; }
+  function specCopy(sp) {
+    return { W: sp.W, H: sp.H, D: sp.D, miss: sp.miss, prof: sp.prof.map(function (ps) { return { ax: ps.ax, C: ps.C, O: ps.O, cs: ps.cs, feats: ps.feats.map(copyFeat) }; }) };
+  }
+  // Holes of the two profiles never cross each other (their spans along the shared axis stay half a unit apart).
+  function holesApart(sp) {
+    function spans(ps) { return ps.feats.filter(function (f) { return f.kind === 'hole' || f.kind === 'round'; }).map(function (f) { return f.kind === 'hole' ? [f.c0, f.c1] : [f.cc - f.r, f.cc + f.r]; }); }
+    var A = spans(sp.prof[0]), B = spans(sp.prof[1]);
+    return A.every(function (a) { return B.every(function (b) { return a[1] + HALF <= b[0] + 1e-9 || b[1] + HALF <= a[0] + 1e-9; }); });
+  }
+  function solidOf(sp) {
+    if (!holesApart(sp)) return null;
+    var S = { W: sp.W, H: sp.H, D: sp.D, prof: [] };
+    for (var i = 0; i < 2; i++) { var lp = profLoops(sp.prof[i]); if (!profOk(sp.prof[i], lp)) return null; S.prof.push({ ax: sp.prof[i].ax, loops: lp }); }
+    return S;
+  }
+  // The kinds a level draws (version 3 'cubes' levels 3–6), the level's own kind first and always present.
+  var SOLID_KINDS = [['step', 'notch'], ['hole', 'step', 'notch'], ['slope', 'step', 'notch', 'hole'], ['round', 'step', 'notch', 'hole', 'slope']];
+  var SOLID_LABELS = ['solid: steps and notches', 'solid: a hole through', 'solid: slopes', 'solid: round holes'];
+  var SIZES = [3, 3.5, 4];
+  function newSpec(rng, lv, nf, miss, short) {
+    var sp = { W: SIZES[rint(rng, 0, 2)], H: SIZES[rint(rng, 0, 1)], D: SIZES[rint(rng, 0, 1)], miss: miss, prof: [] };
+    VIEWS.filter(function (v) { return v !== miss; }).forEach(function (v) { var e = profExt(sp, VAX[v], miss); sp.prof.push({ ax: VAX[v], C: e.C, O: e.O, cs: e.cs, feats: [] }); });
+    var kinds = SOLID_KINDS[lv], want = [kinds[0]];
+    while (want.length < nf) want.push(kinds[rint(rng, 0, kinds.length - 1)]);
+    // one feature in each profile at least
+    var where = want.map(function (_, i) { return i < 2 ? i : rint(rng, 0, 1); });
+    if (rng.chance(0.5)) where = where.map(function (w, i) { return i < 2 ? 1 - w : w; });
+    for (var i = 0; i < want.length; i++) {
+      var ps = sp.prof[where[i]], ok = false;
+      for (var t = 0; t < 30 && !ok; t++) {
+        var f = newFeat(rng, want[i], ps.C, ps.O, short);
+        if (!f) continue;
+        ps.feats.push(f);
+        if (profOk(ps, profLoops(ps)) && holesApart(sp)) ok = true; else ps.feats.pop();
+      }
+      if (!ok) return null;
+    }
+    return sp;
+  }
+  // The changes one feature can take (each a new spec; null where the profile breaks): mirrored along c
+  // (to the other end of the missing view's line of sight) or along o, moved to the other profile, made
+  // half a unit larger or smaller, moved half a unit, left out, a step made a slope or back.
+  function variants(sp, pi, fi, lv) {
+    var out = [], ps = sp.prof[pi], f = ps.feats[fi], C = ps.C, O = ps.O;
+    function add(tag, fn, toOther) {
+      var g = fn ? copyFeat(f) : null;
+      if (fn && fn(g, toOther ? sp.prof[1 - pi] : ps) === false) return;
+      out.push({ tag: tag, pi: pi, fi: fi, g: g, to: toOther ? 1 - pi : pi });
+    }
+    var isCorner = f.kind === 'step' || f.kind === 'slope';
+    add('flip c', function (g) {
+      if (isCorner) g.ch = !g.ch;
+      else if (g.kind === 'notch') { if (g.side[0] === 'c') g.side = g.side === 'c0' ? 'c1' : 'c0'; else { var a = C - g.p1; g.p1 = C - g.p0; g.p0 = a; } }
+      else if (g.kind === 'hole') { var b = C - g.c1; g.c1 = C - g.c0; g.c0 = b; } else g.cc = C - g.cc;
+    });
+    add('flip o', function (g) {
+      if (isCorner) g.oh = !g.oh;
+      else if (g.kind === 'notch') { if (g.side[0] === 'o') g.side = g.side === 'o0' ? 'o1' : 'o0'; else { var a = O - g.p1; g.p1 = O - g.p0; g.p0 = a; } }
+      else if (g.kind === 'hole') { var b = O - g.o1; g.o1 = O - g.o0; g.o0 = b; } else g.oc = O - g.oc;
+    });
+    add('other view', function (g, q) {
+      var O2 = q.O;
+      if (isCorner) { if (g.so >= O) g.so = O2; else g.so = Mth.min(g.so, O2 - 1); return g.so >= 0.5; }
+      if (g.kind === 'notch') { if (g.side[0] === 'c') return g.p1 <= O2 - 0.5; g.d = Mth.min(g.d, O2 - 1); return g.d >= 0.5; }
+      if (g.kind === 'hole') return g.o1 <= O2 - 0.5;
+      return g.oc + g.r <= O2 - 0.5;
+    }, true);
+    [0.5, -0.5].forEach(function (dl) {
+      add(dl > 0 ? 'larger' : 'smaller', function (g) {
+        if (isCorner) { if (g.sc >= C) g.so += dl; else g.sc += dl; return g.sc > 0 && g.so > 0; }
+        if (g.kind === 'notch') { g.d += dl; return g.d > 0; }
+        if (g.kind === 'hole') { g.c1 += dl; return g.c1 > g.c0; }
+        if (g.r + dl / 2 < 0.5 || g.r + dl / 2 > 0.75) return false;
+        g.r += dl / 2; g.cc += dl / 2; g.oc += dl / 2;
+      });
+      if (!isCorner) add(dl > 0 ? 'moved on' : 'moved back', function (g) {
+        if (g.kind === 'notch') { g.p0 += dl; g.p1 += dl; } else if (g.kind === 'hole') { g.c0 += dl; g.c1 += dl; } else g.cc += dl;
+      });
+    });
+    if (ps.feats.length > 1) add('left out', null);
+    if (isCorner && lv >= 2) add(f.kind === 'step' ? 'a slope' : 'a step', function (g) { g.kind = g.kind === 'step' ? 'slope' : 'step'; });
+    return out;
+  }
+  // A spec with changes applied (each to another feature).
+  function applyVars(sp, vs) {
+    var s2 = specCopy(sp), keep = s2.prof.map(function (q) { return q.feats.map(function () { return true; }); }), add = [[], []];
+    vs.forEach(function (v) { keep[v.pi][v.fi] = false; if (v.g) add[v.to].push(copyFeat(v.g)); });
+    s2.prof.forEach(function (q, i) { q.feats = q.feats.filter(function (_, j) { return keep[i][j]; }).concat(add[i]); });
+    return s2;
+  }
+  // The solid is one piece (cells of a quarter unit, six-connected).
+  function inSolid(S, X) { for (var i = 0; i < 2; i++) { var pl = PLANE[S.prof[i].ax]; if (!inLoops(S.prof[i].loops, X[pl[0]], X[pl[1]])) return false; } return true; }
+  function connected(S) {
+    var st = 0.25, nx = Mth.round(S.W / st), ny = Mth.round(S.H / st), nz = Mth.round(S.D / st), cell = new Uint8Array(nx * ny * nz), cnt = 0, first = -1, x, y, z;
+    for (z = 0; z < nz; z++) for (y = 0; y < ny; y++) for (x = 0; x < nx; x++) if (inSolid(S, [(x + 0.5) * st, (y + 0.5) * st, (z + 0.5) * st])) { var k = (z * ny + y) * nx + x; cell[k] = 1; cnt++; if (first < 0) first = k; }
+    if (first < 0) return false;
+    var stack = [first], seen = 1; cell[first] = 2;
+    while (stack.length) {
+      var c = stack.pop(); x = c % nx; y = Mth.floor(c / nx) % ny; z = Mth.floor(c / (nx * ny));
+      [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].forEach(function (d) {
+        var X = x + d[0], Y = y + d[1], Z = z + d[2];
+        if (X < 0 || Y < 0 || Z < 0 || X >= nx || Y >= ny || Z >= nz) return;
+        var q = (Z * ny + Y) * nx + X;
+        if (cell[q] === 1) { cell[q] = 2; seen++; stack.push(q); }
+      });
+    }
+    return seen === cnt;
+  }
+  // The outline of a view as a bitmap (quarter-unit cells, sampled at their centres).
+  function outlineOf(S, name) {
+    var vw = axisView(S, name), out = '';
+    for (var v = 0.125; v < vw.h; v += 0.25) for (var u = 0.125; u < vw.w; u += 0.25) out += rayIn(S, unproj(vw, u, v), vw.dir).length ? '1' : '0';
+    return out;
+  }
+  // How two drawings of one size differ: the length of line drawn in one only (pos) and drawn in both in
+  // other styles (sty); with runs, the differing runs [u0, v0, u1, v1, style in a, style in b].
+  function drawDiff(A, B, runs) {
+    var groups = {}, pos = 0, sty = 0, out = [];
+    [A, B].forEach(function (g, which) {
+      g.segs.forEach(function (q) {
+        var dx = q[2] - q[0], dy = q[3] - q[1], L = Mth.hypot(dx, dy);
+        dx /= L; dy /= L;
+        if (dx < -1e-9 || (Mth.abs(dx) <= 1e-9 && dy < 0)) { dx = -dx; dy = -dy; }
+        var off = q[0] * dy - q[1] * dx, key = r6(dx) + ',' + r6(dy) + ',' + r6(off), s0 = q[0] * dx + q[1] * dy, s1 = q[2] * dx + q[3] * dy;
+        var gr = groups[key] || (groups[key] = { dx: dx, dy: dy, off: off, iv: [] });
+        gr.iv.push([Mth.min(s0, s1), Mth.max(s0, s1), q[4], which]);
+      });
+    });
+    Object.keys(groups).sort().forEach(function (k) {
+      var gr = groups[k], xs = [];
+      gr.iv.forEach(function (x) { xs.push(x[0], x[1]); });
+      xs.sort(num);
+      for (var i = 0; i + 1 < xs.length; i++) {
+        var a = xs[i], b = xs[i + 1];
+        if (b - a < 1e-7) continue;
+        var m = (a + b) / 2, sa = 0, sb = 0;
+        gr.iv.forEach(function (x) { if (x[0] < m && m < x[1]) { if (x[3]) sb = x[2]; else sa = x[2]; } });
+        if (sa === sb) continue;
+        if (!sa || !sb) pos += b - a; else sty += b - a;
+        if (runs) out.push([r4(a * gr.dx + gr.off * gr.dy), r4(a * gr.dy - gr.off * gr.dx), r4(b * gr.dx + gr.off * gr.dy), r4(b * gr.dy - gr.off * gr.dx), sa, sb]);
+      }
+    });
+    return { pos: pos, sty: sty, runs: runs ? out : null };
+  }
+  // ---- items on solids. The four options are the missing views of four solids of the class made from one
+  // spec by two changes X and Y to two different features (none, X, Y, both: a 2 × 2 square), and the key
+  // is a corner of the square drawn at random: every option then differs from two others by one change
+  // and from one by both, so the options' likeness to each other says nothing about the key, and a change
+  // that adds or removes lines is as often in the key as not. A square is kept only if every corner could be
+  // the key at the item's foil level (so the draw of the key's corner stays uniform):
+  //   foil 0  every other option differs in its outline or lines (at least one unit of line), the easiest;
+  //   foil 1  all four share one outline, and every other option differs in its lines;
+  //   foil 2  all four share one outline, and the key's neighbour along one change differs only in which
+  //           lines are solid and which dotted (the format's subtlest option).
+  // Every two options differ by at least half a unit of line (or style). The given views are the key
+  // solid's own. A hole in a given profile must show in the other given view (else filling it would leave
+  // both given views unchanged, and the drawings would not fix the solid).
+  function relation(a, b) {
+    if (a.out !== b.out) return 'outline';
+    var d = drawDiff(a.g, b.g);
+    return d.pos > 1e-6 ? 'lines' : d.sty > 1e-6 ? 'dashes' : 'same';
+  }
+  function holesShow(sp, S, given) {
+    for (var pi = 0; pi < 2; pi++) {
+      var other = VIEWS.filter(function (v) { return VAX[v] === sp.prof[1 - pi].ax; })[0];
+      for (var fi = 0; fi < sp.prof[pi].feats.length; fi++) {
+        var f = sp.prof[pi].feats[fi];
+        if (f.kind !== 'hole' && f.kind !== 'round') continue;
+        var S2 = solidOf(applyVars(sp, [{ pi: pi, fi: fi, g: null, to: pi }]));
+        if (!S2) return false;
+        var d = drawDiff(drawSolid(S2, other), given[other]);
+        if (d.pos + d.sty < 0.5) return false;
+      }
+    }
+    return true;
+  }
+  function buildSolid(rng, p) {
+    var lv = p.cubes - 3, nf = p.grid ? 3 : 2, miss = MISSING[p.missing], fl = p.foil;
+    var sp = newSpec(rng, lv, nf, miss, fl === 2);
+    if (!sp) { stats.noSpec++; return null; }
+    var vars = [];
+    sp.prof.forEach(function (ps, pi) { ps.feats.forEach(function (f, fi) { vars = vars.concat(variants(sp, pi, fi, lv)); }); });
+    if (vars.length < 2) return null;
+    var memo = {};
+    function obj(vs) {
+      var key = vs.map(function (v) { return vars.indexOf(v); }).sort(num).join(',');
+      if (key in memo) return memo[key];
+      var s2 = vs.length ? applyVars(sp, vs) : sp, S = solidOf(s2), r = null;
+      if (S) r = { sp: s2, S: S, g: drawSolid(S, miss), out: outlineOf(S, miss), vs: vs };
+      return (memo[key] = r);
+    }
+    var base = obj([]);
+    if (!base) return null;
+    // single changes by their effect on the missing view, tried in a random order; X from those that suit
+    // the level (foil 2: a change that only turns lines solid or dotted), Y from any other feature's
+    vars = rshuffle(rng, vars);
+    function eff(v) { if (v.eff === undefined) { var o = obj([v]); v.eff = o ? relation(base, o) : null; if (o) v.pos = drawDiff(base.g, o.g).pos; } return v.eff; }
+    function suits(v) { var e = eff(v); return fl === 2 ? e === 'dashes' : fl === 1 ? e === 'lines' : e === 'outline' || (e === 'lines' && v.pos >= 1); }
+    var tried = 0;
+    for (var xi = 0; xi < vars.length && tried < 12; xi++) {
+      var X = vars[xi];
+      if ((fl === 2 && X.tag !== 'flip c') || !suits(X)) continue;
+      for (var yi = 0; yi < vars.length && tried < 12; yi++) {
+      var Y = vars[yi];
+      if ((Y.pi === X.pi && Y.fi === X.fi) || !(fl === 2 ? eff(Y) === 'dashes' || eff(Y) === 'lines' : suits(Y))) continue;
+      tried++;
+      var sq = [obj([]), obj([X]), obj([Y]), obj([X, Y])];
+      // every option keeps a cut of the level's own kind (a hole through, a slope, a round hole)
+      if (sq.some(function (o) { return !o || !o.sp.prof.some(function (q) { return q.feats.some(function (f) { return f.kind === SOLID_KINDS[lv][0]; }); }); })) { stats.levelMiss++; continue; }
+      var rel = [], ok = true, i, j;
+      for (i = 0; i < 4 && ok; i++) { rel.push([]); for (j = 0; j < 4; j++) rel[i].push(i === j ? 'same' : j < i ? rel[j][i] : relation(sq[i], sq[j])); }
+      for (i = 0; i < 4 && ok; i++) for (j = i + 1; j < 4; j++) {
+        var d = drawDiff(sq[i].g, sq[j].g);
+        if (rel[i][j] === 'same' || d.pos + d.sty < 0.75) ok = false;
+      }
+      if (!ok) { stats.closeSet++; continue; }
+      var outl = sq.every(function (o) { return o.out === sq[0].out; });
+      for (i = 0; i < 4 && ok; i++) {
+        var others = [0, 1, 2, 3].filter(function (k) { return k !== i; });
+        if (fl === 0) ok = others.every(function (k) { var d2 = drawDiff(sq[i].g, sq[k].g); return rel[i][k] === 'outline' || d2.pos >= 1; });
+        else if (fl === 1) ok = outl && others.every(function (k) { return rel[i][k] === 'lines'; });
+        else ok = outl && others.some(function (k) { return rel[i][k] === 'dashes'; });
+      }
+      if (!ok) { stats.levelMiss++; continue; }
+      var kc = rint(rng, 0, 3), K = sq[kc], given = {};
+      if (!connected(K.S)) { stats.apart++; return null; } // the key solid is one piece (the class keeps it so; checked)
+      VIEWS.forEach(function (v) { if (v !== miss) given[v] = drawSolid(K.S, v); });
+      if (!holesShow(K.sp, K.S, given)) { stats.holeHidden++; return null; }
+      var order = rshuffle(rng, [0, 1, 2, 3]);
+      return {
+        solid: true, W: sp.W, H: sp.H, D: sp.D, missing: miss, spec: K.sp, solidKey: K.S, given: given, key: order.indexOf(kc),
+        options: order.map(function (k) {
+          var ch = [X, Y].filter(function (v) { return (sq[k].vs.indexOf(v) >= 0) !== (K.vs.indexOf(v) >= 0); }).map(function (v) { return v.tag; });
+          return { kind: k === kc ? 'key' : rel[kc][k], change: ch, drawing: sq[k].g };
+        }),
+      };
+      }
+    }
+    if (!tried) stats.noX++; else stats.noSquare++;
+    return null;
+  }
+  // ---- the solids' validator (independent of the drawing code above: it never enumerates edges). It reads
+  // the item's stated solids (polygons; a round hole's 32 sides count as one smooth wall), and for every drawing checks by rays
+  // that each drawn line sits where the solid changes across it (solid where what is seen changes, dotted
+  // where only something behind does), and, along scan lines, that every such change has its line. It
+  // also checks the class (profiles inside the box, touching its four sides, material on every line across
+  // them, so each given view's outline is its profile), that each hole of a given profile shows in the
+  // other given view, and that every option differs visibly from the key (rasterised separately).
+  function vIn(loops, u, v) { // winding number within each loop, even-odd over the loops
+    var inside = false;
+    loops.forEach(function (L) {
+      var P = L.pts, n = P.length, wn = 0;
+      for (var i = 0; i < n; i++) {
+        var a = P[i], b = P[(i + 1) % n], cr = (b[0] - a[0]) * (v - a[1]) - (u - a[0]) * (b[1] - a[1]);
+        if (a[1] <= v) { if (b[1] > v && cr > 0) wn++; } else if (b[1] <= v && cr < 0) wn--;
+      }
+      if (wn !== 0) inside = !inside;
+    });
+    return inside;
+  }
+  // Where the axis ray through image point (U, V) of a view enters and leaves the solid: [{ t, round }] by depth.
+  function vRay(S, view, U, V) {
+    var k = VAX[view], X = [0, 0, 0];
+    if (view === 'top') { X[0] = U; X[2] = S.D - V; } else if (view === 'front') { X[0] = U; X[1] = V; } else { X[2] = S.D - U; X[1] = V; }
+    var lists = [];
+    for (var i = 0; i < 2; i++) {
+      var pr = S.prof[i], pl = PLANE[pr.ax];
+      if (pr.ax === k) { if (!vIn(pr.loops, X[pl[0]], X[pl[1]])) return []; lists.push(null); continue; }
+      var vi = pl.indexOf(k), fi = 1 - vi, w = X[pl[fi]], ts = [];
+      pr.loops.forEach(function (L) {
+        var P = L.pts, n = P.length;
+        for (var j = 0; j < n; j++) {
+          var a = P[j], b = P[(j + 1) % n];
+          if ((a[fi] > w) !== (b[fi] > w)) ts.push({ t: a[vi] + (b[vi] - a[vi]) * (w - a[fi]) / (b[fi] - a[fi]), round: L.round ? 1 : 0 });
+        }
+      });
+      lists.push(ts.sort(function (p, q) { return p.t - q.t; }));
+    }
+    var all = [].concat(lists[0] || [], lists[1] || []).sort(function (p, q) { return p.t - q.t; }), out = [], was = false;
+    function inside(t) {
+      for (var i = 0; i < 2; i++) { if (!lists[i]) continue; var c = 0; lists[i].forEach(function (x) { if (x.t < t) c++; }); if (c % 2 === 0) return false; }
+      return true;
+    }
+    for (var q = 0; q < all.length; q++) {
+      var t1 = q + 1 < all.length ? all[q + 1].t : INF, mid = t1 === INF ? all[q].t + 1 : (all[q].t + t1) / 2, now = t1 - all[q].t > 1e-9 && inside(mid);
+      if (now !== was) { out.push(all[q]); was = now; }
+    }
+    if (!lists[0] && !lists[1]) out = [{ t: -INF, round: 0 }, { t: INF, round: 0 }];
+    return out;
+  }
+  // What changes across a short step from p to q: 1 what is seen (the nearest surface: present, depth, slope),
+  // 2 only something behind, 0 nothing. a, b, c, d: rays at p − (q − p), p, q, q + (q − p).
+  // A round hole's wall bends at each of its 32 sides: for it only a change in the number of surfaces counts.
+  function vChange(a, b, c, d) {
+    if (!b.length !== !c.length) return 1;
+    if (!b.length) return 0;
+    function bend(r0, r1, r2, r3, i0, i1, i2, i3) { // jump or kink between r1 and r2 on surfaces i
+      if (r1[i1].round || r2[i2].round) return !r1[i1].round !== !r2[i2].round || Mth.abs(r1[i1].t - r2[i2].t) > 0.05; // another surface, or a jump
+      if (!r0[i0] || !r3[i3]) return Mth.abs(r1[i1].t - r2[i2].t) > 0.02;
+      var pred = 2 * r1[i1].t - r0[i0].t, back = 2 * r2[i2].t - r3[i3].t;
+      return Mth.abs(r2[i2].t - pred) > 2e-4 || Mth.abs(r1[i1].t - back) > 2e-4;
+    }
+    if (bend(a, b, c, d, a.length - 1, b.length - 1, c.length - 1, d.length - 1)) return 1;
+    if (b.length !== c.length) return 2;
+    for (var i = 0; i < b.length - 1; i++) if (a.length === b.length && d.length === c.length ? bend(a, b, c, d, i, i, i, i) : Mth.abs(b[i].t - c[i].t) > 0.02) return 2;
+    return 0;
+  }
+  function vRuns(g) { return g.segs.filter(function (q) { return Mth.hypot(q[2] - q[0], q[3] - q[1]) > 1e-6; }); }
+  function vDrawing(S, view, g) {
+    var segs = vRuns(g), i, k;
+    function R(u, v) { return vRay(S, view, u, v); }
+    for (i = 0; i < segs.length; i++) {
+      var q = segs[i], L = Mth.hypot(q[2] - q[0], q[3] - q[1]), nx = -(q[3] - q[1]) / L, ny = (q[2] - q[0]) / L;
+      var fr = L > 0.1 ? [0.3137, 0.5219, 0.7071] : [0.5219];
+      for (k = 0; k < fr.length; k++) {
+        var mu = q[0] + (q[2] - q[0]) * fr[k], mv = q[1] + (q[3] - q[1]) * fr[k], ch = -1;
+        // the change across the line, seen up close (smaller steps where a nearby feature crowds the wider ones)
+        for (var h = 0.006; h > 0.0005 && ch !== q[4]; h /= 3) ch = vChange(R(mu - 3 * h * nx, mv - 3 * h * ny), R(mu - h * nx, mv - h * ny), R(mu + h * nx, mv + h * ny), R(mu + 3 * h * nx, mv + 3 * h * ny));
+        if (ch !== q[4]) return view + ': the line ' + q.slice(0, 4).join(',') + ' is drawn ' + (q[4] === 1 ? 'solid' : 'dotted') + ' but the solid shows ' + ['nothing', 'a seen edge', 'a hidden edge'][ch] + ' there';
+      }
+    }
+    // scan lines: every change has a line of its kind within reach
+    function near(u, v, st) {
+      for (var j = 0; j < segs.length; j++) { var s = segs[j]; if ((st === 1 && s[4] !== 1) || segDist([u, v], [s[0], s[1]], [s[2], s[3]]) > 0.02) continue; return true; }
+      return false;
+    }
+    for (var dir = 0; dir < 2; dir++) {
+      var len = dir ? g.h : g.w, acr = dir ? g.w : g.h;
+      for (var c = 0.1737; c < acr; c += 0.2513) {
+        var pts = [];
+        for (var x = 0.004; x < len; x += 0.0123) pts.push([x, dir ? R(c, x) : R(x, c)]);
+        for (k = 1; k + 2 < pts.length; k++) {
+          var ch2 = vChange(pts[k - 1][1], pts[k][1], pts[k + 1][1], pts[k + 2][1]);
+          if (!ch2) continue;
+          var x0 = (pts[k][0] + pts[k + 1][0]) / 2;
+          if (!(dir ? near(c, x0, ch2) : near(x0, c, ch2))) return view + ': a ' + (ch2 === 1 ? 'seen' : 'hidden') + ' edge near ' + (dir ? [c, x0] : [x0, c]).map(r4).join(',') + ' has no line';
+        }
+      }
+    }
+    return true;
+  }
+  // The class: each profile inside its box and touching all four sides, every line across it meets material.
+  function vProfile(S, pr) {
+    var pl = PLANE[pr.ax], ext = [S.W, S.H, S.D], L = ext[pl[0]], M = ext[pl[1]], lo = [INF, INF], hi = [-INF, -INF];
+    pr.loops.forEach(function (lp) { lp.pts.forEach(function (p) { for (var k = 0; k < 2; k++) { lo[k] = Mth.min(lo[k], p[k]); hi[k] = Mth.max(hi[k], p[k]); } }); });
+    if (Mth.abs(lo[0]) > 1e-9 || Mth.abs(lo[1]) > 1e-9 || Mth.abs(hi[0] - L) > 1e-9 || Mth.abs(hi[1] - M) > 1e-9) return 'a profile does not fill its box';
+    for (var k = 0; k < 2; k++) {
+      var a = k ? M : L, b = k ? L : M;
+      for (var w = 0.11; w < a; w += 0.2) {
+        var any = false;
+        for (var x = 0.013; x < b && !any; x += 0.05) if (k ? vIn(pr.loops, x, w) : vIn(pr.loops, w, x)) any = true;
+        if (!any) return 'a line across a profile meets no material';
+      }
+    }
+    return true;
+  }
+  // Two drawings differ visibly: at least half a unit of line (or style) differs, rasterised on a 1/20 grid.
+  function vDiffers(a, b) {
+    function cells(g) {
+      var m = {};
+      g.segs.forEach(function (q) {
+        var L = Mth.hypot(q[2] - q[0], q[3] - q[1]), n = Mth.max(1, Mth.ceil(L / 0.02));
+        for (var i = 1; i < n; i++) { var u = q[0] + (q[2] - q[0]) * i / n, v = q[1] + (q[3] - q[1]) * i / n; m[Mth.round(u * 20) + ',' + Mth.round(v * 20)] = q[4]; }
+      });
+      return m;
+    }
+    var A = cells(a), B = cells(b), d = 0, k;
+    for (k in A) if (B[k] !== A[k]) d++;
+    for (k in B) if (!(k in A)) d++;
+    return d * 0.05 >= 0.5;
+  }
+  function validateSolid(item) {
+    try {
+      var S = item.solidKey, miss = item.missing, views = VIEWS.filter(function (v) { return v !== miss; }), i, r;
+      if (!S || S.prof.length !== 2) return 'no stated solid';
+      if (S.prof.some(function (p) { return p.ax === VAX[miss]; })) return 'a cut runs along the missing view';
+      if (views.map(function (v) { return VAX[v]; }).sort().join() !== S.prof.map(function (p) { return p.ax; }).sort().join()) return 'the profiles are not the given views';
+      for (i = 0; i < 2; i++) if ((r = vProfile(S, S.prof[i])) !== true) return r;
+      if (!item.options || item.options.length !== 4 || !(item.key >= 0 && item.key < 4)) return 'four options and a key';
+      for (i = 0; i < views.length; i++) if ((r = vDrawing(S, views[i], item.given[views[i]])) !== true) return 'given ' + r;
+      if ((r = vDrawing(S, miss, item.options[item.key].drawing)) !== true) return 'key ' + r;
+      for (i = 0; i < 4; i++) if (i !== item.key && !vDiffers(item.options[i].drawing, item.options[item.key].drawing)) return 'option ' + i + ' is too close to the key';
+      for (i = 0; i < 4; i++) for (var j = i + 1; j < 4; j++) if (!vDiffers(item.options[i].drawing, item.options[j].drawing)) return 'options ' + i + ' and ' + j + ' are too close';
+      // each hole of a given profile shows in the other given view: without it, that view's drawing breaks
+      for (i = 0; i < 2; i++) {
+        var other = views.filter(function (v) { return VAX[v] !== S.prof[i].ax; })[0];
+        for (var h = 1; h < S.prof[i].loops.length; h++) {
+          var S2 = { W: S.W, H: S.H, D: S.D, prof: S.prof.map(function (p, k) { return k !== i ? p : { ax: p.ax, loops: p.loops.filter(function (_, q) { return q !== h; }) }; }) };
+          if (vDrawing(S2, other, item.given[other]) === true) return 'hole ' + h + ' of the ' + VIEWS.filter(function (v) { return VAX[v] === S.prof[i].ax; })[0] + ' profile does not show in the ' + other + ' view';
+        }
+      }
+      return true;
+    } catch (e) { return 'validate threw: ' + (e && e.message); }
+  }
+
   function score(item, response) { return { correct: Number.isInteger(response) && response === item.key }; }
 
   function attempt(rng, p, relaxed) {
