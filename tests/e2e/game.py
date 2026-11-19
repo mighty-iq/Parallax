@@ -158,6 +158,8 @@ def run_viewport(p, C, name, ctx_opts, rnd):
 
     # Daily v2 (desktop): today's Daily is a ramp with points; its share line carries them and the mark row
     if name == 'desktop':
+        # the ramp starts at release (config.daily2.epochs[1].from ships null): this page starts it today
+        page.evaluate('PX.engine.config.daily2.epochs[1].from = PX.engine.daily.day(Date.now())')
         page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "daily" }, { force: true })')
         n = 0
         for i in range(12):
