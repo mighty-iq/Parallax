@@ -40,3 +40,8 @@
 /* the Lab: the Balance check (a check of one bet) */
 .px-ms-balance { margin: var(--s2) 0; }
 .px-ms-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+
+/* a probe's task card: the rest of its instruction folded away */
+.px-ms-more { margin-top: var(--s2); }
+.px-ms-more > summary { cursor: pointer; color: var(--ink-2); padding: 0.7rem 0; text-decoration: underline; text-underline-offset: 0.2em; }
+.px-ms-more > p { margin: var(--s2) 0 0; }

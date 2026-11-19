@@ -9,6 +9,9 @@
   PX.ex.learn('mechanisms', {
     goal: 'When the driver turns, how does the marked part move?',
     // The three kinds of question, each named, so no item asks something the screen never showed.
+    // the task card's lines in a Spatial Check (js/ui/measure.js folds the instruction away under "More about this
+    // task"): what the first item needs, its own question being on the screen with it
+    brief: ['The driver turns the way its arrow shows. Each picture asks one question about the part marked with a dashed ring: which way it turns, whether the weight goes up or down, or whether it turns faster or slower than the driver.'],
     instruction: [
       'Each picture shows gears, often belts, and sometimes a drum with a rope and a weight. The driver turns the way its arrow shows; the question is about the part marked with a dashed ring.',
       'Which way? Does the marked part turn clockwise or counter-clockwise, or can it not turn at all? Gears that form a loop can jam.',
