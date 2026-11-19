@@ -120,18 +120,22 @@
   function marksText(marks) {
     return (isArray(marks) ? marks : []).map(function (m) { return m === 1 ? '✓' : m === 0 ? '✗' : '·'; }).join('');
   }
+  // o.dealt: the items this device could show, when fewer than the Daily's (the line says so: a fair
+  // comparison needs the same items)
   function share(n, right, of, o) {
+    var short = isObj(o) && isNum(o.dealt) && o.dealt < C.daily.items ? ' · ' + o.dealt + ' of ' + C.daily.items + ' items on this device' : '';
     if (isObj(o) && isNum(o.points)) {
       return 'Parallax Daily #' + n + (o.archive ? ' (archive)' : '') + ' · ' + o.points + ' of ' + (isNum(o.max) ? o.max : C.daily2.max) + ' points' +
-        (isArray(o.marks) && o.marks.length ? ' · ' + marksText(o.marks) : '') + ' · ' + C.daily.link;
+        (isArray(o.marks) && o.marks.length ? ' · ' + marksText(o.marks) : '') + short + ' · ' + C.daily.link;
     }
-    return 'Parallax Daily #' + n + (isObj(o) && o.archive ? ' (archive)' : '') + ' · ' + right + '/' + of + ' · ' + C.daily.link;
+    return 'Parallax Daily #' + n + (isObj(o) && o.archive ? ' (archive)' : '') + ' · ' + right + '/' + of + short + ' · ' + C.daily.link;
   }
   function shareOf(key, res) {
     if (!isObj(res)) return null;
     var marks = isArray(res.outcomes) ? res.outcomes : null;
-    return onRamp(key, res) ? share(number(key), res.right, res.n, { points: res.points, max: C.daily2.max, marks: marks, archive: res.archive === 1 })
-      : share(number(key), res.right, res.n, res.archive === 1 ? { archive: true } : undefined);
+    var dealt = isNum(res.n) && res.n < C.daily.items ? res.n : undefined;
+    return onRamp(key, res) ? share(number(key), res.right, res.n, { points: res.points, max: C.daily2.max, marks: marks, archive: res.archive === 1, dealt: dealt })
+      : share(number(key), res.right, res.n, res.archive === 1 || dealt ? { archive: res.archive === 1, dealt: dealt } : undefined);
   }
   // Points of a stored result: only what was written with it (item k of a ramp is worth k when right). A
   // result without points (Parallax 1.1, or another epoch's rule) has none: it is never scored again as a ramp.
@@ -271,8 +275,9 @@
     }
     var shareText = null;
     if (complete) {
-      shareText = D.ramp ? share(D.number, D.right, D.items.length, { points: D.points, max: C.daily2.max, marks: outs, archive: D.archive })
-        : share(D.number, D.right, D.items.length, D.archive ? { archive: true } : undefined);
+      var dealt = D.items.length < C.daily.items ? D.items.length : undefined;
+      shareText = D.ramp ? share(D.number, D.right, D.items.length, { points: D.points, max: C.daily2.max, marks: outs, archive: D.archive, dealt: dealt })
+        : share(D.number, D.right, D.items.length, D.archive || dealt ? { archive: D.archive, dealt: dealt } : undefined);
     }
     res.daily = {
       day: D.day, number: D.number, right: D.right, n: D.items.length, answered: D.n, scored: D.scored, partial: !complete,
