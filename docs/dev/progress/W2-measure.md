@@ -143,3 +143,17 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   measurement and UI suites pass, except section.test's three Form fallback items (W1-band-B's Form work, not mine).
 - Open: tau and the scoped levels' bias are for pooled data; the positional lean of small grids (corners on
   scattered 3 x 4) is a generator property worth a look if Pattern Memory gets a version 3.
+
+## 2026-11-19 13:20 UTC: the first session's Baseline 1 (lead's fresh-player run on a phone, 19 Nov)
+- d2fbd20 Other Way Round version 2: net back's pictures showed the mirror of the key's cube (the two mirror foils
+  folded into them, the key did not); an independent fold with the letters outside in tests/node/otherway.test.mjs
+  (key the only match on 1,667 items). Kind lines in items, card brief, net numbers, map shapes, def.stemKey.
+- a17d878, 6e1688a: no cards between items (each kind's line under its first item; same time limit); a new probe
+  climbs 1 logit at a time; a time-out waits for the player; no stem twice in a run; the expectation question
+  names the tasks; the meter's line says when Baseline 2 comes and how long it takes.
+- a80d7af words ({a} filled, View Match's label, touch captions, pinecone); 3a43b8f Mechanisms (arrow on its
+  clearest side, haloed belts, five answers fit 360 x 640 again after shared tiles grew).
+- Verified: node 1,306/0 (probe and measurement suites), check.py 61/0, flows.py check 19/0 (W2-core's time-out
+  note), fit.py's Spatial Check part (otherway, motiongraphs, mechanisms at 360 x 640, 390 x 844, 844 x 390;
+  viewmatch, patterns at 360 x 640 and 390 x 844), harnesses of mechanisms, viewmatch, cubematch, wordlinks,
+  patterns, level; the new cards and items looked at on phones.
