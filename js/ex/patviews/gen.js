@@ -870,7 +870,8 @@
   // each a profile (polygons on a half-unit lattice; round holes as 32-gons) pushed straight through the box
   // along one given view's axis. Every solid of the class is the intersection of the prisms of its own two
   // outlines (S lies in the prism of each of its outlines, and each outline lies in its profile), so the two
-  // given views fix the solid, and with it the missing view: exactly one option can be right by construction.
+  // given views fix the solid (a hole of a profile always shows in the other given view, so the drawings tell
+  // a hole from a face), and with it the missing view: exactly one option can be right by construction.
   // Axes 0 x (left → right), 1 y (up), 2 z (back → front); the box [0, W] × [0, H] × [0, D]. A profile seen
   // along axis a has plane coordinates (u, v) = PLANE[a] (a 0: (z, y); 1: (x, z); 2: (x, y)).
   //   profile { ax, loops: [{ pts: [[u, v], …], round?: { c: [u, v], r } }] } (even-odd; a round loop's points
