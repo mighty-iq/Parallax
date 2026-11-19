@@ -74,11 +74,14 @@
 
   /* ---------- the mode (E.modes.MODES.climb; the player runs it like the Daily) ---------- */
 
+  // After the week's attempts, a run is practice on items of its own (attempt 'P' with a salt from its start
+  // time, so it never replays an attempt whose answers were seen); it is not stored, shared or rewarded.
   function start(plan, rec, opts, now) {
     var st = state(rec, now), want = opts && typeof opts.attempt === 'string' ? opts.attempt.toUpperCase() : null;
     if (want && letters().indexOf(want) < 0) want = null;
-    var att = want || st.next || letters()[0], prev = st.attempts[att];
-    var scored = !prev || prev.p === 1;
+    var att = want || st.next || null, prev = att ? st.attempts[att] : null;
+    var scored = !!att && (!prev || prev.p === 1);
+    if (!scored) att = 'P' + Math.round(now).toString(36);
     if (!order(st.week, att, plan.can).length) { plan.unavailable = 'The Climb needs at least one exercise this device can run.'; return; }
     plan.climb = {
       week: st.week, number: st.number, attempt: att, scored: scored, R: C().rungs, spare: C().spare,
@@ -149,7 +152,7 @@
       weekBest: st.best, weekBefore: before, pb: st.pb ? st.pb.h : null, pbBefore: pb0, left: st.left,
       newWeekBest: K.scored && complete && K.height > 0 && (before === null || K.height > before),
       newPb: K.scored && complete && K.height > 0 && (pb0 === null || K.height > pb0),
-      summit: complete && K.height >= K.R,
+      summit: K.scored && complete && K.height >= K.R,
     };
   }
 

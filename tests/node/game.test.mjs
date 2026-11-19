@@ -280,6 +280,11 @@ function testClimb(t) {
   t.ok(r4.fin.climb.attempt === 'C' && r4.fin.climb.height === 0 && !r4.fin.climb.newWeekBest, 'attempt C; height 0 is no best');
   const r5 = climbRun(PX, rec, T0 + 2 * DAY, [1, 0, 0]);
   t.ok(r5.fin.climb.practice && !r5.fin.climb.scored && rec.game.climb.w[wk].A.h === 3, 'after three attempts a run is practice and changes nothing');
+  t.ok(r5.steps[0].seed !== A[0].seed && /^P/.test(r5.fin.climb.attempt), 'a practice run has items of its own, never an attempt whose answers were seen (' + r5.fin.climb.attempt + ')');
+  const before = JSON.stringify(rec.game.climb), rp = climbRun(PX, rec, T0 + 2 * DAY + 60000, Array(20).fill(1));
+  t.ok(rp.fin.climb.practice && rp.fin.climb.height === 20 && !rp.fin.climb.summit && !rp.fin.climb.newPb && !rp.fin.achievements.some((a) => a.id === 'summit'), 'a practice run to the top is no summit, no best and no achievement');
+  t.eq(JSON.stringify(rec.game.climb), before, 'a practice run stores nothing');
+  t.ok(rp.steps[0].seed !== r5.steps[0].seed, 'each practice run has new items');
   // a new week: three new attempts; the personal best stays
   const s2 = K.state(rec, T0 + 5 * DAY);
   t.eq([s2.week, s2.left, s2.best, s2.last, s2.pb.h], ['2026-11-23', 3, null, 6, 6], 'a new week brings three attempts; last week’s best and the personal best are known');
