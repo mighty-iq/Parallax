@@ -254,20 +254,29 @@
     }
     return { P: (1 - lapse) * P + lapse / (k + 1), D: (1 - lapse) * D };
   }
-  // The expected information Σ_s D(s)² / P(s) as a function of x = θ − b: a table per (k, tau, lapse) on a 0.05 grid
-  // over [−12, 12], built the first time it is needed (k + 1 terms × 17 points × 481 places), read by interpolation
+  // The expected information Σ_s D(s)² / P(s) at x = θ − b, every s at once (one pass over the 17 points)
+  function cellInfoAt(x, k, tau, lapse) {
+    var d = cellDelta(k, tau), lc = logChoose(k), P = zeros(k + 1), D = zeros(k + 1), s, v = 0;
+    for (var j = 0; j < CZ.length; j++) {
+      var e = x + d + tau * CZ[j], lp = -softplus(-e), lq = -softplus(e), p = sig(e);
+      for (s = 0; s <= k; s++) { var f = CW[j] * mexp(lc[s] + s * lp + (k - s) * lq); P[s] += f; D[s] += f * (s - k * p); }
+    }
+    for (s = 0; s <= k; s++) {
+      var Ps = (1 - lapse) * P[s] + lapse / (k + 1), Ds = (1 - lapse) * D[s];
+      if (Ps > 0) v += Ds * Ds / Ps;
+    }
+    return v;
+  }
+  // … as a table per (k, tau, lapse) on a 0.1 grid over [−10, 10] (beyond it the information is nil), built the first
+  // time it is needed (201 places), read by linear interpolation
   function cellInfo(x, k, tau, lapse) {
     var key = k + ':' + tau + ':' + lapse, tab = hasOwn.call(INFO, key) ? INFO[key] : null, i;
     if (!tab) {
       tab = [];
-      for (i = 0; i <= 480; i++) {
-        var xi = -12 + i * 0.05, v = 0;
-        for (var s = 0; s <= k; s++) { var pd = cellPD(xi, k, s, tau, lapse); if (pd.P > 0) v += pd.D * pd.D / pd.P; }
-        tab.push(v);
-      }
+      for (i = 0; i <= 200; i++) tab.push(cellInfoAt(-10 + i * 0.1, k, tau, lapse));
       INFO[key] = tab;
     }
-    var t = (mmin(12, mmax(-12, x)) + 12) / 0.05, i0 = mmin(479, mfloor(t)), w = t - i0;
+    var t = (mmin(10, mmax(-10, x)) + 10) / 0.1, i0 = mmin(199, mfloor(t)), w = t - i0;
     return tab[i0] * (1 - w) + tab[i0 + 1] * w;
   }
   function cellLogp(theta, b, k, s) {
@@ -672,6 +681,6 @@
     familiarity: familiarity, afterBreak: afterBreak, normalise: normalise,
     baseId: baseId,
     cells: { logp: cellLogp, si: cellSI, delta: cellDelta, of: cellsOf },
-    _: { Phi: Phi, zOf: zOf, spdInverse: spdInverse, linearise: linearise, design: design, prior: prior, compFactor: compFactor, cellPD: cellPD, cellInfo: cellInfo },
+    _: { Phi: Phi, zOf: zOf, spdInverse: spdInverse, linearise: linearise, design: design, prior: prior, compFactor: compFactor, cellPD: cellPD, cellInfo: cellInfo, cellInfoAt: cellInfoAt },
   };
 })(window.PX);
