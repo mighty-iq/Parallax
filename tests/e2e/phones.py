@@ -3,6 +3,14 @@
   dial      O41: the arrow circle's words (ahead, left, right) in Homing and Reckon are 12 px or more on the
             screen wherever they show, at every phone size and on desktop; the circle keeps them on short
             phones only where they fit (else the readout says the same)
+  holes     O55: Hole Punch's panels: two rows of two on taller phones (3 panels too), and sideways the panels
+            and option sheets fit beside each other (they were 0 px wide with one or two folds); show me's large
+            sheet has a size on every phone; 110 px or more per panel except at 360 x 640 (v1.1's sizes)
+  knots     O48: the Knots rope plate is 320 px or more upright and on phones 380 px tall or more held sideways
+            (R2's floor), and takes the height under the status strip on shorter ones
+  dat       O54: Form's See solution letters the solid's faces without discs (the marks stay in view), 12.5 px
+            or more, covering 12 % of a solid's box or less (three discs covered about 35 % at 360 x 640); O56: Painted Cubes' hidden cubes in See solution:
+            9 dashed edges each (no far corner), every number 12 px or more; 360 x 640, 390 x 844, 1366 x 768
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/phones.py [dial ...]   (no names: every part)
 Report: tests/e2e/out/phones.json; screenshots: tests/e2e/out/phones/.
 """
@@ -134,11 +142,210 @@ def part_dial(b):
     REPORT['dial'] = rows
 
 
+def show_me_steps(page, prefix, right=True, max_s=40, measure=None, shots=True):
+    """Answers the item on screen, opens See solution (or Why?) at normal speed and follows it to its end:
+    a screenshot of each caption (taps the next button where the walkthrough waits for one), and
+    measure(page) at each caption when given. Returns the list of (caption, measure)."""
+    page.evaluate('PX.ui.play.config.slowMs = 1')
+    page.evaluate(f'__play.answer({str(right).lower()}).catch(() => 0)')
+    t0 = time.time()
+    while time.time() - t0 < 10 and state(page) not in ('reveal', 'showme'):
+        page.wait_for_timeout(60)
+    page.evaluate('PX.debug.fast(false)')
+    page.wait_for_timeout(200)
+    if state(page) == 'reveal':
+        btn = page.locator('[data-showme]')
+        if btn.count() and btn.first.is_visible():
+            btn.first.click()
+    out, seen, t0 = [], set(), time.time()
+    cap_js = "(() => { const c = [...document.querySelectorAll('.pl-trial .ex-caption, .pl-showme .pl-caption, .pl-caption')].map(e => e.textContent.trim()).filter(Boolean); return c.join(' | ').slice(0, 160); })()"
+    while time.time() - t0 < max_s:
+        st = state(page)
+        if st != 'showme' and time.time() - t0 > 2:
+            break
+        cap = page.evaluate(cap_js)
+        if cap and cap not in seen:
+            seen.add(cap)
+            page.wait_for_timeout(400)
+            k = len(out)
+            if shots:
+                page.screenshot(path=str(DIR / f'{prefix}_step{k}.png'))
+            out.append((cap, measure(page) if measure else None))
+        nxt = page.locator('[data-showme-next]')
+        if nxt.count() and nxt.first.is_visible() and nxt.first.is_enabled():
+            nxt.first.click()
+        page.wait_for_timeout(250)
+    return out
+
+
+FORM_TAGS = r"""() => {
+  const out = [];
+  document.querySelectorAll('.pl-trial .fm-opt-svg').forEach((svg, i) => {
+    const tags = [...svg.querySelectorAll('.fm-tag')];
+    if (!tags.length) return;
+    const R = svg.getBoundingClientRect();
+    let area = 0, discs = 0, small = [];
+    tags.forEach(g => {
+      const r = g.getBoundingClientRect(); area += r.width * r.height;
+      if (g.querySelector('circle')) discs++;
+      const t = g.querySelector('text'), m = t.getScreenCTM(), px = parseFloat(getComputedStyle(t).fontSize) * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c));
+      if (px < 12.5) small.push(Math.round(px * 10) / 10);
+    });
+    out.push({ opt: i + 1, tags: tags.length, discs, cover: Math.round(1000 * area / (R.width * R.height)) / 10, small, box: Math.round(R.width) });
+  });
+  return out;
+}"""
+
+CUBE_MARKS = r"""() => {
+  const badges = [...document.querySelectorAll('.pl-trial .ex-cubes-marks .ex-cubes-badge')];
+  const hid = badges.filter(g => g.classList.contains('is-hidden'));
+  const px = g => { const t = g.querySelector('.ex-cubes-badge-n'), m = t.getScreenCTM(); return parseFloat(getComputedStyle(t).fontSize) * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)); };
+  const circ = g => { const c = [...g.querySelectorAll('circle')].pop(), r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 }; };
+  let overlaps = 0;
+  const C = badges.map(circ);
+  for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++) {
+    const d = Math.hypot(C[i].x - C[j].x, C[i].y - C[j].y);
+    if (d < 0.6 * (C[i].r + C[j].r)) overlaps++;
+  }
+  const ghosts = [...document.querySelectorAll('.pl-trial .ex-cubes-marks .ex-cubes-ghost')].map(p => (p.getAttribute('d').match(/M/g) || []).length);
+  return { badges: badges.length, hidden: hid.length, minPx: badges.length ? Math.round(10 * Math.min(...badges.map(px))) / 10 : null,
+    hiddenPx: hid.length ? Math.round(10 * Math.min(...hid.map(px))) / 10 : null, overlaps, ghosts };
+}"""
+
+
+def part_dat(b):
+    """O54 (Form's letters on the solids) and O56 (Painted Cubes' hidden cubes) in See solution."""
+    rows = {}
+    for (w, h) in ((360, 640), (390, 844), (1366, 768)):
+        touch = w < 1000
+        # Form: See solution after a right answer; the letters on the solids
+        ctx, page, errs = open_app(b, w, h, touch=touch)
+        if C.ok(free_item(page, 'form', {'solid': 1, 'marks': 2, 'view': 0, 'foil': 0}), f'dat form {w}x{h}: an item'):
+            steps = show_me_steps(page, f'form_{w}x{h}', measure=lambda pg: pg.evaluate(FORM_TAGS), shots=w != 390)
+            tagged = [m for _, ms in steps for m in (ms or [])]
+            rows[f'form {w}x{h}'] = tagged
+            print(f'  form {w}x{h}: {tagged}', flush=True)
+            C.ok(len(tagged) > 0, f'dat form {w}x{h}: See solution letters a solid')
+            C.ok(all(m['discs'] == 0 for m in tagged), f'dat form {w}x{h}: the letters on the solids carry no disc ({tagged})')
+            C.ok(all(not m['small'] for m in tagged), f'dat form {w}x{h}: the letters on the solids are 12.5 px or more ({tagged})')
+            C.ok(all(m['cover'] <= 12 for m in tagged), f'dat form {w}x{h}: the letters cover 12 % of a solid\'s box or less ({tagged})')
+        C.ok(not errs, f'dat form {w}x{h}: no page errors ({errs[:2]})')
+        ctx.close()
+        # Painted Cubes: an item with hidden cubes, See solution's "every cube's number" step
+        ctx, page, errs = open_app(b, w, h, touch=touch)
+        hidden_js = "(() => { const it = __play.item, L = PX.ex.get('cubes').lib; return L.render(it.heights).perCube.filter(p => p.any === 0).length; })()"
+        got = False
+        for t in range(12):
+            if not free_item(page, 'cubes', {'cubes': 3, 'height': 3, 'asked': 0}):
+                break
+            if page.evaluate(hidden_js):
+                got = True
+                break
+        if C.ok(got, f'dat cubes {w}x{h}: an item with hidden cubes'):
+            steps = show_me_steps(page, f'cubes_{w}x{h}', measure=lambda pg: pg.evaluate(CUBE_MARKS), shots=w != 390)
+            full = [m for _, m in steps if m and m['hidden']]
+            rows[f'cubes {w}x{h}'] = full[:2]
+            print(f'  cubes {w}x{h}: {full[:1]}', flush=True)
+            C.ok(len(full) > 0, f'dat cubes {w}x{h}: a step shows the hidden cubes')
+            C.ok(all(m['hiddenPx'] >= 12 and m['minPx'] >= 12 for m in full), f'dat cubes {w}x{h}: every number is 12 px or more ({full[:1]})')
+            C.ok(all(all(n == 9 for n in m['ghosts']) for m in full), f'dat cubes {w}x{h}: each hidden cube is drawn with the 9 edges a solid cube shows ({full[:1]})')
+        C.ok(not errs, f'dat cubes {w}x{h}: no page errors ({errs[:2]})')
+        ctx.close()
+    REPORT['dat'] = rows
+
+PF_SIZES = r"""() => {
+  const strip = document.querySelector('.pl-trial .ex-patfold-strip');
+  const panels = [...document.querySelectorAll('.pl-trial .ex-patfold-strip .ex-patfold-svg')].map(e => Math.round(e.getBoundingClientRect().width));
+  const opts = [...document.querySelectorAll('.pl-trial .ex-patfold-opt .ex-patfold-svg')].map(e => Math.round(e.getBoundingClientRect().width));
+  const de = document.documentElement, H = innerHeight;
+  const ctl = [...document.querySelectorAll('.pl-trial .pl-grid .px-choice')].map(e => e.getBoundingClientRect());
+  const holes = [...document.querySelectorAll('.pl-trial .ex-patfold-strip .ex-patfold-hole')].map(e => e.getBoundingClientRect().width).filter(w => w > 0);
+  return { n: strip ? +strip.getAttribute('data-n') : null, panels, opts, minHole: holes.length ? Math.round(10 * Math.min(...holes)) / 10 : null,
+    scrollH: Math.max(de.scrollHeight, document.body.scrollHeight), scrolls: Math.max(de.scrollHeight, document.body.scrollHeight) > H + 1, lowest: Math.round(Math.max(0, ...ctl.map(r => r.bottom))), H };
+}"""
+
+
+def part_holes(b, sizes=((360, 640), (390, 844), (412, 915), (844, 390), (1366, 768))):
+    """O55: Hole Punch's fold panels on phones."""
+    rows = []
+    for (w, h) in sizes:
+        touch = w < 1000
+        ctx, page, errs = open_app(b, w, h, touch=touch)
+        for folds in (0, 1, 2):
+            params = {'folds': folds, 'type': 0, 'idle': 0}
+            if not C.ok(free_item(page, 'patfold', params), f'holes {w}x{h} folds {folds}: an item'):
+                continue
+            page.wait_for_timeout(300)
+            m = page.evaluate(PF_SIZES)
+            m.update(size=f'{w}x{h}', folds=folds)
+            rows.append(m)
+            print(f'  holes {w}x{h} folds {folds}: {m}', flush=True)
+            if folds == 2 or (w, h) == (360, 640):
+                page.screenshot(path=str(DIR / f'holes_{w}x{h}_f{folds}.png'))
+            if touch:  # phones: the item screen never scrolls (fit.py's rule); desktop pages may
+                C.ok(not m['scrolls'] and m['lowest'] <= h + 1, f'holes {w}x{h} folds {folds}: the item fits without a scroll ({m})')
+            if (w, h) != (360, 640):  # 360 x 640 keeps v1.1's sizes (two rows of options leave no more room)
+                C.ok(min(m['panels']) >= 110, f'holes {w}x{h} folds {folds}: each panel is 110 px or more ({m["panels"]})')
+        if touch and free_item(page, 'patfold', {'folds': 1, 'type': 0, 'idle': 0}):
+            # show me's single large sheet has a size on every phone (it was 0 px wide sideways)
+            big = show_me_steps(page, f'holes_{w}x{h}_showme', max_s=12, shots=(w, h) == (844, 390),
+                                measure=lambda pg: pg.evaluate("(() => { const e = [...document.querySelectorAll('.pl-trial .ex-patfold-big .ex-patfold-svg')].find(x => x.getBoundingClientRect().height > 0); return e ? Math.round(e.getBoundingClientRect().width) : 0; })()"))
+            widths = [m for _, m in big if m]
+            print(f'  holes {w}x{h} show me: big sheet {widths}', flush=True)
+            C.ok(bool(widths) and min(widths) >= 100, f'holes {w}x{h}: show me draws its large sheet 100 px or more wide ({widths})')
+        C.ok(not errs, f'holes {w}x{h}: no page errors ({errs[:2]})')
+        ctx.close()
+    REPORT['holes'] = rows
+    return rows
+
+
+KNOTS_JS = r"""() => {
+  const st = document.querySelector('.pl-trial .ex-knots-stage'), r = st ? st.getBoundingClientRect() : null, de = document.documentElement;
+  const ctl = [...document.querySelectorAll('.pl-trial .pl-grid .px-choice')].map(e => e.getBoundingClientRect());
+  const hud = document.querySelector('.pl-hud, .pl-status, .pl-head'), hr = hud ? hud.getBoundingClientRect() : null;
+  return { plate: r ? Math.round(r.width) : 0, plateH: r ? Math.round(r.height) : 0, top: r ? Math.round(r.top) : null, bottom: r ? Math.round(r.bottom) : null,
+    hudBottom: hr ? Math.round(hr.bottom) : null, scrollH: Math.max(de.scrollHeight, document.body.scrollHeight), H: innerHeight,
+    lowest: Math.round(Math.max(0, ...ctl.map(c => c.bottom))), right: Math.round(Math.max(0, ...ctl.map(c => c.right))) };
+}"""
+KNOTS_SIZES = [(844, 390), (932, 430), (915, 412), (740, 360), (667, 375), (360, 640), (390, 844), (1366, 768)]
+
+
+def part_knots(b):
+    """O48: the Knots rope plate is 320 px or more (R2's floor) on phones held sideways."""
+    rows = []
+    for (w, h) in KNOTS_SIZES:
+        touch = w < 1000
+        ctx, page, errs = open_app(b, w, h, touch=touch)
+        if C.ok(free_item(page, 'knots'), f'knots {w}x{h}: an item'):
+            page.wait_for_timeout(300)
+            m = page.evaluate(KNOTS_JS)
+            m['size'] = f'{w}x{h}'
+            rows.append(m)
+            print(f'  knots {w}x{h}: {m}', flush=True)
+            page.screenshot(path=str(DIR / f'knots_{w}x{h}.png'))
+            if touch:
+                C.ok(m['scrollH'] <= h + 1 and m['bottom'] <= h + 1 and m['lowest'] <= h + 1, f'knots {w}x{h}: the item fits without a scroll ({m})')
+            if not (w > h and h < 380):
+                C.ok(m['plate'] >= 320, f'knots {w}x{h}: the plate is 320 px or more ({m["plate"]})')
+            else:  # shorter phones held sideways: the height left under the status strip cannot hold 320 px
+                C.ok(m['plate'] >= min(h - 60, 0.46 * w), f'knots {w}x{h}: the plate takes the height under the status strip or its column ({m["plate"]} of {h})')
+        C.ok(not errs, f'knots {w}x{h}: no page errors ({errs[:2]})')
+        ctx.close()
+    REPORT['knots'] = rows
+
+
+
 def main():
     with sync_playwright() as p:
         b = launch(p)
         if want('dial'):
             part_dial(b)
+        if want('dat'):
+            part_dat(b)
+        if want('holes'):
+            part_holes(b)
+        if want('knots'):
+            part_knots(b)
         b.close()
     return C.summary(REPORT)
 

@@ -108,7 +108,18 @@
   .pl-trial.ex-patfold .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
   .pl-trial.ex-patfold .ex-patfold-verdict { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+/* v1.2 O55 (W3-phones): taller phones (700 px and up) put two folds and the punch in two rows of two as
+   well, with the room the four-panel strip takes (at 390 x 844 each panel is 171 px instead of 111) */
+@media (max-width: 719px) and (min-height: 43.75rem) {
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="3"] { --pf-cols: 2; max-width: min(100%, calc(var(--pl-avail) - 24rem)); }
+}
+/* Phones held sideways: the panels in the left column at the height it has (they were 0 px wide with one
+   fold or two, and 84 px with three, from the upright rules), the option sheets small enough for their two
+   rows to fit beside them (v1.2 O55), and the single large sheet of show me and the Watch at that height */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-patfold .ex-patfold-strip[data-n="4"] { --pf-cols: 4; max-width: 100%; }
-  .pl-trial.ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, calc((var(--pl-avail) - 4rem) / 2)); }
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="2"],
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="3"] { max-width: 100%; }
+  .pl-trial.ex-patfold .ex-patfold-strip[data-n="4"] { --pf-cols: 2; max-width: min(100%, calc(var(--pl-avail) - 4.25rem)); }
+  .pl-trial.ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, calc((var(--pl-avail) - 8rem) / 2)); }
+  .pl-trial.ex-patfold .ex-patfold-big .ex-patfold-svg { width: min(100%, 18rem, calc(var(--pl-avail) - 3rem)); }
 }
