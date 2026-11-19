@@ -413,13 +413,14 @@
     });
     var seen = {};
     out.firsts = a.firsts.concat(b.firsts).filter(function (f) {
-      if (!firstOk(f)) return true;
+      if (!firstOk(f)) { var j = 'x:' + JSON.stringify(f); if (hasOwn.call(seen, j)) return false; seen[j] = f; return true; } // another shape: once
       var k = f.ex + '@' + f.v + ':' + f.cell;
       if (hasOwn.call(seen, k)) { if (f.at < seen[k].at) seen[k].at = f.at; return false; }
       seen[k] = f;
       return true;
     }).sort(function (x, y) { return (isNum(x.at) ? x.at : 0) - (isNum(y.at) ? y.at : 0); });
-    var cw = out.climb.w = isObj(out.climb.w) ? out.climb.w : {}, ow = isObj(older.climb.w) ? older.climb.w : {};
+    var ow = isObj(older.climb.w) ? older.climb.w : {}, cw = isObj(out.climb.w) ? out.climb.w : null;
+    if (!cw && Object.keys(ow).length) cw = out.climb.w = {}; // only when a side has runs: a merge with itself changes nothing
     Object.keys(ow).forEach(function (wk) {
       var w = cw[wk] || (cw[wk] = {});
       Object.keys(ow[wk]).forEach(function (l) {

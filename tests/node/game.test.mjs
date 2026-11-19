@@ -268,6 +268,9 @@ function testContainer(t) {
   b.climb.w[wk].B = { r: 9, h: 8, m: 1, n: [4], t: T0 };
   const m = G.merge(a, b, { newer: 'theirs' });
   t.ok(m.reach.high === a.reach.high && m.firsts.some((f) => f.cell === '8.3') && m.climb.w[wk].B.h === 8 && m.seeded === undefined, 'two tabs: the larger mark, the union of firsts, the run further up; the rows are read again');
+  const odd = JSON.parse(JSON.stringify(rec.game));
+  odd.firsts.push({ exId: 'rotate', cell: '2,1', at: T0 });
+  t.eq(G.merge(odd, JSON.parse(JSON.stringify(odd)), { newer: 'mine' }).firsts.length, odd.firsts.length, 'a merge with itself keeps one copy of each first, a first of another shape included');
 }
 
 /* ============================================================ rule 4: no count of consecutive days */
