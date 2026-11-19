@@ -8,6 +8,10 @@
             sheet has a size on every phone; 110 px or more per panel except at 360 x 640 (v1.1's sizes)
   knots     O48: the Knots rope plate is 320 px or more upright and on phones 380 px tall or more held sideways
             (R2's floor), and takes the height under the status strip on shorter ones
+  progress  O20: Progress on a phone shows one section at a time (with the panels placed after it); seven chips
+            of 44 px pick it and stay on the screen; ?ex= opens Curves; desktop keeps the whole page
+  taps      O22: Settings' Confirm taps (off by default): a first touch tap on a single-choice answer marks it, a
+            second tap on it answers, another answer moves the mark; keys and a mouse answer at once
   dat       O54: Form's See solution letters the solid's faces without discs (the marks stay in view), 12.5 px
             or more, covering 12 % of a solid's box or less (three discs covered about 35 % at 360 x 640); O56: Painted Cubes' hidden cubes in See solution:
             9 dashed edges each (no far corner), every number 12 px or more; 360 x 640, 390 x 844, 1366 x 768
@@ -334,6 +338,134 @@ def part_knots(b):
     REPORT['knots'] = rows
 
 
+PROG_JS = r"""() => {
+  const box = document.querySelector('.px-prog'), nav = document.querySelector('.px-prog-nav');
+  const kids = box ? [...box.children] : [];
+  const shown = kids.filter(k => k.getBoundingClientRect().height > 0).map(k => k.getAttribute('data-tab') + ':' + (k.getAttribute('data-section') || k.className.split(' ')[0]));
+  const chips = nav ? [...nav.querySelectorAll('[data-jump]')].map(b => { const r = b.getBoundingClientRect(); return { id: b.dataset.jump, cur: b.getAttribute('aria-current'), h: Math.round(r.height), w: Math.round(r.width) }; }) : [];
+  const de = document.documentElement;
+  return { shown, chips, n: kids.length, pageH: Math.max(de.scrollHeight, document.body.scrollHeight), H: innerHeight, links: document.querySelectorAll('.px-prog-nav a[href^="#"]').length };
+}"""
+
+
+def part_progress(b):
+    """O20: Progress on a phone shows one section at a time; the jump buttons pick it (44 px chips, never
+    hash links); desktop keeps the whole page. With screens.py's simulated six-week record."""
+    from screens import SIM
+    rows = {}
+    for (w, h) in ((360, 640), (390, 844), (1366, 768)):
+        touch = w < 720
+        ctx, page, errs = open_app(b, w, h, touch=touch)
+        page.evaluate(SIM, {'seed': 7, 'days': 45, 'perWeek': 4, 'minutes': 12, 'lab': False})
+        page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(false)')  # the panels other modules place go with their section
+        page.evaluate('void PX.core.router.go("progress", {}, { force: true })')
+        page.wait_for_timeout(600)
+        m = page.evaluate(PROG_JS)
+        rows[f'{w}x{h} levels'] = m
+        print(f'  progress {w}x{h}: page {m["pageH"]} px, shown {m["shown"]}', flush=True)
+        page.screenshot(path=str(DIR / f'progress_{w}x{h}_levels.png'))
+        C.ok(m['links'] == 0, f'progress {w}x{h}: the section buttons are buttons, no hash links')
+        if touch:
+            C.ok(all(x.startswith('levels:') for x in m['shown']) and len(m['shown']) >= 1, f'progress {w}x{h}: only the Levels tab shows at first ({m["shown"]})')
+            C.ok(all(c['h'] >= 44 for c in m['chips']) and len(m['chips']) == 7, f'progress {w}x{h}: seven section chips of 44 px or more ({m["chips"]})')
+            C.ok([c['id'] for c in m['chips'] if c['cur'] == 'true'] == ['levels'], f'progress {w}x{h}: the Levels chip is marked current')
+            total = 0
+            for sec in ('check', 'curves', 'bests', 'goal', 'achievements', 'data'):
+                page.click(f'[data-jump="{sec}"]')
+                page.wait_for_timeout(350)
+                q = page.evaluate(PROG_JS)
+                total = max(total, q['pageH'])
+                print(f'  progress {w}x{h} {sec}: page {q["pageH"]} px, shown {q["shown"]}', flush=True)
+                ok = q['shown'] and all(x.startswith(sec + ':') for x in q['shown'])
+                C.ok(ok, f'progress {w}x{h}: the {sec} chip shows that section alone, with its panels ({q["shown"]})')
+                C.ok([c['id'] for c in q['chips'] if c['cur'] == 'true'] == [sec], f'progress {w}x{h}: the {sec} chip is marked current')
+                nav_top = page.evaluate("document.querySelector('.px-prog-nav').getBoundingClientRect().top")
+                C.ok(nav_top >= 0, f'progress {w}x{h}: after {sec} the chips are on the screen (top {nav_top})')
+                if sec in ('check', 'achievements'):
+                    page.screenshot(path=str(DIR / f'progress_{w}x{h}_{sec}.png'))
+            rows[f'{w}x{h} longest tab'] = total
+            # ?ex= opens the Curves tab
+            page.evaluate('void PX.core.router.go("progress", { ex: "rotate" }, { force: true })')
+            page.wait_for_timeout(500)
+            q = page.evaluate(PROG_JS)
+            C.ok(q['shown'] and all(x.startswith('curves:') for x in q['shown']), f'progress {w}x{h}: ?ex= opens the Curves tab ({q["shown"]})')
+        else:
+            C.ok(len(m['shown']) == m['n'], f'progress {w}x{h}: desktop shows every section ({len(m["shown"])} of {m["n"]})')
+        C.ok(not errs, f'progress {w}x{h}: no page errors ({errs[:2]})')
+        ctx.close()
+    REPORT['progress'] = rows
+
+
+def tile_center(page, i):
+    page.locator('.pl-grid .px-choice').nth(i).scroll_into_view_if_needed()
+    page.wait_for_timeout(100)
+    r = page.evaluate(f"(() => {{ const b = document.querySelectorAll('.pl-grid .px-choice')[{i}].getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }})()")
+    return r[0], r[1]
+
+
+def part_taps(b):
+    """O22: Settings' "Confirm taps" (off by default): a first touch tap on a single-choice answer marks it, a
+    second tap on the same answer gives it; another answer moves the mark; keys and a mouse answer at once;
+    the answer is logged as touch with its time from the painted frame to the second tap."""
+    ex = 'cubes'  # single choice, five answers
+    # off by default: one tap answers
+    ctx, page, errs = open_app(b, 360, 640)
+    C.ok(page.evaluate('PX.core.store.state.settings.confirmTaps') is False, 'taps: Confirm taps is off by default')
+    if C.ok(free_item(page, ex), 'taps 360x640: an item'):
+        page.wait_for_timeout(300)
+        x, y = tile_center(page, 0)
+        page.touchscreen.tap(x, y)
+        page.wait_for_timeout(300)
+        C.ok(state(page) in ('reveal', 'showme'), f'taps off: one tap answers ({state(page)})')
+    # on: tap, tap another, tap it again
+    page.evaluate('PX.core.store.state.settings.confirmTaps = true')
+    if C.ok(free_item(page, ex), 'taps 360x640 on: an item'):
+        page.wait_for_timeout(300)
+        x0, y0 = tile_center(page, 0)
+        x1, y1 = tile_center(page, 1)
+        page.touchscreen.tap(x0, y0)
+        page.wait_for_timeout(300)
+        sel = page.evaluate("[...document.querySelectorAll('.pl-grid .px-choice')].map(b => b.getAttribute('aria-pressed'))")
+        C.ok(state(page) == 'respond' and sel[0] == 'true', f'taps on: a first tap marks the answer and does not answer ({state(page)}, {sel})')
+        page.screenshot(path=str(DIR / 'taps_360x640_marked.png'))
+        page.touchscreen.tap(x1, y1)
+        page.wait_for_timeout(300)
+        sel = page.evaluate("[...document.querySelectorAll('.pl-grid .px-choice')].map(b => b.getAttribute('aria-pressed'))")
+        C.ok(state(page) == 'respond' and sel[1] == 'true' and sel[0] == 'false', f'taps on: a tap on another answer moves the mark ({state(page)}, {sel})')
+        page.touchscreen.tap(x1, y1)
+        page.wait_for_timeout(400)
+        C.ok(state(page) in ('reveal', 'showme'), f'taps on: a second tap on the marked answer answers ({state(page)})')
+        tr = page.evaluate("(() => { const e = window.__play && __play.last; return e ? { input: e.input, rtMs: e.rtMs, outcome: e.outcome } : null; })()")
+        C.ok(bool(tr) and tr['input'] == 'touch' and (tr['rtMs'] or 0) > 0, f'taps on: the answer is logged as touch with its time ({tr})')
+        print(f'  taps: last trial {tr}', flush=True)
+    # on: keys answer at once
+    if C.ok(free_item(page, ex), 'taps 360x640 on: a third item'):
+        page.wait_for_timeout(300)
+        page.keyboard.press('2')
+        page.wait_for_timeout(300)
+        C.ok(state(page) in ('reveal', 'showme'), f'taps on: a key answers at once ({state(page)})')
+    C.ok(not errs, f'taps 360x640: no page errors ({errs[:2]})')
+    ctx.close()
+    # desktop with a mouse, setting on: a click answers at once; the Settings switch is there
+    ctx, page, errs = open_app(b, 1366, 768, touch=False)
+    page.evaluate('PX.core.store.state.settings.confirmTaps = true')
+    if C.ok(free_item(page, ex), 'taps 1366x768: an item'):
+        page.wait_for_timeout(300)
+        x, y = tile_center(page, 0)
+        page.mouse.click(x, y)
+        page.wait_for_timeout(300)
+        C.ok(state(page) in ('reveal', 'showme'), f'taps on, mouse: a click answers at once ({state(page)})')
+    page.evaluate('window.__play && void __play.end()')
+    page.evaluate('void PX.core.router.go("settings", {}, { force: true })')
+    page.wait_for_timeout(500)
+    sw = page.locator('[data-key="confirmTaps"], input[name="confirmTaps"], #px-set-confirmTaps')
+    txt = page.evaluate("document.querySelector('main').textContent")
+    C.ok('Confirm taps' in txt, 'taps: Settings has the Confirm taps switch')
+    page.screenshot(path=str(DIR / 'taps_settings_1366x768.png'), full_page=False)
+    C.ok(not errs, f'taps 1366x768: no page errors ({errs[:2]})')
+    ctx.close()
+
+
 
 def main():
     with sync_playwright() as p:
@@ -346,6 +478,10 @@ def main():
             part_holes(b)
         if want('knots'):
             part_knots(b)
+        if want('progress'):
+            part_progress(b)
+        if want('taps'):
+            part_taps(b)
         b.close()
     return C.summary(REPORT)
 
