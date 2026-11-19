@@ -23,8 +23,9 @@
 
    The stored result (rec.daily[day]): { n (items dealt), answered, right, t, number, outcomes (per dealt item:
    1, 0 or null), seeds (each dealt item's own seed, v1.2: O14), ep, points (ramp), archive: 1, partial: true }.
-   A part-way attempt goes on by seed: answered items keep their answers on any device, the rest are dealt where
-   the device can show them. Results written before seeds were stored get them through the store's upgrade hook
+   Each answer writes it through and finish() writes it last (review RV-code-1.2 M2: a phone that discards a
+   background tab never runs finish()). A part-way attempt goes on by seed: answered items keep their answers on
+   any device, the rest are dealt where the device can show them. Results written before seeds were stored get them through the store's upgrade hook
    when their outcomes cover every item of the date; one from a device that dealt fewer goes on by position only
    where the device deals as many, else starts again.
 
@@ -51,7 +52,11 @@
   var U = PX.util;
 
   // The epochs: each freezes its pool (exercise ids in code order) and its rule. Later versions append an
-  // epoch with a later `from`; they never change one that has begun.
+  // epoch with a later `from`; they never change one that has begun. The items themselves come from the live
+  // definitions (ranges, variants, generators), so a version that changes an exercise of a running epoch's pool
+  // deals other items for that epoch's dates: such a release appends an epoch from its own release day, and past
+  // dates stay archive play (review RV-code-1.2 L1: 1.2's epoch 1 deals other settings than 1.1 for about a
+  // quarter of the items; DECISIONS, 19 Nov).
   E.defaults('daily2', {
     epochs: [
       { n: 1, from: '2026-11-01', ramp: false, pool: ['rotate', 'spin', 'fold', 'nets', 'slice', 'views', 'orient', 'span', 'hidden', 'knots'] },
@@ -313,43 +318,52 @@
   // A stuttered or skipped item comes back (the same item: it is the same for everyone).
   function voidStep(plan, rec, step) { if (step.daily) plan.daily.redo.push(step.daily.index); }
 
-  function answer(plan, rec, step, ok) {
+  // The scored attempt is written through with each answer, as the Climb's runs are (review RV-code-1.2 M2): a tab
+  // that a phone discards in the background fires no pagehide, so finish() never runs, and the attempt would be lost
+  // and could be taken again on items already seen; written through, it goes on by seed the next time the Daily
+  // opens. Only the record changes here: the player saves after the answer, and the store writes nothing while it
+  // is held for a stimulus.
+  function answer(plan, rec, step, ok, result, now) {
     var D = plan.daily;
     D.n += 1;
     if (ok) { D.right += 1; D.points += D.items[step.daily.index] ? D.items[step.daily.index].points : 0; }
     D.outcomes[step.daily.index] = ok ? 1 : 0;
+    if (D.scored) keep(rec, D, isNum(now) ? now : 0);
   }
 
   // Every item answered (voided and skipped items come back, so this is the natural end).
-  function over(plan) {
-    var D = plan.daily;
+  function complete(D) {
     for (var i = 0; i < D.items.length; i++) if (!answered(D, i)) return false;
     return true;
+  }
+  function over(plan) { return complete(plan.daily); }
+
+  // outcomes per item: 1 right, 0 wrong, null not answered (never drawn as wrong)
+  function outcomesOf(D) { return D.items.map(function (it, i) { return answered(D, i) ? D.outcomes[i] : null; }); }
+  // The stored result of the scored attempt as it stands; seeds: each dealt item's own seed beside its outcome
+  // (O14), so the attempt goes on by seed on any device.
+  function keep(rec, D, now) {
+    if (!isObj(rec.daily)) rec.daily = {};
+    var entry = { n: D.items.length, answered: D.n, right: D.right, t: now, number: D.number, outcomes: outcomesOf(D), seeds: D.items.map(function (it) { return it.seed; }), ep: D.ep };
+    if (D.ramp) entry.points = D.points;
+    if (D.archive) entry.archive = 1;
+    if (!complete(D)) entry.partial = true;
+    rec.daily[D.day] = entry;
   }
 
   function finish(plan, rec, now, res) {
     var D = plan.daily;
     if (!D || !D.n) return;
-    var complete = over(plan);
-    // outcomes per item: 1 right, 0 wrong, null not answered (never drawn as wrong)
-    var outs = D.items.map(function (it, i) { return answered(D, i) ? D.outcomes[i] : null; });
-    if (D.scored) {
-      if (!isObj(rec.daily)) rec.daily = {};
-      // seeds: each dealt item's own seed beside its outcome (O14), so the attempt goes on by seed on any device
-      var entry = { n: D.items.length, answered: D.n, right: D.right, t: now, number: D.number, outcomes: outs, seeds: D.items.map(function (it) { return it.seed; }), ep: D.ep };
-      if (D.ramp) entry.points = D.points;
-      if (D.archive) entry.archive = 1;
-      if (!complete) entry.partial = true;
-      rec.daily[D.day] = entry;
-    }
+    var whole = over(plan), outs = outcomesOf(D);
+    if (D.scored) keep(rec, D, now);
     var shareText = null;
-    if (complete) {
+    if (whole) {
       var dealt = D.items.length < C.daily.items ? D.items.length : undefined;
       shareText = D.ramp ? share(D.number, D.right, D.items.length, { points: D.points, max: C.daily2.max, marks: outs, archive: D.archive, dealt: dealt })
         : share(D.number, D.right, D.items.length, D.archive || dealt ? { archive: D.archive, dealt: dealt } : undefined);
     }
     res.daily = {
-      day: D.day, number: D.number, right: D.right, n: D.items.length, answered: D.n, scored: D.scored, partial: !complete,
+      day: D.day, number: D.number, right: D.right, n: D.items.length, answered: D.n, scored: D.scored, partial: !whole,
       outcomes: outs, share: shareText, ramp: D.ramp, archive: D.archive,
       points: D.ramp ? D.points : null, max: D.ramp ? C.daily2.max : null, worth: D.items.map(function (it) { return it.points; }),
     };
