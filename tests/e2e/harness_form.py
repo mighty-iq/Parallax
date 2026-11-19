@@ -10,7 +10,8 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_form.py
    after another wrong pick: the face that cannot be marked so); no horizontal scroll
 2. 360 x 640: the stem and all four solids within one screen, targets >= 44 px
 3. show me at normal speed, the tutorial demo with captions; the Watch's tour of both wrong kinds; the
-   worked examples (the plain kind's: fold lines lit, then shapes and sizes; a half mark's)
+   worked examples (the plain kind's: fold lines lit, then shapes and sizes; a half mark's); an L-, T-
+   or U-prism's fold-up ends on the right solid
 4. the harness inlined into a sandboxed srcdoc frame; no console errors
 Screenshots: tests/e2e/out/form/form_<case>_<viewport>_<theme>[_reveal|_showme|_wrong_showme].png """
 import sys
@@ -29,6 +30,7 @@ CASES = {  # name: (params, seed); version 3's kinds
     'plainsizes': ('solid:1,marks:1,view:1,foil:1', 8),  # no marks, one kind in four proportions
     'shaded': ('solid:1,marks:2,view:1,foil:0', 6),  # two shaded faces
     'half': ('solid:2,marks:4,view:2,foil:1', 8),  # two shaded and a half mark
+    'prism': ('solid:3,marks:3,view:1,foil:0', 9),  # an L-, T- or U-prism (O51), on a side, a shade and a half mark
 }
 PLAIN = {'plain', 'plainsizes'}
 DONE = """() => {

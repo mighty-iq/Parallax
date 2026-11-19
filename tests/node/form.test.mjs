@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/form/gen.js', 'js/ex/form/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10044); // 93 per combination (108 in version 3)
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 70 per combination (144 in version 3)
 const CHANCE = 0.25, LIMIT = CHANCE + 0.10;
 
 export async function run(t) {
@@ -40,13 +40,14 @@ const pk = (p) => `${p.solid}${p.marks}${p.view}${p.foil}`;
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat],
     ['form', 3, 'EX-19', ['Vz'], 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise; version 3: the test\'s kinds of item)');
-  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['solid', 3], ['marks', 6], ['view', 3], ['foil', 2]], 'dims');
+  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['solid', 4], ['marks', 6], ['view', 3], ['foil', 2]], 'dims');
+  t.eq(def.dims[0].levels[3], 'L-, T- and U-prisms', 'a fourth solid level: the non-convex prisms (O51)');
   t.eq(def.dims[3].levels, ['clear', 'close'], 'foils: clear (another kind, a size well off, or the marks) or close (the pattern\'s kind in every option); no level names marks, which the plain kind lacks');
   t.eq(def.starter, { dim: 'marks', levels: 1 }, 'the starter band is the first level of marks');
   t.eq(def.dims[1].levels, ['one shaded (starter)', 'plain', 'shaded faces', 'shaded and half', 'two shaded and half', 'shaded and two halves'], 'marks: the starter band, then the test\'s kinds (plain, shaded, partial shading last)');
   t.eq(def.dims[1].at, [-1.5, -0.9, -0.4, 0, 0.6, 1.2], 'marks: the band, plain and shaded in front, the half marks at their 1.1 difficulty (step 0.6)');
   // test-range tags describe format features only (note D1 §6.0)
-  t.eq(def.levelTags, { solid: ['test', 'test', 'test'], marks: ['below', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] }, 'level tags: the band below the test, half marks beyond it (prep sources only)');
+  t.eq(def.levelTags, { solid: ['test', 'test', 'test', 'test'], marks: ['below', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] }, 'level tags: the band below the test, half marks beyond it (prep sources only)');
   t.eq([def.lib.rangeOf({ solid: 0, marks: 0, view: 0, foil: 0 }), def.lib.rangeOf({ solid: 2, marks: 2, view: 2, foil: 1 }), def.lib.rangeOf({ solid: 0, marks: 4, view: 0, foil: 0 })], ['below', 'test', 'beyond'], 'an item\'s range: below wins, then beyond');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(Math.abs(lo + 3.7) < 1e-9, `the floor moves to −3.7 (${lo.toFixed(2)}; note D2 §3.5)`);
@@ -57,28 +58,47 @@ function testDefinition(t, PX, def) {
 
 /* ------------------------------------------------------------------ the model */
 
+// A non-convex solid closed and turned outward, by the test's own count (each directed edge once, its
+// reverse once; a positive volume from the divergence theorem).
+function closedOwn(S) {
+  const e = new Map();
+  let vol = 0;
+  for (const F of S.faces) {
+    for (let i = 0; i < F.length; i++) { const k = F[i] + ':' + F[(i + 1) % F.length]; e.set(k, (e.get(k) || 0) + 1); }
+    const P = F.map((v) => S.verts[v]);
+    for (let i = 1; i + 1 < P.length; i++) { const [a, b, c] = [P[0], P[i], P[i + 1]]; vol += (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0])) / 6; }
+  }
+  for (const [k, c] of e) { const [a, b] = k.split(':'); if (c !== 1 || e.get(b + ':' + a) !== 1) return false; }
+  return vol > 0;
+}
+
 function testModel(t, PX, L) {
   t.section('form: model');
-  const r = PX.rng(31), SYM = { box: [4], tri: [2], trap: [2], pyr: [2], frus: [2, 4], house: [2], tet: [1, 3], wedge: [1, 2], bevel: [1, 2] }; // a square frustum has four; a bevelled box as wide as it is tall two
-  const ALL = ['box', 'tri', 'trap', 'wedge', 'pyr', 'tet', 'frus', 'house', 'bevel']; // every kind built ('tet' is not used by items)
+  const r = PX.rng(31), SYM = { box: [4], tri: [2], trap: [2], pyr: [2], frus: [2, 4], house: [2], tet: [1, 3], wedge: [1, 2], bevel: [1, 2], L: [1, 2], T: [2], U: [2] }; // a square frustum has four; a bevelled box as wide as it is tall two; an L with equal arms two
+  const ALL = ['box', 'tri', 'trap', 'wedge', 'pyr', 'tet', 'frus', 'house', 'bevel', 'L', 'T', 'U']; // every kind built ('tet' is not used by items)
+  const NC = ['L', 'T', 'U'], ncN = {}, ncNets = {};
   t.eq(L.KINDS.flat().sort(), ALL.filter((k) => k !== 'tet').sort(), 'items use every kind with a four-sided face (half marks need one)');
-  let n = 0, closed = 0, symOk = 0, solidOk = 0, nets = 0, mirrorOk = 0, first = '';
-  for (let k = 0; k < 630; k++) {
-    const kind = ALL[k % ALL.length], S = L.build(kind, L.randomDims(r, kind));
+  let n = 0, closed = 0, symOk = 0, solidOk = 0, nets = 0, nConvex = 0, netsConvex = 0, mirrorOk = 0, ownClosed = 0, first = '';
+  for (let k = 0; k < 840; k++) {
+    const kind = ALL[k % ALL.length], S = L.build(kind, L.randomDims(r, kind)), nc = NC.includes(kind);
     n++;
-    if (L.okSolid(S)) solidOk++;
+    if (L.okSolid(S) && (nc ? closedOwn(S) : true)) solidOk++;
+    if (nc && closedOwn(S)) ownClosed++;
     const g = L.matchings(S, S).length;
     if (SYM[kind].includes(g)) symOk++; else first = first || `${kind} ${JSON.stringify(S.dims)} has ${g} turns onto itself`;
     const net = L.unfold(r, S);
+    if (nc) ncN[kind] = (ncN[kind] || 0) + 1; else nConvex++;
     if (!net) continue;
     nets++;
+    if (nc) ncNets[kind] = (ncNets[kind] || 0) + 1; else netsConvex++;
     if (L.validNet({ solid: S, net }) === true) closed++;
     // the mirror image is the same solid (all kinds are mirror-symmetric), so some turn carries one onto the other
     if (L.matchings(S, L.mirrored(S)).length === g) mirrorOk++;
   }
-  t.eq(solidOk, n, `every built solid is closed and convex (${n})`);
-  t.eq(symOk, n, 'turn groups: box 4, prisms and pyramids 2 (square frustum 4), uneven wedge, bevelled box and three-sided pyramid 1' + (first ? ' first: ' + first : ''));
-  t.ok(nets >= 0.9 * n, `random spanning trees unfold without overlap mostly (${nets}/${n})`);
+  t.eq(solidOk, n, `every built solid is closed (convex, or for L-, T- and U-prisms closed by the test's own count: each edge met once each way, outward faces) (${n})`);
+  t.eq(symOk, n, 'turn groups: box 4, prisms and pyramids 2 (square frustum 4), uneven wedge, bevelled box, three-sided pyramid and uneven L 1, T and U 2' + (first ? ' first: ' + first : ''));
+  t.ok(netsConvex >= 0.9 * nConvex, `random spanning trees unfold convex solids without overlap mostly (${netsConvex}/${nConvex})`);
+  t.ok(NC.every((k) => (ncNets[k] || 0) >= 0.3 * ncN[k]), `L-, T- and U-prisms: pieces laid one at a time find a pattern often (${NC.map((k) => k + ' ' + (ncNets[k] || 0) + '/' + ncN[k]).join(', ')})`);
   t.eq(closed, nets, 'every unfolded net folds back into its solid (the validator\'s fold)');
   t.eq(mirrorOk, nets, 'mirror images are congruent solids (marks decide chirality)');
   // A box net with a face moved does not close.
@@ -92,7 +112,7 @@ function testModel(t, PX, L) {
 function testPool(t, PX, def, L) {
   t.section('form: pool');
   const combos = PX.ex.enumerate(def);
-  t.eq(combos.length, 108, '108 combinations (3 × 6 × 3 × 2)');
+  t.eq(combos.length, 144, '144 combinations (4 × 6 × 3 × 2)');
   const per = Math.ceil(N_ITEMS / combos.length), items = [];
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, malformed = 0, json = 0, first = null;
   const before = { ...L.stats };
@@ -133,15 +153,18 @@ function testPool(t, PX, def, L) {
   return items;
 }
 
-// Two faces of the pattern not joined by a hinge that share a stretch of edge longer than 0.05 (the test's
-// own check: each edge projected on its longer axis).
+// Two faces of the pattern that share a stretch of edge longer than 0.05 other than the fold line between
+// a piece and its parent (the test's own check: each edge projected on its longer axis; non-convex pieces
+// can meet their parent beyond the fold line).
 function cutAlongFace(net) {
   const cr = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const same = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.01;
   for (let i = 0; i < net.length; i++) for (let j = i + 1; j < net.length; j++) {
-    if (net[i].parent === net[j].face || net[j].parent === net[i].face) continue;
+    const kin = net[i].parent === net[j].face || net[j].parent === net[i].face;
     const A = net[i].poly, B = net[j].poly;
     for (let k = 0; k < A.length; k++) for (let m = 0; m < B.length; m++) {
       const p = A[k], q = A[(k + 1) % A.length], r = B[m], w = B[(m + 1) % B.length], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (kin && same(p, w) && same(q, r)) continue; // the fold line itself
       if (Math.abs(cr(p, q, r)) / len > 0.01 || Math.abs(cr(p, q, w)) / len > 0.01) continue;
       const ax = Math.abs(q[0] - p[0]) >= Math.abs(q[1] - p[1]) ? 0 : 1;
       const lo = Math.max(Math.min(p[ax], q[ax]), Math.min(r[ax], w[ax])), hi = Math.min(Math.max(p[ax], q[ax]), Math.max(r[ax], w[ax]));
@@ -151,13 +174,51 @@ function cutAlongFace(net) {
   return false;
 }
 
+// A pattern that closes round a gap (the test's own flood fill on a fifth-unit grid).
+function holeIn(net) {
+  const pip = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+  const xs = net.flatMap((n) => n.poly.map((q) => q[0])), ys = net.flatMap((n) => n.poly.map((q) => q[1]));
+  const x0 = Math.min(...xs) - 0.3, y0 = Math.min(...ys) - 0.3, W = Math.ceil((Math.max(...xs) + 0.3 - x0) / 0.2), H = Math.ceil((Math.max(...ys) + 0.3 - y0) / 0.2);
+  const g = new Uint8Array(W * H);
+  for (let i = 0; i < W; i++) for (let j = 0; j < H; j++) if (net.some((n) => pip(n.poly, x0 + (i + 0.5) * 0.2, y0 + (j + 0.5) * 0.2))) g[i * H + j] = 1;
+  const st = [0]; g[0] = 2;
+  while (st.length) { const k = st.pop(), i = Math.floor(k / H), j = k % H; for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const u = i + a, v = j + b; if (u >= 0 && v >= 0 && u < W && v < H && !g[u * H + v]) { g[u * H + v] = 2; st.push(u * H + v); } } }
+  return g.some((x) => x === 0);
+}
+// On an L-, T- or U-prism, the picture painted in lib.drawOrder (a 64 × 64 grid, later faces over earlier)
+// against the validator's rays (lib.shownShare): per face, the share each shows agrees within 0.15.
+function paintAgrees(L, o) {
+  const Q = L.screenPts(o.solid, o.view), order = L.drawOrder(o.solid, o.view), rays = L.shownShare(o.solid, o.view);
+  const pip = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+  const xs = Q.map((q) => q[0]), ys = Q.map((q) => q[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), sx = (Math.max(...xs) - x0) / 64, sy = (Math.max(...ys) - y0) / 64;
+  const top = new Int16Array(64 * 64).fill(-1), inside = {};
+  for (const f of order) {
+    const P = o.solid.faces[f].map((v) => Q[v]);
+    inside[f] = 0;
+    for (let i = 0; i < 64; i++) for (let j = 0; j < 64; j++) if (pip(P, x0 + (i + 0.5) * sx, y0 + (j + 0.5) * sy)) { top[i * 64 + j] = f; inside[f]++; }
+  }
+  const shows = {};
+  top.forEach((f) => { if (f >= 0) shows[f] = (shows[f] || 0) + 1; });
+  return order.every((f) => inside[f] < 12 || Math.abs((shows[f] || 0) / inside[f] - rays[f]) <= 0.15);
+}
+
 function testItems(t, PX, def, L, pool) {
   t.section('form: items');
   const ranks = [0, 0, 0, 0], kinds = {}, solids = {};
   let lvl = 0, marksOk = 0, viewOk = 0, shapeOk = 0, nShape = 0, noCube = 0, seen3 = 0, congruentOk = 0, nFoil = 0;
   let nBand = 0, band2x2 = 0, bandOff = 0, bandKinds = 0;
   let nPlain = 0, plainOk = 0, nShaded = 0, shadedOk = 0, shadedOther = 0, shadedFoils = 0, nLines = 0, linesOk = 0, dashedTouch = 0;
+  let nNC = 0, noHole = 0, nPaint = 0, paintOk = 0, ncMarks = 0, ncMarksOk = 0;
   for (const { p, it } of pool) {
+    if (p.solid === 3) { // L-, T- and U-prisms (version 3, O51)
+      nNC++;
+      if (!holeIn(it.net)) noHole++;
+      it.options.forEach((o) => {
+        const sh = L.shownShare(o.solid, o.view), c = L.facing(o.solid, o.view);
+        o.marks.forEach((m, g) => { if (m && c[g] > 0) { ncMarks++; if (sh[g] <= 0.1 || sh[g] >= 0.85) ncMarksOk++; } });
+        if (nPaint < 1200) { nPaint++; if (paintAgrees(L, o)) paintOk++; }
+      });
+    }
     ranks[it.key]++;
     // fold lines drawn plain from the plain kind on: every line inside the pattern must fold (own check)
     if (p.marks >= 1) { nLines++; if (!cutAlongFace(it.net)) linesOk++; } else if (cutAlongFace(it.net)) dashedTouch++;
@@ -233,6 +294,9 @@ function testItems(t, PX, def, L, pool) {
     it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
   }
   const N = pool.length;
+  t.ok(nNC >= 1000 && noHole === nNC, `L-, T- and U-prisms: no pattern closes round a gap (${noHole}/${nNC})`);
+  t.eq(ncMarksOk, ncMarks, `L-, T- and U-prisms: a mark on a face turned toward the viewer shows wholly or not at all (the validator's rays; ${ncMarks} marks)`);
+  t.eq(paintOk, nPaint, `L-, T- and U-prisms: faces painted in lib.drawOrder show what rays from each face find (${nPaint} pictures)`);
   t.eq(linesOk, nLines, `with plain fold lines no cut edge lies along another face, so every line inside the pattern folds (${linesOk}/${nLines})`);
   console.log(`       form starter-band patterns (dashed folds) with a cut along another face: ${dashedTouch} of ${nBand}`);
   t.eq(lvl, N, 'the solid is of the level\'s kinds');
@@ -276,8 +340,8 @@ const mtype = (m) => (!m ? 0 : typeof m === 'object' ? 2 : 1);
 function shapeSolvers(L, it) {
   const net = it.net.map((n) => ({ k: shapeOfPts(n.poly.map(([x, y]) => [x, y, 0])), m: mtype(it.marks[n.face]) }));
   const O = it.options.map((o) => {
-    const c = L.facing(o.solid, o.view), faces = o.solid.faces.map((G, g) => ({ c: c[g], k: shapeOf(o.solid, g), m: mtype(o.marks[g]) }));
-    return { clear: faces.filter((f) => f.c >= L.SEEN), drawn: faces.filter((f) => f.c > 0) };
+    const c = L.facing(o.solid, o.view), seen = new Set(L.seenFaces(o.solid, o.view)), faces = o.solid.faces.map((G, g) => ({ g, c: c[g], k: shapeOf(o.solid, g), m: mtype(o.marks[g]) }));
+    return { clear: faces.filter((f) => seen.has(f.g)), drawn: faces.filter((f) => f.c > 0) };
   });
   const out = {};
   for (const [name, same] of [['exact', (a, b) => a === b], ['rough', alike]]) {
@@ -407,7 +471,7 @@ const cpuMs = typeof process.threadCpuUsage === 'function'
   : () => performance.now();
 function testTiming(t, PX, def) {
   t.section('form: timing');
-  for (const hard of [{ solid: 2, marks: 5, view: 2, foil: 1 }, { solid: 2, marks: 2, view: 2, foil: 0 }, { solid: 2, marks: 1, view: 2, foil: 0 }, { solid: 2, marks: 0, view: 2, foil: 1 }]) {
+  for (const hard of [{ solid: 3, marks: 5, view: 2, foil: 1 }, { solid: 3, marks: 2, view: 2, foil: 0 }, { solid: 3, marks: 1, view: 2, foil: 0 }, { solid: 3, marks: 0, view: 2, foil: 0 }, { solid: 2, marks: 5, view: 2, foil: 1 }]) {
     let best = Infinity; const text = [];
     for (let r = 0; r < 3 && best >= 20; r++) {
       const cpu = [], wall = [];

@@ -85,6 +85,19 @@
     for (i = 0; i < n; i++) { faces[0].push(i); faces[1].push(n + i); faces.push([i, n + i, n + (i + 1) % n, (i + 1) % n]); }
     return finish(kind, dims, verts, faces);
   }
+  // v1.2 (version 3, O51): L-, T- and U-prisms, a non-convex cross-section (x, y) extruded along z.
+  // Faces are oriented from the polygon's own winding (finish()'s centroid rule holds only for convex
+  // solids): the near cap counterclockwise, the far cap reversed, the sides outward of a CCW outline.
+  function ncPrism(kind, dims, poly, L) {
+    var n = poly.length, verts = [], faces = [[], []], a2 = 0, i, cx = 0;
+    for (i = 0; i < n; i++) a2 += poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1];
+    if (a2 < 0) poly = poly.slice().reverse();
+    poly.forEach(function (q) { cx += q[0] / n; });
+    poly.forEach(function (q) { verts.push([q[0] - cx, q[1], L / 2]); });
+    poly.forEach(function (q) { verts.push([q[0] - cx, q[1], -L / 2]); });
+    for (i = 0; i < n; i++) { faces[0].push(i); faces[1].push(n + (n - i) % n); faces.push([i, n + i, n + (i + 1) % n, (i + 1) % n]); }
+    return { kind: kind, dims: dims, verts: verts, faces: faces };
+  }
   function pyramid(kind, dims, base, apex) { // base in (x, z) at y = 0
     var verts = base.map(function (p) { return [p[0], 0, p[1]]; }).concat([apex]), n = base.length, faces = [base.map(function (_, i) { return i; })];
     for (var i = 0; i < n; i++) faces.push([i, (i + 1) % n, n]);
@@ -99,6 +112,12 @@
     // v1.2 (version 3): a box with one long top edge bevelled away (a five-sided prism): d = [width,
     // height, bevel, length], the bevel cutting `bevel` off the width and the height
     bevel: function (d) { return prism('bevel', d, [[-d[0] / 2, 0], [d[0] / 2, 0], [d[0] / 2, d[1] - d[2]], [d[0] / 2 - d[2], d[1]], [-d[0] / 2, d[1]]], d[3]); },
+    // d = [width, height, upright arm's thickness, foot's thickness, length]
+    L: function (d) { return ncPrism('L', d, [[0, 0], [d[0], 0], [d[0], d[3]], [d[2], d[3]], [d[2], d[1]], [0, d[1]]], d[4]); },
+    // d = [bar's width, height, stem's width, bar's thickness, length]
+    T: function (d) { var w = d[0] / 2, a = d[2] / 2, y = d[1] - d[3]; return ncPrism('T', d, [[-a, 0], [a, 0], [a, y], [w, y], [w, d[1]], [-w, d[1]], [-w, y], [-a, y]], d[4]); },
+    // d = [width, height, wall's thickness, floor's thickness, length]
+    U: function (d) { var w = d[0] / 2, i = w - d[2]; return ncPrism('U', d, [[-w, 0], [w, 0], [w, d[1]], [i, d[1]], [i, d[3]], [-i, d[3]], [-i, d[1]], [-w, d[1]]], d[4]); },
     pyr: function (d) { return pyramid('pyr', d, [[-d[0] / 2, -d[1] / 2], [d[0] / 2, -d[1] / 2], [d[0] / 2, d[1] / 2], [-d[0] / 2, d[1] / 2]], [0, d[2], 0]); },
     tet: function (d) { return pyramid('tet', d, [[-d[0] / 2, -d[1] / 3], [d[0] / 2, -d[1] / 3], [0, 2 * d[1] / 3]], [0, d[2], 0]); },
     frus: function (d) {
@@ -108,7 +127,9 @@
   };
   // dim 'solid'. The three-sided pyramid ('tet') is built but not used: it has no four-sided face for
   // the half mark that every level now carries.
-  var KINDS = [['box', 'tri', 'trap', 'bevel'], ['wedge', 'pyr'], ['frus', 'house']];
+  var KINDS = [['box', 'tri', 'trap', 'bevel'], ['wedge', 'pyr'], ['frus', 'house'], ['L', 'T', 'U']];
+  var NCK = { L: 1, T: 1, U: 1 }; // the non-convex kinds (version 3, O51)
+  function isNC(s) { return !!(s && NCK[s.kind]); }
   // Sizes per kind, in units (half-unit lattice); the solid is never a cube.
   function randomDims(rng, kind) {
     var d;
@@ -120,6 +141,10 @@
     if (kind === 'pyr') { do { d = [half(rng, 2, 3.5), half(rng, 2, 3.5), half(rng, 1.5, 3)]; } while (d[0] === d[1]); return d; }
     if (kind === 'tet') return [half(rng, 2.5, 4), half(rng, 2, 3.5), half(rng, 1.5, 3)];
     if (kind === 'bevel') { do { d = [half(rng, 2, 3.5), half(rng, 2, 3.5), half(rng, 1, 1.5), half(rng, 2, 4)]; } while (d[2] > Mth.min(d[0], d[1]) - 1 || d[0] === d[3]); return d; }
+    // small enough that a pattern of eight or ten faces keeps its unit edges readable on a phone
+    if (kind === 'L') { do { d = [half(rng, 2, 3), half(rng, 2, 3), half(rng, 1, 1.5), half(rng, 1, 1.5), half(rng, 1.5, 2.5)]; } while (!okDims('L', d)); return d; }
+    if (kind === 'T') { do { d = [half(rng, 3, 4), half(rng, 2, 3), half(rng, 1, 2), 1, half(rng, 1.5, 2.5)]; } while (!okDims('T', d)); return d; }
+    if (kind === 'U') { do { d = [half(rng, 3, 4), half(rng, 2, 3), 1, 1, half(rng, 1.5, 2.5)]; } while (!okDims('U', d)); return d; }
     return [half(rng, 2, 3.5), half(rng, 2, 3.5), half(rng, 1.5, 2.5), 0.5];
   }
   function build(kind, dims) { return BUILD[kind](dims); }
@@ -141,6 +166,8 @@
     if (kind === 'trap') return d[1] <= d[0] - 1;
     if (kind === 'box') return d[0] !== d[1] && d[1] !== d[2] && d[0] !== d[2];
     if (kind === 'bevel') return d[2] <= Mth.min(d[0], d[1]) - 1;
+    if (kind === 'L' || kind === 'T') return d[2] <= d[0] - 1 && d[3] <= d[1] - 1;
+    if (kind === 'U') return 2 * d[2] <= d[0] - 1 && d[3] <= d[1] - 1;
     return true;
   }
   function mirrored(s) { // reflected through x = 0, faces reoriented
@@ -159,13 +186,104 @@
   var SEEN = 0.2, BAND = 0.02;
   function viewMatrix(v) { var c = YAW[v.yaw][0], s = YAW[v.yaw][1]; return mmul([c, 0, s, 0, 1, 0, -s, 0, c], TILTS[v.tilt]); }
   function faceNormal(s, f) { return unit(newell(s.faces[f].map(function (i) { return s.verts[i]; }))); }
-  // Cosine of each face's outward normal with the direction toward the viewer.
-  function facing(s, v) {
-    var M = viewMatrix(v);
-    var V = VIEWS[v.el || 0];
-    return s.faces.map(function (_, f) { return dot(mvec(M, faceNormal(s, f)), V); });
+  // Cosine of each face's outward normal with the direction toward the viewer. Normals are kept per solid
+  // object (a WeakMap: nothing is added to the solid itself).
+  var NORMALS = typeof WeakMap === 'function' ? new WeakMap() : null;
+  function normalsOf(s) {
+    var n = NORMALS && NORMALS.get(s);
+    if (!n) { n = s.faces.map(function (_, f) { return faceNormal(s, f); }); if (NORMALS) NORMALS.set(s, n); }
+    return n;
   }
-  function seenFaces(s, v) { return facing(s, v).map(function (c, f) { return c >= SEEN ? f : -1; }).filter(function (f) { return f >= 0; }); }
+  function facing(s, v) {
+    var M = viewMatrix(v), V = VIEWS[v.el || 0], d = [M[0] * V[0] + M[3] * V[1] + M[6] * V[2], M[1] * V[0] + M[4] * V[1] + M[7] * V[2], M[2] * V[0] + M[5] * V[1] + M[8] * V[2]];
+    return normalsOf(s).map(function (n) { return n[0] * d[0] + n[1] * d[1] + n[2] * d[2]; });
+  }
+  // On a non-convex prism a face turned toward the viewer may be partly hidden by another part of the
+  // solid (version 3, O51). It counts as seen only when it shows wholly (VIS_SEEN of it or more), and a
+  // marked face must show wholly or not at all (randomView), so a mark is never half hidden.
+  var VIS_SEEN = 0.97, VIS_NONE = 0.02;
+  function seenFaces(s, v) {
+    var c = facing(s, v), vis = isNC(s) ? visible(s, v) : null;
+    return c.map(function (x, f) { return x >= SEEN && (!vis || vis[f] >= VIS_SEEN) ? f : -1; }).filter(function (f) { return f >= 0; });
+  }
+  var RIGHT = [0.8660254038, 0, -0.5];
+  // The corners in the picture: x right, y up, z toward the viewer (a right-handed frame).
+  function screenPts(s, v) {
+    var M = viewMatrix(v), V = VIEWS[v.el || 0], U = cross(V, RIGHT);
+    return s.verts.map(function (q) { var w = mvec(M, q); return [dot(w, RIGHT), dot(w, U), dot(w, V)]; });
+  }
+  // A front face's depth at picture point (x, y), from its plane.
+  function depthFn(Q) { var n = newell(Q); return function (x, y) { return Q[0][2] - (n[0] * (x - Q[0][0]) + n[1] * (y - Q[0][1])) / n[2]; }; }
+  // Points over the face's picture (a 14 × 14 grid on its box, those inside); equal areas in the picture
+  // are equal areas on the face (a parallel projection).
+  function gridIn(P) {
+    var x0 = INF, x1 = -INF, y0 = INF, y1 = -INF, out = [];
+    P.forEach(function (q) { x0 = Mth.min(x0, q[0]); x1 = Mth.max(x1, q[0]); y0 = Mth.min(y0, q[1]); y1 = Mth.max(y1, q[1]); });
+    for (var i = 0; i < 12; i++) for (var j = 0; j < 12; j++) { var x = x0 + (x1 - x0) * (i + 0.5) / 12, y = y0 + (y1 - y0) * (j + 0.5) / 12; if (pip2(P, x, y)) out.push([x, y]); }
+    return out;
+  }
+  function boxOf(P) { var b = [INF, INF, -INF, -INF]; P.forEach(function (q) { b[0] = Mth.min(b[0], q[0]); b[1] = Mth.min(b[1], q[1]); b[2] = Mth.max(b[2], q[0]); b[3] = Mth.max(b[3], q[1]); }); return b; }
+  var visCache = {}, visCount = 0;
+  // Per face, the share of it the picture shows (0 for faces turned away); convex solids show every face
+  // turned toward the viewer wholly.
+  function visible(s, v) {
+    var c = facing(s, v), key = s.kind + s.dims.join(',') + (s.mirror ? 'm' : '') + '|' + v.yaw + v.tilt + (v.el || 0);
+    if (!isNC(s)) return c.map(function (x) { return x > 0 ? 1 : 0; });
+    if (visCache[key]) return visCache[key];
+    var Q = screenPts(s, v), front = [], poly = {}, dep = {}, box = {}, out = s.faces.map(function () { return 0; });
+    s.faces.forEach(function (F, f) { if (c[f] > 1e-9) { front.push(f); poly[f] = F.map(function (i) { return Q[i]; }); dep[f] = depthFn(poly[f]); box[f] = boxOf(poly[f]); } });
+    for (var a = 0; a < front.length; a++) {
+      var f = front[a], pts = gridIn(poly[f]), shown = 0, near = [];
+      for (var b = 0; b < front.length; b++) {
+        var g = front[b], A = box[f], B = box[g];
+        if (g !== f && A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3]) near.push(g);
+      }
+      for (var k = 0; k < pts.length; k++) {
+        var x = pts[k][0], y = pts[k][1], z = dep[f](x, y), hid = false;
+        for (var m = 0; m < near.length && !hid; m++) { var h = near[m], H = box[h]; if (x > H[0] && x < H[2] && y > H[1] && y < H[3] && pip2(poly[h], x, y) && dep[h](x, y) > z + 1e-6) hid = true; }
+        if (!hid) shown++;
+      }
+      out[f] = pts.length ? shown / pts.length : 0;
+    }
+    if (++visCount > 4000) { visCache = {}; visCount = 0; }
+    visCache[key] = out;
+    return out;
+  }
+  // The faces turned toward the viewer in the order to paint them (far first): convex solids in any
+  // order; on a non-convex prism, a face is painted after every face it covers (orderPolys).
+  function drawOrder(s, v) {
+    var c = facing(s, v), front = s.faces.map(function (_, f) { return f; }).filter(function (f) { return c[f] > 1e-9; });
+    if (!isNC(s)) return front;
+    var Q = screenPts(s, v);
+    return orderPolys(front.map(function (f) { return { id: f, pts: s.faces[f].map(function (i) { return Q[i]; }) }; }));
+  }
+  // Planar polygons in picture space (x right, y up, z toward the viewer) in the order to paint them: a
+  // topological order of "covers" where two pictures overlap (depths compared at grid points of each);
+  // a cycle falls back to mean depth. Also the fold-up's order (the view) on non-convex prisms.
+  function orderPolys(list) {
+    var P = list.filter(function (x) { return Mth.abs(newell(x.pts)[2]) > 1e-9; }), dep = {}, mean = {}, after = {}, deg = {}, box = {};
+    P.forEach(function (x) {
+      dep[x.id] = depthFn(x.pts); box[x.id] = boxOf(x.pts);
+      mean[x.id] = x.pts.reduce(function (t, q) { return t + q[2]; }, 0) / x.pts.length; after[x.id] = []; deg[x.id] = 0;
+    });
+    for (var a = 0; a < P.length; a++) for (var b = a + 1; b < P.length; b++) {
+      var f = P[a], g = P[b], A = box[f.id], B = box[g.id], vote = 0;
+      if (!(A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3])) continue;
+      gridIn(f.pts).forEach(function (q) { if (pip2(g.pts, q[0], q[1])) { var d = dep[g.id](q[0], q[1]) - dep[f.id](q[0], q[1]); if (d > 1e-6) vote++; else if (d < -1e-6) vote--; } });
+      gridIn(g.pts).forEach(function (q) { if (pip2(f.pts, q[0], q[1])) { var d = dep[g.id](q[0], q[1]) - dep[f.id](q[0], q[1]); if (d > 1e-6) vote++; else if (d < -1e-6) vote--; } });
+      if (vote > 0) { after[f.id].push(g.id); deg[g.id]++; } else if (vote < 0) { after[g.id].push(f.id); deg[f.id]++; }
+    }
+    var out = [], ready = P.filter(function (x) { return !deg[x.id]; }).map(function (x) { return x.id; });
+    while (ready.length) {
+      ready.sort(function (x, y) { return mean[x] - mean[y]; });
+      var f0 = ready.shift();
+      out.push(f0);
+      after[f0].forEach(function (g) { if (--deg[g] === 0) ready.push(g); });
+    }
+    var all = P.map(function (x) { return x.id; });
+    if (out.length < all.length) return all.sort(function (x, y) { return mean[x] - mean[y]; });
+    return out;
+  }
 
   /* ------------------------------------------------------------ nets */
   function adjacency(s) { // [{ a, b, f, g }]: edges shared by faces f and g
@@ -187,6 +305,7 @@
   // strict (every level whose fold lines are drawn plain): no two faces may touch along a stretch of edge
   // except at their hinge, since a cut lying inside the outline would read as a fold line
   function unfold(rng, s, strict) {
+    if (isNC(s)) return unfoldNC(rng, s);
     var E = adjacency(s), nF = s.faces.length, root = rint(rng, 0, nF - 1), placed = {}, net = [], queue = [root];
     placed[root] = flat(s, root);
     net.push({ face: root, poly: placed[root], parent: -1, hinge: null });
@@ -205,15 +324,68 @@
         queue.push(g);
       });
     }
-    if (net.length !== nF || overlapping(net) || (strict && touchesOffHinge(net))) return null;
+    if (net.length !== nF || overlapping(net) || (strict && touchesOffHinge(net, s))) return null;
     // Rounded to a thousandth of a unit (stored); the validator folds what is stored.
     net.forEach(function (n) { n.poly = n.poly.map(function (p) { return [Mth.round(p[0] * 1000) / 1000, Mth.round(p[1] * 1000) / 1000]; }); });
     return net;
   }
-  // The longest stretch of polygon A's outline lying on polygon B's (collinear edges that overlap).
-  function sharedRun(A, B) {
+  // Non-convex prisms (version 3, O51): random spanning trees almost always overlap, so pieces are laid
+  // one at a time, each through a hinge (in random order) where it overlaps no piece already laid and
+  // touches none along an edge but its parent; stuck, the attempt fails. Always strict (no cut inside).
+  function unfoldNC(rng, s) {
+    var E = rshuffle(rng, adjacency(s)), nF = s.faces.length, root = rint(rng, 0, nF - 1), placed = {}, net = [];
+    placed[root] = flat(s, root);
+    net.push({ face: root, poly: placed[root], parent: -1, hinge: null });
+    while (net.length < nF) {
+      var done = false;
+      for (var x = 0; x < E.length && !done; x++) {
+        var e = E[x], f = placed[e.f] && !placed[e.g] ? e.f : placed[e.g] && !placed[e.f] ? e.g : -1;
+        if (f < 0) continue;
+        var g = f === e.f ? e.g : e.f, Pf = s.faces[f], Pg = s.faces[g], A = placed[f][Pf.indexOf(e.a)], B = placed[f][Pf.indexOf(e.b)];
+        var loc = flat(s, g), a2 = loc[Pg.indexOf(e.a)], b2 = loc[Pg.indexOf(e.b)];
+        var ang = Mth.atan2(B[1] - A[1], B[0] - A[0]) - Mth.atan2(b2[1] - a2[1], b2[0] - a2[0]), c = Mth.cos(ang), sn = Mth.sin(ang);
+        var poly = loc.map(function (q) { var dx = q[0] - a2[0], dy = q[1] - a2[1]; return [A[0] + c * dx - sn * dy, A[1] + sn * dx + c * dy]; });
+        var bad = net.some(function (n) { return overlapPair(poly, n.poly) || (n.face !== f ? sharedRun(poly, n.poly) > 0.05 : sharedRun(poly, n.poly, Pg.indexOf(e.a), Pg.indexOf(e.b)) > 0.05); });
+        if (bad) continue;
+        placed[g] = poly;
+        net.push({ face: g, poly: poly, parent: f, hinge: [e.a, e.b] });
+        done = true;
+        E = rshuffle(rng, E);
+      }
+      if (!done) return null;
+    }
+    net.forEach(function (n) { n.poly = n.poly.map(function (q) { return [Mth.round(q[0] * 1000) / 1000, Mth.round(q[1] * 1000) / 1000]; }); });
+    return overlapping(net) || touchesOffHinge(net, s) || enclosesHole(net) ? null : net;
+  }
+  // A pattern must not close round a gap (a notch shut by a piece touching it at two corners reads as a
+  // hole in a face): cells of a quarter unit, the background flooded from the border; any cell left is
+  // a hole.
+  function enclosesHole(net) {
+    var b = [INF, INF, -INF, -INF], st = 0.25;
+    net.forEach(function (n) { var q = boxOf(n.poly); b = [Mth.min(b[0], q[0]), Mth.min(b[1], q[1]), Mth.max(b[2], q[2]), Mth.max(b[3], q[3])]; });
+    var W = Mth.ceil((b[2] - b[0]) / st) + 2, H = Mth.ceil((b[3] - b[1]) / st) + 2, cell = new Array(W * H), stack = [], i, j;
+    for (i = 0; i < W; i++) for (j = 0; j < H; j++) {
+      var x = b[0] + (i - 0.5) * st, y = b[1] + (j - 0.5) * st;
+      cell[i * H + j] = net.some(function (n) { return pip2(n.poly, x, y); }) ? 1 : 0;
+    }
+    stack.push(0); cell[0] = 2;
+    while (stack.length) {
+      var k = stack.pop(), ci = Mth.floor(k / H), cj = k % H;
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+        var ni = ci + d[0], nj = cj + d[1];
+        if (ni < 0 || nj < 0 || ni >= W || nj >= H || cell[ni * H + nj] !== 0) return;
+        cell[ni * H + nj] = 2; stack.push(ni * H + nj);
+      });
+    }
+    for (i = 0; i < cell.length; i++) if (cell[i] === 0) return true;
+    return false;
+  }
+  // The longest stretch of polygon A's outline lying on polygon B's (collinear edges that overlap); with
+  // ha, hb: A's edge between those corners (its hinge with B) left out.
+  function sharedRun(A, B, ha, hb) {
     var best = 0;
     for (var k = 0; k < A.length; k++) for (var m = 0; m < B.length; m++) {
+      if (ha !== undefined && ((k === ha && (k + 1) % A.length === hb) || (k === hb && (k + 1) % A.length === ha))) continue;
       var p = A[k], q = A[(k + 1) % A.length], r = B[m], t = B[(m + 1) % B.length], dx = q[0] - p[0], dy = q[1] - p[1], L = Mth.sqrt(dx * dx + dy * dy);
       if (L < 1e-9) continue;
       if (Mth.abs((r[0] - p[0]) * dy - (r[1] - p[1]) * dx) / L > 0.01 || Mth.abs((t[0] - p[0]) * dy - (t[1] - p[1]) * dx) / L > 0.01) continue;
@@ -222,10 +394,14 @@
     }
     return best;
   }
-  function touchesOffHinge(net) {
+  function touchesOffHinge(net, s) {
     for (var i = 0; i < net.length; i++) for (var j = i + 1; j < net.length; j++) {
-      if (net[i].parent === net[j].face || net[j].parent === net[i].face) continue;
-      if (sharedRun(net[i].poly, net[j].poly) > 0.05) return true;
+      var c = net[i].parent === net[j].face ? net[i] : net[j].parent === net[i].face ? net[j] : null;
+      if (!c) { if (sharedRun(net[i].poly, net[j].poly) > 0.05) return true; continue; }
+      // parent and child (non-convex pieces can also meet beyond their hinge): the child's hinge edge left out
+      if (!s) continue;
+      var F = s.faces[c.face], o = c === net[i] ? net[j] : net[i];
+      if (sharedRun(c.poly, o.poly, F.indexOf(c.hinge[0]), F.indexOf(c.hinge[1])) > 0.05) return true;
     }
     return false;
   }
@@ -239,18 +415,55 @@
     for (var i = 0, j = P.length - 1; i < P.length; j = i++) { var a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; }
     return c;
   }
-  function inner(P) { // a point well inside a convex polygon (its centroid)
-    var x = 0, y = 0; P.forEach(function (p) { x += p[0]; y += p[1]; }); return [x / P.length, y / P.length];
+  function inner(P) { // a point well inside the polygon: its centroid, or (non-convex) an ear's centroid
+    var x = 0, y = 0; P.forEach(function (p) { x += p[0]; y += p[1]; });
+    var c = [x / P.length, y / P.length];
+    if (pip2(P, c[0], c[1])) return c;
+    for (var i = 0; i < P.length; i++) {
+      var a = P[(i + P.length - 1) % P.length], b = P[i], d = P[(i + 1) % P.length];
+      if ((b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]) <= 1e-9) continue; // a reflex corner
+      var e = [(a[0] + b[0] + d[0]) / 3, (a[1] + b[1] + d[1]) / 3];
+      if (pip2(P, e[0], e[1])) return e;
+    }
+    return c;
+  }
+  function convexPoly(A) {
+    for (var i = 0; i < A.length; i++) { var a = A[i], b = A[(i + 1) % A.length], c = A[(i + 2) % A.length]; if ((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) < -1e-9) return false; }
+    return true;
+  }
+  // A point just inside polygon A next to its corner k: toward the inner point c on a convex piece; on a
+  // non-convex one along the corner's bisector, turned inward at a reflex corner.
+  function nudgeIn(A, k, c) {
+    var q = A[k];
+    if (convexPoly(A)) return [q[0] + (c[0] - q[0]) * 0.02, q[1] + (c[1] - q[1]) * 0.02];
+    var a = A[(k + A.length - 1) % A.length], b = A[(k + 1) % A.length], u = [a[0] - q[0], a[1] - q[1]], w = [b[0] - q[0], b[1] - q[1]];
+    var lu = Mth.sqrt(u[0] * u[0] + u[1] * u[1]) || 1, lw = Mth.sqrt(w[0] * w[0] + w[1] * w[1]) || 1, d = [u[0] / lu + w[0] / lw, u[1] / lu + w[1] / lw], ld = Mth.sqrt(d[0] * d[0] + d[1] * d[1]);
+    var cr = (q[0] - a[0]) * (b[1] - q[1]) - (q[1] - a[1]) * (b[0] - q[0]);
+    if (ld < 1e-9) d = [-w[1] / lw, w[0] / lw]; else { d = [d[0] / ld, d[1] / ld]; if (cr < 0) d = [-d[0], -d[1]]; }
+    return [q[0] + d[0] * 0.02, q[1] + d[1] * 0.02];
+  }
+  function midIn(A, k, B) {
+    var p = A[k], q = A[(k + 1) % A.length], dx = q[0] - p[0], dy = q[1] - p[1], l = Mth.sqrt(dx * dx + dy * dy) || 1;
+    return pip2(B, (p[0] + q[0]) / 2 - dy / l * 0.02, (p[1] + q[1]) / 2 + dx / l * 0.02);
   }
   function overlapping(net) {
-    for (var i = 0; i < net.length; i++) for (var j = i + 1; j < net.length; j++) {
-      var A = net[i].poly, B = net[j].poly, k, m;
+    for (var i = 0; i < net.length; i++) for (var j = i + 1; j < net.length; j++) if (overlapPair(net[i].poly, net[j].poly)) return true;
+    return false;
+  }
+  function overlapPair(A, B) {
+    {
+      var k, m;
       for (k = 0; k < A.length; k++) for (m = 0; m < B.length; m++) if (segCross(A[k], A[(k + 1) % A.length], B[m], B[(m + 1) % B.length])) return true;
       var ca = inner(A), cb = inner(B);
       if (pip2(B, ca[0], ca[1]) || pip2(A, cb[0], cb[1])) return true;
       // a vertex of one strictly inside the other (overlaps that cross no edge properly)
-      for (k = 0; k < A.length; k++) { var pa = A[k], qa = [pa[0] + (ca[0] - pa[0]) * 0.02, pa[1] + (ca[1] - pa[1]) * 0.02]; if (pip2(B, qa[0], qa[1])) return true; }
-      for (m = 0; m < B.length; m++) { var pb = B[m], qb = [pb[0] + (cb[0] - pb[0]) * 0.02, pb[1] + (cb[1] - pb[1]) * 0.02]; if (pip2(A, qb[0], qb[1])) return true; }
+      for (k = 0; k < A.length; k++) { var qa = nudgeIn(A, k, ca); if (pip2(B, qa[0], qa[1])) return true; }
+      for (m = 0; m < B.length; m++) { var qb = nudgeIn(B, m, cb); if (pip2(A, qb[0], qb[1])) return true; }
+      // non-convex pieces: a point just inside each edge's middle (left of a CCW outline) inside the other
+      if (A.length > 5 || B.length > 5) {
+        for (k = 0; k < A.length; k++) if (midIn(A, k, B)) return true;
+        for (m = 0; m < B.length; m++) if (midIn(B, m, A)) return true;
+      }
     }
     return false;
   }
@@ -317,7 +530,7 @@
   // Tags that describe format features only (note D1 §6.0): below the test (the starter band and its
   // scaffolds: dashed fold lines), the documented test range, or beyond it (half marks: prep sources only).
   // Never the real test's difficulty or a forecast.
-  var LEVEL_TAGS = { solid: ['test', 'test', 'test'], marks: ['below', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] };
+  var LEVEL_TAGS = { solid: ['test', 'test', 'test', 'test'], marks: ['below', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] };
   function rangeOf(params) {
     var p = cleanParams(params), out = 'test';
     Object.keys(LEVEL_TAGS).forEach(function (k) { var t = LEVEL_TAGS[k][p[k]]; if (t === 'below') out = 'below'; else if (t === 'beyond' && out !== 'below') out = 'beyond'; });
@@ -340,11 +553,11 @@
   function shapeClasses(s) { return s.faces.map(function (_, f) { return shapeKey(s, f); }); }
   // Marks for the level. The first lands on a face of `seen` (the key's picture shows it); faces with a
   // congruent partner are preferred, so a marked face's shape alone rarely names it.
-  function randomMarks(rng, s, setup0, seen) {
+  function randomMarks(rng, s, setup0, seen, ok) { // ok: per face, whether a mark may sit there (markable)
     var setup = rshuffle(rng, setup0), m = s.faces.map(function () { return 0; }), cls = shapeClasses(s);
     function partnered(f) { return cls.some(function (c, g) { return g !== f && c === cls[f]; }); }
     for (var i = 0; i < setup.length; i++) {
-      var cand = s.faces.map(function (F, f) { return !m[f] && (setup[i] === 'F' || F.length === 4) && (i > 0 || !seen || seen.indexOf(f) >= 0) ? f : -1; }).filter(function (f) { return f >= 0; });
+      var cand = s.faces.map(function (F, f) { return !m[f] && (!ok || ok[f]) && (setup[i] === 'F' || F.length === 4) && (i > 0 || !seen || seen.indexOf(f) >= 0) ? f : -1; }).filter(function (f) { return f >= 0; });
       if (!cand.length) return null;
       var pref = cand.filter(partnered), f = rpick(rng, pref.length && rng.chance(0.7) ? pref : cand);
       m[f] = setup[i] === 'F' ? 1 : { h: rint(rng, 0, 3) };
@@ -405,14 +618,24 @@
   function markedSeen(s, m, v) { return seenFaces(s, v).filter(function (f) { return m[f]; }).length; }
   // A view of the level's kind showing at least three faces clearly and one mark; no face sits near
   // the threshold, so what counts as seen never hangs on rounding.
+  // Non-convex prisms (version 3): a marked face shows wholly or not at all, and three faces show wholly.
   function randomView(rng, s, m, level) {
-    for (var t = 0; t < 24; t++) {
+    var nc = isNC(s);
+    for (var t = 0; t < (nc ? 40 : 24); t++) {
       var v = { yaw: rint(rng, 0, 11), tilt: rpick(rng, TILT_SETS[level]), el: rint(rng, 0, 1) }, c = facing(s, v);
       if (c.some(function (x) { return x > SEEN - BAND && x < SEEN + BAND; })) continue;
+      if (nc) {
+        var vis = visible(s, v);
+        if (m && m.some(function (x, f) { return x && vis[f] > VIS_NONE && vis[f] < VIS_SEEN; })) continue;
+        if (seenFaces(s, v).length < 3) continue;
+      }
       if (c.filter(function (x) { return x >= SEEN; }).length >= 3 && (!m || !m.some(function (x) { return x; }) || markedSeen(s, m, v) >= 1)) return v;
     }
     return null;
   }
+  // The faces a mark may take on solid s in the key's picture v: on a non-convex prism, none that shows
+  // only in part.
+  function markable(s, v) { var vis = isNC(s) ? visible(s, v) : null; return s.faces.map(function (_, f) { return !vis || vis[f] <= VIS_NONE || vis[f] >= VIS_SEEN; }); }
 
   /* ------------------------------------------------------------ shortcut solvers */
   function pickShare(scores, high) {
@@ -448,7 +671,7 @@
   var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, nets: 0, noView: 0, noMarks: 0, fewOrbits: 0, fewFoils: 0, noSet: 0, lastInvalid: null, lastError: null };
   var FOILS = ['shape', 'marks'];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
-  function cleanParams(params) { return { solid: lvl(params, 'solid', 3), marks: lvl(params, 'marks', 6), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
+  function cleanParams(params) { return { solid: lvl(params, 'solid', 4), marks: lvl(params, 'marks', 6), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
   /* ------------------------------------------------------------ the starter band (v1.2) */
   // One shaded face and no half mark (note D2 §3.5). With one shade a mark foil can only move it to a
   // face of another shape (on these solids a turn carries every face onto each congruent one), so face
@@ -459,7 +682,7 @@
   // Foil level 1 keeps that design with the sizes closer (BAND_OFF below): "marks only" cannot be built
   // with one shade, since upright pictures never show the base, so a solid has at most two other face
   // shapes a picture can carry the shade on (DECISIONS).
-  var BAND_KINDS = [['box', 'tri'], ['wedge', 'pyr'], ['frus', 'house']];
+  var BAND_KINDS = [['box', 'tri'], ['wedge', 'pyr'], ['frus', 'house'], ['L', 'T', 'U']];
   // v1.2 (version 3, PLAN milestone 8: wrong-size foils at least 40 % off; a fresh player found a size
   // 25 % off hard to see on a phone): level 0 half again or more, level 1 40 to 49 %
   var BAND_OFF = [[0.5, 0.8], [0.4, 0.5]]; // per foil level: a size off by [at least, under] this share
@@ -484,9 +707,9 @@
     var kind = rpick(rng, BAND_KINDS[p.solid]), S = build(kind, randomDims(rng, kind)), net = null;
     for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S);
     if (!net) { stats.nets++; return null; }
-    var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, all1, p.view);
+    var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, isNC(S) ? null : all1, p.view);
     if (!kv) { stats.noView++; return null; }
-    var M = randomMarks(rng, S, MARKS[0], seenFaces(S, kv));
+    var M = randomMarks(rng, S, MARKS[0], seenFaces(S, kv), markable(S, kv));
     if (!M) { stats.noMarks++; return null; }
     // per other face shape, the shade on each face of that shape in turn (a view must show it)
     var cls = shapeClasses(S), maps = autos(S).map(function (a) { return a.v; }), byCls = {}, others = [];
@@ -602,7 +825,7 @@
       // two kinds of solid, two of each: the pattern's kind (the key and one in other proportions) and one
       // other kind in two proportions, so counting kinds never points at the key
       for (var a = 0; a < 3; a++) add(resized(rng, S, 1, 0.5), 'shape');
-      var others = rshuffle(rng, [].concat.apply([], KINDS).filter(function (k) { return k !== S.kind; }));
+      var others = rshuffle(rng, [].concat.apply([], KINDS.slice(0, p.solid + 1)).filter(function (k) { return k !== S.kind; }));
       others.slice(0, 3).forEach(function (k) { var O = build(k, randomDims(rng, k)); add(O, 'other'); for (var r = 0; r < 2; r++) add(resized(rng, O, 1, 0.5), 'other'); });
     } else {
       // more candidates than places: the key is the middle of its own resizings unless the triple is
@@ -648,9 +871,9 @@
     var kind = rpick(rng, kinds), S = build(kind, randomDims(rng, kind)), net = null;
     for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S, true);
     if (!net) { stats.nets++; return null; }
-    var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, all1, p.view);
+    var all1 = S.faces.map(function () { return 1; }), kv = randomView(rng, S, isNC(S) ? null : all1, p.view);
     if (!kv) { stats.noView++; return null; }
-    var M = randomMarks(rng, S, setup, seenFaces(S, kv));
+    var M = randomMarks(rng, S, setup, seenFaces(S, kv), markable(S, kv));
     if (!M) { stats.noMarks++; return null; }
     // Mark foils: each mark moved to a congruent face, one foil per different marked solid (turns of
     // the solid carry arrangements of one marked solid onto each other); the mirror image is one of them.
@@ -733,11 +956,19 @@
         if (pa < 0 || pb < 0 || ca < 0 || cb < 0) { pts[n.face] = 'bad'; return; }
         var P = by[n.parent].poly, C = n.poly;
         if (Mth.abs(P[pa][0] - C[ca][0]) + Mth.abs(P[pa][1] - C[ca][1]) > 2e-3 || Mth.abs(P[pb][0] - C[cb][0]) + Mth.abs(P[pb][1] - C[cb][1]) > 2e-3) { pts[n.face] = 'bad'; return; }
-        var phi = Mth.acos(Mth.max(-1, Mth.min(1, dot(faceNormal(S, n.parent), faceNormal(S, n.face)))));
-        // the turn in the flat layout (z = 0), signed so the child leaves toward −z
-        var A = [P[pa][0], P[pa][1], 0], B = [P[pb][0], P[pb][1], 0], k = unit(sub(B, A)), cen = [0, 0, 0];
-        C.forEach(function (q) { cen = add(cen, [q[0] / C.length, q[1] / C.length, 0]); });
-        var sgn = turn(cen, A, k, phi)[2] < 0 ? 1 : -1;
+        var np = faceNormal(S, n.parent), phi = Mth.acos(Mth.max(-1, Mth.min(1, dot(np, faceNormal(S, n.face)))));
+        // the turn in the flat layout (z = 0), signed so the child leaves toward −z, or toward +z at a
+        // reflex edge (a non-convex prism's inner corner: the child face rises out of the parent's plane)
+        var A = [P[pa][0], P[pa][1], 0], B = [P[pb][0], P[pb][1], 0], k = unit(sub(B, A));
+        // the child's inward direction at the hinge (left of the edge in its counterclockwise order)
+        var h0 = Fc[ca], h1 = Fc[(ca + 1) % Fc.length] === Fc[cb] ? Fc[cb] : null;
+        var inward = h1 !== null ? cross(faceNormal(S, n.face), sub(S.verts[h1], S.verts[h0])) : cross(faceNormal(S, n.face), sub(S.verts[Fc[ca]], S.verts[Fc[cb]]));
+        var up = dot(np, inward) > 1e-9;
+        // a point of the child just inside its hinge edge (the piece lies there, whatever its shape)
+        var mx = (C[ca][0] + C[cb][0]) / 2, my = (C[ca][1] + C[cb][1]) / 2, ex = C[cb][0] - C[ca][0], ey = C[cb][1] - C[ca][1], el = Mth.sqrt(ex * ex + ey * ey) || 1;
+        var cen = [mx - ey / el * 0.01, my + ex / el * 0.01, 0];
+        if (!pip2(C, cen[0], cen[1])) cen = [mx + ey / el * 0.01, my - ex / el * 0.01, 0];
+        var sgn = (turn(cen, A, k, phi)[2] < 0) !== up ? 1 : -1;
         chain[n.face] = chain[n.parent].concat([{ A: A, k: k, a: sgn * phi * share }]);
         pts[n.face] = C.map(function (q) {
           var p = [q[0], q[1], 0], L = chain[n.face];
@@ -772,6 +1003,7 @@
   }
   function okSolid(s) {
     if (!s || !Array.isArray(s.verts) || !Array.isArray(s.faces) || s.verts.length < 4 || s.faces.length < 4 || !BUILD[s.kind]) return false;
+    if (isNC(s)) return okClosed(s);
     // convex and closed: every face's plane has all corners on its inner side; Euler's formula holds
     var c = [0, 0, 0];
     s.verts.forEach(function (v) { c = add(c, mul(v, 1 / s.verts.length)); });
@@ -781,6 +1013,23 @@
       for (var i = 0; i < s.verts.length; i++) if (dot(n, sub(s.verts[i], o)) > 1e-6) return false;
     }
     return s.verts.length - adjacency(s).length + s.faces.length === 2;
+  }
+  // A non-convex solid: every edge met once each way (closed, consistently turned), flat faces, Euler's
+  // formula, and a positive volume (faces turned outward).
+  function okClosed(s) {
+    var seen = {}, vol = 0;
+    for (var f = 0; f < s.faces.length; f++) {
+      var F = s.faces[f], P = F.map(function (i) { return s.verts[i]; }), n = unit(newell(P));
+      for (var i = 0; i < F.length; i++) {
+        var k = F[i] + '>' + F[(i + 1) % F.length];
+        if (seen[k]) return false;
+        seen[k] = 1;
+        if (Mth.abs(dot(n, sub(P[i], P[0]))) > 1e-6) return false;
+      }
+      for (var j = 1; j + 1 < P.length; j++) vol += dot(P[0], cross(P[j], P[j + 1])) / 6;
+    }
+    for (var key in seen) { var ab = key.split('>'); if (!seen[ab[1] + '>' + ab[0]]) return false; }
+    return vol > 1e-6 && s.verts.length - adjacency(s).length + s.faces.length === 2;
   }
   function okMarks(s, m) {
     return Array.isArray(m) && m.length === s.faces.length && m.every(function (x, f) { return x === 0 || x === 1 || (x && typeof x === 'object' && Number.isInteger(x.h) && x.h >= 0 && x.h < 4 && s.faces[f].length === 4); });
@@ -846,12 +1095,57 @@
     }
     return out;
   }
+  // Check 2's own visibility on a non-convex prism: points on each face (a grid in the face's own plane),
+  // a ray from each toward the viewer in the solid's frame, and whether it meets another face first.
+  // Per face, the share of points not hidden (own code: rays in 3D, not the picture's 2D depths).
+  function shownShare(O, v) {
+    var c = YAW[v.yaw][0], sn = YAW[v.yaw][1], T = TILTS[v.tilt], V = VIEWS[v.el || 0];
+    var r = [c * V[0] - sn * V[2], V[1], sn * V[0] + c * V[2]];
+    var d = [T[0] * r[0] + T[3] * r[1] + T[6] * r[2], T[1] * r[0] + T[4] * r[1] + T[7] * r[2], T[2] * r[0] + T[5] * r[1] + T[8] * r[2]];
+    function wind(Q, x, y) {
+      var wn = 0;
+      for (var i = 0; i < Q.length; i++) {
+        var a = Q[i], b = Q[(i + 1) % Q.length], cr = (b[0] - a[0]) * (y - a[1]) - (x - a[0]) * (b[1] - a[1]);
+        if (a[1] <= y) { if (b[1] > y && cr > 0) wn++; } else if (b[1] <= y && cr < 0) wn--;
+      }
+      return wn !== 0;
+    }
+    var Fs = O.faces.map(function (G) {
+      var P = G.map(function (i) { return O.verts[i]; }), n = [0, 0, 0];
+      for (var k = 1; k + 1 < P.length; k++) n = add(n, cross(sub(P[k], P[0]), sub(P[k + 1], P[0])));
+      n = unit(n);
+      var e1 = unit(sub(P[1], P[0])), e2 = cross(n, e1);
+      return { P: P, n: n, e1: e1, e2: e2, Q: P.map(function (q) { var w = sub(q, P[0]); return [dot(w, e1), dot(w, e2)]; }) };
+    });
+    return Fs.map(function (F, g) {
+      if (dot(F.n, d) <= 1e-9) return 0;
+      var u0 = INF, u1 = -INF, w0 = INF, w1 = -INF, all = 0, shown = 0;
+      F.Q.forEach(function (q) { u0 = Mth.min(u0, q[0]); u1 = Mth.max(u1, q[0]); w0 = Mth.min(w0, q[1]); w1 = Mth.max(w1, q[1]); });
+      for (var i = 0; i < 9; i++) for (var j = 0; j < 9; j++) {
+        var u = u0 + (u1 - u0) * (i + 0.5) / 9, w = w0 + (w1 - w0) * (j + 0.5) / 9;
+        if (!wind(F.Q, u, w)) continue;
+        all++;
+        var X = add(F.P[0], add(mul(F.e1, u), mul(F.e2, w))), hid = false;
+        for (var h = 0; h < Fs.length && !hid; h++) {
+          if (h === g) continue;
+          var H = Fs[h], dn = dot(H.n, d);
+          if (Mth.abs(dn) < 1e-9) continue;
+          var t = dot(H.n, sub(H.P[0], X)) / dn;
+          if (t <= 1e-6) continue;
+          var Y = sub(add(X, mul(d, t)), H.P[0]);
+          if (wind(H.Q, dot(Y, H.e1), dot(Y, H.e2))) hid = true;
+        }
+        if (!hid) shown++;
+      }
+      return all ? shown / all : 0;
+    });
+  }
   function foldsOnto(item, o, lines) {
-    var cs = faceCos(o.solid, o.view), net = item.net;
+    var cs = faceCos(o.solid, o.view), net = item.net, sh = isNC(o.solid) ? shownShare(o.solid, o.view) : null;
     return layings(net, o.solid, lines).some(function (at) {
       for (var i = 0; i < net.length; i++) {
         var g = at[i].g, x = item.marks[net[i].face], y = o.marks[g];
-        if (cs[g] < SEEN) continue;
+        if (cs[g] < SEEN || (sh && sh[g] < 0.8)) continue;
         if (typeof x === 'object') { if (!y || typeof y !== 'object' || y.h !== (x.h + at[i].s) % 4) return false; } else if (y !== x) return false;
       }
       return true;
@@ -870,10 +1164,12 @@
       return false;
     }
     for (var i = 0; i < net.length; i++) for (var j = 0; j < net.length; j++) {
-      if (i === j || net[i].parent === net[j].face || net[j].parent === net[i].face) continue;
-      var A = net[i].poly;
+      if (i === j) continue;
+      var A = net[i].poly, B = net[j].poly, kin = net[i].parent === net[j].face || net[j].parent === net[i].face;
       for (var k = 0; k < A.length; k++) {
         var a = A[k], b = A[(k + 1) % A.length], n = Mth.max(2, Mth.ceil(Mth.hypot(b[0] - a[0], b[1] - a[1]) / 0.02)), run = 0;
+        // parent and child: the fold line they share (the same edge both ways) is not a cut
+        if (kin && B.some(function (q, m) { var r = B[(m + 1) % B.length]; return d2(a, r) < FIT && d2(b, q) < FIT; })) continue;
         for (var s0 = 1; s0 < n; s0++) {
           var x = a[0] + (b[0] - a[0]) * s0 / n, y = a[1] + (b[1] - a[1]) * s0 / n;
           run = onOutline(net[j].poly, x, y) ? run + 1 : 0;
@@ -907,8 +1203,9 @@
       for (var i = 0; i < 4; i++) {
         var o = item.options[i];
         if (!o || !okSolid(o.solid) || !okMarks(o.solid, o.marks) || !o.view || !YAW[o.view.yaw] || !TILTS[o.view.tilt] || !VIEWS[o.view.el]) return 'option ' + i + ' is malformed';
-        var c = facing(o.solid, o.view);
-        if (c.filter(function (x) { return x >= SEEN; }).length < 3) return 'option ' + i + ' shows fewer than three faces clearly';
+        var c = facing(o.solid, o.view), sh = isNC(o.solid) ? shownShare(o.solid, o.view) : null;
+        if (c.filter(function (x, g) { return x >= SEEN && (!sh || sh[g] >= 0.8); }).length < 3) return 'option ' + i + ' shows fewer than three faces clearly';
+        if (sh && o.marks.some(function (x, g) { return x && c[g] > 0 && sh[g] > 0.1 && sh[g] < 0.85; })) return 'option ' + i + ' shows a mark only in part';
         if (c.some(function (x) { return x > SEEN - BAND && x < SEEN + BAND; })) return 'option ' + i + ' has a face at the edge of being seen';
         if (lv !== 1 && !markedSeen(o.solid, o.marks, o.view)) return 'option ' + i + ' shows no mark';
         var ok = possible(item.solid, item.marks, o.solid, o.marks, o.view);
@@ -1050,15 +1347,16 @@
   // moves from −2.2 to −3.7 and older combinations keep their exact difficulty. Range 5.5.
   // v1.2 (version 3; PLAN milestone 8, note D1 §6.4): 'marks' becomes the test's kinds of item: the starter
   // band (−1.5), plain (−0.9), shaded faces (−0.4), then the half marks at their old steps (0, 0.6, 1.2);
-  // bevelled boxes join the first solids; the band's wrong sizes are 40 % off or more. Hand-set, to be
-  // refitted from pooled exports; the range stays −3.7 to 1.8, so stored levels keep their numbers.
+  // bevelled boxes join the first solids; L-, T- and U-prisms are a fourth solid level (O51; +1.5, the
+  // step's 0.5 on); the band's wrong sizes are 40 % off or more. Hand-set, to be refitted from pooled
+  // exports. The range grows to −3.7 … 2.3 (the new top); js/engine/rebase.js re-bases stored levels.
   PX.ex.define({
     id: 'form', version: 3, code: 'EX-19', name: 'Form', short: 'Form',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', answer: 'choice', nOptions: 4, pat: true,
     bet: 'format', format: 'form:pattern-to-solid', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     starter: { dim: 'marks', levels: 1 },
     dims: [
-      { key: 'solid', label: 'Solid', levels: ['boxes and prisms', 'wedges and pyramids', 'frusta and five-sided'], step: 0.5 },
+      { key: 'solid', label: 'Solid', levels: ['boxes and prisms', 'wedges and pyramids', 'frusta and five-sided', 'L-, T- and U-prisms'], step: 0.5 },
       { key: 'marks', label: 'Marks', levels: MARK_LABELS.slice(), step: 0.6, at: [-1.5, -0.9, -0.4, 0, 0.6, 1.2] },
       { key: 'view', label: 'Pictures', levels: ['upright', 'on a side', 'upside down'], step: 0.5 },
       // version 3: 'close' is the same kind of solid in every option (sizes nearer, or only the marks differ),
@@ -1071,13 +1369,13 @@
     lib: {
       LEVEL_TAGS: LEVEL_TAGS, rangeOf: rangeOf, plainFolds: plainFolds, MARK_LABELS: MARK_LABELS, BAND_OFF: BAND_OFF, okDims: okDims,
       buildPlain: buildPlain, buildMarked: buildMarked, volume: volume, resized: resized, sizeDist: sizeDist, plainFeats: plainFeats,
-      plainShares: plainShares, PLAIN_SOLVERS: PLAIN_SOLVERS, pairedSizes: pairedSizes, touchesOffHinge: touchesOffHinge, sharedRun: sharedRun, cutInside: cutInside, sizeOff: sizeOff, validPlain: validPlain, validShaded: validShaded,
+      plainShares: plainShares, PLAIN_SOLVERS: PLAIN_SOLVERS, pairedSizes: pairedSizes, touchesOffHinge: touchesOffHinge, sharedRun: sharedRun, enclosesHole: enclosesHole, cutInside: cutInside, sizeOff: sizeOff, validPlain: validPlain, validShaded: validShaded,
       TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
       KINDS: KINDS, VIEW: VIEW, VIEWS: VIEWS, YAW: YAW, TILTS: TILTS, TILT_SETS: TILT_SETS, SEEN: SEEN, SOLVERS: SOLVERS, MARKS: MARKS, stats: stats,
       build: build, randomDims: randomDims, stretched: stretched, mirrored: mirrored, adjacency: adjacency, flat: flat, unfold: unfold, overlapping: overlapping,
       viewMatrix: viewMatrix, faceNormal: faceNormal, facing: facing, seenFaces: seenFaces, matchings: matchings, possible: possible, halfSet: halfSet,
       randomMarks: randomMarks, arrangements: arrangements, autos: autos, reflection: reflection, carry: carry, canon: canon, shapeKey: shapeKey,
-      randomView: randomView, feats: feats, touchRule: touchRule, netTouch: netTouch, shares: shares, optFeats: optFeats,
+      randomView: randomView, feats: feats, isNC: isNC, NCK: NCK, visible: visible, drawOrder: drawOrder, orderPolys: orderPolys, screenPts: screenPts, shownShare: shownShare, okClosed: okClosed, markable: markable, VIS_SEEN: VIS_SEEN, VIS_NONE: VIS_NONE, touchRule: touchRule, netTouch: netTouch, shares: shares, optFeats: optFeats,
       foldLines: foldLines, layings: layings, foldsOnto: foldsOnto, faceCos: faceCos,
       fold: fold, validNet: validNet, okSolid: okSolid, buildItem: buildItem, fallback: fallback, cleanParams: cleanParams, mvec: mvec, newell: newell,
       buildBand: buildBand, validBand: validBand, classCount: classCount, shapeClasses: shapeClasses, BAND_KINDS: BAND_KINDS,

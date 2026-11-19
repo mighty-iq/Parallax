@@ -1,7 +1,8 @@
 /* EX-19 Form (DAT-style format): view (DOM and SVG; ARCHITECTURE.md §6). layout 'stem+options'.
    The stem is the flat pattern (fold lines dashed on the starter band, drawn plain like cut edges from
    the plain kind on, version 3); options are SVG pictures of
-   convex solids (orthographic, flat tones by face direction, outlines). The pattern and the solids
+   solids (orthographic, flat tones by face direction, outlines; faces painted in lib.drawOrder, far
+   first, since an L-, T- or U-prism can hide part of a face behind another). The pattern and the solids
    share one scale (px per unit), so sizes compare directly. Marks: a darker tone plus a hatch;
    a half mark shades one side of a diagonal. Never colour alone.
    Show me (ctx.play steps, from the grading model: lib.matchings and lib.possible give the face
@@ -131,7 +132,8 @@
     var o = item.options[i], P = st.proj[i], cx = (P.box[0] + P.box[2]) / 2, cy = (P.box[1] + P.box[3]) / 2, E = st.E;
     var svg = SV.el('svg', { viewBox: [cx - E / 2, cy - E / 2, E, E], class: 'fm-opt-svg', 'aria-hidden': 'true', focusable: 'false', preserveAspectRatio: 'xMidYMid meet' });
     var hatch = hatchDefs(svg, 5 / st.k), fill = hatch.url, g = SV.el('g', { class: 'fm-solid' }), faces = {};
-    P.faces.filter(function (f) { return f.c > 0; }).forEach(function (f) {
+    // painted far first (lib.drawOrder: on L-, T- and U-prisms a face may hide part of another)
+    lib.drawOrder(o.solid, o.view).map(function (f) { return P.faces[f]; }).forEach(function (f) {
       var fg = SV.el('g');
       fg.appendChild(SV.el('path', { d: SV.pathData(f.pts, true), class: 'px-fig-face ' + tone(f.light) }));
       var mp = markPoly(f.pts, o.marks[f.f]);
@@ -445,9 +447,12 @@
       var P = pts[n.face].map(function (p) { return mv3(Q, sub3(p, cen)); }), nz = 0, z = 0;
       for (var i = 0; i < P.length; i++) { var p = P[i], q = P[(i + 1) % P.length]; nz += (p[0] - q[0]) * (p[1] + q[1]); z += p[2] / P.length; }
       var nn = unit3(lib.newell(P));
-      list.push({ f: n.face, z: z, front: nn[2] > 0, light: dot(nn, [-0.3, 0.6, 0.75]), scr: P.map(function (p) { return [ox + k * p[0], oy - k * p[1]]; }) });
+      list.push({ f: n.face, z: z, front: nn[2] > 0, light: dot(nn, [-0.3, 0.6, 0.75]), scr: P.map(function (p) { return [ox + k * p[0], oy - k * p[1]]; }), dep: P });
     });
-    list.sort(function (x, y) { return x.z - y.z; });
+    if (lib.isNC(item.solid)) { // L-, T- and U-prisms: faces can cover each other, so paint in true depth order
+      var at = {}; list.forEach(function (x) { at[x.f] = x; });
+      list = lib.orderPolys(list.map(function (x) { return { id: x.f, pts: x.dep }; })).map(function (f) { return at[f]; });
+    } else list.sort(function (x, y) { return x.z - y.z; });
     list.forEach(function (x) {
       var g = SV.el('g');
       g.appendChild(SV.el('path', { d: SV.pathData(x.scr, true), class: x.front ? 'px-fig-face ' + tone(x.light) : 'fm-inside' }));
