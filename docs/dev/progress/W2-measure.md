@@ -82,3 +82,13 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
 - Not built yet: the probe upgrades as new versions (Cube Match 4 options, Mechanisms 4 natural options, Pattern
   Memory by cells), Balance and the Lab checks (Central Point's negative-transfer check, learning speed on new
   exercises).
+
+## 2026-11-19 00:25 UTC: Lab checks
+- Learning curves on new exercises (53f07c7): `E.assess.curves`, the Lab panel, filing at session ends; DECISIONS.
+- Balance (93e343d gen; the rest landed inside c5885d5 through the shared index, recorded by the empty 9050fda): the
+  generator, view and Lab occasion, kept in rec.measure.balance outside the ladder; check.py 59/0 with Balance at
+  360 x 640, 844 x 390, 1366 x 768 and 390 x 844.
+- Index races: my 3f1cdf7 had dropped W3-game's lines and Views' layers-view (restored in b5c5538); since 00:20 UTC I
+  commit through a private index (requests.md line).
+- Still open: the probe upgrades as new versions (Cube Match 4 options, Mechanisms 4 natural options, Pattern Memory
+  by cells).
