@@ -2,7 +2,7 @@
    ("New here? Watch, Try, Go (3 min)") calls PX.ui.tour.start(), which opens the play screen in
    mode 'tour': Watch, Try, Go for Rotate, Fold and Track (each one a slow demo with captions and
    a few practice items that never count; exercises this device cannot show are left out), then
-   "Measure your starting point (15 to 25 min, no feedback)" or Later. Every step can be skipped;
+   "Measure your starting point" (its time from the config, as the check says it; no feedback) or Later. Every step can be skipped;
    skipping the baseline only means transfer reports start later. The end screen carries the
    Chimera invite (v1.2, gap C6).
    Flags: store.state.tour.done (true once the tour ended, finished or left) and
@@ -76,11 +76,13 @@
       // gap C6: the tutorial ends with the invite (a screen of its own, no items on it)
       var inv = PX.ui.chimera && PX.ui.chimera.invite ? PX.ui.chimera.invite('tutorial', { host: wrap, className: 'pl-tour-invite' }) : null;
       if (inv) wrap.appendChild(inv);
+      // the check's length from the config, as the check itself says it (W2-measure: PX.ui.measure.minutesOf)
+      var Mq = PX.ui.measure, mins = Mq && Mq.minutesOf ? Mq.minutesOf('B1', store.state) : null;
       Play.showCard(box, null, {
         id: 'baseline', title: 'Measure your starting point',
-        lines: ['15 to 25 minutes, no feedback: short tasks that Parallax never trains, plus a word task as a control.',
+        lines: [(mins ? 'About ' + (mins % 1 ? mins.toFixed(1) : mins) + ' minutes' : 'A few minutes') + ', no feedback: short tasks that Parallax never trains, plus a word task as a control.',
           'Later checks are compared with this starting point, so you can see what practice changes beyond familiarity with the tasks. Skipping only means those reports start later.'],
-        actions: [{ label: 'Later', value: 'later' }, { label: 'Measure now (15 to 25 min)', value: 'now', primary: true }],
+        actions: [{ label: 'Later', value: 'later' }, { label: 'Measure now' + (mins ? ' (about ' + (mins % 1 ? mins.toFixed(1) : mins) + ' min)' : ''), value: 'now', primary: true }],
       }).then(function (v) {
         t.baseline = v === 'now' ? 'now' : 'later';
         save();

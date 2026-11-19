@@ -268,7 +268,8 @@
     var b = p.body;
     b.setAttribute('data-status', rep.status);
     if (rep.status === 'none') {
-      b.appendChild(h('p.px-prog-empty', 'The Spatial Check measures change on tasks you never practise, so it can show whether your training carries over. It takes 15 to 25 minutes, gives no feedback, and starts with two baseline checks.'));
+      var about = PX.ui.measure && PX.ui.measure.aboutMinutes ? PX.ui.measure.aboutMinutes('B1', rec) : null; // the config's time (W2-measure)
+      b.appendChild(h('p.px-prog-empty', 'The Spatial Check measures change on tasks you never practise, so it can show whether your training carries over. It takes ' + (about || 'a few minutes') + ', gives no feedback, and starts with two baseline checks.'));
       b.appendChild(nextLine(rec, now));
       b.appendChild(wordsList());
       return p.el;

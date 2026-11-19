@@ -599,6 +599,15 @@
       })));
   }
 
+  // Minutes of an occasion of this kind, from the config (items of its mix × config.measure.secPerItem, to the half
+  // minute): the one source for every time a player reads about a check (the tour's card, Today, the check's intro).
+  function minutesOf(kind, r) {
+    var n = 0;
+    try { A().mix(kind, r || rec(), { optional: false }, canRun).forEach(function (x) { n += x.items; }); } catch (e) { n = 0; }
+    return n ? Math.round(n * E().config.measure.secPerItem / 30) / 2 : null;
+  }
+  function aboutMinutes(kind, r) { var m = minutesOf(kind, r); return m ? 'about ' + minutes(m) : null; }
+
   // The schedule in words, from the config (RV-wave2 finding 15: no number typed beside the constant that sets it).
   var WORDNUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
   function scheduleText(r) {
@@ -663,7 +672,7 @@
     p.el.setAttribute('data-section', 'measureweek');
     p.body.appendChild(K.toggle({
       key: 'measureWeek', label: 'Measurement week', checked: s.measureWeek === true,
-      hint: 'On the four days before each 4-weekly verdict, one block a day of about ' + minutes(m) + ' in place of the 4-weekly check: the sharpest reading for that verdict. Off: the 4-weekly check opens a session.',
+      hint: 'On the ' + (WORDNUM[E().config.measure.weekDays] || E().config.measure.weekDays) + ' days before each ' + (E().config.measure.everyDays % 7 ? E().config.measure.everyDays + '-day' : (E().config.measure.everyDays / 7) + '-weekly') + ' verdict, one block a day of about ' + minutes(m) + ' in place of the full check: the sharpest reading for that verdict. Off: the full check opens a session.',
       onChange: function (on) {
         var S = store(), r = S.state;
         r.settings.measureWeek = !!on;
@@ -742,5 +751,6 @@
   }, { id: 'measure.balance', order: 42 });
 
   PX.ui.measure = { quiet: false, play: play, status: status, names: NAMES, words: WORDS, meterEl: meterEl, rangeRows: rangeRows, balanceRuns: balanceRuns, balanceMinutes: balanceMinutes,
+    minutesOf: minutesOf, aboutMinutes: aboutMinutes,
     _: { limitRange: limitRange, sessions: SESSIONS, askExpect: askExpect, askOverlap: askOverlap, offer: offer } };
 })(window.PX);
