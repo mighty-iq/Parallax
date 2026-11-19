@@ -580,6 +580,15 @@ function testReal(t) {
     }
   }
   t.ok(n > 0 || !ok.length, n + ' items of the first three forms generate and validate');
+  // v1.2 (PLAN milestone 8; W1-band-B's request): an exercise with a test range is dealt at its test-range settings
+  // only, so Missing View's cube stacks and every level tagged below or beyond the format stay out of the forms
+  const tagged = ok.filter((id) => PX.ex.get(id).testRange), off = [];
+  let m = 0;
+  for (const size of ['mini', 'full']) for (let f = 1; f <= 8; f++) for (const id of tagged) {
+    S.formItems(size, f, id, S.SIZES[size].perPart).forEach((it) => { m++; const tg = PX.ex.rangeTag(PX.ex.get(id), it.params); if (tg !== 'test') off.push(id + ' ' + JSON.stringify(it.params) + ' ' + tg); });
+  }
+  t.ok(!tagged.length || (m > 0 && !off.length), `every item of eight forms of each size sits at test-range settings (${m} items of ${tagged.join(', ')})` + (off.length ? ': ' + off.slice(0, 4).join('; ') : ''));
+  if (PX.ex.get('patviews') && PX.ex.get('patviews').testRange) t.ok(S.formItems('full', 1, 'patviews', 15).every((x) => x.params.cubes >= PX.ex.get('patviews').lib.NCUBE), 'Missing View\'s forms deal solid blocks only, never cube stacks');
   Object.keys(warned).forEach((id) => console.log(`       ! ${id}: ${warned[id]} item(s) of the first forms failed (pending, not counted)`));
   const run = S.start({ settings: {}, ex: {}, sessions: [], trials: [], idx: { ex: [], mode: [] } }, { size: 'mini', now: T0 });
   t.eq(run.parts.map((p) => p.exId), ok, 'a real run has the existing parts in PAT order');
