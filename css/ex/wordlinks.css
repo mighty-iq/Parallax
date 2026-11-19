@@ -36,5 +36,6 @@
 .ex-wordlinks .pr-timer.is-running .pr-timer-fill { animation-name: wl-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
 .ex-wordlinks .pr-timer.is-stopped .pr-timer-fill,
 html[data-hx-state="paused"] .ex-wordlinks .pr-timer-fill,
-[data-paused] .ex-wordlinks .pr-timer-fill { animation-play-state: paused; }
+[data-paused] .ex-wordlinks .pr-timer-fill,
+.ex-wordlinks[data-paused] .pr-timer-fill { animation-play-state: paused; }
 @keyframes wl-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
