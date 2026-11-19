@@ -8,6 +8,8 @@
 .ex-patterns .pm-wrap { width: 100%; margin: 0 auto; outline: none; border-radius: var(--r-plate, 2px); }
 .ex-patterns .pm-wrap:focus-visible { box-shadow: 0 0 0 3px var(--focus, #0B6A86); }
 .ex-patterns .pm-svg { display: block; width: 100%; height: auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+/* While the squares can be marked, a drag on the grid paints them (js/ex/patterns/view.js strokes), not the page's scroll. */
+.ex-patterns .pm-wrap.is-marking .pm-svg { touch-action: none; }
 .ex-patterns .pm-verdict { margin-top: 0.6rem; }
 
 .ex-patterns .pm-sq { fill: var(--surface, #FFFFFF); stroke: var(--rule-strong, #7B838A); stroke-width: 0.35; }

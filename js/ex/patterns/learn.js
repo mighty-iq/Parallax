@@ -8,16 +8,16 @@
   PX.ex.learn('patterns', {
     goal: 'Remember the pattern, then mark the squares that were filled.',
     // the card's text (the instruction folds away under "More about this task"); version 2 scores every square
-    brief: ['A pattern of filled squares shows for 3 seconds, then the grid empties. Mark the squares that were filled. Every square you mark right counts, and a wrong mark costs as much as a missed one, so mark the squares you remember.'],
+    brief: ['A pattern of filled squares shows for 3 seconds, then the grid empties. Mark the squares that were filled: tap them, or drag across several. Every square you mark right counts, and a wrong mark costs as much as a missed one, so mark the squares you remember.'],
     instruction: [
       'A pattern of filled squares appears for 3 seconds. Then the grid empties.',
-      'Mark every square that was filled, in any order: tap it, or move with the arrow keys and press Space. Tap again to unmark. Confirm with Enter or the Confirm button.',
+      'Mark every square that was filled, in any order: tap it, drag across several, or move with the arrow keys and press Space. Tap again to unmark; a drag that starts on a marked square unmarks the squares it crosses. Confirm with Enter or the Confirm button.',
       'Every square you mark right counts, and a wrong mark costs as much as a missed square.',
       'The bar shows the time left to mark. The Check does not show how many squares were right.',
     ],
     parts: [
       { id: 'grid', label: 'Grid', text: 'Squares from 3 × 3 up to 6 × 6; about half of them are filled.' },
-      { id: 'marks', label: 'Marks', text: 'Your marks, shown with a dot. The counter says how many squares are marked.' },
+      { id: 'marks', label: 'Marks', text: 'Your marks, shown with a dot: tap a square, or drag across several. The counter says how many squares are marked.' },
       { id: 'confirm', label: 'Confirm', text: 'Enter or the Confirm button sends the marks.' },
     ],
     // The worked example: a 3 × 3 grid, 4 squares in one T-shaped group (seed 5: cells 0, 1, 2, 4).
@@ -27,8 +27,8 @@
     captions: {
       look: 'Look at the pattern. It stays for 3 seconds.',
       empty: 'Now the grid is empty.',
-      mark: 'Mark each square that was filled: tap it, or use the arrow keys and Space.',
-      markTouch: 'Mark each square that was filled: tap it.',
+      mark: 'Mark each square that was filled: tap it or drag across several, or use the arrow keys and Space.',
+      markTouch: 'Mark each square that was filled: tap it, or drag across several at once.',
       confirm: 'When you are done, press Enter or Confirm.',
       again: 'Here is the pattern again.',
       right: 'All {k} squares marked, and no others.',

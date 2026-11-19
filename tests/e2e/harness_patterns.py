@@ -10,7 +10,12 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_patterns.py   (two browser s
    extra squares; show me runs to the end; no horizontal scroll on the phone
 3. show me at normal speed: 2–4 s, shorter with reduced motion; the worked example plays
 4. the harness inlined into a sandboxed srcdoc iframe renders and plays by keyboard
-5. no console errors anywhere
+5. strokes (round 3 of the first session's fresh-player run): a mouse drag paints the squares it crosses, a
+   drag that starts on a marked square clears, one fast move fills the squares between, a corner graze paints
+   nothing, a click still toggles one square, and the answer is the painted squares, scored by cells; on a
+   touch phone (real touch events) a finger drag paints without scrolling the page, and the grid takes
+   drags only while squares can be marked (touch-action)
+6. no console errors anywhere
 Screenshots: tests/e2e/out/patterns/<name>.png """
 import sys
 
@@ -175,6 +180,88 @@ def normal_speed(b, cons):
     return times
 
 
+CENTRES = """() => Array.from(document.querySelectorAll('.pm-cell .pm-sq')).map((r) => { const b = r.getBoundingClientRect();
+    return [b.left + b.width / 2, b.top + b.height / 2, b.width]; })"""
+MARKED = "() => PX.ex.view('patterns').marked()"
+
+
+def strokes(b, cons):
+    # the mouse, on a desktop
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=4, p='size:6,regularity:1', fast=1))
+    page.wait_for_function(READY, timeout=60000)
+    cols = page.evaluate('() => __harness.item.cols')
+    c = page.evaluate(CENTRES)
+    m = page.mouse
+    m.move(c[0][0], c[0][1]); m.down(); m.move(c[3][0], c[3][1], steps=8); m.up()
+    C.ok(page.evaluate(MARKED) == [0, 1, 2, 3], f'strokes: a drag along the first row paints the four squares it crosses ({page.evaluate(MARKED)})')
+    C.ok(page.evaluate("document.querySelector('.pm-count').textContent") == 'Marked: 4', 'strokes: the counter follows the stroke')
+    m.move(c[1][0], c[1][1]); m.down(); m.move(c[3][0], c[3][1], steps=6); m.up()
+    C.ok(page.evaluate(MARKED) == [0], f'strokes: a drag that starts on a marked square clears the squares it crosses ({page.evaluate(MARKED)})')
+    a, z = cols, cols + 4  # the second row, one move event from its first to its fifth square
+    m.move(c[a][0], c[a][1]); m.down(); m.move(c[z][0], c[z][1], steps=1); m.up()
+    C.ok(page.evaluate(MARKED) == [0] + list(range(a, z + 1)), f'strokes: one fast move fills the squares between ({page.evaluate(MARKED)})')
+    # a graze along the line between the third and fourth rows, starting on a marked square of the third row's end
+    r3 = 2 * cols
+    page.evaluate('(ids) => ids.forEach((i) => document.querySelectorAll(".pm-cell")[i].dispatchEvent(new MouseEvent("click", { bubbles: true })))', [r3])
+    before = page.evaluate(MARKED)
+    gap_y = (c[r3][1] + c[r3 + cols][1]) / 2
+    m.move(c[r3 + 2][0], gap_y); m.down(); m.move(c[r3 + 4][0], gap_y, steps=6); m.up()
+    C.ok(page.evaluate(MARKED) == before, f'strokes: a stroke in the gap between rows paints nothing ({page.evaluate(MARKED)})')
+    page.locator('.pm-cell').nth(r3 + 5).click()
+    page.wait_for_timeout(50)
+    after_click = page.evaluate(MARKED)
+    C.ok(after_click == sorted(before + [r3 + 5]), f'strokes: a click toggles one square, once ({after_click})')
+    page.locator('.pm-cell').nth(r3 + 5).click()
+    page.wait_for_timeout(50)
+    C.ok(page.evaluate(MARKED) == before, 'strokes: a second click unmarks it')
+    want = page.evaluate(MARKED)
+    page.locator('.pm-actions .px-btn').click()
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    r = page.evaluate('() => __harness.last')
+    key = page.evaluate('() => __harness.key')
+    hits = len(set(want) & set(key))
+    C.ok(r['response'] == want and r['result']['detail']['hits'] == hits and r['result']['detail']['falseAlarms'] == len(want) - hits,
+         f'strokes: the answer is the painted squares, scored by cells ({r["response"]}; {r["result"]["detail"]})')
+    C.ok(page.evaluate("getComputedStyle(document.querySelector('.pm-svg')).touchAction") != 'none', 'strokes: after the answer the grid no longer holds drags')
+    ctx.close()
+    # a finger, on a touch phone (Chromium touch events through CDP: real pointer events, touch-action applies)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=4, p='size:6,regularity:1', fast=1))
+    page.wait_for_function(STATE, arg='ready', timeout=60000)
+    page.wait_for_timeout(200)
+    ta0 = page.evaluate("getComputedStyle(document.querySelector('.pm-svg')).touchAction")
+    page.wait_for_function(READY, timeout=10000)
+    ta1 = page.evaluate("getComputedStyle(document.querySelector('.pm-svg')).touchAction")
+    C.ok(ta0 != 'none' and ta1 == 'none', f'strokes: the grid takes drags only while squares can be marked ({ta0} → {ta1})')
+    cols = page.evaluate('() => __harness.item.cols')
+    page.evaluate('() => window.scrollTo(0, 0)')
+    c = page.evaluate(CENTRES)
+    y0 = page.evaluate('() => scrollY')
+    cdp = ctx.new_cdp_session(page)
+    def touch(kind, pt):
+        cdp.send('Input.dispatchTouchEvent', {'type': kind, 'touchPoints': [] if pt is None else [{'x': pt[0], 'y': pt[1]}]})
+    # down the first column: squares 0, cols, 2·cols, 3·cols
+    path = [c[0]] + [[c[0][0], c[0][1] + (c[3 * cols][1] - c[0][1]) * k / 10] for k in range(1, 11)]
+    touch('touchStart', path[0])
+    for pt in path[1:]:
+        touch('touchMove', pt)
+        page.wait_for_timeout(16)
+    touch('touchEnd', None)
+    page.wait_for_timeout(100)
+    got = page.evaluate(MARKED)
+    C.ok(got == [0, cols, 2 * cols, 3 * cols], f'strokes: a finger drag down the first column paints its four squares ({got})')
+    C.ok(page.evaluate('() => scrollY') == y0, f'strokes: and the page does not scroll ({y0} → {page.evaluate("() => scrollY")})')
+    page.locator('.pm-cell').nth(1).tap()
+    page.wait_for_timeout(80)
+    C.ok(page.evaluate(MARKED) == [0, 1, cols, 2 * cols, 3 * cols], f'strokes: a tap still marks one square ({page.evaluate(MARKED)})')
+    ctx.close()
+
+
 def sandboxed(b, cons):
     doc = harness_single(EX, {'seed': 21, 'p': 'size:1,regularity:0', 'fast': True})
     host = srcdoc_host(f'harness_{EX}', doc)
@@ -200,6 +287,7 @@ def main():
         exposure_check(b, cons)
         desktop_and_phone(b, cons)
         times = normal_speed(b, cons)
+        strokes(b, cons)
         sandboxed(b, cons)
         b.close()
     errors = [e for c in cons for e in c.errors()]

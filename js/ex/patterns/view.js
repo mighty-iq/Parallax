@@ -8,8 +8,10 @@
    exposure nothing else changes on the page. The measured exposure and whether a frame gap over
    100 ms happened (a hidden tab, a stall: the trial should be voided) are kept for the player
    (view.exposure()).
-   collect() lets the player mark cells: tap or click toggles a cell; the arrow keys move a visible
-   cursor, Space toggles, Enter (or Confirm) sends the sorted cell ids. Marks are a dot as well as a
+   collect() lets the player mark cells: tap or click toggles a cell, and a drag paints every cell it
+   crosses (a drag that starts on a marked cell clears instead; fresh-player run of 19 Nov, round 3:
+   fifteen cells took fifteen taps); the arrow keys move a visible cursor, Space toggles, Enter (or
+   Confirm) sends the sorted cell ids. Scoring is by cells either way (js/ex/patterns/gen.js). Marks are a dot as well as a
    tint (colour never alone). Reveal and show me are for development (the Check gives no feedback):
    found cells keep their dot, missed cells get a dashed outline, extra marks a cross. The time limit
    for marking runs as a calm bar under the grid. */
@@ -94,7 +96,7 @@
   function describe(item) {
     var ms = def.timeLimit(item.params);
     return 'A grid of ' + item.rows + ' by ' + item.cols + ' squares. Some squares are filled for ' + Math.round(item.exposureMs / 1000) +
-      ' seconds, then the grid empties. Mark the squares that were filled: tap them, or move with the arrow keys and press Space; confirm with Enter' +
+      ' seconds, then the grid empties. Mark the squares that were filled: tap them or drag across them, or move with the arrow keys and press Space; confirm with Enter' +
       (ms ? '; up to ' + Math.round(ms / 1000) + ' seconds to mark.' : '.');
   }
 
@@ -114,14 +116,81 @@
     ctx.host.appendChild(root);
     st = { ctx: ctx, root: root, phase: phase, svg: svg, wrap: wrap, verdict: verdict, stage: stage, timer: timer, timerFill: timer.firstChild,
       counter: counter, confirm: confirm, bar: bar, caption: caption, desc: desc, item: null, cells: [], marks: {}, cursor: 0,
-      accepting: false, respond: null, popKeys: null, exposure: null, mode: null };
-    // One listener for every cell: taps and clicks toggle (pointer targets are whole squares).
+      accepting: false, respond: null, popKeys: null, exposure: null, mode: null, stroke: null, strokeAt: 0 };
+    // Pointers: a press on a square toggles it and starts a stroke; moving on paints (or, from a marked square, clears)
+    // each square the stroke crosses. A click that a stroke already handled is ignored; a click without one (a script,
+    // an assistive tool) toggles as before.
+    svg.addEventListener('pointerdown', strokeStart);
+    svg.addEventListener('pointermove', strokeMove);
+    svg.addEventListener('pointerup', strokeEnd);
+    svg.addEventListener('pointercancel', strokeEnd);
+    svg.addEventListener('lostpointercapture', strokeEnd);
     svg.addEventListener('click', function (ev) {
+      if (st.strokeAt && timing.now() - st.strokeAt < 1000) return;
       var g = ev.target && ev.target.closest ? ev.target.closest('.pm-cell') : null;
       if (!g || !st.accepting) return;
       st.cursor = Number(g.getAttribute('data-id'));
       toggle(st.item, st.cursor, false);
     });
+  }
+
+  /* ---------- strokes (drag to paint) ---------- */
+
+  // A point in drawing units (the viewBox is drawn with "meet": one scale on both axes, centred).
+  function toUnits(ev) {
+    var r = st.svg.getBoundingClientRect(), it = st.item;
+    if (!it || !r.width || !r.height) return null;
+    var W = it.cols * (CELL + GAP) + GAP, H = it.rows * (CELL + GAP) + GAP, sc = Math.min(r.width / W, r.height / H);
+    return [(ev.clientX - r.left - (r.width - W * sc) / 2) / sc, (ev.clientY - r.top - (r.height - H * sc) / 2) / sc];
+  }
+  // The square under a point, counting only its middle (a stroke that grazes a corner paints nothing there).
+  var CORE = 0.12;
+  function cellAt(x, y) {
+    var it = st.item, c = Math.floor((x - GAP / 2) / (CELL + GAP)), r = Math.floor((y - GAP / 2) / (CELL + GAP));
+    if (c < 0 || r < 0 || c >= it.cols || r >= it.rows) return -1;
+    var fx = x - GAP - c * (CELL + GAP), fy = y - GAP - r * (CELL + GAP), lo = CORE * CELL, hi = (1 - CORE) * CELL;
+    return fx >= lo && fx <= hi && fy >= lo && fy <= hi ? r * it.cols + c : -1;
+  }
+  function strokeStart(ev) {
+    if (!st || !st.accepting || st.stroke || ev.isPrimary === false || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    var g = ev.target && ev.target.closest ? ev.target.closest('.pm-cell') : null;
+    if (!g) return;
+    var id = Number(g.getAttribute('data-id')), at = toUnits(ev);
+    st.stroke = { id: ev.pointerId, paint: !st.marks[id], last: at, seen: {} };
+    st.strokeAt = timing.now();
+    try { st.svg.setPointerCapture(ev.pointerId); } catch (e) { /* the stroke still works inside the grid */ }
+    strokeCell(id);
+  }
+  function strokeCell(id) {
+    var k = st.stroke;
+    if (id < 0 || k.seen[id]) return;
+    k.seen[id] = true;
+    if (!!st.marks[id] === k.paint) return;
+    if (k.paint) st.marks[id] = true; else delete st.marks[id];
+    st.cursor = id;
+    paint(st.item, 'empty', st.marks);
+    showCursor(st.item, false);
+    updateCount();
+  }
+  function strokeMove(ev) {
+    var k = st && st.stroke;
+    if (!k || ev.pointerId !== k.id) return;
+    if (!st.accepting) { strokeEnd(ev); return; }
+    var at = toUnits(ev);
+    if (!at) return;
+    // every square between the last point and this one (a fast stroke skips squares between two events)
+    var from = k.last || at, dx = at[0] - from[0], dy = at[1] - from[1], n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / (CELL / 4)));
+    for (var i = 1; i <= n; i++) strokeCell(cellAt(from[0] + dx * i / n, from[1] + dy * i / n));
+    k.last = at;
+    st.strokeAt = timing.now();
+    if (ev.cancelable) ev.preventDefault();
+  }
+  function strokeEnd(ev) {
+    var k = st && st.stroke;
+    if (!k || (ev && ev.pointerId !== undefined && ev.pointerId !== k.id)) return;
+    st.stroke = null;
+    st.strokeAt = timing.now();
+    try { if (st.svg.hasPointerCapture && st.svg.hasPointerCapture(k.id)) st.svg.releasePointerCapture(k.id); } catch (e) { /* gone */ }
   }
 
   function toggle(item, id, showCur) {
@@ -182,6 +251,7 @@
     if (!st || st.item !== item) return;
     st.respond = respond;
     st.accepting = true;
+    st.wrap.classList.add('is-marking'); // a drag on the grid paints instead of scrolling (css/ex/patterns.css)
     var n = item.rows * item.cols;
     function move(dr, dc) {
       var r = Math.floor(st.cursor / item.cols), c = st.cursor % item.cols;
@@ -203,6 +273,8 @@
   function stopCollect() {
     if (!st) return;
     st.accepting = false;
+    st.stroke = null;
+    st.wrap.classList.remove('is-marking');
     if (st.popKeys) { st.popKeys(); st.popKeys = null; }
   }
   function submit(source) {
