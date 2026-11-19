@@ -46,8 +46,11 @@
     if (where === 'page') {
       var layers = b.LAYERS.filter(function (l) { return b.hosts(def, l); }).map(function (l) { return LAYER_WORDS[l]; });
       var extra = [];
-      if (layers.length) extra.push(cap(andList(layers)) + ' come with this exercise in some periods and not in others, at random, so the community can test the bet.');
-      if (def.layers && def.layers.produce && bet === 'produce') extra.push('Its own bet is producing the answer, so its draw-the-answer items come in about half of the periods.');
+      // in the trials, an add-on comes in some periods and not in others; out of them, always (RV-wave2 finding 18)
+      var inTrials = b.joined(rec);
+      if (layers.length) extra.push(cap(andList(layers)) + (inTrials ? ' come with this exercise in some periods and not in others, at random, so the community can test the bet.'
+        : ' come with this exercise every time while you are out of the bet trials (Settings).'));
+      if (inTrials && def.layers && def.layers.produce && bet === 'produce') extra.push('Its own bet is producing the answer, so its draw-the-answer items come in about half of the periods.');
       extra.push('Evidence so far: ' + gradeText(x.grade) + '. ' + b.GRADES[x.grade]);
       kids.push(h('p.px-meta.px-bet-meta', extra.join(' ')));
       var go = ui.button('Test the bets with us', { kind: 'ghost', small: true, go: 'lab' });
@@ -86,7 +89,7 @@
         h('dd', h('span.px-bet-text', x.line), h('span.px-meta.px-bet-ex', ' ' + cap(exNames(id)) + (compact ? '' : '. Evidence so far: ' + gradeText(x.grade) + '.'))));
     }));
   }
-  var TRIALS_TEXT = 'To test a bet rather than an exercise, Parallax switches its add-ons on and off at random within each player: for each add-on, half of the exercises that have it get it in one period and the other half in the next, and a period lasts at least 4 weeks and 8 sessions. Because everyone gets every add-on half the time, pooled exports form randomised trials.';
+  var TRIALS_TEXT = 'To test a bet rather than an exercise, Parallax switches its add-ons on and off at random within each player: for each add-on, about half of the exercises that have it get it in one period and the rest in the next, and a period lasts at least 4 weeks and 8 sessions. Because each exercise gets each of its add-ons in one period of every two, pooled exports form randomised trials.';
   PX.ui.hooks.on('about:sections', function () {
     var sec = h('section.px-about-section.px-bets-about', { 'data-section': 'bets' },
       h('h2', 'Test the bets with us'),
@@ -106,7 +109,7 @@
     p.el.setAttribute('data-section', 'bettrials');
     p.body.appendChild(K.toggle({
       key: 'betTrials', label: 'Join the bet trials', checked: s.betTrials !== false,
-      hint: 'Switches each add-on on for half of the exercises that have it and off for the other half, swapping every period of at least 4 weeks and 8 sessions, so pooled exports can test the bets. Off: every add-on runs for every exercise. ' + addonsLine() + ' Nothing leaves this device unless you export it.',
+      hint: 'Switches each add-on on for about half of the exercises that have it and off for the rest, swapping every period of at least 4 weeks and 8 sessions, so pooled exports can test the bets. Off: every add-on runs for every exercise. ' + addonsLine() + ' Nothing leaves this device unless you export it.',
       onChange: function (v) {
         var S = store(), rec = S.state;
         rec.settings.betTrials = !!v;
@@ -294,7 +297,7 @@
   function statementText(c, id) { var x = c.compare.statements.filter(function (s) { return s.id === id; })[0]; return x ? x.text : id; }
 
   // Shows the round in the player's card; resolves { chosen, rt } or null when the session ends under it.
-  function showRound(ctx, def, r, c) {
+  function showRound(ctx, def, r, c, hasApply) {
     var V = views()[def.id], hA = h('div.px-bets-figbox'), hB = h('div.px-bets-figbox'), marks = [];
     var opts = h('div.px-bets-opts', { role: 'group', 'aria-label': 'What is the same in both?' });
     var after = h('div.px-bets-after', { hidden: true });
@@ -330,7 +333,7 @@
           after.hidden = false;
           after.appendChild(h('p.px-bets-verdict', { role: 'status' }, i === r.correct ? 'Yes: that holds in both.' : 'Not this one: the highlighted rule holds in both.'));
           after.appendChild(h('p.px-bets-principle', h('b', 'The rule: '), r.text));
-          after.appendChild(h('p.px-meta', 'The next item is one where it decides the answer.'));
+          if (hasApply) after.appendChild(h('p.px-meta', 'The next item is one where it decides the answer.')); // only when there is one (RV-wave2 finding 10)
           after.appendChild(h('div.px-bets-next', next));
           try { next.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
         }
@@ -354,10 +357,12 @@
     var r = null;
     try { r = b.round(def.id, d.principle, step.params, step.seed, d.stage); } catch (e) { report('round', e); }
     if (!r) return Promise.resolve(null);
-    return showRound(ctx, def, r, c).then(function (got) {
+    // the apply item first, so the round promises one only when there is one
+    var S = store(), aSeed = null;
+    try { aSeed = b.applySeed(S.state, def.id, d.principle, step.params, step.seed); } catch (e) { report('apply', e); }
+    return showRound(ctx, def, r, c, aSeed !== null).then(function (got) {
       if (!got) return null;
-      var S = store(), rec = S.state, now = Date.now(), key = def.id + '@' + (def.version || 1), aSeed = null;
-      try { aSeed = b.applySeed(rec, def.id, d.principle, step.params, step.seed); } catch (e) { report('apply', e); }
+      var rec = S.state, now = Date.now(), key = def.id + '@' + (def.version || 1);
       if (aSeed !== null) { step.seed = aSeed; step.layer = b.ROW_LAYER.compare; step.betPrinciple = d.principle; }
       b.compared(rec, ctx.plan, { exId: def.id, principle: d.principle, stage: r.stage, a: key, aSeed: r.a.seed, b: key, bSeed: r.b.seed,
         choice: r.opts[got.i], correct: got.i === r.correct, rt: got.rt, apply: aSeed === null ? 0 : aSeed, opts: r.opts, pos: r.correct }, now);
@@ -455,7 +460,11 @@
           var after = h('div.px-bets-after', { hidden: true });
           body.appendChild(choices(set.uses, function (i, btns) {
             out.use = set.uses[i].id;
-            btns.forEach(function (bt, j) { bt.disabled = true; if (j === i) bt.classList.add('is-right'); else bt.classList.add('is-dim'); });
+            // no right answer here: the pick is marked as chosen, neutrally (RV-wave2 finding 21 b)
+            btns.forEach(function (bt, j) {
+              bt.disabled = true;
+              if (j === i) { bt.classList.add('is-chosen'); bt.setAttribute('aria-pressed', 'true'); bt.appendChild(h('span.px-bets-tick', { 'aria-hidden': 'true' }, ' ●')); } else bt.classList.add('is-dim');
+            });
             if (set.uses[i].id === 'other') { box.hidden = false; try { inp.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
             after.hidden = false;
             after.appendChild(nextBtn('Back to training', finish));
@@ -529,6 +538,8 @@
   PX.ui.hooks.on('item:notes', function (ctx) {
     var def = ctx && ctx.def, step = ctx && ctx.step, k = def ? CALIB[def.id] : null;
     if (!k || !step || !ctx.tr || ctx.tr.outcome === 'stutter' || (ctx.mode !== 'train' && ctx.mode !== 'path') || !B().hosts(def, 'calib')) return null;
+    // a voided or skipped answer (a fallback item, a stutter: out.outcome 2; skipped: 3) never counts (rule 7; RV-wave2 finding 12)
+    if ((ctx.item && ctx.item.fallback === true) || (ctx.out && (ctx.out.outcome === 2 || ctx.out.outcome === 3))) return null;
     var v = k.value(ctx.tr);
     if (!isNum(v)) return null;
     var S = store();
