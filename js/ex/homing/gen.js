@@ -237,6 +237,15 @@
     return best;
   }
 
+  // v1.2 O42 (for the solution map in view.js): the point where the ray from the start S at map bearing b (° clockwise
+  // from up; SVG y points down) meets the rim ring round the end E of radius r (> |S − E|), so a landmark drawn there
+  // lies in the direction the 3D view showed it from the start (1.1 drew it at its bearing from the end).
+  function rimFromStart(S, E, b, r) {
+    var u = [Math.sin(b * PI / 180), -Math.cos(b * PI / 180)], D = [S[0] - E[0], S[1] - E[1]];
+    var du = D[0] * u[0] + D[1] * u[1], t = -du + Math.sqrt(Math.max(0, du * du - (D[0] * D[0] + D[1] * D[1]) + r * r));
+    return [S[0] + t * u[0], S[1] + t * u[1]];
+  }
+
   /* ------------------------------------------------------------ motion (shared with Reckon and the views) */
   // A piece { dur, v0, v1 }: the rate moves from v0 to v1 along a raised cosine (constant when equal).
   function piece(dur, v0, v1) { return { dur: dur, v0: v0, v1: v1 }; }
@@ -628,7 +637,7 @@
       route: route, sumTurns: sumTurns, steer: steer, drawTarget: drawTarget, shortcuts: shortcuts, routeOk: routeOk, search: search,
       build: build, assemble: assemble, fallback: fallback, normParams: normParams, checkRoute: checkRoute, checkMotion: checkMotion,
       // motion
-      piece: piece, pieceDist: pieceDist, pieceAt: pieceAt, rateAt: rateAt, rampPieces: rampPieces, twoRatePieces: twoRatePieces,
+      piece: piece, pieceDist: pieceDist, pieceAt: pieceAt, rateAt: rateAt, rampPieces: rampPieces, twoRatePieces: twoRatePieces, rimFromStart: rimFromStart,
       legPieces: legPieces, turnPieces: turnPieces, plan: plan, segAt: segAt, poseAt: poseAt, motionSeconds: motionSeconds,
       // the gentle motion profile (v1.2)
       GENTLE: GENTLE, gentle: gentle,

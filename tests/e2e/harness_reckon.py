@@ -301,6 +301,8 @@ def open_app(page):
 def app_item(page, params, until, ex='reckon'):
     """A Free play run of Reckon (or `ex`) with these settings, until the player reaches state `until` (an
     intro or offer card may come first, as in fit.py)."""
+    if ex == 'reckon' and 'legs' not in params:
+        params = dict(params, legs=0)  # v1.2, version 2: the player's Free play asks for every dim
     cfg = {'mode': 'free', 'exId': ex, 'run': '1', 'trials': 2, 'params': params}
     page.evaluate(f'void PX.core.router.go("play", {json.dumps(cfg)}, {{ force: true }})')
     for _ in range(900):
@@ -474,9 +476,12 @@ def reveal_sizes(b, cons):
             page.evaluate('void __play.end()')
         ctx.close()
     REPORT['reveal'] = rows
+    # v1.2 (W2-bets' request; CONTRACT-v1.2 conflict 9): the habit line and the chart are the calibration-detail arm,
+    # which the engine's pick hook sets in Train and Path only; Free play passes no layer, so they stay away here
+    # (the harness, which passes none at all, still shows them: demo_bias_srcdoc, v12)
     for r in rows:
-        C.ok(r['lastBottom'] <= r['barTop'] + 1 and r['verdictTop'] >= 0 and (r['ex'] == 'homing' or (r['chart'] and r['habit'])),
-             f"the real player at {r['size']}, {r['ex']} {r['v']}: the explanation{' with chart and habit line' if r['ex'] == 'reckon' else ''} ends above the result bar, the verdict in view ({r})")
+        C.ok(r['lastBottom'] <= r['barTop'] + 1 and r['verdictTop'] >= 0 and (r['ex'] == 'homing' or (not r['chart'] and not r['habit'])),
+             f"the real player at {r['size']}, {r['ex']} {r['v']}: the explanation{' (Free play: no habit line or chart, the detail arm is Train and Path only)' if r['ex'] == 'reckon' else ''} ends above the result bar, the verdict in view ({r})")
 
 
 def desktop_keys(b, cons):
@@ -871,6 +876,72 @@ def v12(b, cons):
     ctx.close()
 
 
+def v12_shots(b, cons):
+    """Reckon version 2 (PLAN milestone 8) at 360 × 640 and 390 × 844 (touch) and 1366 × 768: a route where the legs
+    decide (two alternatives, one shown) and a walk back of the new range; the walk ends with the turn on the spot
+    (the pose faces the item's final heading), the answer is right when turned to the key, the reveal and Show me
+    draw; screenshots at the answer, the reveal and the map. The Watch demo (seed 44 at the easiest level) shows
+    its final turn in the walk caption."""
+    rows = []
+    for vp, extra in (((360, 640), PHONE), ((390, 844), PHONE), ((1366, 768), {})):
+        ctx = b.new_context(viewport={'width': vp[0], 'height': vp[1]}, **extra)
+        page = ctx.new_page()
+        cons.append(Console(page))
+        tag = '%dx%d' % vp
+        page.goto(url('v2_' + tag, seed=301, p='route:3,flow:0,speed:1,tolerance:1,legs:1', v='point', fast=True))
+        page.wait_for_function(READY, timeout=90000)
+        for case, q, sd in (('legs', {'variant': 'point', 'route': 3, 'flow': 0, 'speed': 1, 'tolerance': 1, 'legs': 1}, 301),
+                            ('return', {'variant': 'return', 'route': 5, 'flow': 1, 'speed': 2, 'tolerance': 3, 'legs': 1}, 302)):
+            if case != 'legs':
+                page.evaluate('([q, s]) => __harness.next(q, s)', [q, sd])
+                page.wait_for_function(READY, timeout=90000)
+            it = page.evaluate("""() => { const it = __harness.item, p = PX.ex.view('reckon').pose();
+                return { key: it.keyDeg, d: it.distance, v: it.walkSpeed, n: it.legs.length, turns: it.turns.length, R: it.turns[it.turns.length - 1],
+                         alts: (it.alts || []).length, alt: it.alt, dh: Math.abs(((p.h - it.heading) % 360 + 540) % 360 - 180), valid: PX.ex.get('reckon').validate(it) === true }; }""")
+            shot(page, f'v2_{tag}_{case}_answer')
+            tt = Touch(ctx, page) if extra else None
+            turn_to(page, it['key'], tt)
+            if case == 'return':
+                page.locator('.ex-reckon-walk').scroll_into_view_if_needed()
+                walk_back(page, it['d'], it['v'], tt)
+            sel = '.ex-reckon-here' if case == 'return' else '.ex-fp-confirm'
+            page.locator(sel).scroll_into_view_if_needed()
+            tt.tap(sel) if tt else page.locator(sel).click()
+            page.wait_for_function(STATE, arg='reveal', timeout=15000)
+            page.wait_for_timeout(700)
+            right = page.evaluate('() => __harness.last.result.correct')
+            shot(page, f'v2_{tag}_{case}_reveal', full=True)
+            before = page.evaluate('() => __harness.played.finished')
+            page.evaluate('() => { __harness.showMe(); }')
+            page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=60000)
+            page.wait_for_timeout(300)
+            shot(page, f'v2_{tag}_{case}_showme')
+            it.update(size=tag, case=case, right=right)
+            rows.append(it)
+        ctx.close()
+    REPORT['v2'] = rows
+    C.ok(all(r['valid'] and r['turns'] == r['n'] and 30 <= abs(r['R']) <= 150 and r['dh'] < 0.5 for r in rows),
+         f'version 2: every route ends with a turn on the spot of 30–150° and the walk leaves you facing the final heading ({[(r["size"], r["case"], r["R"], round(r["dh"], 3)) for r in rows]})')
+    C.ok(all(r['alts'] == 2 and r['alt'] in (0, 1) for r in rows if r['case'] == 'legs'), 'where the legs decide, the item carries two alternatives and shows one')
+    C.ok(all(r['right'] for r in rows), f'turned to the key (and walked the home distance) is right at every size ({[(r["size"], r["case"], r["right"]) for r in rows]})')
+    # the Watch demo's walk caption names the final turn
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, **PHONE)
+    page = ctx.new_page()
+    cons.append(Console(page))
+    page.goto(url('v2_demo', seed=44, p='route:0,flow:0,speed:0,tolerance:0,legs:0', v='point', fast=True))
+    page.wait_for_function(READY, timeout=90000)
+    page.evaluate("() => { window.__subs = []; const o = new MutationObserver(() => { const t = (document.querySelector('.ex-fp-sub') || {}).textContent; if (t && __subs[__subs.length - 1] !== t) __subs.push(t); }); o.observe(document.body, { subtree: true, childList: true, characterData: true }); }")
+    before = page.evaluate('() => __harness.played.finished')
+    page.evaluate('() => { __harness.demo(); }')
+    page.wait_for_timeout(2500)
+    shot(page, 'v2_demo_390x844_walk')
+    page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=120000)
+    subs = page.evaluate('() => window.__subs')
+    it = page.evaluate('() => ({ key: __harness.item.keyDeg, R: __harness.item.turns[__harness.item.turns.length - 1] })')
+    C.ok(any('one last turn on the spot' in t for t in subs) and it['key'] < 180, f'the Watch demo (seed 44) is a right-hand item and its walk caption names the last turn on the spot ({it}; {[t[:60] for t in subs][:6]})')
+    ctx.close()
+
+
 def main():
     cons = []
     only = set(sys.argv[1:])
@@ -881,6 +952,10 @@ def main():
                 v12(b, cons)
             if 'demo' in only:
                 demo_bias_srcdoc(b, cons)
+            if 'reveal' in only:
+                reveal_sizes(b, cons)
+            if 'shots' in only:
+                v12_shots(b, cons)
             b.close()
             errors = [e for c in cons for e in c.errors()]
             C.ok(not errors, f'no console errors ({errors[:5]})')
@@ -895,6 +970,7 @@ def main():
         throttled(b, cons)
         demo_bias_srcdoc(b, cons)
         v12(b, cons)
+        v12_shots(b, cons)
         b.close()
     errors = [e for c in cons for e in c.errors()]
     C.ok(not errors, f'no console errors ({errors[:5]})')

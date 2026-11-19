@@ -32,6 +32,20 @@ O11; Reckon texts O39, O40. Not in wave 1: Reckon's rated-level changes (final r
   walk-back tip; requests to W1-rules (Practise sheet → Watch, Try, Go) and W1-core (Your turn strip, Replay, Show me
   after right answers). Record: docs/dev/reviews/RV-reckon-retest-v1.2.md.
 
+## Milestone 8: Reckon and Homing (started 2026-11-19 00:29 UTC)
+Task: PLAN milestone 8's Reckon and Homing bullets (note docs/research/v1.2/N1-reckon.md §3.4, §6 #6–11, addendum),
+W2-bets' request of 22:10 UTC (Reckon's calibration-detail arm). Commits: 6c52c5f (Reckon version 2), 7bc3a04 (the
+calibration detail, the guide's Reckon page), then Homing O42 and the simulation (below).
+- Reckon version 2: a final turn on the spot (±30–150°) on every rated route, fitted to an even target; the `legs` dim
+  (two alternatives from the same turns, more than 2w + 8° apart, a coin for the one shown, stored as alts and
+  re-derived by the validator); a fourth tolerance (15°, τ 0.2); walks back of 3–20 m; per-route estMs; version 2 with
+  re-basing through js/engine/rebase.js; the strategy cards' wording as the studies found it; a legs tip.
+- Checks: tests/node/reckon.test.mjs 333 (10 000+ items per variant plus 24 000 for the shortcut cells; no exempt cell;
+  turn-only answers ≤ 50 % + 3 SE in every legs-decide cell and never right for both alternatives), homing 297, core,
+  engine-v11, record4, bets, shortcut-levels, section: all pass.
+- The simulation: tests/node/sim-reckon.mjs with tests/node/fixtures/learner-reckon.mjs (results in
+  docs/dev/v1.2/reckon-sim.md).
+
 ## In progress
 - Nothing. Scored items of the retest were not played (the driver, not the app, stalled); the flow did not change,
   so a rerun is the lead's call. The driver stays running (bounded slot wait).

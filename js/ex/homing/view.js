@@ -604,7 +604,7 @@
      Show me: the route from above (start heading up), then turned so that you face up
      ===================================================================================== */
 
-  // A map of one item in the stage's overlay. o: { cap, landmarks (draw them on the rim) }.
+  // A map of one item in the stage's overlay. o: { cap, landmarks (draw them on the rim, as seen from the start) }.
   function routeMap(item, o) {
     var kc = o.cap, P = item.path, h0 = item.startHeading, s = Math.sin(rad(h0)), c = Math.cos(rad(h0));
     function mp(p) { return [p[0] * c - p[1] * s, -(p[0] * s + p[1] * c)]; }
@@ -624,9 +624,11 @@
     svg.appendChild(world);
     var m = { item: item, kc: kc, svg: svg, world: world, route: route, marks: marks, pts: pts, E: E, H: H, u: u, fs: fs, rho: 0, mp: mp,
       uprights: [], fixed: [], lands: [], dots: [], labels: [], spots: [] };
-    var end = P[P.length - 1], edge = S2.el('g', { class: 'ex-fp-maplandmarks' });
+    var start = P[0], edge = S2.el('g', { class: 'ex-fp-maplandmarks' });
     (o.landmarks ? item.landmarks || [] : []).forEach(function (Lm) {
-      var b = Math.atan2(Lm.x - end[0], Lm.y - end[1]) * 180 / Math.PI - h0, q = polar(E[0], E[1], b, H * 0.88);
+      // v1.2 O42: where the start saw it (the line from the start to the dot keeps the landmark's true direction),
+      // still on the rim ring round the end, so the dots stay clear of the route and inside the map
+      var b = Math.atan2(Lm.x - start[0], Lm.y - start[1]) * 180 / Math.PI - h0, q = genLib().rimFromStart(pts[0], E, b, H * 0.88);
       edge.appendChild(circle(1.5 * u, 'ex-fp-maplandmark', q[0], q[1]));
       m.dots.push(q);
       var lab = label(m, edge, q, Lm.name, 'ex-fp-maplabel');
