@@ -48,6 +48,7 @@ export async function run(t) {
   storeRows(t);
   logCsv(t);
   produceScale(t);
+  dailyUntimed(t);
 }
 
 function defaults(t) {
@@ -423,4 +424,25 @@ function produceScale(t) {
   t.near(M.refChance(plain), (0.02 + 0.25) / 2, 1e-12, 'without a produce layer the median runs over every variant');
   t.eq(M.refChance(prod), 0.25, 'with one, the reference guessing rate leaves the produce variant out');
   t.eq(M.pool(prod).filter((c) => c.params.variant === 'draw').length, 3, 'its items stay in the pool (explicit picks and the bets pick hook use them)');
+}
+
+// The Daily stays untimed (W3-game's request; note G1 §2.1): its points are challenge points under the same
+// conditions for everyone, so a Quick item (def.pace) carries no deadline there; Train still paces it.
+function dailyUntimed(t) {
+  t.section('the Daily leaves the Quick deadline out');
+  const PX = t.context({}).PX, E = PX.engine, at = T0 + 40 * DAY, day = PX.util.dayKey(at);
+  E.config.daily2.epochs.push({ n: 98, from: day, ramp: true, pool: ['centralpoint'] });
+  const rec = newRecord(PX, at - 3600e3), plan = E.modes.start(rec, 'daily', { now: at, day });
+  const steps = [];
+  for (let i = 0; i < 8; i++) {
+    const s = E.modes.next(plan, rec, at + i * 20000);
+    if (!s || s.done) break;
+    steps.push(s);
+    E.modes.answer(plan, rec, s, { correct: true, rt: 3000 }, at + i * 20000 + 3000);
+  }
+  const quick = steps.filter((x) => x.exId === 'centralpoint' && x.params.variant === 'quick');
+  t.ok(quick.length >= 4 && quick.every((x) => !x.paced && !x.deadlineMs), 'Daily items of a Quick variant carry no deadline (' + quick.length + ' items)');
+  const tr = E.modes.start(newRecord(PX, at - 3600e3), 'train', { now: at, pin: 'centralpoint', minutes: 5 });
+  const s1 = E.modes.next(tr, rec, at);
+  t.ok(s1 && s1.exId === 'centralpoint' && s1.paced && s1.deadlineMs > 0, 'Train still gives them their Quick deadline');
 }
