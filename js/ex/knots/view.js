@@ -18,7 +18,8 @@
   var P = lib.PLATE, NS = 'http://www.w3.org/2000/svg';
   var st = null;                                  // the mounted view's state
   var LETTERS = ['A', 'B', 'C', 'D'];
-  var TAG_R = 14;                                 // tag circles: 28 px across on a 320 px plate
+  var TAG_R = 16;                                 // tag circles: 32 px across on a 320 px plate (v1.2, W3-exfix: 28 read small;
+                                                  // over 480 marked items a disc touches the rope on 0.3 % of tags)
   var HIT_R = 22;                                 // their tap discs: 44 px across
 
   function learn() { return PX.ex.learn('knots') || {}; }
@@ -100,6 +101,8 @@
     });
   }
   function ring(g, x, y, cls) { g.appendChild(el('circle', { cx: f1(x), cy: f1(y), r: 17, class: 'ex-knots-ring ' + (cls || '') })); }
+  // A ring list: [x, y] (a move's crossing: dashed) or [x, y, cls] (a marked crossing, in its tag's look: 'is-key',
+  // 'is-chosen'; v1.2, W3-exfix).
 
   // Tag positions: 24–44 px from the crossing. The score favours a tag that is clearly nearer its
   // own crossing than any other (the margin counts most), clear of the rope, with a short leader;
@@ -137,7 +140,7 @@
       t.appendChild(el('circle', { cx: f1(sp.x), cy: f1(sp.y), r: HIT_R, class: 'ex-knots-taghit' }));
       t.appendChild(el('line', { x1: f1(sp.cx + dx / l * 9), y1: f1(sp.cy + dy / l * 9), x2: f1(sp.x - dx / l * TAG_R), y2: f1(sp.y - dy / l * TAG_R), class: 'ex-knots-leader' }));
       t.appendChild(el('circle', { cx: f1(sp.x), cy: f1(sp.y), r: TAG_R, class: 'ex-knots-tagdisc' }));
-      var tx = el('text', { x: f1(sp.x), y: f1(sp.y + 5), 'text-anchor': 'middle', class: 'ex-knots-tagtext' });
+      var tx = el('text', { x: f1(sp.x), y: f1(sp.y + 6), 'text-anchor': 'middle', class: 'ex-knots-tagtext' });
       tx.textContent = LETTERS[i];
       t.appendChild(tx);
       g.appendChild(t);
@@ -274,7 +277,7 @@
     clearG(st.ropeG); clearG(st.markG);
     st.tagG.style.display = 'none';
     var pc = drawPolys(st.ropeG, polys);
-    (rings || []).forEach(function (r) { ring(st.markG, r[0], r[1]); });
+    (rings || []).forEach(function (r) { ring(st.markG, r[0], r[1], r[2]); });
     return pc;
   }
   // No crossing joins the loops any more: lift loop B above loop A (a casing along all of it) and
@@ -297,7 +300,7 @@
     clearG(st.ropeG); clearG(st.markG);
     st.tagG.style.display = tags ? '' : 'none';
     drawItem(st.ropeG, curves, over);
-    (rings || []).forEach(function (r) { ring(st.markG, r[0], r[1]); });
+    (rings || []).forEach(function (r) { ring(st.markG, r[0], r[1], r[2]); });
   }
   // Replays are cached per item and flags (they take a few ms, never during a stimulus).
   function replayOf(item, over, split) {
@@ -355,10 +358,13 @@
     var c = item.tags[item.key], o2 = item.over.slice(), dg = lib.diagramOf(curves, item.over), X = dg.X[c];
     o2[c] = !o2[c];
     var R2 = replayOf(item, o2, false), untie = item.variant === 'untie', shown = false;
+    // v1.2 (W3-exfix, desktop fresh run d1: a dashed ring was hard to match to its letter): the ring on the key
+    // crossing takes the key tag's look (solid green), and the tag shows it too, also before the answer (Watch)
+    function keyTag(on) { st.tags.forEach(function (t, i) { if (i === item.key) t.g.classList.toggle('is-key', on); }); }
     out.push({
       ms: 1600, caption: cap('switchKey', { tag: LETTERS[item.key] }),
-      enter: function () { shown = false; still(curves, item.over, [[X.x, X.y]], true); },
-      update: function (k) { if (k >= 0.55 && !shown) { shown = true; still(curves, o2, [[X.x, X.y]], true); } },
+      enter: function () { shown = false; still(curves, item.over, [[X.x, X.y, 'is-key']], true); keyTag(true); },
+      update: function (k) { if (k >= 0.55 && !shown) { shown = true; still(curves, o2, [[X.x, X.y, 'is-key']], true); } },
     });
     out = out.concat(moveSteps(R2));
     out.push({
@@ -371,7 +377,7 @@
       o3[c2] = !o3[c2];
       out.push({
         ms: 2400, caption: cap('stays', { tag: LETTERS[response], what: untie ? 'still holds a knot' : 'still falls open' }),
-        enter: function () { still(curves, o3, [[X2.x, X2.y]], true); },
+        enter: function () { still(curves, o3, [[X2.x, X2.y, 'is-chosen']], true); },
       });
     }
     return out;

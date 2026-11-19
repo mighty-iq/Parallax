@@ -54,3 +54,17 @@ tests/node/<id>*.test.mjs and tests/e2e/harness_<id>*.py. Source: fresh players 
 - The view's line after a miss that earns round points now reads as a near miss; the verdict word is play.js's:
   requested from W2-core (requests.md). Checks: node centralpoint + layers-centralpoint 393/0; harness_centralpoint
   227/0 (new: a miss 1.3–2.5 bands off earns credit and reads "near miss"; a far miss does not).
+
+## Knots (items 7 and 10)
+- Try 1: fixed seed 310 (a knot, one move, rope and spread as the demo's); the random draw preferred a falling-open
+  rope (four moves at 5 crossings). Tags 32 units (was 28), letters 17 px; show me's key ring solid green like its tag,
+  the wrong pick's red and dashed; wide screens put the answers beside the plate (no fold, no shift after answering).
+- Checks: node knots: the full run (10 000 items) passed all but the new Try 1 check, whose spread tolerance was too
+  tight (0.0015 units); after the fix its learn checks pass (a 300-item rerun; its shortcut cells fail only on that
+  sample size); harness_knots 342/0; the app at 1366 × 768 (pull and untie): answers at 258 px before and after.
+
+## Left open (the lead's word at 16:00 UTC: stop after the items in hand)
+- Requests: W2-core, the verdict word "Near miss" (play.js) and the copy of Pause over a show me's stage at 360 × 640
+  (stageIntoView); W3-voice, the guide's Nets text and shot.
+- Not rerun for this round: fit.py for Central Point and Knots (their changes are a text line, larger tags on the plate
+  and a layout from 720 px wide; phones unchanged), and the full knots node run after the tolerance fix.
