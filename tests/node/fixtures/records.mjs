@@ -75,7 +75,10 @@ export function v4Filled(T0) {
     trial: { sessions: 3, answers: 120, s0: 9, n0: 640, end: null, restUntil: null }, verdict: null, shown: { summary: 1, today: 0 } }] };
   r.bets = { v: 1, plan: { compare: { seed: 77, periods: [{ n: 1, start: T0 - 10 * DAY, s0: 3, on: ['rotate'] }] } } };
   r.measure = { v: 1, form0: 'B' };
-  r.game = { v: 1, reach: { high: 31 }, grades: { rotate: { g: 4, at: T0 - DAY } }, records: {}, firsts: [{ exId: 'rotate', cell: '2,1', at: T0 - DAY }], atlas: {}, climb: {}, notes: {} };
+  // milestone 5's shapes (js/engine/game.js; W3-game): a cell of the atlas, a first, one Climb run and the best height
+  r.game = { v: 1, reach: { high: 31 }, grades: { rotate: { g: 4, at: T0 - DAY } }, records: {},
+    firsts: [{ ex: 'rotate', v: 1, cell: '2.1', at: T0 - DAY }], atlas: { rotate: { v: 1, c: { '2.1': [6, 4, 0, 1] } } },
+    climb: { w: { '2026-10-26': { A: { r: 12, h: 11, m: 1, n: [3], t: 1000 } } }, pb: { h: 11 } }, notes: {} };
   r.sessions.push({ id: 's-c', start: T0 - DAY, end: T0 - DAY + 220000, mode: 'check', trials: 14, right: 9, practiceMs: 210000, exs: ['cubematch', 'wordlinks'], summary: null, kind: 'block', ext: { measure: { block: 3 } } });
   r.assess.push({ date: new Date(T0 - DAY).toISOString(), form: 'C', kind: 'block', pv: { cubematch: 1, wordlinks: 1 },
     results: { cubematch: { right: 2, n: 3, theta: 0.5, se: 1.1 }, wordlinks: { right: 1, n: 2, theta: 0.3, se: 1.3 } },

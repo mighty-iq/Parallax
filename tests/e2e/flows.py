@@ -183,7 +183,10 @@ def run_daily(b, C):
     ok = drive(page, '!!document.querySelector(".pl-daily")', limit=300)
     C.ok(ok, f'{tag}: the challenge runs to its result')
     line = page.locator('.pl-daily .px-copybox-text').input_value()
-    C.ok(re.fullmatch(r'Parallax Daily #\d+ · \d/\d+ · https://discord\.gg/chmr', line) is not None, f'{tag}: share line {line!r}')
+    # Daily v2 (from 19 Nov 2026, milestone 5): the points of the ramp and the mark row
+    C.ok(re.fullmatch(r'Parallax Daily #\d+ · (\d/\d+|\d+ of 36 points · [✓✗]{8}) · https://discord\.gg/chmr', line) is not None, f'{tag}: share line {line!r}')
+    pts = page.evaluate("(() => { const d = PX.engine.daily.status(PX.core.store.state, Date.now()); return d.ramp ? [d.points, document.querySelector('.pl-daily-points') ? document.querySelector('.pl-daily-points').textContent : null, document.querySelectorAll('.pl-mark-w').length] : null; })()")
+    C.ok(pts is None or (pts[1] is not None and f'{pts[0]} of 36' in pts[1] and pts[2] == 8), f'{tag}: a ramp shows its points beside the right answers and each item\'s worth ({pts})')
     page.locator('.pl-daily [data-copy]').first.click()
     page.wait_for_timeout(300)
     C.ok('Cop' in page.locator('.pl-daily .px-copybox-status').first.inner_text(), f'{tag}: Copy reports back')
@@ -401,7 +404,10 @@ def main():
     C = Checks('flows')
     with sync_playwright() as p:
         b = launch(p)
+        only = sys.argv[1:]  # e.g. `flows.py daily`: only the runs named
         for fn in (run_tour, run_check, run_daily, run_modes, run_today):
+            if only and fn.__name__.replace('run_', '') not in only:
+                continue
             try:
                 fn(b, C)
             except Exception as e:
