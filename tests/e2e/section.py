@@ -1,21 +1,25 @@
-"""E2E: Section practice (js/ui/section.js, js/engine/section.js; v1.1 PLAN M5; R3 §9).
+"""E2E: Section practice (js/ui/section.js, js/engine/section.js; v1.1 PLAN M5; R3 §9; v1.2 PLAN milestone 8).
 
-A mini section end to end on a phone (390×844, touch) and a desktop (1280×860, mouse and keys):
-the setup (sizes, form, parts, rules, the ADA line), a part's instructions with the clock stopped,
-items without feedback, Skip, Flag, Back (the earlier answer shown as chosen), the item strip, a
-pause that stops the section clock, a voided item replaced at the end of its part, the end-of-part
-card, a reload that resumes the run where it was, "End the section" from the pause sheet, and the
-review (results and pacing, the items to look at again, each replayed with the answer marked and
-its show-me). v1.2: a reload keeps the time spent on the current item (O9); the review comes back after a
-reload and is offered on the setup screen later (O10); item numbers never shift after a void (O11); the
-Chimera pop-up is the full welcome on a first launch and a one-tap card later (gap C2). The record: trials with mode 'section', no rating change, one session, the run
-summary, the next form. A second short run checks that time running out ends the section, and
-that reading a part's instructions does not use its time. On the phone the item, its options and
-the controls fit the screen without scrolling.
+A mini section end to end on a phone (390×844, touch) and a desktop (1280×860, mouse and keys). v1.2, test
+conditions (note docs/research/v1.2/D1-pat-formats.md addendum A.4): the setup (sizes, form, parts, rules, the
+guessing line, the ADA line); every part's instructions on one page before the clock starts (the clock stopped,
+no time used); one clock across all parts that stops while an item is prepared (a 1.5 s generator moves it far
+less); items without feedback; Mark, Strike (tap while striking, right-click, Shift with a letter; kept on the
+item, said to screen readers), Skip and Back (the earlier answer shown as chosen); a pause that stops the clock;
+a voided item replaced at the end of its part, with numbers that never shift (O11); the next part straight
+after the last item of one, and Back across parts; the review list (marked and unanswered items of every
+part, the guessing line, a chip that opens its item, the way back); a reload that resumes the run where it
+was with its time kept (O9); "End the section" from the review list, which names the unanswered items; the
+review (results and pacing, the items to look at again, each replayed with the answer marked and its
+show-me), which comes back after a reload and is offered on the setup screen later (O10). The record: trials
+with mode 'section' logged when the section ends, no rating change, one session, the run summary, the next
+form. A second short run checks that time running out ends the section, and that the instructions use none
+of its time. On the phone the item, its options and the controls fit the screen without scrolling.
+v1.2 O28: the same on a phone held sideways (844×390, 740×360): the instructions fit the width, every item of
+a part fits the screen with its five controls (at least 44 px), and the review list fits.
 
 Until three DAT-style exercises can run here, stand-ins (Fold, Views, Slice, Hidden, Nets) take
 their place through the test knob PX.engine.section.config.parts.
-v1.2 O28: the same on a phone held sideways (844×390, 740×360): every item of a part fits the screen.
 Screenshots: tests/e2e/out/section/. Run: tests/e2e/pwslot.sh python3 tests/e2e/section.py [sideways]
 """
 import json, os, pathlib, sys
@@ -107,6 +111,16 @@ def answer_key(page, phone, right=True):
     page.wait_for_timeout(150)
 
 
+def list_filter(page, value, phone):
+    """The review list's Show filter (a segmented control: radio inputs inside labels)."""
+    lab = page.locator('[data-sec-list] .px-seg-item', has=page.locator(f'input[value="{value}"]')).first
+    if phone:
+        lab.tap()
+    else:
+        lab.click()
+    page.wait_for_timeout(150)
+
+
 def fits(page):
     """On a phone: the item's stimulus, its options and the controls row are inside the screen."""
     return page.evaluate('''(() => {
@@ -143,19 +157,25 @@ def main_run(b, C, tag, phone):
     C.ok('new to you' in txt and page.locator('.sec-new [data-go="library"]').count() == 1, f'{tag}: formats never practised are marked, with a way to learn them first')
     page.screenshot(path=str(OUT / f'{tag}_setup.png'), full_page=True)
     press(page, '[data-sec-start]', phone)
-    wait_mode(page, 'intro')
+    # v1.2 test conditions (PLAN milestone 8): every part's instructions on one page, before the clock starts
+    wait_mode(page, 'instructions')
     s = sec(page)
-    C.ok(s['running'] is False, f'{tag}: the clock is stopped while the part instructions are open')
-    page.screenshot(path=str(OUT / f'{tag}_intro.png'))
+    C.ok(s['running'] is False, f'{tag}: the clock is stopped while the instructions are open')
+    ins = page.locator('[data-card-box="sec-instructions"]').inner_text()
+    C.ok(page.locator('[data-sec-instr]').count() == len(parts) + 1, f'{tag}: the instructions hold every part ({len(parts)}) and the rules of the section')
+    C.ok('Guessing is not penalised' in ins and 'not affiliated with or endorsed by the ADA' in ins and 'before test day' in ins,
+         f'{tag}: they say guessing is not penalised, carry the ADA line, and say why they come first')
+    page.screenshot(path=str(OUT / f'{tag}_instructions.png'), full_page=True)
     if phone:  # RV-play-dat: "Start part 1" showed a keyboard hint on a phone
         C.ok(page.evaluate('[...document.querySelectorAll("[data-card-box] .px-kbd")].every((k) => getComputedStyle(k).display === "none")'),
-             f'{tag}: no key hints on the part card on a touch screen')
+             f'{tag}: no key hints on the instructions on a touch screen')
     page.wait_for_timeout(800)
     C.ok(sec(page)['usedMs'] < 300, f'{tag}: reading the instructions uses no section time ({sec(page)["usedMs"]:.0f} ms)')
+    page.locator('[data-card="start"]').scroll_into_view_if_needed()
     press(page, '[data-card="start"]', phone)
     wait_mode(page, 'item')
     wait_respond(page)
-    C.ok(sec(page)['running'] is True, f'{tag}: the clock runs during items')
+    C.ok(sec(page)['running'] is True and run_state(page)['begun'] is True, f'{tag}: Start the clock: the clock runs during items')
     t = page.locator('[data-sec-timer]').inner_text()
     C.ok(':' in t, f'{tag}: the HUD shows the time left ({t})')
     C.ok(page.locator('.pl-verdict:not(:empty)').count() == 0, f'{tag}: no feedback')
@@ -165,20 +185,43 @@ def main_run(b, C, tag, phone):
         C.ok(f['ok'], f'{tag}: the item, its options and the controls fit the screen {f}')
     page.screenshot(path=str(OUT / f'{tag}_item.png'))
 
-    # item 1 right → moves on; flag and skip item 2; back twice: item 1 shows its answer
+    # the clock stops while an item is prepared: item 2's generator takes 1.5 s, and the clock moves far less
+    page.evaluate("""(id) => { const d = PX.ex.get(id), g = d.generate; window.__slowGen = [d, g];
+        d.generate = function (r, p) { const t = performance.now(); while (performance.now() - t < 1500) {} d.generate = g; return g.call(this, r, p); }; }""", parts[0])
+    u_before = sec(page)['usedMs']
     key1 = page.evaluate('__play.key')
     answer_key(page, phone, True)
-    page.wait_for_function('__section.state.index === 1', timeout=5000)
+    page.wait_for_function('__section.state.index === 1', timeout=8000)
+    wait_respond(page)
+    u_after = sec(page)['usedMs']
+    page.evaluate('(() => { if (window.__slowGen) { window.__slowGen[0].generate = window.__slowGen[1]; } })()')
+    C.ok(u_after - u_before < 900, f'{tag}: the section clock stops while an item is prepared (1.5 s of preparation, the clock moved {u_after - u_before:.0f} ms)')
     C.ok(True, f'{tag}: choosing an answer moves on to item 2')
     C.ok(page.locator('.pl-verdict:not(:empty)').count() == 0, f'{tag}: still no feedback after answering')
-    wait_respond(page)
+
+    # Mark, then Strike: options crossed out by tap, by Shift with a letter, by right-click; kept on the item
     press(page, '[data-sec-flag]', phone)
-    C.ok(page.locator('[data-sec-flag]').get_attribute('aria-pressed') == 'true', f'{tag}: Flag marks item 2')
-    if phone:
-        press(page, '[data-sec-items]', phone)
-    C.ok(page.locator('.sec-strip [data-sec-item].is-flagged').count() == 1 and page.locator('.sec-strip [data-sec-item].is-answered').count() == 1, f'{tag}: the strip shows one answered and one flagged item')
-    C.ok(page.locator('.sec-strip [data-sec-item].is-answered .sec-chip-dot').count() == 1 and page.locator('.sec-strip [data-sec-item]:not(.is-answered) .sec-chip-dot').count() == 0, f'{tag}: an answered item carries a mark, not colour alone')
-    page.screenshot(path=str(OUT / f'{tag}_strip.png'))
+    C.ok(page.locator('[data-sec-flag]').get_attribute('aria-pressed') == 'true', f'{tag}: Mark marks item 2')
+    n_opt = page.locator('.pl-grid .px-choice').count()
+    press(page, '[data-sec-strike]', phone)
+    C.ok(page.locator('[data-sec-strike]').get_attribute('aria-pressed') == 'true' and sec(page)['striking'], f'{tag}: Strike turns striking on')
+    press(page, '.pl-grid .px-choice[data-index="0"]', phone)
+    st0 = run_state(page)['parts'][0]['items'][1].get('struck')
+    C.ok(st0 == [0] and sec(page)['index'] == 1 and page.locator('.pl-grid .px-choice[data-index="0"].is-struck').count() == 1,
+         f'{tag}: while striking, a tap crosses an option out and answers nothing ({st0})')
+    C.ok(page.locator('.pl-grid .px-choice[data-index="0"]').get_attribute('aria-describedby') == 'sec-struck-desc', f'{tag}: a struck option says so to a screen reader')
+    press(page, '[data-sec-strike]', phone)
+    C.ok(page.locator('[data-sec-strike]').get_attribute('aria-pressed') == 'false', f'{tag}: Strike again turns it off')
+    if not phone:
+        letters = page.evaluate('!!(PX.ui.play.current() && PX.ui.play.current().ctx && PX.ui.play.current().ctx.letters)')
+        page.locator('.pl-grid .px-choice[data-index="2"]').click(button='right')
+        page.wait_for_timeout(100)
+        if letters:
+            page.keyboard.press('Shift+B')
+            page.wait_for_timeout(100)
+        st1 = run_state(page)['parts'][0]['items'][1].get('struck')
+        C.ok(st1 == ([0, 1, 2] if letters else [0, 2]) and sec(page)['index'] == 1, f'{tag}: a right-click{" and Shift+B" if letters else ""} strike options too, answering nothing ({st1})')
+    page.screenshot(path=str(OUT / f'{tag}_struck.png'))
     if phone:
         press(page, '[data-sec-next]', phone)
     else:
@@ -192,12 +235,15 @@ def main_run(b, C, tag, phone):
         page.keyboard.press('ArrowLeft')
     page.wait_for_function('__section.state.index === 1', timeout=5000)
     wait_respond(page)
+    page.wait_for_timeout(150)
+    C.ok(page.locator('.pl-grid .px-choice.is-struck').count() == (1 if phone else len(run_state(page)['parts'][0]['items'][1].get('struck') or [])), f'{tag}: back on item 2, its struck options are still crossed out')
     press(page, '[data-sec-back]', phone)
     page.wait_for_function('__section.state.index === 0', timeout=5000)
     wait_respond(page)
     sel = page.evaluate('[...document.querySelectorAll(".pl-grid .px-choice")].findIndex((b) => b.classList.contains("is-selected"))')
     C.ok(isinstance(key1, int) and sel == key1 or not isinstance(key1, int), f'{tag}: back on item 1, its answer is shown as chosen ({sel} = {key1})')
     C.ok(page.locator('[data-sec-next]').inner_text().startswith('Next'), f'{tag}: an answered item offers Next, not Skip')
+    C.ok(page.locator('[data-sec-back]').is_disabled(), f'{tag}: nothing before the first item')
     press(page, '[data-sec-next]', phone)
     page.wait_for_function('__section.state.index === 1', timeout=5000)
     answer_key(page, phone, False)  # item 2 wrong
@@ -230,7 +276,8 @@ def main_run(b, C, tag, phone):
     wait_respond(page)
     C.ok(sec(page)['running'] is True, f'{tag}: Resume starts it again')
 
-    # the rest of the part: items 4, 5 and the replacement, which carries the number of item 3 (v1.2 O11)
+    # the rest of the part: items 4, 5 and the replacement, which carries the number of item 3 (v1.2 O11); then
+    # on into part 2 with no card between (one clock, free navigation)
     metas = []
     for _ in range(3):
         if sec(page)['mode'] != 'item':
@@ -240,22 +287,46 @@ def main_run(b, C, tag, phone):
         answer_key(page, phone, True)
         page.wait_for_timeout(200)
     C.ok(metas == ['item 4 of 5', 'item 5 of 5', 'item 3 of 5'], f'{tag}: items 4 and 5 keep their numbers; the replacement at the end is item 3 ({metas})')
-    wait_mode(page, 'partend')
-    card = page.locator('[data-card-box="sec-partend"]').inner_text()
-    C.ok('Flagged: item 2' in card and 'cannot come back' in card, f'{tag}: the end-of-part card lists the flagged item and says the part closes')
-    focus = page.evaluate('document.activeElement && document.activeElement.getAttribute("data-card")')
-    C.ok(focus == 'back' and page.locator('[data-card-box="sec-partend"] [data-card="back"]').get_attribute('class').find('primary') >= 0, f'{tag}: with an item flagged, the default goes back to it, not on ({focus})')
-    page.screenshot(path=str(OUT / f'{tag}_partend.png'))
-    press(page, '[data-card="next"]', phone)
-    wait_mode(page, 'intro')
-    rows = page.evaluate('(n) => { const s = PX.core.store.state, m = s.idx.mode.indexOf("section"); return s.trials.slice(n).map((r) => [r[2] === m, r[5]]); }', trials0)
-    C.ok(len(rows) == 6 and all(x[0] for x in rows), f'{tag}: closing part 1 logged its 6 shown items with mode "section" {rows}')
-    C.ok(sorted(x[1] for x in rows) == [0, 1, 1, 1, 1, 2], f'{tag}: outcomes: 4 right, 1 wrong, 1 void {sorted(x[1] for x in rows)}')
+    page.wait_for_function('__section.state.mode === "item" && __section.state.part === 1', timeout=8000)
+    wait_respond(page)
+    meta2 = page.locator('.pl-hud-meta').first.inner_text()
+    C.ok('Part 2 of' in meta2 and 'item 1 of 5' in meta2, f'{tag}: the next answer opens part 2 at once, no card between ({meta2!r})')
+    C.ok(page.evaluate('(n) => PX.core.store.state.trials.length - n', trials0) == 0, f'{tag}: nothing is logged before the section ends')
+    # Back from part 2's first item goes to part 1's last one (the replacement)
+    press(page, '[data-sec-back]', phone)
+    page.wait_for_function('__section.state.part === 0 && __section.state.index === 5', timeout=5000)
+    C.ok(True, f'{tag}: Back from part 2 returns to part 1 (free navigation across parts)')
+    wait_respond(page)
+
+    # the review list: marked and unanswered items of every part; a chip goes to its item
+    press(page, '[data-sec-items]', phone)
+    wait_mode(page, 'list')
+    lst = page.locator('[data-sec-list]').inner_text()
+    C.ok(sec(page)['running'] is True and 'Review' in lst and 'Marked (1)' in lst and 'Unanswered' in lst, f'{tag}: Review lists marked and unanswered items while the clock runs')
+    C.ok('Guessing is not penalised' in lst, f'{tag}: with unanswered items, the list says guessing is not penalised')
+    page.screenshot(path=str(OUT / f'{tag}_list.png'), full_page=True)
+    list_filter(page, 'marked', phone)
+    chip = page.locator('[data-sec-list] [data-sec-item="0:1"]')
+    C.ok(chip.count() == 1 and 'marked' in (chip.get_attribute('aria-label') or ''), f'{tag}: the marked item 2 of part 1 is listed as marked')
+    if phone:
+        chip.tap()
+    else:
+        chip.click()
+    page.wait_for_function('__section.state.mode === "item" && __section.state.part === 0 && __section.state.index === 1', timeout=5000)
+    C.ok(True, f'{tag}: a chip opens its item')
+    wait_respond(page)
+    press(page, '[data-sec-items]', phone)
+    wait_mode(page, 'list')
+    ret = page.locator('[data-sec-return]')
+    C.ok(ret.count() == 1 and 'part 1, item 2' in ret.inner_text(), f'{tag}: the list offers the way back to the item ({ret.inner_text() if ret.count() else None!r})')
+    C.ok(not page.locator('.pl-guide').first.is_visible() if page.locator('.pl-guide').count() else True, f'{tag}: the last item\u2019s goal line is not over the list')
+    list_filter(page, 'unanswered', phone)
+    press(page, '[data-sec-list] [data-sec-item="1:0"]', phone)  # part 2's first item, never answered
+    page.wait_for_function('__section.state.mode === "item" && __section.state.part === 1 && __section.state.index === 0', timeout=5000)
+    wait_respond(page)
 
     # part 2: one answer, 2.5 s on item 2, then a reload at once resumes the run with that time kept (v1.2 O9:
     # in 1.1 the clock was saved only between items, so the reload gave the 2.5 s back)
-    press(page, '[data-card="start"]', phone)
-    wait_mode(page, 'item')
     answer_key(page, phone, True)
     page.wait_for_function('__section.state.index === 1', timeout=5000)
     wait_respond(page)
@@ -273,7 +344,7 @@ def main_run(b, C, tag, phone):
     C.ok(page.locator('[data-sec-resume]').count() == 1, f'{tag}: after a reload the section offers to resume (route {on_section})')
     page.screenshot(path=str(OUT / f'{tag}_resume.png'))
     press(page, '[data-sec-resume]', phone)
-    wait_mode(page, 'intro')
+    wait_mode(page, 'resume-card')
     press(page, '[data-card="start"]', phone)
     wait_mode(page, 'item')
     s = sec(page)
@@ -285,14 +356,18 @@ def main_run(b, C, tag, phone):
     p2 = [x for x in run_state(page)['parts'][1]['items'] if x['status'] == 'answered']
     p2_right, p2_void = sum(1 for x in p2 if x['correct']), [x.get('voidReason') for x in run_state(page)['parts'][1]['items'] if x['status'] == 'void']
 
-    # End the section from the pause sheet → the review
+    # End the section from the review list → a confirmation → the review
     wait_respond(page)
-    press(page, '[data-pause]', phone)
-    press(page, '[data-end]', phone)
+    press(page, '[data-sec-items]', phone)
+    wait_mode(page, 'list')
+    press(page, '[data-sec-end]', phone)
     page.wait_for_timeout(200)
-    C.ok(page.locator('.px-modal').count() == 1, f'{tag}: ending asks first')
+    C.ok(page.locator('.px-modal').count() == 1 and 'not answered' in page.locator('.px-modal').inner_text(), f'{tag}: ending asks first, naming the unanswered items')
     page.locator('.px-modal .px-btn--primary, .px-modal .px-btn--danger').first.click()
     wait_mode(page, 'review')
+    rows = page.evaluate('(n) => { const s = PX.core.store.state, m = s.idx.mode.indexOf("section"); return s.trials.slice(n).map((r) => [r[2] === m, r[5]]); }', trials0)
+    C.ok(len(rows) >= 7 and all(x[0] for x in rows), f'{tag}: the section’s shown items are logged when it ends, with mode "section" ({len(rows)} rows)')
+    C.ok(sorted(x[1] for x in rows).count(2) >= 1 and sorted(x[1] for x in rows).count(1) >= 4, f'{tag}: outcomes include the right answers and the void {sorted(x[1] for x in rows)}')
     rv = page.locator('[data-sec-review]').inner_text()
     out = page.evaluate('(() => { const s = PX.core.store.state; return { run: s.section.runs[s.section.runs.length - 1], next: s.section.next, live: s.section.live, sess: s.sessions[s.sessions.length - 1] }; })()')
     run = out['run']
@@ -398,9 +473,9 @@ def time_up(b, C):
     page.wait_for_timeout(300)
     budget = page.evaluate('PX.engine.section.shape("mini").budgetMs')
     page.locator('[data-sec-start]').click()
-    wait_mode(page, 'intro')
+    wait_mode(page, 'instructions')
     page.wait_for_timeout(budget + 1500)
-    C.ok(sec(page)['mode'] == 'intro', f'{tag}: the instructions can stay open longer than the whole budget ({budget} ms)')
+    C.ok(sec(page)['mode'] == 'instructions', f'{tag}: the instructions can stay open longer than the whole budget ({budget} ms)')
     page.locator('[data-card="start"]').click()
     page.wait_for_function('__section.state && __section.state.mode === "review"', timeout=budget + 8000)
     res = page.evaluate('__section.state.result')
@@ -412,10 +487,11 @@ def time_up(b, C):
 
 
 def sideways(b, C, sizes=((844, 390), (740, 360))):
-    """v1.2 O28 (W3-phones): a mini section on a phone held sideways: the setup and the part card fit sideways
-    (nothing wider than the screen), and every item of the first part shows its stimulus, its options and the
-    controls row on the screen without scrolling, through answers, a flag, Skip and Back; the pause sheet opens
-    and resumes; the end-of-part card shows."""
+    """v1.2 O28 (W3-phones): a mini section on a phone held sideways: the setup and the instructions fit sideways
+    (nothing wider than the screen; the instructions are a page to read, so Start the clock comes after them),
+    and every item of the first part shows its stimulus, its options and the controls row (Back, Mark, Strike,
+    Review, Skip, each at least 44 px) on the screen without scrolling, through answers, a mark, Skip and Back;
+    the pause sheet opens and resumes; the review list fits; the part goes on into the next."""
     for w, hgt in sizes:
         tag = f'sideways {w}x{hgt}'
         ctx = b.new_context(viewport={'width': w, 'height': hgt}, has_touch=True, is_mobile=True, device_scale_factor=2)
@@ -430,14 +506,14 @@ def sideways(b, C, sizes=((844, 390), (740, 360))):
         C.ok(page.locator('[data-sec-start]').count() == 1 and wide <= w + 1, f'{tag}: the setup screen has Start and nothing wider than the screen ({wide})')
         page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_setup.png'))
         press(page, '[data-sec-start]', True)
-        wait_mode(page, 'intro')
-        card_js = '(() => { const b = document.querySelector(\'[data-card="start"]\'); if (!b) return null; const r = b.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })()'
-        card = page.evaluate(card_js)
-        sy = page.evaluate('window.scrollY')
-        # v1.2 (W3-phones' finding, the lead's request): Start lies on the screen as the card opens; the player
-        # does not scroll (the page's own scroll on opening is reported)
-        C.ok(card is not None and card[0] >= 0 and card[1] <= hgt + 1, f'{tag}: the part card\'s Start is on the screen without scrolling ({card}, scrollY {sy})')
+        wait_mode(page, 'instructions')
+        wide = page.evaluate('Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)')
         page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_intro.png'))
+        page.locator('[data-card="start"]').scroll_into_view_if_needed()
+        page.wait_for_timeout(150)
+        card = page.evaluate('(() => { const b = document.querySelector(\'[data-card="start"]\'); if (!b) return null; const r = b.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom), Math.round(r.height)]; })()')
+        C.ok(wide <= w + 1 and card is not None and card[0] >= 0 and card[1] <= hgt + 1 and card[2] >= 44, f'{tag}: the instructions fit the width, and Start the clock follows them ({wide}; {card})')
+        page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_intro_end.png'))
         press(page, '[data-card="start"]', True)
         wait_mode(page, 'item')
         bad, seen = [], 0
@@ -450,6 +526,8 @@ def sideways(b, C, sizes=((844, 390), (740, 360))):
                 bad.append((k, page.evaluate('__play.exId'), f))
             if k == 0:
                 page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_item.png'))
+                small = page.evaluate('[...document.querySelectorAll(".sec-controls .px-btn")].map((b) => Math.round(b.getBoundingClientRect().height)).filter((x) => x < 44)')
+                C.ok(page.locator('.sec-controls .px-btn').count() == 5 and not small, f'{tag}: five controls under the item, each at least 44 px ({small})')
                 press(page, '[data-sec-flag]', True)
                 C.ok(page.locator('[data-sec-flag]').get_attribute('aria-pressed') == 'true', f'{tag}: Flag marks the item')
                 press(page, '[data-sec-next]', True)  # Skip
@@ -472,9 +550,17 @@ def sideways(b, C, sizes=((844, 390), (740, 360))):
                 break
         C.ok(seen >= 3 and not bad, f'{tag}: every item of the part fits the screen without scrolling ({seen} items; {bad[:2]})')
         page.wait_for_timeout(300)
-        mode = sec(page)['mode']
-        C.ok(mode in ('partend', 'intro', 'review', 'done'), f'{tag}: the part goes on to its end ({mode})')
+        st2 = sec(page)
+        C.ok(st2['mode'] in ('item', 'list', 'review') and (st2['mode'] != 'item' or st2['part'] >= 1), f'{tag}: the part goes on into the next ({st2["mode"]}, part {st2["part"]})')
         page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_after.png'))
+        if st2['mode'] == 'item':
+            wait_respond(page)
+            press(page, '[data-sec-items]', True)
+            wait_mode(page, 'list')
+            wide = page.evaluate('Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)')
+            chips = page.evaluate('[...document.querySelectorAll("[data-sec-list] [data-sec-item]")].map((b) => Math.round(b.getBoundingClientRect().height))')
+            C.ok(wide <= w + 1 and chips and min(chips) >= 44, f'{tag}: the review list fits the width, its items at least 44 px ({wide}; {chips[:3]})')
+            page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_list.png'), full_page=True)
         C.ok(not con.errors(), f'{tag}: no console errors ({con.errors()[:3]})')
         ctx.close()
 
