@@ -438,12 +438,13 @@ def progress_checks(page, tag, w):
     if status == 'change' and w < 720:
         shown = page.evaluate("[...document.querySelectorAll('.px-fp-row:not(.px-fp-axisrow) .px-fp-rowaxis')].filter((e) => e.offsetHeight > 0).length")
         C.ok(shown == rows, f'{tag}: on a phone every interval row carries its own scale ({shown} of {rows})')
-    C.ok('logit' not in page.locator('main').inner_text().lower(), f'{tag}: no "logits" in the Progress text')
+    # v1.2 O20: a phone shows one Progress section at a time, so the text checks read every section's text
+    C.ok('logit' not in page.locator('main').text_content().lower(), f'{tag}: no "logits" in the Progress text')
     C.ok(page.locator('.px-cal-rows li').count() >= 6, f'{tag}: weekly goal calendar')
     C.ok(page.locator('.px-ach-item.is-earned').count() >= 3, f'{tag}: achievements earned')
     C.ok(page.locator('.px-bests li').count() >= 1, f'{tag}: personal bests')
     C.ok('never' not in page.locator('[data-section="data"] .px-backup-line').inner_text(), f'{tag}: backup line shows the date')
-    txt = page.locator('main').inner_text()
+    txt = page.locator('main').text_content()
     C.ok(not FORBIDDEN.search(txt) and not re.search(r'\bIQ\b', txt), f'{tag}: no IQ, percentile, brain age or mastered')
     basics(page, f'{tag} progress', w)
     page.click('[data-jump="achievements"]')

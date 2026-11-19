@@ -606,11 +606,38 @@
 
   var SECTIONS = [['levels', 'Levels'], ['check', 'Spatial Check'], ['curves', 'Curves'], ['bests', 'Bests'], ['goal', 'Weekly goal'], ['achievements', 'Achievements'], ['data', 'Your data']];
 
+  // v1.2 O20 (W3-phones): on a phone (under 720 px wide) Progress shows one section at a time, with the
+  // panels other modules place after it; the jump buttons above pick the section (css/screens.css hides
+  // the others), wider screens keep the whole page and the buttons scroll to a section. In memory only.
+  var lastTab = 'levels';
+  function narrow() { try { return window.matchMedia('(max-width: 719px)').matches; } catch (e) { return false; } }
+  function tabs(box, nav) {
+    var cur = null;
+    Array.prototype.forEach.call(box.children, function (k) {
+      var id = k.getAttribute('data-section');
+      if (id && SECTIONS.some(function (s) { return s[0] === id; })) cur = id;
+      k.setAttribute('data-tab', cur || SECTIONS[0][0]);
+    });
+    box.setAttribute('data-tabs', '');
+    box._nav = nav;
+    pick(box, SECTIONS.some(function (s) { return s[0] === lastTab; }) ? lastTab : SECTIONS[0][0]);
+  }
+  function pick(box, id) {
+    lastTab = id;
+    Array.prototype.forEach.call(box.children, function (k) { if (k.getAttribute('data-tab') === id) k.setAttribute('data-tab-on', ''); else k.removeAttribute('data-tab-on'); });
+    if (box._nav) Array.prototype.forEach.call(box._nav.querySelectorAll('[data-jump]'), function (b) { b.setAttribute('aria-current', b.getAttribute('data-jump') === id ? 'true' : 'false'); });
+  }
   function jumpTo(id) {
     var el = document.getElementById('px-prog-' + id);
     if (!el) return;
+    var box = el.closest ? el.closest('.px-prog[data-tabs]') : null, tabbed = !!box && narrow();
+    if (box) pick(box, id);
+    // a phone: the buttons stay in view above the section they show; else the section comes to the top
+    var to = tabbed && box._nav ? box._nav : el;
     var reduce = PX.ui.app && PX.ui.app.motionReduced && PX.ui.app.motionReduced();
-    try { el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); } catch (e) { el.scrollIntoView(); }
+    if (!tabbed || to.getBoundingClientRect().top < 0) {
+      try { to.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); } catch (e) { to.scrollIntoView(); }
+    }
     var t = el.querySelector('.px-panel-title');
     if (t) { t.setAttribute('tabindex', '-1'); try { t.focus({ preventScroll: true }); } catch (e2) { t.focus(); } }
   }
@@ -648,6 +675,8 @@
     // v1.2 wave 2 (CONTRACT-v1.2 R): panels other modules add, after a section (by id or title) or in
     // its place (replace: 'check'; the new panel keeps the section's id for the jump links)
     if (PX.ui.hooks && typeof PX.ui.hooks.screen === 'function') PX.ui.hooks.screen('progress:panels', box, { rec: rec, now: now });
+    if (focus) lastTab = 'curves';
+    tabs(box, nav);
     host.appendChild(box);
     if (focus) window.setTimeout(function () { jumpTo('curves'); }, 0);
   }
