@@ -47,8 +47,12 @@
       answerSpeed: 'The marked part makes {n} turns for every {d} turns of the driver: {answer}.',
       answerDirSpeed: 'The marked part makes {n} turns for every {d} turns of the driver: {answer}.',
       answerJam: 'Nothing can turn: the answer is “{answer}”.',
-      keys: 'Answer with the keys 1 to 5, or tap an answer.',
-      keysTouch: 'Tap the answer that fits.',
+      // the worked example's key line says when it applies (round 3 of the first session's fresh-player run: "Tap the
+      // answer that fits" during the example, where a tap does nothing)
+      keys: 'In the items, answer with the keys 1 to 5, or tap an answer.',
+      keysTouch: 'In the items, you tap the answer that fits.',
+      // how to tell faster from slower, before the answer counts the turns (round 3: the captions explained direction only)
+      speed: 'Speed: where gears mesh or a belt joins two wheels, the bigger wheel turns slower. A gear with twice the teeth makes half the turns; wheels on one axle turn at the same speed.',
       cw: 'clockwise',
       ccw: 'counter-clockwise',
     },

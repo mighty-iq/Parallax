@@ -29,8 +29,8 @@
       second: 'Now find the word that goes with {c} in the same way.',
       answer: '{cd} The answer is “{d}”.',
       others: 'The other words go with {c} in other ways, or not at all.',
-      keys: 'Answer with the keys 1 to 4, or tap a word.',
-      keysTouch: 'Tap the word that completes the pair.',
+      keys: 'In the items, answer with the keys 1 to 4, or tap a word.',
+      keysTouch: 'In the items, you tap the word that completes the pair.',
       verdict: '{d}: {cd}',
     },
     sentences: {

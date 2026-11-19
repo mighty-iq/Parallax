@@ -181,6 +181,19 @@ def normal_speed(b, cons):
     page.wait_for_function('(n) => __harness.played.finished > n', arg=before, timeout=90000)
     d = page.evaluate("() => ({ seed: __harness.item.seed, want: PX.ex.learn('mechanisms').demo[0].seed, caption: document.querySelector('.hx-caption').textContent })")
     C.ok(d['seed'] == d['want'] and d['caption'], f'the worked example plays the fixed seed with captions ({d})')
+    # round 3 of the first session's fresh-player run: the example says how to tell faster from slower before it counts
+    # the turns, and its line about answering says it is for the items
+    caps = page.evaluate("() => PX.ex.view('mechanisms').steps(__harness.item, true).map((s) => s.caption || '')")
+    q = page.evaluate('() => __harness.item.question')
+    sp = [i for i, c in enumerate(caps) if c.startswith('Speed:')]
+    C.ok(q not in ('speed', 'dirspeed') or (len(sp) == 1 and 'bigger wheel turns slower' in caps[sp[0]] and sp[0] < len(caps) - 1 and 'turns for every' in caps[-1]),
+         f'the example ({q}) explains speed (the bigger wheel turns slower) before the answer counts the turns ({caps})')
+    C.ok(caps[-2].startswith('In the items'), f'its line about answering says it is for the items ({caps[-2]!r})')
+    page.goto(file_url('tests/dev/harness.html', ex=EX, seed=7, p='gears:0,structure:0', fast=1))
+    page.wait_for_function(READY, timeout=60000)
+    q0 = page.evaluate('() => __harness.item.question')
+    caps0 = page.evaluate("() => PX.ex.view('mechanisms').steps(__harness.item, false).map((s) => s.caption || '')")
+    C.ok((q0 in ('speed', 'dirspeed')) == any(c.startswith('Speed:') for c in caps0), f'the speed line comes with a speed question only ({q0}: {caps0})')
     ctx.close()
     return times
 
