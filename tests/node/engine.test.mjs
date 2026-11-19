@@ -642,6 +642,9 @@ function testTrain(t) {
   const A2 = scripted(pattern.concat([true, true, true, true, true]), 'fold'), row2 = A2.res.summary.per[0];
   const now2 = A2.Ex.est.shown(A2.rs, A2.P.ex.get('fold'), { display: A2.pl.display });
   t.ok(row2.level.after === now2.level && row2.level.lo === now2.lo && row2.level.hi === now2.hi, 'with answers after the last note, the summary shows est.shown at the end');
+  const last2 = A2.notes[A2.notes.length - 1].be;
+  t.eq(row.level.block, { level: last.after.level, since: 0, n: 3 }, 'the summary row names its last block of 10 (no answer since)');
+  t.eq(row2.level.block, { level: last2.after.level, since: 5, n: 3 }, '… and the 5 rated answers after it, so the player can tell how the level follows from the note');
   const A3 = scripted(Array.from({ length: 20 }, (_, i) => i % 2 === 0), 'fold');
   t.ok(A3.notes.every((x) => x.be.block.right === 5 && !x.be.block.reached) && A3.res.bests.length === 0, 'blocks below the reference (5 of 10) set no best');
 }

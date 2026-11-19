@@ -198,7 +198,8 @@ def run_train(b, C):
     click_card(page, 'skip')
     wait_state(page, 'respond')
     C.ok(page.evaluate('PX.core.store.state.tour.seen.rotate === true'), f'{tag}: Skip marks the tutorial as seen')
-    C.ok('EX-02' in page.locator('.pl-hud-id').inner_text(), f'{tag}: the banner names the exercise')
+    hud = page.locator('.pl-hud-id').inner_text()
+    C.ok('Rotate' in hud and 'EX-' not in hud, f'{tag}: the banner names the exercise in words, no code ({hud!r})')
     C.ok(page.evaluate('PX.core.store.isHeld()') is True, f'{tag}: no saves while the item is up (store held)')
     # a right answer by keyboard: feedback within 0.5 s
     page.evaluate(VERDICT_TIMER)
@@ -862,7 +863,7 @@ def run_captions(b, C):
     seen_all(page)
     go(page, {'mode': 'free', 'exId': 'rotate', 'params': {'angle': 0, 'axis': 0, 'cubes': 0, 'variant': 'pick'}, 'trials': 3})
     wait_state(page, 'respond')
-    page.evaluate('PX.debug.fast(false); PX.core.store.state.ui.autoplay = false')
+    page.evaluate('PX.debug.fast(false)')
     start = """(steps) => { const P = PX.ui.play.current(); P.demoing = true; window.__log = []; window.__done = false;
       const mk = (s) => Object.assign({ ms: s.ms || 300, enter() { __log.push(s.name); } }, s.cap ? { caption: s.cap } : {},
         s.motion !== undefined ? { motion: s.motion } : {}, s.anim ? { update() {} } : {});
@@ -911,7 +912,7 @@ def run_captions(b, C):
     C.ok(s6b['cap'] == 'G0' and lab2.startswith('Your turn'), f'{tag}: a tap on the figure does the same; the last caption says Your turn at once ({s6b["cap"]}, {lab2!r})')
     page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
     page.wait_for_function('__done === true', timeout=5000)
-    # Auto-play: the timed pace, kept as the player's choice
+    # Auto-play: the timed pace, for the item it was switched on for (run_first2: the next item starts with taps)
     page.evaluate(start, [{'name': 'g', 'cap': 'G'}, {'name': 'h', 'cap': 'H'}])
     page.wait_for_timeout(500)
     page.locator('[data-showme-auto]').tap()
@@ -919,7 +920,7 @@ def run_captions(b, C):
     page.wait_for_function('__done === true', timeout=12000)
     s7 = page.evaluate(probe)
     dt = page.evaluate('performance.now()') - t0
-    C.ok(s7['log'] == 'g h' and page.evaluate('PX.core.store.state.ui.autoplay === true'), f'{tag}: Auto-play plays the captions without taps, and is kept ({s7}, {dt:.0f} ms)')
+    C.ok(s7['log'] == 'g h', f'{tag}: Auto-play plays the captions without taps ({s7}, {dt:.0f} ms)')
     page.evaluate(start, [{'name': 'i', 'cap': 'I'}, {'name': 'j', 'cap': 'J'}])
     page.wait_for_timeout(2000)
     s8 = page.evaluate(probe)
@@ -927,12 +928,11 @@ def run_captions(b, C):
     page.locator('[data-showme-auto]').tap()  # back to taps: the caption now waits
     page.wait_for_timeout(1500)
     s9 = page.evaluate(probe)
-    C.ok(s9['waiting'] and s9['auto'] == 'false' and page.evaluate('PX.core.store.state.ui.autoplay === false'), f'{tag}: Auto-play off makes the current caption wait ({s9})')
+    C.ok(s9['waiting'] and s9['auto'] == 'false', f'{tag}: Auto-play off makes the current caption wait ({s9})')
     page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()
     page.wait_for_function('__done === true', timeout=5000)
     page.evaluate('PX.ui.play.current().demoing = false')
     # round 2: after a wrong answer the show-me's Next is "next caption" (as in Watch), never the next item
-    page.evaluate('PX.core.store.state.ui.autoplay = false')
     page.evaluate('__play.answer(false)')
     page.wait_for_function('__play.state === "showme"', timeout=8000)
     seed0 = page.evaluate('__play.last && __play.last.item && __play.last.item.seed')
@@ -1368,7 +1368,7 @@ def run_round4(b, C):
     seen_all(page)
     go(page, {'mode': 'free', 'exId': 'rotate', 'params': {'angle': 0, 'axis': 0, 'cubes': 0, 'variant': 'pick'}, 'trials': 3})
     wait_state(page, 'respond')
-    page.evaluate('PX.debug.fast(false); PX.core.store.state.ui.autoplay = false')
+    page.evaluate('PX.debug.fast(false)')
     start = """(steps) => { const P = PX.ui.play.current(); P.demoing = true; window.__done = false;
       const mk = (s) => Object.assign({ ms: s.ms || 300 }, s.cap ? { caption: s.cap } : {}, s.motion !== undefined ? { motion: s.motion } : {}, s.anim ? { update() {} } : {});
       P.ctx.play(steps.map(mk)).then(() => { __done = true; P.demoing = false; }); }"""
@@ -1419,7 +1419,7 @@ def run_round5(b, C):
     page = ctx.new_page()
     con = Console(page)
     boot(page)
-    page.evaluate('PX.debug.fast(false); PX.core.store.state.ui.autoplay = false')
+    page.evaluate('PX.debug.fast(false)')
     go(page, {'mode': 'watch', 'exId': 'angles'})
     for _ in range(100):  # the rules card first (the teaching template)
         if page.evaluate('window.__play && __play.state === "showme"'):
@@ -1688,6 +1688,125 @@ RANGE_CLONE_JS = '''(() => { // a copy of Angles with a test range on its gap le
 })()'''
 
 
+def run_first2(b, C):
+    """The lead's fresh-player run of the new first session (19 Nov, 390 x 844): Auto-play stays with the item it
+    was switched on for; key hints only with a keyboard (a mouse-like pointer or a key pressed); Today plans what
+    is left of the day's session length, or says the day is done; the summary's level, the block note and the
+    grade read as one story, and no codes in the session's screens; Spin's tags sit under the figures."""
+    tag = 'first session 2'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    # 1. key hints: none on a phone (boot's Escape counts as a key press, so it is forgotten first)
+    page.evaluate('PX.core.keys.typed(false)')
+    go(page, {'mode': 'free', 'exId': 'rotate', 'params': {'angle': 0, 'axis': 0, 'cubes': 0, 'variant': 'pick'}, 'trials': 3})
+    wait_state(page, 'respond')
+    kh = """() => ({ attr: document.documentElement.hasAttribute('data-keys'), present: PX.core.keys.present(), hints: PX.ui.play.current().ctx.settings.keyHints,
+      badge: [...document.querySelectorAll('.pl-grid .px-choice-key')].map((k) => getComputedStyle(k).display), n: document.querySelectorAll('.pl-grid .px-choice-key').length })"""
+    k1 = page.evaluate(kh)
+    C.ok(not k1['attr'] and not k1['present'] and k1['hints'] is False and k1['n'] >= 4 and all(d == 'none' for d in k1['badge']),
+         f'{tag}: a phone shows no key hints (no data-keys, ctx keyHints off, the option numbers hidden) ({k1})')
+    page.keyboard.press('F2')  # a keyboard on the tablet: the hints come back
+    page.wait_for_timeout(100)
+    k2 = page.evaluate(kh)
+    C.ok(k2['attr'] and k2['present'] and k2['hints'] is True and all(d != 'none' for d in k2['badge']), f'{tag}: after a key press they show ({k2})')
+    page.evaluate('PX.core.keys.typed(false)')
+    # 2. Auto-play: switched on in one item's walkthrough, kept for that item, gone for the next item
+    page.evaluate('PX.debug.fast(false)')
+    start = """(steps) => { const P = PX.ui.play.current(); P.demoing = true; window.__log = []; window.__done = false;
+      P.ctx.play(steps.map((s) => ({ ms: 300, caption: s, enter() { __log.push(s); } }))).then(() => { __done = true; P.demoing = false; }); }"""
+    probe = """() => ({ cap: document.querySelector('.pl-caption').textContent, waiting: document.querySelector('.pl-showme').hasAttribute('data-waiting'),
+      auto: document.querySelector('[data-showme-auto]').getAttribute('aria-pressed'), saved: 'autoplay' in (PX.core.store.state.ui || {}) })"""
+    page.evaluate(start, ['A', 'B'])
+    page.wait_for_timeout(500)
+    page.locator('[data-showme-auto]').tap()
+    page.wait_for_function('__done === true', timeout=12000)
+    page.evaluate(start, ['C', 'D'])
+    page.wait_for_timeout(1500)
+    a1 = page.evaluate(probe)
+    C.ok(a1['auto'] == 'true' and not a1['waiting'] and not a1['saved'], f'{tag}: Auto-play holds for the item it was switched on for, and is not saved ({a1})')
+    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()  # Close
+    page.wait_for_function('__done === true', timeout=5000)
+    page.evaluate('PX.ui.play.current().token++')  # the next item
+    page.evaluate(start, ['E', 'F'])
+    page.wait_for_function('document.querySelector(".pl-showme").hasAttribute("data-waiting")', timeout=8000)
+    a2 = page.evaluate(probe)
+    C.ok(a2['auto'] == 'false' and a2['cap'] == 'E', f'{tag}: the next item\'s walkthrough waits for taps again ({a2})')
+    page.locator('.pl-showme-buttons .px-btn:nth-child(4)').tap()
+    page.wait_for_function('__done === true', timeout=5000)
+    page.evaluate('PX.debug.fast(true)')
+    # 5. Spin's tags under the figures (and Rotate's), tall shapes, after the reveal
+    for ex, params, fig in (('spin', {'angle': 0, 'cells': 2, 'variant': 'pick'}, '.ex-spin-svg--opt'), ('rotate', {'angle': 0, 'axis': 0, 'cubes': 0, 'variant': 'pick'}, '.ex-thumb')):
+        go(page, {'mode': 'free', 'exId': ex, 'params': params, 'trials': 3})
+        wait_state(page, 'respond')
+        page.evaluate('__play.answer(true)')
+        wait_state(page, 'reveal')
+        page.wait_for_timeout(300)
+        ov = page.evaluate(f"""() => [...document.querySelectorAll('.pl-grid .px-choice')].map((c) => {{ const t = c.querySelector('.ex-tag:not([hidden])'), f = c.querySelector({json.dumps(fig)});
+          if (!t || !f) return null; const a = t.getBoundingClientRect(), s = f.getBoundingClientRect(), r = c.getBoundingClientRect();
+          return {{ gap: Math.round(a.top - s.bottom), inside: a.bottom <= r.bottom + 0.5 && a.top >= r.top, fig: Math.round(s.width) }}; }})""")
+        shot_path = OUT / f'first2_{ex}_tags.png'
+        page.screenshot(path=str(shot_path))
+        C.ok(len(ov) >= 4 and all(x and x['gap'] >= 0 and x['inside'] for x in ov), f'{tag}: {ex}: each tag sits under its figure, inside its option ({ov})')
+        page.evaluate('__play.end()')
+        page.wait_for_timeout(300)
+    # 4. the summary: the level, the block note and the grade as one story; no codes
+    page.evaluate("PX.ui.hooks.mute((id) => id === 'game.summary'); PX.ui.play.config.budgetMs = 600000;")
+    n0 = page.evaluate('PX.core.store.state.trials.length')
+    go(page, {'mode': 'train', 'exId': 'spin', 'count': 1, 'minutes': 30})
+    drive(page, f'PX.core.store.state.trials.length >= {n0 + 15}', right=1.0, limit=400)
+    page.evaluate('__play.end()')
+    page.wait_for_selector('.pl-summary', timeout=10000)
+    page.wait_for_timeout(400)
+    sm = page.evaluate("""() => { const r = document.querySelector('.pl-res[data-ex="spin"]'), s = r && r.querySelector('.pl-res-since'), g = document.querySelector('.gm-grade .gm-line');
+      return { head: r ? r.querySelector('.pl-res-head').textContent : '', lv: r ? r.querySelector('.pl-res-lv b').textContent : '', since: s ? s.textContent : null,
+        block: s ? s.getAttribute('data-block') : null, grade: g ? g.textContent : null, codes: /EX-\\d|\\bSR\\b|\\bVz\\b/.test([...document.querySelectorAll('.pl-res')].map((x) => x.innerText).join(' ')) }; }""")
+    page.screenshot(path=str(OUT / 'first2_summary.png'), full_page=True)
+    C.ok(sm['since'] and f"block of 10 ended at level {sm['block']}" in sm['since'] and f"moved your level to {sm['lv']}" in sm['since'] and re.search(r'the (\d+ answers|answer) after it', sm['since']),
+         f'{tag}: the summary says how its level follows from the block note ({sm["lv"]}; {sm["since"]!r})')
+    C.ok(sm['grade'] and f"best block of 10 ended at level {sm['block']}" in sm['grade'] and 'or more brings grade' in sm['grade'],
+         f'{tag}: the grade line names the same block and what the next grade needs ({sm["grade"]!r})')
+    C.ok(sm['head'].startswith('Spin') and '2D speeded rotation' in sm['head'] and not sm['codes'], f'{tag}: the summary names the exercise in words, no codes ({sm["head"]!r})')
+    page.evaluate('PX.ui.hooks.mute(true)')
+    # 3. Today: what is left of the day's session length, or the day done
+    page.evaluate('PX.core.store.state.settings.sessionMin = 20')
+    today = """() => { const s = document.querySelector('.px-slot--session'), b = s.querySelector('[data-primary]');
+      return { aside: s.querySelector('.px-panel-head .px-num') ? s.querySelector('.px-panel-head .px-num').textContent : '', line: s.querySelector('[data-today]') ? s.querySelector('[data-today]').textContent : null,
+        kind: s.querySelector('[data-today]') ? s.querySelector('[data-today]').getAttribute('data-today') : null, btn: b ? b.textContent.replace(/Enter$/, '').trim() : '', go: b ? b.getAttribute('data-go') : '',
+        names: s.querySelectorAll('.px-protocol-name').length, codes: /EX-\\d|\\bSR\\b|\\bVz\\b/.test(s.innerText), spec: [...s.querySelectorAll('.px-protocol-main .px-spec')].map((x) => x.textContent),
+        levels: [...document.querySelectorAll('.px-slot--levels .px-level-name')].map((x) => x.innerText.replace(/\\s+/g, ' ').trim()) }; }"""
+    def set_today(ms):
+        page.evaluate(f"""() => {{ const r = PX.core.store.state, t = Date.now();
+          r.sessions = (r.sessions || []).filter((s) => !(new Date(s.start).toDateString() === new Date(t).toDateString()));
+          if ({ms} > 0) r.sessions.push({{ id: 'sx' + t, start: t - {ms} - 60000, end: t - 30000, mode: 'train', trials: 20, right: 15, practiceMs: {ms}, exs: ['spin'] }}); }}""")
+        page.evaluate('void PX.core.router.go("home", {}, { force: true })')
+        page.wait_for_selector('.px-slot--session', timeout=10000)
+        page.wait_for_timeout(200)
+        return page.evaluate(today)
+    t0 = set_today(0)
+    C.ok(t0['kind'] is None and t0['aside'].startswith('20 min') and t0['btn'] == 'Start today’s session' and t0['go'] == 'play?mode=train' and not t0['codes']
+         and t0['spec'] and all(x and not re.search(r'EX-|\bVz\b', x) for x in t0['spec'])
+         and t0['levels'] and all(not re.search(r'EX-|\bSR\b|\bVz\b', x) for x in t0['levels']), f'{tag}: nothing practised today: the full plan and the levels, in words ({t0})')
+    t1 = set_today(7 * 60000)
+    C.ok(t1['kind'] == 'part' and t1['aside'].startswith('13 min left') and 'Today so far: 7 min of 20 min' in (t1['line'] or '') and t1['btn'] == 'Go on with today’s session'
+         and t1['go'] == 'play?mode=train&minutes=13&count=2' and t1['names'] == 2, f'{tag}: after 7 minutes, Today plans the 13 left with two exercises ({t1})')
+    page.screenshot(path=str(OUT / 'first2_today_part.png'), full_page=True)
+    t2 = set_today(19 * 60000)
+    C.ok(t2['kind'] == 'done' and t2['aside'] == 'Done for today' and 'Done for today: 19 min of practice' in (t2['line'] or '') and t2['btn'] == 'Another session · 20 min'
+         and t2['go'] == 'play?mode=train', f'{tag}: with 19 of 20 minutes done, the day is done and another session is extra ({t2})')
+    page.screenshot(path=str(OUT / 'first2_today_done.png'), full_page=True)
+    page.evaluate('PX.ui.play.config.budgetMs = null')  # the test knob would set every session's length
+    go(page, {'mode': 'train', 'minutes': 13, 'count': 2})
+    page.wait_for_function('__play.session && __play.session.exs && __play.session.exs.length > 0', timeout=10000)
+    pl = page.evaluate('({ exs: __play.session.exs.length, min: Math.round(__play.session.budgetMs / 60000) })')
+    C.ok(pl['exs'] == 2 and pl['min'] == 13, f'{tag}: Go on opens the rest: 13 minutes, two exercises ({pl})')
+    page.evaluate('__play.end()')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def run_wave3(b, C):
     """Shared support for PLAN milestone 8 (CONTRACT-v1.2 Wave 3): a view with optionKeys 'letters' shows A–D on
     its options, a letter key and a digit both answer, the keys sheet and the view context name letters (W1); Free
@@ -1780,7 +1899,7 @@ def main():
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

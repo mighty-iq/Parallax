@@ -43,6 +43,10 @@
   .pl-trial.ex-spin .ex-spin-opt { position: relative; }
   .pl-trial.ex-spin .ex-spin-opt .ex-spin-svg--opt { width: calc(var(--spin-cell) - 0.75rem); max-width: 100%; }
   .pl-trial.ex-spin .ex-spin-opt .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+  /* the tag after the reveal sits in a strip under the figure, never on it (first-session fresh test: "Turned
+     copy" covered the ends of tall shapes); the strip is there from the start, so the reveal moves nothing */
+  .pl-trial.ex-spin .ex-spin-opt { padding-bottom: 1.5rem; }
+  .pl-trial.ex-spin .ex-spin-opt .ex-spin-svg--opt { width: calc(min(var(--spin-cell) - 0.75rem, 100%) - 1.5rem); }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   .pl-trial.ex-spin { --spin-cell: min(calc((var(--pl-col) - var(--s2)) / 2), calc((var(--pl-avail) - var(--tap) - 2 * var(--s2)) / 2)); }

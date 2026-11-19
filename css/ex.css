@@ -143,8 +143,10 @@
     height: min(20rem, calc(var(--pl-avail) - 2 * var(--rot-cell) - var(--tap) - 3 * var(--s2)));
   }
   .pl-trial.ex-rotate .px-choices[style*="--px-cols:4"] .px-choice { height: var(--rot-cell); padding: var(--s1); }
-  .pl-trial.ex-rotate .px-choice .ex-opt { position: relative; }
-  .pl-trial.ex-rotate .px-choice .ex-thumb { width: calc(var(--rot-cell) - 0.5rem - 2px); height: auto; max-width: 100%; }
+  /* the tag after the reveal sits in a strip under the figure, never on it (first-session fresh test, as in Spin);
+     the strip is there from the start, so the reveal moves nothing */
+  .pl-trial.ex-rotate .px-choice .ex-opt { position: relative; padding-bottom: 1.5rem; }
+  .pl-trial.ex-rotate .px-choice .ex-thumb { width: calc(min(var(--rot-cell) - 0.5rem - 2px, 100%) - 1.5rem); height: auto; max-width: 100%; }
   .pl-trial.ex-rotate .px-choice .ex-tag { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
 }
 /* sideways: the figures on the left at full height, the options right (css/play.css --pl-col) */

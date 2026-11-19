@@ -239,7 +239,8 @@ ctx.play([
   grid and runs the view's `collect` and `reveal` for that item, with its answer type from
   `item.answer`; the other items keep the grid (CONTRACT-v1.2 S).
 - **Keyboard:** stem+options needs nothing more (the grid takes 1–9). Custom layouts register
-  keys through `ctx.keys.push(map, { through: true })` and show key hints.
+  keys through `ctx.keys.push(map, { through: true })` and show key hints only while
+  `ctx.settings.keyHints` is true (the setting and a keyboard: a phone gets none until a key is pressed).
 - **Lettered options (1.2, milestone 8; CONTRACT-v1.2 W1):** `optionKeys: 'letters'` on a
   stem+options view of at most five options letters them A–E (keys A–E and 1–5); name options in
   captions with `ctx.optionName(i)`. The DAT-style look has shared tokens and classes in css/ex.css

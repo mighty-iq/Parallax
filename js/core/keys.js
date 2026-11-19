@@ -16,7 +16,9 @@
    Never taken: keys with Ctrl, Alt or Meta (browser shortcuts); every key except Escape
    while typing in an input, textarea, select or contenteditable; arrows on range and
    radio inputs; Enter and Space on a focused button, link, checkbox or summary (native
-   activation), unless the element carries data-px-keys (then the layers decide). */
+   activation), unless the element carries data-px-keys (then the layers decide).
+   present() → is there a keyboard (a mouse-like pointer, or a key pressed outside a text field);
+   :root[data-keys] says the same to the style sheets, so key hints show only with a keyboard. */
 (function (PX) {
   'use strict';
 
@@ -113,8 +115,47 @@
   function depth() { return layers.length; }
   function clear() { layers.length = 0; } // tests and emergency resets only
 
+  /* Is there a keyboard? (v1.2, first-session fresh test: "Answer with the keys 1 to 5" on a phone.) Key hints show
+     only where there is one: a mouse-like pointer (hover and a fine pointer), or a key pressed on this page
+     outside a text field (a phone's on-screen keyboard types into fields and never reaches the layers).
+     present() → boolean; :root[data-keys] says the same to the style sheets (css/base.css hides key hints
+     without it); typed(false) forgets the key press (tests). */
+  var pressed = false, fineMq = null;
+  function finePointer() {
+    try {
+      if (!fineMq && window.matchMedia) fineMq = window.matchMedia('(hover: hover) and (pointer: fine)');
+      return !!(fineMq && fineMq.matches);
+    } catch (e) { return false; }
+  }
+  function present() { return pressed || finePointer(); }
+  function markRoot() {
+    var root = window.document && window.document.documentElement;
+    if (!root || !root.setAttribute) return;
+    if (present()) root.setAttribute('data-keys', ''); else root.removeAttribute('data-keys');
+  }
+  function sawKey(e) {
+    if (pressed || !e || e.isComposing || isTyping(e.target)) return;
+    var name = normalise(e);
+    if (!name || /^(Unidentified|Process|Dead|Shift|Control|Alt|AltGraph|Meta|CapsLock|Fn)$/.test(name)) return;
+    pressed = true;
+    markRoot();
+  }
+  function typed(v) { pressed = !!v; markRoot(); return present(); }
+  (function watch() {
+    var doc = window.document;
+    if (!doc || !doc.addEventListener) return;
+    doc.addEventListener('keydown', sawKey, true);
+    finePointer();
+    try {
+      if (fineMq && fineMq.addEventListener) fineMq.addEventListener('change', markRoot);
+      else if (fineMq && fineMq.addListener) fineMq.addListener(markRoot);
+    } catch (e) { /* a mouse plugged in later shows them after a key press */ }
+    markRoot();
+  })();
+
   PX.core.keys = {
     push: push, depth: depth, clear: clear, handle: handle,
     normalise: normalise, isTyping: isTyping, nativeKey: nativeKey,
+    present: present, typed: typed,
   };
 })(window.PX);

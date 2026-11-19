@@ -257,12 +257,12 @@
 .pl-strategy ol { margin: var(--s2) 0 0; padding-left: 1.25rem; }
 .pl-strategy li + li { margin-top: var(--s1); }
 
-/* touch screens: key hints and the Keys button give way (a keyboard, when there is one, still
-   works); by pointer, not by width, so a phone held sideways loses them too */
-@media (hover: none) and (pointer: coarse) {
-  .pl-hud-tools [data-help], .pl-hud-keys { display: none; }
-  .pl-howto-keys { display: none; }
-}
+/* without a keyboard (js/core/keys.js: no mouse-like pointer and no key pressed yet) the key hints and the Keys
+   button give way; a key pressed on a tablet brings them back. By pointer, not by width, so a phone held
+   sideways loses them too */
+:root:not([data-keys]) .pl-hud-tools [data-help],
+:root:not([data-keys]) .pl-hud-keys,
+:root:not([data-keys]) .pl-howto-keys { display: none; }
 
 /* =====================================================================================
    Phones (PLAN M2; docs/research/v1.1/I2-mobile-audit.md §11). A phone is narrower than
@@ -312,8 +312,8 @@
   }
   .pl-hud-id { grid-area: id; flex-wrap: nowrap; gap: var(--s2); min-width: 0; overflow: hidden; white-space: nowrap; }
   .pl-hud-id .px-spec { flex-wrap: nowrap; font-size: var(--fs-sm); line-height: 1.3; }
-  .pl-hud-id .px-spec > :not(:nth-child(3)) { display: none; } /* the exercise's name; its code and abilities are on its cards */
-  .pl-hud-id .px-spec > :nth-child(3) { color: var(--ink); font-weight: 500; }
+  .pl-hud-id .px-spec > :not(:first-child) { display: none; } /* the exercise's name; what it is shows on its cards */
+  .pl-hud-id .px-spec > :first-child { color: var(--ink); font-weight: 500; }
   .pl-hud-text { font-size: var(--fs-sm); line-height: 1.3; }
   .pl-tag { font-size: 0.8125rem; line-height: 1.3; }
   .pl-hud-id .px-spec { flex: none; }

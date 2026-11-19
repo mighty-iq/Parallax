@@ -47,6 +47,10 @@
         var before = plan.level0[id], after = E.modes._.levelNow(rec, def, plan);
         var ch = before ? after.exact - before.exact : 0;
         row.level = { before: before ? before.level : null, after: after.level, lo: after.lo, hi: after.hi, settings: after.settings };
+        // the session's last whole block of 10 (its block-end note) and the rated answers since, so the summary can
+        // tell how its level follows from the note (and the grade) the player saw: { level, since, n } or null
+        var bl = isObj(plan.blocks) && isArray(plan.blocks[id]) ? plan.blocks[id] : [];
+        row.level.block = bl.length ? { level: bl[bl.length - 1].level, since: isObj(plan.blockN) && isNum(plan.blockN[id]) ? plan.blockN[id] : 0, n: bl.length } : null;
         row.change = U.round(ch, 1);
         row.noise = noise(after);
         row.clear = !!before && Math.abs(ch) > row.noise;

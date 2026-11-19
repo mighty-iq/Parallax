@@ -310,7 +310,7 @@ def run_modes(b, C):
     C.ok(ok and page.evaluate('PX.core.store.state.trials.length') == page.evaluate('PX.core.store.state.trials.length'), f'{tag}: Watch, Try, Go ends with a way to start')
     page.locator('[data-card="session"]').click()
     wait_state(page, 'respond')
-    C.ok('EX-09' in page.locator('.pl-hud-id').inner_text(), f'{tag}: the session starts with the exercise pinned')
+    C.ok('Span' in page.locator('.pl-hud-id').inner_text(), f'{tag}: the session starts with the exercise pinned')
     C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
 

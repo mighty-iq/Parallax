@@ -312,6 +312,11 @@ a:hover { color: var(--signal-strong); text-decoration-thickness: 2px; }
 :root[data-keyhints="off"] .px-kbd,
 :root[data-keyhints="off"] .px-choice-key,
 :root[data-keyhints="off"] .px-keyhint { display: none; }
+/* key hints only with a keyboard: js/core/keys.js sets data-keys for a mouse-like pointer or after a key press
+   (first-session fresh test: key hints on a phone); a letter that names an option stays (css/ex.css) */
+:root:not([data-keys]) .px-kbd,
+:root:not([data-keys]) .px-choice-key,
+:root:not([data-keys]) .px-keyhint { display: none; }
 /* touch screens and phone widths: no key hints on buttons (a keyboard, when there is one, still
    works); by width too, as the player does, since a touch screen does not always say so */
 @media (hover: none) and (pointer: coarse), (max-width: 719px) { .px-kbd { display: none; } }

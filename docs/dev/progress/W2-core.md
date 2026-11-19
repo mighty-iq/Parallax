@@ -53,6 +53,15 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
   "test range only" and rec.ex[id].tag, figure sets for Painted Cubes (W3-bandA's request). wave3.test.mjs 61/0;
   play.py run_wave3; flows.py and play.py follow W2-measure's new probe cards.
 
+## 2026-11-19 12:20 UTC: the lead's fresh-player run of the first session (five findings)
+- Auto-play belongs to the item it was switched on for (never saved); key hints only with a keyboard
+  (PX.core.keys.present(), :root[data-keys], ctx.settings.keyHints); Today plans what is left of the day's session
+  length or says the day is done (homePlan today/route); the results row tells how its level follows from the last
+  block, the grade line (game.js, requests.md) names the block, and the player and Today show no codes; Spin's and
+  Rotate's tags sit in a strip under the figures. Guard: play.py run_first2 (390 x 844), 14/0; the whole of play.py
+  253/1, the one failure its banner check, which now reads the name (train 33/0); fit.py spin, rotate 24/0;
+  flows.py modes, today 31/1, the one failure band B's new dims' phrases (requests.md).
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with
