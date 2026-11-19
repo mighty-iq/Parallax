@@ -1,5 +1,72 @@
 # Changelog
 
+## 1.2.0 · unreleased
+
+The second update, built by the Chimera community on Discord (https://discord.gg/chmr). Parallax becomes a
+trainer to open every day without bending the science: a game layer between items, items at your edge on every
+setting, a stated change when you stall, nine named transfer bets the community can test with pooled exports, and
+a measure that moves every week. A record from 1.0 or 1.1 upgrades by itself (format 4), with nothing lost.
+
+- **Central Point (EX-20), new:** tap the spot with the least total distance to a set of marked dots on a 7 × 7
+  board, answering on the half-steps. The quick form, the default, runs against a deadline that starts at 20 s and
+  tightens as you answer in time, with a round score from closeness and pace, so near misses still score; the
+  exact form, a variant, has no clock and nudge controls. The method is taught first in plain words (count the
+  sides, then balance equal pulls). Right within 1 %, 0.5 % or 0.25 % of the best total, with partial credit out to
+  four times the band. Its bet is calibration; every item keeps the cheap picks, the average included, out of the
+  band.
+- **A first session that reaches training:** one two-minute tutorial (Spin), then your starting point (Baseline
+  1, about 11.5 minutes without feedback, or Later), then training. Views and the six DAT-style formats start
+  lower, with a rules card, a worked example, a strategy card, and a first practice item with its first step done;
+  Watch captions wait for you and name the strategy card's steps.
+- **Your edge on every setting:** from 100 rated answers on an exercise, Train fits how much each setting costs
+  you and chooses items on your own difficulties; one target item in five leads with a setting at its frontier;
+  once Speed is open, easy items come with its deadline (fluency items).
+- **Plateaus get a change:** when the last 640 rated answers on an exercise show no progress (over at least 8
+  sessions on 8 days), Parallax changes one thing (the interleaving stage, a drill, deadlines, a rest, the other
+  strategy, another variant or a wider mix, or harder items), says what and why, runs it for 3 sessions and 120
+  answers, and reports "clearly up", "no change yet" or "unclear yet".
+- **Test the bets with us:** every training exercise names the mechanism of transfer it bets on (attention
+  control, load at the edge, variety, named strategies, comparison, bridging, producing the answer, calibration,
+  format practice). Comparison rounds, a bridge set, draw-the-answer items (draw the view, mark the holes, mark the
+  cut) and detailed feedback on estimates are switched on and off at random within each player, in periods of at
+  least 4 weeks and 8 sessions, so pooled exports form randomised trials; "Join the bet trials" in Settings. Off-
+  screen challenges on seven exercises, with an "I did it" tap.
+- **A measure that moves every week (Design A):** after the two baselines, short blocks of about 3.5 minutes
+  without feedback open up to four sessions a week, and a full check comes every 4 weeks (or an opt-in measurement
+  week). One trend model reads every occasion with familiarity and day-to-day ups and downs; a meter shows the chance
+  that your probe composite rose beyond familiarity, and the words "likely gain", "likely no change" or "unclear
+  yet" come only at milestones. New probes: Other Way Round (near) and Motion Graphs (far); Cube Match, Mechanisms
+  and Pattern Memory upgraded (each version its own probe). In the Lab: Balance, a check of Central Point's bet,
+  and learning curves on the exercises added since 1.0.
+- **A game layer between items:** grades 1 to 10 per exercise, Reach (the sum of your best levels, never falling),
+  the Atlas of settings handled with firsts, records, a Daily Challenge that ramps from easy to hard with points
+  (1 to 8 per item, from the day 1.2 is released), the weekly Climb (20 rungs, three seeded attempts, sounds while
+  Sound is on, and a Summit achievement), weekly field notes, a fresh-start note after a week away, and cards at
+  every high point. Nothing of it runs while an item is on screen; no daily streaks, no points for time, no
+  leaderboards.
+- **The DAT-style formats, closer to the real ones:** lettered answers, plain line drawings in the test range, and
+  a tag on every level (below the test, test range, beyond the test) that describes the format, never the test's
+  difficulty or a score; "test range only" in Free play. Angles numbers its angles and letters its answers;
+  Painted Cubes asks two to four questions about one figure, with an optional tally pad and five painted sides;
+  Openings turns or flips its openings; Hole Punch's wrong sheets may differ in hole count; Form gains the test's
+  kinds of pattern and L-, T- and U-prisms; Missing View moves to profile solids. Section practice runs under test
+  conditions: every part's instructions first, one clock across the parts, Back, Next, Mark, Strike and a review
+  list. Still opt-in, and still no score forecast.
+- **Reckon version 2 and motion comfort:** every route ends with a turn on the spot of 30 to 150°; a legs level
+  where the same turns end in places far apart; a 15° tolerance level; walks back of 3 to 20 m. Homing and Reckon
+  show a one-time notice, check in after 3 minutes of motion and then every 5, and offer Gentle motion. Homing's
+  solution map draws landmarks in their direction from the start.
+- **Modes and the Chimera welcome:** every mode says when it is the right one, and Today suggests one at a time; the
+  full welcome shows on the first launch, later launches a one-tap note, and invitations come at natural high points.
+- **Privacy in exports:** cards and exports carry no name unless you add your nickname, and no browser, language or
+  time zone unless you tick device details; the community export keeps times in UTC and no local days.
+- **Phones and fixes:** Progress in tabs, Confirm taps, larger words on the arrow circle, Section practice held
+  sideways, clearer layouts for Hole Punch, Form, Painted Cubes and Knots; Pause and End during feedback, one
+  answer-time format, Section practice's clock and review over a reload. Playtest mode for testers, off by default.
+- **Under the hood:** record format 4 (plateau events, bet periods, measurement occasions, the game layer, an events
+  table); six new trial columns; hooks for modules between items; the node suite in four CI shards
+  (`node tests/node/run.mjs --shard k/n`); the guide rewritten for 1.2, with its research in docs/research/v1.2/.
+
 ## 1.1.0 · 2026-11-13
 
 The first update, built by the Chimera community on Discord (https://discord.gg/chmr).
