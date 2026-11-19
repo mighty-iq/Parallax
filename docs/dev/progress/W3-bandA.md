@@ -33,3 +33,4 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
   the set row with "Question i of n" and the tally pad (O12), test-range tags; harness_cubes 249/0 (app checks at 360 x 640,
   390 x 844, 1366 x 768: the answers keep their place when the pad opens and at the reveal; the tally survives the figure's
   next question). Node: angles, cubes, wave3, section, firstband, core, rebase, formats, bets 1904/0; shortcut-levels 196/0.
+  (Correction: Angles' node test had 379 checks at 9f509c8, not the 384 its commit message says.)

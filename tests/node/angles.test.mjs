@@ -111,6 +111,27 @@ export async function run(t) {
   t.eq(longShort, 0, `every longer arm is at least ${L.LONG_MIN}·L (RV-dat-style-A §7; info: ${(100 * phoneShort / nAngles).toFixed(1)} % of longer arms are under 90 px in a 155 px phone cell)`);
   t.eq(bandClass, 0, `every 9° item is near-right, whatever the size param (${nBand} items)`);
 
+  t.section('angles: an independent solver');
+  // This file's own solver, separate from gen.js (whose validator re-measures through its own
+  // polynomial trigonometry): each drawn angle by Math.atan2 from the item's endpoints, the order
+  // smallest first, then the answer that lists it. It must find the key on every item, with the
+  // closest drawn pair at least the level's gap (less 0.02° of rounding) apart.
+  let solverMiss = 0, gapShort = 0, firstMiss = null;
+  for (const { item } of items) {
+    const deg = item.angles.map((g) => {
+      const a1 = Math.atan2(g.a[1] - g.v[1], g.a[0] - g.v[0]), a2 = Math.atan2(g.b[1] - g.v[1], g.b[0] - g.v[0]);
+      let d = Math.abs(a1 - a2) * 180 / Math.PI;
+      return d > 180 ? 360 - d : d;
+    });
+    const order = [0, 1, 2, 3].sort((i, j) => deg[i] - deg[j]);
+    const found = item.options.findIndex((o) => o.join() === order.join());
+    if (found !== item.key) { solverMiss++; firstMiss = firstMiss || `seed ${item.seed}: ${order.join()} vs key ${item.key}`; }
+    const sorted = order.map((c) => deg[c]), close = Math.min(sorted[1] - sorted[0], sorted[2] - sorted[1], sorted[3] - sorted[2]);
+    if (close < L.GAPS[item.params.gap] - 0.02) gapShort++;
+  }
+  t.eq(solverMiss, 0, `Math.atan2 on the drawn endpoints orders the angles as the key says on every item (${items.length})` + (firstMiss ? `: ${firstMiss}` : ''));
+  t.eq(gapShort, 0, 'the closest drawn pair is at least the level\'s gap apart on every item');
+
   t.section('angles: validator catches broken items');
   const base = items[0].item;
   const broken = [
