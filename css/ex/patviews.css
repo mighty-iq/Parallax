@@ -107,3 +107,18 @@
 
 /* v1.2 (CONTRACT-v1.2 W1): the drawing's letter (A–D) stays above the drawing, on a chip of the cell's ground. */
 .ex-patviews .px-choice .px-choice-key { position: absolute; z-index: 2; padding: 0 0.15rem; border-radius: 2px; background: var(--stim-ground, #F4F5F3); }
+
+/* v1.2 (version 3; PLAN milestone 8, O49): profile solids in the format's look (CONTRACT-v1.2 W2): ink lines on a white
+   plate, hidden edges as short thin dashes, no fill; the stem's stage and every drawing sit on the plate. Show me's
+   traces, marks and the landing drawing keep their own colours. */
+.ex-patviews .pv-stem.is-plain .pv-stage { background: var(--plate, #FFFFFF); border: 1px solid var(--plate-frame, #9AA1A7); border-radius: var(--r-plate, 2px); }
+.ex-patviews .pv-stem.is-plain .pv-given .pv-line,
+.ex-patviews .pv-opt-cell.is-plain .pv-opt .pv-line,
+.ex-patviews .pv-stem.is-plain .pv-pic .pv-line { stroke: var(--plate-ink, #16191C); stroke-width: var(--plate-edge-w, 1.4px); }
+.ex-patviews .pv-stem.is-plain .pv-given .pv-dot,
+.ex-patviews .pv-opt-cell.is-plain .pv-opt .pv-dot { stroke-width: var(--plate-thin-w, 1px); stroke-dasharray: var(--plate-dash, 4px 3px); }
+.ex-patviews .pv-stem.is-plain .pv-label { fill: var(--plate-ink, #16191C); }
+.ex-patviews .pv-stem.is-plain .pv-label--miss { fill: var(--signal, #0B6A86); }
+.ex-patviews .pv-stem.is-plain .pv-cover { fill: var(--plate, #FFFFFF); }
+.ex-patviews .pv-opt-cell.is-plain .pv-opt-svg { background: var(--plate, #FFFFFF); outline: 1px solid var(--plate-frame, #9AA1A7); outline-offset: -1px; }
+.ex-patviews .pv-stem.is-plain .pv-given.is-pointed .pv-line { stroke: var(--stim-target, #0B6A86); }

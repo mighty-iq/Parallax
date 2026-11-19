@@ -14,7 +14,12 @@
    hidden ones dotted) and lays that drawing in the slot; its captions carry the strategy card's
    steps ("1/3 · Outline first: …"). The Watch holds on the dotted-line step until a tap (O52). On
    the starter band the structure is drawn beside the views, labelled; Try 1 (ctx.assist = { proj:
-   true }) has the projection lines already drawn into the slot. */
+   true }) has the projection lines already drawn into the slot.
+   v1.2 (version 3; PLAN milestone 8, O49): profile solids (item.solid) in the format's look (CONTRACT-v1.2 W2:
+   ink lines on a white plate, hidden edges as short dashes, no fill): the stem and the drawings carry .is-plain.
+   Show me draws the solid itself in the free corner (a pictorial of its seen edges, lib.drawSolid along a
+   corner view) where cube stacks turn their cubes, and marks a wrong drawing's differing lines by
+   lib.drawDiff. */
 (function (PX) {
   'use strict';
 
@@ -69,7 +74,7 @@
   // A drawing as an SVG group at origin (ox, oy) and scale c.
   function drawingGroup(d, ox, oy, c, cls) {
     var g = SV.el('g', { class: cls || '' });
-    g.appendChild(SV.el('path', { d: fillPath(d, ox, oy, c), class: 'pv-fill' }));
+    if (d.fill) g.appendChild(SV.el('path', { d: fillPath(d, ox, oy, c), class: 'pv-fill' }));
     g.appendChild(SV.el('path', { d: segPath(d.segs, ox, oy, c, 2), class: 'pv-line pv-dot' }));
     g.appendChild(SV.el('path', { d: segPath(d.segs, ox, oy, c, 1), class: 'pv-line pv-solid' }));
     return g;
@@ -79,6 +84,7 @@
 
   function drawStem(item) {
     var svg = st.svg, Wpx = Math.max(1, st.stage.clientWidth), Hpx = Math.max(1, st.stage.clientHeight - 4);
+    st.root.classList.toggle('is-plain', !!item.solid);
     PX.ui.clear(svg);
     SV.attrs(svg, { viewBox: [0, 0, Wpx, Hpx] });
     var Lo = st.L = layout(item, Wpx, Hpx), c = Lo.c;
@@ -111,7 +117,7 @@
 
   function describe(item) {
     var gv = lib.VIEWS.filter(function (v) { return v !== item.missing; });
-    return 'Two views of a block structure are drawn: the ' + gv[0] + ' view and the ' + gv[1] + ' view. Solid lines are seen edges, dotted lines hidden ones. Which of four drawings, A to D, is its ' + item.missing + ' view?';
+    return 'Two views of a ' + (item.solid ? 'solid block' : 'block structure') + ' are drawn: the ' + gv[0] + ' view and the ' + gv[1] + ' view. Solid lines are seen edges, dotted lines hidden ones. Which of four drawings, A to D, is its ' + item.missing + ' view?';
   }
 
   /* ---------- view functions ---------- */
@@ -153,7 +159,7 @@
     svg.style.maxWidth = Math.round(wU * st.optC) + 'px';
     svg.style.aspectRatio = wU + ' / ' + hU;
     var tag = h('span.ex-tag', { hidden: true });
-    el.appendChild(h('span.ex-opt.pv-opt-cell', svg, tag));
+    el.appendChild(h('span.ex-opt.pv-opt-cell' + (item.solid ? '.is-plain' : ''), svg, tag));
     st.opts[i] = { el: el, svg: svg, g: g, tag: tag, ghost: null };
   }
   function optionLabel(item, i) { return 'Drawing ' + nm(i); }
@@ -173,14 +179,14 @@
     return timing.nextPaint();
   }
 
-  var WHY = { hull: 'Outline cannot fit', align: 'Lines do not line up', search: 'No structure fits' };
+  var WHY = { hull: 'Outline cannot fit', align: 'Lines do not line up', search: 'No structure fits', outline: 'Outline does not fit', lines: 'Lines do not fit', dashes: 'Solid or dotted wrong' };
   function reveal(item, response, result, ctx) {
     if (!st) return Promise.resolve();
     st.root.classList.add('is-revealed');
     st.opts.forEach(function (o, i) {
       if (!o) return;
       var op = item.options[i];
-      o.tag.textContent = i === item.key ? '✓ ' + NAMES[item.missing] + ' view' : WHY[op.why] || 'Does not fit';
+      o.tag.textContent = i === item.key ? '✓ ' + NAMES[item.missing] + ' view' : WHY[item.solid ? op.kind : op.why] || 'Does not fit';
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
       if (i !== item.key) markDiff(item, i, 'pv-diff'); // where this drawing differs from the right one
@@ -299,9 +305,12 @@
     var cy = st.shown ? 14 : 0;
     if (s.object) {
       ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y + cy, width: Lo.free.w + 8, height: Lo.free.h - cy, class: 'pv-cover' }));
-      ov.appendChild(isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
+      ov.appendChild(item.solid ? solidPicture(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }, 1) : isoGroup(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }));
     }
-    if (s.turn) { // { t: 0 → 1 from the corner view to the missing side, cubes: opacity }
+    if (s.turn && item.solid) { // solids: the pictorial in the free corner, fading as the drawing comes in
+      ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y + cy, width: Lo.free.w + 8, height: Lo.free.h - cy, class: 'pv-cover' }));
+      ov.appendChild(solidPicture(item, { x: Lo.free.x, y: Lo.free.y + 2, w: Lo.free.w, h: Lo.free.h - 4 }, s.turn.cubes === undefined ? 1 : s.turn.cubes));
+    } else if (s.turn) { // { t: 0 → 1 from the corner view to the missing side, cubes: opacity }
       var A = AIM[item.missing], F = turnFrame(item), e = ease(U.clamp(s.turn.t, 0, 1));
       ov.appendChild(SV.el('rect', { x: Lo.free.x - 4, y: Lo.free.y + cy, width: Lo.free.w + 8, height: Lo.free.h - cy, class: 'pv-cover' }));
       ov.appendChild(cubesGroup(item, cam(lerp(ISO.az, A.az, e), lerp(ISO.el, A.el, e)), F, s.turn.cubes === undefined ? 1 : s.turn.cubes));
@@ -327,7 +336,7 @@
     if (s.picked >= 0) {
       var pd = item.options[s.picked].drawing, kd = item.options[item.key].drawing;
       ov.appendChild(drawingGroup(pd, at.x, at.y, c, 'pv-picked'));
-      var diff = unitDiff(pd, kd);
+      var diff = item.solid ? solidDiff(pd, kd) : unitDiff(pd, kd);
       if (diff.length) ov.appendChild(SV.el('path', { d: segPath(diff, at.x, at.y, c), class: 'pv-diff' }));
     }
     focusOption(s.focus === undefined ? -1 : s.focus);
@@ -354,19 +363,45 @@
     return out;
   }
 
+  // Solids: the runs where drawing a differs from b (present in one only, or in another style), as segments.
+  function solidDiff(a, b) { return lib.drawDiff(a, b, true).runs.map(function (q) { return [q[0], q[1], q[2], q[3], 1]; }); }
+  // Solids: a pictorial of the solid (its seen edges, from the front-right-top corner), fitted into box b.
+  function solidPicture(item, b, alpha) {
+    if (!st.pic || st.pic.item !== item) {
+      var C = cam(ISO.az, ISO.el), S = item.solidKey, xs = [], ys = [];
+      [0, S.W].forEach(function (x) { [0, S.H].forEach(function (y) { [0, S.D].forEach(function (z) { xs.push(dot3([x, y, z], C.r)); ys.push(dot3([x, y, z], C.u)); }); }); });
+      var u0 = Math.min.apply(null, xs), v0 = Math.min.apply(null, ys);
+      var vw = { dir: C.d, right: C.r, up: C.u, ou: -u0, ov: -v0, w: Math.max.apply(null, xs) - u0, h: Math.max.apply(null, ys) - v0 };
+      var d = lib.drawSolid(S, vw);
+      st.pic = { item: item, d: { w: d.w, h: d.h, segs: d.segs.filter(function (q) { return q[4] === 1; }) } };
+    }
+    var dd = st.pic.d, k = Math.min(b.w / dd.w, b.h / dd.h), ox = b.x + (b.w - dd.w * k) / 2, oy = b.y + (b.h + dd.h * k) / 2;
+    var g = drawingGroup(dd, ox, oy, k, 'pv-pic');
+    g.setAttribute('style', 'opacity:' + U.clamp(alpha === undefined ? 1 : alpha, 0, 1).toFixed(3));
+    return g;
+  }
   // Marks, on option i, the unit lines where it differs from the right drawing (thick dots: a shape
   // as well as a colour). One mark group per option; drawn again replaces it.
   function markDiff(item, i, cls) {
     var o = st.opts[i];
     if (!o || i === item.key) return;
     if (o.diff && o.diff.parentNode) o.diff.parentNode.removeChild(o.diff);
-    var d = item.options[i].drawing, diff = unitDiff(d, item.options[item.key].drawing);
+    var d = item.options[i].drawing, diff = item.solid ? solidDiff(d, item.options[item.key].drawing) : unitDiff(d, item.options[item.key].drawing);
     o.diff = diff.length ? SV.el('path', { d: segPath(diff, 0, d.h, 1), class: cls }) : null;
     if (o.diff) o.svg.appendChild(o.diff);
   }
   // What the marked lines of a wrong drawing get wrong: drawn the wrong way (solid or dotted), a line
   // too many, or one missing.
   function diffCaption(item, i) {
+    if (item.solid) {
+      var r = lib.drawDiff(item.options[i].drawing, item.options[item.key].drawing, true).runs, ex = 0, mi = 0, tD = 0, tS = 0;
+      r.forEach(function (q) { if (q[4] && !q[5]) ex++; else if (!q[4] && q[5]) mi++; else if (q[5] === 2) tD++; else tS++; });
+      if (!ex && !mi && tD && !tS) return cap('diffDotted');
+      if (!ex && !mi && tS && !tD) return cap('diffSolid');
+      if (!tD && !tS && ex && !mi) return cap('diffExtra');
+      if (!tD && !tS && mi && !ex) return cap('diffMissing');
+      return cap('diffMixed');
+    }
     function units(d) {
       var m = {};
       d.segs.forEach(function (q) {
@@ -395,10 +430,11 @@
       { ms: 1500, caption: cap('views'), enter: function () { draw(item, S({ pointed: true })); } },
       { ms: 1100, caption: cap('slot'), enter: function () { draw(item, S({ slot: true })); } },
       { ms: 1400 + 110 * projectors(item).length, caption: cap('project', { view: miss }), enter: function () { draw(item, S({ proj: 0.001, slot: true })); }, update: function (k) { draw(item, S({ proj: Math.max(0.001, k), slot: true })); } },
-      // 2/3: the structure turns in sight to the missing side (Keehner et al. 2008: the informative view)
-      { ms: 2600, caption: cap('turn', { view: miss, side: side }), enter: function () { draw(item, S({ proj: 1, turn: { t: 0 } })); }, update: function (k) { draw(item, S({ proj: 1, turn: { t: k } })); } },
+      // 2/3: the structure turns in sight to the missing side (Keehner et al. 2008: the informative view);
+      // a solid is drawn in the corner as the two views fix it
+      { ms: 2600, caption: cap(item.solid ? 'turnSolid' : 'turn', { view: miss, side: side }), enter: function () { draw(item, S({ proj: 1, turn: { t: 0 } })); }, update: function (k) { draw(item, S({ proj: 1, turn: { t: k } })); } },
       // 3/3: the cubes fade to the drawing: seen edges solid, hidden ones dotted
-      { ms: 2400, caption: cap(nd ? 'fade' : 'fadeNone', { view: miss }), enter: function () { draw(item, S({ proj: 1, turn: { t: 1 }, keyAt: { t: 0, alpha: 0 } })); },
+      { ms: 2400, caption: cap((nd ? 'fade' : 'fadeNone') + (item.solid ? 'Solid' : ''), { view: miss }), enter: function () { draw(item, S({ proj: 1, turn: { t: 1 }, keyAt: { t: 0, alpha: 0 } })); },
         update: function (k) { draw(item, S({ proj: 1, turn: { t: 1, cubes: 1 - 0.8 * k }, keyAt: { t: 0, alpha: k } })); } },
       { id: 'lay', ms: 1500, caption: cap('lay', { view: miss }), enter: function () { draw(item, S({ proj: 1, keyAt: { t: 0 } })); }, update: function (k) { draw(item, S({ proj: 1, keyAt: { t: k } })); },
         exit: function () { draw(item, S({ built: all })); } },
@@ -409,8 +445,9 @@
     if (ndAll) list.push({ ms: 4200, caption: cap('dotted'), dotted: true, enter: function () { draw(item, S({ built: all, object: true, dotted: true })); } });
     list.push({ id: 'land', ms: 1300, caption: cap('land', { n: nm(key) }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
     if (picked >= 0) {
-      var why = item.options[picked].why;
-      list.push({ ms: 3200, caption: cap(why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch', { n: nm(picked) }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
+      var why = item.options[picked].why, kind = item.options[picked].kind;
+      var whyCap = item.solid ? (kind === 'outline' ? 'whyOutline' : kind === 'dashes' ? 'whyDashes' : 'whyLines') : why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch';
+      list.push({ ms: 3200, caption: cap(whyCap, { n: nm(picked) }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
     }
     return list;
   }

@@ -10,6 +10,8 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_patviews.py
 2. 360 x 640: the stem and all four options within one screen, targets >= 44 px
 3. show me at normal speed (planned time), the tutorial demo with captions, its dotted-line step
 4. the harness inlined into a sandboxed srcdoc frame; no console errors
+5. v1.2 (version 3): profile solids (steps and notches, a hole through, slopes, round holes) in the format's look:
+   the stem and the drawings on the plate (.is-plain), no fill, and show me's pictorial of the solid
 Screenshots: tests/e2e/out/patviews/patviews_<case>_<viewport>_<theme>[_reveal|_showme|_wrong].png """
 import sys
 
@@ -23,12 +25,23 @@ C = Checks('harness_patviews')
 EX, DEPS, DIR = 'patviews', ('views',), OUT / 'patviews'
 DIR.mkdir(parents=True, exist_ok=True)
 STEM = '.pv-stage'
-CASES = {  # name: (params, seed)
+CASES = {  # name: (params, seed); version 3: cube stacks at cubes 0-2, profile solids at 3-6
     'band': ('cubes:0,grid:0,missing:0,foil:0', 13),  # v1.2: the starter band
     'end': ('cubes:2,grid:0,missing:0,foil:0', 3),
-    'front': ('cubes:3,grid:1,missing:1,foil:2', 5),
-    'top': ('cubes:4,grid:1,missing:2,foil:1', 7),
+    'front': ('cubes:4,grid:1,missing:1,foil:2', 5),  # a hole through, the front view missing
+    'top': ('cubes:6,grid:1,missing:2,foil:1', 7),  # round holes, the top view missing
+    'steps': ('cubes:3,grid:0,missing:0,foil:0', 11),  # steps and notches
+    'slope': ('cubes:5,grid:1,missing:0,foil:2', 9),  # slopes, solid or dotted foils
 }
+MISS = ['end', 'front', 'top']
+
+
+def missing_of(params):
+    return MISS[int(dict(kv.split(':') for kv in params.split(','))['missing'])]
+
+
+def solid_of(params):
+    return int(dict(kv.split(':') for kv in params.split(','))['cubes']) >= 3
 DONE = """() => {
     const it = __harness.item, cells = document.querySelectorAll('.hx-grid .px-choice'), wrong = !__harness.last.result.correct;
     const traced = document.querySelectorAll('.pv-over .pv-trace').length, picked = document.querySelectorAll('.pv-over .pv-picked').length;
@@ -70,7 +83,11 @@ def desktop_and_phone(b, cons):
                 name = f'patviews_{case}_{tag}_{theme}'
                 open_item(page, EX, {'seed': seed, 'p': params, 'fast': True, 'theme': theme}, DEPS, name)
                 stage_ok(C, page, STEM, name)
-                stem_ok(page, name, 'end' if case == 'band' else case)  # the band case asks for the end view (missing:0)
+                stem_ok(page, name, missing_of(params))
+                if solid_of(params):
+                    pl = page.evaluate("""() => ({ stem: !!document.querySelector('.pv-stem.is-plain'), fill: document.querySelectorAll('.pv-given .pv-fill, .pv-opt .pv-fill').length,
+                        cells: document.querySelectorAll('.pv-opt-cell.is-plain').length, bg: getComputedStyle(document.querySelector('.pv-stage')).backgroundColor })""")
+                    C.ok(pl['stem'] and pl['fill'] == 0 and pl['cells'] == 4 and pl['bg'] == 'rgb(255, 255, 255)', f'{name}: a solid in the format\'s look: plain lines on the white plate, no fill ({pl})')
                 shot(page, name + '.png')
                 if phone:
                     no_hscroll(C, page, name)
@@ -79,6 +96,13 @@ def desktop_and_phone(b, cons):
                     shot(page, name + '_reveal.png')
                     show_me(C, page, name, DONE, page=page)
                     shot(page, name + '_showme.png')
+                    if solid_of(params):  # show me's pictorial of the solid in the free corner (the 2/3 step)
+                        pic = page.evaluate("""() => { const v = PX.ex.view('patviews'), L = PX.ex.learn('patviews'), list = v.steps(__harness.item, null);
+                            const i = list.findIndex((s) => s.caption && s.caption.startsWith(L.captions.turnSolid.split('{')[0])); if (i < 0) return { found: false };
+                            list[i].enter(); const g = document.querySelector('.pv-over .pv-pic');
+                            return { found: true, lines: g ? g.querySelectorAll('path').length : 0, w: g ? Math.round(g.getBBox().width) : 0 }; }""")
+                        C.ok(pic.get('found') and pic['lines'] >= 1 and pic['w'] >= 40, f'{name}: show me draws the solid itself beside the views ({pic})')
+                        shot(page, name + '_picture.png')
                     page.keyboard.press('Space')
                     page.wait_for_function(READY, timeout=10000)
                     answer_pointer(C, page, 4, name, tap=phone)

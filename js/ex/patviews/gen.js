@@ -61,8 +61,9 @@
   var CUBES = [[4, 6], [4, 7], [5, 10], [7, 12], [9, 15]];
   var DRAWN = [[4, 6], [4, 5], [6, 7], [8, 9], [10, 12]]; // the first structure's cube count per level
   var CUBE_LABELS = ['4–6 (starter, structure shown)', '4–7', '5–10', '7–12', '9–15'];
-  // Version 3 (PLAN milestone 8, O49), in progress: the profile solids below are built and validated but not
-  // dealt yet (the definition still holds version 2's cube levels).
+  // Version 3 (PLAN milestone 8, O49): the 'cubes' dim holds the object: cube stacks at levels 0–2 (the
+  // structures below the format), profile solids at levels 3–6 (the format's own objects; see the solids
+  // section). Version 2's cube levels 7–12 and 9–15 are left out (harder stacks are no closer to the test).
   var NCUBE = 3, NOBJ = 7;
   var GRIDS = [3, 4];
   var FOILS = ['outline', 'lines', 'dashes'];
@@ -637,7 +638,7 @@
   var stats = { tries: 0, nulls: 0, over: 0, invalid: 0, errors: 0, fallbacks: 0, lastInvalid: null, lastError: null, nodes: 0, noFit: 0, fewCands: 0, noSet: 0, noSpec: 0, closeSet: 0, levelMiss: 0, holeHidden: 0, noSquare: 0, noX: 0, apart: 0 };
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) {
-    return { cubes: lvl(params, 'cubes', CUBES.length), grid: lvl(params, 'grid', GRIDS.length), missing: lvl(params, 'missing', MISSING.length), foil: lvl(params, 'foil', FOILS.length) };
+    return { cubes: lvl(params, 'cubes', NOBJ), grid: lvl(params, 'grid', GRIDS.length), missing: lvl(params, 'missing', MISSING.length), foil: lvl(params, 'foil', FOILS.length) };
   }
   function cubeCount(b) { var n = 0; for (var k = 0; k < b.hm.length; k++) n += b.hm[k]; return n; }
   // The starter band's structures (note D2 §3.7): 4–6 cubes, two high at most and somewhere, in a box of
@@ -813,6 +814,7 @@
     return b;
   }
   function validate(item) {
+    if (item && item.solid) return MISSING.indexOf(item.missing) < 0 ? 'unknown missing view' : validateSolid(item);
     try {
       if (!item || MISSING.indexOf(item.missing) < 0) return 'unknown missing view';
       var pp = cleanParams(item.params), band = pp.cubes === 0, b = okRows(item, band);
@@ -1403,9 +1405,30 @@
   //   foil 1  all four share one outline, and every other option differs in its lines;
   //   foil 2  all four share one outline, and the key's neighbour along one change differs only in which
   //           lines are solid and which dotted (the format's subtlest option).
-  // Every two options differ by at least half a unit of line (or style). The given views are the key
+  // Every two options look apart (lookApart: a unit of line cells, counting both drawings). The given views are the key
   // solid's own. A hole in a given profile must show in the other given view (else filling it would leave
   // both given views unchanged, and the drawings would not fix the solid).
+  // How far apart two drawings look: line cells (a sixteenth of a unit) of one with no line of the same style in the
+  // other within one cell, in units (a line moved by less than a sixteenth, or two lines that close, look alike).
+  function lookApart(a, b) {
+    function cells(g) {
+      var m = {};
+      g.segs.forEach(function (q) {
+        var n = Mth.max(1, Mth.ceil(Mth.hypot(q[2] - q[0], q[3] - q[1]) * 32));
+        for (var i = 0; i <= n; i++) { var k = Mth.round((q[0] + (q[2] - q[0]) * i / n) * 16) + ',' + Mth.round((q[1] + (q[3] - q[1]) * i / n) * 16); m[k] = (m[k] || 0) | q[4]; }
+      });
+      return m;
+    }
+    function near(M, key, st) {
+      var p = key.split(','), u = +p[0], v = +p[1];
+      for (var du = -1; du <= 1; du++) for (var dv = -1; dv <= 1; dv++) if ((M[(u + du) + ',' + (v + dv)] || 0) & st) return true;
+      return false;
+    }
+    var A = cells(a), B = cells(b), d = 0, k;
+    for (k in A) if (!near(B, k, A[k])) d++;
+    for (k in B) if (!near(A, k, B[k])) d++;
+    return d / 16;
+  }
   function relation(a, b) {
     if (a.out !== b.out) return 'outline';
     var d = drawDiff(a.g, b.g);
@@ -1419,8 +1442,7 @@
         if (f.kind !== 'hole' && f.kind !== 'round') continue;
         var S2 = solidOf(applyVars(sp, [{ pi: pi, fi: fi, g: null, to: pi }]));
         if (!S2) return false;
-        var d = drawDiff(drawSolid(S2, other), given[other]);
-        if (d.pos + d.sty < 0.5) return false;
+        if (lookApart(drawSolid(S2, other), given[other]) < 1) return false;
       }
     }
     return true;
@@ -1453,22 +1475,19 @@
       if ((fl === 2 && X.tag !== 'flip c') || !suits(X)) continue;
       for (var yi = 0; yi < vars.length && tried < 12; yi++) {
       var Y = vars[yi];
-      if ((Y.pi === X.pi && Y.fi === X.fi) || !(fl === 2 ? eff(Y) === 'dashes' || eff(Y) === 'lines' : suits(Y))) continue;
+      if ((Y.pi === X.pi && Y.fi === X.fi) || (X.tag === 'left out' && Y.tag === 'left out') || !(fl === 2 ? eff(Y) === 'dashes' || eff(Y) === 'lines' : suits(Y))) continue; // at most one cut left out
       tried++;
       var sq = [obj([]), obj([X]), obj([Y]), obj([X, Y])];
       // every option keeps a cut of the level's own kind (a hole through, a slope, a round hole)
       if (sq.some(function (o) { return !o || !o.sp.prof.some(function (q) { return q.feats.some(function (f) { return f.kind === SOLID_KINDS[lv][0]; }); }); })) { stats.levelMiss++; continue; }
       var rel = [], ok = true, i, j;
       for (i = 0; i < 4 && ok; i++) { rel.push([]); for (j = 0; j < 4; j++) rel[i].push(i === j ? 'same' : j < i ? rel[j][i] : relation(sq[i], sq[j])); }
-      for (i = 0; i < 4 && ok; i++) for (j = i + 1; j < 4; j++) {
-        var d = drawDiff(sq[i].g, sq[j].g);
-        if (rel[i][j] === 'same' || d.pos + d.sty < 0.75) ok = false;
-      }
+      for (i = 0; i < 4 && ok; i++) for (j = i + 1; j < 4; j++) if (rel[i][j] === 'same' || lookApart(sq[i].g, sq[j].g) < 1) ok = false;
       if (!ok) { stats.closeSet++; continue; }
       var outl = sq.every(function (o) { return o.out === sq[0].out; });
       for (i = 0; i < 4 && ok; i++) {
         var others = [0, 1, 2, 3].filter(function (k) { return k !== i; });
-        if (fl === 0) ok = others.every(function (k) { var d2 = drawDiff(sq[i].g, sq[k].g); return rel[i][k] === 'outline' || d2.pos >= 1; });
+        if (fl === 0) ok = others.every(function (k) { return rel[i][k] === 'outline' || (drawDiff(sq[i].g, sq[k].g).pos >= 1 && lookApart(sq[i].g, sq[k].g) >= 2); });
         else if (fl === 1) ok = outl && others.every(function (k) { return rel[i][k] === 'lines'; });
         else ok = outl && others.some(function (k) { return rel[i][k] === 'dashes'; });
       }
@@ -1579,7 +1598,7 @@
       var len = dir ? g.h : g.w, acr = dir ? g.w : g.h;
       for (var c = 0.1737; c < acr; c += 0.2513) {
         var pts = [];
-        for (var x = 0.004; x < len; x += 0.0123) pts.push([x, dir ? R(c, x) : R(x, c)]);
+        for (var x = -0.05; x < len + 0.05; x += 0.0123) pts.push([x, dir ? R(c, x) : R(x, c)]); // from outside the box: the outline too
         for (k = 1; k + 2 < pts.length; k++) {
           var ch2 = vChange(pts[k - 1][1], pts[k][1], pts[k + 1][1], pts[k + 2][1]);
           if (!ch2) continue;
@@ -1618,7 +1637,7 @@
     var A = cells(a), B = cells(b), d = 0, k;
     for (k in A) if (B[k] !== A[k]) d++;
     for (k in B) if (!(k in A)) d++;
-    return d * 0.05 >= 0.5;
+    return d * 0.05 >= 0.4;
   }
   function validateSolid(item) {
     try {
@@ -1649,7 +1668,7 @@
   function attempt(rng, p, relaxed) {
     stats.tries++;
     var item;
-    try { item = build(rng, p, relaxed); } catch (e) { stats.errors++; stats.lastError = String(e && e.stack || e); return null; }
+    try { item = p.cubes >= NCUBE ? buildSolid(rng, p) : build(rng, p, relaxed); } catch (e) { stats.errors++; stats.lastError = String(e && e.stack || e); return null; }
     if (!item) { stats.nulls++; return null; }
     item.ex = 'patviews';
     return item;
@@ -1657,7 +1676,7 @@
   function generate(rng, params) {
     // The starter band rejects lopsided foil sets outright (chooseFoils, strict), so it gets more tries,
     // the last 50 without that rule (a few band settings rarely find a balanced set).
-    var p = cleanParams(params), item = null, tries = p.cubes === 0 ? 150 : 50;
+    var p = cleanParams(params), item = null, tries = p.cubes === 0 ? 150 : p.cubes >= NCUBE ? 80 : 50;
     for (var i = 0; i < tries && !item; i++) item = attempt(i === 0 ? rng : rng.fork('retry' + i), p, i >= 100);
     if (!item) item = fallback(p);
     item.seed = rng.seed;
@@ -1666,7 +1685,7 @@
   }
   function fallback(p) {
     stats.fallbacks++;
-    var tries = [p, { cubes: p.cubes, grid: 1, missing: p.missing, foil: 0 }, { cubes: 2, grid: 1, missing: 0, foil: 0 }];
+    var tries = p.cubes >= NCUBE ? [p, { cubes: p.cubes, grid: p.grid, missing: p.missing, foil: 0 }, { cubes: NCUBE, grid: 0, missing: 0, foil: 0 }] : [p, { cubes: p.cubes, grid: 1, missing: p.missing, foil: 0 }, { cubes: 2, grid: 1, missing: 0, foil: 0 }];
     for (var t = 0; t < tries.length; t++) {
       for (var k = 0; k < 400; k++) {
         var item = attempt(PX.rng(PX.rng.hash('patviews-fallback', tries[t].cubes, tries[t].grid, tries[t].missing, tries[t].foil, k)), tries[t]);
@@ -1702,18 +1721,33 @@
   // exhaustive search rejects), Δ = −1.6 against today's level 0 (hand-set, to be refitted from pooled
   // exports): the floor moves from −2.2 to −3.8; older combinations keep their exact difficulty. The
   // cube counts now hold for the shown structure. Range 5.6.
+  // v1.2 (version 3; PLAN milestone 8, O49; note D1 §3.2, §6.5, addendum A.1 row 13): the format's own
+  // objects. 'cubes' becomes the object: cube stacks at levels 0–2 (below the format), then profile solids
+  // with steps and notches, a hole through, slopes, round holes (all in the test range, as the official
+  // samples show them); 'grid' is the size (cubes on 3 × 3 or 4 × 4; solids made with two or three cuts, one of
+  // which a change may leave out). Steps
+  // for the solids hand-set (to be refitted from pooled exports): +0.2 over the largest stack level for
+  // plain cuts, +0.3 for each further kind. Version 2's stack levels 7–12 and 9–15 are left out; stored
+  // levels move with the range (js/engine/rebase.js). Range 5.8.
+  var LEVEL_TAGS = { cubes: ['below', 'below', 'below', 'test', 'test', 'test', 'test'], grid: ['test', 'test'], missing: ['test', 'test', 'test'], foil: ['test', 'test', 'test'] };
   PX.ex.define({
-    id: 'patviews', version: 2, code: 'EX-15', name: 'Missing View', short: 'Missing View',
+    id: 'patviews', version: 3, code: 'EX-15', name: 'Missing View', short: 'Missing View',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4, pat: true,
     bet: 'format', format: 'patviews:missing-third-view', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     requires: ['views'],
     starter: { dim: 'cubes', levels: 1 },
     dims: [
-      { key: 'cubes', label: 'Cubes', levels: CUBE_LABELS.slice(), step: 0.5, at: [-1.6, 0, 0.5, 1.0, 1.5] },
-      { key: 'grid', label: 'Grid', levels: ['3 × 3', '4 × 4'], step: 0.5 },
+      { key: 'cubes', label: 'Object', levels: CUBE_LABELS.slice(0, NCUBE).map(function (s) { return 'cube stack, ' + s; }).concat(SOLID_LABELS), step: 0.5, at: [-1.6, 0, 0.5, 0.7, 1.0, 1.3, 1.6] },
+      { key: 'grid', label: 'Size', levels: ['small (cubes on 3 × 3; one or two cuts)', 'large (cubes on 4 × 4; two or three cuts)'], step: 0.5 },
       { key: 'missing', label: 'Missing view', levels: MISSING.slice(), step: 0.4 },
-      { key: 'foil', label: 'Foils', levels: ['outline', 'same outline', 'solid or dotted'], step: 0.6 },
+      { key: 'foil', label: 'Foils', levels: ['outline or lines', 'same outline', 'solid or dotted'], step: 0.6 },
     ],
+    testRange: {
+      dims: LEVEL_TAGS,
+      notes: {
+        cubes: 'The official samples show blocks with steps, notches, holes, round holes and slopes, drawn in plain lines. Cube stacks are starter help below the format.',
+      },
+    },
     base: -2.2,
     generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
@@ -1724,6 +1758,11 @@
       lineSet: lineSet, crossStyles: crossStyles, pairV: pairV, search: search, searchRay: searchRay, possibleViews: possibleViews, neighbours: neighbours,
       flips: flips, shares: shares, pickShare: pickShare, gdistLines: gdistLines, build: build, fallback: fallback, cleanParams: cleanParams,
       cubeCount: cubeCount, bandBox: bandBox, bandStructure: bandStructure,
+      // profile solids (version 3)
+      NCUBE: NCUBE, NOBJ: NOBJ, LEVEL_TAGS: LEVEL_TAGS, SOLID_KINDS: SOLID_KINDS, SOLID_LABELS: SOLID_LABELS, PLANE: PLANE, VAX: VAX,
+      drawSolid: drawSolid, axisView: axisView, solidEdges: solidEdges, rayIn: rayIn, inSolid: inSolid, drawDiff: drawDiff, outlineOf: outlineOf,
+      profLoops: profLoops, profOk: profOk, solidOf: solidOf, newSpec: newSpec, variants: variants, applyVars: applyVars, connected: connected,
+      relation: relation, lookApart: lookApart, holesShow: holesShow, buildSolid: buildSolid, validateSolid: validateSolid, vRay: vRay, vDrawing: vDrawing, vDiffers: vDiffers,
     },
   });
 })(window.PX);

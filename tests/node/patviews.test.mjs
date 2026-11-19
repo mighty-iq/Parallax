@@ -1,11 +1,12 @@
 /* EX-15 Missing View (DAT-style format): drawings (two methods), the class-free proofs, the exhaustive search against
-   brute force, generator, validator, scorer, shortcut solvers, timing, learn data.
+   brute force, generator, validator, scorer, shortcut solvers, timing, learn data; version 3's profile solids (the
+   class, the 2 × 2 options, the foil levels, their own shortcut solvers).
    Run through tests/node/run.mjs (filter: patviews). */
 import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/views/gen.js', 'js/ex/patviews/gen.js', 'js/ex/patviews/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 112 per combination (90 with the starter band)
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 14112); // 112 per combination (126; the starter band's pool keeps 2 016)
 const CHANCE = 0.25, LIMIT = CHANCE + 0.10;
 
 export async function run(t) {
@@ -18,7 +19,8 @@ export async function run(t) {
   testMethods(t, PX, L, VL);
   testSearch(t, PX, L, VL);
   const pool = testPool(t, PX, def, L);
-  testKinds(t, PX, def, L, pool);
+  testKinds(t, PX, def, L, pool.filter((x) => !x.it.solid));
+  testSolids(t, PX, def, L, pool.filter((x) => x.it.solid));
   testShortcuts(t, PX, def, L, pool);
   testTampering(t, PX, def, L, pool);
   testFallback(t, PX, def, L);
@@ -33,11 +35,18 @@ const pk = (p) => `${p.cubes}${p.grid}${p.missing}${p.foil}`;
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat],
-    ['patviews', 2, 'EX-15', ['Vz'], 'intrinsic-static', 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise; version 2: the starter band)');
-  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 5], ['grid', 2], ['missing', 3], ['foil', 3]], 'dims');
+    ['patviews', 3, 'EX-15', ['Vz'], 'intrinsic-static', 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise; version 3: profile solids)');
+  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 7], ['grid', 2], ['missing', 3], ['foil', 3]], 'dims (cubes: the object, three cube-stack levels and four of solids)');
   t.eq(def.requires, ['views'], 'declares that it reads Views\' block model');
   t.eq(def.starter, { dim: 'cubes', levels: 1 }, 'the starter band is the first level of cubes');
-  t.eq(def.dims[0].at, [-1.6, 0, 0.5, 1.0, 1.5], 'cubes: the band offset in front, older levels at their 1.1 difficulty (step 0.5)');
+  t.eq(def.dims[0].at, [-1.6, 0, 0.5, 0.7, 1.0, 1.3, 1.6], 'object: the band in front, the stacks at their 1.1 difficulty, the solids above them');
+  // the test range (CONTRACT-v1.2 W3): stacks below the format, every solid level in it
+  const tags = def.testRange && def.testRange.dims;
+  t.eq(tags && tags.cubes, ['below', 'below', 'below', 'test', 'test', 'test', 'test'], 'test range: cube stacks below, every solid level test');
+  t.eq(PX.ex.rangeTag(def, { cubes: 2, grid: 1, missing: 2, foil: 2 }), 'below', 'a cube-stack item is below the format');
+  t.eq(PX.ex.rangeTag(def, { cubes: 6, grid: 1, missing: 2, foil: 2 }), 'test', 'a solid item is in the test range');
+  t.ok(def.dims[0].levels.slice(3).every((s) => /^solid: /.test(s)) && def.dims[0].levels.slice(0, 3).every((s) => /^cube stack, /.test(s)), 'the object levels name what they deal');
+  t.ok(!/DAT|score/i.test(JSON.stringify(def.testRange)), 'the tags describe format features only (no test name, no score)');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(Math.abs(lo + 3.8) < 1e-9, `the floor moves to −3.8 (${lo.toFixed(2)}; note D2 §3.7)`);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${(hi - lo).toFixed(2)})`);
@@ -149,7 +158,7 @@ function testSearch(t, PX, L, VL) {
 function testPool(t, PX, def, L) {
   t.section('patviews: pool');
   const combos = PX.ex.enumerate(def);
-  t.eq(combos.length, 90, '90 combinations (5 × 2 × 3 × 3)');
+  t.eq(combos.length, 126, '126 combinations (7 × 2 × 3 × 3)');
   const per = Math.ceil(N_ITEMS / combos.length), items = [];
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, json = 0, first = null, malformed = 0;
   const before = { ...L.stats };
@@ -187,11 +196,14 @@ function testPool(t, PX, def, L) {
   t.eq(same, checked, `the same seed gives the same item (${checked} seeds regenerated)`);
   // The starter band draws from a small enumerated list of structures (4–6 cubes, two high), so variety
   // is judged above it; the band reports its own count.
-  const above = items.filter((x) => x.p.cubes > 0), band = items.filter((x) => x.p.cubes === 0);
+  const above = items.filter((x) => x.p.cubes > 0 && !x.it.solid), band = items.filter((x) => x.p.cubes === 0);
   const distinct = new Set(above.map((x) => x.it.missing + JSON.stringify(x.it.heights)));
-  t.ok(distinct.size > 0.6 * above.length, `structures are varied above the band (${distinct.size} distinct of ${above.length})`);
+  // version 3 keeps the small stacks (4–7 and 5–10 cubes) above the band; 1.1's larger levels gave more variety
+  t.ok(distinct.size > 0.5 * above.length, `structures are varied above the band (${distinct.size} distinct of ${above.length})`);
   const dBand = new Set(band.map((x) => x.it.missing + JSON.stringify(x.it.heights)));
   t.ok(dBand.size >= 150, `the starter band uses many of its structures (${dBand.size} distinct of ${band.length})`);
+  const sol = items.filter((x) => x.it.solid), dSol = new Set(sol.map((x) => x.it.missing + JSON.stringify(x.it.given)));
+  t.ok(sol.length && dSol.size > 0.9 * sol.length, `solids are varied (${dSol.size} distinct stems of ${sol.length})`);
   return items;
 }
 
@@ -253,6 +265,46 @@ function testKinds(t, PX, def, L, pool) {
   t.ok(why.search > 0 && why.hull > 0, 'some foils fall to the hull proof, some need the exhaustive search');
 }
 
+/* ------------------------------------------------------------------ profile solids (version 3) */
+
+// The solids' own checks: the item's shape, the level's cut in the key, the foil levels by what each other option
+// gets wrong against the key (L.relation, by outline bitmaps and line runs), the key's place, and the drawings'
+// sizes; the validator (run on every item in the pool) checks the drawings by rays.
+function testSolids(t, PX, def, L, pool) {
+  t.section('patviews: solids');
+  const N = pool.length, VAX = { end: 0, top: 1, front: 2 }, ranks = [0, 0, 0, 0];
+  let shape = 0, kindOk = 0, size = 0, cuts = 0, f0 = 0, n0 = 0, f1 = 0, n1 = 0, f2 = 0, n2 = 0, profs = 0;
+  const seenKinds = {}, changes = {};
+  for (const { p, it } of pool) {
+    ranks[it.key]++;
+    const miss = L.MISSING[p.missing], given = Object.keys(it.given).sort();
+    if (it.missing === miss && given.join() === ['top', 'front', 'end'].filter((v) => v !== miss).sort().join() && it.options.length === 4) shape++;
+    const ext = { top: [it.W, it.D], front: [it.W, it.H], end: [it.D, it.H] }[miss];
+    if (it.options.every((o) => Math.abs(o.drawing.w - ext[0]) < 1e-9 && Math.abs(o.drawing.h - ext[1]) < 1e-9)) size++;
+    const axes = it.solidKey.prof.map((q) => q.ax).sort().join(), want = given.map((v) => VAX[v]).sort().join();
+    if (axes === want) profs++;
+    const feats = it.spec.prof.flatMap((q) => q.feats);
+    if (feats.some((f) => f.kind === L.SOLID_KINDS[p.cubes - L.NCUBE][0])) kindOk++;
+    if (feats.length >= (p.grid ? 2 : 1) && feats.length <= (p.grid ? 3 : 2)) cuts++;
+    const foils = it.options.filter((_, i) => i !== it.key), kd = it.options[it.key].drawing;
+    foils.forEach((o) => { seenKinds[o.kind] = (seenKinds[o.kind] || 0) + 1; o.change.forEach((c) => { changes[c] = (changes[c] || 0) + 1; }); });
+    if (p.foil === 0) { n0++; if (foils.every((o) => o.kind === 'outline' || L.drawDiff(o.drawing, kd).pos >= 1)) f0++; }
+    if (p.foil === 1) { n1++; if (foils.every((o) => o.kind === 'lines')) f1++; }
+    if (p.foil === 2) { n2++; if (foils.some((o) => o.kind === 'dashes') && foils.every((o) => o.kind !== 'outline')) f2++; }
+  }
+  t.ok(N >= 8000, `solid items (${N})`);
+  t.eq(shape, N, 'every solid item asks for its level\'s missing view, gives the other two and four drawings');
+  t.eq(profs, N, 'the stated solid has one profile on each given view\'s axis (no cut along the missing view)');
+  t.eq(size, N, 'every drawing has the size the two given views require');
+  t.eq(kindOk, N, 'the key solid has a cut of its level\'s own kind (steps or notches, a hole through, a slope, a round hole)');
+  t.eq(cuts, N, 'the key solid has the size\'s number of cuts (small: one or two, large: two or three)');
+  t.eq(f0, n0, `foil level 0: every other drawing differs in its outline or by at least a unit of line (${n0})`);
+  t.eq(f1, n1, `foil level 1: every other drawing shares the key's outline and differs in its lines (${n1})`);
+  t.eq(f2, n2, `foil level 2: one other drawing differs only in solid and dotted, none in its outline (${n2})`);
+  t.ok(ranks.every((r) => r / N > 0.22 && r / N < 0.28), `the key's place is spread (${ranks.map((r) => (r / N * 100).toFixed(0) + '%').join(' ')})`);
+  console.log(`       patviews solids: foil kinds ${JSON.stringify(seenKinds)}, changes ${JSON.stringify(changes)}`);
+}
+
 /* ------------------------------------------------------------------ shortcut solvers */
 
 const shareOf = (scores, key, high) => {
@@ -270,12 +322,15 @@ function linesApart(a, b) {
 function testShortcuts(t, PX, def, L, pool) {
   t.section('patviews: shortcut solvers, starter band');
   shortcutPool(t, L, pool.filter((x) => x.p.cubes === 0), true);
-  t.section('patviews: shortcut solvers, levels above the band');
-  shortcutPool(t, L, pool.filter((x) => x.p.cubes > 0), false);
+  t.section('patviews: shortcut solvers, cube stacks above the band');
+  shortcutPool(t, L, pool.filter((x) => x.p.cubes > 0 && !x.it.solid), false);
+  t.section('patviews: shortcut solvers, solids');
+  shortcutPool(t, L, pool.filter((x) => x.it.solid), false, 'solids');
 }
 // Per item, every shortcut solver's share of the key (ties shared). One implementation for this file's pools
 // and for tests/node/shortcut-levels.test.mjs (the export at the end).
 function itemScores(L, it) {
+  if (it.solid) return solidScores(L, it);
   const out = {}, add = (name, v) => { out[name] = v; };
   {
     const g = it.options.map((o) => L.grid(o.drawing)), c = g.map(L.counts), key = it.key;
@@ -305,7 +360,40 @@ function itemScores(L, it) {
   }
   return out;
 }
-function shortcutPool(t, L, pool, band) {
+// Solids: the same cheap solvers on line runs (lengths in units; L.drawDiff for likeness), the drawing most like a
+// given view of its size, the most symmetric drawing; and, reported, the format's own method: every line position
+// of the drawing lines up with a line or corner of the given view that shares that axis.
+const REPORTED = ['size fits the stem', 'lines line up with the given views'];
+function solidScores(L, it) {
+  const out = {}, add = (name, v) => { out[name] = v; }, key = it.key, D = it.options.map((o) => o.drawing);
+  'ABCD'.split('').forEach((ch, j) => add('always ' + ch, key === j ? 1 : 0)); // always the same letter
+  const len = (d, st) => d.segs.reduce((a, q) => a + (st && q[4] !== st ? 0 : Math.hypot(q[2] - q[0], q[3] - q[1])), 0);
+  const sol = D.map((d) => len(d, 1)), dot = D.map((d) => len(d, 2)), all = D.map((d) => len(d)), cnt = D.map((d) => d.segs.length);
+  add('most solid', shareOf(sol, key, true)); add('fewest solid', shareOf(sol, key, false));
+  add('most dotted', shareOf(dot, key, true)); add('fewest dotted', shareOf(dot, key, false));
+  add('most lines', shareOf(all, key, true)); add('fewest lines', shareOf(all, key, false));
+  add('most pieces', shareOf(cnt, key, true)); add('fewest pieces', shareOf(cnt, key, false));
+  const dist = (a, b) => { const x = L.drawDiff(a, b); return Math.round((x.pos + x.sty) * 1e4) / 1e4; }, distL = (a, b) => Math.round(L.drawDiff(a, b).pos * 1e4) / 1e4;
+  const sum = D.map((a, i) => D.reduce((s, b, j) => s + (i === j ? 0 : dist(a, b)), 0));
+  const sumL = D.map((a, i) => D.reduce((s, b, j) => s + (i === j ? 0 : distL(a, b)), 0));
+  add('like the others', shareOf(sum, key, false)); add('odd one out', shareOf(sum, key, true));
+  add('like the others (lines only)', shareOf(sumL, key, false)); add('odd one out (lines only)', shareOf(sumL, key, true));
+  add('size fits the stem', 1 / 4);
+  const gv = Object.keys(it.given).map((v) => it.given[v]);
+  const like = D.map((o) => Math.min(...gv.filter((x) => Math.abs(x.w - o.w) < 1e-9 && Math.abs(x.h - o.h) < 1e-9).map((x) => dist(o, x)).concat([99])));
+  add('most like a given view', shareOf(like, key, false));
+  const mirror = (d) => ({ w: d.w, h: d.h, segs: d.segs.map((q) => [d.w - q[0], q[1], d.w - q[2], q[3], q[4]]) });
+  add('most symmetric', shareOf(D.map((d) => dist(d, mirror(d))), key, false));
+  // the method: the missing view's axes are shared with the given views (end: v with the front's v, u with the
+  // top's v; front: u with the top's u, v with the end's v; top: u with the front's u, v with the end's u)
+  const share = { end: [['top', 1], ['front', 1]], front: [['top', 0], ['end', 1]], top: [['front', 0], ['end', 0]] }[it.missing];
+  const coords = (d, k) => { const s = new Set(); d.segs.forEach((q) => { s.add(Math.round(q[k] * 1e3)); s.add(Math.round(q[k + 2] * 1e3)); }); return s; };
+  const avail = share.map(([v, k]) => coords(it.given[v], k));
+  const aligned = D.map((d) => { let n = 0, ok = 0; for (let ax = 0; ax < 2; ax++) for (const c of coords(d, ax)) { n++; if (avail[ax].has(c)) ok++; } return ok / Math.max(1, n); });
+  add('lines line up with the given views', shareOf(aligned.map((x) => Math.round(x * 1e3)), key, true));
+  return out;
+}
+function shortcutPool(t, L, pool, band, what) {
   t.ok(pool.length >= 2000, `${pool.length} items`);
   const acc = {}, cnt = {}, cell = {};
   for (const { it, p } of pool) {
@@ -319,11 +407,20 @@ function shortcutPool(t, L, pool, band) {
   for (const name of Object.keys(acc)) {
     const a = acc[name] / cnt[name];
     line.push(`${name} ${(a * 100).toFixed(1)}%`);
+    if (REPORTED.includes(name)) continue; // the format's own method: reported, not bounded
     t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
-  console.log(`       patviews shortcuts${band ? ' (starter band)' : ''}: ` + line.join(', '));
-  // Per foil level and missing view too (review RV-dat-style-B §9), apart from the constant "size fits".
-  const over = Object.entries(cell).filter(([k, v]) => !k.startsWith('size fits') && v[0] / v[1] > LIMIT).map(([k, v]) => `${k} ${(v[0] / v[1] * 100).toFixed(1)}% (n ${v[1]})`);
+  console.log(`       patviews shortcuts${band ? ' (starter band)' : what ? ' (' + what + ')' : ''}: ` + line.join(', '));
+  // Per foil level and missing view too (review RV-dat-style-B §9), apart from the constant "size fits". As in
+  // tests/node/shortcut-levels.test.mjs, a cell over the bound by less than two standard errors of its own share is
+  // printed as sampling noise, not failed.
+  const over = [], near = [];
+  Object.entries(cell).forEach(([k, v]) => {
+    const a = v[0] / v[1], se = Math.sqrt(a * (1 - a) / v[1]), tag = `${k} ${(a * 100).toFixed(1)}% (n ${v[1]})`;
+    if (k.startsWith('size fits') || REPORTED.some((r) => k.startsWith(r)) || a <= LIMIT) return;
+    (a > LIMIT + 2 * se ? over : near).push(tag);
+  });
+  if (near.length) console.log('       patviews: cells over chance + 10 by less than two standard errors (sampling noise, not failed): ' + near.join('; '));
   t.ok(!over.length, 'every solver stays within chance + 10 at each foil level and missing view' + (over.length ? ': ' + over.join('; ') : ''));
 }
 
@@ -331,7 +428,7 @@ function shortcutPool(t, L, pool, band) {
 
 function testTampering(t, PX, def, L, pool) {
   t.section('patviews: validate rejects broken items');
-  const pick = (f) => pool.filter((x, i) => i % 41 === 0 && (!f || f(x.it))).slice(0, 40).map((x) => JSON.parse(JSON.stringify(x.it)));
+  const pick = (f) => pool.filter((x, i) => i % 41 === 0 && !x.it.solid && (!f || f(x.it))).slice(0, 40).map((x) => JSON.parse(JSON.stringify(x.it)));
   const cases = [
     ['the key index moved', null, (it) => { it.key = (it.key + 1) % 4; }],
     ['a foil replaced by the key', null, (it) => { const j = (it.key + 1) % 4; it.options[j] = JSON.parse(JSON.stringify(it.options[it.key])); }],
@@ -345,6 +442,26 @@ function testTampering(t, PX, def, L, pool) {
     let rejected = 0;
     items.forEach((it) => { mod(it); if (def.validate(it) !== true) rejected++; });
     t.eq(rejected, items.length, `validate rejects: ${name} (${items.length} items)`);
+  }
+  // solids: the validator reads only the stated solid and the drawings
+  const pickS = (f) => pool.filter((x, i) => i % 23 === 0 && x.it.solid && (!f || f(x.it))).slice(0, 30).map((x) => JSON.parse(JSON.stringify(x.it)));
+  const longest = (segs, st) => segs.reduce((b, q, i) => (st && q[4] !== st) || (b >= 0 && Math.hypot(segs[b][2] - segs[b][0], segs[b][3] - segs[b][1]) >= Math.hypot(q[2] - q[0], q[3] - q[1])) ? b : i, -1);
+  const casesS = [
+    ['solids: the key index moved', null, (it) => { it.key = (it.key + 1) % 4; }],
+    ['solids: a foil replaced by the key', null, (it) => { const j = (it.key + 1) % 4; it.options[j] = JSON.parse(JSON.stringify(it.options[it.key])); }],
+    ['solids: the key\'s longest dotted line made solid', (it) => it.options[it.key].drawing.segs.some((q) => q[4] === 2), (it) => { const s = it.options[it.key].drawing.segs; s[longest(s, 2)][4] = 1; }],
+    ['solids: the key\'s longest solid line made dotted', null, (it) => { const s = it.options[it.key].drawing.segs; s[longest(s, 1)][4] = 2; }],
+    ['solids: the key\'s longest line left out', null, (it) => { const s = it.options[it.key].drawing.segs; s.splice(longest(s), 1); }],
+    ['solids: a line of a given view left out', null, (it) => { const v = Object.keys(it.given)[0], s = it.given[v].segs; s.splice(longest(s), 1); }],
+    ['solids: the missing view renamed', null, (it) => { it.missing = ['top', 'front', 'end'].filter((v) => v !== it.missing)[0]; }],
+    ['solids: a profile turned to the missing view\'s axis', null, (it) => { it.solidKey.prof[0].ax = ({ end: 0, top: 1, front: 2 })[it.missing]; }],
+    ['solids: a profile cut short of its box', null, (it) => { const P = it.solidKey.prof[0].loops[0].pts; let mx = 0; P.forEach((p) => { mx = Math.max(mx, p[0]); }); P.forEach((p) => { if (p[0] === mx) p[0] -= 0.5; }); }],
+  ];
+  for (const [name, f, mod] of casesS) {
+    const items = pickS(f);
+    let rejected = 0;
+    items.forEach((it) => { mod(it); if (def.validate(it) !== true) rejected++; });
+    t.ok(items.length >= 10 && rejected === items.length, `validate rejects: ${name} (${rejected} of ${items.length} items)`);
   }
 }
 
@@ -365,9 +482,12 @@ const cpuMs = typeof process.threadCpuUsage === 'function'
   : () => performance.now();
 function testTiming(t, PX, def) {
   t.section('patviews: timing');
-  for (const hard of [{ cubes: 4, grid: 1, missing: 2, foil: 2 }, { cubes: 4, grid: 1, missing: 1, foil: 2 }, { cubes: 4, grid: 1, missing: 0, foil: 0 }]) {
+  // cube stacks under 20 ms; the solids (four solids' hidden-line drawings and the given views per item) under 60 ms
+  for (const hard of [{ cubes: 2, grid: 1, missing: 2, foil: 2 }, { cubes: 2, grid: 1, missing: 1, foil: 2 }, { cubes: 2, grid: 1, missing: 0, foil: 0 },
+    { cubes: 6, grid: 1, missing: 0, foil: 2 }, { cubes: 6, grid: 1, missing: 2, foil: 2 }, { cubes: 5, grid: 1, missing: 1, foil: 0 }]) {
+    const lim = hard.cubes >= def.lib.NCUBE ? 60 : 20;
     let best = Infinity, text = [];
-    for (let r = 0; r < 3 && best >= 20; r++) {
+    for (let r = 0; r < 3 && best >= lim; r++) {
       const cpu = [], wall = [];
       for (let s = 0; s < 200; s++) {
         const c0 = cpuMs(), w0 = performance.now();
@@ -378,7 +498,7 @@ function testTiming(t, PX, def) {
       best = Math.min(best, cpu[190]);
       text.push(`${cpu[190].toFixed(1)} (wall ${wall[190].toFixed(1)})`);
     }
-    t.ok(best < 20, `generation p95 at ${JSON.stringify(hard)}: ${best.toFixed(1)} ms CPU < 20 ms (rounds: ${text.join(', ')})`);
+    t.ok(best < lim, `generation p95 at ${JSON.stringify(hard)}: ${best.toFixed(1)} ms CPU < ${lim} ms (rounds: ${text.join(', ')})`);
   }
 }
 
@@ -432,7 +552,11 @@ function testLearn(t, PX, def) {
   }
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['views', 'slot', 'intro', 'project', 'turn', 'fade', 'fadeNone', 'lay', 'dotted', 'land', 'shown', 'assist', 'whyHull', 'whyAlign', 'whySearch', 'object', 'diffDotted', 'diffSolid', 'diffExtra', 'diffMissing', 'diffMixed'];
+  const caps = ['views', 'slot', 'intro', 'project', 'turn', 'fade', 'fadeNone', 'lay', 'dotted', 'land', 'shown', 'assist', 'whyHull', 'whyAlign', 'whySearch', 'object', 'diffDotted', 'diffSolid', 'diffExtra', 'diffMissing', 'diffMixed',
+    'turnSolid', 'fadeSolid', 'fadeNoneSolid', 'whyOutline', 'whyLines', 'whyDashes'];
+  // the solids' class is said on the rules card, and every solid level has its tip
+  t.ok(L.rules.some((r) => /straight through/.test(r) && /line of sight/.test(r)), 'the rules card says the solids\' class: every cut straight through, along a given view\'s line of sight');
+  t.ok([3, 4, 5, 6].every((lv) => L.tips.some((x) => x.when && x.when.dim === 'cubes' && x.when.levels.includes(lv))), 'a tip for each solid level');
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
@@ -469,7 +593,7 @@ function testTutorialRepeat(t, PX, def, id) {
 /* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
 export function shortcutScores(PX, def, item) {
   const out = {};
-  for (const [name, hit] of Object.entries(itemScores(def.lib, item))) out[name] = name === 'size fits the stem' ? { hit, chance: 0.25, info: true } : { hit, chance: 0.25 };
+  for (const [name, hit] of Object.entries(itemScores(def.lib, item))) out[name] = SHORTCUT_EXEMPT.includes(name) ? { hit, chance: 0.25, info: true } : { hit, chance: 0.25 };
   return out;
 }
-export const SHORTCUT_EXEMPT = ['size fits the stem'];
+export const SHORTCUT_EXEMPT = ['size fits the stem', 'lines line up with the given views'];
