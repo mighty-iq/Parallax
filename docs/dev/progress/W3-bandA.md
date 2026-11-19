@@ -48,3 +48,10 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
   "Typical at this level" are W2-core's (requests e3b0127). 5. Version 3: level 2's closest pair in the middle, the ends
   settle a third of items (55 % before); "smallest first, largest last" reported per level. 6. The answer part names A–D
   alone; letter-only keys requested from W2-core. DECISIONS ca9aef0.
+- 13:39 UTC: the lead's next round. A (Painted Cubes, fresh-player run 88a0363): Try 4 and a new Try 5 are one six-cube plain
+  figure's two questions, Try 4 with a tip on the test's drawing and the supports, "Question 1 of 2" and a tally caption, Try 5
+  with the figure-set tip and the tally kept; badges on the most interior point of their cube's visible faces, a numbered
+  hidden cube veiled with its number at its centre, digits centred (harness_cubes 264/0: Try 4 and 5 in the app, badges on
+  42 figures at 360 x 640 and 390 x 844; fit cubes and angles 18/0). B (O30): the brute-force search of every reading of
+  the picture, 600 figures, one reading each under the rule; 330 with others without it (cubes 210/0). C: Angles keys
+  A–D alone (harness_angles 318/0). Commits 2e74ca1, a837a68; DECISIONS 416ea25.
