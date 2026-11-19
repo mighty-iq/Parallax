@@ -1,11 +1,15 @@
 /* PR-8 Balance (js/ex/balance/view.js), a Lab check. Every rule under .ex-balance; tokens from css/base.css with
    fallbacks. The board is 100 units square; the street 100 units long with the houses above it. */
 .ex-balance .bl-prompt { margin: 0 0 var(--s2, 0.5rem); font-size: var(--fs-lg, 1.125rem); font-weight: 600; color: var(--ink, #1A1D21); text-align: center; }
+/* the first item of a kind in the Check: the kind's line under the question (js/ui/measure.js, item.hint) */
+.ex-balance .ex-kindhint { margin: 0 auto var(--s2, 0.5rem); max-width: 34rem; font-size: 0.9375rem; line-height: 1.4; color: var(--ink-2, #454B52); text-align: center; }
+.ex-balance .ex-kindhint b { color: var(--ink, #1A1D21); }
 .ex-balance .bl-stage { display: flex; flex-direction: column; align-items: center; padding: 0.75rem; }
 .ex-balance .bl-wrap { width: 100%; max-width: 30rem; margin: 0 auto; outline: none; border-radius: var(--r-plate, 2px); }
 /* desktops and tablets: the board leaves room for the question above it and Confirm below it (phones: below) */
 @media (min-width: 700px) and (min-height: 501px) {
   .ex-balance-stem[data-kind="centroid"] .bl-wrap { max-width: min(30rem, calc(100vh - 23rem)); min-width: 12rem; }
+  .ex-balance-stem.has-kindhint[data-kind="centroid"] .bl-wrap { max-width: min(30rem, calc(100vh - 27rem)); } /* the kind's line above */
 }
 .ex-balance .bl-wrap:focus-visible { box-shadow: 0 0 0 3px var(--focus, #0B6A86); }
 .ex-balance .bl-svg { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }

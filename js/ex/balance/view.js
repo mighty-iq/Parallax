@@ -70,7 +70,7 @@
 
   /* ---------- the countdown bar ---------- */
   function timerStart(item) {
-    var ms = def.timeLimit(item.params);
+    var ms = def.timeLimit(item.params) + (item.extraMs > 0 ? item.extraMs : 0); // extraMs: the Check's time for a kind's line
     st.timer.hidden = !ms;
     st.timer.classList.remove('is-running', 'is-stopped');
     if (!ms) return;
@@ -94,7 +94,7 @@
   }
 
   function mount(ctx) {
-    var q = h('p.bl-prompt');
+    var q = h('p.bl-prompt'), kh = h('p.ex-kindhint', { hidden: true });
     var svg = S.svg(100, 100, { class: 'bl-svg', 'aria-hidden': 'true', focusable: 'false' });
     var wrap = h('div.bl-wrap', { tabindex: '0', role: 'group', 'aria-label': 'Answer area', 'data-px-keys': '' }, svg);
     var verdict = h('div.ex-verdict.bl-verdict', { hidden: true, role: 'status' });
@@ -105,9 +105,9 @@
     confirm.setAttribute('data-px-keys', '');
     var bar = h('div.bl-actions', hint, confirm);
     var caption = h('p.ex-caption', { 'aria-live': 'polite' }), desc = h('p.px-sr');
-    var root = h('div.ex-balance-stem', q, stage, timer, bar, caption, desc);
+    var root = h('div.ex-balance-stem', q, kh, stage, timer, bar, caption, desc);
     ctx.host.appendChild(root);
-    st = { ctx: ctx, root: root, q: q, svg: svg, wrap: wrap, verdict: verdict, stage: stage, timer: timer, timerFill: timer.firstChild,
+    st = { ctx: ctx, root: root, q: q, kh: kh, svg: svg, wrap: wrap, verdict: verdict, stage: stage, timer: timer, timerFill: timer.firstChild,
       hint: hint, confirm: confirm, bar: bar, caption: caption, desc: desc, item: null, at: null, mark: null, accepting: false,
       respond: null, popKeys: null, drag: false, how: 'place' };
     svg.addEventListener('pointerdown', function (ev) {
@@ -142,6 +142,11 @@
     PX.ui.clear(st.svg);
     if (kindOf(item) === 'median') drawStreet(item); else drawBoard(item);
     st.q.textContent = prompt(item);
+    var t = typeof item.hint === 'string' ? item.hint : ''; // the first item of a kind in the Check: the kind's line
+    PX.ui.clear(st.kh);
+    if (t) { st.kh.appendChild(h('b', 'New kind. ')); st.kh.appendChild(document.createTextNode(t)); }
+    st.kh.hidden = !t;
+    st.root.classList.toggle('has-kindhint', !!t); // the board gives up the line's height
     st.desc.textContent = describe(item);
     st.verdict.hidden = true;
     st.caption.textContent = '';

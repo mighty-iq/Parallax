@@ -31,7 +31,9 @@
 /* the background question in a probe's first card (Motion Graphs): three taps, the chosen one ticked */
 .pl-expect.pl-background-q { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pl-background-q .px-btn[aria-pressed="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
-.pl-background-q .px-btn[aria-pressed="true"]::before { content: "\2713\00a0"; }
+/* the check mark sits in the corner, so a chosen "A little" keeps one line on a phone (fresh-player run of 19 Nov) */
+.pl-background-q .px-btn { position: relative; white-space: nowrap; justify-content: center; }
+.pl-background-q .px-btn[aria-pressed="true"]::before { content: "\2713"; position: absolute; top: 0.2rem; left: 0.45rem; font-size: 0.8em; }
 
 /* the Lab: learning curves on new exercises */
 .px-ms-curve-list { margin: var(--s2) 0 0; padding-left: 1.25rem; }

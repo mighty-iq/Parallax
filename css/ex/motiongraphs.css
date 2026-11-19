@@ -2,9 +2,18 @@
    fallbacks. Nothing animates but the time bar. */
 .ex-motiongraphs .mg-stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1.6rem 0.75rem 0.6rem; text-align: center; }
 .ex-motiongraphs .mg-prompt { margin: 0; max-width: 40rem; font-size: var(--fs-md, 1rem); line-height: 1.4; color: var(--ink, #1A1D21); }
+/* the first item of a kind in the Check: the kind's line under the question (js/ui/measure.js, item.hint) */
+.ex-motiongraphs .ex-kindhint { margin: 0.35rem 0 0; max-width: 40rem; font-size: 0.9375rem; line-height: 1.4; color: var(--ink-2, #454B52); }
+.ex-motiongraphs .ex-kindhint b { color: var(--ink, #1A1D21); }
 .ex-motiongraphs .mg-pic { width: 100%; display: flex; justify-content: center; }
 .ex-motiongraphs .mg-pic svg { display: block; width: 100%; max-width: 34rem; height: auto; max-height: clamp(6rem, 24vh, 11rem); }
 .ex-motiongraphs .mg-pic svg.mg-graph { width: auto; height: clamp(6.5rem, 22vh, 10rem); }
+/* the first item of a kind carries its line: the picture gives up about the line's height (360 x 640 keeps it all);
+   phones held sideways keep their own sizes */
+@media (min-height: 481px) {
+  .ex-motiongraphs .ex-motiongraphs-stem.has-kindhint .mg-pic svg { max-height: clamp(5rem, 18vh, 9rem); }
+  .ex-motiongraphs .ex-motiongraphs-stem.has-kindhint .mg-pic svg.mg-graph { height: clamp(5rem, 14vh, 8rem); }
+}
 .ex-motiongraphs .mg-verdict { margin-top: 0.4rem; max-width: 40rem; text-align: left; }
 .ex-motiongraphs .mg-answer { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 2.75rem; }
 .ex-motiongraphs .mg-answer svg { display: block; width: 100%; height: auto; max-height: clamp(4rem, 14vh, 7rem); }

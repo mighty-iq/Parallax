@@ -36,7 +36,7 @@ READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 SIZES = {'360x640': (360, 640), '390x844': (390, 844), '412x915': (412, 915), '844x390': (844, 390)}
 EXTRA = {'375x548': (375, 548)}  # an iPhone SE in Safari with its toolbars shown (on request: --sizes 375x548)
 STRICT = '360x640'
-PROBES = ['wordlinks', 'cubematch', 'viewmatch', 'mechanisms', 'patterns', 'level']
+PROBES = ['wordlinks', 'cubematch', 'viewmatch', 'mechanisms', 'patterns', 'level', 'otherway', 'motiongraphs']  # the Spatial Check's probes ('balance' is the Lab's)
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--sizes', default=','.join(SIZES))

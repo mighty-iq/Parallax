@@ -71,7 +71,7 @@
   }
 
   function timerStart(item) {
-    var ms = def.timeLimit(item.params);
+    var ms = def.timeLimit(item.params) + (item.extraMs > 0 ? item.extraMs : 0); // extraMs: the Check's time for a kind's line
     st.timer.hidden = !ms;
     st.timer.classList.remove('is-running', 'is-stopped');
     if (!ms) return;
@@ -82,14 +82,14 @@
   function timerStop() { if (st) st.timer.classList.add('is-stopped'); }
 
   function mount(ctx) {
-    var q = h('p.mg-prompt'), pic = h('div.mg-pic');
+    var q = h('p.mg-prompt'), hint = h('p.ex-kindhint', { hidden: true }), pic = h('div.mg-pic');
     var verdict = h('div.ex-verdict.mg-verdict', { hidden: true, role: 'status' });
-    var stage = h('div.ex-stage.mg-stage', q, pic, verdict);
+    var stage = h('div.ex-stage.mg-stage', q, hint, pic, verdict);
     var timer = h('div.pr-timer', { 'aria-hidden': 'true', hidden: true }, h('div.pr-timer-fill'));
     var caption = h('p.ex-caption', { 'aria-live': 'polite' }), desc = h('p.px-sr');
     var root = h('div.ex-motiongraphs-stem', stage, timer, caption, desc);
     ctx.host.appendChild(root);
-    st = { root: root, q: q, pic: pic, verdict: verdict, timer: timer, timerFill: timer.firstChild, caption: caption, desc: desc, item: null, opts: [] };
+    st = { root: root, q: q, hint: hint, pic: pic, verdict: verdict, timer: timer, timerFill: timer.firstChild, caption: caption, desc: desc, item: null, opts: [] };
   }
 
   function present(item, ctx) {
@@ -98,13 +98,18 @@
     PX.ui.clear(st.pic);
     st.root.setAttribute('data-kind', item.kind);
     st.q.textContent = prompt(item);
+    var t = typeof item.hint === 'string' ? item.hint : ''; // the first item of a kind in the Check: the kind's line
+    PX.ui.clear(st.hint);
+    if (t) { st.hint.appendChild(h('b', 'New kind. ')); st.hint.appendChild(document.createTextNode(t)); }
+    st.hint.hidden = !t;
+    st.root.classList.toggle('has-kindhint', !!t); // the picture gives up the line's height
     if (item.kind === 'strobe') st.pic.appendChild(graph(item.x, false));
     else st.pic.appendChild(strobe(item.x, 0, 12, { bus: item.kind === 'frame' ? item.bus : null, cls: 'is-stem' }));
     st.root.classList.remove('is-revealed');
     st.verdict.hidden = true;
     st.caption.textContent = '';
-    var ms = def.timeLimit(item.params);
-    st.desc.textContent = prompt(item) + ' Choose one of four (keys 1 to 4)' + (ms ? '; up to ' + Math.round(ms / 1000) + ' seconds.' : '.');
+    var ms = def.timeLimit(item.params) + (item.extraMs > 0 ? item.extraMs : 0);
+    st.desc.textContent = prompt(item) + (t ? ' ' + t : '') + ' Choose one of four (keys 1 to 4)' + (ms ? '; up to ' + Math.round(ms / 1000) + ' seconds.' : '.');
     timerStart(item);
     return timing.nextPaint();
   }
