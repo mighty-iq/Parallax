@@ -69,7 +69,6 @@ const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880];
 // entry when its generator is fixed. (gap: accuracy − chance at that run)
 const KNOWN = {
   fold: { 'sym1|folds=0': 0.194, 'punchHoles|folds=0': 0.153 },
-  nets: { 'farGraph|shape=0': 0.183, 'central|shape=1': 0.228, 'close in the flat net|carried=0': 0.266, 'row4exact|shape=0': 0.196 },
   slice: { 'roundest|cut=0': 0.143, 'fullest|cut=0': 0.165, 'roundest|structure=1': 0.123 },
 };
 

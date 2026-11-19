@@ -37,7 +37,7 @@ export async function run(t) {
   t.ok(n >= 9500, 'items generated (' + n + ')');
   t.ok(zPairs > 1000 && zOpp === zPairs, 'every pair at the ends of a Z of four lands opposite (' + zOpp + ' of ' + zPairs + ' pairs)');
   t.ok(d3 > 100 && d3z === d3, 'every scored opposite item with two faces between is a Z (' + d3z + ' of ' + d3 + ')');
-  t.ok(corners > 50 && cornerMeet === corners, 'edges along a concave corner always meet (' + cornerMeet + ' of ' + corners + ')');
+  t.ok(corners > 20 && cornerMeet === corners, 'edges along a concave corner always meet (' + cornerMeet + ' of ' + corners + ')'); // > 20: since 19 Nov concave corners are a tenth of the first squares-carried level's yes pairs (gen.js NOTCH_SHARE)
 
   t.section('nets layers: comparison rounds are valid');
   const stmt = (id) => C.compare.statements.find((x) => x.id === id);
