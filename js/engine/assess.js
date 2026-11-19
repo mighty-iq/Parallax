@@ -69,6 +69,11 @@
     curveMinutes: 240,     // h = 1 − exp(−training minutes since the first occasion / 240): the training-gain curve
     secPerItem: 15,        // for the minutes Today shows
     formRandom: true,      // the record's first form drawn at B1 (O16); false keeps 1.1's A, B, C from A
+    // New-exercise learning curves (Lab; note T1 §5.2): exercises added in an update, Central Point first; the first
+    // n rated answers give the slope, shown from min answers on; weak priors on the start (around the items) and the
+    // slope, only against separation: pooled exports combine slopes with their se, so they must not be shrunk much
+    // (60 answers give one player's slope an se of about 1.3 logits)
+    curves: { ex: ['centralpoint', 'reckon', 'knots', 'openings', 'patviews', 'angles', 'patfold', 'cubes', 'form'], n: 60, min: 20, startSd: 3, slopeSd: 5 },
   });
 
   /* ---------- the grid posterior of one probe ---------- */
@@ -789,9 +794,16 @@
   var WORDS = { 'likely gain': true, 'likely no change': true, 'unclear yet': true };
   // rec.measure (CONTRACT-v1.2 M; record.js registers the open container): { v, form0, verdicts: [{ day, at, words,
   // p, mean, lo, hi }], later: ms | null }. Unknown keys are kept.
+  function curveOk(k, x) {
+    return /^[a-z0-9]+@\d+$/.test(k) && isObj(x) && x.done === true && isNum(x.n) && isNum(x.slope) && isNum(x.se) && isNum(x.first) && x.ex === k.split('@')[0];
+  }
   function checkMeasure(v) {
     if (!isObj(v)) return undefined;
     if (hasOwn.call(v, 'later') && !isNum(v.later)) delete v.later;
+    if (hasOwn.call(v, 'curves')) {
+      if (!isObj(v.curves)) delete v.curves;
+      else Object.keys(v.curves).forEach(function (k) { if (!curveOk(k, v.curves[k])) delete v.curves[k]; });
+    }
     if (!hasOwn.call(v, 'verdicts')) return v; // keys are added when first needed, never by the repair
     v.verdicts = (isArray(v.verdicts) ? v.verdicts : []).filter(function (x) {
       return isObj(x) && isNum(x.day) && x.day > 0 && isNum(x.at) && WORDS[x.words] === true;
@@ -815,7 +827,103 @@
     out.form0 = (a && a.form0) || (b && b.form0) || null;
     var later = (b && isNum(b.later) ? b.later : null) || (a && isNum(a.later) ? a.later : null);
     if (later !== null) out.later = later; else delete out.later;
+    var cv = {};
+    [a, b].forEach(function (x) {
+      if (!x || !isObj(x.curves)) return;
+      Object.keys(x.curves).forEach(function (k) { if (!cv[k] || x.curves[k].first < cv[k].first) cv[k] = x.curves[k]; });
+    });
+    if (Object.keys(cv).length) out.curves = cv; else delete out.curves;
     return out;
+  }
+
+  /* ---------- new-exercise learning curves (PLAN milestone 6, Lab checks; note T1 §5.2) ---------- */
+  // An exercise added in an update is a task nobody has practised. Its first n rated answers (Train, Path or Speed;
+  // right or wrong; this version of the exercise; not the timed, fluency, fixed, threshold, probe, daily or Climb items)
+  // give a learning slope: P(right) = g + (1 − g − lapse)·σ(θ0 + β·x − b), x from 0 (the first answer) to 1 (the n-th),
+  // b the difficulty each answer was rated on and g its guessing rate; θ0 and β by Fisher scoring with weak priors.
+  // Exposure: the rated answers per bet before the exercise's first one. Observational (motivation and order confound
+  // it), so pooled exports relate slopes to exposure and the Lab calls it exploratory. Pure: reads rec.trials;
+  // opts.keep files finished curves in rec.measure.curves, so they outlive the trial cap.
+  var CURVE_SKIP = { fluency: 1, fixed: 1, timed: 1, threshold: 1, probe: 1, daily: 1, climb: 1 };
+  var CURVE_MODES = { train: 1, path: 1, speed: 1 };
+  function fitCurve(rows, CC) {
+    var n = rows.length, bm = 0, lapse = isNum(C.lapse) ? C.lapse : 0.03;
+    rows.forEach(function (r) { bm += r.b / n; });
+    var th = bm, be = 0, info = null, last = Math.max(1, CC.n - 1);
+    for (var it = 0; it < 30; it++) {
+      var g0 = -(th - bm) / (CC.startSd * CC.startSd), g1 = -be / (CC.slopeSd * CC.slopeSd);
+      var i00 = 1 / (CC.startSd * CC.startSd), i01 = 0, i11 = 1 / (CC.slopeSd * CC.slopeSd);
+      rows.forEach(function (r, k) {
+        var x = k / last, sg = 1 / (1 + Math.exp(-(th + be * x - r.b))), sc = 1 - r.g - lapse;
+        var P = Math.min(1 - 1e-9, Math.max(1e-9, r.g + sc * sg)), dP = sc * sg * (1 - sg);
+        var d = (r.y - P) * dP / (P * (1 - P)), w = dP * dP / (P * (1 - P));
+        g0 += d; g1 += d * x;
+        i00 += w; i01 += w * x; i11 += w * x * x;
+      });
+      var det = i00 * i11 - i01 * i01;
+      if (!(det > 0)) break;
+      var s0 = (i11 * g0 - i01 * g1) / det, s1 = (i00 * g1 - i01 * g0) / det;
+      th += Math.max(-2, Math.min(2, s0)); be += Math.max(-2, Math.min(2, s1));
+      info = { i00: i00, i01: i01, i11: i11, det: det };
+      if (Math.abs(s0) + Math.abs(s1) < 1e-6) break;
+    }
+    var V00 = info ? info.i11 / info.det : CC.startSd * CC.startSd, V01 = info ? -info.i01 / info.det : 0, V11 = info ? info.i00 / info.det : CC.slopeSd * CC.slopeSd;
+    var gm = U.median(rows.map(function (r) { return r.g; })), xn = Math.min(1, (n - 1) / last);
+    // the chance of a right answer on an item of the answers' mean difficulty, at x, with its 95 % range
+    function pAt(x, zs) {
+      var sd = Math.sqrt(Math.max(0, V00 + 2 * x * V01 + x * x * V11));
+      return r3(gm + (1 - gm - lapse) / (1 + Math.exp(-(th + be * x - bm + zs * sd))));
+    }
+    return { start: r3(th - bm), slope: r3(be), se: r3(Math.sqrt(V11)), bMean: r3(bm),
+      p0: pAt(0, 0), p0lo: pAt(0, -1.96), p0hi: pAt(0, 1.96), p1: pAt(xn, 0), p1lo: pAt(xn, -1.96), p1hi: pAt(xn, 1.96) };
+  }
+  function r3(x) { return Math.round(x * 1000) / 1000; }
+  function curves(rec, opts) {
+    wire();
+    opts = opts || {};
+    var CC = C.measure.curves, want = {}, out = {}, bets = {};
+    if (!CC || !isArray(CC.ex)) return [];
+    CC.ex.forEach(function (id) { var d = PX.ex.get(id); if (d && d.role !== 'probe') want[id] = d; });
+    if (E.log && typeof E.log.scan === 'function' && rec && isArray(rec.trials)) {
+      E.log.scan(rec, function (row, exId, mode, ver) {
+        var oc = row[E.log.COL.outcome];
+        if (!CURVE_MODES[mode] || (oc !== 0 && oc !== 1)) return;
+        var kc = row[E.log.COL.kind], kind = isNum(kc) && E.log.KINDS[kc] ? E.log.KINDS[kc] : '';
+        if (CURVE_SKIP[kind]) return;
+        var d = PX.ex.get(exId);
+        if (!d || d.role === 'probe') return;
+        var w = want[exId];
+        if (w && ver === (w.version || 1)) {
+          var c = out[exId] || (out[exId] = { ex: exId, ver: ver, bet: w.bet || null, first: row[0], exposure: U.deepCopy(bets), rows: [] });
+          if (c.rows.length < CC.n) {
+            var p = E.log.rowParams(w, row, ver), b = E.log.bUsed(w, row, ver), g = null;
+            try { g = p ? w.chance(p) : null; } catch (e) { g = null; }
+            if (isNum(b) && isNum(g)) c.rows.push({ b: b, g: g, y: oc });
+          }
+        }
+        var bet = d.bet || 'none';
+        bets[bet] = (bets[bet] || 0) + 1;
+      });
+    }
+    var kept = rec && isObj(rec.measure) && isObj(rec.measure.curves) ? rec.measure.curves : {};
+    var list = [];
+    CC.ex.forEach(function (id) {
+      var w = want[id];
+      if (!w) return;
+      var key = id + '@' + (w.version || 1), c = out[id], k = kept[key];
+      if ((!c || c.rows.length < CC.n) && isObj(k) && k.done) { list.push(U.deepCopy(k)); return; } // rows folded by the cap
+      if (!c || c.rows.length < CC.min) return;
+      var res = { ex: id, ver: c.ver, bet: c.bet, n: c.rows.length, done: c.rows.length >= CC.n, first: c.first, exposure: c.exposure };
+      var f = fitCurve(c.rows, CC);
+      for (var x in f) if (hasOwn.call(f, x)) res[x] = f[x];
+      if (res.done && opts.keep && rec) {
+        if (!isObj(rec.measure)) rec.measure = {};
+        if (!isObj(rec.measure.curves)) rec.measure.curves = {};
+        if (!isObj(rec.measure.curves[key])) rec.measure.curves[key] = U.deepCopy(res);
+      }
+      list.push(res);
+    });
+    return list;
   }
 
   var wired = { merge: false, record: false, events: false };
@@ -851,8 +959,8 @@
     start: start, next: next, answer: answer, void: voidStep, finish: finish, due: due, nextCheck: nextCheck, report: report,
     form: form, checks: checks, occasions: occasions, composite: composite, needB3: needB3, expect: expect,
     nextMeasure: nextMeasure, meter: meter, later: later, trendInput: trendInput, fit: fit, settle: settle, wire: wire,
-    mix: mixOf, FULL: FULL,
-    _: { GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0,
+    mix: mixOf, FULL: FULL, curves: curves,
+    _: { fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0,
       checkMeasure: checkMeasure, mergeMeasure: mergeMeasure, hAt: hAt, fromPosterior: fromPosterior, blockMix: blockMix, fullMix: fullMix },
   };
 })(window.PX);
