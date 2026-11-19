@@ -48,6 +48,7 @@
       answerDirSpeed: 'The marked part makes {n} turns for every {d} turns of the driver: {answer}.',
       answerJam: 'Nothing can turn: the answer is “{answer}”.',
       keys: 'Answer with the keys 1 to 5, or tap an answer.',
+      keysTouch: 'Tap the answer that fits.',
       cw: 'clockwise',
       ccw: 'counter-clockwise',
     },

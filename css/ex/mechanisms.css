@@ -20,7 +20,8 @@
 .ex-mechanisms .mx-groove { fill: none; stroke: var(--stim-edge, #2B3036); stroke-width: 0.25; }
 .ex-mechanisms .mx-drum .mx-rim { fill: var(--surface-3, #DDE1DE); }
 .ex-mechanisms .mx-wind { stroke: var(--ink-2, #454B52); stroke-width: 0.35; }
-.ex-mechanisms .mx-run { stroke: var(--ink-2, #454B52); stroke-width: 1.15; stroke-linecap: round; stroke-dasharray: 3.2 1.3; }
+.ex-mechanisms .mx-run { stroke: var(--ink-2, #454B52); stroke-width: 1.3; stroke-linecap: round; }
+.ex-mechanisms .mx-run-halo { stroke: var(--stim-ground, #F7F8F7); stroke-width: 3.1; stroke-linecap: butt; }
 .ex-mechanisms .mx-wrap { fill: none; stroke: var(--ink-2, #454B52); stroke-width: 1.1; }
 .ex-mechanisms .mx-rope { stroke: var(--ink, #1A1D21); stroke-width: 0.6; }
 .ex-mechanisms .mx-weight rect { fill: var(--stim-face-3, #A4ABB2); stroke: var(--stim-edge, #2B3036); stroke-width: 0.45; }
@@ -68,8 +69,9 @@ html[data-hx-state="paused"] .ex-mechanisms .pr-timer-fill,
      question and all five on one screen */
   .pl-trial.ex-mechanisms .mx-question { font-size: var(--fs-md, 1rem); line-height: 1.35; }
   .pl-trial.ex-mechanisms .px-choices:has(> :nth-child(5)) .mx-glyph { display: none; }
-  .pl-trial.ex-mechanisms .px-choices:has(> :nth-child(5)) .px-choice { min-height: 2.75rem; padding-top: 0.35rem; padding-bottom: 0.35rem; }
-  .pl-trial.ex-mechanisms .px-choices:has(> :nth-child(5)) .ex-answer-text { padding: 0 0.75rem; }
+  .pl-trial.ex-mechanisms .px-choices:has(> :nth-child(5)) .px-choice { min-height: 2.75rem; padding: 0.2rem 0.5rem; }
+  .pl-trial.ex-mechanisms .px-choices:has(> :nth-child(5)) .ex-answer-text { padding: 0 0.5rem; }
+  :root[data-keys] .pl-trial.ex-mechanisms .px-choices:has(> :nth-child(5)) .ex-answer-text { padding-left: 1.1rem; } /* the digit's corner */
   .pl-trial.ex-mechanisms .px-choices > :nth-child(5):last-child { grid-column: 1 / -1; }
   .pl-trial.ex-mechanisms .mx-svg { max-height: calc(var(--pl-avail, 100vh) - 17.5rem); }
 }
