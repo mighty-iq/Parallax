@@ -128,7 +128,7 @@
     emit('play:screen', { screen: 'climb-run', mode: 'climb', exId: plan.exs && plan.exs[0] || null });
     X.scaleBox = h('div.gm-climb-scale', { 'aria-hidden': 'true' });
     X.run = h('div.gm-climb-run', { 'data-pstate': 'idle' }, X.scaleBox);
-    X.wrap.appendChild(h('h1.px-sr', 'Weekly Climb, attempt ' + K.attempt));
+    X.wrap.appendChild(h('h1.px-sr', 'Weekly Climb, ' + (K.scored ? 'attempt ' + K.attempt : 'practice')));
     X.wrap.appendChild(X.run);
     X.live = h('p.px-sr', { 'aria-live': 'polite' });
     X.wrap.appendChild(X.live);
@@ -252,25 +252,25 @@
     ui.clear(X.wrap);
     top();
     X.wrap.setAttribute('data-climb-state', 'end');
-    var c = res && res.climb, K = PX.ui.kit;
+    var c = res && res.climb, K = PX.ui.kit, kept = !!(c && c.partial && !c.practice); // a practice run is never kept
     if (!c) {
       head(X, null, 'Weekly Climb', 'No rung was answered, so this attempt is still open.');
       X.wrap.appendChild(h('div.pl-summary-actions', ui.button('Back to Today', { kind: 'primary', go: 'home' }), ui.button('Weekly Climb', { kind: 'ghost', onClick: function () { intro(X); } })));
       return;
     }
-    head(X, 'Week of ' + fmtDay(c.week) + ' · attempt ' + c.attempt + (c.practice ? ' · practice' : ''), c.partial ? 'Run paused at height ' + c.height : 'Height ' + c.height, null);
+    head(X, 'Week of ' + fmtDay(c.week) + ' · ' + (c.practice ? 'practice' : 'attempt ' + c.attempt), kept ? 'Run paused at height ' + c.height : 'Height ' + c.height, null);
     emit('play:screen', { screen: 'climb-end', mode: 'climb', exId: null });
     var pr = playtestRow(c);
     if (pr) X.wrap.appendChild(pr);
-    var p = K.panel({ title: c.partial ? 'Kept for later' : c.summit ? 'Summit' : 'Your run', className: 'gm-panel gm-print', aside: 'Climb #' + c.number });
+    var p = K.panel({ title: kept ? 'Kept for later' : c.summit ? 'Summit' : c.practice ? 'Practice run' : 'Your run', className: 'gm-panel gm-print', aside: 'Climb #' + c.number });
     p.el.setAttribute('data-height', String(c.height));
-    p.el.setAttribute('data-climb-end', c.partial ? 'partial' : 'done');
-    p.body.appendChild(h('p.gm-print-head', 'CLIMB #' + c.number + ' · ATTEMPT ' + c.attempt + ' · ' + (c.spare ? 'ONE SPARE' : 'NO SPARE')));
+    p.el.setAttribute('data-climb-end', kept ? 'partial' : c.practice ? 'practice' : 'done');
+    p.body.appendChild(h('p.gm-print-head', 'CLIMB #' + c.number + ' · ' + (c.practice ? 'PRACTICE' : 'ATTEMPT ' + c.attempt) + ' · ' + (c.spare ? 'ONE SPARE' : 'NO SPARE')));
     var big = h('b.px-num.gm-print-big', String(c.height));
     p.body.appendChild(h('p.gm-print-line', h('span', 'Height '), big, h('span.px-meta', ' of ' + c.rungs + (isNum(c.weekBest) ? ' · best this week ' + c.weekBest : '') + (isNum(c.pb) ? ' · your highest ' + c.pb : ''))));
     p.body.appendChild(GU().scale({ max: c.rungs, value: c.height, notches: c.notches, best: c.weekBest, width: 320 }));
     var lines = [];
-    if (c.partial) lines.push('The run is kept: it goes on at rung ' + (c.height + 1) + ' whenever you open the Climb this week.');
+    if (kept) lines.push('The run is kept: it goes on at rung ' + (c.height + 1) + ' whenever you open the Climb this week.');
     else if (c.practice) lines.push('A practice run: this week’s ' + E().climb.letters().length + ' attempts are climbed, so it changes nothing.');
     else {
       if (c.summit) lines.push('All ' + c.rungs + ' rungs cleared.');
@@ -280,7 +280,7 @@
     }
     lines.forEach(function (t) { p.body.appendChild(h('p.gm-line', t)); });
     X.wrap.appendChild(p.el);
-    if (!c.partial && !c.practice) {
+    if (!kept && !c.practice) {
       GU().fx.run(big, 'gm-fx-type', 300);
       if (c.summit) GU().sound.reward('summit'); else if (c.newPb) GU().sound.reward('pb'); else if (c.newWeekBest) GU().sound.reward('week');
     }
@@ -291,7 +291,9 @@
       X.wrap.appendChild(pa.el);
     }
     var text = 'Parallax Climb #' + c.number + ' · height ' + c.height + ' of ' + c.rungs + ' · ' + GU().LINK;
-    if (!c.partial) {
+    // only a scored run is shared or invited: a practice run is no result to compare (as the Daily shares
+    // only its scored attempt)
+    if (!c.partial && !c.practice) {
       var ps = K.panel({ title: 'Share', className: 'gm-panel' });
       ps.body.appendChild(h('p', 'Your share line. Everyone climbs the same rungs this week, so heights compare fairly.'));
       ps.body.appendChild(K.copyField(text, { rows: 1, ariaLabel: 'Climb share line', label: 'Copy' }));
@@ -303,9 +305,9 @@
       if (kind && C && typeof C.invite === 'function') { var inv = C.invite(kind, { host: X.wrap }); if (inv) X.wrap.appendChild(inv); }
     }
     var st = E().climb.state(rec(), now()), acts = h('div.pl-summary-actions');
-    if (c.partial) acts.appendChild(ui.button('Go on now', { kind: 'primary', onClick: function () { start(X, c.attempt); } }));
+    if (kept) acts.appendChild(ui.button('Go on now', { kind: 'primary', onClick: function () { start(X, c.attempt); } }));
     else if (st.next) acts.appendChild(ui.button('Climb attempt ' + st.next, { kind: 'primary', onClick: function () { start(X, st.next); } }));
-    acts.appendChild(ui.button('Back to Today', { kind: st.next || c.partial ? 'ghost' : 'primary', go: 'home' }));
+    acts.appendChild(ui.button('Back to Today', { kind: st.next || kept ? 'ghost' : 'primary', go: 'home' }));
     acts.appendChild(ui.button('Climb overview', { kind: 'ghost', onClick: function () { intro(X); } }));
     X.wrap.appendChild(acts);
   }

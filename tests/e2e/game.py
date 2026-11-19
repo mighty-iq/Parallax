@@ -289,6 +289,28 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.evaluate('void PX.core.router.go("home", {}, { force: true })')
     page.wait_for_timeout(400)
 
+    # a practice run (desktop): after the week's attempts, items of its own; no share line, card or invite
+    if name == 'desktop':
+        page.evaluate('''(() => { const c = PX.engine.game.game(PX.core.store.state).climb, wk = PX.engine.climb.week(Date.now()); c.w = c.w || {}; c.w[wk] = c.w[wk] || {};
+          PX.engine.climb.letters().forEach((a) => { c.w[wk][a] = { r: 4, h: 3, m: 2, n: [3, 4], t: Date.now() }; }); PX.core.store.save(); })()''')
+        page.evaluate('void PX.core.router.go("climb", {}, { force: true })')
+        page.wait_for_selector('[data-climb-start="practice"]', timeout=10000)
+        page.locator('[data-climb-start]').click()
+        for i in range(6):
+            r = to_respond(page, C, name, 'practice')
+            if r is not True:
+                break
+            page.evaluate('PX.debug.fast(true); PX.debug.answer(false)')
+            page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
+            page.evaluate('PX.debug.fast(false); __play.next()')
+            if page.locator('[data-climb-end]').count():
+                break
+        page.wait_for_selector('[data-climb-end]', timeout=15000)
+        C.ok(page.locator('[data-climb-end="practice"]').count() == 1 and page.locator('[data-gm-share="climb"]').count() == 0 and page.locator('[data-invite]').count() == 0,
+             f'{name}: a practice run ends without a share line, card or invite')
+        page.evaluate('void PX.core.router.go("home", {}, { force: true })')
+        page.wait_for_timeout(400)
+
     # The Atlas, Progress, Settings
     page.evaluate('void PX.core.router.go("atlas", { ex: "fold" }, { force: true })')
     page.wait_for_selector('[data-atlas="fold"]', timeout=10000)
