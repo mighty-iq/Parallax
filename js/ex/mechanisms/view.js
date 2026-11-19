@@ -25,6 +25,12 @@
 
   function learn() { return PX.ex.learn('mechanisms') || {}; }
   function fill(t, vars) { return String(t || '').replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] !== undefined ? vars[k] : m; }); }
+  // No keyboard at hand (PX.core.keys.present(), as the key hints use; else a touch-only pointer): captions leave keys out.
+  function touchOnly() {
+    var K = PX.core.keys;
+    if (K && typeof K.present === 'function') { try { return !K.present(); } catch (e) { /* the media query */ } }
+    try { return !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches); } catch (e2) { return false; }
+  }
   function cap(key, vars) { return fill((learn().captions || {})[key], vars); }
   function dirWord(turn) { return cap(turn > 0 ? 'cw' : 'ccw'); }
 
@@ -115,9 +121,10 @@
     g.appendChild(rot);
     return { g: g, rot: rot };
   }
-  // A curved arrow outside the driver: the way it turns (dir 1 clockwise).
-  function turnArrow(ax, r, dir) {
-    var R = r + TOOTH + 3.2, a0 = -Math.PI * 0.8, a1 = -Math.PI * 0.2, s = dir > 0 ? 1 : 0;
+  // A curved arrow outside the driver: the way it turns (dir 1 clockwise), centred at angle phi (−π/2: above it).
+  function turnArrow(ax, r, dir, phi) {
+    if (typeof phi !== 'number') phi = -Math.PI / 2;
+    var R = r + TOOTH + 3.2, a0 = phi - Math.PI * 0.3, a1 = phi + Math.PI * 0.3, s = dir > 0 ? 1 : 0;
     var p0 = [ax.x + R * Math.cos(dir > 0 ? a0 : a1), ax.y + R * Math.sin(dir > 0 ? a0 : a1)];
     var p1 = [ax.x + R * Math.cos(dir > 0 ? a1 : a0), ax.y + R * Math.sin(dir > 0 ? a1 : a0)];
     var end = dir > 0 ? a1 : a0, tx = -Math.sin(end) * dir, ty = Math.cos(end) * dir; // travel direction at the tip
@@ -127,6 +134,46 @@
     g.appendChild(S.el('path', { d: 'M' + p0[0] + ' ' + p0[1] + 'A' + R + ' ' + R + ' 0 0 ' + s + ' ' + p1[0] + ' ' + p1[1] }));
     g.appendChild(S.path(head, true, { class: 'mx-arrow-head' }));
     return g;
+  }
+  // Where the driver's arrow goes: above the driver, unless another wheel or a belt run comes close there; then the
+  // side of the eight that keeps farthest from them, inside the drawing (fresh-player run of 19 Nov: an arrow drawn
+  // over the next gear). → the arc's centre angle
+  function arrowAngle(item, ax, r, segs) {
+    var m = st.model, vb = st.vb, R = r + TOOTH + 3.2, best = -Math.PI / 2, bestClear = -Infinity;
+    function clearAt(phi) {
+      var c = Infinity;
+      for (var j = 0; j <= 8; j++) {
+        var a = phi - Math.PI * 0.3 + Math.PI * 0.6 * j / 8, px = ax.x + R * Math.cos(a), py = ax.y + R * Math.sin(a);
+        item.wheels.forEach(function (w) {
+          if (w.axle === item.driver.axle) return;
+          var o = m.axles[w.axle];
+          c = Math.min(c, Math.hypot(px - o.x, py - o.y) - (w.r + TOOTH));
+        });
+        segs.forEach(function (sg) { c = Math.min(c, segDist(px, py, sg)); });
+        c = Math.min(c, px - vb[0] - 1, vb[0] + vb[2] - px - 1, py - vb[1] - 1, vb[1] + vb[3] - py - 1);
+      }
+      return c;
+    }
+    if (clearAt(best) >= 1.5) return best;
+    [-0.5, -0.25, -0.75, 0, 1, 0.25, 0.75, 0.5].forEach(function (k) {
+      var phi = k * Math.PI, c = clearAt(phi);
+      if (c > bestClear + 0.25) { bestClear = c; best = phi; }
+    });
+    return best;
+  }
+  function segDist(px, py, sg) {
+    var dx = sg[2] - sg[0], dy = sg[3] - sg[1], L2 = dx * dx + dy * dy, t = L2 ? ((px - sg[0]) * dx + (py - sg[1]) * dy) / L2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (sg[0] + t * dx), py - (sg[1] + t * dy));
+  }
+  // The arc's box (centre and size, as labelSpot's), for the labels to keep clear of it
+  function arrowBox(ax, r, phi) {
+    var R = r + TOOTH + 3.2, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (var j = 0; j <= 8; j++) {
+      var a = phi - Math.PI * 0.3 + Math.PI * 0.6 * j / 8, px = ax.x + R * Math.cos(a), py = ax.y + R * Math.sin(a);
+      x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+    }
+    return [(x0 + x1) / 2, (y0 + y1) / 2, x1 - x0 + 3, y1 - y0 + 3];
   }
   // Labels keep about 13 px on screen whatever the drawing's scale (st.fs drawing units; phones: no text under 13 px).
   function label(x, y, text, cls) {
@@ -234,8 +281,13 @@
       var A = m.wheels[b.a], B = m.wheels[b.b], pa = m.axles[A.axle], pb = m.axles[B.axle];
       var runs = lib.beltRuns(pa.x, pa.y, A.r, pb.x, pb.y, B.r, b.crossed);
       var g = S.el('g', { class: 'mx-belt' + (b.crossed ? ' is-crossed' : ''), 'data-belt': i });
+      // each run over a halo of the stage colour: a crossed belt shows one run passing over the other (fresh-player run
+      // of 19 Nov: the crossing was hard to see)
       var lines = runs.map(function (r) { return S.el('line', { class: 'mx-run', x1: r[0], y1: r[1], x2: r[2], y2: r[3] }); });
-      lines.forEach(function (l) { g.appendChild(l); });
+      runs.forEach(function (r, j) {
+        g.appendChild(S.el('line', { class: 'mx-run-halo', x1: r[0], y1: r[1], x2: r[2], y2: r[3] }));
+        g.appendChild(lines[j]);
+      });
       top.appendChild(g);
       st.parts.belts.push({ g: g, runs: runs, lines: lines, a: A, b: B });
     });
@@ -266,16 +318,23 @@
     item.axles.forEach(function (a) { marks.appendChild(S.el('circle', { class: 'mx-pin', cx: a.x, cy: a.y, r: 1.1 })); });
     // The driver: arrow + label; the marked part: dashed ring + label (and the weight for lift).
     var dax = m.axles[item.driver.axle], dr = Math.max.apply(null, m.byAxle[item.driver.axle].map(function (w) { return w.r; }));
-    marks.appendChild(turnArrow(dax, dr, item.driver.dir));
+    var runSegs = [];
+    item.belts.forEach(function (b) {
+      var A = m.wheels[b.a], B = m.wheels[b.b], pa = m.axles[A.axle], pb = m.axles[B.axle];
+      (lib.beltRuns(pa.x, pa.y, A.r, pb.x, pb.y, B.r, b.crossed) || []).forEach(function (rr) { runSegs.push(rr); });
+    });
+    if (item.rope) { var rw = m.wheels[item.rope.wheel], rax = m.axles[rw.axle]; runSegs.push([item.rope.weight[0], rax.y, item.rope.weight[0], item.rope.weight[1]]); }
+    var phi = arrowAngle(item, dax, dr, runSegs);
+    marks.appendChild(turnArrow(dax, dr, item.driver.dir, phi));
     var tax2 = m.axles[item.target], tr = Math.max.apply(null, m.byAxle[item.target].map(function (w) { return w.r; }));
     var ring = S.el('circle', { class: 'mx-ring', cx: tax2.x, cy: tax2.y, r: tr + TOOTH + 1.6 });
     marks.appendChild(ring);
     st.parts.rings.target = ring;
     var tname = item.rope ? 'DRUM' : 'MARKED';
-    var R = dr + TOOTH + 3.2, arrowBox = [dax.x, dax.y - R + 1.2, 1.7 * R, 4.4]; // the turning arrow over the driver
+    var aBox = arrowBox(dax, dr, phi); // the turning arrow
     // The weight's label first (beside the weight), then DRIVER and MARKED/DRUM keep clear of it
     // and of each other: no two labels ever overlap.
-    var lw = item.rope ? weightSpot(item) : null, keep = lw ? [arrowBox, lw] : [arrowBox];
+    var lw = item.rope ? weightSpot(item) : null, keep = lw ? [aBox, lw] : [aBox];
     var ls = labelSpot(item, dax, dr, 'DRIVER', keep), lt = labelSpot(item, tax2, tr, tname, keep.concat([ls]));
     st.labels = { driver: label(ls[0], ls[1], 'DRIVER', 'mx-label--driver'), marked: label(lt[0], lt[1], tname, 'mx-label--marked') };
     marks.appendChild(st.labels.driver);
@@ -516,7 +575,7 @@
       steps.push({ ms: 1600 * f, caption: cap(key, { answer: item.options[item.key], n: w.n, d: w.d }), enter: function () { focusOption(item.key); } });
     }
     // The instruction's pace adds how to answer, before the answer: the example ends on its answer.
-    if (slow) steps.splice(steps.length - 1, 0, { ms: 1500, caption: cap('keys'), enter: function () { reset(); } });
+    if (slow) steps.splice(steps.length - 1, 0, { ms: 1500, caption: cap(touchOnly() ? 'keysTouch' : 'keys'), enter: function () { reset(); } });
     return steps;
   }
 
