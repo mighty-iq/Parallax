@@ -250,7 +250,7 @@
   function positions(run) {
     var out = [];
     run.parts.forEach(function (P, p) {
-      if (P.broken) return;
+      if (P.broken || P.logged) return; // logged: a part a 1.1 run closed before it went on freely
       P.items.forEach(function (it, i) { if (it.status !== 'void') out.push({ part: p, index: i }); });
     });
     return out;
@@ -279,7 +279,7 @@
   function list(run, which) {
     var out = [];
     run.parts.forEach(function (P, p) {
-      if (P.broken) return;
+      if (P.broken || P.logged) return;
       P.items.forEach(function (it, i) {
         if (it.status === 'void') return;
         var answered = it.status === 'answered';

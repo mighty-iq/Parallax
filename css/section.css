@@ -79,10 +79,7 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .sec-controls .px-btn { min-height: var(--tap); min-width: 7rem; }
 .sec-controls [data-sec-next] { margin-left: auto; min-width: 10rem; }
 .sec-controls [data-sec-flag].is-on { border-color: var(--warn); color: var(--warn); background: var(--warn-wash); }
-.sec-stripwrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2) var(--s4); }
-.sec-stripwrap[hidden] { display: none; }
-.sec-strip, .sec-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
-.sec-strip-actions { display: flex; justify-content: flex-end; }
+.sec-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .sec-chip {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;
   min-width: var(--tap); min-height: var(--tap); padding: 0 var(--s2);
@@ -103,6 +100,35 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .sec-chip-mark { font-family: var(--font-sans); font-size: var(--fs-xs); }
 .sec-chip.is-right .sec-chip-mark { color: var(--right); }
 .sec-chip.is-wrong .sec-chip-mark { color: var(--wrong); }
+
+/* ---------- Section practice under test conditions (v1.2, PLAN milestone 8) ---------- */
+/* Strike: the button's pressed state, its one-line hint, and a struck-out option: a diagonal line through it
+   and a lighter figure (a shape as well as a tone, rule 8); while striking, options show a dashed inner edge */
+.sec-controls [data-sec-strike].is-on { border-color: var(--ink); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--ink); }
+.sec-strike-hint { margin: 0; }
+.sec-strike-hint[hidden] { display: none; }
+.sec-screen .px-choice.is-struck { position: relative; }
+.sec-screen .px-choice.is-struck .px-choice-body { opacity: 0.35; }
+.sec-screen .px-choice.is-struck::after {
+  content: ''; position: absolute; inset: 8% 5%; pointer-events: none;
+  background: linear-gradient(to top right, transparent calc(50% - 1.5px), var(--ink-2) calc(50% - 1.5px), var(--ink-2) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+}
+.sec-screen .pl-trial.sec-striking .px-choice { cursor: crosshair; outline: 1px dashed var(--ink-3); outline-offset: -5px; }
+/* the instructions before the clock */
+.sec-instructions .sec-instr-lead { font-weight: 500; }
+.sec-instructions .sec-instr-part { margin-top: var(--s4); }
+.sec-instructions .sec-instr-part h3 { font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--s1); }
+.sec-instructions .sec-instr-part ul { margin: var(--s2) 0 0; padding-left: 1.25rem; display: grid; gap: var(--s1); color: var(--ink-2); max-width: var(--measure); }
+.sec-guess { color: var(--ink); }
+/* the review list (the clock runs) */
+.sec-list[hidden] { display: none; }
+.sec-list-panel { display: grid; gap: var(--s3); margin-top: var(--s3); }
+.sec-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
+.sec-list-head h2 { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.sec-list-clock { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.sec-list-lead { margin: 0; color: var(--ink-2); max-width: var(--measure); }
+.sec-list-parts { display: grid; gap: var(--s3); }
+.sec-list .pl-summary-actions { margin-top: var(--s2); }
 
 /* ---------- Section practice: review ---------- */
 .sec-review { display: grid; gap: var(--s5); }
@@ -158,10 +184,9 @@ p.px-overlap-legal { margin-top: var(--s3); }
     --pl-avail: calc(var(--pl-vh) - 2 * var(--tap) - 0.25rem - 6 * var(--s2) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
   .sec-foot { margin: var(--s2) calc(-1 * var(--gutter)) 0; padding-left: var(--gutter); padding-right: var(--gutter); }
-  .sec-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); }
+  .sec-controls { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s1); }
   .sec-controls .px-btn { width: 100%; min-width: 0; padding-left: var(--s1); padding-right: var(--s1); }
   .sec-controls [data-sec-next] { margin-left: 0; min-width: 0; }
-  .sec-stripwrap { display: grid; justify-content: stretch; }
   .sec-controls .px-kbd { display: none; }
   .sec-timer { min-height: 1.75rem; padding: 0 var(--s1); }
   .sec-table th, .sec-table td { padding: var(--s2) var(--s1); }
