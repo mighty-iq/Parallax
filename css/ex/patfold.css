@@ -123,3 +123,10 @@
   .pl-trial.ex-patfold .ex-patfold-opt .ex-patfold-svg { max-width: min(6.75rem, calc((var(--pl-avail) - 8rem) / 2)); }
   .pl-trial.ex-patfold .ex-patfold-big .ex-patfold-svg { width: min(100%, 18rem, calc(var(--pl-avail) - 3rem)); }
 }
+
+/* v1.2 version 3 (PLAN milestone 8; CONTRACT-v1.2 W2; note D1 addendum A.1 row 4): from two folds on the format's
+   look, a broken outline of the original square in every panel, the folded paper white with ink edges, no flap
+   shading, arrows, cell lines or dots (the view leaves them out), the punch a small open circle. */
+.ex-patfold .ex-patfold-punch-open { fill: var(--plate, #FFFFFF); stroke: var(--plate-ink, #16191C); stroke-width: 0.06; }
+/* The sheet's letter (A–E) stays above the drawing, on a chip of the cell's ground. */
+.ex-patfold .px-choice .px-choice-key { position: absolute; z-index: 2; padding: 0 0.15rem; border-radius: 2px; background: var(--stim-ground, #F4F5F3); }

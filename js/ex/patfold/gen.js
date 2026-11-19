@@ -71,6 +71,13 @@
   var FOLDS = [1, 2, 3]; // level 0 (v1.2): the starter band, one fold
   var TYPES = ['half', 'corner', 'diagonal', 'mixed'];
   var IDLE = [0, 1, 2];
+  // dim 'sheets' (version 3; note D1 addendum A.1 row 5): as on the official samples, wrong sheets may
+  // have another hole count (a fold not undone, a hole missed, an extra hole or layer), two of the four
+  // keep the key's count so a full unfold still decides; 1.1's "every sheet at the key's count" stays as
+  // the harder level, beyond the official samples. Counting the layers under the punch is the format's
+  // own method there (reported, DECISIONS); the naive counts stay within chance + 10.
+  var SHEETS = ['counts may differ', 'all at the key\'s count'], SHEETS_AT = [-0.4, 0];
+  var LEVEL_TAGS = { folds: ['below', 'test', 'test'], sheets: ['test', 'beyond'] };
   var NOPT = 5;
   var BASE = -1.85, STEP_FOLDS = 0.9, STEP_TYPE = 0.45, STEP_IDLE = -0.45;
   // The starter band (v1.2; note D2 §3.6, §3.8): one fold that matters, Δ = −1.3 against two folds that
@@ -87,7 +94,7 @@
 
   function normParams(params) {
     var p = {};
-    [['folds', FOLDS], ['type', TYPES], ['idle', IDLE]].forEach(function (d) {
+    [['folds', FOLDS], ['type', TYPES], ['idle', IDLE], ['sheets', SHEETS]].forEach(function (d) {
       var v = params ? params[d[0]] : 0;
       p[d[0]] = isInt(v) && v >= 0 && v < d[1].length ? v : 0;
     });
@@ -99,7 +106,7 @@
   // As in Fold: one fold cannot mix, so a one-fold "mixed" item is a diagonal fold and rates as one.
   function difficulty(params) {
     var p = normParams(params), type = p.folds === 0 && p.type === 3 ? 2 : p.type;
-    return BASE + (p.folds === 0 ? BAND_DELTA : STEP_FOLDS * (p.folds - 1)) + STEP_TYPE * type + STEP_IDLE * idleOf(p);
+    return BASE + (p.folds === 0 ? BAND_DELTA : STEP_FOLDS * (p.folds - 1)) + STEP_TYPE * type + STEP_IDLE * idleOf(p) + SHEETS_AT[p.sheets];
   }
   function rint(r, n) { return floor(r.next() * n); }
   function rankCost(t, lo, hi) { return t < lo ? lo - t : t > hi ? t - hi : 0; }
@@ -108,6 +115,8 @@
 
   var api = null; // the sheet API of the current lib.sheet call
   var bandNow = false; // the attempt in progress is on the starter band (one fold)
+  var diffNow = false; // the attempt in progress lets wrong sheets have another hole count (dim 'sheets' 0)
+  var checkN = 0; // during check: the options Fold's own check sees (those at the key's count)
 
   // Widens Fold's pool with neighbouring problems that a 4 × 4 sheet needs: "the punch at another
   // place" (the true holes of a punch at any other cell of the folded paper with as many layers;
@@ -158,7 +167,42 @@
       }
     }
     for (var q = 1; q <= 3; q++) add(ctx.key.map(function (c) { return turnCell(c, q); }), 'the answer turned');
+    if (diffNow) diffPool(ctx, pool, seen);
     return pool;
+  }
+  // Wrong sheets with another hole count (dim 'sheets' 0), the errors the official explanations name: a
+  // fold not unfolded, a hole missed, an extra hole, a layer counted that is not there (the holes
+  // reflected across a crease that misses them as well).
+  function diffPool(ctx, pool, seen) {
+    var A = api, size = ctx.key.length, P = ctx.punches[0], F = ctx.folds.length, k;
+    function add(cells, why) {
+      var m = A.maskOf(cells);
+      if (!m) return;
+      var n = A.popcount(m[0]) + A.popcount(m[1]);
+      if (n === size || n !== cells.length || n < 1) return;
+      var key = A.maskKey(m);
+      if (seen[key]) return;
+      seen[key] = true;
+      pool.push({ mask: m, why: why, diff: true });
+    }
+    var order = [];
+    for (k = F - 1; k >= 0; k--) order.push(k);
+    for (k = 0; k < F; k++) {
+      var m = A.unfoldMask([P], ctx.steps, order.filter(function (x) { return x !== k; }), 64);
+      if (m) add(A.maskCells(m), 'fold ' + (k + 1) + ' not unfolded');
+      var L = ctx.folds[k].line, extra = ctx.key.slice();
+      ctx.key.forEach(function (c) { var rc = A.reflCell(L, c[0], c[1]); if (rc[0] >= 0 && rc[1] >= 0 && rc[0] < SIZE && rc[1] < SIZE && !extra.some(function (e) { return e[0] === rc[0] && e[1] === rc[1]; })) extra.push(rc); });
+      add(extra, 'a layer counted at fold ' + (k + 1) + ' that is not there');
+    }
+    var r = ctx.r, srcs = [ctx.key].concat(pool.filter(function (f) { return !f.diff; }).slice(0, 6).map(function (f) { return A.maskCells(f.mask); }));
+    srcs.forEach(function (src, si) {
+      for (var t = 0; t < (si ? 1 : 3); t++) {
+        var gone = rint(r, src.length), drop = src.filter(function (_, i) { return i !== gone; });
+        if (drop.length === size - 1) add(drop, 'a hole missed');
+        var base = src[rint(r, src.length)], d = [[1, 0], [-1, 0], [0, 1], [0, -1]][rint(r, 4)], nc = [base[0] + d[0], base[1] + d[1]];
+        if (nc[0] >= 0 && nc[1] >= 0 && nc[0] < SIZE && nc[1] < SIZE && !src.some(function (c) { return c[0] === nc[0] && c[1] === nc[1]; })) add(src.concat([nc]), 'an extra hole');
+      }
+    });
   }
 
   // Scores of one hole set for the shortcut heuristics.
@@ -189,11 +233,13 @@
     // alone is fully symmetric is rejected (the attempt fails and another fold is drawn). Where
     // the capped heuristics compete for the three foils (one fold that matters), a random tilt
     // decides which one gets the extra tie, so neither is favoured over the pool.
-    var tc = rint(r, nf + 1), ts1 = rint(r, nf + 1), tsa = rint(r, nf + 1), tilt = rint(r, 2) * 0.6;
+    var tc = rint(r, nf + 1), ts1 = rint(r, nf + 1), tsa = rint(r, nf + 1), tilt = rint(r, 2) * 0.6, tmost = rint(r, nf + 1), tfew = rint(r, nf + 1);
+    var nKey = keyCells.length, diffs = pool.filter(function (f) { return f.diff; }).length;
+    if (diffNow && (diffs < 2 || pool.length - diffs < 2)) return null;
     var cap1 = K.s1 > 1 - EPS, capA = K.sa > 1 - EPS;
     var wU = 12 + tilt, wS = 12.6 - tilt;
     var best = null, bestCost = INF, n = pool.length, idx = new Array(nf);
-    var tries = n <= 9 ? 240 : 600;
+    var tries = n <= 9 ? 240 : diffNow ? 900 : 600;
     for (var t = 0; t < tries; t++) {
       // nf distinct random pool entries
       for (var q = 0; q < nf; q++) {
@@ -202,6 +248,9 @@
         idx[q] = v;
       }
       var opt = idx.map(function (i2) { return pool[i2]; });
+      var nd = 0;
+      for (q = 0; q < nf; q++) if (opt[q].diff) nd++;
+      if (nd !== (diffNow ? 2 : 0)) continue; // counts may differ: two wrong sheets at the key's count, two not
       // total Hamming distance of every option to the others ("most like the others")
       var tot = [0], q2, w2;
       for (q2 = 0; q2 < nf; q2++) { tot[0] += opt[q2].dk; tot.push(opt[q2].dk); }
@@ -213,12 +262,18 @@
       var ups = 0;
       for (q2 = 0; q2 < nf; q2++) ups += opt[q2].up;
       if (!ups || (cap1 && !r1[1]) || (capA && !ra[1])) continue;
+      if (bandNow && !opt.some(function (f) { return f.s1 > 1 - EPS && !f.up; })) continue; // the band's crease-symmetric sheet without the punch hole
       // The starter band (one fold): the key is the punch and its twin across the crease, so a hole
       // under the punch and symmetry about the crease cannot both be held near chance (each foil has
       // one of them at most). Crease symmetry is the format's method there (DECISIONS, PLAN Defaults):
       // at least one foil is symmetric about the crease without the punch hole, and the rest share
       // the punch hole (note D2 §3.6), so "a hole under the punch" stays near one in four.
-      var cost = rankCost(tc, below, below + tie)
+      var cnt = diffNow ? (function () {
+        var c = opt.map(function (f) { return A.popcount(f.mask[0]) + A.popcount(f.mask[1]); });
+        var rm = rankRange(nKey, c), rf = rankRange(-nKey, c.map(function (x) { return -x; }));
+        return rankCost(tmost, rm[0], rm[1]) + rankCost(tfew, rf[0], rf[1]);
+      })() : 0;
+      var cost = cnt + rankCost(tc, below, below + tie)
         + (bandNow ? 0 : cap1 ? wS / (1 + r1[1]) : rankCost(ts1, r1[0], r1[1]))
         + (capA ? wS / (1 + ra[1]) : rankCost(tsa, ra[0], ra[1]))
         + wU / (1 + ups);
@@ -226,7 +281,7 @@
     }
     return best;
   }
-  var HOOKS = { pool: widenPool, select: selectFoils, nOptions: function () { return NOPT; } };
+  var HOOKS = { pool: widenPool, select: selectFoils, nOptions: function () { return checkN || NOPT; } };
 
   /* ---------- items ---------- */
 
@@ -238,6 +293,7 @@
   }
   function attempt(A, r, p, relaxed) {
     bandNow = p.folds === 0;
+    diffNow = p.sheets === 0;
     var raw = A.attempt(r, foldParams(p), relaxed);
     return raw ? convert(raw, p, 0) : null;
   }
@@ -267,7 +323,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [1013064581, 667686021, 3477199578, 1997380191, 2195573640, 1197173088];
+  var TUTORIAL = [1013064581, 667686021, 256731889, 2839566138, 248429863, 1197173088];
   function stemSig(item) { return PX.rng.hash('patfold-stem', JSON.stringify([item.folds.map(function (f) { return [f.line, f.seg]; }), item.punches])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params);
@@ -303,6 +359,7 @@
     var p = item.params || {};
     if (!(isInt(p.folds) && p.folds >= 0 && p.folds < FOLDS.length && isInt(p.type) && p.type >= 0 && p.type < TYPES.length
       && isInt(p.idle) && p.idle >= 0 && p.idle < IDLE.length)) return 'bad params';
+    var sheets = isInt(p.sheets) && p.sheets >= 0 && p.sheets < SHEETS.length ? p.sheets : 0;
     if (item.n !== SIZE) return 'the sheet must be 4 × 4';
     if (!(isInt(item.key) && item.key >= 0 && item.key < NOPT)) return 'key out of range';
     if (!isArray(item.punches) || item.punches.length !== 1) return 'one punch';
@@ -317,24 +374,43 @@
       }
     }
     if (item.holes !== item.options[item.key].length) return 'hole count';
+    // dim 'sheets': all at the key's count, or two wrong sheets at it and two with another count. A sheet
+    // with another count cannot be the true holes (Fold's check below proves the key's count is theirs);
+    // here it must lie on the 16 positions without repeats and differ from every other sheet.
+    var same = [], seenS = {};
+    for (var o2 = 0; o2 < NOPT; o2++) {
+      var cells = item.options[o2], key2 = cells.map(function (c) { return c[0] + ',' + c[1]; }).sort().join(' ');
+      if (new Set(cells.map(function (c) { return c[0] + ',' + c[1]; })).size !== cells.length) return 'option ' + (o2 + 1) + ': a hole repeated';
+      if (seenS[key2]) return 'options ' + seenS[key2] + ' and ' + (o2 + 1) + ' are the same';
+      seenS[key2] = o2 + 1;
+      if (cells.length === item.holes) same.push(o2);
+    }
+    if (sheets === 1 ? same.length !== NOPT : same.length !== 3) return sheets === 1 ? 'every sheet at the key\'s count' : 'two wrong sheets at the key\'s count and two with another count';
     // Fold's independent re-simulation on 4·16 triangles: legal folds of the stated classes, one
     // piece, a clean punch through whole cells, the folds that matter, exactly one option equal to
-    // the true holes (the key), every option with that count, options pairwise different, and the
-    // show-me states agreeing with the simulation.
+    // the true holes (the key), every option it is given with that count, options pairwise different,
+    // and the show-me states agreeing with the simulation. It sees the sheets at the key's count.
     var asFold = {};
     Object.keys(item).forEach(function (k) { asFold[k] = item[k]; });
     asFold.ex = 'fold';
     asFold.params = foldParams(p);
+    asFold.options = same.map(function (i) { return item.options[i]; });
+    asFold.why = same.map(function (i) { return (item.why || [])[i]; });
+    asFold.key = same.indexOf(item.key);
+    asFold.nOptions = same.length;
+    if (asFold.key < 0) return 'the key is not among the sheets at its own count';
     // Fold's check also re-simulates every drawn step (outline, faces per layer, flags, layer order,
     // arrow origins, holes; RV-dat-style-A §4), since the stem is drawn from item.steps.
-    var v = onSheet(function (A) { return A.check(asFold); });
+    checkN = same.length;
+    var v;
+    try { v = onSheet(function (A) { return A.check(asFold); }); } finally { checkN = 0; }
     return v === true ? true : 'fold model: ' + v;
   }
 
   function score(item, response) { return { correct: isInt(response) && response === item.key }; }
 
   PX.ex.define({
-    id: 'patfold', version: 2, code: 'EX-17', name: 'Hole punch', short: 'Hole Punch',
+    id: 'patfold', version: 3, code: 'EX-17', name: 'Hole punch', short: 'Hole Punch',
     abilities: ['Vz'], cell: 'intrinsic-dynamic', role: 'train', pat: true,
     bet: 'format', format: 'patfold:fold-punch-unfold-4x4', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     starter: { dim: 'folds', levels: 1 },
@@ -344,7 +420,16 @@
       { key: 'folds', label: 'Folds', levels: ['1 (starter)', 2, 3], step: STEP_FOLDS, at: [BAND_DELTA, 0, STEP_FOLDS] },
       { key: 'type', label: 'Fold type', levels: TYPES, step: STEP_TYPE },
       { key: 'idle', label: 'Folds that do not matter', levels: IDLE, step: STEP_IDLE },
+      { key: 'sheets', label: 'Wrong sheets', levels: SHEETS, step: 0.4, at: SHEETS_AT },
     ],
+    // Test range (CONTRACT-v1.2 W3; DECISIONS 19 Nov): format features only, never the test's difficulty
+    testRange: {
+      dims: LEVEL_TAGS,
+      notes: {
+        folds: 'One fold is a starter level: the official rules ask for more than one.',
+        sheets: 'On the official samples the answers differ in hole count; wrong sheets that all keep the right count come from Parallax\'s earlier versions.',
+      },
+    },
     base: BASE,
     difficulty: difficulty,
     chance: 1 / NOPT,
@@ -353,7 +438,7 @@
     score: score,
     lib: {
       TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
-      SIZE: SIZE, FOLDS: FOLDS, TYPES: TYPES, IDLE: IDLE, AXES: AXES,
+      SIZE: SIZE, FOLDS: FOLDS, TYPES: TYPES, IDLE: IDLE, AXES: AXES, SHEETS: SHEETS, SHEETS_AT: SHEETS_AT, LEVEL_TAGS: LEVEL_TAGS,
       norm: normParams, foldParams: foldParams, idleOf: idleOf, fallback: fallbackFor,
       // Fold's sheet helpers on the 4 × 4 sheet (maskOf, hamming, symScore, reflCell, …): fn(A).
       onSheet: onSheet,

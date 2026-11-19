@@ -20,11 +20,16 @@ def stem(C, page, tag):
     d = page.evaluate("""() => {
         const it = __harness.item, panels = Array.from(document.querySelectorAll('.ex-patfold-strip .ex-patfold-panel'));
         return { folds: it.folds.length, panels: panels.length, labels: panels.map((p) => p.querySelector('.ex-label').textContent),
-                 holes: panels.map((p) => p.querySelectorAll('.ex-patfold-hole').length), was: panels.map((p) => p.querySelectorAll('.ex-patfold-was').length) };
+                 holes: panels.map((p) => p.querySelectorAll('.ex-patfold-hole, .ex-patfold-punch-open').length), was: panels.map((p) => p.querySelectorAll('.ex-patfold-was').length),
+                 scaffolds: document.querySelectorAll('.ex-patfold-strip .is-flap, .ex-patfold-strip .ex-patfold-arrow, .ex-patfold-strip .ex-patfold-grid, .ex-patfold-strip .ex-patfold-dot').length,
+                 open: document.querySelectorAll('.ex-patfold-strip .ex-patfold-punch-open').length };
     }""")
     C.ok(d['panels'] == d['folds'] + 1 and d['labels'][-1] == 'Punch', f'{tag}: one panel per fold and the punch panel ({d["labels"]})')
     C.ok(all(h == 0 for h in d['holes'][:-1]) and d['holes'][-1] == 1, f'{tag}: holes only in the punch panel, one punch ({d["holes"]})')
     C.ok(all(w == 1 for w in d['was']), f'{tag}: every panel shows where the paper was, dashed ({d["was"]})')
+    # version 3: from two folds on the test look (no flap shading, arrows, cell lines or dots; the punch an open circle)
+    plain = d['folds'] > 1
+    C.ok((d['scaffolds'] == 0 and d['open'] == 1) if plain else (d['scaffolds'] > 0 and d['open'] == 0), f'{tag}: {"the test look: no scaffolds, an open punch" if plain else "the starter scaffolds"} ({d["scaffolds"]} scaffolds, {d["open"]} open punch)')
 
 
 def options(C, page, tag):
@@ -44,6 +49,7 @@ def showme(C, frame, tag):
 
 if __name__ == '__main__':
     # v1.2: folds level 0 is the starter band (one fold); 2 and 3 folds are levels 1 and 2
-    P = Pat('patfold', [('band', 'folds:0', 1), ('easy', 'folds:1,idle:1', 3), ('three', 'folds:2,type:3', 6), ('corner', 'folds:2,type:1,idle:1', 11)], deps=['js/ex/fold/gen.js'],
+    # version 3: dim 'sheets' (0: wrong sheets may have other hole counts; 1: all at the key's count)
+    P = Pat('patfold', [('band', 'folds:0,sheets:0', 1), ('easy', 'folds:1,idle:1,sheets:0', 3), ('three', 'folds:2,type:3,sheets:1', 6), ('corner', 'folds:2,type:1,idle:1,sheets:0', 11)], deps=['js/ex/fold/gen.js'],
             stem_check=stem, option_check=options, showme_check=showme)
-    sys.exit(P.run(demo=('folds:0', 14), sandbox=('folds:2,type:2', 21)))
+    sys.exit(P.run(demo=('folds:0,sheets:0', 14), sandbox=('folds:2,type:2,sheets:0', 21)))
