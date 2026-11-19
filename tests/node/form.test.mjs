@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/form/gen.js', 'js/ex/form/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 140 per combination (72 with the starter band)
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10044); // 93 per combination (108 in version 3)
 const CHANCE = 0.25, LIMIT = CHANCE + 0.10;
 
 export async function run(t) {
@@ -39,14 +39,19 @@ const pk = (p) => `${p.solid}${p.marks}${p.view}${p.foil}`;
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat],
-    ['form', 2, 'EX-19', ['Vz'], 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise; version 2: the starter band)');
-  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['solid', 3], ['marks', 4], ['view', 3], ['foil', 2]], 'dims');
+    ['form', 3, 'EX-19', ['Vz'], 'train', 'choice', 4, true], 'definition fields (a PAT-format exercise; version 3: the test\'s kinds of item)');
+  t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['solid', 3], ['marks', 6], ['view', 3], ['foil', 2]], 'dims');
+  t.eq(def.dims[3].levels, ['clear', 'close'], 'foils: clear (another kind, a size well off, or the marks) or close (the pattern\'s kind in every option); no level names marks, which the plain kind lacks');
   t.eq(def.starter, { dim: 'marks', levels: 1 }, 'the starter band is the first level of marks');
-  t.eq(def.dims[1].at, [-1.5, 0, 0.6, 1.2], 'marks: the band offset in front, older levels at their 1.1 difficulty (step 0.6)');
+  t.eq(def.dims[1].levels, ['one shaded (starter)', 'plain', 'shaded faces', 'shaded and half', 'two shaded and half', 'shaded and two halves'], 'marks: the starter band, then the test\'s kinds (plain, shaded, partial shading last)');
+  t.eq(def.dims[1].at, [-1.5, -0.9, -0.4, 0, 0.6, 1.2], 'marks: the band, plain and shaded in front, the half marks at their 1.1 difficulty (step 0.6)');
+  // test-range tags describe format features only (note D1 §6.0)
+  t.eq(def.levelTags, { solid: ['test', 'test', 'test'], marks: ['below', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] }, 'level tags: the band below the test, half marks beyond it (prep sources only)');
+  t.eq([def.lib.rangeOf({ solid: 0, marks: 0, view: 0, foil: 0 }), def.lib.rangeOf({ solid: 2, marks: 2, view: 2, foil: 1 }), def.lib.rangeOf({ solid: 0, marks: 4, view: 0, foil: 0 })], ['below', 'test', 'beyond'], 'an item\'s range: below wins, then beyond');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(Math.abs(lo + 3.7) < 1e-9, `the floor moves to −3.7 (${lo.toFixed(2)}; note D2 §3.5)`);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${(hi - lo).toFixed(2)})`);
-  const old0 = PX.ex.difficulty(def, { solid: 0, marks: 1, view: 0, foil: 0 });
+  const old0 = PX.ex.difficulty(def, { solid: 0, marks: 3, view: 0, foil: 0 });
   t.ok(Math.abs(old0 + 2.2) < 1e-9 && pRight(0, old0) >= 0.88 && pRight(0, old0) <= 0.93, `a beginner at θ = 0 gets the pre-1.2 floor about 90 % right (${pRight(0, old0).toFixed(3)}), the starter band ${pRight(0, lo).toFixed(3)}`);
 }
 
@@ -54,12 +59,12 @@ function testDefinition(t, PX, def) {
 
 function testModel(t, PX, L) {
   t.section('form: model');
-  const r = PX.rng(31), SYM = { box: [4], tri: [2], trap: [2], pyr: [2], frus: [2, 4], house: [2], tet: [1, 3], wedge: [1, 2] }; // a square frustum has four
-  const ALL = ['box', 'tri', 'trap', 'wedge', 'pyr', 'tet', 'frus', 'house']; // every kind built ('tet' is not used by items)
+  const r = PX.rng(31), SYM = { box: [4], tri: [2], trap: [2], pyr: [2], frus: [2, 4], house: [2], tet: [1, 3], wedge: [1, 2], bevel: [1, 2] }; // a square frustum has four; a bevelled box as wide as it is tall two
+  const ALL = ['box', 'tri', 'trap', 'wedge', 'pyr', 'tet', 'frus', 'house', 'bevel']; // every kind built ('tet' is not used by items)
   t.eq(L.KINDS.flat().sort(), ALL.filter((k) => k !== 'tet').sort(), 'items use every kind with a four-sided face (half marks need one)');
   let n = 0, closed = 0, symOk = 0, solidOk = 0, nets = 0, mirrorOk = 0, first = '';
-  for (let k = 0; k < 600; k++) {
-    const kind = ALL[k % 8], S = L.build(kind, L.randomDims(r, kind));
+  for (let k = 0; k < 630; k++) {
+    const kind = ALL[k % ALL.length], S = L.build(kind, L.randomDims(r, kind));
     n++;
     if (L.okSolid(S)) solidOk++;
     const g = L.matchings(S, S).length;
@@ -72,7 +77,7 @@ function testModel(t, PX, L) {
     if (L.matchings(S, L.mirrored(S)).length === g) mirrorOk++;
   }
   t.eq(solidOk, n, `every built solid is closed and convex (${n})`);
-  t.eq(symOk, n, 'turn groups: box 4, prisms and pyramids 2 (square frustum 4), uneven wedge and three-sided pyramid 1' + (first ? ' first: ' + first : ''));
+  t.eq(symOk, n, 'turn groups: box 4, prisms and pyramids 2 (square frustum 4), uneven wedge, bevelled box and three-sided pyramid 1' + (first ? ' first: ' + first : ''));
   t.ok(nets >= 0.9 * n, `random spanning trees unfold without overlap mostly (${nets}/${n})`);
   t.eq(closed, nets, 'every unfolded net folds back into its solid (the validator\'s fold)');
   t.eq(mirrorOk, nets, 'mirror images are congruent solids (marks decide chirality)');
@@ -87,7 +92,7 @@ function testModel(t, PX, L) {
 function testPool(t, PX, def, L) {
   t.section('form: pool');
   const combos = PX.ex.enumerate(def);
-  t.eq(combos.length, 72, '72 combinations (3 × 4 × 3 × 2)');
+  t.eq(combos.length, 108, '108 combinations (3 × 6 × 3 × 2)');
   const per = Math.ceil(N_ITEMS / combos.length), items = [];
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, malformed = 0, json = 0, first = null;
   const before = { ...L.stats };
@@ -128,17 +133,39 @@ function testPool(t, PX, def, L) {
   return items;
 }
 
+// Two faces of the pattern not joined by a hinge that share a stretch of edge longer than 0.05 (the test's
+// own check: each edge projected on its longer axis).
+function cutAlongFace(net) {
+  const cr = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  for (let i = 0; i < net.length; i++) for (let j = i + 1; j < net.length; j++) {
+    if (net[i].parent === net[j].face || net[j].parent === net[i].face) continue;
+    const A = net[i].poly, B = net[j].poly;
+    for (let k = 0; k < A.length; k++) for (let m = 0; m < B.length; m++) {
+      const p = A[k], q = A[(k + 1) % A.length], r = B[m], w = B[(m + 1) % B.length], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (Math.abs(cr(p, q, r)) / len > 0.01 || Math.abs(cr(p, q, w)) / len > 0.01) continue;
+      const ax = Math.abs(q[0] - p[0]) >= Math.abs(q[1] - p[1]) ? 0 : 1;
+      const lo = Math.max(Math.min(p[ax], q[ax]), Math.min(r[ax], w[ax])), hi = Math.min(Math.max(p[ax], q[ax]), Math.max(r[ax], w[ax]));
+      if ((hi - lo) * len / Math.abs(q[ax] - p[ax]) > 0.05) return true;
+    }
+  }
+  return false;
+}
+
 function testItems(t, PX, def, L, pool) {
   t.section('form: items');
   const ranks = [0, 0, 0, 0], kinds = {}, solids = {};
   let lvl = 0, marksOk = 0, viewOk = 0, shapeOk = 0, nShape = 0, noCube = 0, seen3 = 0, congruentOk = 0, nFoil = 0;
   let nBand = 0, band2x2 = 0, bandOff = 0, bandKinds = 0;
+  let nPlain = 0, plainOk = 0, nShaded = 0, shadedOk = 0, shadedOther = 0, shadedFoils = 0, nLines = 0, linesOk = 0, dashedTouch = 0;
   for (const { p, it } of pool) {
     ranks[it.key]++;
+    // fold lines drawn plain from the plain kind on: every line inside the pattern must fold (own check)
+    if (p.marks >= 1) { nLines++; if (!cutAlongFace(it.net)) linesOk++; } else if (cutAlongFace(it.net)) dashedTouch++;
     solids[it.solid.kind] = (solids[it.solid.kind] || 0) + 1;
     if (L.KINDS[p.solid].includes(it.solid.kind)) lvl++;
     const m = it.marks, ones = m.filter((x) => x === 1).length, halves = m.filter((x) => typeof x === 'object').length;
-    if ((p.marks === 0 && ones === 1 && halves === 0) || (p.marks === 1 && ones === 1 && halves === 1) || (p.marks === 2 && ones === 2 && halves === 1) || (p.marks === 3 && ones === 1 && halves === 2)) marksOk++;
+    const want = [[1, 0], [0, 0], [2, 0], [1, 1], [2, 1], [1, 2]][p.marks];
+    if (ones === want[0] && halves === want[1]) marksOk++;
     if (p.marks === 0) { // the starter band (note D2 §3.5)
       nBand++;
       if (p.solid > 0 || ['box', 'tri'].includes(it.solid.kind)) bandKinds++;
@@ -148,16 +175,49 @@ function testItems(t, PX, def, L, pool) {
       const cls = it.options.map((o, i) => (sz[i] ? 'S' : 'W') + (i === it.key || (sz[i] ? false : stretched.length === 2 && JSON.stringify(o.marks) === JSON.stringify(it.marks)) ? 'k' : 'm'));
       if (JSON.stringify(cls.slice().sort()) === JSON.stringify(['Sk', 'Sm', 'Wk', 'Wm']) && stretched.length === 2 && stretched[0].solid.dims.join() === stretched[1].solid.dims.join()
         && it.options.filter((o, i) => sz[i] && i !== it.key).every((o) => shadeKey(o) !== keyShade)) band2x2++;
-      const need = p.foil === 0 ? 0.4 : 0.25;
-      if (stretched.every((o) => { const d = o.solid.dims.map((x, j) => Math.abs(x - it.solid.dims[j]) / it.solid.dims[j]).filter((x) => x > 1e-9); return d.length === 1 && d[0] >= need - 1e-9 && d[0] < (p.foil === 0 ? 0.6 : 0.4) + 1e-9; })) bandOff++;
+      const need = p.foil === 0 ? 0.5 : 0.4;
+      if (stretched.every((o) => { const d = o.solid.dims.map((x, j) => Math.abs(x - it.solid.dims[j]) / it.solid.dims[j]).filter((x) => x > 1e-9); return d.length === 1 && d[0] >= need - 1e-9 && d[0] < (p.foil === 0 ? 0.8 : 0.5) + 1e-9; })) bandOff++;
       it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
       if (it.options.every((o) => L.TILT_SETS[p.view].includes(o.view.tilt))) viewOk++;
       if (!(it.solid.kind === 'box' && new Set(it.solid.dims).size < 3)) noCube++;
       if (it.options.every((o) => L.seenFaces(o.solid, o.view).length >= 2)) seen3++;
       continue;
     }
-    // Foils move marks only to congruent faces (R3 §8.6): per face shape, as many shaded and half-shaded
-    // faces as in the pattern; the proportion foil carries the pattern's own marks.
+    if (p.marks === 1) { // plain (version 3): no marks; foil 0 two kinds, two of each (each pair one length apart by half again or more); foil 1 three of the kind, 1–2 lengths a quarter off
+      nPlain++;
+      const offs = it.options.map((o, i) => (i === it.key ? null : o.solid.kind !== it.solid.kind ? 'other' : o.solid.dims.map((x, j) => Math.abs(x - it.solid.dims[j]) / it.solid.dims[j]).filter((x) => x > 1e-9)));
+      const foils = offs.filter((x) => x !== null), same = foils.filter((x) => x !== 'other');
+      const noMarks = it.marks.every((x) => !x) && it.options.every((o) => o.marks.every((x) => !x));
+      const oth = it.options.filter((o) => o.solid.kind !== it.solid.kind).map((o) => o.solid);
+      const ratios = oth.length === 2 && oth[0].kind === oth[1].kind ? oth[0].dims.map((x, j) => Math.max(x, oth[1].dims[j]) / Math.min(x, oth[1].dims[j])).filter((r) => r > 1 + 1e-9) : [];
+      const ok = p.foil === 0 ? same.length === 1 && same[0].length === 1 && same[0][0] >= 0.5 - 1e-9 && ratios.length === 1 && ratios[0] >= 1.5 - 1e-9
+        : same.length === 3 && same.every((d) => d.length >= 1 && d.length <= 2 && Math.min(...d) >= 0.25 - 1e-9);
+      if (noMarks && ok && new Set(it.options.map((o) => o.solid.kind + o.solid.dims.join())).size === 4) plainOk++;
+      if (it.options.every((o) => L.TILT_SETS[p.view].includes(o.view.tilt))) viewOk++;
+      if (!(it.solid.kind === 'box' && new Set(it.solid.dims).size < 3)) noCube++;
+      if (it.options.every((o) => L.seenFaces(o.solid, o.view).length >= 2)) seen3++;
+      it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
+      continue;
+    }
+    if (p.marks === 2) { // shaded (version 3): two whole shades everywhere; foil 1 the pattern's own solid in every option, foil 0 one in other proportions
+      nShaded++;
+      const twoWhole = (mk) => mk.filter((x) => x === 1).length === 2 && !mk.some((x) => x && typeof x === 'object');
+      const sameSolid = it.options.map((o) => o.solid.kind === it.solid.kind && o.solid.dims.join() === it.solid.dims.join());
+      const nOther = sameSolid.filter((x) => !x).length;
+      if (twoWhole(m) && it.options.every((o) => twoWhole(o.marks)) && nOther === (p.foil === 0 ? 1 : 0) && it.options.every((o) => o.solid.kind === it.solid.kind)) shadedOk++;
+      // a foil's shade on a face of another shape (allowed here; the shaded face's shape tells it, DECISIONS)
+      const tl = (S, mk) => JSON.stringify(mk.map((x, f) => (x ? shapeOf(S, f) : '')).filter(Boolean).sort());
+      it.options.forEach((o, i) => { if (i !== it.key && sameSolid[i]) { shadedFoils++; if (tl(o.solid, o.marks) !== tl(it.solid, m)) shadedOther++; } });
+      if (it.options.every((o) => L.TILT_SETS[p.view].includes(o.view.tilt))) viewOk++;
+      if (!(it.solid.kind === 'box' && new Set(it.solid.dims).size < 3)) noCube++;
+      if (it.options.every((o) => L.seenFaces(o.solid, o.view).length >= 2)) seen3++;
+      const sh = it.options.filter((o) => o.kind === 'shape').length;
+      if (p.foil === 0) { nShape++; if (sh === 1) shapeOk++; } else if (sh === 0) shapeOk++;
+      it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
+      continue;
+    }
+    // Partial shading: foils move marks only to congruent faces (R3 §8.6): per face shape, as many shaded
+    // and half-shaded faces as in the pattern; the proportion foil carries the pattern's own marks.
     const tally = (S, mk) => { const o = {}; mk.forEach((x, f) => { if (x) { const k = shapeOf(S, f) + (typeof x === 'object' ? '#h' : '#f'); o[k] = (o[k] || 0) + 1; } }); return JSON.stringify(Object.entries(o).sort()); };
     const kt = tally(it.solid, m);
     it.options.forEach((o, i) => {
@@ -173,16 +233,21 @@ function testItems(t, PX, def, L, pool) {
     it.options.forEach((o, i) => { if (i !== it.key) kinds[o.kind] = (kinds[o.kind] || 0) + 1; });
   }
   const N = pool.length;
+  t.eq(linesOk, nLines, `with plain fold lines no cut edge lies along another face, so every line inside the pattern folds (${linesOk}/${nLines})`);
+  console.log(`       form starter-band patterns (dashed folds) with a cut along another face: ${dashedTouch} of ${nBand}`);
   t.eq(lvl, N, 'the solid is of the level\'s kinds');
-  t.eq(marksOk, N, 'marks as the level says (starter: one shaded; shaded + half; two shaded + half; shaded + two halves)');
-  t.eq(congruentOk, nFoil, `above the band, mark foils move marks only to congruent faces; proportion foils keep the pattern's marks (${nFoil} foils)`);
+  t.eq(marksOk, N, 'marks as the level says (starter: one shaded; plain: none; shaded: two; shaded + half; two shaded + half; shaded + two halves)');
+  t.eq(congruentOk, nFoil, `with half marks, mark foils move marks only to congruent faces; proportion foils keep the pattern's marks (${nFoil} foils)`);
+  t.ok(nPlain >= 1500 && plainOk === nPlain, `plain: no marks; foil 0 two kinds, two of each, each pair one length apart by half again or more; foil 1 three of the kind with one or two lengths a quarter off; four different solids (${plainOk}/${nPlain})`);
+  t.ok(nShaded >= 1500 && shadedOk === nShaded, `shaded: two whole shades on the pattern and every option; foil 1 the pattern's own solid four times, foil 0 one in other proportions (${shadedOk}/${nShaded})`);
+  console.log(`       form shaded foils with a shade on a face of another shape: ${shadedOther} of ${shadedFoils}`);
   t.eq(viewOk, N, 'every picture turns the solid as the level says');
   t.eq(noCube, N, 'no box is a cube (oriented marks on cubes belong to the Cube Match probe)');
-  t.eq(shapeOk, N - nBand, 'above the band, foil level 0: exactly one proportion foil; level 1: none');
-  t.ok(nBand >= 2000, `starter band items (${nBand})`);
+  t.eq(shapeOk, N - nBand - nPlain, 'marked kinds above the band, foil level 0: exactly one proportion foil; level 1: none');
+  t.ok(nBand >= 1500, `starter band items (${nBand})`);
   t.eq(bandKinds, nBand, 'starter band, easiest solids: boxes and triangular prisms only');
   t.eq(band2x2, nBand, 'starter band: a 2 × 2 of right or wrong size and right or wrong shaded face (one mark foil with the shade on a face of another shape; one stretched solid twice)');
-  t.eq(bandOff, nBand, 'starter band: a wrong size is one length off by 40–60 % (foil level 0) or 25–39 % (foil level 1)');
+  t.eq(bandOff, nBand, 'starter band: a wrong size is one length off by 50–80 % (foil level 0) or 40–49 % (foil level 1; PLAN milestone 8: at least 40 %)');
   t.eq(seen3, N, 'every picture shows at least two faces clearly (three where the solid allows it)');
   t.ok(ranks.every((r) => r / N > 0.22 && r / N < 0.28), `the key's place is spread (${ranks.map((r) => (r / N * 100).toFixed(0) + '%').join(' ')})`);
   t.ok(kinds.mirror > 0, `mirror foils occur ${JSON.stringify(kinds)}`);
@@ -226,59 +291,81 @@ function shapeSolvers(L, it) {
   return out;
 }
 
-// Two pools: the starter band's own (every band item) and the levels above it. On the band, face shape
-// decides the one mark foil by design (PLAN Defaults: face-shape matching is Form's format method there),
-// so the face-shape solvers are reported on the band and bounded above it.
-function testShortcuts(t, PX, def, L, pool) {
-  t.section('form: shortcut solvers, starter band');
-  shortcutPool(t, L, pool.filter((x) => x.p.marks === 0), true);
-  t.section('form: shortcut solvers, levels above the band');
-  shortcutPool(t, L, pool.filter((x) => x.p.marks > 0), false);
-}
-function shortcutPool(t, L, pool, band) {
-  const acc = {}, cnt = {}, req = {}, byFoil = {};
-  const add = (name, v, required, p) => {
-    acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1; req[name] = required;
-    if (p) { const k = name + ' @ foil ' + p.foil; byFoil[k] = byFoil[k] || [0, 0, name]; byFoil[k][0] += v; byFoil[k][1]++; }
-  };
-  t.ok(pool.length >= 2000, `${pool.length} items`);
-  for (const { it, p } of pool) {
-    for (const [name, scores] of Object.entries(shapeSolvers(L, it))) add(band ? name + ' (the band\'s method, reported)' : name, shareOf(scores, it.key, false), !band, band ? null : p);
-    if (band) { // the band's own cheap counts: the shaded face's shape most common, the shape most common
-      const sk = it.options.map((o) => shapeOf(o.solid, o.marks.indexOf(1))), c1 = {}, c2 = {};
-      sk.forEach((k) => { c1[k] = (c1[k] || 0) + 1; });
-      it.options.forEach((o) => { const k = o.solid.dims.join(); c2[k] = (c2[k] || 0) + 1; });
-      add('the most common shaded-face shape', shareOf(sk.map((k) => c1[k]), it.key, true), true);
-      add('the least common shaded-face shape', shareOf(sk.map((k) => c1[k]), it.key, false), true);
-      add('the most common solid size', shareOf(it.options.map((o) => c2[o.solid.dims.join()]), it.key, true), true);
-    }
-    const F = it.options.map((o) => L.feats(o)), key = it.key;
-    add('most marks seen', shareOf(F.map((x) => x.marked), key, true), true);
-    add('fewest marks seen', shareOf(F.map((x) => x.marked), key, false), true);
-    add('most faces seen', shareOf(F.map((x) => x.seen), key, true), true);
-    add('fewest faces seen', shareOf(F.map((x) => x.seen), key, false), true);
+// Per item, every shortcut solver's share of the key (ties shared), and whether it is bounded. One
+// implementation for this file's pools and for tests/node/shortcut-levels.test.mjs (the export below).
+// Reported, not bounded (format methods, DECISIONS): on the starter band and in the shaded kind face shape
+// decides a foil whose shade sits on a face of another shape; in the plain kind face shapes and sizes are
+// the method itself (Kaplan's first landmark); proportions-only is a partial strategy.
+const volumeOf = (S) => { let v = 0; for (const F of S.faces) { const a = S.verts[F[0]]; for (let k = 1; k + 1 < F.length; k++) { const b = S.verts[F[k]], c = S.verts[F[k + 1]]; v += (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0])) / 6; } } return Math.abs(v); };
+const sizeGap = (a, b) => (a.kind !== b.kind ? 6 : a.dims.reduce((s, d, i) => s + Math.abs(Math.log(d / b.dims[i])), 0));
+function itemScores(L, it, p) {
+  const out = {}, key = it.key, lv = p.marks;
+  const put = (name, scores, high, info) => { out[name] = { hit: shareOf(scores, key, high), chance: 0.25, info: !!info }; };
+  const shapeInfo = lv <= 2; // band, plain, shaded: the shaded (or any) face's shape is the method
+  for (const [name, scores] of Object.entries(shapeSolvers(L, it))) put(name, scores, false, shapeInfo);
+  if (lv === 0) { // the band's own cheap counts: the shaded face's shape most common, the size most common
+    const sk = it.options.map((o) => shapeOf(o.solid, o.marks.indexOf(1))), c1 = {}, c2 = {};
+    sk.forEach((k) => { c1[k] = (c1[k] || 0) + 1; });
+    it.options.forEach((o) => { const k = o.solid.dims.join(); c2[k] = (c2[k] || 0) + 1; });
+    put('the most common shaded-face shape', sk.map((k) => c1[k]), true);
+    put('the least common shaded-face shape', sk.map((k) => c1[k]), false);
+    put('the most common solid size', it.options.map((o) => c2[o.solid.dims.join()]), true);
+  }
+  if (lv === 1) { // plain: sizes and kinds read without folding
+    const vol = it.options.map((o) => volumeOf(o.solid)), kc = {};
+    it.options.forEach((o) => { kc[o.solid.kind] = (kc[o.solid.kind] || 0) + 1; });
+    const gaps = it.options.map((a) => it.options.reduce((s, b) => s + sizeGap(a.solid, b.solid), 0));
+    put('the largest solid', vol, true);
+    put('the smallest solid', vol, false);
+    put('most like the others in its sizes', gaps, false);
+    put('least like the others in its sizes', gaps, true);
+    put('of the most common kind', it.options.map((o) => kc[o.solid.kind]), true);
+    put('of the least common kind', it.options.map((o) => kc[o.solid.kind]), false);
+  }
+  const F = it.options.map((o) => L.feats(o));
+  put('most faces seen', F.map((x) => x.seen), true);
+  put('fewest faces seen', F.map((x) => x.seen), false);
+  if (lv !== 1) {
+    put('most marks seen', F.map((x) => x.marked), true);
+    put('fewest marks seen', F.map((x) => x.marked), false);
     const d = (a, b) => Math.abs(a.marked - b.marked) + Math.abs(a.seen - b.seen) + Math.abs(a.halves - b.halves) + (a.shape !== b.shape ? 2 : 0);
-    const sum = F.map((a) => F.reduce((s, b) => s + d(a, b), 0));
-    add('like the others', shareOf(sum, key, false), true);
-    add('odd one out', shareOf(sum, key, true), true);
+    const sum = F.map((a) => F.reduce((t2, b) => t2 + d(a, b), 0));
+    put('like the others', sum, false);
+    put('odd one out', sum, true);
     const netAdj = L.netTouch(it.net, it.marks);
-    add('marks touch only as in the net', shareOf(it.options.map((o) => L.touchRule(o, netAdj)), key, true), true);
+    put('marks touch only as in the net', it.options.map((o) => L.touchRule(o, netAdj)), true);
     const nm = it.marks.filter((x) => x).length;
-    add('as many marks seen as the pattern has', shareOf(F.map((x) => (x.marked === nm ? 1 : 0)), key, true), true);
-    add('a half mark seen', shareOf(F.map((x) => x.halves), key, true), true);
-    // Partial strategy (reported): proportions only (rule out the wrong shape, then guess).
-    add('proportions only', shareOf(it.options.map((o) => (o.solid.dims.join() === it.solid.dims.join() ? 1 : 0)), key, true), false);
+    put('as many marks seen as the pattern has', F.map((x) => (x.marked === nm ? 1 : 0)), true);
+    if (lv >= 3) put('a half mark seen', F.map((x) => x.halves), true);
+    put('proportions only', it.options.map((o) => (o.solid.dims.join() === it.solid.dims.join() ? 1 : 0)), true, true);
+  }
+  return out;
+}
+// Four pools: the starter band, plain, shaded, and the half-mark levels (partial shading).
+function testShortcuts(t, PX, def, L, pool) {
+  for (const [name, f] of [['starter band', (x) => x.p.marks === 0], ['plain', (x) => x.p.marks === 1], ['shaded', (x) => x.p.marks === 2], ['half marks', (x) => x.p.marks >= 3]]) {
+    t.section('form: shortcut solvers, ' + name);
+    shortcutPool(t, L, pool.filter(f), name);
+  }
+}
+function shortcutPool(t, L, pool, title) {
+  const acc = {}, cnt = {}, info = {}, byFoil = {};
+  t.ok(pool.length >= 1500, `${pool.length} items`);
+  for (const { it, p } of pool) {
+    for (const [name, sc] of Object.entries(itemScores(L, it, p))) {
+      acc[name] = (acc[name] || 0) + sc.hit; cnt[name] = (cnt[name] || 0) + 1; info[name] = sc.info;
+      if (!sc.info) { const k = name + ' @ foil ' + p.foil; byFoil[k] = byFoil[k] || [0, 0]; byFoil[k][0] += sc.hit; byFoil[k][1]++; }
+    }
   }
   const line = [];
   for (const name of Object.keys(acc)) {
     const a = acc[name] / cnt[name];
-    line.push(`${name} ${(a * 100).toFixed(1)}%`);
-    if (req[name]) t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
+    line.push(`${name}${info[name] ? ' (reported)' : ''} ${(a * 100).toFixed(1)}%`);
+    if (!info[name]) t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
-  console.log(`       form shortcuts${band ? ' (starter band)' : ''}: ` + line.join(', '));
-  // The face-shape solvers also per foil level (the proportion foil is the only foil they can rule out).
+  console.log(`       form shortcuts (${title}): ` + line.join(', '));
   const over = Object.entries(byFoil).filter(([, v]) => v[0] / v[1] > LIMIT).map(([k, v]) => `${k} ${(v[0] / v[1] * 100).toFixed(1)}%`);
-  t.ok(!over.length, 'face-shape solvers stay within chance + 10 at each foil level' + (over.length ? ': ' + over.join('; ') : ''));
+  t.ok(!over.length, 'every bounded solver stays within chance + 10 at each foil level' + (over.length ? ': ' + over.join('; ') : ''));
 }
 
 /* ------------------------------------------------------------------ tampering, fallback, timing */
@@ -320,7 +407,7 @@ const cpuMs = typeof process.threadCpuUsage === 'function'
   : () => performance.now();
 function testTiming(t, PX, def) {
   t.section('form: timing');
-  for (const hard of [{ solid: 2, marks: 3, view: 2, foil: 1 }, { solid: 1, marks: 1, view: 2, foil: 1 }, { solid: 2, marks: 0, view: 2, foil: 1 }]) {
+  for (const hard of [{ solid: 2, marks: 5, view: 2, foil: 1 }, { solid: 2, marks: 2, view: 2, foil: 0 }, { solid: 2, marks: 1, view: 2, foil: 0 }, { solid: 2, marks: 0, view: 2, foil: 1 }]) {
     let best = Infinity; const text = [];
     for (let r = 0; r < 3 && best >= 20; r++) {
       const cpu = [], wall = [];
@@ -360,19 +447,25 @@ function testLearn(t, PX, def) {
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
   if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
   const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
-  // a worked example before the Try item that brings the first hard feature (note D2 addendum C change 4)
-  // the right solid shows its half mark clearly (the face turned at least 0.5 toward the viewer)
-  const halfSeen = (it) => { const k = it.options[it.key], g = k.marks.findIndex((m) => m && typeof m === 'object'); return g >= 0 && def.lib.facing(k.solid, k.view)[g] >= 0.5; };
+  // a worked example before the Try item that brings the first new feature (note D2 addendum C change 4):
+  // version 3's plain kind (no marks, fold lines drawn plain), on a sister item whose two solids of another
+  // kind each show a face the pattern lacks (the ✗ of its second caption)
+  const otherSeen = (it) => {
+    const keys = new Set(it.solid.faces.map((_, f) => def.lib.shapeKey(it.solid, f)));
+    return it.options.filter((o) => o.solid.kind !== it.solid.kind).every((o) => { const c = def.lib.facing(o.solid, o.view); return o.solid.faces.some((_, g) => c[g] >= def.lib.SEEN && !keys.has(def.lib.shapeKey(o.solid, g))); });
+  };
+  const twoKinds = (it) => it.marks.every((m) => !m) && it.options.filter((o) => o.solid.kind !== it.solid.kind).length === 2;
   const exE = L.practice[2].example, xe = exE && def.generate(PX.rng(exE.seed), L.practice[2].params);
-  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[2].seed && def.validate(xe) === true && !xe.fallback && xe.marks.some((m) => m && typeof m === 'object') && xe.options.some((o) => o.kind === 'mirror') && xe.key !== items[2].key && halfSeen(xe) && L.practice.every((e, i) => i === 2 || e.example === undefined),
-    `Try 3 (the half mark) comes after a worked example of a half mark on a sister item, with a mirror image among its solids and the half mark clearly seen on the right one (seed ${exE && exE.seed})`);
+  t.ok(!!xe && Number.isInteger(exE.seed) && exE.seed !== L.practice[2].seed && def.validate(xe) === true && !xe.fallback && twoKinds(xe) && otherSeen(xe) && xe.key !== items[2].key && L.practice.every((e, i) => i === 2 || e.example === undefined),
+    `Try 3 (the plain kind) comes after a worked example on a sister item: no marks, two solids of another kind, each showing a face the pattern lacks (seed ${exE && exE.seed})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].marks === 0 && P[1].marks === 0 && items[0].solid.kind === 'box' && items[1].solid.kind !== 'box', 'Try 1 (a box) and Try 2 (a prism) are at the starter band');
-  t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, 'Try 3 is the pre-1.2 floor (a half mark)');
-  t.ok(P[3].marks === 2, 'Try 4: a third mark');
+  t.eq(P[2], { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, 'Try 3 is the plain kind (no marks; fold lines drawn plain)');
+  t.ok(P[3].marks === 2 && items[3].marks.filter((m) => m === 1).length === 2, 'Try 4: the shaded kind (two shaded faces)');
   t.eq(L.practice[0].assist, { letters: true }, 'Try 1 has its second step done (the shaded face\'s neighbours lettered)');
-  t.ok(L.practice[2].assist && L.practice[2].assist.half && L.practice[2].tip === 'half', 'Try 3 brings the half mark with its tip and its corner dotted');
-  t.ok(items[2].options.some((o) => o.kind === 'mirror'), 'Try 3 has a mirror-image foil (its first appearance, with the tip)');
+  t.ok(L.practice[2].tip === 'plain' && L.practice[3].tip === 'shaded' && !L.practice[2].assist && !L.practice[3].assist, 'Try 3 and Try 4 bring their kinds with their tips');
+  t.ok(twoKinds(items[2]) && otherSeen(items[2]), 'Try 3: two solids of another kind (each showing a face the pattern lacks) and one of the pattern\'s kind in other proportions');
+  t.ok(['plain', 'shaded', 'half', 'two', 'halves'].every((id, j) => { const x = (L.tips || []).find((tp) => tp.id === id); return x && x.when.dim === 'marks' && x.when.levels.join() === String(j + 1); }), 'the kinds\' tips sit at their levels (plain 1, shaded 2, the half marks 3–5)');
   const tipIds = new Set((L.tips || []).map((x) => x.id));
   t.ok(L.practice.every((e) => e.tip === undefined || tipIds.has(e.tip)), 'forced tips exist');
   t.eq(new Set(items.map((it) => it.key)).size, 4, `the Try answers sit in four different places (${items.map((it) => it.key + 1).join(', ')})`);
@@ -391,7 +484,7 @@ function testLearn(t, PX, def) {
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['sizes', 'landmark', 'landmarkAlone', 'match', 'matchAlone', 'halfCorner', 'matchHalf', 'exHalf', 'exMirror', 'exMatch', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'assist', 'assistHalf'];
+  const caps = ['sizes', 'landmark', 'landmarkAlone', 'match', 'matchAlone', 'halfCorner', 'matchHalf', 'exHalf', 'exMirror', 'exMatch', 'plainShape', 'plainShapeAll', 'plainSize', 'plainMatch', 'exLines', 'exOut', 'exOutSizes', 'exPlainMatch', 'whyOther', 'whyOtherAny', 'whyShape', 'whyShapeAny', 'whyMarks', 'whyMirror', 'assist', 'assistHalf'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
@@ -424,3 +517,13 @@ function testTutorialRepeat(t, PX, def, id) {
   t.eq(repeats, 0, `no rated item at the tutorial's settings has a tutorial stem (${n} items; ${guarded} first draws were redrawn)`);
   t.eq(changed, 0, 'an item whose first draw is not a tutorial stem is the same as before');
 }
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
+export function shortcutScores(PX, def, item, params) {
+  const out = itemScores(def.lib, item, def.lib.cleanParams(params || item.params));
+  for (const k of Object.keys(out)) if (!out[k].info) delete out[k].info;
+  return out;
+}
+// reported without a bound (DECISIONS): face shape at the band, plain and shaded kinds (the method), and
+// proportions only (a partial strategy); a name bounded at other levels is judged there
+export const SHORTCUT_EXEMPT = ['proportions only'];

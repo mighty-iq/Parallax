@@ -2,7 +2,7 @@
    fallbacks; shared pieces (.ex-stage, .ex-label, .ex-caption, .ex-verdict, .ex-tag, .ex-opt, .ex-focus,
    .px-fig-*) come from css/ex.css and css/base.css. Pattern and solids are SVG in units at one scale.
    A mark is a darker tone plus a hatch (a pattern of lines), never colour alone; fold lines are
-   dashed, cut edges solid. */
+   dashed on the starter band and plain from the plain kind on, cut edges solid. */
 .ex-form .fm-stem { width: 100%; }
 .ex-form .fm-stage { width: 100%; height: clamp(11rem, min(40vh, 66vw), 20rem); }
 .ex-form .fm-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -13,6 +13,10 @@
 .ex-form .fm-hatch-line { stroke: var(--stim-edge, #22262A); stroke-opacity: 0.55; }
 .ex-form .fm-cut { fill: none; stroke: var(--ink, #1A1D21); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .ex-form .fm-fold { fill: none; stroke: var(--ink-2, #454B52); stroke-width: 1.5px; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+/* version 3: from the plain kind on (the test's range) a fold line is drawn like a cut edge; the worked
+   example lights them (every line inside the pattern folds) */
+.ex-form .fm-fold--plain { stroke: var(--ink, #1A1D21); stroke-width: 2px; stroke-dasharray: none; stroke-linecap: round; }
+.ex-form .fm-fold.is-lit { stroke: var(--stim-target, #0B6A86); stroke-width: 4px; stroke-dasharray: none; }
 .ex-form .fm-edge { fill: none; stroke: var(--stim-edge, #22262A); stroke-width: 1.6px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .ex-form .fm-netface.is-pointed .fm-face,
 .ex-form .fm-solid .is-pointed .px-fig-face { stroke: var(--stim-target, #0B6A86); stroke-width: 3px; vector-effect: non-scaling-stroke; }

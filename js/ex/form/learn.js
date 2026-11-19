@@ -9,19 +9,21 @@
   PX.ex.learn('form', {
     goal: 'The flat pattern folds up into a solid. Which of the four pictured solids is it?',
     parts: [
-      { id: 'pattern', label: 'Pattern', text: 'The outside surface of a solid, cut open and laid flat. Dashed lines fold; solid lines are cut edges that meet another edge once folded.' },
-      { id: 'marks', label: 'Marks', text: 'Shaded faces carry a tone and a hatch. A half-shaded face is shaded on one side of its diagonal, so it also shows which way the face is turned.' },
+      { id: 'pattern', label: 'Pattern', text: 'The outside surface of a solid, cut open and laid flat. Every line inside it folds: dashed in starter items, plain after that, as in the test. The outline is cut; its edges meet once folded.' },
+      { id: 'marks', label: 'Marks', text: 'Shaded faces carry a tone and a hatch. A half-shaded face is shaded on one side of its diagonal, so it also shows which way the face is turned. With no marks, shapes and sizes decide.' },
       { id: 'solids', label: 'Solids', text: 'Four solids, each turned its own way. Only the faces turned toward you count; hidden faces may carry anything.' },
       { id: 'answer', label: 'Answer', text: 'Exactly one solid folds from the pattern: right shape, right sizes, marks in the right places. Tap it or press its key (1–4).' },
     ],
     // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.5): the rules card first, the
     // Watch at the starter band (one shaded face, a box, upright), the card "Shape, then one landmark"
-    // before Try 1, Try 1 with the shaded face's neighbours lettered; Try 3 brings the half mark with its
-    // tip and its shaded corner dotted (the mirror image's first appearance), after a worked example of a
-    // half mark on a sister item (note D2 addendum C change 4); Try 4 a third mark.
+    // before Try 1, Try 1 with the shaded face's neighbours lettered. Version 3 (the test's kinds, note D1
+    // §6.4): Try 3 is the plain kind (no marks, fold lines drawn plain) after a worked example on a sister
+    // item that lights the fold lines (note D2 addendum C change 4); Try 4 the shaded kind (two shaded
+    // faces). Half marks lie beyond the test's range: their tip, and show me's dotted corner, teach them
+    // when they first come.
     rules: [
       'The pattern is the outside surface of the solid, cut open and laid flat.',
-      'Dashed lines fold; solid lines are cut edges that meet another edge once folded.',
+      'Every line inside the pattern folds (dashed in starter items, plain later); edges on its outline meet once folded.',
       'Only the faces turned towards you count; hidden faces may carry anything.',
       'The right solid matches the pattern in shape, sizes and marks.',
     ],
@@ -31,16 +33,18 @@
     practice: [
       { params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, assist: { letters: true }, seed: 12 },
       { params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, seed: 207 },
-      { params: { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, assist: { half: true }, tip: 'half', seed: 303, example: { seed: 54 } },
-      { params: { solid: 0, marks: 2, view: 0, foil: 0, task: 'tutorial' }, tip: 'two', seed: 406 },
+      { params: { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, tip: 'plain', seed: 35, example: { seed: 8 } },
+      { params: { solid: 0, marks: 2, view: 0, foil: 0, task: 'tutorial' }, tip: 'shaded', seed: 39 },
     ],
     tips: [
       { id: 'one', when: { dim: 'marks', levels: [0] }, text: 'Starter items: one shaded face. First drop the solids of the wrong size, then check that the shaded face has the shape it has in the pattern.' },
       { id: 'shape', when: { dim: 'foil', levels: [0] }, text: 'First check the shape: compare the face shapes and sizes in the pattern with each solid.' },
-      { id: 'marksOnly', when: { dim: 'foil', levels: [1] }, text: 'All four have the right shape now: pick one marked face and check which faces must be its neighbours.' },
-      { id: 'half', when: { dim: 'marks', levels: [1] }, text: 'New: a half-shaded face. It also shows which way it is turned: its shaded corner (dotted) must touch the same faces once folded, or the solid is the mirror image.' },
-      { id: 'two', when: { dim: 'marks', levels: [2] }, text: 'Three marks: check the half mark first, since it tells a solid from its mirror image. Faces apart in the pattern can still meet.' },
-      { id: 'halves', when: { dim: 'marks', levels: [3] }, text: 'Two half marks: check each one\'s corner on its own, then whether the two sit right against each other.' },
+      { id: 'marksOnly', when: { dim: 'foil', levels: [1] }, text: 'All four are the pattern\'s kind of solid now: compare the sizes first, then the faces beside a shaded face.' },
+      { id: 'plain', when: { dim: 'marks', levels: [1] }, text: 'New, as in the test: no marks, and the fold lines are drawn plain. Every line inside the pattern folds. Check the face shapes, then the sizes.' },
+      { id: 'shaded', when: { dim: 'marks', levels: [2] }, text: 'Two shaded faces: pick one, name the faces that meet it once folded, then check them in each solid.' },
+      { id: 'half', when: { dim: 'marks', levels: [3] }, text: 'New: a half-shaded face. It also shows which way it is turned: its shaded corner must touch the same faces once folded, or the solid is the mirror image.' },
+      { id: 'two', when: { dim: 'marks', levels: [4] }, text: 'Three marks: check the half mark first, since it tells a solid from its mirror image. Faces apart in the pattern can still meet.' },
+      { id: 'halves', when: { dim: 'marks', levels: [5] }, text: 'Two half marks: check each one\'s corner on its own, then whether the two sit right against each other.' },
       { id: 'side', when: { dim: 'view', levels: [1] }, text: 'The solids lie on their sides: find the base or the slanted faces first, then the marks.' },
       { id: 'upside', when: { dim: 'view', levels: [2] }, text: 'Upside down: the base is on top. Name it first, then work round its edges.' },
     ],
@@ -65,7 +69,7 @@
         text: 'Rule out by shape and size first, then check one marked face and the faces around it.',
         steps: [
           'Drop every solid whose face shapes or sizes differ from the pattern.',
-          'Pick the shaded face. In the pattern, name the faces that share its edges once folded (joined by a dashed line, or edges that meet).',
+          'Pick a shaded face. In the pattern, name the faces that share its edges once folded (joined by a fold line, or edges that meet).',
           'In each solid left, check that those faces sit beside it.',
         ],
         when: 'From the first item on; steady when the pictures are turned or upside down.',
@@ -93,6 +97,17 @@
       exHalf: '1/3 · A half-shaded face also shows which way it is turned: its shaded corner (dotted) touches the same faces once folded.',
       exMirror: '2/3 · Solid {n} is the mirror image: its half mark is turned the other way (see {f}).',
       exMatch: '3/3 · Only solid {n} has the half mark turned that way. Folded up, the pattern is solid {n}.',
+      // the plain kind (version 3): show me and the Watch (shapes, sizes, the solid left) and its worked example
+      plainShape: '1/3 · Shapes first: a solid with a face the pattern does not have is out (✗).',
+      plainShapeAll: '1/3 · Shapes first: all four solids have the pattern\'s face shapes, so sizes decide.',
+      plainSize: '2/3 · Then sizes: a solid with an edge of another length is out (the marked edge).',
+      plainMatch: '3/3 · Only solid {n} has the pattern\'s faces at the pattern\'s sizes. Folded up, the pattern is solid {n}.',
+      exLines: '1/3 · From here every line is drawn plain, as in the test. Each line inside the pattern folds; the outline is cut.',
+      exOut: '2/3 · No marks: shapes and sizes decide. Out: a face the pattern lacks (✗) or an edge of another length (marked).',
+      exOutSizes: '2/3 · No marks: sizes decide. Out: every solid with an edge of another length (marked).',
+      exPlainMatch: '3/3 · Only solid {n} has the pattern\'s faces at the pattern\'s sizes. Folded up, the pattern is solid {n}.',
+      whyOther: 'Solid {n} is another shape: the face marked {f} is not in the pattern.',
+      whyOtherAny: 'Solid {n} is another kind of solid: its faces are not the pattern\'s.',
       whyShape: 'Solid {n} is the wrong size: the marked edge is {dir} than the same edge in the pattern.',
       whyShapeAny: 'Solid {n} is the wrong size: one of its edges has another length than in the pattern.',
       whyMarks: 'Solid {n}: the face marked {f} cannot look like that once the pattern is folded.',

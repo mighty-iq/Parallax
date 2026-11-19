@@ -1,5 +1,6 @@
 /* EX-19 Form (DAT-style format): view (DOM and SVG; ARCHITECTURE.md §6). layout 'stem+options'.
-   The stem is the flat pattern (fold lines dashed, cut edges solid); options are SVG pictures of
+   The stem is the flat pattern (fold lines dashed on the starter band, drawn plain like cut edges from
+   the plain kind on, version 3); options are SVG pictures of
    convex solids (orthographic, flat tones by face direction, outlines). The pattern and the solids
    share one scale (px per unit), so sizes compare directly. Marks: a darker tone plus a hatch;
    a half mark shades one side of a diagonal. Never colour alone.
@@ -102,7 +103,10 @@
     });
     function segsD(list) { return list.map(function (s) { return 'M' + SV.pathData(s).slice(1); }).join(''); }
     g.appendChild(SV.el('path', { d: segsD(cuts), class: 'fm-cut' }));
-    g.appendChild(SV.el('path', { d: segsD(folds), class: 'fm-fold' }));
+    // version 3: from the plain kind on (the test's range) fold lines are drawn like cut edges; the
+    // generator keeps every cut on the outline, so a line inside the pattern always folds
+    st.foldPath = SV.el('path', { d: segsD(folds), class: 'fm-fold' + (lib.plainFolds(item) ? ' fm-fold--plain' : '') });
+    g.appendChild(st.foldPath);
     svg.appendChild(g);
     st.netLabels = SV.el('g', { class: 'fm-labels' });
     svg.appendChild(st.netLabels);
@@ -158,7 +162,7 @@
   /* ---------- mount, present, reveal ---------- */
   function describe(item) {
     var n = item.marks.filter(function (x) { return x; }).length;
-    return 'A flat pattern of ' + item.net.length + ' faces with ' + n + ' marked; dashed lines fold. Which of four pictured solids, each turned its own way, folds from it?';
+    return 'A flat pattern of ' + item.net.length + ' faces' + (n ? ' with ' + n + ' marked' : ', none marked') + '; ' + (lib.plainFolds(item) ? 'every line inside it folds' : 'dashed lines fold') + '. Which of four pictured solids, each turned its own way, folds from it?';
   }
   function mount(ctx) {
     var root = h('div.fm-stem'), stage = h('div.ex-stage.fm-stage');
@@ -208,13 +212,15 @@
       if (nf && n < letters.length) label(st.netLabels, nf.pts, letters[n++], size);
     });
   }
-  var WHY = { shape: 'Wrong size', marks: 'Marks do not fit', mirror: 'Mirror image' };
+  var WHY = { shape: 'Wrong size', other: 'Other shape', marks: 'Marks do not fit', mirror: 'Mirror image' };
+  // A wrong solid of another kind (the plain kind's foils; published as 'shape', a wrong shape or size).
+  function isOther(item, i) { var o = item.options[i]; return o.kind === 'shape' && o.solid.kind !== item.solid.kind; }
   function reveal(item, response, result, ctx) {
     if (!st) return Promise.resolve();
     st.root.classList.add('is-revealed');
     st.opts.forEach(function (o, i) {
       if (!o) return;
-      o.tag.textContent = i === item.key ? '✓ Folds from it' : WHY[item.options[i].kind] || 'Does not fold';
+      o.tag.textContent = i === item.key ? '✓ Folds from it' : WHY[isOther(item, i) ? 'other' : item.options[i].kind] || 'Does not fold';
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
     });
@@ -270,6 +276,7 @@
   function optLetter(i) { var r = st.opts[i].svg.getBoundingClientRect(), side = Math.max(1, Math.min(r.width, r.height)); return st.E / side * Math.max(13, Math.min(15, side * 0.12)); }
   function clearMarks() {
     showFold(false);
+    lightFolds(false);
     PX.ui.clear(st.netLabels);
     st.opts.forEach(function (o, j) {
       if (!o) return;
@@ -280,6 +287,19 @@
       void j;
     });
     Object.keys(st.netG || {}).forEach(function (f) { st.netG[f].g.classList.remove('is-pointed'); });
+  }
+  // The worked example of the plain kind: the fold lines lit (every line inside the pattern folds).
+  function lightFolds(on) { if (st && st.foldPath) st.foldPath.classList.toggle('is-lit', !!on); }
+  // A face of solid i whose shape the pattern does not have (the most clearly seen), or -1.
+  function oddFace(item, i) {
+    var keys = {}, o = item.options[i], c = lib.facing(o.solid, o.view), best = -1;
+    item.solid.faces.forEach(function (_, f) { keys[lib.shapeKey(item.solid, f)] = 1; });
+    o.solid.faces.forEach(function (_, g) { if (c[g] > 0 && !keys[lib.shapeKey(o.solid, g)] && (best < 0 || c[g] > c[best])) best = g; });
+    return best;
+  }
+  function crossOdd(item, i) {
+    var g = oddFace(item, i), of = g >= 0 && st.opts[i] ? st.opts[i].faces[g] : null;
+    if (of) { label(st.opts[i].labels, of.pts, '✗', optLetter(i), 'bad', true); of.g.classList.add('is-pointed'); }
   }
   function focusOption(i) { var b = st.opts[i] && st.opts[i].el.closest ? st.opts[i].el.closest('.px-choice') : null; if (b) b.classList.add('ex-focus'); }
   // Faces f of the solid (with letters) shown in the pattern and, through the map, in option i.
@@ -321,6 +341,10 @@
   // places), or a face whose mark cannot look like that (✗ in the solid and in the pattern).
   function whyStep(item, i, ms) {
     var o = item.options[i];
+    if (isOther(item, i)) {
+      var odd = oddFace(item, i);
+      return { ms: ms, caption: cap(odd >= 0 ? 'whyOther' : 'whyOtherAny', { n: i + 1, f: '✗' }), enter: function () { clearMarks(); focusOption(i); crossOdd(item, i); } };
+    }
     if (o.kind === 'shape') {
       var e = changedEdge(item, i);
       return { ms: ms, caption: e ? cap('whyShape', { n: i + 1, dir: e.longer ? 'longer' : 'shorter' }) : cap('whyShapeAny', { n: i + 1 }), enter: function () { clearMarks(); focusOption(i); if (e) markEdge(item, i, e); } };
@@ -341,16 +365,17 @@
   // Step 1 of the card on the item: every wrong-size solid with the edge that differs marked in it and
   // in the pattern.
   function markSizes(item) {
-    item.options.forEach(function (o, i) { if (i !== item.key && o.kind === 'shape') { var e = changedEdge(item, i); if (e) markEdge(item, i, e); } });
+    item.options.forEach(function (o, i) { if (i !== item.key && o.kind === 'shape' && !isOther(item, i)) { var e = changedEdge(item, i); if (e) markEdge(item, i, e); } });
   }
   // The Watch (v1.2, fresh-player tests: every caption waits for a tap, so few of them): the card's
   // three steps on the starter item, the third ending in the fold-up and back on the answer. A
   // worked example of a half mark (any item that has one) shows only what is new: the half mark's
   // corner, the mirror image it rules out, and the solid that keeps it.
   function demoList(item) {
-    return hasHalf(item) ? steps(item, null, 'example') : steps(item, null, 'watch');
+    return hasHalf(item) || isPlain(item) ? steps(item, null, 'example') : steps(item, null, 'watch');
   }
   function hasHalf(item) { return item.marks.some(function (m) { return m && typeof m === 'object'; }); }
+  function isPlain(item) { return !item.marks.some(function (m) { return m; }); }
 
   /* ---------- the fold-up (O51) ---------- */
   function sub3(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
@@ -488,6 +513,7 @@
     // the end of a Watch or worked example: the pattern back, the answer in focus (no wrong solid marked)
     var rest = { ms: 700, enter: function () { clearMarks(); focusOption(key); if (mode === 'example') pointHalf(); else if (km) tagFaces(item, key, km, tags); } };
     var list;
+    if (isPlain(item)) return plainSteps(item, picked, mode);
     if (mode === 'example') {
       var mirror = -1;
       item.options.forEach(function (o, i) { if (i !== key && o.kind === 'mirror' && mirror < 0) mirror = i; });
@@ -504,6 +530,30 @@
       if (picked >= 0) list.push(whyStep(item, picked, 3000));
     }
     return list.filter(Boolean);
+  }
+
+  // The plain kind (version 3): no marks, so shapes and then sizes decide. Show me and the Watch: 1/3 the
+  // solids of another kind (a face the pattern lacks crossed out), 2/3 the wrong sizes (the edge that
+  // differs), 3/3 the solid left, then the fold-up. The worked example: 1/3 the fold lines lit (every
+  // line inside the pattern folds), 2/3 both checks at once, 3/3 the solid left.
+  function plainSteps(item, picked, mode) {
+    var key = item.key, other = item.options.some(function (o, i) { return isOther(item, i); });
+    function outShapes() { item.options.forEach(function (o, i) { if (isOther(item, i)) crossOdd(item, i); }); }
+    var shapes = { ms: 2600, caption: cap(other ? 'plainShape' : 'plainShapeAll'), enter: function () { clearMarks(); outShapes(); } };
+    var sizes = { ms: 2600, caption: cap('plainSize'), enter: function () { clearMarks(); markSizes(item); } };
+    var match = { ms: 2600, caption: cap('plainMatch', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); } };
+    var rest = { ms: 700, enter: function () { clearMarks(); focusOption(key); } };
+    if (mode === 'example') {
+      return [
+        { ms: 2800, caption: cap('exLines'), enter: function () { clearMarks(); lightFolds(true); } },
+        { ms: 2800, caption: cap(other ? 'exOut' : 'exOutSizes'), enter: function () { clearMarks(); outShapes(); markSizes(item); } },
+        Object.assign({}, match, { caption: cap('exPlainMatch', { n: key + 1 }) }),
+      ].concat(foldSteps(item), [rest]);
+    }
+    var list = [shapes, sizes, match].concat(foldSteps(item));
+    if (mode === 'watch') list.push(rest);
+    else if (picked >= 0) list.push(whyStep(item, picked, 3000));
+    return list;
   }
 
   function runSteps(list, ctx, opts) {
