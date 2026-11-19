@@ -118,6 +118,25 @@ function testPending(t) {
   t.eq(pend.map((f) => f.ex + ':' + f.cell).sort(), fin.game.firsts.map((f) => f.ex + ':' + f.cell).sort(), 'the firsts shown at block ends are those the session ends with (' + pend.length + ')');
 }
 
+function testDisplayClass(t) {
+  t.section('a phone-trained exercise (perDisplay)');
+  const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 23), def = PX.ex.get('track');
+  t.ok(def.perDisplay, 'Track keeps a rating per screen class');
+  for (let d = 0; d < 3; d++) playSession(PX, rec, L, 'train', { now: T0 + d * DAY, pin: 'track', exId: 'track', count: 1, display: 'small', minutes: 10 }, d);
+  const e = rec.ex.track;
+  t.ok(e && e.small && e.small.n > 0 && !(e.n > 0), 'the answers went to the small-screen rating (' + (e && e.small && e.small.n) + ')');
+  t.eq([G.displayFor(rec, def), G.displayFor(rec, def, 'small'), G.displayFor(rec, def, 'large')], ['small', 'small', 'small'], 'the game layer reads the class the player trains on');
+  const now = T0 + 3 * DAY, g = G.grades(rec, now, 'small').find((x) => x.exId === 'track');
+  t.eq(g.level, E.est.shown(rec, def, { display: 'small' }).level, '"Now" is the phone rating\'s level, not the large slot\'s starting guess');
+  // Homing (24 cells) after one phone session still has cells to reach (Track's 12 are all handled by now)
+  playSession(PX, rec, L, 'train', { now, pin: 'homing', exId: 'homing', count: 1, display: 'small', minutes: 6 }, 3);
+  t.ok(rec.ex.homing.small.n > 0 && !(rec.ex.homing.n > 0), 'Homing trained on the phone only');
+  const wr = G.withinReach(rec, now + 3600e3, 'homing');
+  t.ok(wr && wr.exId === 'homing', 'within reach finds the phone-trained exercise (' + (wr && wr.cell) + ')');
+  t.eq(G.withinReach(rec, now + 3600e3, 'track'), null, 'an exercise whose cells are all handled has nothing within reach');
+  t.eq(G.displayFor(rec, PX.ex.get('fold'), 'small'), 'large', 'an exercise with one rating reads it whatever the screen');
+}
+
 function testSeeding(t) {
   t.section('Atlas seeding');
   const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 11);
@@ -390,6 +409,7 @@ export async function run(t) {
   testSessions(t);
   testSeeding(t);
   testPending(t);
+  testDisplayClass(t);
   testDaily(t);
   testClimb(t);
   testNotes(t);
