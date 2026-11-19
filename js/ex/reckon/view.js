@@ -508,10 +508,15 @@
     }
     PX.ui.clear(el.notes);
     el.notes.appendChild(h('p.ex-fp-note', lines.join(' ')));
-    var bl = item.task ? '' : biasLine();
+    // v1.2 wave 2 (W2-bets' request; PLAN milestone 4, CONTRACT-v1.2 conflict 9): the bias line and the habit
+    // chart are the calibration detail, shown when the player sets ctx.layer to 'calib-detail' (players outside
+    // the bet trials always, and the detail arm); the plain arm keeps this answer's errors (angle, distance,
+    // drift per metre) above. A host that passes no layer at all (the dev harness) shows the detail.
+    var detail = lib().showDetail(st.ctx);
+    var bl = item.task || !detail ? '' : biasLine();
     if (bl) el.notes.appendChild(h('p.ex-fp-note.ex-reckon-bias', bl));
     el.notes.hidden = false;
-    var ch = item.task ? null : chart(item);
+    var ch = item.task || !detail ? null : chart(item);
     PX.ui.clear(el.chart);
     if (ch) el.chart.appendChild(ch);
     el.chart.hidden = !ch;
