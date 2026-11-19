@@ -52,6 +52,18 @@ calibration detail, the guide's Reckon page), then Homing O42 and the simulation
   passes no calibration layer, so its reveal has no habit line or chart); harness_homing.py map 2/0 (O42 at
   360 × 640 and 1366 × 768, worst landmark direction error under 0.5°).
 
+## Milestone 8: Section practice under test conditions (started 2026-11-19 10:51 UTC)
+Task: PLAN milestone 8's DAT-style bullet, the Section practice part (note D1 addendum A.4). Commits: b3605b7 (the
+engine: begin, free navigation, strike, the review list, logging at the end), 7811182 (the screen), then the guide's
+page, DECISIONS and these notes.
+- Every part's instructions on one page before the clock; one clock across parts that stops while an item is
+  prepared; Back and Next across parts; Mark, Strike (tap while on, right-click, Shift with a letter, X and option
+  keys while on) and Review (marked, unanswered, all; its own Pause); End the section from the list; the guessing
+  line in the setup, the instructions and the list; the ADA line on every page that names the test.
+- Checks: tests/node/section.test.mjs 408/0 (new: test conditions); tests/e2e/section.py 165/0 at 390 × 844 (touch),
+  1280 × 860 (mouse and keys), 844 × 390 and 740 × 360 (touch), screenshots looked at (instructions, struck options,
+  the review list, sideways items and list).
+
 ## In progress
 - Nothing. Scored items of the retest were not played (the driver, not the app, stalled); the flow did not change,
   so a rerun is the lead's call. The driver stays running (bounded slot wait).

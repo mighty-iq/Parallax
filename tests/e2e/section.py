@@ -221,6 +221,22 @@ def main_run(b, C, tag, phone):
             page.wait_for_timeout(100)
         st1 = run_state(page)['parts'][0]['items'][1].get('struck')
         C.ok(st1 == ([0, 1, 2] if letters else [0, 2]) and sec(page)['index'] == 1, f'{tag}: a right-click{" and Shift+B" if letters else ""} strike options too, answering nothing ({st1})')
+        # keys: X turns striking on and off, an option key strikes while it is on; M unmarks and marks
+        page.keyboard.press('x')
+        page.wait_for_timeout(100)
+        on = sec(page)['striking']
+        page.keyboard.press(str(min(4, n_opt)))
+        page.wait_for_timeout(100)
+        page.keyboard.press('x')
+        page.wait_for_timeout(100)
+        st2 = run_state(page)['parts'][0]['items'][1].get('struck') or []
+        C.ok(on and (min(4, n_opt) - 1) in st2 and not sec(page)['striking'] and sec(page)['index'] == 1, f'{tag}: X turns striking on and off, and an option key strikes while it is on, answering nothing ({st2})')
+        page.keyboard.press('m')
+        page.wait_for_timeout(100)
+        un = page.locator('[data-sec-flag]').get_attribute('aria-pressed')
+        page.keyboard.press('m')
+        page.wait_for_timeout(100)
+        C.ok(un == 'false' and page.locator('[data-sec-flag]').get_attribute('aria-pressed') == 'true', f'{tag}: M unmarks and marks the item')
     page.screenshot(path=str(OUT / f'{tag}_struck.png'))
     if phone:
         press(page, '[data-sec-next]', phone)
