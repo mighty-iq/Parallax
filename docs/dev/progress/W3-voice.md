@@ -71,3 +71,8 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   1.64/1.27 SD central and 1.26/0.97 optimistic, false "likely gain" 5.9 % ever through week 8), the eight probes
   (gallery: pr6 and pr7 new; pr1, pr3, pr4 to retake), and reading the measure (an illustrative record whose
   numbers are marked invented; the panel; one person and many). No effect size in IQ points (O24).
+- 2026-11-19 12:41 UTC, guide step 5: chapter 6, "Motivation and the game" (three pages): the research
+  (note G1 §1: Vermeir 2020, Sailer & Homner 2020, Katz 2014, Anderson 2011, Deci 1999, Kluger & DeNisi 1996, Ryan
+  2006, Ginns 2018, Kao 2024 [abstract], Rodrigues 2022, Dai 2014, Silverman & Barasch 2023, Milkman 2021); the game
+  layer table with the harm each element avoids (ENGINE §24; DECISIONS W3-game 18-19 Nov); what it leaves out; the
+  weekly goal (the owner's kept weeks-in-a-row count), 22 achievements (achievements.js), feedback after an answer.
