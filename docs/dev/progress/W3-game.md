@@ -1,18 +1,20 @@
 # W3-game: PLAN milestone 5, the game layer (option B)
 
-Updated 2026-11-19 00:03 UTC.
+Updated 2026-11-19 00:42 UTC.
 
 ## Done (committed)
-- Engine: js/engine/game.js (grades, Reach with its high mark, the Atlas with the guessing rule and firsts, within reach, the fresh-start gap, the finish hook `res.game`, the container's repair and two-tab merge, events grade/first/climb/note), js/engine/climb.js (mode 'climb', each answer written through), js/engine/fieldnotes.js, Daily v2 in js/engine/daily.js (epochs with frozen pools; the ramp and points from 19 Nov 2026; history; archive), Summit in js/engine/achievements.js.
-- Screens through the hooks: js/ui/game.js (summary panel, Today slots, Progress panel, exercise-page lines, Settings section, item:reveal handler, effects, sounds, the needle sweep for play.js's bars), js/ui/climb.js (route 'climb'), js/ui/atlas.js (route 'atlas'), css/game.css; index.html (my lines).
-- Tests: tests/node/game.test.mjs (299 checks: the rules code can check, a simulated first week, the stimulus guard in CSS); tests/e2e/game.py at 1366 x 768, 390 x 844 and 360 x 640 (screenshots in tests/e2e/out/game/, looked at).
-- Docs: ENGINE.md §24; DECISIONS lines (one per mechanic with the harm it avoids); requests.md lines.
-- Node suite with the game layer (full run before the firsts fix): 10 of 6,564 checks failed in 4 files: engine.test.mjs 4 (the achievement count 21 → 22), engine-v12.test.mjs 1 (the fixture 'quickx' outside the frozen Daily pool), record4.test.mjs 4 → 1 after the firsts fix (its own check registration on 'game'), bets.test.mjs 1 (the guide's add-ons line; not from the game layer). All four have requests.
+- Engine: js/engine/game.js (grades, Reach with its high mark, the Atlas with the guessing rule and firsts, within reach, the fresh-start gap, pending firsts for block ends, the start hook that seeds an older record's Atlas, the finish hook `res.game`, the container's repair and two-tab merge, events grade/first/climb/note), js/engine/climb.js (mode 'climb', each answer written through), js/engine/fieldnotes.js, Daily v2 in js/engine/daily.js (epochs with frozen pools; the ramp and points from 19 Nov 2026; history; archive), Summit in js/engine/achievements.js, and Top tenth without the Daily's rows.
+- Screens through the hooks: js/ui/game.js (summary panel, block-end firsts, Today slots, Progress panel, exercise-page lines, Settings section, item:reveal tick and ring, the needle sweep, effects, sounds), js/ui/climb.js (route 'climb', with item:reveal and playtest taps), js/ui/atlas.js (route 'atlas'), css/game.css; index.html (my lines).
+- W2-core added the call sites (eef57f7: item:reveal, the sweep, the Daily's points on its end screen and Today, record.js's merge handing over, PACED without the Daily); the pinned node tests (engine, engine-v12, record4) match the design (30ba958, at the lead's word).
+- Tests: tests/node/game.test.mjs (310 checks with the load check: the rules code can check, a simulated first week, the stimulus guard in CSS, pending firsts, Top tenth); tests/e2e/game.py at 1366 x 768, 390 x 844 and 360 x 640 (113/0 on the last full run; screenshots in tests/e2e/out/game/, looked at).
+- sim.mjs, 200 learners, with and without the game layer: all hard checks pass; nothing else moved beyond the noise of the Daily's new items (ENGINE.md §24).
+- Docs: ENGINE.md §24; DECISIONS lines (one per mechanic with the harm it avoids, and Top tenth); requests.md lines (all answered).
 
-## Waiting on others (requests.md)
-- W2-core: engine.test.mjs counts 21 → 22 (Summit); engine-v12.test.mjs needs a test epoch for 'quickx'; record4.test.mjs's own check on 'game'; flows.py's Daily share-line pattern; record.js mergeGame to delegate to E.game.merge; play.js: call item:reveal (tick, ring), the Daily end's points, the needle sweep call sites; PACED without the Daily (untimed challenge points).
-- The lead: share.js has no wave-2 owner (a Climb and a grade card kind of their own would beat the session kind with a label); library.js's modeName shows 'Climb' (the Log could say 'Weekly Climb').
+## Waiting on others
+- The lead: share.js has no wave-2 owner (a Climb and a grade card kind of their own would beat the session kind with a label); library.js's modeName shows 'Climb' in the Log ('Weekly Climb' would read better).
 
 ## Next
-- sim.mjs with 200 learners against a baseline without the game layer (running).
 - Optional: a pooled-export summary of the game layer without days (it stays out of the pooled export now).
+
+## Open problems
+- None blocking. Climb sounds follow CONTRACT M (they need the global Sound switch, off by default); the Climb's intro offers "Turn sound on".

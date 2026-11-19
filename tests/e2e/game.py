@@ -97,7 +97,7 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.evaluate('void PX.core.router.go("home", {}, { force: true })')
     page.wait_for_timeout(500)
     slot = page.locator('[data-gm="climb"]')
-    C.ok(slot.count() == 1 and 'Three attempts this week' in slot.first.inner_text(), f'{name}: Today shows the Weekly Climb with three attempts')
+    C.ok(slot.count() == 1 and '3 attempts this week' in slot.first.inner_text(), f'{name}: Today shows the Weekly Climb with three attempts')
     order = page.evaluate("Array.from(document.querySelectorAll('.px-today > *')).map(e => e.getAttribute('data-slot') || e.getAttribute('data-gm') || '')")
     C.ok('daily' in order and 'climb' in order and order.index('climb') == order.index('daily') + 1, f'{name}: the Climb comes after the Daily ({order})')
     slot.first.scroll_into_view_if_needed()
