@@ -35,8 +35,13 @@
       { params: { rope: 0, spacing: 0, variant: 'link' }, seed: 2, kind: 'linked' },
       { params: { rope: 0, spacing: 0, variant: 'link' }, seed: 9, kind: 'apart' },
     ],
+    // v1.2 (W3-exfix, fresh-player test g3: Try 1 looked much harder than the demo): Try 1 is a fixed item at the
+    // demo's level that is no harder than it: a knot whose show me takes one move (a loop slides off), its rope as
+    // long and as spread as the demo's (tests/node/knots.test.mjs measures both). Drawn at random it was most often
+    // a rope that falls open, since Try prefers another answer than the demo's, and at 5 crossings those take four
+    // moves.
     practice: [
-      { rope: 0, spacing: 0, variant: 'pull' },
+      { params: { rope: 0, spacing: 0, variant: 'pull' }, seed: 310 },
       { rope: 1, spacing: 0, variant: 'pull' },
       { rope: 0, spacing: 0, variant: 'untie' },
     ],

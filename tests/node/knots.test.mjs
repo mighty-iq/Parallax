@@ -559,8 +559,26 @@ function testLearn(t, PX, def, H) {
     }
     t.ok(d.kind === 'knot' && pair >= 0, `the pull Watch demo is a knot with a minimal pair (crossing ${pair})`);
   }
-  t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && L.practice.every(valid), '3–5 practice params');
-  t.ok(L.practice.every((p, i) => i === 0 || def.difficulty(p) >= def.difficulty(L.practice[i - 1]) - 1e-9), 'practice items easiest first');
+  const pp = (L.practice || []).map((e) => (e && e.params ? e.params : e)); // entries may be { params, seed } (v1.2)
+  t.ok(Array.isArray(L.practice) && L.practice.length >= 3 && L.practice.length <= 5 && pp.every(valid), '3–5 practice params');
+  t.ok(pp.every((p, i) => i === 0 || def.difficulty(p) >= def.difficulty(pp[i - 1]) - 1e-9), 'practice items easiest first');
+  // v1.2 (W3-exfix, fresh-player test g3): Try 1 is no harder than the Watch demo: the same level, no more show-me
+  // moves, a rope no longer and no more spread out on the plate
+  {
+    const d = L.demo.find((x) => x.params.variant === 'pull'), e = L.practice[0];
+    const shape = (it) => {
+      const R = H.replay(H.curvesOf(it), it.over, {}), dg = H.diagramOf(H.curvesOf(it), it.over), P0 = H.PLATE, pts = it.pts;
+      let len = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      const inP = (q) => q[0] >= 0 && q[0] <= P0 && q[1] >= 0 && q[1] <= P0;
+      for (let i = 1; i < pts.length; i++) if (inP(pts[i]) && inP(pts[i - 1])) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      dg.X.forEach((c) => { x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y); });
+      return { moves: R ? R.steps.length : 99, len, spread: Math.max(x1 - x0, y1 - y0), n: it.n, key: it.key };
+    };
+    const dI = def.generate(PX.rng(d.seed), d.params), tI = e && e.params && Number.isInteger(e.seed) ? def.generate(PX.rng(e.seed), e.params) : null;
+    const a = shape(dI), b2 = tI ? shape(tI) : null;
+    t.ok(!!b2 && !tI.fallback && def.validate(tI) === true && def.difficulty(e.params) <= def.difficulty(d.params) + 1e-9 && b2.moves <= a.moves && b2.len <= a.len * 1.05 && b2.spread <= a.spread + 1 && e.seed !== d.seed,
+      `Try 1 (seed ${e && e.seed}) is no harder than the demo (seed ${d.seed}): moves ${b2 && b2.moves} vs ${a.moves}, rope ${b2 && Math.round(b2.len)} vs ${Math.round(a.len)}, spread ${b2 && Math.round(b2.spread)} vs ${Math.round(a.spread)}`);
+  }
   t.ok(Array.isArray(L.tips) && L.tips.length >= 3, 'just-in-time tips');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
@@ -575,7 +593,7 @@ function testLearn(t, PX, def, H) {
     const okV = !w.variant || [].concat(w.variant).includes(p.variant), okD = !w.dim || (w.levels || []).includes(p[w.dim]);
     return (w.variant || w.dim) && okV && okD;
   });
-  t.ok(L.practice.every((p) => (firstTip(p) || {}).id === (p.variant === 'pull' ? 'slide-off' : p.variant)), `each Try item's tip fits its format (${L.practice.map((p) => (firstTip(p) || {}).id).join(', ')})`);
+  t.ok(pp.every((p) => (firstTip(p) || {}).id === (p.variant === 'pull' ? 'slide-off' : p.variant)), `each Try item's tip fits its format (${pp.map((p) => (firstTip(p) || {}).id).join(', ')})`);
   t.ok(/letter/.test((L.tips.find((x) => x.id === 'untie') || {}).text || ''), 'the untie tip says what the letters are');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');

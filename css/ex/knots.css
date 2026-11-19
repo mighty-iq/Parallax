@@ -43,6 +43,8 @@
 /* show me: the crossings a move is about (a ring: a shape, so not colour alone) */
 .ex-knots .ex-knots-ring { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 2.5px; stroke-dasharray: 5 3.5; }
 .ex-knots .ex-knots-ring.is-key { stroke: var(--right, #2A7239); stroke-width: 3px; stroke-dasharray: none; }
+/* v1.2 (W3-exfix): a marked crossing's ring in its tag's look: the wrong pick red and dashed, as its tag */
+.ex-knots .ex-knots-ring.is-chosen { stroke: var(--wrong, #B33A2F); stroke-width: 2.5px; stroke-dasharray: 4 3; }
 
 /* tags A–D beside four crossings (untie, tie): a disc with a letter and a solid leader to the
    crossing; a 44-unit invisible disc (r 22) catches the tap */
@@ -51,7 +53,7 @@
 .ex-knots .ex-knots-leader { stroke: var(--ink-2, #454B52); stroke-width: 1.75px; stroke-linecap: round; }
 .ex-knots .ex-knots-tagdisc { fill: var(--surface, #FFFFFF); stroke: var(--ink-2, #454B52); stroke-width: 1.75px; }
 .ex-knots .ex-knots-tagtext {
-  fill: var(--ink, #1A1D21); font-family: var(--font-sans, system-ui, sans-serif); font-size: 15px; font-weight: 700;
+  fill: var(--ink, #1A1D21); font-family: var(--font-sans, system-ui, sans-serif); font-size: 17px; font-weight: 700;
   pointer-events: none;
 }
 .ex-knots .ex-knots-tag:hover .ex-knots-tagdisc,
@@ -104,6 +106,23 @@
     padding-top: calc(var(--s1) + env(safe-area-inset-top, 0px)); padding-bottom: calc(var(--s1) + env(safe-area-inset-bottom, 0px));
   }
   body.px-item .pl-player:has(> .pl-trial.ex-knots) { gap: var(--s1); }
+}
+
+/* v1.2 (W3-exfix, desktop fresh run d1 at 1366 × 768: Knot / No knot sat under the fold on a session's first items,
+   and the verdict that appears under the plate moved them down, so a second click missed): wide screens put the
+   answers beside the plate, at its top; the verdict and captions stay under the plate, in its own column */
+@media (min-width: 720px) and (min-height: 501px) {
+  .pl-trial.ex-knots:has(> .pl-grid > .px-choices) {
+    display: grid; grid-template-columns: auto minmax(13rem, 20rem); grid-template-rows: auto auto auto 1fr;
+    justify-content: center; align-items: start; gap: 0 var(--s5, 1.5rem);
+  }
+  .pl-trial.ex-knots:has(> .pl-grid > .px-choices) > .pl-host { grid-column: 1; grid-row: 1 / -1; }
+  .pl-trial.ex-knots:has(> .pl-grid > .px-choices) > .pl-grid { grid-column: 2; grid-row: 1; }
+  .pl-trial.ex-knots:has(> .pl-grid > .px-choices) > .pl-confirm { grid-column: 2; grid-row: 2; margin-top: var(--s2, 0.5rem); }
+  .pl-trial.ex-knots:has(> .pl-grid > .px-choices) > .pl-limit { grid-column: 2; grid-row: 3; margin-top: var(--s2, 0.5rem); }
+  .pl-trial.ex-knots .px-choices[style*="--px-cols:2"] { --px-cols: 1 !important; }
+  .pl-trial.ex-knots .px-choices[style*="--px-cols:4"] { --px-cols: 2 !important; }
+  .pl-trial.ex-knots .px-choice { min-height: 4rem; }
 }
 
 /* reduced motion: show me steps in keyframes (the player); nothing here animates by CSS */
