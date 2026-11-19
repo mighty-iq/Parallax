@@ -401,6 +401,24 @@ function testContainer(t) {
   t.eq(G.merge(odd, JSON.parse(JSON.stringify(odd)), { newer: 'mine' }).firsts.length, odd.firsts.length, 'a merge with itself keeps one copy of each first, a first of another shape included');
 }
 
+function testPooled(t) {
+  t.section('the pooled export: a summary without days');
+  const e = t.env({ now: T0 }), PX = e.PX, S = PX.core.store, E = PX.engine;
+  E.config.daily2.epochs[1].from = RAMP;
+  E.fields().forEach((f) => { try { S.field(f.key, f.def, f.fix); } catch (x) { /* registered */ } });
+  S.load();
+  const rec = S.state, L = new Learner(PX, 41);
+  for (let d = 0; d < 3; d++) { playSession(PX, rec, L, 'train', { now: T0 + d * DAY, minutes: 8 }, d); playSession(PX, rec, L, 'daily', { now: T0 + d * DAY + 3600e3 }, d); }
+  climbRun(PX, rec, T0 + 3 * DAY, [1, 1, 0, 1, 0]);
+  S.save();
+  const p = S.pooled(), g = p.gameSummary;
+  t.ok(g && g.v === 1 && g.reach === E.game.reach(rec).value && g.firsts > 0 && g.daily.played === 3 && g.climb.runs.length === 1, 'the header gameSummary carries Reach, firsts, the Daily and the Climb');
+  t.eq(g.climb.runs[0].slice(0, 5), [E.climb.number(E.climb.week(T0 + 3 * DAY)), 'A', 3, 2, 1], 'a Climb run by its Climb number, never its week\'s date');
+  t.ok(!('game' in p) && !('daily' in p), 'the containers with local weeks and days stay out');
+  const txt = JSON.stringify(g);
+  t.ok(!/\d{4}-\d{2}-\d{2}/.test(txt), 'no local day or week anywhere in the summary');
+}
+
 /* ============================================================ rule 4: no count of consecutive days */
 
 function walk(dir, out) {
@@ -504,4 +522,5 @@ export async function run(t) {
   testNoChains(t);
   testFirstWeek(t);
   testStimGuard(t);
+  testPooled(t);
 }
