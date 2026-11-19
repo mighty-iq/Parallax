@@ -25,7 +25,7 @@
   var st = null;
 
   function learn() { return PX.ex.learn('cubematch') || {}; }
-  function cap(key, a) { return String((learn().captions || {})[key] || '').replace('{a}', a === undefined ? '' : a); }
+  function cap(key, a) { return String((learn().captions || {})[key] || '').replace(/\{a\}/g, a === undefined ? '' : a); }
 
   /* ---------- vectors and quaternions ---------- */
   function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }

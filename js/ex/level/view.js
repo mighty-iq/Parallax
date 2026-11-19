@@ -28,7 +28,7 @@
   }
 
   function learn() { return PX.ex.learn('level') || {}; }
-  function cap(key, a) { return String((learn().captions || {})[key] || '').replace('{a}', a === undefined ? '' : a); }
+  function cap(key, a) { return String((learn().captions || {})[key] || '').replace(/\{a\}/g, a === undefined ? '' : a); }
 
   function P(p) { return [p[0], -p[1]]; }          // page → SVG
   function pts(list) { return list.map(P); }

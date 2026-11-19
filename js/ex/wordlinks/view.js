@@ -33,6 +33,12 @@
     var d = item.options[item.key];
     return { a: lib.show(item.a), b: lib.show(item.b), c: lib.show(item.c), d: lib.show(d), ab: sentence(item.relation, item.a, item.b), cd: sentence(item.relation, item.c, d) };
   }
+  // No keyboard at hand (PX.core.keys.present(), as the key hints use; else a touch-only pointer): captions leave keys out.
+  function touchOnly() {
+    var K = PX.core.keys;
+    if (K && typeof K.present === 'function') { try { return !K.present(); } catch (e) { /* the media query */ } }
+    try { return !!(window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches); } catch (e2) { return false; }
+  }
   function cap(key, item) { return fill((learn().captions || {})[key], vars(item)); }
 
   /* ---------- the countdown bar ---------- */
@@ -184,7 +190,7 @@
       { ms: 2000, caption: cap('second', item), enter: function () { focusOption(-1); point(['c', 'q']); } },
       { ms: 2600, caption: cap('answer', item), enter: function () { point(['c', 'q']); focusOption(item.key); } },
       { ms: 2000, caption: cap('others', item), enter: function () { point(['c']); focusOption(item.key); } },
-      { ms: 1600, caption: cap('keys', item), enter: clearMarks },
+      { ms: 1600, caption: cap(touchOnly() ? 'keysTouch' : 'keys', item), enter: clearMarks },
     ], ctx, { name: 'demo', caption: caption || null }).then(clearMarks);
   }
 
