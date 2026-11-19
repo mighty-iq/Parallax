@@ -52,17 +52,17 @@
     if (!list.length) { wrap.appendChild(h('p', 'No exercise has an Atlas in this build.')); return null; }
     var tried = list.filter(function (d) { return E().schedule.totals(r, d).n > 0; });
     var pick = typeof p.ex === 'string' && PX.ex.get(p.ex) ? p.ex : uiRec().last && PX.ex.get(uiRec().last) ? uiRec().last : (tried[0] || list[0]).id;
-    var chips = h('div.gm-atlas-chips', { role: 'tablist', 'aria-label': 'Exercises' });
+    var chips = h('div.gm-atlas-chips', { role: 'group', 'aria-label': 'Exercises' });
     var body = h('div.gm-atlas-body');
     list.forEach(function (def) {
       var at = G().atlas(r, def), on = def.id === pick;
-      var b = h('button.gm-chip', { type: 'button', role: 'tab', 'aria-selected': on ? 'true' : 'false', 'data-atlas-ex': def.id },
+      var b = h('button.gm-chip', { type: 'button', 'aria-pressed': on ? 'true' : 'false', 'data-atlas-ex': def.id },
         h('span', nameOf(def)), h('span.px-num.gm-chip-n', at.handled + '/' + at.total));
       if (!E().schedule.totals(r, def).n) b.classList.add('is-untried');
       b.addEventListener('click', function () {
         uiRec().last = def.id;
         try { store.save(); } catch (e) { /* later */ }
-        Array.prototype.forEach.call(chips.children, function (c) { c.setAttribute('aria-selected', c === b ? 'true' : 'false'); });
+        Array.prototype.forEach.call(chips.children, function (c) { c.setAttribute('aria-pressed', c === b ? 'true' : 'false'); });
         show(def);
       });
       chips.appendChild(b);
@@ -71,7 +71,7 @@
     wrap.appendChild(body);
     function show(def) { ui.clear(body); body.appendChild(sheet(rec(), def, Date.now())); }
     show(PX.ex.get(pick));
-    var on = chips.querySelector('[aria-selected="true"]');
+    var on = chips.querySelector('[aria-pressed="true"]');
     if (on && chips.scrollWidth > chips.clientWidth) { try { chips.scrollLeft = Math.max(0, on.offsetLeft - 16); } catch (e) { /* ignore */ } }
     wrap.appendChild(h('div.pl-summary-actions', ui.button('Progress', { kind: 'ghost', go: 'progress' }), ui.button('Back to Today', { kind: 'ghost', go: 'home' })));
     return null;
@@ -99,11 +99,13 @@
         var key = i + '.' + j, c = at.cells[key], e = ease[key];
         var state = c && c.handled ? 'handled' : c ? 'tried' : 'unseen';
         var band = aim !== null && e && Math.abs(e.b - aim) <= 0.5;
-        var cell = h('div.gm-cell', { role: 'cell', 'data-cell': key, 'data-state': state, 'aria-label': GU().cellText(def, i, j) + ': ' + (state === 'handled' ? 'handled' : state === 'tried' ? 'tried, ' + c.r + ' of ' + c.n + ' right' : e ? 'not tried yet' : 'not in the automatic mix') },
+        var isReach = !!(wr && wr.cell === key);
+        var cell = h('div.gm-cell', { role: 'cell', 'data-cell': key, 'data-state': state, 'aria-label': GU().cellText(def, i, j) + ': ' + (state === 'handled' ? 'handled' : state === 'tried' ? 'tried, ' + c.r + ' of ' + c.n + ' right' : e ? 'not tried yet' : 'not in the automatic mix') +
+          (band ? '; at your level now' : '') + (isReach ? '; within reach' : '') },
           h('span.gm-cell-mark', { 'aria-hidden': 'true' }));
         if (!e) cell.classList.add('is-out');
         if (band) cell.classList.add('is-band');
-        if (wr && wr.cell === key) { cell.classList.add('is-reach'); cell.setAttribute('data-reach', ''); }
+        if (isReach) { cell.classList.add('is-reach'); cell.setAttribute('data-reach', ''); }
         if (state === 'handled' && fresh.indexOf(key) >= 0 && animated < 12) { GU().fx.run(cell, 'gm-fx-flip gm-fx-d' + Math.min(animated, 11), 200 + 40 * animated); animated++; }
         row.appendChild(cell);
       }

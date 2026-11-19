@@ -35,7 +35,7 @@
   function display() { try { return E().est.displayClass(win.innerWidth, win.innerHeight); } catch (e) { return 'large'; } }
   function can(def) { var P = Play(); return P && typeof P.canRun === 'function' ? P.canRun(def) : true; }
   function fmtDay(key) { try { return PX.util.fmtDate(new Date(key + 'T12:00:00').getTime(), 'short'); } catch (e) { return key; } }
-  function spareText(K) { return K.spare < 1 ? 'no spare' : K.misses >= K.spare ? 'spare used' : 'one spare'; }
+  function spareText(K) { return GU().spareLeft(K.spare, K.misses); }
 
   var current = null;
   // Playtest mode (test builds): where a visit is, how a run ended, and three taps on the Climb's printout.
@@ -83,7 +83,7 @@
     E().climb.letters().forEach(function (a) {
       var x = st.attempts[a];
       list.appendChild(h('li', { 'data-attempt': a, 'data-state': !x ? 'open' : x.p === 1 ? 'partial' : 'done' }, h('b.px-num', a),
-        h('span', !x ? 'not climbed yet' : x.p === 1 ? 'waiting at rung ' + (x.h + 1) + (x.m ? ' (spare used)' : '') : 'height ' + x.h + (x.n && x.n.length ? ' · notches at ' + x.n.join(', ') : ''))));
+        h('span', !x ? 'not climbed yet' : x.p === 1 ? 'waiting at rung ' + (x.h + 1) + (x.m ? ' (' + GU().spareLeft(st.spare, x.m) + ')' : '') : 'height ' + x.h + (x.n && x.n.length ? ' · notches at ' + x.n.join(', ') : ''))));
     });
     p.body.appendChild(list);
     p.body.appendChild(h('p.px-meta', (st.best !== null ? 'Best this week: ' + st.best + '. ' : '') + (st.pb ? 'Your highest run: ' + st.pb.h + '. ' : '') + (st.last !== null ? 'Last week’s best: ' + st.last + '.' : '')));
@@ -108,7 +108,7 @@
     X.wrap.appendChild(foot);
     var rules = K.panel({ title: 'How it works', className: 'gm-panel' });
     rules.body.appendChild(h('ul.gm-rules',
-      h('li', 'A right answer clears the rung. A miss leaves a notch and the same rung comes again with another item; the second miss ends the run.'),
+      h('li', 'A right answer clears the rung. ' + GU().climbWords().rule.charAt(0).toUpperCase() + GU().climbWords().rule.slice(1) + '.'),
       h('li', 'Untimed: take the time you need. The items never change your levels.'),
       h('li', plural(E().climb.letters().length, 'attempt', 'attempts') + ' a week, each with its own items, the same for everyone; your best counts. After them, runs are practice.'),
       h('li', 'A run you leave goes on where you stopped. A new Climb comes every Monday; a missed week costs nothing.')));
@@ -217,11 +217,12 @@
     if (tr.end) X.ended = true;
     if (tr.outcome === 'skipped' || tr.error) { loop(X); return null; }
     if (K.height > h0) { drawScale(X, true); GU().sound.rung(K.height); X.live.textContent = 'Rung ' + (h0 + 1) + ' cleared. Height ' + K.height + '.'; }
-    else if (K.misses > m0) { drawScale(X, false); X.live.textContent = K.misses > K.spare ? 'A second miss: the run ends at height ' + K.height + '.' : 'A miss: a notch at rung ' + K.rung + '. The rung comes again.'; }
+    var last = 'The ' + GU().climbWords().ordinal + ' miss: the run ends at height ' + K.height + '.';
+    if (K.height <= h0 && K.misses > m0) { drawScale(X, false); X.live.textContent = K.misses > K.spare ? last : 'A miss: a notch at rung ' + K.rung + '. The rung comes again.'; }
     if (out.outcome === 0 || out.outcome === 1) {
       // the step up (or the notch) on a small ruled scale under the verdict, between rungs only
       var mini = GU().scale({ max: K.R, value: K.height, notches: K.notches, best: K.weekBest, width: 220 });
-      var note = h('div.pl-note.gm-climb-note', h('p', K.height > h0 ? 'Rung ' + K.height + ' cleared.' : K.misses > K.spare ? 'Second miss: the run ends at height ' + K.height + '.' : 'Miss: rung ' + K.rung + ' comes again with another item (spare used).'), mini);
+      var note = h('div.pl-note.gm-climb-note', h('p', K.height > h0 ? 'Rung ' + K.height + ' cleared.' : K.misses > K.spare ? last : 'Miss: rung ' + K.rung + ' comes again with another item (' + spareText(K) + (K.spare - K.misses > 0 ? ' left' : '') + ').'), mini);
       X.P.note(note);
       if (K.height > h0) GU().fx.run(mini, 'gm-fx-step', 200);
     }

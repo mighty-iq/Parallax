@@ -23,7 +23,7 @@
                                      training exercises outside the DAT-style focus; value never falls
      atlasDims(def) → { keys: [a, b|null], dims: [dimA, dimB|null] } | null
      atlas(rec, def) → { keys, cols, rows, cells: { 'i.j': { n, r, g, handled } }, handled, tried, total }
-     tail(n, r, g) → P(at least r right of n by guessing at rate g)      handled when ≤ config.game.p
+     tail(n, r, g) → P(at least r right of n by guessing at rate g)      handled when < config.game.p
      withinReach(rec, now, exId?) → { exId, cell, i, j, b } | null   the nearest unhandled cell at the level
      fresh(rec, now) → { days } | null   a fresh-start note after a gap of config.game.gapDays or more
      climb: see the Climb section below; notes: see the field notes section below
@@ -193,7 +193,9 @@
     for (var k = r; k <= n; k++) s += Math.exp(ln - logFact(k) - logFact(n - k) + k * lg + (n - k) * lq);
     return Math.min(1, s);
   }
-  function handledBy(n, r, g) { return r >= 1 && tail(n, r, g) <= cfg().p + 1e-12; }
+  // Handled when guessing alone explains the right answers less than one time in ten: tail < p (strictly, as
+  // the texts say; a hair below p for the rounding of exp/log).
+  function handledBy(n, r, g) { return r >= 1 && tail(n, r, g) < cfg().p - 1e-12; }
 
   // One exercise's cells: { v: version, c: { 'i.j': [n, right, g × 1000 (the highest seen), handled 0|1] } }.
   function slotOf(g, def) {

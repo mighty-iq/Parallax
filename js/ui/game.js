@@ -222,6 +222,19 @@
     return svg;
   }
 
+  // The Climb's rule in words, from config.game.climb.spare: { ends: 'the second miss ends the run', ordinal,
+  // rule: the whole sentence }.
+  var ORD = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'];
+  function climbWords() {
+    var sp = E().config.game.climb.spare, ord = ORD[Math.min(ORD.length - 1, Math.max(0, sp))];
+    return { ordinal: ord, ends: 'the ' + ord + ' miss ends the run',
+      rule: sp > 0 ? 'a miss leaves a notch and the same rung comes again with another item; the ' + ord + ' miss ends the run' : 'the first miss ends the run' };
+  }
+  function spareLeft(spare, misses) {
+    var left = spare - misses;
+    return spare < 1 ? 'no spare' : left > 1 ? left + ' spares' : left === 1 ? 'one spare' : spare > 1 ? 'spares used' : 'spare used';
+  }
+
   // "4 folds with 3 punches": a cell of an exercise's Atlas in its own words.
   function cellText(def, i, j) {
     var ad = G().atlasDims(def), X = PX.ui.exinfo;
@@ -326,7 +339,7 @@
       st.left === all ? plural(all, 'attempt', 'attempts') + ' this week' : st.left ? plural(st.left, 'attempt', 'attempts') + ' left this week' : 'All ' + all + ' attempts climbed this week';
     p.body.appendChild(h('p.px-status', { 'data-climb-left': String(st.left) }, status, st.best !== null ? h('span.px-num', ' · best ' + st.best + ' of ' + st.rungs) : null));
     if (st.best !== null) p.body.appendChild(scale({ max: st.rungs, value: st.best, best: st.pb ? st.pb.h : null }));
-    p.body.appendChild(h('p.px-slot-text', st.rungs + ' rungs from easy to hard, the same for everyone this week. Untimed; a miss leaves a notch and the second miss ends the run.' + (used === 0 && st.last !== null ? ' Last week’s best: ' + st.last + '.' : '')));
+    p.body.appendChild(h('p.px-slot-text', st.rungs + ' rungs from easy to hard, the same for everyone this week. Untimed; ' + climbWords().rule + '.' + (used === 0 && st.last !== null ? ' Last week’s best: ' + st.last + '.' : '')));
     p.body.appendChild(h('div.px-slot-foot', ui.button(st.partial ? 'Go on climbing' : st.left ? 'Climb' : 'See this week’s Climb', { kind: 'secondary', go: 'climb' })));
     return { el: p.el, after: 'daily', order: 40 };
   }
@@ -353,7 +366,7 @@
           var b = ui.button(kept ? 'Drop' : 'Keep', { kind: 'ghost', small: true, ariaLabel: (kept ? 'Drop: ' : 'Keep: ') + noteText(n), onClick: function () {
             var R = rec();
             if (E().notes.keep(R, Date.now(), i, !kept)) { save(); if (PX.ui.app && typeof PX.ui.app.rerender === 'function') PX.ui.app.rerender(); }
-            else ui.toast('Two notes are kept already. Drop one to keep another.', { kind: 'info' });
+            else ui.toast(plural(E().config.game.notes.keep, 'note is', 'notes are') + ' kept already. Drop one to keep another.', { kind: 'info' });
           } });
           b.setAttribute('data-note-keep', String(i));
           li.appendChild(b);
@@ -373,20 +386,21 @@
   /* ---------- Progress ---------- */
 
   function histogram(hist) {
-    var NS = 'http://www.w3.org/2000/svg', bins = [], w = 220, hgt = 44, max = 0;
-    for (var b = 0; b < 9; b++) { var s = 0; for (var k = b * 4; k < Math.min(hist.length, b * 4 + 4) + (b === 8 ? 1 : 0); k++) s += hist[k] || 0; bins.push(s); if (s > max) max = s; }
+    var NS = 'http://www.w3.org/2000/svg', bins = [], w = 220, hgt = 44, max = 0, top = E().config.daily2.max, nb = Math.max(1, Math.ceil(top / 4));
+    // bins of 4 points; the last bin takes the maximum too (0–3, 4–7, …, 32–36 for a maximum of 36)
+    for (var b = 0; b < nb; b++) { var s = 0; for (var k = b * 4; k < (b === nb - 1 ? top + 1 : b * 4 + 4); k++) s += hist[k] || 0; bins.push(s); if (s > max) max = s; }
     var svg = doc.createElementNS(NS, 'svg');
     svg.setAttribute('viewBox', '0 0 ' + w + ' ' + (hgt + 12));
     svg.setAttribute('class', 'gm-hist');
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', 'Daily points: ' + bins.map(function (n, i) { return (i * 4) + '–' + (i === 8 ? 36 : i * 4 + 3) + ': ' + n; }).join(', '));
+    svg.setAttribute('aria-label', 'Daily points: ' + bins.map(function (n, i) { return (i * 4) + '–' + (i === nb - 1 ? top : i * 4 + 3) + ': ' + n; }).join(', '));
     bins.forEach(function (n, i) {
-      var bw = w / 9 - 4, bh = max ? Math.max(n ? 2 : 0, Math.round(hgt * n / max)) : 0, r = doc.createElementNS(NS, 'rect');
-      r.setAttribute('x', String(i * (w / 9) + 2)); r.setAttribute('y', String(hgt - bh)); r.setAttribute('width', String(bw)); r.setAttribute('height', String(bh));
+      var bw = w / nb - 4, bh = max ? Math.max(n ? 2 : 0, Math.round(hgt * n / max)) : 0, r = doc.createElementNS(NS, 'rect');
+      r.setAttribute('x', String(i * (w / nb) + 2)); r.setAttribute('y', String(hgt - bh)); r.setAttribute('width', String(bw)); r.setAttribute('height', String(bh));
       r.setAttribute('class', 'gm-hist-bar');
       svg.appendChild(r);
       var t = doc.createElementNS(NS, 'text');
-      t.setAttribute('x', String(i * (w / 9) + w / 18)); t.setAttribute('y', String(hgt + 10)); t.setAttribute('class', 'gm-hist-t');
+      t.setAttribute('x', String(i * (w / nb) + w / nb / 2)); t.setAttribute('y', String(hgt + 10)); t.setAttribute('class', 'gm-hist-t');
       t.textContent = String(i * 4);
       svg.appendChild(t);
     });
@@ -438,7 +452,7 @@
     rows.appendChild(h('div', h('dt', 'Weekly Climb'), h('dd', cs.pb ? 'Highest run ' + cs.pb.h + ' of ' + cs.rungs + (cs.best !== null ? '; this week ' + cs.best : '') : 'Not climbed yet')));
     rows.appendChild(h('div', h('dt', 'Daily Challenge'), h('dd', dh.played ? plural(dh.played, 'Daily', 'Dailies') + ' played' + (dh.ramp.n ? '; best ' + dh.ramp.best + ' of ' + E().config.daily2.max + ' points' : '') + (dh.archive ? ' (' + dh.archive + ' from the archive)' : '') : 'Not played yet')));
     p.body.appendChild(rows);
-    if (dh.ramp.n) p.body.appendChild(h('figure.gm-hist-fig', histogram(dh.ramp.hist), h('figcaption.px-meta', 'Points per Daily since the ramp began (0–36).')));
+    if (dh.ramp.n) p.body.appendChild(h('figure.gm-hist-fig', histogram(dh.ramp.hist), h('figcaption.px-meta', 'Points per Daily since the ramp began (0–' + E().config.daily2.max + ').')));
     var arch = E().daily.archive(r, now, 7).filter(function (x) { return x.state !== 'done'; });
     if (arch.length) {
       p.body.appendChild(h('p.px-meta', 'Missed a day? Past Dailies stay open in the archive: scored once, marked archive, outside that day’s shared result.'));
@@ -541,7 +555,7 @@
     Hk.on('item:notes', function (ctx) { return blockFirsts(ctx); }, { id: 'game.firsts', order: 60 });
   }
 
-  PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, sweep: sweep, firstTime: firstTime, cellText: cellText, share: share, shareButton: shareButton,
+  PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, sweep: sweep, firstTime: firstTime, climbWords: climbWords, spareLeft: spareLeft, cellText: cellText, share: share, shareButton: shareButton,
     celebrate: celebrate, reduced: reduced, moving: moving, noteText: noteText, gradeCard: gradeCard, reachWords: reachWords, LINK: LINK,
     _: { summaryPanel: summaryPanel, climbSlot: climbSlot, notesSlot: notesSlot, progressPanel: progressPanel, startNow: startNow, exerciseLines: exerciseLines, blockFirsts: blockFirsts } };
 })(window.PX);
