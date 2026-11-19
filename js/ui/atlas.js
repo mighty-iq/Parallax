@@ -45,6 +45,7 @@
     var r = rec(), now = Date.now(), list = defs(r), p = route.params || {};
     var wrap = h('div.gm-atlas-screen');
     host.appendChild(wrap);
+    try { if (PX.bus) PX.bus.emit('play:screen', { screen: 'atlas', mode: null, exId: null }); } catch (e) { /* a listener failed */ }
     var P = PX.ui.play;
     var lead = 'Each cell is a pair of settings. A cell is handled once your right answers there are more than guessing would explain (less than one time in ten). Cells fill from Train, Path, Speed, Free play, the Daily and the Climb.';
     wrap.appendChild(P && P.screenHead ? P.screenHead(null, 'Atlas', lead) : h('div.px-screen-head', h('h1', 'Atlas'), h('p.px-lead', lead)));
