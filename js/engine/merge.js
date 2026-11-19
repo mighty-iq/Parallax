@@ -149,7 +149,16 @@
     rows.sort(function (a, b) { return a[0] - b[0]; }); // stable: same-second rows keep their order
     out.trials = rows;
 
+    // by id; a session that "Keep going" went on with (modes.finish) keeps the side with more answers, so the tab
+    // that saw only its first part does not undo the join
+    var longer = {};
+    arr(theirs.sessions).concat(arr(mine.sessions)).forEach(function (s) {
+      if (!isObj(s) || typeof s.id !== 'string') return;
+      var o = longer[s.id];
+      if (!o || (s.trials || 0) > (o.trials || 0) || ((s.trials || 0) === (o.trials || 0) && (s.end || 0) > (o.end || 0))) longer[s.id] = s;
+    });
     out.sessions = union(theirs.sessions, mine.sessions, function (s) { return isObj(s) && typeof s.id === 'string' ? s.id : null; })
+      .map(function (s) { return isObj(s) && hasOwn.call(longer, s.id) ? cp(longer[s.id]) : s; })
       .sort(function (a, b) { return (a.start || 0) - (b.start || 0); });
     var ach = cp(obj(theirs.achievements));
     Object.keys(obj(mine.achievements)).forEach(function (k) {

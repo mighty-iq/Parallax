@@ -74,6 +74,18 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
   options; shell.py 274/0 (one reset line, requests.md); overlap.py 58/0; section.py 165/0; flows.py 70/2 (band B's
   phrases; a check time-out from W2-measure's uncommitted probes: HEAD with these changes passes 19/0); node 2222/0.
 
+## 2026-11-19 14:14 UTC: the lead's third first-session run, and the Daily's share line
+- After an answer: See solution follows every right answer; on phones the strip's buttons are its last row, with the
+  notes (Stretch, block notes) between the verdict and the buttons, so Next item keeps its place.
+- The first summary: "N more answers and this session counts toward your week" with Keep going, which goes on with
+  the session under its id (modes.start continueOf; finish joins the parts; merge keeps the longer record); after it,
+  "With its first N answers, this session now counts toward your week". A level range wider than 30 reads "still
+  settling", with the range in words.
+- The Daily's share line wraps and fits its lines at 360 and 390 px.
+- Guard: play.py run_first3 (390 x 844, and the Daily at 390 and 360) 8/0; play.py 275/0; fit.py 360 x 640 and
+  390 x 844 85/0; node 2237/0 (engine-w2 keepGoing); flows.py 71/1 (W2-measure's uncommitted probes; HEAD with these
+  changes passes check 19/0).
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with

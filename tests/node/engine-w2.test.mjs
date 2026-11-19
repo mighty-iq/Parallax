@@ -49,6 +49,41 @@ export async function run(t) {
   logCsv(t);
   produceScale(t);
   dailyUntimed(t);
+  keepGoing(t);
+}
+
+// "Keep going" (first-session fresh test): a session of today that does not count toward the week goes on under its
+// id, and finish() adds the new part to its record; a counted session, another day's, another mode's or a check's
+// starts a session of its own; two tabs keep the joined record.
+function keepGoing(t) {
+  t.section('modes: Keep going joins a short session of today (continueOf)');
+  const PX = mk(t), E = PX.engine, rec = newRecord(PX, T0);
+  const ex = PX.ex.list('train')[0].id;
+  const a = play(PX, rec, 'train', { now: T0, minutes: 20, pin: ex, count: 1 }, 5, () => ({ correct: true, rt: 2000 }));
+  const first = rec.sessions[rec.sessions.length - 1];
+  t.ok(a.res.session === first && first.trials === 5 && !E.streak.counts(first), 'a first part of 5 answers does not count (' + first.trials + ')');
+  const ms0 = rec.practiceMs, n0 = rec.sessions.length, p0 = first.practiceMs;
+  const b = play(PX, rec, 'train', { now: T0 + 120000, minutes: 20, pin: ex, count: 1, continueOf: first.id }, 5, () => ({ correct: true, rt: 2000 }));
+  const joined = rec.sessions.filter((s) => s.id === first.id);
+  t.ok(b.plan.id === first.id && b.plan.continues === first.id && b.steps.every((s) => s.sessionId === first.id), 'the second part runs under the first part\'s id');
+  t.ok(rec.sessions.length === n0 && joined.length === 1 && joined[0].trials === 10 && joined[0].right === 10 && E.streak.counts(joined[0]), 'one record of 10 answers, which counts toward the week');
+  t.ok(b.res.session === joined[0] && b.res.joined && b.res.joined.trials === 5, 'res.session is the joined record; res.joined holds the first part (' + JSON.stringify(b.res.joined) + ')');
+  t.ok(rec.practiceMs > ms0 && Math.abs((rec.practiceMs - ms0) - (joined[0].practiceMs - p0)) < 1, 'the practice total grows by the second part alone (' + (rec.practiceMs - ms0) + ' ms)');
+  t.ok(joined[0].summary && joined[0].summary.ex.length === 1 && joined[0].summary.ex[0][1] === 10 && joined[0].summary.ex[0][2] === 10, 'the compact summary adds the parts (' + JSON.stringify(joined[0].summary) + ')');
+  t.ok(b.res.streak && b.res.streak.week && b.res.streak.week.sessions === 1, 'the week counts it (' + JSON.stringify(b.res.streak.week) + ')');
+  const c = play(PX, rec, 'train', { now: T0 + 240000, minutes: 20, pin: ex, count: 1, continueOf: first.id }, 3, () => ({ correct: true, rt: 2000 }));
+  t.ok(c.plan.id !== first.id && !c.plan.continues, 'a session that counts already starts a session of its own');
+  const short2 = play(PX, rec, 'train', { now: T0 + 360000, minutes: 20, pin: ex, count: 1 }, 2, () => ({ correct: true, rt: 2000 })).res.session;
+  const d = play(PX, rec, 'train', { now: T0 + DAY, minutes: 20, pin: ex, count: 1, continueOf: short2.id }, 2, () => ({ correct: true, rt: 2000 }));
+  t.ok(d.plan.id !== short2.id, 'another day\'s session is not joined');
+  const e = play(PX, rec, 'free', { now: T0 + 400000, exId: ex, trials: 3, continueOf: short2.id }, 2, () => ({ correct: true, rt: 2000 }));
+  t.ok(e.plan.id !== short2.id, 'another mode\'s session is not joined');
+  // two tabs: the side with more answers keeps a joined record
+  const mine = JSON.parse(JSON.stringify(rec)), theirs = JSON.parse(JSON.stringify(rec));
+  const ti = theirs.sessions.findIndex((s) => s.id === first.id);
+  theirs.sessions[ti] = Object.assign({}, theirs.sessions[ti], { trials: 5, right: 5 });
+  const m1 = E.merge(theirs, mine), m2 = E.merge(mine, theirs);
+  t.ok([m1, m2].every((m) => m.sessions.filter((s) => s.id === first.id).length === 1 && m.sessions.find((s) => s.id === first.id).trials === 10), 'two tabs: the joined record wins in either order');
 }
 
 function defaults(t) {

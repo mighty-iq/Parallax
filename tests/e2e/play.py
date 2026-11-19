@@ -953,7 +953,9 @@ def run_captions(b, C):
     page.locator('[data-end]').click()
     page.wait_for_selector('.pl-summary', timeout=8000)
     short = page.locator('.pl-week-short')
-    C.ok(short.count() == 1 and '10 answers or 5 minutes' in short.inner_text(), f'{tag}: a session too short to count says why ({short.inner_text() if short.count() else None!r})')
+    rule = page.locator('.pl-week-short + .px-meta')
+    C.ok(short.count() == 1 and short.inner_text().endswith('more answers and this session counts toward your week.') and rule.count() == 1 and '10 answers or 5 minutes' in rule.inner_text(),
+         f'{tag}: a session too short to count says how many answers make it count, and the rule ({short.inner_text() if short.count() else None!r})')
     C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
 
@@ -1922,6 +1924,87 @@ def run_cubes2(b, C):
     ctx.close()
 
 
+def run_first3(b, C):
+    """The lead's third first-session run (390 x 844): after an answer, See solution comes with every right answer and
+    the buttons keep their place whatever note appears (notes sit between the verdict and the buttons); the first
+    summary says how many answers make a short session count and Keep going goes on with it, so its answers count
+    together; a wide range reads "still settling"."""
+    tag = 'first session 3'
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    # 1. the strip after a quick right answer, then with a note
+    go(page, {'mode': 'free', 'exId': 'spin', 'params': {'angle': 0, 'cells': 0, 'variant': 'samediff'}, 'trials': 5})
+    wait_state(page, 'respond')
+    page.evaluate('__play.answer(true)')
+    wait_state(page, 'reveal')
+    page.wait_for_timeout(300)
+    rect = """() => { const n = document.querySelector('[data-next]'), s = document.querySelector('[data-showme]'), r = n.getBoundingClientRect();
+      return { top: Math.round(r.top), left: Math.round(r.left), w: Math.round(r.width), see: !s.hidden && s.offsetParent !== null ? s.firstChild.textContent.trim() : null,
+        rt: __play.last && __play.last.rtMs }; }"""
+    r0 = page.evaluate(rect)
+    page.evaluate("""() => { const p = document.createElement('p'); p.className = 'px-meta'; p.setAttribute('data-test-note', '');
+      p.textContent = 'Stretch: an item set above your level (about one in 10), so a right answer counts for more. A second line to make the note taller.';
+      PX.ui.play.current().note(p); }""")
+    page.wait_for_timeout(300)
+    r1 = page.evaluate(rect)
+    order = page.evaluate("""() => { const v = document.querySelector('.pl-verdict').getBoundingClientRect(), n = document.querySelector('[data-test-note]').getBoundingClientRect(),
+      b = document.querySelector('[data-next]').getBoundingClientRect(); return v.bottom <= n.top + 1 && n.bottom <= b.top + 1; }""")
+    page.screenshot(path=str(OUT / 'first3_reveal_note.png'))
+    C.ok(r0['see'] == 'See solution' and r0['rt'] is not None and r0['rt'] < 3000, f'{tag}: See solution after a quick right answer too ({r0})')
+    C.ok(abs(r1['top'] - r0['top']) <= 1 and r1['left'] == r0['left'] and r1['w'] == r0['w'] and order, f'{tag}: a note goes between the verdict and the buttons, and Next item keeps its place ({r0} → {r1}; order {order})')
+    page.evaluate('__play.end()')
+    page.wait_for_timeout(300)
+    # 2. a first session of 5 answers: how many more make it count, Keep going, and the joined session
+    page.evaluate('PX.ui.play.config.budgetMs = 600000')
+    n0 = page.evaluate('PX.core.store.state.trials.length')
+    go(page, {'mode': 'train', 'exId': 'spin', 'count': 1, 'minutes': 30})
+    drive(page, f'PX.core.store.state.trials.length >= {n0 + 5}', right=1.0, limit=200)
+    page.evaluate('__play.end()')
+    page.wait_for_selector('.pl-summary', timeout=10000)
+    page.wait_for_timeout(300)
+    sm = page.evaluate("""() => { const m = document.querySelector('.pl-week-short[data-more]'), k = document.querySelector('[data-keep-going]'), st = document.querySelector('.pl-res-settling'),
+      lines = [...document.querySelectorAll('.pl-res .px-meta')].map((x) => x.textContent);
+      return { more: m ? m.getAttribute('data-more') : null, text: m ? m.textContent : null, keep: !!(k && k.offsetParent), settling: st ? st.textContent : null, range: st ? st.getAttribute('data-range') : null,
+        first: lines.find((x) => x.startsWith('A first level')) || null, n: (PX.core.store.state.sessions || []).length,
+        again: [...document.querySelectorAll('[data-again]')].map((x) => x.className) }; }""")
+    page.screenshot(path=str(OUT / 'first3_summary.png'), full_page=True)
+    C.ok(sm['more'] == '5' and sm['text'] == '5 more answers and this session counts toward your week.' and sm['keep'], f'{tag}: the first summary says 5 more answers make the session count, with Keep going ({sm})')
+    C.ok(sm['settling'] == 'still settling' and sm['first'] and sm['first'].startswith('A first level, likely between ') and 'narrows as you answer more' in sm['first'],
+         f'{tag}: the wide range reads "still settling", with the range in words ({sm["settling"]}, {sm["range"]}; {sm["first"]!r})')
+    C.ok(all('px-btn--secondary' in c for c in sm['again']), f'{tag}: Keep going is the one primary action; Another session is secondary ({sm["again"]})')
+    sid = page.evaluate('PX.core.store.state.sessions[PX.core.store.state.sessions.length - 1].id')
+    page.locator('[data-keep-going]').tap()
+    n1 = page.evaluate('PX.core.store.state.trials.length')
+    drive(page, f'PX.core.store.state.trials.length >= {n1 + 5}', right=1.0, limit=200)
+    page.evaluate('__play.end()')
+    page.wait_for_selector('.pl-summary', timeout=10000)
+    page.wait_for_timeout(300)
+    j = page.evaluate(f"""() => {{ const r = PX.core.store.state, mine = r.sessions.filter((s) => s.id === {json.dumps(sid)}), jn = document.querySelector('[data-joined]');
+      return {{ count: mine.length, trials: mine[0] ? mine[0].trials : null, n: r.sessions.length, joined: jn ? jn.textContent : null, more: !!document.querySelector('.pl-week-short[data-more]') }}; }}""")
+    page.screenshot(path=str(OUT / 'first3_joined.png'), full_page=True)
+    C.ok(j['count'] == 1 and j['trials'] == 10 and j['n'] == sm['n'] and not j['more'] and j['joined'] == 'With its first 5 answers, this session now counts toward your week.',
+         f'{tag}: Keep going joins the session: one record of 10 answers that counts, and the summary says so ({j})')
+    # 3. W3-game-2's request: the Daily's share line shows whole at 390 and 360 px (it wraps, and the box fits its lines)
+    go(page, {'mode': 'daily'})
+    drive(page, '!!document.querySelector(".pl-daily .px-copybox-text")', limit=300)
+    page.wait_for_timeout(400)
+    fitj = """() => { const t = document.querySelector('.pl-daily .px-copybox-text'), r = t.getBoundingClientRect();
+      return { w: innerWidth, sh: t.scrollHeight, ch: t.clientHeight, left: Math.round(r.left), right: Math.round(r.right), sw: t.scrollWidth, cw: t.clientWidth, line: t.value.length }; }"""
+    d390 = page.evaluate(fitj)
+    page.screenshot(path=str(OUT / 'first3_daily_390.png'), full_page=True)
+    page.set_viewport_size({'width': 360, 'height': 740})
+    page.wait_for_timeout(500)
+    d360 = page.evaluate(fitj)
+    page.screenshot(path=str(OUT / 'first3_daily_360.png'), full_page=True)
+    C.ok(all(x['sh'] <= x['ch'] + 1 and x['sw'] <= x['cw'] + 1 and x['left'] >= 0 and x['right'] <= x['w'] for x in (d390, d360)) and d360['ch'] >= d390['ch'],
+         f'{tag}: the Daily\'s share line shows whole, wrapped, at 390 and 360 px ({d390}; {d360})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def run_wave3(b, C):
     """Shared support for PLAN milestone 8 (CONTRACT-v1.2 Wave 3): a view with optionKeys 'letters' shows A–D on
     its options, a letter key and a digit both answer, the keys sheet and the view context name letters (W1); Free
@@ -2016,7 +2099,7 @@ def main():
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2, run_cubes2)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2, run_cubes2, run_first3)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue
