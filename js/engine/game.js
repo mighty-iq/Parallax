@@ -510,6 +510,39 @@
   }
   if (E.rebase && typeof E.rebase.register === 'function') E.rebase.register(convertReach);
 
+  /* ---------- the pooled export: a summary without days (CONTRACT-v1.2 M; review RV-wave2 #20) ---------- */
+
+  // What the community needs to see what the game layer does to practice: Reach and its parts, grades, the
+  // Atlas counts per exercise@version, the number of firsts, Climb runs by Climb number (never a week's date)
+  // and the Daily's counts and points histogram. No local day or week key, no text. The container itself
+  // stays out of the pooled export (its weeks are local); this is the header 'gameSummary'.
+  function summary(rec) {
+    if (!isObj(rec)) return null;
+    var g = isObj(rec.game) ? rec.game : {}, R = reach(rec), parts = {}, gradesOut = {}, atlasOut = {};
+    R.parts.forEach(function (p) { if (p.best > 0) parts[p.exId] = p.best; });
+    trainDefs().forEach(function (def) {
+      var b = bestOf(rec, def.id), a = atlas(rec, def);
+      if (b) gradesOut[def.id] = gradeOf(b.level);
+      if (a && a.tried) atlasOut[def.id + '@' + (def.version || 1)] = [a.handled, a.tried, a.total];
+    });
+    var runs = [], cw = isObj(g.climb) && isObj(g.climb.w) ? g.climb.w : {};
+    Object.keys(cw).sort().forEach(function (wk) {
+      if (!WEEK_RE.test(wk) || !isObj(cw[wk])) return;
+      Object.keys(cw[wk]).sort().forEach(function (a) {
+        var x = cw[wk][a];
+        if (isObj(x) && isNum(x.h) && isNum(x.m)) runs.push([E.climb ? E.climb.number(wk) : null, a, x.h, x.m, x.p === 1 ? 0 : 1]);
+      });
+    });
+    var dh = E.daily && E.daily.history ? E.daily.history(rec) : null;
+    return {
+      v: 1, reach: R.value, parts: parts, grades: gradesOut, atlas: atlasOut, firsts: isArray(g.firsts) ? g.firsts.filter(firstOk).length : 0,
+      climb: { runs: runs, pb: isObj(g.climb) && isObj(g.climb.pb) && isNum(g.climb.pb.h) ? g.climb.pb.h : null, columns: ['climb', 'attempt', 'height', 'misses', 'done'] },
+      daily: dh ? { played: dh.played, archive: dh.archive, ramp: { n: dh.ramp.n, hist: dh.ramp.hist }, plain: { n: dh.plain.n } } : null,
+    };
+  }
+  var S0 = PX.core && PX.core.store;
+  if (S0 && typeof S0.header === 'function') S0.header('gameSummary', function (ctx) { return summary(ctx && ctx.rec); });
+
   // The start hook seeds the Atlas of a record from before the game layer, before its first item (so a
   // block end can name this session's firsts); the finish hook (after the session is stored, before the
   // weekly goal and achievements; CONTRACT Q) counts the session.
@@ -530,7 +563,7 @@
   E.game = {
     ATLAS: ATLAS, RANKS: RANKS, game: game, gradeOf: gradeOf, band: band, bestOf: bestOf, grades: grades, reach: reach, rank: rank,
     atlasDims: atlasDims, cellOf: cellOf, tail: tail, handledBy: handledBy, atlas: atlas, cellEase: cellEase, displayFor: displayFor,
-    withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair, firstOk: firstOk, pending: pending,
+    withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair, firstOk: firstOk, pending: pending, summary: summary,
     _: { tally: tally, seedAtlas: seedAtlas, slotOf: slotOf, chanceOf: chanceOf, atlasMode: atlasMode, trainDefs: trainDefs, reachDefs: reachDefs, defOf: defOf, near: near, convertReach: convertReach },
   };
 })(window.PX);
