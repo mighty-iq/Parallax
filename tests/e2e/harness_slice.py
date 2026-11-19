@@ -10,6 +10,7 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_slice.py   (two browser slot
    Replay; the tutorial demo plays to the end with captions; a context loss voids the trial
 3. the harness inlined into a sandboxed srcdoc iframe renders and plays by keyboard
 4. no console errors anywhere
+5. (v1.2) over 45 items at each size no point of the picture lies under the stage's labels
 Screenshots: tests/e2e/out/slice/slice_<case>_<viewport>_<theme>[_reveal|_wrong|_showme].png """
 import sys
 
@@ -101,6 +102,27 @@ def show_me(frame, tag, key='s', page=None, click=None):
     return ms
 
 
+def labels_clear(page, tag, n=45):
+    """v1.2 (W3-exfix, fresh-player test g1): no point of the trial picture (the solid and the plane's
+    square) lies under the stage's labels "Solid" and "Cutting plane", over n items of every kind."""
+    worst, moved, shrunk, low = None, 0, 0, []
+    for i in range(n):
+        p = {'structure': i % 3, 'cut': (i // 3) % 3, 'curved': (i // 9) % 2}
+        page.evaluate('([p, s]) => __harness.next(p, s)', [p, 300 + i])
+        page.wait_for_function(READY, timeout=40000)
+        lab = page.evaluate("() => PX.ex.view('slice').inspect().labels")
+        gap = lab['gap']
+        if gap is not None:
+            worst = gap if worst is None else min(worst, gap)
+        if lab['dy'] > 0.5:
+            moved += 1
+        if lab['bottom'] > lab['H'] + 0.5:
+            low.append((i, lab))
+    print(f'  {tag}: least room under the labels {worst} px; {moved} of {n} pictures moved down', flush=True)
+    C.ok(worst is None or worst >= 0, f'{tag}: over {n} items no point of the picture lies under a label (least room {worst} px; {moved} pictures moved down)')
+    C.ok(not low, f'{tag}: a picture moved down stays inside the stage ({low[:3]})')
+
+
 def desktop_and_phone(b, cons):
     for vp, tag, kw in [((1366, 768), '1366', {}), ((412, 880), '412', {'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True})]:
         ctx = b.new_context(viewport={'width': vp[0], 'height': vp[1]}, **kw)
@@ -136,6 +158,9 @@ def desktop_and_phone(b, cons):
                     shot(page, name + '_showme.png')
                 errs = page.evaluate('() => __harness.errors')
                 C.ok(not errs, f'{name}: no harness errors ({errs})')
+        page.goto(file_url('tests/dev/harness.html', ex='slice', seed=300, p='structure:0,cut:0,curved:0', fast=1))
+        page.wait_for_function(READY, timeout=40000)
+        labels_clear(page, f'labels {tag}')
         ctx.close()
 
 
