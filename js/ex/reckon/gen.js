@@ -646,6 +646,12 @@
     return out;
   }
 
+  // v1.2 wave 2 (W2-bets' request; CONTRACT-v1.2 conflict 9): does the reveal show the calibration detail (the
+  // bias line and the habit chart)? Yes on calib-detail items (the player sets ctx.layer: players outside the bet
+  // trials always, and the detail arm) and where the host passes no layer at all (the dev harness); not in the
+  // plain arm ('' or another layer), which keeps this answer's own errors.
+  function showDetail(ctx) { return !ctx || ctx.layer === undefined || ctx.layer === 'calib-detail'; }
+
   /* ------------------------------------------------------------ timing */
   var RESPONSE_MS = 5000;   // typical time to turn to face the start and confirm
   var STOP_MS = 2000;       // after the walk back: stopping and confirming
@@ -670,6 +676,7 @@
     id: 'reckon', version: 2, code: 'EX-12', name: 'Reckon (experimental)', short: 'Reckon', experimental: true,
     abilities: ['NAV'], cell: 'extrinsic-dynamic', role: 'train', answer: 'angle', answers: { point: 'angle', return: 'position' },
     bet: 'calibrate', format: { point: 'reckon:walk-point-start', return: 'reckon:walk-back-start' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
+    layers: { calib: true }, // v1.2 wave 2 (W2-bets' request of 22:10 UTC): the bias line and habit chart in view.js are the calibration-detail arm
     perDisplay: true, variants: VARIANTS.slice(), extraParams: ['task'],
     requires: ['homing'], // its route model (gen.js) and its 3D kit (view.js): load Homing's files first
     dims: [
@@ -693,7 +700,7 @@
       LEAD_MS: LEAD_MS, MAX_MOTION: MAX_MOTION, RESPONSE_MS: RESPONSE_MS, STOP_MS: STOP_MS, MEAN_PATH: MEAN_PATH, MEAN_D: MEAN_D, HEADING_TURN: HEADING_TURN, DIST_LEG: DIST_LEG,
       TASK_RATE: TASK_RATE, TASK_SPEED: TASK_SPEED,
       LEGS_LEVELS: LEGS_LEVELS, ROT: ROT, LEG2: LEG2, PATH2: PATH2, SEP_PAD: SEP_PAD, D_MIN: D_MIN, D_MIN_RETURN: D_MIN_RETURN, LEG_CELLS: LEG_CELLS,
-      legCell: legCell, halfWidth: halfWidth, keySep: keySep, dMinOf: dMinOf, buildLegs: buildLegs, legOk: legOk, drawRot: drawRot, checkAlts: checkAlts,
+      legCell: legCell, halfWidth: halfWidth, keySep: keySep, dMinOf: dMinOf, buildLegs: buildLegs, legOk: legOk, drawRot: drawRot, checkAlts: checkAlts, showDetail: showDetail,
       MARGIN: MARGIN, SAFE: SAFE, HIST_N: HIST_N, stats: stats, homing: H,
       normParams: normParams, routeCost: routeCost, tolDeg: tolDeg, axisGap: axisGap, shortcuts: shortcuts, shortcutsMiss: shortcutsMiss, spreads: spreads,
       build: build, assemble: assemble, speedPlan: speedPlan, drawSpeeds: drawSpeeds, taskItem: taskItem, fallback: fallback, keyXZ: keyXZ,

@@ -549,6 +549,13 @@ export async function run(t) {
 
   t.section('reckon: the player\'s own errors (bias over the last 20 routes)');
   {
+    // v1.2 wave 2 (W2-bets' request; CONTRACT-v1.2 conflict 9): the bias line and the habit chart are the
+    // calibration-detail arm; the plain arm keeps the answer's own errors
+    const sd = L.showDetail, src = readFileSync(new URL('../../js/ex/reckon/view.js', import.meta.url), 'utf8');
+    t.ok(typeof sd === 'function' && sd({ layer: 'calib-detail' }) && !sd({ layer: '' }) && !sd({ layer: 'produce' }) && sd({}) && sd(null),
+      'the detail shows on calib-detail items and where no layer is passed (the dev harness), not in the plain arm');
+    t.ok(def.layers && def.layers.calib === true && /var detail = lib\(\)\.showDetail\(st\.ctx\)/.test(src) && /item\.task \|\| !detail \? '' : biasLine\(\)/.test(src) && /item\.task \|\| !detail \? null : chart\(item\)/.test(src),
+      'Reckon hosts the calib layer, and its reveal gates the bias line and the chart on it');
     const mkE = (k, q, d, r) => [0, r >= 0 ? 1 : 0, k, q, d, r, 20, 0];
     const over = Array.from({ length: 20 }, (_, i) => mkE(i % 2 ? 100 : 260, i % 2 ? 115 : 245, 10, i % 4 === 1 ? 8 : -1));
     const b = L.bias(over, 20);
