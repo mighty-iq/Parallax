@@ -116,3 +116,30 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   Node 82 checks (10,008 items; cheap answers pooled 16-32 %, two scoped cells 42-50 %, DECISIONS); fit.py's Spatial
   Check part at 360 x 640 (right and wrong), 390 x 844, 412 x 915 and 844 x 390; check.py 59/0;
   harness_cubematch.py 83/0; engine and measurement suites 2,819/0.
+
+## 2026-11-19 09:44 UTC: Mechanisms version 2 (the lead's go, morning)
+- da06744, cc3f0ef: one question with natural answers: which way the marked part turns and whether faster or slower
+  than the driver (four answers), or that it cannot turn (the fifth; jams kept, at 1/3 of the jam level's items);
+  the weight question dropped (DECISIONS: both). Speed only on items where wheel size alone does not give it (the
+  driver's wheel and the marked one differ in size, and the size rule is wrong on half the speed items). Version 1's
+  range in def.past. Node 57/0 (10,080 items; an independent solver agrees; shortcuts per structure level within
+  chance + 10); fit.py's Spatial Check part at 360 x 640 (right and wrong, 10/10), 390 x 844 and 844 x 390 (5/5);
+  check.py 60/0; harness_mechanisms.py 177/0; five answers fit a 360 x 640 phone with words only.
+
+## 2026-11-19 10:24 UTC: Pattern Memory version 2, scored by cells (simulated first)
+- Simulation (tests/node/measure-cells.mjs; measure-sim.md §12): a truth with a pattern-level ease shared by its
+  squares (SD 0.5–1.5), guesses on forgotten squares and level errors. A fixed-weight fractional score was not
+  honest across the ease spread; the testlet model (a binomial over the squares, integrated over the pattern's ease,
+  tau 1.5) is, at or below version 1's own over-claim in every case. The gain comes from the aim: items at a
+  whole-pattern chance of 0.35 carry ×2.0–3.4 per 5-item block (×1.6–2.0 at the widest spread) and ×3.0–4.4 in
+  2-item blocks; at version 1's 0.6 only ×0.9–1.4. Note M1's ×2 holds, simulated, not yet on pooled data.
+- 7a0da99: E.trend.cells (logp, si, delta); rows [b, g, ok, rtMs, s, k]; the check's posterior and the trend
+  input under it; def.measureK 0.35; scattered patterns split evenly between the checkerboard colours (within 2);
+  rule 5 per level for blind answers, six small or scattered levels scoped at chance + 25 (DECISIONS: three lines);
+  a blind answer reads −3.70 in a 5-item check. The card says a wrong mark costs as much as a missed square.
+- d458d55 check.py 61/0; fit.py's Spatial Check part for patterns at 360 x 640 (10/10) and 390 x 844 (5/5);
+  harness_patterns.py 102/0; the instruction card looked at on both phones. 226259c: the information tables in one
+  pass (cold 83 → 30 ms in Node; warm fits as fast as exact items). Node: patterns, measure, trend 498/0; engine,
+  measurement and UI suites pass, except section.test's three Form fallback items (W1-band-B's Form work, not mine).
+- Open: tau and the scoped levels' bias are for pooled data; the positional lean of small grids (corners on
+  scattered 3 x 4) is a generator property worth a look if Pattern Memory gets a version 3.
