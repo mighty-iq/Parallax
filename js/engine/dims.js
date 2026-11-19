@@ -29,7 +29,7 @@
            right at g + (1 − g)·k or better (opts.k, default the level reference 0.75; opts.sd: average over
            the rating's spread as item choice does; opts.st: a rating; opts.filter: candidates allowed)
      lead(rec, def, display, opts) → { dim, key, level } | null   the leading dimension next in turn and
-           its frontier level at the item target (opts.k, opts.st)
+           its frontier level at the item target (opts.k, opts.st), off the scoped cells as the leads are
      room(plan) → how many more of the current deck's target items may change kind (conflict 10: 3 of 8)
      fluencyOpen(rec, def, display) → bool      Speed is open for the exercise (and it has no Quick deadline)
      timedStep(plan, rec, def, step, now)       a fluency step's timed difficulty, prediction and target
@@ -41,8 +41,10 @@
    kind taken back); the deck's easy item becomes a fluency item where Speed was open at the start
    (ctx.share.fluency, config.dims.fluency of a deck by default; more than the easy item comes from target
    items, within room()). pick (order 10): the person pool; a leading item's level filter; a fluency
-   item's fluent zone, aim and Speed deadline. finish (order 10): the fit for every exercise answered in a
-   Train or Path session (res.dims). */
+   item's fluent zone, aim and Speed deadline. pick (order 90, the last): a leading or fluency item's
+   filter, as the hooks after order 10 left it, keeps off the scoped shortcut cells and keeps a candidate
+   (scopedPick). finish (order 10): the fit for every exercise answered in a Train or Path session
+   (res.dims). */
 (function (PX) {
   'use strict';
 
@@ -539,7 +541,7 @@
     var d = leadIndex(inf, s ? s.lead : null), dm = inf.dims[d];
     var st = opts.st || E.est.get(rec, def, { display: display }), k = isNum(opts.k) ? opts.k : M.styleK(C.style);
     var list = (pool(rec, def, display) || M.poolEntry(def)).list;
-    var filter = opts.filter === undefined ? trainFilter(def) : opts.filter;
+    var filter = offScoped(def, opts.filter === undefined ? trainFilter(def) : opts.filter); // as leadPlan
     var lv = hardestHandled(dm, easiest(list, d, dm.L, filter), st, k, true, C.select.tol);
     return { dim: d, key: dm.key, level: lv };
   }
@@ -589,7 +591,7 @@
     };
     var list = (pe || M.poolEntry(def)).list, any = false;
     for (var q = 0; q < list.length && !any; q++) if (ok(list[q])) any = true;
-    if (!any) return { kind: 'easy' }; // nothing fluent in this run's settings: the deck's easy item after all
+    if (!any) { o.kind = 'easy'; return { kind: 'easy' }; } // nothing fluent in this run's settings: the deck's easy item after all (o.kind too, which scopedPick reads)
     var refRt = isNum(tm.refRt) && tm.refRt > 0 ? tm.refRt : E.speed.untimedRt(rec, def);
     var sameV = (typeof tm.variant === 'string' ? tm.variant : null) === tg.variant;
     var dl = sameV && isNum(tm.deadline) && tm.deadline > 0 ? tm.deadline : S.startFactor * refRt;
@@ -705,6 +707,33 @@
     return null;
   }
 
+  // The last pick hook (order 90): a leading or fluency item stays off the scoped shortcut cells however
+  // the hooks after order 10 left its filter (a plateau's wider mix or variant swap replaces it, which
+  // dropped the exclusion), and its filter keeps a candidate, so modes' fallback, which drops every filter,
+  // never deals it. When nothing off the cells passes the filter, the fallback's own steps are taken here
+  // off the cells: the exercise's Train variants, then any setting. Exercises without such cells, and
+  // every other kind, are left as they were. (Cells that only the seed names: seedFor, in MODES.train.next.)
+  function scopedPick(plan, rec, def, o, ctx) {
+    if (!def || !isObj(o) || (o.kind !== 'lead' && o.kind !== 'fluency') || !hasParamCells(def)) return null;
+    var list = o.pool && isArray(o.pool.list) && o.pool.list.length === M.pool(def).length ? o.pool.list : M.pool(def);
+    var f = offScoped(def, o.filter);
+    if (!anyPasses(list, f)) {
+      f = offScoped(def, E.modes._.autoFilter(def, null));
+      if (!anyPasses(list, f)) f = offScoped(def, null);
+      if (!anyPasses(list, f)) return null; // every setting is a scoped cell: never a dead end
+    }
+    o.filter = f;
+    return null;
+  }
+  function hasParamCells(def) {
+    for (var i = 0; i < SCOPED.length; i++) if (SCOPED[i].ex === def.id && SCOPED[i].when) return true;
+    return false;
+  }
+  function anyPasses(list, f) {
+    for (var q = 0; q < list.length; q++) if (f(list[q])) return true;
+    return false;
+  }
+
   // At a Train session's start: whether Speed is open for each of its exercises (fluency items then).
   function startHook(plan, rec) {
     var D = cfg();
@@ -732,10 +761,12 @@
     if (res) res.dims = out;
   }
 
+  var offScopedPick = null;
   if (E.modes && typeof E.modes.hook === 'function') {
     E.modes.hook('start', startHook, { id: 'dims.open', order: 10 });
     E.modes.hook('kind', kindHook, { id: 'dims.kind', order: 10 });
     E.modes.hook('pick', pickHook, { id: 'dims.pick', order: 10 });
+    offScopedPick = E.modes.hook('pick', scopedPick, { id: 'dims.scoped', order: 90 });
     E.modes.hook('finish', finishHook, { id: 'dims.fit', order: 10 });
   }
 
@@ -743,6 +774,9 @@
     state: state, fit: fit, b: bOf, pool: pool, frontier: frontier, lead: lead, room: room,
     fluencyOpen: fluencyOpen, timedStep: timedStep, fluencyAnswer: fluencyAnswer,
     scoped: SCOPED, isScoped: isScoped, seedFor: seedFor, // the scoped shortcut cells (CLAUDE.md rule 5), for the tests too
-    _: { info: info, rowsFor: rowsFor, solve: solve, offsetOf: offsetOf, priorSd: priorSd, capStep: capStep, kindHook: kindHook, pickHook: pickHook, finishHook: finishHook, startHook: startHook },
+    _: { info: info, rowsFor: rowsFor, solve: solve, offsetOf: offsetOf, priorSd: priorSd, capStep: capStep, kindHook: kindHook, pickHook: pickHook, finishHook: finishHook, startHook: startHook,
+      scopedPick: scopedPick,
+      // tests only: removes the order-90 hook in this context, to show what it guards (tests/node/dims-scoped.test.mjs)
+      unhookScoped: function () { if (offScopedPick) { offScopedPick(); offScopedPick = null; } } },
   };
 })(window.PX);
