@@ -686,14 +686,18 @@
     store.save();
     store.flush();
     function step(n, name, text) { return h('li.px-offer-step', h('span.px-num', n), h('b', name), h('span', text)); }
-    // the length from each tutorial's own estimate (PX.ui.tour.minutes; fresh-player round 4)
-    var tm = PX.ui.tour && typeof PX.ui.tour.minutes === 'function' ? PX.ui.tour.minutes() : { words: 'a few minutes', short: '' };
+    // the length from the tutorial's own estimate (PX.ui.tour.minutes; fresh-player round 4); one exercise, then the
+    // starting point (now or later) and training (the owner's first-session choice of 19 Nov; js/ui/tour.js)
+    var tm = PX.ui.tour && typeof PX.ui.tour.minutes === 'function' ? PX.ui.tour.minutes() : { words: 'a few minutes', short: '', names: '' };
+    var Mq = PX.ui.measure, b1 = null;
+    try { b1 = Mq && Mq.minutesOf ? Mq.minutesOf('B1', R) : null; } catch (e) { b1 = null; }
     return ui.modal({
       title: 'New here?',
       className: 'px-offer',
       body: [
-        h('p', 'Watch, Try, Go walks you through Rotate, Fold and Track in about ' + tm.words + '. You can skip any step.'),
+        h('p', 'Watch, Try, Go teaches you ' + (tm.names ? tm.names + ', your first exercise,' : 'your first exercise') + ' in about ' + tm.words + '. You can skip any step.'),
         h('ol.px-offer-steps', step('1', 'Watch', 'A slow demo of the solution'), step('2', 'Try', 'Practice items that don’t count'), step('3', 'Go', 'Your sessions start with easy items that count')),
+        h('p.px-meta', 'Before training you can measure your starting point' + (b1 ? ' (about ' + (b1 % 1 ? b1.toFixed(1) : b1) + ' minutes, no feedback)' : '') + ', or leave it for later.'),
       ],
       actions: [
         { label: 'Skip', value: 'skip', kind: 'secondary', className: 'px-offer-skip' },

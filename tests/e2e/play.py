@@ -1300,41 +1300,24 @@ def run_gamefeel(b, C):
 
 
 def run_round4(b, C):
-    """Fresh-player round 4 (a new player's first session, phone 390 x 844): the tour's length from each
-    tutorial's own estimate; the walkthrough button's words follow what a tap does and Close leaves no
-    caption; the tour's step indicator whole, one Pause during Track, Track's label on a chip; the tour's
-    Track Try items at the first band."""
+    """Fresh-player round 4 (a new player's first session, phone 390 x 844): the step indicator whole, one
+    Pause during Track, Track's label on a chip (in Track's own Watch, Try, Go since the first-run tutorial is
+    one exercise: run_firstrun); the walkthrough button's words follow what a tap does and Close leaves no
+    caption."""
     tag = 'round 4'
     ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
     page = ctx.new_page()
     con = Console(page)
-    page.goto(INDEX.as_uri())
-    page.wait_for_function(READY, timeout=20000)
-    page.evaluate('PX.ui.hooks && PX.ui.hooks.mute(true)')
-    for _ in range(3):  # the Chimera welcome first; the tour offer comes after it
-        if page.locator('.px-modal.px-offer').count():
-            break
-        page.keyboard.press('Escape')
-        page.wait_for_timeout(200)
-    tm = page.evaluate('PX.ui.tour.minutes()')
-    go_txt = page.locator('.px-offer-go').inner_text().strip()
-    body = page.locator('.px-modal.px-offer').inner_text()
-    C.ok(tm['minutes'] >= 5 and go_txt == f"Watch, Try, Go ({tm['minutes']} min)" and f"about {tm['words']}" in body,
-         f'{tag}: the tour offer gives the tutorials\' own length ({go_txt!r}; {tm})')
-    page.locator('.px-offer-go').click()
-    page.wait_for_selector('[data-wtg="rotate"]', timeout=8000)
-    page.evaluate('PX.debug.fast(true)')
-    for ex in ('rotate', 'fold'):
-        page.wait_for_selector(f'[data-wtg="{ex}"]', timeout=15000)
-        page.locator('[data-wtg-skip]').click()
+    boot(page)
+    go(page, {'mode': 'watch', 'exId': 'track'})
     page.wait_for_selector('[data-wtg="track"]', timeout=15000)
     page.wait_for_timeout(300)
     steps = page.evaluate("""(() => { const ol = document.querySelector('.pl-wtg-steps'), r = ol.getBoundingClientRect();
       return { over: ol.scrollWidth - ol.clientWidth, pills: [...ol.children].map((li) => Math.round(li.getBoundingClientRect().right - r.right)) }; })()""")
-    C.ok(steps['over'] <= 1 and all(x <= 1 for x in steps['pills']), f'{tag}: the tour\'s step indicator shows its three steps whole at 390 px ({steps})')
+    C.ok(steps['over'] <= 1 and all(x <= 1 for x in steps['pills']), f'{tag}: the step indicator shows its three steps whole at 390 px ({steps})')
     tries = []
     for _ in range(400):
-        if page.locator('[data-tour-end]').count() == 0 or page.evaluate("!document.querySelector('[data-wtg=\"track\"]')"):
+        if page.evaluate("!document.querySelector('[data-wtg=\"track\"]')"):
             break
         st = state(page)
         nb = page.locator('.ex-track-notice:not([hidden]) .px-btn')
@@ -1346,9 +1329,6 @@ def run_round4(b, C):
             if vis:
                 tries.append(('pause', vis))
         elif st == 'respond':
-            it = page.evaluate("({ p: __play.item.params, practice: !!PX.ui.play.current().cfg.practice, demo: !!PX.ui.play.current().cfg.demo })")
-            if it['practice'] and not it['demo']:
-                tries.append(('try', it['p']))
             page.evaluate('__play.answer(true).catch(() => 0)')
         elif st in ('reveal', 'showme'):
             page.evaluate('__play.next()')
@@ -1356,9 +1336,6 @@ def run_round4(b, C):
         if cb.count():
             cb.first.click()
         page.wait_for_timeout(60)
-    first = page.evaluate("(() => { const L = PX.ex.learn('track'), x = L.practice[0]; return x.params || x; })()")
-    tp = [x[1] for x in tries if x[0] == 'try']
-    C.ok(len(tp) >= 3 and all(all(p.get(k) == v for k, v in first.items()) for p in tp), f'{tag}: the tour\'s Track Try items stay at the first band ({len(tp)} items; {tp[-1:]} vs {first})')
     pv = [x[1] for x in tries if x[0] == 'pause']
     C.ok(pv and all(v[0] == 'hidden' and v[1] not in ('rgba(0, 0, 0, 0)', 'transparent') for v in pv), f'{tag}: during Track\'s stimulus one Pause shows (the title row\'s steps aside) and its label sits on a chip ({pv[:1]})')
     C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
@@ -1399,12 +1376,165 @@ def run_round4(b, C):
     ctx.close()
 
 
+FIRSTRUN_CARDS = '''(() => { window.__cards = []; const seen = new Set();
+  new MutationObserver(() => { for (const el of document.querySelectorAll('[data-card-box]')) { const id = el.getAttribute('data-card-box');
+    if (!seen.has(el)) { seen.add(el); __cards.push(id); } } }).observe(document.documentElement, { subtree: true, childList: true }); })()'''
+
+
+def firstrun_start(b, C, tag, shots_on):
+    """A fresh record at 390 x 844 with every builder's hook on (a new player's view): the welcome, then the offer."""
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    page.goto(INDEX.as_uri())
+    page.wait_for_function(READY, timeout=20000)
+    page.evaluate('document.fonts.ready.then(() => 1)')
+    C.ok(page.locator('.px-modal[data-welcome]').count() == 1, f'{tag}: the full Chimera welcome opens first')
+    page.keyboard.press('Escape')
+    page.wait_for_selector('.px-modal.px-offer', timeout=4000)
+    page.wait_for_timeout(250)
+    if shots_on:
+        page.screenshot(path=str(OUT / 'firstrun_1_offer.png'))
+    return ctx, page, con
+
+
+def run_firstrun(b, C):
+    """The owner's first-session choice A (19 Nov), at 390 x 844 on a fresh record: the welcome → one tutorial
+    (Spin's Watch, Try, Go; the offer gives its length and names the exercise) → the end screen offers the
+    starting point with its time and Later → Train, both ways: Later trains at once (the put-off logged, no
+    baseline card in that session, the session opens with Spin); Measure now plays Baseline 1 first with no
+    second ask (the expectation question, then the probes), then trains. Screenshots: out/play/firstrun_*.png."""
+    tag = 'first run'
+    ctx, page, con = firstrun_start(b, C, tag, True)
+    tm = page.evaluate('PX.ui.tour.minutes()')
+    b1 = page.evaluate("PX.ui.measure.minutesOf('B1', PX.core.store.state)")
+    b1t = (f'{b1:.1f}' if b1 % 1 else str(int(b1))) if b1 else None
+    body = page.locator('.px-modal.px-offer').inner_text()
+    go_txt = page.locator('.px-offer-go').inner_text().strip()
+    C.ok(page.evaluate('PX.ui.tour.LIST') == ['spin'] and tm['names'] == 'Spin' and tm['minutes'] <= 3 and go_txt == f"Watch, Try, Go ({tm['minutes']} min)"
+         and 'Spin' in body and f"about {tm['words']}" in body and b1t and f'about {b1t} minutes' in body,
+         f'{tag}: the offer names the one exercise, its own length and the starting point\'s time ({go_txt!r}; {tm}; B1 {b1})')
+    page.locator('.px-offer-go').tap()
+    page.wait_for_selector('[data-wtg="spin"]', timeout=8000)
+    page.evaluate(FIRSTRUN_CARDS)
+    lead = page.locator('.pl-wtg-lead').inner_text().strip()
+    tools = page.locator('.pl-wtg-tools .px-btn:visible').all_inner_texts()
+    C.ok(page.evaluate('PX.core.router.current().params.mode') == 'tour' and lead == 'Your first exercise: Spin' and page.locator('[data-tour-end]').count() == 0
+         and [t.strip() for t in tools if t.strip() != 'Parts'] == ['Skip the tutorial'], f'{tag}: one tutorial, Spin, with one way out ({lead!r}; {tools})')
+    page.wait_for_function('__play.state === "showme"', timeout=15000)
+    page.wait_for_timeout(600)
+    page.screenshot(path=str(OUT / 'firstrun_2_watch.png'))
+    page.evaluate('PX.debug.fast(true)')
+    for _ in range(60):  # the walkthrough waits for a tap per caption
+        if page.evaluate('__play.played && __play.played.demos >= 1'):
+            break
+        nx = page.locator('[data-showme-next]')
+        if nx.count() and nx.first.is_visible():
+            nx.first.tap()
+        page.wait_for_timeout(150)
+    C.ok(page.evaluate('__play.played && __play.played.demos >= 1'), f'{tag}: the Watch demo plays')
+    ok = drive(page, '!!document.querySelector("[data-card-box=baseline]")', limit=300, right=1.0)
+    C.ok(ok, f'{tag}: the tutorial ends with the starting-point card')
+    page.wait_for_timeout(300)
+    page.screenshot(path=str(OUT / 'firstrun_3_end.png'))
+    page.screenshot(path=str(OUT / 'firstrun_3_end_full.png'), full_page=True)
+    end = page.evaluate("""(() => ({ h1: document.querySelector('.pl-screen h1:not(.px-sr)') ? document.querySelector('.pl-screen h1:not(.px-sr)').textContent : '',
+      go: !!document.querySelector('.pl-go-steps .is-current'), card: document.querySelector('[data-card-box=baseline]').innerText,
+      btns: [...document.querySelectorAll('[data-card-box=baseline] [data-card]')].map((x) => [x.getAttribute('data-card'), x.textContent.trim().replace(/Enter$/, '')]),
+      invite: document.querySelectorAll('[data-invite="tutorial"]').length, over: document.documentElement.scrollWidth - innerWidth,
+      rows: PX.core.store.state.trials.length, tour: PX.core.store.state.tour.done, ui: PX.core.store.state.ui.tour }))()""")
+    C.ok(end['h1'] == 'Go: Spin for real' and end['go'] and end['rows'] == 0 and end['tour'] is True and end['ui']['done'] == ['spin'],
+         f'{tag}: the end screen is Go, nothing logged, the flags set ({end["h1"]!r}; {end["ui"]})')
+    C.ok(end['btns'] == [['later', 'Later'], ['now', f'Measure now ({b1t} min)']] and f'About {b1t} minutes, no feedback' in end['card'] and 'next session opens with the check' in end['card'],
+         f'{tag}: the starting point with its honest time and Later ({end["btns"]})')
+    small = page.evaluate(TARGETS_JS)
+    C.ok(end['invite'] == 1 and end['over'] <= 0 and not small, f'{tag}: the Chimera invite at the tutorial\'s end; no sideways scroll; targets 44 px ({end["over"]}; {small[:3]})')
+    # Later → Train at once: the put-off logged, no baseline card this session, Spin first
+    page.locator('[data-card-box=baseline] [data-card="later"]').tap()
+    page.wait_for_timeout(300)
+    rp = page.evaluate('PX.core.router.current().params')
+    for _ in range(80):
+        st = state(page) if page.evaluate('!!window.__play') else None
+        if st == 'respond':
+            break
+        if card(page):
+            page.locator('[data-card-box] .px-btn--primary').first.tap()
+        page.wait_for_timeout(100)
+    page.wait_for_timeout(250)
+    page.screenshot(path=str(OUT / 'firstrun_4_later_train.png'))
+    lat = page.evaluate("""(() => { const r = PX.core.store.state, ev = PX.engine.events ? PX.engine.events.list(r, { kind: 'measure' }) : [];
+      return { later: r.measure && r.measure.later, ev: ev.map((e) => e.data && e.data.what), ex: __play.exId, st: __play.state,
+        next: PX.ui.measure.status(r, Date.now()), cards: __cards.slice() }; })()""")
+    C.ok(rp.get('mode') == 'train' and rp.get('exId') == 'spin' and rp.get('baseline') == 'later' and isinstance(lat['later'], (int, float)) and 'baseline-later' in lat['ev'],
+         f'{tag}: Later opens Train with Spin and logs the put-off ({rp}; {lat["ev"]})')
+    C.ok(lat['st'] == 'respond' and lat['ex'] == 'spin' and 'measure-offer' not in lat['cards'] and 'expect' not in lat['cards'] and lat['next']['kind'] == 'B1' and lat['next']['when'] == 'session-start',
+         f'{tag}: the session trains Spin at once; no baseline card in it; the next session opens with it ({lat["cards"]}; {lat["next"]["when"]})')
+    for i in range(2):  # two scored Spin items
+        page.evaluate('__play.answer(true).catch(() => 0)')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+        page.evaluate('__play.next()')
+        page.wait_for_timeout(200)
+    rows = page.evaluate("(() => { const r = PX.core.store.state, mi = r.idx.mode.indexOf('train'); return r.trials.filter((t) => t[2] === mi).length; })()")
+    C.ok(rows >= 2 and 'measure-offer' not in page.evaluate('__cards'), f'{tag}: training counts ({rows} Train rows) and still no baseline card')
+    C.ok(not con.errors(), f'{tag} (Later): no console errors {con.errors()[:3]}')
+    ctx.close()
+
+    # Measure now (the tutorial skipped this time): Baseline 1 first, with no second ask, then Train
+    tag = 'first run, measure now'
+    ctx, page, con = firstrun_start(b, C, tag, False)
+    page.locator('.px-offer-go').tap()
+    page.wait_for_selector('[data-wtg="spin"]', timeout=8000)
+    page.evaluate(FIRSTRUN_CARDS)
+    page.locator('[data-wtg-skip]').tap()
+    page.wait_for_selector('[data-card-box=baseline]', timeout=8000)
+    h1 = page.locator('.pl-screen h1:not(.px-sr)').first.inner_text().strip()
+    C.ok(h1 == 'Tutorial skipped' and page.evaluate('PX.core.store.state.ui.tour.skipped') == ['spin'], f'{tag}: a skipped tutorial still ends with the starting-point card ({h1!r})')
+    page.evaluate('PX.debug.fast(true)')
+    page.locator('[data-card-box=baseline] [data-card="now"]').tap()
+    page.wait_for_selector('[data-card-box]', timeout=8000)
+    rp = page.evaluate('PX.core.router.current().params')
+    first = card(page)
+    page.screenshot(path=str(OUT / 'firstrun_5_now_expect.png'))
+    C.ok(rp.get('mode') == 'train' and rp.get('baseline') == 'now' and 'exId' not in rp and first == 'expect',
+         f'{tag}: Measure now opens Train, whose first card is the expectation question, not a second offer ({rp}; {first})')
+    page.locator('[data-expect="3"]').tap()
+    page.wait_for_timeout(200)
+    ok = drive(page, '!!document.querySelector("[data-card-box=measure-done]")', cards={'probe-intro': 'skip'}, limit=1200, right=0.7)
+    page.wait_for_timeout(200)
+    page.screenshot(path=str(OUT / 'firstrun_6_now_saved.png'))
+    done = page.evaluate("""(() => { const r = PX.core.store.state; return { checks: (r.assess || []).map((a) => a.kind), cards: __cards.slice(),
+      txt: (document.querySelector('[data-card-box=measure-done]') || {}).innerText || '', expect: r.spatial && r.spatial.expect && r.spatial.expect.value }; })()""")
+    C.ok(ok and done['checks'] == ['B1'] and done['expect'] == 3 and 'measure-offer' not in done['cards'] and 'Your session starts now.' in done['txt'],
+         f'{tag}: Baseline 1 saved inside the session, never offered twice ({done["checks"]}; {[c for c in done["cards"] if c != "probe-intro"][:6]})')
+    page.locator('[data-card-box=measure-done] .px-btn--primary').tap()
+    page.wait_for_timeout(300)
+    nxt = None
+    for _ in range(100):
+        cid = card(page)
+        if cid:
+            nxt = nxt or cid
+            if cid == 'wtg-offer':
+                click_card(page, 'skip')
+            else:
+                page.locator('[data-card-box] .px-btn--primary').first.tap()
+        elif page.evaluate('!!window.__play') and state(page) == 'respond':
+            break
+        page.wait_for_timeout(100)
+    page.wait_for_timeout(250)
+    page.screenshot(path=str(OUT / 'firstrun_7_now_train.png'))
+    tr = page.evaluate("({ st: __play.state, ex: __play.exId, mode: PX.core.router.current().params.mode, kind: PX.ui.measure.status(PX.core.store.state, Date.now()).kind })")
+    C.ok(tr['st'] == 'respond' and tr['mode'] == 'train' and tr['kind'] != 'B1' and (nxt in (None, 'wtg-offer')),
+         f'{tag}: then training starts (a new exercise offers its own Watch, Try, Go first: {nxt}; {tr})')
+    C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main():
     C = Checks('play')
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

@@ -213,7 +213,6 @@
 .pl-sum-foot { margin-top: var(--s2); }
 
 .pl-check-list + p { margin-top: var(--s3); }
-.pl-tour-miss { margin: calc(-1 * var(--s3)) 0 var(--s4); }
 .pl-wtg-lead { margin-bottom: calc(-1 * var(--s1)); }
 /* the 1–5 expectation scale: one row of five equal steps, or one column on narrow screens */
 .pl-expect { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s2); margin: var(--s3) 0; }
