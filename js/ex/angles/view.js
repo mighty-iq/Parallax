@@ -1,8 +1,12 @@
 /* EX-16 Angles: view (SVG; ARCHITECTURE.md §6, docs/dev/EXERCISE-GUIDE.md).
-   layout 'stem+options': the stem is four cells lettered A–D (2 × 2 on phones, a row on wide
+   layout 'stem+options': the stem is four cells numbered 1–4 (2 × 2 on phones, a row on wide
    screens), each with one angle drawn from the item's own endpoints (cell units, 1 × 1); the options
-   are orderings of the letters, smallest angle first ("C – A – D – B"). Letters, not numbers, so an
-   angle is never confused with an answer, whose keys are 1–4 (fresh-player test, RV-play-dat).
+   are orderings of the numbers, smallest angle first ("3 – 1 – 4 – 2"), lettered A–D by the player
+   (optionKeys 'letters': keys A–D and 1–4 both pick). That is the format's labelling (note D1 §2.3,
+   §6.2 and addendum A.1 row 2: angles numbered, answers lettered); version 1.1 had it the other way
+   round. Captions name answers through ctx.optionName ("answer B").
+   - The test look (CONTRACT-v1.2 W2): each cell is a white plate with ink lines in both themes;
+     marks on it (sizes, the overlay, Try 1's help) use a fixed dark accent that reads on white.
    - Strokes keep 2 CSS px at any size (vector-effect), anti-aliased; no arc at the vertex.
    - Reveal: every angle's size in degrees in a free corner of its cell, from the grading model.
    - Show me carries out the "Extremes first" card on the item (v1.2, docs/research/v1.2/
@@ -48,9 +52,10 @@
     });
     return list;
   }
-  var LETTERS = ['A', 'B', 'C', 'D'];
-  function letter(c) { return LETTERS[c]; }
-  function listText(order) { return order.map(letter).join(' – '); }
+  // An angle's name on screen: its number 1–4 (the format's labelling); an answer's: its letter A–D.
+  function angleName(c) { return String(c + 1); }
+  function listText(order) { return order.map(angleName).join(' – '); }
+  function answerName(i) { return st && st.ctx && typeof st.ctx.optionName === 'function' ? st.ctx.optionName(i) : PX.ui.optionName(i, true); }
   function narrow() { return (window.innerWidth || 1024) < 720; }
 
   /* ---------- drawing ---------- */
@@ -92,8 +97,8 @@
   }
 
   function describe(item) {
-    return 'Four angles, lettered A to D, each in its own box. Which list orders them from the smallest angle to the largest? ' +
-      item.options.map(function (o, i) { return 'Answer ' + (i + 1) + ': ' + listText(o) + '.'; }).join(' ');
+    return 'Four angles, numbered 1 to 4, each in its own box. Which answer orders them from the smallest angle to the largest? ' +
+      item.options.map(function (o, i) { return 'Answer ' + answerName(i) + ': ' + listText(o) + '.'; }).join(' ');
   }
 
   /* ---------- view functions ---------- */
@@ -146,9 +151,9 @@
     st.cellEls = []; st.sizeEls = [];
     item.angles.forEach(function (g, c) {
       var corners = labelCorners(g);
-      var num = h('span.ex-label.ex-angles-n', { 'data-corner': corners[0] }, letter(c));
+      var num = h('span.ex-label.ex-angles-n', { 'data-corner': corners[0] }, angleName(c));
       var size = h('span.ex-angles-size', { hidden: true, 'data-corner': corners[1] });
-      var cell = h('div.ex-angles-cell', { 'data-cell': letter(c) }, num, cellSvg(g), size);
+      var cell = h('div.ex-angles-cell', { 'data-cell': angleName(c) }, num, cellSvg(g), size);
       st.cellEls.push(cell); st.sizeEls.push(size);
       st.cells.appendChild(cell);
     });
@@ -195,11 +200,11 @@
     if (!st) mount(ctx);
     newItem(item);
     var tag = h('span.ex-tag', { hidden: true });
-    // A no-break space binds each dash to the letter before it, so long text wraps after a dash.
+    // A no-break space binds each dash to the number before it, so long text wraps after a dash.
     el.appendChild(h('span.ex-answer.ex-angles-opt', h('span.ex-answer-text', listText(item.options[i]).replace(/ –/g, '\u00a0–')), tag));
     st.opts[i] = { el: el, tag: tag };
   }
-  function optionLabel(item, i) { return 'Smallest to largest: ' + item.options[i].map(letter).join(', '); }
+  function optionLabel(item, i) { return 'Option ' + PX.ui.optionName(i, true) + ': smallest to largest ' + item.options[i].map(angleName).join(', '); }
   function gridCols() { return narrow() ? 2 : 4; }
 
   /* ---------- reveal ---------- */
@@ -268,7 +273,7 @@
       enter: function () {
         setMode('big');
         PX.ui.clear(st.big);
-        st.big.appendChild(overlaySvg({ deg: m[pair.small].deg, n: letter(pair.small) }, { deg: m[pair.large].deg, n: letter(pair.large) }));
+        st.big.appendChild(overlaySvg({ deg: m[pair.small].deg, n: angleName(pair.small) }, { deg: m[pair.large].deg, n: angleName(pair.large) }));
       },
     };
   }
@@ -281,11 +286,11 @@
     var left = item.options.filter(function (o, i) { return keepSL[i]; });
     var outOf = function (keep) { return keep.map(function (k) { return !k; }); };
     out.push({
-      ms: 2400, caption: cap('smallest', { a: letter(small) }),
+      ms: 2400, caption: cap('smallest', { a: angleName(small) }),
       enter: function () { setMode('cells'); focusOption(-1); showSizes(item, sizes); point([small]); crossOut(outOf(keepS)); },
     });
     out.push({
-      ms: 2400, caption: cap('largest', { b: letter(large) }),
+      ms: 2400, caption: cap('largest', { b: angleName(large) }),
       enter: function () { setMode('cells'); focusOption(-1); showSizes(item, sizes); point([small, large]); crossOut(outOf(keepSL)); },
       exit: function () { point([]); },
     });
@@ -294,7 +299,7 @@
       var foil = left.filter(function (o) { return o.join() !== order.join(); })[0];
       var pair = foil ? widest(foil, m.map(function (x) { return x.deg; })) : deciding(item);
       if (pair) {
-        var vars = { a: letter(pair.small), b: letter(pair.large), d: fmtDeg(pair.gap).replace('°', '') };
+        var vars = { a: angleName(pair.small), b: angleName(pair.large), d: fmtDeg(pair.gap).replace('°', '') };
         out.push({ ms: 2400, caption: cap('disagree', vars), enter: function () { setMode('cells'); showSizes(item, sizes); point([pair.small, pair.large]); crossOut(outOf(keepSL)); }, exit: function () { point([]); } });
         out.push(overlayStep(item, pair, 1700, 'overlay', vars));
         out.push(overlayStep(item, pair, 1900, demo ? 'pairEye' : 'pair', vars));
@@ -303,19 +308,19 @@
       out.push({ ms: 1800, caption: cap('left', { order: listText(order) }), enter: function () { setMode('cells'); showSizes(item, sizes); point([]); crossOut(outOf(keepSL)); focusOption(item.key); } });
     }
     out.push({
-      ms: 1800, caption: cap('done', { order: listText(item.order), n: item.key + 1 }),
+      ms: 1800, caption: cap('done', { order: listText(item.order), n: answerName(item.key) }),
       enter: function () { setMode('cells'); showSizes(item, sizes); point([]); crossOut(null); focusOption(item.key); },
     });
     var r = response;
     if (typeof r === 'number' && r !== item.key && r >= 0 && r < 4) {
       var wrong = deciding(item, r);
       if (wrong) {
-        var wv = { n: r + 1, a: letter(wrong.small), b: letter(wrong.large), d: fmtDeg(wrong.gap).replace('°', '') };
+        var wv = { n: answerName(r), a: angleName(wrong.small), b: angleName(wrong.large), d: fmtDeg(wrong.gap).replace('°', '') };
         out.push({
           ms: 2400, caption: cap('chosen', wv),
           enter: function () {
             setMode('big'); crossOut(null); focusOption(r); PX.ui.clear(st.big);
-            st.big.appendChild(overlaySvg({ deg: m[wrong.small].deg, n: letter(wrong.small) }, { deg: m[wrong.large].deg, n: letter(wrong.large) }));
+            st.big.appendChild(overlaySvg({ deg: m[wrong.small].deg, n: angleName(wrong.small) }, { deg: m[wrong.large].deg, n: angleName(wrong.large) }));
           },
         });
       }
@@ -405,6 +410,7 @@
 
   PX.ex.view('angles', {
     layout: 'stem+options',
+    optionKeys: 'letters', // answers A–D (CONTRACT-v1.2 W1)
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
     reveal: reveal, showMe: showMe, demo: demo, unmount: unmount, drawRule: drawRule,
