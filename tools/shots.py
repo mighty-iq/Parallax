@@ -20,7 +20,11 @@ tests/e2e/pwslot.sh (two slots per machine).
 v1.1 adds Reckon (a near miss played by keys for its feedback), Knots (pull, and untie as an EXTRA shot),
 the six DAT-style formats, and the screens of V11_NAMES (phones at 360 × 740 with touch: an item and its
 Help, Homing and Reckon answered by their touch controls; the Section practice review; About's Test
-hygiene; the Library's DAT-style group). `app` shoots them all; app-<name> one of them. """
+hygiene; the Library's DAT-style group). `app` shoots them all; app-<name> one of them.
+v1.2 (W3-voice, milestone 10): Central Point (EX-20, its quick form, and its reveal), the probes Other Way Round
+(PR-6) and Motion Graphs (PR-7), and the settings of the version-3 DAT-style formats (their test range, drawn in
+plain lines: Openings turned or flipped, Hole Punch with three folds, Painted Cubes stacked, Form with shaded
+faces, Missing View on a profile solid); Views at 8 cubes on its version-2 levels. """
 import json
 import pathlib
 import sys
@@ -61,7 +65,7 @@ EXERCISES = [
     ('fold', 'ex04', 4, 'folds:2,type:1,punches:1,idle:0', None, ('sm', 4200)),
     ('nets', 'ex05', 7, 'carried:1,shape:0,between:1', 'opposite', ('sm', 2500)),
     ('slice', 'ex06', 7, 'structure:1,cut:1,curved:0', None, ('sm', 2500)),
-    ('views', 'ex07', 7, 'cubes:2,grid:0,view:1', 'toview', ('fb', 0)),
+    ('views', 'ex07', 7, 'cubes:3,grid:0,view:1', 'toview', ('fb', 0)),   # v1.2: cubes 3–4 (starter), 4, 6, 8…
     ('orient', 'ex08', 7, 'shift:2,objects:1,tolerance:1', None, ('fb', 0)),
     ('span', 'ex09', 7, 'len:3,cross:1,turn:0', 'forward', ('fb', 0)),
     ('hidden', 'ex10', 7, 'extra:2,sim:1,size:1', None, ('fb', 0)),
@@ -70,18 +74,22 @@ EXERCISES = [
     # six DAT-style formats (one shot each: the guide gives them half a card).
     ('reckon', 'ex12', 33, 'route:3,flow:0,speed:1,tolerance:1', 'return', ('fb', 0)),
     ('knots', 'ex13', 4, 'rope:3,spacing:0', 'pull', ('sm', 1400)),
-    ('openings', 'ex14', 7, 'features:1,edges:1,keyview:1,pose:0,foils:0', None, None),
-    ('patviews', 'ex15', 7, 'cubes:1,grid:0,missing:0,foil:2', None, None),
+    # v1.2 (version 3): settings in each format's test range
+    ('openings', 'ex14', 7, 'features:3,edges:1,keyview:1,pose:0,foils:0,turn:2', None, None),
+    ('patviews', 'ex15', 7, 'cubes:3,grid:0,missing:0,foil:1', None, None),
     ('angles', 'ex16', 9, 'gap:1,size:2,resolve:1,pose:1', None, None),
-    ('patfold', 'ex17', 7, 'folds:1,type:1,idle:0', None, None),
-    ('cubes', 'ex18', 7, 'cubes:1,height:1,asked:0', None, None),
-    ('form', 'ex19', 7, 'solid:1,marks:1,view:1,foil:1', None, None),
+    ('patfold', 'ex17', 7, 'folds:2,type:1,idle:0,sheets:0', None, None),
+    ('cubes', 'ex18', 7, 'cubes:2,height:2,asked:0', None, None),
+    ('form', 'ex19', 7, 'solid:1,marks:2,view:1,foil:1', None, None),
+    ('centralpoint', 'ex20', 7, 'targets:2,band:0', 'quick', ('fb', 0)),
     ('cubematch', 'pr1', 7, 'rotation:1,change:0,glyphs:1', None, None),
     ('viewmatch', 'pr2', 7, 'angle:2,objects:1,foils:0', None, None),
-    ('mechanisms', 'pr3', 7, 'gears:1,structure:2,question:0', None, None),
+    ('mechanisms', 'pr3', 7, 'gears:1,structure:2', None, None),            # version 2: no question dim
     ('patterns', 'pr4', 7, 'size:2,regularity:1', None, None),
     ('level', 'pr5', 7, 'tilt:2,task:0,gap:1', None, None),
     ('wordlinks', 'pr0', 7, 'relation:1,words:0,foils:1', None, None),
+    ('otherway', 'pr6', 7, 'level:1', 'foldback', None),
+    ('motiongraphs', 'pr7', 7, 'level:1', 'pos', None),
 ]
 # Further shots of an exercise under their own names: (id, name, seed, params, variant, second).
 EXTRA = [
@@ -94,9 +102,10 @@ LABEL = {'track': 'EX-01 · Track', 'rotate': 'EX-02 · Rotate', 'spin': 'EX-03 
          'span': 'EX-09 · Span', 'hidden': 'EX-10 · Hidden', 'homing': 'EX-11 · Homing', 'reckon': 'EX-12 · Reckon',
          'knots': 'EX-13 · Knots', 'openings': 'EX-14 · Openings', 'patviews': 'EX-15 · Missing View',
          'angles': 'EX-16 · Angles', 'patfold': 'EX-17 · Hole Punch', 'cubes': 'EX-18 · Painted Cubes',
-         'form': 'EX-19 · Form', 'cubematch': 'PR-1 · Cube Match',
+         'form': 'EX-19 · Form', 'centralpoint': 'EX-20 · Central Point', 'cubematch': 'PR-1 · Cube Match',
          'viewmatch': 'PR-2 · View Match', 'mechanisms': 'PR-3 · Mechanisms', 'patterns': 'PR-4 · Pattern Memory',
-         'level': 'PR-5 · Level', 'wordlinks': 'PR-0 · Word Links'}
+         'level': 'PR-5 · Level', 'wordlinks': 'PR-0 · Word Links', 'otherway': 'PR-6 · Other Way Round',
+         'motiongraphs': 'PR-7 · Motion Graphs'}
 # App screens. Screens that need history get a realistic record built in the page by the engine
 # itself: tests/e2e/screens.py's SIM plays about six weeks of real sessions (PX.engine.modes
 # start/next/answer/finish with a simulated learner), so no number on a figure is hand-written.
@@ -113,6 +122,8 @@ APP_NAMES += V11_NAMES
 APP_READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 APP_SCALE = 1.5          # 1366 × 768 at 1.5: sharp at full text width in print, files of a sensible size
 NICE = ('rotate', 'fold', 'nets', 'slice', 'views', 'spin')   # exercises that read well in a still picture
+# v1.2: only the game layer's screen hooks run while the player is pictured (tests/e2e/play.py mutes them likewise)
+GAME_ONLY = "PX.ui.hooks && PX.ui.hooks.mute((id) => /^game[.]/.test(id))"
 made = {}
 
 
@@ -411,6 +422,9 @@ def shoot_app_screens(b, want):
           try:
             page.reload()
             boot_app(page)
+            # v1.2: a measurement block, a comparison round or a bridge set may open a session; the player's
+            # pictures show an exercise item, so only the game layer's hooks run (its tick and summary panel)
+            page.evaluate(GAME_ONLY)
             go_route(page, 'play', {'mode': 'train', 'exId': 'rotate'})
             if to_nice_item(page):
                 page.wait_for_timeout(2400)          # a plausible response time on the feedback line
@@ -497,6 +511,7 @@ def shoot_app_screens(b, want):
             go_route(page, 'library')
             save(page, 'app-library-phone', viewport(page))
         if wanted('app-player-phone'):
+            page.evaluate(GAME_ONLY)
             go_route(page, 'play', {'mode': 'train', 'exId': 'fold'})
             if to_nice_item(page):
                 page.wait_for_timeout(700)
@@ -516,7 +531,7 @@ def free_play(page, ex, params, fast=False):
     if fast:
         page.evaluate('PX.debug.fast(true)')
     go_route(page, 'play', {'mode': 'free', 'exId': ex, 'run': '1', 'trials': 10, 'params': params})
-    return click_through(page, 30)
+    return click_through(page, 60)   # v1.2: Reckon's routes end with a turn on the spot (a longer walk, even fast)
 
 
 def turn_keys(page, deg):
@@ -546,6 +561,11 @@ def section_run(page):
             page.locator('[data-card="start"]').first.click()
         elif mode == 'partend' and page.locator('[data-card="next"]').count():
             page.locator('[data-card="next"]').first.click()
+        elif mode == 'list' and page.locator('[data-sec-end]').count():   # v1.2: the review list ends a run
+            page.locator('[data-sec-end]').first.click()
+            page.wait_for_timeout(300)
+            if page.locator('.px-modal .px-btn--primary, .px-modal .px-btn--danger').count():
+                page.locator('.px-modal .px-btn--primary, .px-modal .px-btn--danger').first.click()
         elif mode == 'item' and page.evaluate('window.__play && __play.state === "respond"'):
             page.wait_for_timeout(8000 + (n * 3700) % 9000)   # 8 to 17 s an item: a quick person's pace
             page.evaluate(f'__play.answer({"false" if n % 4 == 3 else "true"}).catch(() => 0)')
@@ -612,7 +632,7 @@ def shoot_v11_screens(b, want):
         c.close()
     if 'app-reckon-phone' in want:                  # Reckon's walk back: turned to the start, part of the way walked
         c, page = phone()
-        if free_play(page, 'reckon', {'variant': 'return', 'route': 1, 'flow': 0, 'speed': 1, 'tolerance': 1}, fast=True):
+        if free_play(page, 'reckon', {'variant': 'return', 'route': 1, 'flow': 0, 'speed': 1, 'tolerance': 1, 'legs': 0}, fast=True):
             page.wait_for_timeout(600)
             it = page.evaluate('() => ({ key: __play.item.keyDeg, d: __play.item.distance, v: __play.item.walkSpeed })')
             turn_keys(page, it['key'])
