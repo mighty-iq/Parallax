@@ -59,11 +59,11 @@
     strategies: [
       {
         id: 'imagery', title: 'Build it, then look',
-        text: 'Picture the structure from the two views, then look at it from the missing side.',
+        text: 'Picture the object from the two views, then look at it from the missing side.',
         steps: [
-          'From the top view, place the columns; from the front or end view, give them heights.',
+          'From one view take the shape, from the other its depth: columns of cubes and their heights, or a block and its cuts.',
           'Turn to the missing side in your mind and look straight on.',
-          'Edges you could touch from that side are solid; edges behind cubes are dotted.',
+          'Edges you could touch from that side are solid; edges behind something nearer are dotted.',
         ],
         when: 'Quick for small structures.',
       },
