@@ -119,6 +119,7 @@ INDEX_READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 
 
 def wtg_checks(b, cons, C, ex, out_dir, assist_selector, n_rated=5, try_marks=None):
+    # try_marks: {Try number: a selector that must be on screen, or check(page) → (ok, info), which may act first}
     """The app's Watch, Try, Go for one exercise, scripted end to end at 390 × 844 (touch): the rules
     card with every rule's figure, the Watch, the strategy card (strategyFirst), Try 1 with its first
     step done (assist_selector is on screen), every Try item (and a worked example where learn.js asks
@@ -158,6 +159,7 @@ def wtg_checks(b, cons, C, ex, out_dir, assist_selector, n_rated=5, try_marks=No
         return [document.querySelector('[data-card-box="wtg-strategy"]').textContent, c.title]; }}""")
     C.ok(title[1] in title[0], f'{tag}: the strategy card before Try 1 is "{title[1]}"')
     page.screenshot(path=str(out_dir / f'{ex}_wtg_3_strategy.png'))
+    want_tries = page.evaluate(f"PX.ex.learn('{ex}').practice.length")
     page.locator('[data-card-box="wtg-strategy"] [data-card="try"]').tap()
     page.wait_for_function('__play.state === "respond"', timeout=15000)
     on = page.evaluate(f'() => !!document.querySelector({assist_selector!r})')
@@ -172,7 +174,7 @@ def wtg_checks(b, cons, C, ex, out_dir, assist_selector, n_rated=5, try_marks=No
             ended = True
             end = page.evaluate("""() => ({ head: (document.querySelector('h1') || {}).textContent || '',
                 link: Array.from(document.querySelectorAll('a[href="https://discord.gg/chmr"]')).some((a) => a.getClientRects().length > 0) })""")
-            C.ok(tries == 4 and end['link'], f'{tag}: after the four Try items the end screen ("{end["head"]}") invites to Chimera with the link ({end})')
+            C.ok(tries == want_tries and end['link'], f'{tag}: after the {want_tries} Try items the end screen ("{end["head"]}") invites to Chimera with the link ({end})')
             page.screenshot(path=str(out_dir / f'{ex}_wtg_6_end.png'))
             page.locator('[data-card="session"]').first.tap()
             page.wait_for_timeout(400)
@@ -188,14 +190,17 @@ def wtg_checks(b, cons, C, ex, out_dir, assist_selector, n_rated=5, try_marks=No
                 tries += 1
                 page.screenshot(path=str(out_dir / f'{ex}_wtg_try{tries}.png'))
                 sel = (try_marks or {}).get(tries)
-                if sel:
+                if callable(sel):
+                    ok, info = sel(page)  # a check of its own (it may act on the item first, e.g. open the tally)
+                    C.ok(ok, f'{tag}: Try {tries}: {info}')
+                elif sel:
                     C.ok(page.evaluate(f'() => !!document.querySelector({sel!r})'), f'{tag}: Try {tries} draws its help ({sel})')
             else:
                 rated += 1
             page.evaluate('__play.answer(true)')
             page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "idle"', timeout=10000)
-            if tries == 4 and rated == 0:
-                page.screenshot(path=str(out_dir / f'{ex}_wtg_5_try4.png'))
+            if tries == want_tries and rated == 0:
+                page.screenshot(path=str(out_dir / f'{ex}_wtg_5_try{want_tries}.png'))
             page.evaluate('PX.ui.play.current() && PX.ui.play.current().goNext()')
             page.wait_for_timeout(250)
             continue
@@ -206,7 +211,7 @@ def wtg_checks(b, cons, C, ex, out_dir, assist_selector, n_rated=5, try_marks=No
             page.wait_for_timeout(250)
             continue
         page.wait_for_timeout(300)
-    C.ok(tries == 4, f'{tag}: four Try items ({tries}; worked examples {examples})')
+    C.ok(tries == want_tries, f'{tag}: {want_tries} Try items, as learn.practice lists ({tries}; worked examples {examples})')
     C.ok(ended and rated >= n_rated, f'{tag}: then a session from the end screen, {n_rated} scored items answered ({rated})')
     page.screenshot(path=str(out_dir / f'{ex}_wtg_7_go.png'))
     page.evaluate('__play.end()')

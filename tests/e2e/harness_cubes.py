@@ -10,7 +10,9 @@ on the starter band and while show me plays; the set row and the tally pad on a 
 questions (the harness: Section-style params.ask); in the app's Free play at 360 x 640, 390 x 844 and
 1366 x 768: "Question i of n", the answers keep their place when the pad opens and at the reveal, the
 tally and the drawing stay for the figure's next question, a new figure empties the pad, nothing
-scrolls. Screenshots: tests/e2e/out/cubes/. """
+scrolls. The fresh-player run (19 Nov): Try 4 and Try 5 one plain figure's two questions with the tip,
+"Question 1 of 2", the tally and its caption; every badge on its own cube at 360 × 640 and 390 × 844
+(badges_check). Screenshots: tests/e2e/out/cubes/. """
 import sys
 
 from playwright.sync_api import sync_playwright
@@ -252,6 +254,124 @@ def tally_app(b, cons, C, out_dir):
         ctx.close()
 
 
+# The lead's fresh-player run (19 Nov): number badges sat on joins, and a hidden cube's number where four cubes
+# meet. Each badge must sit on its own cube: a seen cube's badge centre on one of its own visible faces and at
+# least 85 % of its circle over its own faces (a quarter, for a cube only a sliver of which shows: its badge at
+# the smallest size; view.js keeps a seen cube's badge out of the veils where it fits there); a hidden cube's
+# at its centre inside its veiled outline; no two badges overlapping. After show me (every cube's number).
+BADGES = """() => {
+    const it = __harness.item, L = PX.ex.get('cubes').lib, rr = L.render(it.heights), im = rr.img;
+    const ownAt = (x, y) => { const px = Math.floor((x - im.x0) * im.scale), py = Math.floor((y - im.y0) * im.scale);
+        return px < 0 || py < 0 || px >= im.W || py >= im.H ? -1 : im.own[py * im.W + px]; };
+    const cubeAt = (x, y) => { const f = ownAt(x, y); return f < 0 ? -1 : rr.faces[f].cube; };
+    const veils = Array.from(document.querySelectorAll('.ex-cubes-marks .ex-cubes-veil')).map((v) => { const n = (v.getAttribute('d').match(/-?[0-9.]+(e-?[0-9]+)?/g) || []).map(Number), out = [];
+        for (let i = 0; i + 1 < n.length; i += 2) out.push([n[i], n[i + 1]]); return out; });
+    const inPoly = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j];
+        if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+    const bs = Array.from(document.querySelectorAll('.ex-cubes-marks .ex-cubes-badge')).map((g) => {
+        const c = g.querySelector('circle:not(.ex-cubes-ring)'), ring = g.querySelector('.ex-cubes-ring');
+        return { i: +g.getAttribute('data-cube'), x: +c.getAttribute('cx'), y: +c.getAttribute('cy'), r: +(ring || c).getAttribute('r'), r0: +c.getAttribute('r'), hidden: g.classList.contains('is-hidden') };
+    });
+    const bad = [];
+    bs.forEach((b) => {
+        if (b.hidden) {
+            const q = rr.cubes[b.i], cc = L.proj([q.x + 0.5, q.y + 0.5, q.z + 0.5]);
+            if (Math.hypot(cc[0] - b.x, cc[1] - b.y) > 2e-3 || !veils.some((P) => inPoly(P, b.x, b.y))) bad.push(['hidden off its veil', b.i]);
+            return;
+        }
+        if (cubeAt(b.x, b.y) !== b.i) bad.push(['centre not on its cube', b.i, cubeAt(b.x, b.y)]);
+        let n = 0, own = 0;
+        for (let u = -1; u <= 1.0001; u += 0.2) for (let v = -1; v <= 1.0001; v += 0.2) {
+            if (u * u + v * v > 1) continue;
+            n++; if (cubeAt(b.x + u * b.r0, b.y + v * b.r0) === b.i) own++;
+        }
+        // a badge at its smallest size marks a cube only a sliver of which shows (its centre on the sliver,
+        // a quarter of its circle at least); a larger badge fits its spot (85 % of its circle on its own cube)
+        if (own / n < (b.r0 <= 0.1501 ? 0.25 : 0.85)) bad.push(['circle off its cube', b.i, Math.round(100 * own / n), b.r0]);
+    });
+    for (let a = 0; a < bs.length; a++) for (let c = a + 1; c < bs.length; c++) {
+        const d = Math.hypot(bs[a].x - bs[c].x, bs[a].y - bs[c].y);
+        if (d < bs[a].r0 + bs[c].r0) bad.push(['overlap', bs[a].i, bs[c].i]);
+    }
+    const svg = document.querySelector('.ex-cubes-figure-box svg'), vb = svg.viewBox.baseVal, px = svg.getBoundingClientRect().width / vb.width;
+    return { n: bs.length, cubes: rr.cubes.length, hidden: bs.filter((b) => b.hidden).length, bad: bad.slice(0, 6), badgePx: Math.round(2 * 0.22 * px) };
+}"""
+
+
+def badges_check(b, cons, C, out_dir):
+    # the fresh player's worked example (four cubes meeting at a hidden support), Try 4's figure, larger ones
+    items = [('example', 'cubes:0,height:1,asked:0', 5), ('try4', 'cubes:1,height:1,asked:0', 324), ('mid', 'cubes:2,height:2,asked:1', 7),
+             ('big', 'cubes:3,height:2,asked:0', 11), ('tall', 'cubes:4,height:3,asked:1', 3), ('small3', 'cubes:0,height:2,asked:0', 9)]
+    for w, hgt in ((360, 640), (390, 844)):
+        ctx = b.new_context(viewport={'width': w, 'height': hgt}, **PHONE)
+        page = ctx.new_page()
+        cons.append(Console(page))
+        for name, params, seed in items:
+            tag = f'cubes badges at {w}×{hgt}, {name}'
+            page.goto(file_url('tests/dev/harness.html', ex='cubes', seed=seed, p=params, fast=1))
+            page.wait_for_function(READY, timeout=60000)
+            key = page.evaluate('() => __harness.key')
+            page.locator('.hx-grid .px-choice').nth((key + 1) % 5).tap()
+            page.wait_for_function("() => __harness.state === 'reveal'", timeout=10000)
+            before = page.evaluate('() => __harness.played.finished')
+            page.evaluate('() => { __harness.showMe(); }')
+            page.wait_for_function(f"() => __harness.played.finished > {before}", timeout=30000)
+            page.wait_for_timeout(150)
+            d = page.evaluate(BADGES)
+            C.ok(d['n'] == d['cubes'] and not d['bad'], f'{tag}: every badge on its own cube, hidden ones inside their veil, none overlapping ({d})')
+            if name in ('example', 'try4', 'big'):
+                page.locator('.ex-cubes-stage').screenshot(path=str(out_dir / f'cubes_badges_{name}_{w}x{hgt}.png'))
+        if w == 390:
+            # the placement is in the figure's own units, so one size covers the geometry: 36 more stacked figures
+            n_bad, n_badges, slivers, worst = 0, 0, 0, []
+            for k in range(36):
+                params = f'cubes:{k % 5},height:{1 + k % 3},asked:{k % 2}'
+                page.goto(file_url('tests/dev/harness.html', ex='cubes', seed=1000 + k, p=params, fast=1))
+                page.wait_for_function(READY, timeout=60000)
+                key = page.evaluate('() => __harness.key')
+                page.locator('.hx-grid .px-choice').nth((key + 1) % 5).tap()
+                page.wait_for_function("() => __harness.state === 'reveal'", timeout=10000)
+                before = page.evaluate('() => __harness.played.finished')
+                page.evaluate('() => { __harness.showMe(); }')
+                page.wait_for_function(f"() => __harness.played.finished > {before}", timeout=30000)
+                d = page.evaluate(BADGES)
+                n_badges += d['n']
+                slivers += page.evaluate("() => Array.from(document.querySelectorAll('.ex-cubes-marks .ex-cubes-badge:not(.is-hidden) circle:not(.ex-cubes-ring)')).filter((c) => +c.getAttribute('r') <= 0.1501).length")
+                if d['bad'] or d['n'] != d['cubes']:
+                    n_bad += 1
+                    worst.append((params, 1000 + k, d['bad'][:2]))
+            C.ok(n_bad == 0, f'cubes badges on 36 more stacked figures: every badge on its own cube ({n_badges} badges, {slivers} at the smallest size on a sliver; {worst[:3]})')
+        ctx.close()
+
+
+# The lead's fresh-player run (19 Nov): Try 4 changed to the plain drawing unannounced, and figure sets and the
+# tally were first met in scored items. Try 4 and Try 5 are now one plain figure's two questions.
+SET_STATE = """() => { const row = document.querySelector('.ex-cubes-set'), fig = document.querySelector('.ex-cubes-figure-box');
+    return { row: row && !row.hidden ? row.textContent.replace(/\\s+/g, ' ').trim() : '', plain: !!(fig && fig.classList.contains('is-plain')),
+             tip: (document.querySelector('.pl-tip:not([hidden])') || {}).textContent || '', caption: (document.querySelector('.ex-cubes-under .ex-caption') || {}).textContent || '',
+             svg: fig && fig.querySelector('svg') ? (fig.querySelector('svg').__mark = fig.querySelector('svg').__mark || Math.random().toString(36).slice(2)) : '',
+             tally: Array.from(document.querySelectorAll('.ex-cubes-tally-c .ex-cubes-tally-v')).map((e) => e.textContent) }; }"""
+_try4 = {}
+
+
+def try4_set(page):
+    d = page.evaluate(SET_STATE)
+    ok = d['row'].startswith('Question 1 of 2') and 'Tally' in d['row'] and d['plain'] and 'plain lines' in d['tip'] and 'Tally keeps your counts' in d['caption']
+    page.locator('.ex-cubes-tally-toggle').tap()  # the tally, used once: one cube with 3 painted sides
+    page.wait_for_timeout(150)
+    page.locator('.ex-cubes-tally-c').nth(3).tap()
+    page.wait_for_timeout(150)
+    d2 = page.evaluate(SET_STATE)
+    _try4.update(svg=d['svg'], tally=d2['tally'])
+    return ok and d2['tally'][3] == '1', f'the plain drawing with its tip, "Question 1 of 2" with the tally and its caption, a tap counts ({d}, tally {d2["tally"]})'
+
+
+def try5_set(page):
+    d = page.evaluate(SET_STATE)
+    ok = d['row'].startswith('Question 2 of 2') and d['plain'] and 'Same figure' in d['tip'] and d['svg'] == _try4.get('svg') and d['tally'] == _try4.get('tally')
+    return ok, f'the same drawing, "Question 2 of 2", the figure-set tip, the tally kept ({d}; Try 4 {_try4})'
+
+
 class Band(Pat):
     def run(self, demo, sandbox):
         cons = []
@@ -265,8 +385,10 @@ class Band(Pat):
                         [('flat', 'cubes:0,height:0,asked:0', 1), ('flat9', 'cubes:1,height:0,asked:1', 5), ('small', 'cubes:0,height:1,asked:0', 18)],
                         assist_check=assist, try1=('cubes:0,height:0,asked:0', 13),
                         assists=[('try3', 'cubes:0,height:1,asked:0', 18, '{"hidden":true}', hidden_before, hidden_after)])
-            wtg_checks(b, cons, self.C, 'cubes', self.dir, '.ex-cubes-marks .ex-cubes-badge--unknown', try_marks={3: '.ex-cubes-marks .ex-cubes-ghost'})
+            wtg_checks(b, cons, self.C, 'cubes', self.dir, '.ex-cubes-marks .ex-cubes-badge--unknown',
+                       try_marks={3: '.ex-cubes-marks .ex-cubes-ghost', 4: try4_set, 5: try5_set})
             reveal_stable(b, cons, self.C, 'cubes', self.dir)
+            badges_check(b, cons, self.C, self.dir)
             letters_look(b, cons, self.C, self.dir)
             tally_harness(b, cons, self.C, self.dir)
             tally_app(b, cons, self.C, self.dir)

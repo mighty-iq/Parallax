@@ -21,7 +21,12 @@
      then show me's steps, each caption up long enough to read (readable()).
    - Try 3 (ctx.assist = { hidden: true }): the hidden support drawn dashed, without its number,
      between the worked example (dashed and numbered) and Try 4 (nothing marked); its reveal
-     numbers it.
+     numbers it. Try 4 and Try 5 ask the two questions of one figure in the test's plain drawing
+     (learn.practice gives params.ask): the set row says "Question 1 of 2" with the tally, and a caption
+     at the first question says what the tally is for.
+   - Badges (fresh-player run, 19 Nov): each on the most interior point of its cube's visible faces
+     (lib.render's raster), sized to sit inside a face; a numbered hidden cube's dashed outline is
+     veiled, its number at its centre, and the other badges keep out of the veil.
    - Version 3 (PLAN milestone 8; note D1 §6.1, §6.3): answers lettered A–E for 1–5 cubes
      (optionKeys 'letters'; captions name them through ctx.optionName); the format's plain line
      drawing in the test range (white faces, ink edges, on a white plate in both themes; CONTRACT-v1.2
@@ -131,30 +136,130 @@
   }
   // A cube outlined as a dashed ghost, for the hidden supports: the 9 edges a solid cube shows from the
   // figure's viewpoint (v1.2 O56: the 3 edges at its far corner, corner 0, made the overlay busy on a phone).
-  function ghost(q) {
+  // veil: when the ghost carries a number, its outline is filled with a light veil, so the number reads as
+  // the hidden cube's and the joins of the cubes in front fade under it (fresh-player run, 19 Nov: a hidden
+  // cube's number sat where four cubes meet).
+  function corners(q) {
     var c = [];
     for (var i = 0; i < 8; i++) c.push(pt([q.x + (i & 1), q.y + ((i >> 1) & 1), q.z + ((i >> 2) & 1)]));
+    return c;
+  }
+  // The outline of a cube in the picture: the convex hull of its eight corners (a hexagon), counter-clockwise.
+  function hull(q) {
+    var P = corners(q).slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    var cross = function (o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); };
+    var lo = [], up = [], i;
+    for (i = 0; i < P.length; i++) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], P[i]) <= 1e-12) lo.pop(); lo.push(P[i]); }
+    for (i = P.length - 1; i >= 0; i--) { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], P[i]) <= 1e-12) up.pop(); up.push(P[i]); }
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+  function ghost(q, veil) {
+    var c = corners(q);
     var E = [[2, 3], [4, 5], [6, 7], [1, 3], [4, 6], [5, 7], [1, 5], [2, 6], [3, 7]];
     var d = E.map(function (e) { return 'M' + c[e[0]][0] + ' ' + c[e[0]][1] + 'L' + c[e[1]][0] + ' ' + c[e[1]][1]; }).join('');
-    return S.el('path', { d: d, class: 'ex-cubes-ghost' });
+    var path = S.el('path', { d: d, class: 'ex-cubes-ghost' });
+    if (!veil) return path;
+    var g = S.el('g', { class: 'ex-cubes-ghost-g' });
+    g.appendChild(S.path(hull(q), true, { class: 'ex-cubes-veil' }));
+    g.appendChild(path);
+    return g;
   }
-  // A badge on the cube's most visible face, or at its centre when it is hidden. kind: 'number'
-  // (ink), 'count' (counted for the question: the accent and a ring), 'unknown' ('?').
-  function badge(c, text, kind) {
-    var q = c.q, at;
-    if (c.hidden) at = pt([q.x + 0.5, q.y + 0.5, q.z + 0.5]);
-    else {
-      var best = -1, side = 0;
-      for (var s = 0; s < 3; s++) if (c.vis.faces[s] > best) { best = c.vis.faces[s]; side = s; }
-      var f = faceAt([q.x, q.y, q.z], side);
-      at = [(f[0][0] + f[2][0]) / 2, (f[0][1] + f[2][1]) / 2];
+  // Inside a convex outline, or within pad of it.
+  function nearHull(poly, X, Y, pad) {
+    var inside = true, n = poly.length, i;
+    for (i = 0; i < n; i++) {
+      var a = poly[i], b = poly[(i + 1) % n];
+      if ((b[0] - a[0]) * (Y - a[1]) - (b[1] - a[1]) * (X - a[0]) < 0) { inside = false; break; }
     }
-    // a hidden cube's badge is smaller (v1.2 O56): it sits over the cubes in front of it
-    var k = c.hidden ? 0.8 : 1;
-    var g = S.el('g', { class: 'ex-cubes-badge ex-cubes-badge--' + kind + (c.hidden ? ' is-hidden' : '') });
-    if (kind === 'count') g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.4 * k, class: 'ex-cubes-ring' }));
-    g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: 0.3 * k }));
-    g.appendChild(S.text(at[0], at[1] + 0.11 * k, String(text), { class: 'ex-cubes-badge-n' }));
+    if (inside || !(pad > 0)) return inside;
+    for (i = 0; i < n; i++) {
+      var p = poly[i], q2 = poly[(i + 1) % n], dx = q2[0] - p[0], dy = q2[1] - p[1], L2 = dx * dx + dy * dy || 1;
+      var t = Math.max(0, Math.min(1, ((X - p[0]) * dx + (Y - p[1]) * dy) / L2)), ex = p[0] + t * dx - X, ey = p[1] + t * dy - Y;
+      if (ex * ex + ey * ey < pad * pad) return true;
+    }
+    return false;
+  }
+  // The most interior point of face fi's visible pixels (lib.render's raster), leaving out the pixels
+  // where off(x, y) holds: { at: [x, y], clear: distance to the region's edge, in cube edges } or null.
+  function facePoint(rr, fi, off) {
+    var im = rr.img, s = im.scale, f = rr.faces[fi], SQ2 = Math.SQRT2;
+    var bx0 = Math.max(0, Math.floor((f.box[0] - im.x0) * s) - 1), bx1 = Math.min(im.W - 1, Math.ceil((f.box[2] - im.x0) * s) + 1);
+    var by0 = Math.max(0, Math.floor((f.box[1] - im.y0) * s) - 1), by1 = Math.min(im.H - 1, Math.ceil((f.box[3] - im.y0) * s) + 1);
+    var w = bx1 - bx0 + 3, hh = by1 - by0 + 3, d = new Float64Array(w * hh), any = false, px, py, k;
+    for (py = by0; py <= by1; py++) {
+      for (px = bx0; px <= bx1; px++) {
+        var on = im.own[py * im.W + px] === fi;
+        if (on && off && off(im.x0 + (px + 0.5) / s, im.y0 + (py + 0.5) / s)) on = false;
+        d[(py - by0 + 1) * w + (px - bx0 + 1)] = on ? 1e9 : 0;
+        if (on) any = true;
+      }
+    }
+    if (!any) return null;
+    for (py = 1; py < hh - 1; py++) for (px = 1; px < w - 1; px++) {
+      k = py * w + px;
+      if (d[k] === 0) continue;
+      d[k] = Math.min(d[k], d[k - 1] + 1, d[k - w] + 1, d[k - w - 1] + SQ2, d[k - w + 1] + SQ2);
+    }
+    var best = -1, bk = -1;
+    for (py = hh - 2; py >= 1; py--) for (px = w - 2; px >= 1; px--) {
+      k = py * w + px;
+      if (d[k] === 0) continue;
+      d[k] = Math.min(d[k], d[k + 1] + 1, d[k + w] + 1, d[k + w + 1] + SQ2, d[k + w - 1] + SQ2);
+      if (d[k] > best) { best = d[k]; bk = k; }
+    }
+    var gx = bk % w, gy = Math.floor(bk / w);
+    // the distance runs to the centre of the first pixel outside: half a pixel less to the region's edge
+    return { at: [im.x0 + (gx - 1 + bx0 + 0.5) / s, im.y0 + (gy - 1 + by0 + 0.5) / s], clear: Math.max(0, best - 0.5) / s };
+  }
+  // Where a cube's badge goes and how large: a hidden cube's at its centre, inside its veiled outline; a
+  // seen cube's on the most interior point of its faces' visible parts, outside the veils where a badge
+  // fits there and clear of the badges placed before it, as large as the spot allows (between BADGE_MIN
+  // and BADGE_R), so every badge sits on its own cube and never on a join. Ties: the front face, then the top.
+  var BADGE_R = 0.22, BADGE_MIN = 0.15, RING_D = 0.07, HID_K = 0.88, FACE_PREF = [0.01, 0.02, 0];
+  function placeOf(c, veils, discs) {
+    var q = c.q;
+    if (c.hidden) return { at: pt([q.x + 0.5, q.y + 0.5, q.z + 0.5]), r: BADGE_R * HID_K };
+    var rr = st.rr;
+    // clear of the badges placed so far (the hidden cubes' first): the distance to the region's edge then
+    // bounds this badge's size, so the two never overlap
+    var nearHid = function (X, Y) {
+      for (var j = 0; j < discs.length; j++) { var dx = X - discs[j].at[0], dy = Y - discs[j].at[1], g = discs[j].r + BADGE_MIN + 0.02; if (dx * dx + dy * dy < g * g) return true; }
+      return false;
+    };
+    var inVeil = function (pad) {
+      return function (X, Y) { if (nearHid(X, Y)) return true; for (var a = 0; a < veils.length; a++) if (nearHull(veils[a], X, Y, pad)) return true; return false; };
+    };
+    // out of the veils with a margin, then out of them, then anywhere clear of the other badges, then anywhere:
+    // the first tier where a badge of the smallest size fits, else the roomiest spot of all tiers
+    var tiers = [inVeil(0.08), inVeil(0), nearHid, null], roomiest = null;
+    for (var t = 0; t < tiers.length; t++) {
+      var best = null;
+      for (var fi = 0; fi < rr.faces.length; fi++) {
+        var f = rr.faces[fi];
+        if (f.cube !== c.i) continue;
+        var r = facePoint(rr, fi, tiers[t]);
+        if (!r) continue;
+        var score = r.clear + FACE_PREF[f.side];
+        if (!best || score > best.score) best = { at: r.at, score: score, clear: r.clear };
+      }
+      if (best && best.clear >= BADGE_MIN) return { at: best.at, r: Math.min(BADGE_R, best.clear) };
+      if (best && (!roomiest || best.clear > roomiest.clear + 1e-9)) roomiest = best;
+    }
+    if (roomiest) return { at: roomiest.at, r: BADGE_MIN };
+    var f0 = faceAt([q.x, q.y, q.z], 0);
+    return { at: [(f0[0][0] + f0[2][0]) / 2, (f0[0][1] + f0[2][1]) / 2], r: BADGE_MIN };
+  }
+  // A badge (v1.2 fresh-player run: sized to sit inside its face; a hidden cube's a little smaller, dashed).
+  // kind: 'number' (ink), 'count' (counted for the question: the accent and a ring), 'unknown' ('?').
+  function badge(c, text, kind, place) {
+    var at = place.at, r = place.r, k = r / BADGE_R;
+    var g = S.el('g', { class: 'ex-cubes-badge ex-cubes-badge--' + kind + (c.hidden ? ' is-hidden' : ''), 'data-cube': String(c.i) });
+    if (kind === 'count') g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: r + RING_D, class: 'ex-cubes-ring' }));
+    g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: r }));
+    // S.text centres the em box on y (dominant-baseline central), which centres a digit within 0.01 edge
+    var t = S.text(at[0], at[1], String(text), { class: 'ex-cubes-badge-n' });
+    if (Math.abs(k - 1) > 1e-6 && !c.hidden) t.style.fontSize = (0.29 * k).toFixed(3) + 'px';
+    g.appendChild(t);
     return g;
   }
   function marks() { var m = st.fig.svg.querySelector('.ex-cubes-marks'); PX.ui.clear(m); return m; }
@@ -163,7 +268,7 @@
   // each column from the top down (as the card goes).
   function cubeList(item) {
     if (st.list && st.listItem === item) return st.list;
-    var rr = lib.render(item.heights), out = [];
+    var rr = st.rr = lib.render(item.heights), out = [];
     rr.cubes.forEach(function (q, i) { out.push({ q: q, i: i, vis: rr.perCube[i], hidden: rr.perCube[i].any === 0, counted: q.painted === item.ask }); });
     out.sort(function (a, b) { return a.q.z - b.q.z || a.q.x - b.q.x || b.q.y - a.q.y; });
     st.list = out; st.listItem = item;
@@ -185,10 +290,17 @@
     var m = marks(), all = cubeList(item), k = 0, ring = {}, also = opts.also || [];
     counted(item).forEach(function (c) { if (k++ < (opts.counted || 0)) ring[c.i] = true; });
     var shown = all.filter(function (c) { return opts.only ? ring[c.i] || also.indexOf(c.i) >= 0 : true; });
-    shown.forEach(function (c) { if (c.hidden) m.appendChild(ghost(c.q)); });
+    var hid = shown.filter(function (c) { return c.hidden; });
+    var veils = hid.map(function (c) { return hull(c.q); }), discs = [], place = {};
+    hid.forEach(function (c) { m.appendChild(ghost(c.q, true)); });
+    // the hidden cubes' badges first (fixed at their centres), then each seen cube's clear of those placed
+    hid.concat(shown.filter(function (c) { return !c.hidden; })).forEach(function (c) {
+      var pl = place[c.i] = placeOf(c, veils, discs);
+      discs.push({ at: pl.at, r: pl.r + (ring[c.i] ? RING_D : 0) });
+    });
     shown.forEach(function (c) {
       var blank = (opts.blank || []).indexOf(c.i) >= 0;
-      m.appendChild(badge(c, blank ? '?' : c.q.painted, ring[c.i] ? 'count' : blank ? 'unknown' : 'number'));
+      m.appendChild(badge(c, blank ? '?' : c.q.painted, ring[c.i] ? 'count' : blank ? 'unknown' : 'number', place[c.i]));
     });
   }
   // Try 1's first step done (ctx.assist = { numbers: n }): every cube's number but n. Left blank:
@@ -251,7 +363,8 @@
     st.root.classList.toggle('is-tally', !!several && st.tallyOpen);
     row.hidden = !several;
     if (!several) return;
-    var label = set ? 'Question ' + (set.i + 1) + ' of ' + set.n : 'Question ' + (item.pos + 1) + ' about this figure';
+    // Try asks every question of its figure (learn.practice, by params.ask), so it names the total too.
+    var label = set ? 'Question ' + (set.i + 1) + ' of ' + set.n : ctx && ctx.practice ? 'Question ' + (item.pos + 1) + ' of ' + item.asks.length : 'Question ' + (item.pos + 1) + ' about this figure';
     var toggle = h('button.px-btn.ex-cubes-tally-toggle', { type: 'button', 'aria-pressed': st.tallyOpen ? 'true' : 'false', 'aria-controls': 'ex-cubes-tally' }, 'Tally');
     toggle.addEventListener('click', function () {
       var svg = st.figure.querySelector('svg'), h0 = svg ? svg.getBoundingClientRect().height : 0;
@@ -318,7 +431,7 @@
       st.figKey = key;
       st.tally = [0, 0, 0, 0, 0, 0];
       st.cut = ''; // a new figure is laid out with the pad as it is (css/ex/cubes.css budgets it on phones)
-      st.list = null; st.listItem = null;
+      st.list = null; st.listItem = null; st.rr = null;
     } else {
       // the same figure, a new question: the drawing stays, its marks go
       normal();
@@ -338,6 +451,10 @@
     } else if (st.assistHidden) {
       ghostHidden(item);
       st.caption.textContent = cap('assistHidden', { what: what });
+    } else if (ctx && ctx.practice && !ctx.demo && st.root.classList.contains('has-set') && item.pos === 0) {
+      // Try's figure set (fresh-player run, 19 Nov: sets and the tally were first met in scored items)
+      var two = item.asks.length === 2;
+      st.caption.textContent = cap('setFirst', { n: two ? 'Two' : String(item.asks.length), all: two ? 'both' : 'all of them' });
     }
     st.desc.textContent = describe(item) + (st.assist ? ' Every cube but ' + st.assist.length + ' shows its number of painted sides.' : '') +
       (st.assistHidden ? ' ' + cap('assistHidden', { what: what }) : '');

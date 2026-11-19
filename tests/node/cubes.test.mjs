@@ -1,7 +1,8 @@
 /* EX-18 Painted Cubes: generator, validator (independent recount and ray cast), scorer, difficulty,
    camera, figure sets (version 3: 2–4 questions a figure, five painted sides), shortcut solvers on
    every question, partial counts (O57), an independent solver from the picture with a one-column
-   uniqueness proof (O30), Section-mode asks, timing and learn data (ARCHITECTURE §12; R3 §8.4;
+   uniqueness proof and a brute-force search of every reading of the picture (O30), Section-mode asks,
+   timing and learn data (ARCHITECTURE §12; R3 §8.4;
    note D1 §6.3). Run through tests/node/run.mjs. PX_REPORT=1 prints the numbers; PX_TEST_ITEMS=<n>
    shortens it. */
 import { MANIFEST, deepDiff } from './run.mjs';
@@ -307,6 +308,46 @@ export async function run(t) {
   t.eq(solveBad, 0, `every question of every figure is solved from the tops in view alone (${sample.length} figures)` + (firstSolve && solveBad ? `: ${firstSolve}` : ''));
   t.eq(ambiguous, 0, `no column of another height gives the same tops in view under the format's rule (${tried} figures searched)` + (firstSolve && ambiguous ? `: ${firstSolve}` : ''));
 
+  t.section('cubes: every reading of the drawing (O30, brute force)');
+  // Every figure that draws the same picture: height maps on the grid widened by one cell on every side,
+  // columns up to 5 high (one more than any figure), searched column by column from the front, each column
+  // at every height; a reading survives only if it fills every pixel of this file's own raster (10 px an
+  // edge; the generator's z-buffer uses 14) with the same face as the figure: the same side at the same
+  // place in the picture. Under the drawing's rule for hidden cubes (a cube out of sight only holds others
+  // up, so every column's top cube shows), every reading must answer every question of the figure alike.
+  // Without the rule the search also finds the readings the rule rules out, which shows it can.
+  const O30_PER = Math.max(2, Math.min(15, Math.round(N_ITEMS / 670))); // figures per level combination
+  const combos = PX.ex.enumerate(def);
+  let o30n = 0, o30one = 0, o30diff = 0, o30bad = null, o30free = 0, o30freeDiff = 0, o30capped = 0, o30ms = 0;
+  const perLevel = {};
+  for (let ci = 0; ci < combos.length; ci++) {
+    for (let s = 0; s < O30_PER; s++) {
+      const item = def.generate(PX.rng(PX.rng.hash('cubes-o30', ci, s)), combos[ci]);
+      if (item.fallback) continue;
+      const t0 = procMs();
+      const want = item.asks.map((N) => L.histogram(item.heights)[N]);
+      const ruled = readingsOf(L, item.heights, { rule: true, cap: 50 });
+      const free = readingsOf(L, item.heights, { rule: false, cap: 2000 });
+      o30ms += procMs() - t0;
+      o30n++;
+      const answers = (Hs) => Hs.map((H2) => item.asks.map((N) => paintedCounts(H2)[N]));
+      const same = (a) => a.every((x, j) => x === want[j]);
+      if (ruled.list.length === 1 && deepDiff(trimMap(ruled.list[0], item.heights.length), item.heights) === null) o30one++;
+      else o30bad = o30bad || `seed ${item.seed} ${JSON.stringify(combos[ci])}: ${ruled.list.length} readings under the rule`;
+      if (!answers(ruled.list).every(same)) { o30diff++; o30bad = o30bad || `seed ${item.seed}: a reading under the rule answers differently`; }
+      if (free.list.length > 1 || free.capped) { o30free++; if (!answers(free.list).every(same)) o30freeDiff++; }
+      if (free.capped) o30capped++;
+      for (const d of def.dims) { const k = d.key + '=' + combos[ci][d.key]; perLevel[k] = (perLevel[k] || 0) + 1; }
+    }
+  }
+  const minLevel = Math.min(...Object.values(perLevel));
+  t.ok(o30n >= Math.min(600, 40 * O30_PER) - 5 && minLevel >= O30_PER * 4, `figures searched: ${o30n}, at least ${minLevel} at every level of every dimension (${O30_PER} per combination)`);
+  t.eq(o30one, o30n, `under the rule every figure has exactly one reading, its own (${o30n} figures)` + (o30bad ? `: ${o30bad}` : ''));
+  t.eq(o30diff, 0, 'so every question of every figure has one answer for every reading of its picture');
+  t.ok(o30free > 0 && o30freeDiff > 0, `without the rule the search finds other readings (hidden cubes nothing rests on: ${o30free} of ${o30n} figures, ${o30freeDiff} of them with another answer${o30capped ? `; ${o30capped} capped at 2,000` : ''}): the rule is what makes the answer unique`);
+  t.ok(o30ms / Math.max(1, o30n) < 60, `the search takes ${(o30ms / Math.max(1, o30n)).toFixed(1)} ms of CPU a figure (both searches)`);
+  if (process.env.PX_REPORT) console.log(`       O30: ${o30n} figures (fewest at a level ${minLevel}), one reading under the rule in ${o30one}; without it other readings in ${o30free} (${o30freeDiff} with another answer, ${o30capped} capped); ${(o30ms / Math.max(1, o30n)).toFixed(1)} ms a figure`);
+
   if (process.env.PX_REPORT) {
     console.log('       cubes: ' + Object.entries(acc).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
     console.log('       cubes, starter band: ' + Object.entries(accBand).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
@@ -364,6 +405,99 @@ function solverHits(L, item, prevKeys, sight) {
     'visible cubes only': clampHit(pt.vis), 'visible cubes plus one': clampHit(pt.vis + 1), 'column tops only': clampHit(pt.tops),
   };
   return out;
+}
+
+/* ---------- every reading of the picture (O30, brute force) ---------- */
+
+// The picture of a height map: this file's own raster of the faces that show, each pixel holding the face
+// that owns it as it appears in the picture (its side and the place of its corner on screen, never its
+// position in space), drawn from the front: a column (x, z) can only be hidden by columns at x' ≥ x and
+// z' ≥ z, so columns go by descending x + z, each face filling the pixels nothing nearer has filled.
+// readingsOf(L, H, { rule, cap }) searches every height map on the grid widened by one cell a side, columns
+// 0–5 high, in that order: a column's height survives if every pixel it fills holds the picture's face
+// there, every pixel no later column can reach is filled as in the picture, and (rule) its top cube shows.
+// → { list: [height maps on the widened grid], capped }.
+const O30_SCALE = 10, O30_HMAX = 5;
+function readingsOf(L, H, opts) {
+  const G = H.length, E = G + 2, S = O30_SCALE, HM = O30_HMAX, P = (x, y, z) => L.proj([x - 1, y, z - 1]);
+  // raster bounds: every corner of the widened box
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const x of [0, E]) for (const y of [0, HM]) for (const z of [0, E]) { const q = P(x, y, z); x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
+  const W = Math.ceil((x1 - x0) * S) + 2, Hh = Math.ceil((y1 - y0) * S) + 2;
+  const ids = new Map(), idOf = (k) => { if (!ids.has(k)) ids.set(k, ids.size); return ids.get(k); };
+  // a unit face (side 0 top, 1 front, 2 right) of the cube at (x, y, z): its pixels and its key in the picture
+  const faceCache = new Map();
+  function face(x, y, z, side) {
+    const ck = x + ',' + y + ',' + z + ',' + side;
+    if (faceCache.has(ck)) return faceCache.get(ck);
+    const o = side === 0 ? [x, y + 1, z] : side === 1 ? [x, y, z + 1] : [x + 1, y, z];
+    const u = side === 2 ? [0, 0, 1] : [1, 0, 0], v = side === 0 ? [0, 0, 1] : [0, 1, 0];
+    const p0 = P(o[0], o[1], o[2]), pu = P(o[0] + u[0], o[1] + u[1], o[2] + u[2]), pv = P(o[0] + v[0], o[1] + v[1], o[2] + v[2]);
+    const ux = pu[0] - p0[0], uy = pu[1] - p0[1], vx = pv[0] - p0[0], vy = pv[1] - p0[1], det = ux * vy - uy * vx;
+    const xs = [p0[0], pu[0], pv[0], pu[0] + vx], ys = [p0[1], pu[1], pv[1], pu[1] + vy], px = [];
+    for (let py = Math.max(0, Math.floor((Math.min(...ys) - y0) * S)); py <= Math.min(Hh - 1, Math.ceil((Math.max(...ys) - y0) * S)); py++) {
+      for (let qx = Math.max(0, Math.floor((Math.min(...xs) - x0) * S)); qx <= Math.min(W - 1, Math.ceil((Math.max(...xs) - x0) * S)); qx++) {
+        const sx = x0 + (qx + 0.5) / S - p0[0], sy = y0 + (py + 0.5) / S - p0[1];
+        const a = (sx * vy - sy * vx) / det, b = (ux * sy - uy * sx) / det;
+        if (a >= 0 && a < 1 && b >= 0 && b < 1) px.push(py * W + qx);
+      }
+    }
+    const f = { px, id: idOf(side + ':' + Math.round(p0[0] * 1e6) + ':' + Math.round(p0[1] * 1e6)) };
+    faceCache.set(ck, f);
+    return f;
+  }
+  // the faces a column of height h shows, given its front (z + 1) and right (x + 1) neighbours: its top, then
+  // each cube's front and right side where no neighbour covers it, top cube first; [face, cube level]
+  function colFaces(x, z, h, hf, hr) {
+    const out = [];
+    if (h > 0) out.push([face(x, h - 1, z, 0), h - 1]);
+    for (let y = h - 1; y >= 0; y--) { if (hf <= y) out.push([face(x, y, z, 1), y]); if (hr <= y) out.push([face(x, y, z, 2), y]); }
+    return out;
+  }
+  const order = [];
+  for (let z = 0; z < E; z++) for (let x = 0; x < E; x++) order.push([x, z]);
+  order.sort((a, b) => (b[0] + b[1]) - (a[0] + a[1]) || b[0] - a[0]);
+  const at = (M, x, z) => (x < 0 || z < 0 || x >= E || z >= E ? 0 : M[z][x]);
+  // the target: H on the widened grid
+  const T0 = Array.from({ length: E }, (_, z) => Array.from({ length: E }, (_, x) => (x >= 1 && z >= 1 && x <= G && z <= G ? H[z - 1][x - 1] : 0)));
+  const T = new Int32Array(W * Hh).fill(-1);
+  for (const [x, z] of order) for (const [f] of colFaces(x, z, T0[z][x], at(T0, x, z + 1), at(T0, x + 1, z))) for (const p of f.px) if (T[p] === -1) T[p] = f.id;
+  // the last column (in order) whose tallest outline reaches each pixel: after it, a pixel stays as it is
+  const last = new Int32Array(W * Hh).fill(-1);
+  order.forEach(([x, z], k) => { for (let y = 0; y < HM; y++) for (let side = 0; side < 3; side++) for (const p of face(x, y, z, side).px) last[p] = k; });
+  const lastOf = order.map(() => []);
+  for (let p = 0; p < W * Hh; p++) if (last[p] >= 0 && T[p] !== -1) lastOf[last[p]].push(p);
+  const img = new Int32Array(W * Hh).fill(-1), M = Array.from({ length: E }, () => new Array(E).fill(0)), list = [];
+  let capped = false;
+  (function dfs(k) {
+    if (capped) return;
+    if (k === order.length) { if (list.length >= opts.cap) { capped = true; return; } list.push(M.map((r) => r.slice())); return; }
+    const [x, z] = order[k], hf = at(M, x, z + 1), hr = at(M, x + 1, z);
+    for (let h = 0; h <= HM && !capped; h++) {
+      const filled = [];
+      let ok = true, topShows = h === 0;
+      for (const [f, y] of colFaces(x, z, h, hf, hr)) {
+        for (const p of f.px) {
+          if (img[p] !== -1) continue;
+          if (T[p] !== f.id) { ok = false; break; }
+          img[p] = f.id; filled.push(p);
+          if (y === h - 1) topShows = true;
+        }
+        if (!ok) break;
+      }
+      if (ok && opts.rule && !topShows) ok = false;
+      if (ok) for (const p of lastOf[k]) if (img[p] === -1) { ok = false; break; }
+      if (ok) { M[z][x] = h; dfs(k + 1); M[z][x] = 0; }
+      for (const p of filled) img[p] = -1;
+    }
+  })(0);
+  return { list, capped };
+}
+// A reading on the widened grid back on the figure's own grid (its border must be empty), else null.
+function trimMap(M, G) {
+  const E = M.length;
+  for (let z = 0; z < E; z++) for (let x = 0; x < E; x++) if ((x === 0 || z === 0 || x === E - 1 || z === E - 1) && M[z][x] !== 0) return null;
+  return M.slice(1, G + 1).map((r) => r.slice(1, G + 1));
 }
 
 /* ---------- the picture, read with this file's own code (O30) ---------- */
@@ -437,9 +571,9 @@ function testLearn(t, PX, def) {
   t.ok(/touch/.test(ruleText) && /under/.test(ruleText) && /hold up/.test(ruleText), 'the three rules of note D2 §3.3: touching faces, a cube under another, hidden supports');
   const first = (L.strategies || []).find((x) => x.id === L.strategyFirst);
   t.ok(first && first.steps.length === 3 && /Count by position/.test(first.title), 'strategyFirst names the "Count by position" card, three steps');
-  t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((x) => x && valid(x.params) && Number.isInteger(x.seed)), 'four Try items as objects { params, seed, … }');
+  t.ok(Array.isArray(L.practice) && L.practice.length === 5 && L.practice.every((x) => x && valid(x.params) && Number.isInteger(x.seed)), 'five Try items as objects { params, seed, … }');
   const P = L.practice;
-  t.ok(P[0].assist && P[0].assist.numbers === 2 && !P[1].assist && !P[3].assist, 'Try 1 has its first step done (every number but two); Try 2 and Try 4 have no help');
+  t.ok(P[0].assist && P[0].assist.numbers === 2 && !P[1].assist && !P[3].assist && !P[4].assist, 'Try 1 has its first step done (every number but two); Try 2, Try 4 and Try 5 have no help');
   t.ok(P[2].assist && P[2].assist.hidden === true && !P[2].assist.numbers, 'Try 3 draws its hidden support dashed (a faded step between the worked example and Try 4)');
   t.ok(typeof L.captions.assistHidden === 'string' && /\{what\}/.test(L.captions.assistHidden), 'the caption for the dashed hidden cube');
   t.ok(def.difficulty(P[0].params) <= floor + 1e-9 && def.difficulty(P[1].params) <= floor + 1e-9, 'Try 1 and Try 2 at the starter floor');
@@ -460,10 +594,29 @@ function testLearn(t, PX, def) {
     'before Try 3 a worked example with one hidden support (another figure than Try 3\'s)');
   const rr4 = def.lib.render(tryItems[3].heights);
   t.ok(rr4.cubes.some((q, i) => q.painted === tryItems[3].ask && rr4.perCube[i].any === 0), 'Try 4 hides a cube that the count includes');
+  // The lead's fresh-player run (19 Nov): Try 4 changed to the plain drawing without a word, and figure sets
+  // and the tally were first met in scored items. Try 4 and Try 5 are now the two questions of one figure, in
+  // the plain drawing, Try 4 with the tip that says so and how to count the supports nobody can see.
+  const same = (a, b) => JSON.stringify({ ...a, ask: 0 }) === JSON.stringify({ ...b, ask: 0 });
+  t.ok(P[3].seed === P[4].seed && same(P[3].params, P[4].params) && P[3].params.ask === 0 && P[4].params.ask === 1 && def.set.size(P[3].params, P[3].seed) === 2,
+    'Try 4 and Try 5: questions 1 and 2 of one two-question figure (one seed, params.ask 0 and 1)');
+  t.ok(JSON.stringify(tryItems[3].heights) === JSON.stringify(tryItems[4].heights) && tryItems[3].ask !== tryItems[4].ask && tryItems[4].pos === 1 && tryItems[4].asks.length === 2,
+    'the two questions ask about different numbers of painted sides on the same figure');
+  t.ok([P[3], P[4]].every((x) => PX.ex.rangeTag(def, x.params) === 'test') && [P[0], P[1], P[2]].every((x) => PX.ex.rangeTag(def, x.params) === 'below'),
+    'Try 4 and Try 5 are in the test range (the plain drawing); Try 1–3 below it (shaded)');
+  const tipOf = (id) => (L.tips || []).find((x) => x.id === id);
+  t.ok(P[3].tip === 'plain' && tipOf('plain') && /plain lines/.test(tipOf('plain').text) && /not marked/.test(tipOf('plain').text) && /hold others up, seen or not/.test(tipOf('plain').text),
+    'Try 4\'s tip says the figure is drawn as on the test, plain, hidden cubes unmarked, and how to count the supports');
+  t.ok(tipOf('plain').when.dim === 'ask' && tipOf('plain').when.levels.join() === '0' && tipOf('plain').text.length <= 125,
+    'the plain-drawing tip fires only where a first question is asked by its index (Try), and stays short for 360 × 640');
+  const firstTip = (params) => (L.tips || []).find((x) => x.when && Array.isArray(x.when.levels) && x.when.levels.includes(params[x.when.dim]));
+  t.ok(!P[4].tip && firstTip(tryItems[4].params) && firstTip(tryItems[4].params).id === 'set' && /tally/.test(tipOf('set').text), 'Try 5 meets the figure-set tip (same figure, new question; the tally)');
+  t.ok(typeof L.captions.setFirst === 'string' && /Tally/.test(L.captions.setFirst) && /\{n\}/.test(L.captions.setFirst), 'a caption for the first question of Try\'s figure set names the tally');
+
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
     const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).length && tr.levels.every((l) => l >= 0 && l < d.levels.length)) ||
-      (def.extraParams.includes(tr.dim) && (tr.levels || []).length && tr.levels.every((l) => Number.isInteger(l) && l >= 1 && l <= 3));
+      (def.extraParams.includes(tr.dim) && (tr.levels || []).length && tr.levels.every((l) => Number.isInteger(l) && l >= 0 && l <= 3));
     t.ok(tip.id && tip.text && tr.dim && dimOk, `tip ${tip.id} has a valid trigger`);
   }
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');

@@ -20,7 +20,7 @@
     // Try 1, Try 1 with every cube's number shown but two, then the band unaided, five cubes two high
     // with one hidden support (one new feature at a time; the ADA's own first cube example teaches
     // the hidden support on four cubes, note D1 addendum A.1), and the pre-1.2 floor, where a hidden
-    // cube is among the counted. Three-high columns keep their tip for rated play. Format rules before practice: d ≈ 0.9–1.2 on the
+    // cube is among the counted: two questions about one figure in the test's plain drawing. Three-high columns keep their tip for rated play. Format rules before practice: d ≈ 0.9–1.2 on the
     // format (Schneider et al. 2020, Levacher et al. 2022, via R4 §4.2); faded worked examples
     // (D2 §2.2). Figures: view.drawRule.
     rules: [
@@ -31,7 +31,7 @@
     strategyFirst: 'analytic',
     // The Watch at the starter band: four flat cubes in an L, asked about 3 painted sides (the
     // corner and the middle of the row: 2 cubes). Seeds are fixed so the answers vary their slot
-    // (Watch 2, Try 3, 1, 3, 2), Try 3 hides exactly one cube and Try 4 hides one that is counted.
+    // (Watch 2, Try 3, 1, 3, 2, 1), Try 3 hides exactly one cube and Try 4 hides one that is counted.
     demo: [
       { params: { cubes: 0, height: 0, asked: 0 }, seed: 1, kind: 'flat' },
     ],
@@ -45,15 +45,23 @@
       // dashed and numbered), faded (Try 3, dashed), alone (Try 4, nothing marked); note D2 §2.2,
       // where fading itself is a working assumption.
       { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden', example: { seed: 5 }, assist: { hidden: true } },
-      { params: { cubes: 1, height: 1, asked: 0 }, seed: 108 },
+      // Try 4 and Try 5: the two questions of one figure (params.ask 0 and 1, one seed), six cubes two
+      // high with a hidden support among the counted, drawn as on the test (plain lines, nothing marked):
+      // the plain look comes with its own tip, and the set row and the tally are met before scored items
+      // (the lead's fresh-player run, 19 Nov: Try 4 changed the look without a word, sets came unannounced).
+      { params: { cubes: 1, height: 1, asked: 0, ask: 0 }, seed: 324, tip: 'plain' },
+      { params: { cubes: 1, height: 1, asked: 0, ask: 1 }, seed: 324 },
     ],
     tips: [
       // version 3: a figure's later questions (params.ask 1–3) come one at a time, the figure unchanged.
       // First in the list: the player shows one tip an item, the first unseen match, and this one
       // belongs to the first later question a player meets.
-      { id: 'set', when: { dim: 'ask', levels: [1, 2, 3] }, text: 'Same figure, new question: every cube keeps the number of painted sides you gave it, so count the cubes with the new number.' },
+      { id: 'set', when: { dim: 'ask', levels: [1, 2, 3] }, text: 'Same figure, new question: every cube keeps the number of painted sides you gave it, so count the cubes with the new number, or read it off your tally.' },
       { id: 'flat', when: { dim: 'height', levels: [0] }, text: 'A flat figure: every cube is in view, and each one has 5 painted sides minus the cubes it touches.' },
       { id: 'hidden', when: { dim: 'height', levels: [1, 2, 3] }, text: 'Cubes stand on cubes now. A cube you cannot see holds up the ones above it: it counts too, and its sides follow from its neighbours.' },
+      // Try 4's tip, where the plain drawing starts. Its trigger (a figure's first question asked by its
+      // index, params.ask 0) holds only for Try entries: in rated play a first question carries no ask.
+      { id: 'plain', when: { dim: 'ask', levels: [0] }, text: 'Drawn as on the test: plain lines, no shading, hidden cubes not marked. Count the cubes that hold others up, seen or not.' },
       { id: 'tall', when: { dim: 'height', levels: [2, 3] }, text: 'Three high: a cube in the middle of a column has no painted top, only the sides no cube touches.' },
       { id: 'few', when: { dim: 'asked', levels: [1] }, text: 'Cubes with one or two painted sides sit inside the figure or under other cubes. Check the hidden ones too.' },
       { id: 'bottom', when: { dim: 'cubes', levels: [2] }, text: 'The bottom is never painted: a cube on the ground has at most five painted sides, and only if nothing touches it.' },
@@ -117,6 +125,7 @@
       chosen: 'Answer {n}, {c}, is {d} the true count: check the hidden cubes and the faces at the back.',
       assist: 'Numbers given, except the two cubes marked ?.',
       assistHidden: '{what} drawn dashed for you.',
+      setFirst: '{n} questions: Tally keeps your counts for {all}.',
     },
     checkin: { whole: 'I recognised the positions at a glance', parts: 'I went through the cubes one by one', unsure: 'Not sure, or both' },
     bridge: 'Cube counting is one of the formats of the Perceptual Ability Test in the Dental Admission Test (DAT®). Practice on a format usually raises scores on that format; an effect of Parallax on DAT scores has not been shown or measured, and those scores relate only modestly to dental-school grades. ' + ADA,
