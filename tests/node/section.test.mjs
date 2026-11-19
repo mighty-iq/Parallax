@@ -589,6 +589,21 @@ function testReal(t) {
   }
   t.ok(!tagged.length || (m > 0 && !off.length), `every item of eight forms of each size sits at test-range settings (${m} items of ${tagged.join(', ')})` + (off.length ? ': ' + off.slice(0, 4).join('; ') : ''));
   if (PX.ex.get('patviews') && PX.ex.get('patviews').testRange) t.ok(S.formItems('full', 1, 'patviews', 15).every((x) => x.params.cubes >= PX.ex.get('patviews').lib.NCUBE), 'Missing View\'s forms deal solid blocks only, never cube stacks');
+  // v1.2 (fresh-player run, 19 Nov; W1-band-B): a part never shows a stem twice where the exercise asks for it
+  // (lib.fewStems, lib.sigOf): Hole Punch's parts repeated one in 37 of 60 forms before
+  const fresh = ok.filter((id) => typeof PX.ex.get(id).lib.fewStems === 'function'), reps = [];
+  let q = 0;
+  for (const size of ['mini', 'full']) for (let f = 1; f <= 8; f++) for (const id of fresh) {
+    const def = PX.ex.get(id), seen = new Set();
+    S.formItems(size, f, id, S.SIZES[size].perPart).forEach((it) => {
+      if (!def.lib.fewStems(it.params)) return;
+      q++;
+      const sg = def.lib.stemSig(def.generate(PX.rng(it.seed), it.params));
+      if (seen.has(sg)) reps.push(id + ' ' + size + ' form ' + f);
+      seen.add(sg);
+    });
+  }
+  t.ok(!fresh.length || (q > 0 && !reps.length), `no part of eight forms of each size shows a stem twice (${q} items of ${fresh.join(', ')})` + (reps.length ? ': ' + reps.slice(0, 4).join('; ') : ''));
   Object.keys(warned).forEach((id) => console.log(`       ! ${id}: ${warned[id]} item(s) of the first forms failed (pending, not counted)`));
   const run = S.start({ settings: {}, ex: {}, sessions: [], trials: [], idx: { ex: [], mode: [] } }, { size: 'mini', now: T0 });
   t.eq(run.parts.map((p) => p.exId), ok, 'a real run has the existing parts in PAT order');

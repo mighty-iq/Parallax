@@ -6,7 +6,10 @@ to the end; the rules card lists 2-4 rules; no console or harness errors. Mid-an
 at normal speed for the new show-me steps (Openings' turn and flip, Form's fold-up, Missing View's
 turn to the missing side). Then the app's own Watch, Try, Go (index.html, fast) at 360 x 640: the rules
 card, the Watch to its end, the strategy card, Try 1-4 with the worked example right before the Try item
-that brings the first hard feature, and the end screen, with no console errors.
+that brings the first hard feature, and the end screen, with no console errors. Then (v1.2, fresh-player run of
+19 Nov: one session dealt the same Missing View item twice) a Free play session in the app at 390 x 844 on the
+smallest pool of Missing View's starter band and of Hole Punch: the session guard is mounted at item:before,
+no stem comes twice, and every logged seed rebuilds the item shown.
 Screenshots: tests/e2e/out/starter_b/.
 Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_starter_b.py [openings form patfold patviews]"""
 import sys
@@ -176,6 +179,65 @@ def wtg_app(b, cons, ex):
     ctx.close()
 
 
+# Free play at fixed settings with few stems (js/ex/patviews/gen.js fewStems): settings, items
+SESSION = {'patviews': ({'cubes': 0, 'grid': 0, 'missing': 1, 'foil': 1}, 8), 'patfold': ({'folds': 1, 'idle': 0, 'sheets': 0, 'type': 3}, 6)}
+
+
+def session_app(b, cons, ex):
+    params, n = SESSION[ex]
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, **PHONE)
+    page = ctx.new_page()
+    con = Console(page)
+    cons.append(con)
+    page.goto((ROOT / 'index.html').as_uri())
+    page.wait_for_function(APP_READY, timeout=20000)
+    for _ in range(4):
+        if not page.evaluate('PX.ui.modalOpen()'):
+            break
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(120)
+    page.evaluate("""() => { const r = PX.core.store.state; r.tour = r.tour || { seen: {} }; r.tour.seen = r.tour.seen || {};
+        PX.ex.list().forEach((d) => { r.tour.seen[d.id] = true; }); }""")
+    ids = page.evaluate("PX.ui.hooks.list('item:before').map((h) => h.id)")
+    C.ok('ex.session-fresh' in ids, f'{ex} session: the guard is mounted at item:before ({ids})')
+    page.evaluate('PX.debug.fast(true)')
+    page.evaluate("(a) => { void PX.core.router.go('play', { mode: 'free', exId: a.ex, run: '1', trials: a.n, params: a.p }, { force: true }); }", {'ex': ex, 'n': n, 'p': params})
+    seen, idle = {}, 0
+    for _ in range(600):
+        st = page.evaluate('() => window.__play ? __play.state : "idle"')
+        if st == 'respond':
+            k = page.evaluate('() => __play.session ? __play.session.answered : -1')
+            if k not in seen:
+                seen[k] = page.evaluate('(id) => PX.ex.get(id).lib.stemSig(__play.item)', ex)
+            page.evaluate('() => __play.answer(true).catch(() => 0)')
+            idle = 0
+        elif st in ('reveal', 'showme'):
+            page.evaluate('() => __play.next()')
+            idle = 0
+        else:
+            if page.locator('[data-card="session"]').count() or (page.evaluate('() => !!(__play.session && __play.session.done)') if st != 'idle' else False):
+                break
+            btn = page.locator('[data-card-box] .px-btn--primary:visible')
+            if btn.count():
+                btn.first.tap()
+                idle = 0
+            else:
+                idle += 1
+                if idle > 100 and len(seen) >= n:
+                    break
+        page.wait_for_timeout(80)
+    stems = [seen[k] for k in sorted(seen)]
+    C.ok(len(stems) == n and len(set(stems)) == n, f'{ex} session: {len(stems)} items of {n}, {len(set(stems))} different stems')
+    rows = page.evaluate("""(a) => { const L = PX.ex.get(a.ex).lib, def = PX.ex.get(a.ex);
+        const rec = PX.core.store.state; // rows: [tSec, exIndex, modeIndex, paramsCode, seed, …]; idx.ex holds 'id@version'
+        const at = rec.idx.ex.map((e, i) => (String(e).split('@')[0] === a.ex ? i : -1)).filter((i) => i >= 0);
+        return rec.trials.filter((r) => at.includes(r[1])).map((r) => L.stemSig(def.generate(PX.rng(r[4]), Object.assign({}, a.p)))); }""", {'ex': ex, 'p': params})
+    C.ok(sorted(rows) == sorted(stems), f'{ex} session: every logged seed rebuilds the item shown ({len(rows)} rows)')
+    page.screenshot(path=str(DIR / f'{ex}_session_end_390.png'))
+    C.ok(not con.errors(), f'{ex} session: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def main(which):
     cons = []
     with sync_playwright() as p:
@@ -183,6 +245,8 @@ def main(which):
         for ex in which:
             check(b, cons, ex)
             wtg_app(b, cons, ex)
+            if ex in SESSION:
+                session_app(b, cons, ex)
         b.close()
     return report(C, cons, {'screenshots': sorted(x.name for x in DIR.glob('*.png'))})
 

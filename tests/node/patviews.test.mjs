@@ -4,6 +4,7 @@
    Run through tests/node/run.mjs (filter: patviews). */
 import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
+import { newRecord } from './fixtures/learner.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/views/gen.js', 'js/ex/patviews/gen.js', 'js/ex/patviews/learn.js'];
 const N_ITEMS = +(process.env.PX_TEST_ITEMS || 14112); // 112 per combination (126; the starter band's pool keeps 2 016)
@@ -27,6 +28,7 @@ export async function run(t) {
   testTiming(t, PX, def);
   testLearn(t, PX, def);
   testTutorialRepeat(t, PX, def, 'patviews');
+  testSession(t, PX, def);
 }
 
 const sig = (x) => 1 / (1 + Math.exp(-x));
@@ -218,7 +220,7 @@ function testKinds(t, PX, def, L, pool) {
     if (nc >= win[0] && nc <= win[1]) countOk++;
     if (p.cubes === 0) { // the starter band (note D2 §3.7)
       nBand++;
-      if (it.H === 2 && it.W >= 2 && it.D >= 2 && Math.max(it.W, it.D) <= 3 && (p.grid === 1 || it.missing === 'front' || Math.min(it.W, it.D) <= 2)) bandBox++;
+      if (it.H === 2 && it.W >= 2 && it.D >= 2 && Math.max(it.W, it.D) <= 3 && (p.grid === 1 || it.missing === 'front' || (it.missing === 'end' && p.foil > 0) || Math.min(it.W, it.D) <= 2)) bandBox++;
       if (it.options.every((o) => o.drawing.segs.every((q) => q[4] === 1))) bandSolid++;
       if (it.options.every((o, i) => i === it.key || o.why === 'hull' || o.why === 'align')) bandProof++;
       if (p.foil === 2) { // the band's subtlest level: same outline, every foil within three units of the key
@@ -252,7 +254,7 @@ function testKinds(t, PX, def, L, pool) {
   const N = pool.length;
   t.eq(countOk, N, 'the shown structure has the level\'s cube count (the labels hold)');
   t.ok(nBand >= 2000, `starter band items (${nBand})`);
-  t.eq(bandBox, nBand, 'starter band: two high, in a box of at most 2 × 3 (grid level 1, or a missing front view: 3 × 3)');
+  t.eq(bandBox, nBand, 'starter band: two high, in a box of at most 2 × 3 (grid level 1, a missing front view, or a missing end view with same-outline or solid-or-dotted foils: 3 × 3)');
   t.eq(bandSolid, nBand, 'starter band: no option has a dotted line (the key never does)');
   t.eq(bandProof, nBand, 'starter band: every foil fails the hull or the line test (none needs the exhaustive search)');
   t.eq(missOk, N, 'every item asks for its level\'s missing view and gives the other two');
@@ -561,7 +563,9 @@ function testLearn(t, PX, def) {
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered|boost|raise your|score gain|predict/i.test(all), 'no IQ, "mastered", score-gain or prediction claims');
-  t.ok(typeof L.bridge === 'string' && /not measured|has not been shown|has not measured/i.test(L.bridge), 'a "where it is used" line with its limitation beside it');
+  // RV-claims-1.2 M5: one limit, which the exercise page's pattern knows (so it adds no second one), then the ADA line
+  const limits = typeof L.bridge === 'string' ? (L.bridge.match(/not been shown|not been studied|has not measured|only modestly|grades or job|little or no/gi) || []).length : 0;
+  t.ok(typeof L.bridge === 'string' && limits === 1 && /not been shown|not been studied|little or no|not established/i.test(L.bridge) && /American Dental Association/.test(L.bridge.slice(-260)), `a "where it is used" line with one limit (${limits}), then the ADA line`);
 }
 
 // v1.2 (fresh-player test): no tutorial item comes back as a rated item. Every learn.js item carries
@@ -588,6 +592,89 @@ function testTutorialRepeat(t, PX, def, id) {
   }
   t.eq(repeats, 0, `no rated item at the tutorial's settings has a tutorial stem (${n} items; ${guarded} first draws were redrawn)`);
   t.eq(changed, 0, 'an item whose first draw is not a tutorial stem is the same as before');
+}
+
+// v1.2 (fresh-player run, 19 Nov: one session dealt the same starter item twice): the session guard
+// (lib.sessionGuard, run by the player's item:before; js/ex/patviews/view.js) shows no stem twice while a
+// setting has stems left. sessionStems plays one Free play session at fixed settings through the engine, as
+// the player does: next, the guard (or none), the item from the step's seed, an answer. Hole Punch, Openings
+// and Form run it too (their tests load this file's guard).
+const NO_CLOCK = { tries: 64, ms: Infinity }; // the guard's tries without its time limit (runs that do not depend on the machine)
+export function sessionStems(PX, def, params, n, guard, T0 = Date.UTC(2026, 10, 19, 12)) {
+  const E = PX.engine, G = PX.ex.get('patviews').lib, rec = newRecord(PX, T0), shown = new Map(), out = [];
+  let now = T0;
+  const plan = E.modes.start(rec, 'free', { now, exId: def.id, params, trials: n });
+  for (let i = 0; i < n; i++) {
+    const step = E.modes.next(plan, rec, now);
+    if (!step || step.done) break;
+    const r = guard ? G.sessionGuard({ mode: 'free', plan, rec, now, step, def }, shown, NO_CLOCK) : null;
+    const it = def.generate(PX.rng(step.seed), step.params);
+    out.push({ sig: def.lib.stemSig(it), r, seed: step.seed });
+    now += 5000;
+    E.modes.answer(plan, rec, step, { correct: i % 2 === 0, rt: 3000 }, now);
+  }
+  return { out, plan, rec };
+}
+// Sessions of n items at each setting (three per setting, three record dates): with the guard no stem comes
+// twice; without it, some session repeats one (plain: so the check can fail; where pools are large a repeat
+// is rare, and the count is reported). Every guarded seed rebuilds the stem the guard counted (the log
+// replays the item shown).
+export function checkSessions(t, PX, def, settings, n, label, plain = true) {
+  let sessions = 0, guardedRep = 0, plainRep = 0, rebuilt = 0, items = 0, moved = 0, short = 0;
+  for (const p of settings) for (const day of [12, 13, 14]) {
+    const T0 = Date.UTC(2026, 10, day, 12);
+    const g = sessionStems(PX, def, p, n, true, T0).out, u = sessionStems(PX, def, p, n, false, T0).out;
+    sessions++;
+    if (g.length < n) short++;
+    if (new Set(g.map((x) => x.sig)).size < g.length) guardedRep++;
+    if (new Set(u.map((x) => x.sig)).size < u.length) plainRep++;
+    g.forEach((x) => { items++; if (x.r && x.r.sig === x.sig) rebuilt++; if (x.r && x.r.tries > 0) moved++; });
+  }
+  t.eq(short, 0, `${label}: every session deals its ${n} items`);
+  t.eq(guardedRep, 0, `${label}: no session of ${n} items shows a stem twice (${sessions} sessions; the guard moved ${moved} of ${items} items)`);
+  if (plain) t.ok(plainRep > 0, `${label}: without the guard ${plainRep} of ${sessions} sessions repeat a stem`);
+  else console.log(`       ${label}: without the guard ${plainRep} of ${sessions} sessions repeat a stem`);
+  t.eq(rebuilt, items, `${label}: every guarded step's seed rebuilds the stem the guard counted`);
+}
+
+function testSession(t, PX, def) {
+  t.section('patviews: a session never shows a stem twice');
+  const L = def.lib, band = PX.ex.enumerate(def).filter((p) => p.cubes === 0);
+  t.ok(band.every((p) => L.fewStems(p)) && PX.ex.enumerate(def).every((p) => L.fewStems(p) === (p.cubes < 3)), 'fewStems (Section forms): the cube stacks (levels 0–2), not the profile solids');
+  t.eq(L.GUARD_OPTS, { tries: 64, ms: 200 }, 'the player\'s guard tries up to 64 seeds within 200 ms');
+  checkSessions(t, PX, def, band, 8, 'patviews starter band');
+  // the smallest pool (a missing front view, same-outline foils: 10 stems): a session of 16 shows every stem it
+  // finds before any comes back, and then the one shown longest ago first
+  const small = { cubes: 0, grid: 0, missing: 1, foil: 1 }, run = sessionStems(PX, def, small, 16, true).out, sigs = run.map((x) => x.sig);
+  const d = new Set(sigs).size, firstAt = new Map();
+  sigs.forEach((s, i) => { if (!firstAt.has(s)) firstAt.set(s, i); });
+  const back = sigs.slice(d).map((s) => firstAt.get(s));
+  t.ok(d >= 8 && new Set(sigs.slice(0, d)).size === d, `the smallest band pool: the first ${d} of 16 items are all different stems`);
+  t.eq(back, back.slice().sort((a, b) => a - b).filter((v, i, a) => a.indexOf(v) === i), `then stems come back oldest first (first shown at ${back.join(', ')})`);
+  t.ok(run.slice(d).every((x) => x.r && x.r.fresh === false), 'the guard says when a stem comes back (fresh: false)');
+  // a step that measures with its own item keeps its seed; its stem still counts
+  const G = L, E = PX.engine, rec = newRecord(PX, Date.UTC(2026, 10, 19, 12)), plan = {}, shown = new Map();
+  const s0 = run[0].seed, mk = (kind, extra) => Object.assign({ seed: s0, params: Object.assign({}, small), kind }, extra || {});
+  const first = G.sessionGuard({ mode: 'path', plan, rec, step: mk('target'), def }, shown, NO_CLOCK);
+  const kept = ['recheck', 'probe', 'daily', 'threshold', 'set'].map((k) => { const st = mk(k); G.sessionGuard({ mode: 'path', plan, rec, step: st, def }, shown, NO_CLOCK); return st.seed === s0; });
+  const st2 = mk('target', { recheck: true }), st3 = mk('target', { layer: 'compare-apply' }), st4 = mk('target');
+  G.sessionGuard({ mode: 'path', plan, rec, step: st2, def }, shown, NO_CLOCK);
+  G.sessionGuard({ mode: 'train', plan, rec, step: st3, def }, shown, NO_CLOCK);
+  const r4 = G.sessionGuard({ mode: 'train', plan, rec, step: st4, def }, shown, NO_CLOCK);
+  t.ok(first && first.fresh && first.tries === 0, 'a new stem keeps the engine\'s seed');
+  t.ok(kept.every(Boolean) && st2.seed === s0 && st3.seed === s0, 'a recheck, a probe, a Daily, Threshold or set item and a comparison round\'s apply item keep their seed');
+  t.ok(st4.seed !== s0 && r4.fresh && r4.sig !== first.sig, 'an ordinary item with a shown stem takes a new seed');
+  t.eq(shown.get(plan).n, 9, 'every guarded step counts its stem');
+  const solid = { cubes: 4, grid: 0, missing: 0, foil: 0 }, st5 = { seed: 77, params: solid, kind: 'target' };
+  const r5 = G.sessionGuard({ mode: 'train', plan, rec, step: st5, def }, shown, NO_CLOCK);
+  t.ok(r5 && r5.fresh && st5.seed === 77, 'profile solids are guarded too (a new stem keeps its seed)');
+  t.eq(G.sessionGuard({ mode: 'train', plan, rec, step: st5, def: { id: 'x', lib: {} } }, shown, NO_CLOCK), null, 'an exercise without sigOf is left alone');
+  // the stem of the item generated last is remembered: no second generation for the player's own item
+  const before = L.stats.tries;
+  def.generate(PX.rng(4242), small);
+  const mid = L.stats.tries, sig = L.sigOf(4242, Object.assign({}, small));
+  t.ok(L.stats.tries === mid && mid > before && sig === L.stemSig(def.generate(PX.rng(4242), small)), 'sigOf reads the last item\'s stem without generating it again');
+  void E;
 }
 
 /* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */

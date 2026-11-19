@@ -526,4 +526,17 @@
     reveal: reveal, showMe: showMe, demo: demo, unmount: unmount,
     steps: function (item, response) { return st && st.item === item ? steps(item, response) : []; },
   });
+
+  /* ---------- no stem twice in a session (v1.2, fresh-player run of 19 Nov; lib.sessionGuard) ----------
+     The player's item:before (CONTRACT-v1.2 R; order 40, after the comparison rounds) runs the guard for every
+     exercise whose lib has sigOf (Openings, Form, Hole Punch, Missing View). js/ui/hooks.js
+     loads after the exercise views, so the handler is registered once the hook points exist. */
+  var shown = typeof WeakMap === 'function' ? new WeakMap() : null; // plan → the stems each exercise has shown
+  var hooked = false;
+  function hook() {
+    if (hooked || !shown || !(PX.ui && PX.ui.hooks && typeof PX.ui.hooks.on === 'function')) return hooked;
+    PX.ui.hooks.on('item:before', function (ctx) { lib.sessionGuard(ctx, shown); return null; }, { id: 'ex.session-fresh', order: 40 });
+    return (hooked = true);
+  }
+  if (!hook() && shown) (function retry(n) { win.setTimeout(function () { if (!hook() && n < 50) retry(n + 1); }, 0); })(0);
 })(window.PX);

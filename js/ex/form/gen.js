@@ -632,13 +632,40 @@
         if (m && m.some(function (x, f) { return x && vis[f] > VIS_NONE && vis[f] < VIS_SEEN; })) continue;
         if (seenFaces(s, v).length < 3) continue;
       }
-      if (c.filter(function (x) { return x >= SEEN; }).length >= 3 && (!m || !m.some(function (x) { return x; }) || markedSeen(s, m, v) >= 1)) return v;
+      if (c.filter(function (x) { return x >= SEEN; }).length >= 3 && (!m || !m.some(function (x) { return x; }) || markedSeen(s, m, v) >= 1) && looksSolid(s, v)) return v;
     }
     return null;
   }
   // The faces a mark may take on solid s in the key's picture v: on a non-convex prism, none that shows
   // only in part.
   function markable(s, v) { var vis = isNC(s) ? visible(s, v) : null; return s.faces.map(function (_, f) { return !vis || vis[f] <= VIS_NONE || vis[f] >= VIS_SEEN; }); }
+  // v1.2 (fresh-player run, 19 Nov: a key drawn end-on looked like a flat rectangle): every picture shows the
+  // solid as a solid. Three faces in sight meet as a corner's do (their normals span space, |det| ≥ LOOK_DET,
+  // so a picture never shows only faces that share one direction, such as a prism's sides seen across), each
+  // of them LOOK_MIN of the picture or more (projected areas), and no face takes more than LOOK_MAX of it.
+  var LOOK_DET = 0.5, LOOK_MIN = 0.08, LOOK_MAX = 0.7;
+  var AREAS = typeof WeakMap === 'function' ? new WeakMap() : null;
+  function areasOf(s) {
+    var a = AREAS && AREAS.get(s);
+    if (!a) { a = s.faces.map(function (F) { return len(newell(F.map(function (i) { return s.verts[i]; }))) / 2; }); if (AREAS) AREAS.set(s, a); }
+    return a;
+  }
+  function det3(a, b, c) { return dot(a, cross(b, c)); }
+  function looksSolid(s, v) {
+    var c = facing(s, v), vis = isNC(s) ? visible(s, v) : null, A = areasOf(s), N = normalsOf(s), tot = 0, seen = [];
+    c.forEach(function (x, f) {
+      if (!(x > 0)) return;
+      var a = A[f] * x * (vis ? vis[f] : 1);
+      tot += a;
+      if (x >= SEEN && (!vis || vis[f] >= VIS_SEEN)) seen.push({ f: f, a: a });
+    });
+    if (seen.length < 3 || !(tot > 0) || seen.some(function (q) { return q.a > LOOK_MAX * tot + 1e-12; })) return false;
+    var big = seen.filter(function (q) { return q.a >= LOOK_MIN * tot - 1e-12; });
+    for (var i = 0; i < big.length; i++) for (var j = i + 1; j < big.length; j++) for (var k = j + 1; k < big.length; k++) {
+      if (Mth.abs(det3(N[big[i].f], N[big[j].f], N[big[k].f])) >= LOOK_DET) return true;
+    }
+    return false;
+  }
 
   /* ------------------------------------------------------------ shortcut solvers */
   function pickShare(scores, high) {
@@ -671,7 +698,7 @@
   }
 
   /* ------------------------------------------------------------ generate */
-  var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, nets: 0, noView: 0, noMarks: 0, fewOrbits: 0, fewFoils: 0, noSet: 0, lastInvalid: null, lastError: null };
+  var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, nets: 0, noView: 0, noMarks: 0, fewOrbits: 0, fewFoils: 0, noSet: 0, twins: 0, lastInvalid: null, lastError: null };
   var FOILS = ['shape', 'marks'];
   function lvl(params, k, n) { var x = params ? params[k] : 0; return Number.isInteger(x) && x >= 0 && x < n ? x : 0; }
   function cleanParams(params) { return { solid: lvl(params, 'solid', 4), marks: lvl(params, 'marks', 7), view: lvl(params, 'view', 3), foil: lvl(params, 'foil', 2) }; }
@@ -679,24 +706,27 @@
   // One shaded face and no half mark (note D2 §3.5). With one shade a mark foil can only move it to a
   // face of another shape (on these solids a turn carries every face onto each congruent one), so face
   // shape decides it: the band's method, taught on the strategy card and reported, not bounded (DECISIONS).
-  // Foil level 0: one mark foil and two wrong-size solids, one size off by at least 40 % (both the same
+  // Foil level 0: one mark foil and two wrong-size solids, one size twice or half the pattern's (both the same
   // stretched solid: one with the pattern's shade, one with the mark foil's), so the options form a
   // 2 × 2 of right or wrong size and right or wrong shaded face, and neither alone finds the key.
-  // Foil level 1 keeps that design with the sizes closer (BAND_OFF below): "marks only" cannot be built
+  // Foil level 1 keeps that design with the sizes closer (BAND_RATIO below): "marks only" cannot be built
   // with one shade, since upright pictures never show the base, so a solid has at most two other face
   // shapes a picture can carry the shade on (DECISIONS).
   var BAND_KINDS = [['box', 'tri'], ['wedge', 'pyr'], ['frus', 'house'], ['L', 'T', 'U']];
   // v1.2 (version 3, PLAN milestone 8: wrong-size foils at least 40 % off; a fresh player found a size
-  // 25 % off hard to see on a phone): level 0 half again or more, level 1 40 to 49 %
-  var BAND_OFF = [[0.5, 0.8], [0.4, 0.5]]; // per foil level: a size off by [at least, under] this share
+  // 25 % off hard to see on a phone). v1.2 (fresh-player run, 19 Nov: three wrong-size picks in a row on a
+  // 390 px phone, at 1.5 to 1.75 times): the larger size over the smaller, level 0 twice or more (to 2.5),
+  // level 1 one and a half times to under twice.
+  var BAND_RATIO = [[2, 2.5], [1.5, 2]]; // per foil level: the changed size's ratio [at least, at most | under]
+  var BAND_MAX = 5; // no size grows past this (the pictures' common scale)
   function classCount(s) { var c = {}; shapeClasses(s).forEach(function (k) { c[k] = 1; }); return Object.keys(c).length; }
+  function bandRatioOk(r, foil) { var b = BAND_RATIO[foil]; return r >= b[0] - 1e-9 && (foil === 0 ? r <= b[1] + 1e-9 : r < b[1] - 1e-9); }
   function stretchedBand(rng, s, foil) {
-    var lo = BAND_OFF[foil][0], hi = BAND_OFF[foil][1];
     for (var t = 0; t < 8; t++) {
       var i = rint(rng, 0, s.kind === 'frus' ? 2 : s.dims.length - 1), d0 = s.dims[i], cand = [];
-      for (var k = -5; k <= 5; k++) {
-        var dd = d0 + k / 2, off = Mth.abs(dd - d0) / d0;
-        if (k && dd >= 1 && off >= lo - 1e-9 && off < hi - 1e-9) cand.push(dd);
+      for (var k = -10; k <= 10; k++) {
+        var dd = d0 + k / 2;
+        if (k && dd >= 1 && dd <= BAND_MAX && bandRatioOk(Mth.max(dd, d0) / Mth.min(dd, d0), foil)) cand.push(dd);
       }
       if (!cand.length) continue;
       var d = s.dims.slice();
@@ -1247,12 +1277,14 @@
         if (c.filter(function (x, g) { return x >= SEEN && (!sh || sh[g] >= 0.8); }).length < 3) return 'option ' + i + ' shows fewer than three faces clearly';
         if (sh && o.marks.some(function (x, g) { return x && c[g] > 0 && sh[g] > 0.1 && sh[g] < 0.85; })) return 'option ' + i + ' shows a mark only in part';
         if (c.some(function (x) { return x > SEEN - BAND && x < SEEN + BAND; })) return 'option ' + i + ' has a face at the edge of being seen';
+        if (!looksSolid(o.solid, o.view)) return 'option ' + i + ' is drawn flat (no corner of three faces in sight)';
         if (lv !== 1 && !markedSeen(o.solid, o.marks, o.view)) return 'option ' + i + ' shows no mark';
         var ok = possible(item.solid, item.marks, o.solid, o.marks, o.view);
         if (ok !== foldsOnto(item, o, lines)) return 'option ' + i + ': the two checks disagree';
         if (i === item.key && !ok) return 'the key is not the folded net';
         if (i !== item.key && ok) return 'option ' + i + ' could also be the folded net';
       }
+      if (!picturesApart(item)) return 'two options draw the same picture';
       if (lv === 0) return validBand(item);
       if (lv === 1) return validPlain(item);
       if (lv === 2 || lv === 3) return validShaded(item);
@@ -1261,8 +1293,8 @@
   }
   // The starter band's promises, checked on what is stored: one shaded face and no half mark, on the
   // pattern and on every option; every option's corners are its stated sizes (rebuilt here), and a
-  // wrong-size solid differs from the pattern in one size only, by at least 40 % (25 % at foil level
-  // 1); the easiest solids are boxes and triangular prisms.
+  // wrong-size solid differs from the pattern in one size only, the larger over the smaller twice or more
+  // (one and a half times to under twice at foil level 1); the easiest solids are boxes and triangular prisms.
   function validBand(item) {
     function one(m) { return m.filter(function (x) { return x === 1; }).length === 1 && !m.some(function (x) { return x && typeof x === 'object'; }); }
     if (!one(item.marks)) return 'starter: one shaded face and no half mark';
@@ -1276,8 +1308,8 @@
       var off = o.solid.dims.map(function (d, k) { return Mth.abs(d - d0[k]); }), n = off.filter(function (x) { return x > 1e-9; }).length;
       if (n > 1) return 'starter: option ' + i + ' differs in more than one size';
       if (n === 1) {
-        var k1 = off.findIndex(function (x) { return x > 1e-9; }), need = BAND_OFF[p.foil][0];
-        if (off[k1] < need * d0[k1] - 1e-9) return 'starter: option ' + i + '\'s size is off by less than ' + Mth.round(need * 100) + ' %';
+        var k1 = off.findIndex(function (x) { return x > 1e-9; }), a = o.solid.dims[k1], r = Mth.max(a, d0[k1]) / Mth.min(a, d0[k1]);
+        if (!bandRatioOk(r, p.foil)) return 'starter: option ' + i + '\'s size is ' + r.toFixed(2) + ' times the pattern\'s, outside ' + BAND_RATIO[p.foil].join(' to ');
       }
     }
     if (p.solid === 0 && item.solid.kind !== 'box' && item.solid.kind !== 'tri') return 'starter: a box or a triangular prism';
@@ -1356,9 +1388,25 @@
     var item;
     try { item = buildItem(rng, p); } catch (e) { stats.errors++; stats.lastError = String(e && e.stack || e); return null; }
     if (!item) { stats.nulls++; return null; }
+    if (!picturesApart(item)) { stats.twins++; return null; }
     item.ex = 'form';
     return item;
   }
+  // v1.2 (CLAUDE.md rule 4, found on 19 Nov: about 3 % of items, Try 4 among them, had two options that drew
+  // the same picture, the same solid turned the same way with the same marks in sight and others hidden): the
+  // four pictures differ. A picture: each face turned towards the viewer as drawn (its corners on screen,
+  // from the picture's top left) with its mark.
+  function pictureKey(o) {
+    var c = facing(o.solid, o.view), P = screenPts(o.solid, o.view), x0 = INF, y0 = INF, out = [];
+    c.forEach(function (x, f) { if (x > 1e-9) o.solid.faces[f].forEach(function (i) { x0 = Mth.min(x0, P[i][0]); y0 = Mth.min(y0, P[i][1]); }); });
+    c.forEach(function (x, f) {
+      if (!(x > 1e-9)) return;
+      var q = o.solid.faces[f].map(function (i) { return Mth.round((P[i][0] - x0) * 1000) + ',' + Mth.round((P[i][1] - y0) * 1000); }).sort().join(' ');
+      out.push(q + '|' + JSON.stringify(o.marks[f] || 0));
+    });
+    return out.sort().join(';');
+  }
+  function picturesApart(item) { var k = {}; item.options.forEach(function (o) { k[pictureKey(o)] = 1; }); return Object.keys(k).length === item.options.length; }
   function generate(rng, params) {
     var p = cleanParams(params), item = null;
     for (var i = 0; i < 50 && !item; i++) item = attempt(i === 0 ? rng : rng.fork('retry' + i), p);
@@ -1382,14 +1430,27 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [1543916583, 3094203016, 1597406505, 2157057468, 2472903096, 2150001115];
+  var TUTORIAL = [1543916583, 3094203016, 203963846, 2157057468, 3655275672, 580503644];
   function stemSig(item) { return PX.rng.hash('form-stem', JSON.stringify([item.solid.kind, item.solid.verts, item.net, item.marks])); }
   function generateFresh(rng, params) {
-    var item = generate(rng, params);
+    var item = generate(rng, params), sig;
     if (params && params.task === 'tutorial') return item;
-    for (var k = 1; k <= 8 && TUTORIAL.indexOf(stemSig(item)) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; }
+    sig = stemSig(item);
+    for (var k = 1; k <= 8 && TUTORIAL.indexOf(sig) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; sig = stemSig(item); }
+    lastGen = { seed: rng.seed, params: params, sig: sig };
     return item;
   }
+  // v1.2 (fresh-player run, 19 Nov): no stem twice in a session (js/ex/patviews/gen.js has the guard and the
+  // reasons). Wedges and pyramids allow fewer patterns (fewStems: about 1 in 1,000 pairs of draws at one setting
+  // came out the same, in 15 of the level's 42 settings); the other solids gave 60 different stems in 60 draws
+  // at every setting (DECISIONS).
+  var lastGen = null;
+  function sigOf(seed, params) {
+    var g = lastGen, s = PX.rng(seed).seed;
+    if (g && g.seed === s && (g.params === params || PX.ex.paramsKey(g.params) === PX.ex.paramsKey(params))) return g.sig;
+    return stemSig(generateFresh(PX.rng(s), params));
+  }
+  function fewStems(params) { return !!params && params.solid === 1; }
 
   /* ------------------------------------------------------------ definition */
   // Logits; P(right) = g + (1 − g − 0.03)·σ(θ − b), g = .25. base −2.2: a box or simple prism, one
@@ -1405,7 +1466,7 @@
   // band (−1.5), plain (−0.9), shaded faces (−0.4), shaded faces apart in the pattern with the
   // net-adjacency lure (−0.15; the net distance, R3 §8.6), then the half marks at their old steps (0, 0.6, 1.2);
   // bevelled boxes join the first solids; L-, T- and U-prisms are a fourth solid level (O51; +1.5, the
-  // step's 0.5 on); the band's wrong sizes are 40 % off or more. Hand-set, to be refitted from pooled
+  // step's 0.5 on); the band's wrong sizes are twice or half (foil 0), 1.5 to 2 times (foil 1). Hand-set, to be refitted from pooled
   // exports. The range grows to −3.7 … 2.3 (the new top); js/engine/rebase.js re-bases stored levels.
   PX.ex.define({
     id: 'form', version: 3, code: 'EX-19', name: 'Form', short: 'Form',
@@ -1431,10 +1492,10 @@
     },
     generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
-      LEVEL_TAGS: LEVEL_TAGS, rangeOf: rangeOf, plainFolds: plainFolds, MARK_LABELS: MARK_LABELS, BAND_OFF: BAND_OFF, okDims: okDims,
+      LEVEL_TAGS: LEVEL_TAGS, rangeOf: rangeOf, plainFolds: plainFolds, MARK_LABELS: MARK_LABELS, BAND_RATIO: BAND_RATIO, looksSolid: looksSolid, pictureKey: pictureKey, picturesApart: picturesApart, LOOK_DET: LOOK_DET, LOOK_MIN: LOOK_MIN, LOOK_MAX: LOOK_MAX, okDims: okDims,
       buildPlain: buildPlain, buildMarked: buildMarked, volume: volume, resized: resized, sizeDist: sizeDist, plainFeats: plainFeats,
       plainShares: plainShares, PLAIN_SOLVERS: PLAIN_SOLVERS, pairedSizes: pairedSizes, touchesOffHinge: touchesOffHinge, sharedRun: sharedRun, enclosesHole: enclosesHole, cutInside: cutInside, sizeOff: sizeOff, validPlain: validPlain, validShaded: validShaded,
-      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate,
+      TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate, sigOf: sigOf, fewStems: fewStems,
       KINDS: KINDS, VIEW: VIEW, VIEWS: VIEWS, YAW: YAW, TILTS: TILTS, TILT_SETS: TILT_SETS, SEEN: SEEN, SOLVERS: SOLVERS, MARKS: MARKS, stats: stats,
       build: build, randomDims: randomDims, stretched: stretched, mirrored: mirrored, adjacency: adjacency, flat: flat, unfold: unfold, overlapping: overlapping,
       viewMatrix: viewMatrix, faceNormal: faceNormal, facing: facing, seenFaces: seenFaces, matchings: matchings, possible: possible, halfSet: halfSet,
