@@ -183,8 +183,8 @@ export async function run(t) {
     const tot = h.reduce((x, y) => x + y, 0), top = Math.max(...h), slack = tot < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / tot) : 0;
     t.ok(top / tot <= 0.3 + slack, `question ${+j + 1} of a figure: the most common answer ≤ chance + 10 (${(100 * top / tot).toFixed(1)} % of ${tot}${slack ? '; quick run, noise allowed' : ''})`);
   }
-  const fiveTot = fiveH.reduce((x, y) => x + y, 0);
-  t.ok(fiveTot > 0 && Math.max(...fiveH) / fiveTot <= FIVE_CAP && fiveH[4] === 0 && fiveH[5] === 0, `five painted sides: 1–3 cubes evenly, the most common at most ${100 * FIVE_CAP} % (scoped; ${fiveH.slice(1, 4).join('/')} of ${fiveTot})`);
+  const fiveTot = fiveH.reduce((x, y) => x + y, 0), slack5 = N_ITEMS < 10080 ? 3 * Math.sqrt(FIVE_CAP * (1 - FIVE_CAP) / Math.max(1, fiveTot)) : 0; // quick runs only
+  t.ok(fiveTot > 0 && Math.max(...fiveH) / fiveTot <= FIVE_CAP + slack5 && fiveH[4] === 0 && fiveH[5] === 0, `five painted sides: 1–3 cubes evenly, the most common at most ${100 * FIVE_CAP} % (scoped; ${fiveH.slice(1, 4).join('/')} of ${fiveTot}${slack5 ? '; quick run, noise allowed' : ''})`);
   const laterPrior = priorRate(laterCells);
 
   t.section('cubes: partial counts (O57; caps per level on stacked figures above the band)');
@@ -489,6 +489,11 @@ function testLearn(t, PX, def) {
 // figures over every combination), so the rules this file bounds are checked per level of every
 // dimension on first and later questions alike. The partial counts (O57) are reported, not bounded
 // (info): they are held at caps per level above.
+// The answers are lettered A–E for 1–5 cubes (the sheet's mapping), so "always the same letter" is
+// the "always c" family; "the letter the last item had" (lead's fresh-player run of Angles, 19 Nov)
+// reads the item before in the stream: the question before on the same figure, or the last
+// question of the figure before.
+let lastKey = null;
 export function shortcutScores(PX, def, item) {
   const L = def.lib, out = {};
   const prev = item.asks.slice(0, item.pos).map((N) => L.histogram(item.heights)[N] - 1);
@@ -496,6 +501,8 @@ export function shortcutScores(PX, def, item) {
     if (name === '_partial') for (const [pn, ph] of Object.entries(hit)) out[pn] = { hit: ph, chance: 0.2, info: true };
     else out[name] = { hit, chance: 0.2 };
   }
+  if (lastKey !== null) out['the letter the last item had'] = { hit: item.key === lastKey ? 1 : 0, chance: 0.2 };
+  lastKey = item.key;
   return out;
 }
 export const SHORTCUT_EXEMPT = [];
