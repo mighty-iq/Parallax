@@ -84,11 +84,29 @@
   .pl-trial.ex-form .fm-stage { height: calc(var(--pl-avail) - 2.5rem); }
 }
 
-/* The key digit (1–5) stays above the drawing in its cell. */
-.ex-form .px-choice-key { z-index: 1; }
+/* The option's letter (A–D, version 3) stays above the drawing in its cell, on a chip of the cell's ground, so the
+   white plate of the test look never covers it. */
+.ex-form .px-choice .px-choice-key { position: absolute; z-index: 2; padding: 0 0.15rem; border-radius: 2px; background: var(--stim-ground, #F4F5F3); }
 
 /* v1.2: the fold-up layer (show-me, O51) over the pattern: the pattern fades while it folds; the inside
    of a face, seen during the fold, is a pale plain tone (marks sit only on the outside). */
 .ex-form .fm-foldup { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
 .ex-form .fm-inside { fill: var(--stim-face-3, #A4ABB2); fill-opacity: 0.55; }
 .ex-form .fm-corner { fill: var(--stim-target, #0B6A86); stroke: var(--surface, #FFFFFF); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+
+/* v1.2 version 3 (PLAN milestone 8; CONTRACT-v1.2 W2): the format's plain line drawing from the plain kind on
+   (.is-plain on the pattern's root and on each solid's cell): white faces and ink lines on the white plate (both
+   themes), a marked face in the one flat tone with Parallax's hatch (rule 8: never a tone alone). The starter band
+   keeps its face tones; the fold-up of show me keeps them too (a show-me aid). */
+.ex-form .fm-stem.is-plain .fm-stage { background: var(--plate, #FFFFFF); border: 1px solid var(--plate-frame, #9AA1A7); border-radius: var(--r-plate, 2px); }
+.ex-form .fm-stem.is-plain .fm-label { color: var(--plate-ink, #16191C); }
+.ex-form .fm-stem.is-plain .fm-face,
+.ex-form .fm-opt-cell.is-plain .fm-solid .px-fig-face { fill: var(--plate, #FFFFFF); }
+.ex-form .fm-stem.is-plain .fm-cut,
+.ex-form .fm-stem.is-plain .fm-fold--plain { stroke: var(--plate-ink, #16191C); stroke-width: var(--plate-edge-w, 1.4px); }
+.ex-form .fm-opt-cell.is-plain .fm-edge { stroke: var(--plate-ink, #16191C); stroke-width: var(--plate-edge-w, 1.4px); }
+.ex-form .fm-stem.is-plain .fm-net .fm-hatch-bg,
+.ex-form .fm-opt-cell.is-plain .fm-hatch-bg { fill: var(--plate-mark, #BEC3C7); }
+.ex-form .fm-stem.is-plain .fm-net .fm-hatch-line,
+.ex-form .fm-opt-cell.is-plain .fm-hatch-line { stroke: var(--plate-ink, #16191C); stroke-opacity: 0.6; }
+.ex-form .fm-opt-cell.is-plain .fm-opt-svg { background: var(--plate, #FFFFFF); outline: 1px solid var(--plate-frame, #9AA1A7); outline-offset: -1px; }

@@ -28,6 +28,8 @@
   var RIGHT = [0.8660254038, 0, -0.5];
 
   function learn() { return PX.ex.learn('form') || {}; }
+  // Options are lettered A–D (CONTRACT-v1.2 W1, the format's own naming); faces in show me are numbered.
+  function nm(i) { return PX.ui.optionName ? PX.ui.optionName(i, true) : String(i + 1); }
   function cap(key, vars) {
     var s = String((learn().captions || {})[key] || '');
     if (vars) for (var k in vars) s = s.split('{' + k + '}').join(String(vars[k]));
@@ -147,7 +149,7 @@
     svg.appendChild(labels);
     svg.style.maxWidth = Math.round(E * st.k) + 'px';
     var tag = h('span.ex-tag', { hidden: true });
-    el.appendChild(h('span.ex-opt.fm-opt-cell', svg, tag));
+    el.appendChild(h('span.ex-opt.fm-opt-cell' + (lib.plainFolds(item) ? '.is-plain' : ''), svg, tag));
     st.opts[i] = { el: el, svg: svg, faces: faces, labels: labels, tag: tag, hatch: hatch };
   }
   // The hatch keeps a 5 px pitch however small an option is drawn (R3 §8.6: at least 4 px).
@@ -158,13 +160,13 @@
       if (w > 0) o.hatch.set(5 * st.E / w);
     });
   }
-  function optionLabel(item, i) { return 'Solid ' + (i + 1); }
+  function optionLabel(item, i) { return 'Solid ' + nm(i); }
   function gridCols() { return 4; }
 
   /* ---------- mount, present, reveal ---------- */
   function describe(item) {
     var n = item.marks.filter(function (x) { return x; }).length;
-    return 'A flat pattern of ' + item.net.length + ' faces' + (n ? ' with ' + n + ' marked' : ', none marked') + '; ' + (lib.plainFolds(item) ? 'every line inside it folds' : 'dashed lines fold') + '. Which of four pictured solids, each turned its own way, folds from it?';
+    return 'A flat pattern of ' + item.net.length + ' faces' + (n ? ' with ' + n + ' marked' : ', none marked') + '; ' + (lib.plainFolds(item) ? 'every line inside it folds' : 'dashed lines fold') + '. Which of four pictured solids, A to D, each turned its own way, folds from it?';
   }
   function mount(ctx) {
     var root = h('div.fm-stem'), stage = h('div.ex-stage.fm-stage');
@@ -185,6 +187,9 @@
     newItem(item);
     st.item = item;
     st.root.classList.remove('is-revealed');
+    // the format's plain line drawing from the plain kind on (CONTRACT-v1.2 W2): white faces, ink lines,
+    // marked faces in one flat tone with the hatch, on the white plate; the starter band keeps its tones
+    st.root.classList.toggle('is-plain', lib.plainFolds(item));
     st.verdict.hidden = true;
     st.caption.textContent = '';
     st.desc.textContent = describe(item);
@@ -207,7 +212,7 @@
   // Try 1's step done: the faces that meet the shaded face once folded, lettered where they lie in the
   // pattern (they need not touch it there).
   function letterNeighbours(item) {
-    var f0 = item.marks.indexOf(1), letters = 'ABCDEFG', n = 0, size = 15 / st.k;
+    var f0 = item.marks.indexOf(1), letters = '1234567', n = 0, size = 15 / st.k;
     if (f0 < 0) return;
     lib.adjacency(item.solid).forEach(function (e) {
       var o = e.f === f0 ? e.g : e.g === f0 ? e.f : -1, nf = o >= 0 ? st.netG[o] : null;
@@ -226,7 +231,7 @@
       o.tag.setAttribute('data-kind', i === item.key ? 'key' : 'foil');
       o.tag.hidden = false;
     });
-    st.verdict.textContent = '✓ Solid ' + (item.key + 1);
+    st.verdict.textContent = '✓ Solid ' + nm(item.key);
     st.verdict.setAttribute('data-kind', 'key');
     st.verdict.hidden = false;
     return timing.wait(ctx && ctx.fast ? 0 : 250);
@@ -345,15 +350,15 @@
     var o = item.options[i];
     if (isOther(item, i)) {
       var odd = oddFace(item, i);
-      return { ms: ms, caption: cap(odd >= 0 ? 'whyOther' : 'whyOtherAny', { n: i + 1, f: '✗' }), enter: function () { clearMarks(); focusOption(i); crossOdd(item, i); } };
+      return { ms: ms, caption: cap(odd >= 0 ? 'whyOther' : 'whyOtherAny', { n: nm(i), f: '✗' }), enter: function () { clearMarks(); focusOption(i); crossOdd(item, i); } };
     }
     if (o.kind === 'shape') {
       var e = changedEdge(item, i);
-      return { ms: ms, caption: e ? cap('whyShape', { n: i + 1, dir: e.longer ? 'longer' : 'shorter' }) : cap('whyShapeAny', { n: i + 1 }), enter: function () { clearMarks(); focusOption(i); if (e) markEdge(item, i, e); } };
+      return { ms: ms, caption: e ? cap('whyShape', { n: nm(i), dir: e.longer ? 'longer' : 'shorter' }) : cap('whyShapeAny', { n: nm(i) }), enter: function () { clearMarks(); focusOption(i); if (e) markEdge(item, i, e); } };
     }
     var pm = bestMap(item, i), g = pm && pm.bad.length ? pm.bad[0] : -1;
     return {
-      ms: ms, caption: cap(o.kind === 'mirror' ? 'whyMirror' : 'whyMarks', { n: i + 1, f: '✗' }),
+      ms: ms, caption: cap(o.kind === 'mirror' ? 'whyMirror' : 'whyMarks', { n: nm(i), f: '✗' }),
       enter: function () {
         clearMarks(); focusOption(i);
         if (pm && g >= 0) {
@@ -489,7 +494,7 @@
     if (land === undefined) land = seenS[0];
     var nb = [];
     lib.adjacency(S).forEach(function (e) { var o = e.f === land ? e.g : e.g === land ? e.f : -1; if (o >= 0 && seenS.indexOf(o) >= 0 && nb.indexOf(o) < 0) nb.push(o); });
-    var letters = 'ABCDEFG', tags = [{ f: land, t: 'A' }].concat(nb.slice(0, 3).map(function (f, j) { return { f: f, t: letters[j + 1] }; }));
+    var letters = '1234567', tags = [{ f: land, t: '1' }].concat(nb.slice(0, 3).map(function (f, j) { return { f: f, t: letters[j + 1] }; }));
     var names = andList(tags.slice(1).map(function (x) { return x.t; }));
     // a half mark (from the pre-1.2 floor on): its shaded corner, dotted in the pattern, and the face
     // pointed in the pattern and in the right solid (note D2 §3.5's mini-demo)
@@ -513,8 +518,8 @@
     var sizes = { ms: 2600, caption: cap('sizes'), enter: function () { clearMarks(); markSizes(item); } };
     var landmark = { ms: 2600, caption: cap(names ? 'landmark' : 'landmarkAlone', { list: names }), enter: function () { clearMarks(); if (km) tagFaces(item, key, km, tags); } };
     var halfStep = half < 0 ? null : { ms: 2800, caption: cap('halfCorner'), enter: function () { clearMarks(); focusOption(key); pointHalf(); } };
-    var match = { ms: 2600, caption: cap(names ? 'match' : 'matchAlone', { n: key + 1, list: names }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); crossOthers(); } };
-    var matchHalf = { ms: 2600, caption: cap('matchHalf', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); pointHalf(); } };
+    var match = { ms: 2600, caption: cap(names ? 'match' : 'matchAlone', { n: nm(key), list: names }), enter: function () { clearMarks(); focusOption(key); if (km) tagFaces(item, key, km, tags); crossOthers(); } };
+    var matchHalf = { ms: 2600, caption: cap('matchHalf', { n: nm(key) }), enter: function () { clearMarks(); focusOption(key); pointHalf(); } };
     // the end of a Watch or worked example: the pattern back, the answer in focus (no wrong solid marked)
     var rest = { ms: 700, enter: function () { clearMarks(); focusOption(key); if (mode === 'example') pointHalf(); else if (km) tagFaces(item, key, km, tags); } };
     var list;
@@ -525,8 +530,8 @@
       // numbered on their own (1/3 the half mark, 2/3 the mirror image, 3/3 the solid that keeps it), so the
       // example does not seem to start at the card's second step (fresh-player rerun)
       var exHalf = halfStep ? Object.assign({}, halfStep, { caption: cap('exHalf') }) : null;
-      var exMirror = mirror >= 0 ? Object.assign({}, whyStep(item, mirror, 2800), { caption: cap('exMirror', { n: mirror + 1, f: '✗' }) }) : null;
-      var exMatch = Object.assign({}, matchHalf, { caption: cap('exMatch', { n: key + 1 }) });
+      var exMirror = mirror >= 0 ? Object.assign({}, whyStep(item, mirror, 2800), { caption: cap('exMirror', { n: nm(mirror), f: '✗' }) }) : null;
+      var exMatch = Object.assign({}, matchHalf, { caption: cap('exMatch', { n: nm(key) }) });
       list = [exHalf, exMirror, exMatch].concat(foldSteps(item), [rest]);
     } else if (mode === 'watch') {
       list = [sizes, landmark, halfStep, match].concat(foldSteps(item), [rest]);
@@ -546,13 +551,13 @@
     function outShapes() { item.options.forEach(function (o, i) { if (isOther(item, i)) crossOdd(item, i); }); }
     var shapes = { ms: 2600, caption: cap(other ? 'plainShape' : 'plainShapeAll'), enter: function () { clearMarks(); outShapes(); } };
     var sizes = { ms: 2600, caption: cap('plainSize'), enter: function () { clearMarks(); markSizes(item); } };
-    var match = { ms: 2600, caption: cap('plainMatch', { n: key + 1 }), enter: function () { clearMarks(); focusOption(key); } };
+    var match = { ms: 2600, caption: cap('plainMatch', { n: nm(key) }), enter: function () { clearMarks(); focusOption(key); } };
     var rest = { ms: 700, enter: function () { clearMarks(); focusOption(key); } };
     if (mode === 'example') {
       return [
         { ms: 2800, caption: cap('exLines'), enter: function () { clearMarks(); lightFolds(true); } },
         { ms: 2800, caption: cap(other ? 'exOut' : 'exOutSizes'), enter: function () { clearMarks(); outShapes(); markSizes(item); } },
-        Object.assign({}, match, { caption: cap('exPlainMatch', { n: key + 1 }) }),
+        Object.assign({}, match, { caption: cap('exPlainMatch', { n: nm(key) }) }),
       ].concat(foldSteps(item), [rest]);
     }
     var list = [shapes, sizes, match].concat(foldSteps(item));
@@ -613,6 +618,7 @@
 
   PX.ex.view('form', {
     layout: 'stem+options',
+    optionKeys: 'letters', // solids A–D (CONTRACT-v1.2 W1)
     css: true,
     mount: mount, present: present, drawOption: drawOption, optionLabel: optionLabel, gridCols: gridCols,
     reveal: reveal, showMe: showMe, demo: demo, unmount: unmount,

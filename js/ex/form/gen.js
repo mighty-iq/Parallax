@@ -536,11 +536,9 @@
   // scaffolds: dashed fold lines), the documented test range, or beyond it (half marks: prep sources only).
   // Never the real test's difficulty or a forecast.
   var LEVEL_TAGS = { solid: ['test', 'test', 'test', 'test'], marks: ['below', 'test', 'test', 'test', 'beyond', 'beyond', 'beyond'], view: ['test', 'test', 'test'], foil: ['test', 'test'] };
-  function rangeOf(params) {
-    var p = cleanParams(params), out = 'test';
-    Object.keys(LEVEL_TAGS).forEach(function (k) { var t = LEVEL_TAGS[k][p[k]]; if (t === 'below') out = 'below'; else if (t === 'beyond' && out !== 'below') out = 'beyond'; });
-    return out;
-  }
+  // An item's range: the registry's rule (CONTRACT-v1.2 W3: beyond when any level is, else below when any is);
+  // only the marks dimension carries tags other than 'test', so no item is both.
+  function rangeOf(params) { return PX.ex.rangeTag('form', cleanParams(params)); }
   // Fold lines are drawn dashed only in the starter band (a scaffold); in the test range every line of
   // the pattern is plain, as on the official sheet (addendum A.1 row 9).
   function plainFolds(item) { return cleanParams(item && item.params).marks >= 1; }
@@ -1423,7 +1421,14 @@
       { key: 'foil', label: 'Foils', levels: ['clear', 'close'], step: 0.8 },
     ],
     base: -2.2,
-    levelTags: LEVEL_TAGS, // v1.2: below the test, test range or beyond it, per level (format features only)
+    // Test range (CONTRACT-v1.2 W3; DECISIONS 19 Nov): format features only, never the test's difficulty
+    testRange: {
+      dims: LEVEL_TAGS,
+      notes: {
+        marks: 'One shaded face with dashed fold lines is a starter level. Half-shaded faces appear only in prep sources; the official sample shows plain patterns.',
+        '*': 'From the plain kind on, fold lines are drawn plain and the solids are plain line drawings, as on the official sample.',
+      },
+    },
     generate: generateFresh, extraParams: ['task'], validate: validate, score: score,
     lib: {
       LEVEL_TAGS: LEVEL_TAGS, rangeOf: rangeOf, plainFolds: plainFolds, MARK_LABELS: MARK_LABELS, BAND_OFF: BAND_OFF, okDims: okDims,
