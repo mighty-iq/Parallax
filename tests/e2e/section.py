@@ -433,12 +433,10 @@ def sideways(b, C, sizes=((844, 390), (740, 360))):
         wait_mode(page, 'intro')
         card_js = '(() => { const b = document.querySelector(\'[data-card="start"]\'); if (!b) return null; const r = b.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })()'
         card = page.evaluate(card_js)
-        if card is not None and card[1] > hgt + 1:  # the card is a page (not an item): a short scroll may bring Start up
-            print(f'  note: {tag}: the part card\'s Start ends at {card[1]} of {hgt} px; a scroll brings it up', flush=True)
-            page.locator('[data-card="start"]').first.scroll_into_view_if_needed()
-            page.wait_for_timeout(150)
-            card = page.evaluate(card_js)
-        C.ok(card is not None and card[0] >= 0 and card[1] <= hgt + 1, f'{tag}: the part card\'s Start is on the screen, or a scroll brings it there ({card})')
+        sy = page.evaluate('window.scrollY')
+        # v1.2 (W3-phones' finding, the lead's request): Start lies on the screen as the card opens; the player
+        # does not scroll (the page's own scroll on opening is reported)
+        C.ok(card is not None and card[0] >= 0 and card[1] <= hgt + 1, f'{tag}: the part card\'s Start is on the screen without scrolling ({card}, scrollY {sy})')
         page.screenshot(path=str(OUT / f'sideways_{w}x{hgt}_intro.png'))
         press(page, '[data-card="start"]', True)
         wait_mode(page, 'item')

@@ -139,6 +139,18 @@ p.px-overlap-legal { margin-top: var(--s3); }
 .sec-stage .pl-verdict-rt { display: none; } /* a replayed answer has no answer time */
 .pl-expect.pl-overlap-q { grid-template-columns: repeat(3, minmax(0, 1fr)); } /* section.css loads before play.css */
 
+/* ---------- a phone held sideways ---------- */
+/* v1.2 (W3-phones' finding): at 740 × 360 the part card's Start button ended 11 px below the screen. Section's
+   cards get tighter padding and gaps at short heights, so Start is on the screen without scrolling at 740 × 360
+   and 844 × 390 (tests/e2e/section.py sideways). */
+@media (max-height: 500px) {
+  .sec-screen .pl-card { padding-top: var(--s3); padding-bottom: var(--s3); }
+  .sec-screen .pl-card .px-panel-head { margin-bottom: var(--s2); }
+  .sec-screen .pl-card .pl-card-spec { margin-bottom: var(--s1); }
+  .sec-screen .pl-card .px-panel-body > p + p { margin-top: var(--s1); }
+  .sec-screen .pl-card .pl-card-actions { margin-top: var(--s3); }
+}
+
 /* ---------- phones ---------- */
 @media (max-width: 719px), (max-height: 500px) {
   /* the item gets the screen less the strip (play.css) and the controls row */
