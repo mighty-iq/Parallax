@@ -106,7 +106,7 @@ def run_viewport(p, C, name, ctx_opts, rnd):
 
     # A Train session with Fold pinned
     page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "train", exId: "fold", pin: "fold", count: 1 }, { force: true })')
-    answers = 0
+    answers, block_first = 0, False
     for i in range(24):
         r = to_respond(page, C, name, 'train')
         if r is not True:
@@ -117,6 +117,8 @@ def run_viewport(p, C, name, ctx_opts, rnd):
         page.evaluate(f'PX.debug.answer({"true" if rnd.random() < 0.85 else "false"})')
         page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
         answers += 1
+        if page.evaluate('!!document.querySelector(".gm-block-firsts")'):
+            block_first = True
         page.evaluate('PX.debug.fast(false); __play.next()')
     C.ok(answers >= 20, f'{name}: {answers} answers in the Train session')
     to_respond(page, C, name, 'train end')
@@ -126,6 +128,7 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     page.wait_for_selector('.pl-summary', timeout=15000)
     page.wait_for_timeout(800)
     gm = page.evaluate('(() => { const s = __play.session; return s && s.res ? s.res.game : null; })()')
+    C.ok(block_first or not (gm and gm.get('firsts')), f'{name}: a first shows as a note between items after a block end ({block_first})')
     C.ok(gm is not None and isinstance(gm.get('firsts'), list), f'{name}: the session has res.game ({gm and {k: (len(gm[k]) if isinstance(gm[k], list) else gm[k]) for k in ("firsts", "grades", "near")}})')
     panel = page.locator('.pl-summary [data-gm="summary"]')
     made = gm and (gm['firsts'] or gm['grades'] or (gm['reach'] and gm['reach']['delta'] > 0))

@@ -100,6 +100,24 @@ function testSessions(t) {
   t.ok(gr.every((x) => x.to > x.from && x.to === G.gradeOf(x.level)), 'a grade moves up only with a best block in a higher tenth');
 }
 
+function testPending(t) {
+  t.section('firsts at a block end (pending)');
+  const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 17);
+  playSession(PX, rec, L, 'free', { now: T0, exId: 'rotate', minutes: 2 }, 0); // seeds the Atlas
+  const before = JSON.stringify(rec.game);
+  const plan = E.modes.start(rec, 'train', { now: T0 + DAY, minutes: 10 });
+  let pend = [];
+  for (let i = 0; i < 40; i++) {
+    const s = E.modes.next(plan, rec, T0 + DAY + i * 5000);
+    if (s.done) break;
+    E.modes.answer(plan, rec, s, L.respond(PX.ex.get(s.exId), s, 1, {}), T0 + DAY + i * 5000 + 3000);
+    pend = G.pending(plan, rec);
+  }
+  t.eq(JSON.stringify(rec.game), before, 'counting a session\'s firsts so far writes nothing');
+  const fin = E.modes.finish(plan, rec, T0 + DAY + 300000);
+  t.eq(pend.map((f) => f.ex + ':' + f.cell).sort(), fin.game.firsts.map((f) => f.ex + ':' + f.cell).sort(), 'the firsts shown at block ends are those the session ends with (' + pend.length + ')');
+}
+
 function testSeeding(t) {
   t.section('Atlas seeding');
   const PX = mk(t), E = PX.engine, G = E.game, rec = newRecord(PX, T0), L = new Learner(PX, 11);
@@ -364,6 +382,7 @@ export async function run(t) {
   testGuessing(t);
   testSessions(t);
   testSeeding(t);
+  testPending(t);
   testDaily(t);
   testClimb(t);
   testNotes(t);

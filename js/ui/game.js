@@ -7,6 +7,7 @@
      progress:panels (40)  grades, Reach and records, the Daily's calm history and archive, start versus now
      settings:sections     celebrations (quiet, medium, strong), Climb sounds, rank titles
      exercise:lines (70)   the exercise page: its records (best block, grade), the Atlas count, within reach
+     item:notes (60)       at a block end, the firsts this session has made so far (a note between items)
      item:reveal           reserved for the plotter tick and the stretch ring (once the player calls it)
    Everything runs between items. The guard is body.px-stim: css/game.css hides every game element under
    it, fx.run refuses to start while it is set, and a running effect is cut the moment it appears. Effects
@@ -493,6 +494,20 @@
     return { el: p.el, after: 'sound' };
   }
 
+  /* ---------- firsts at a block end (item:notes: a note between items, queued like the others) ---------- */
+
+  function blockFirsts(ctx) {
+    if (!ctx || !ctx.out || !ctx.out.blockEnd || !ctx.plan || stimOn()) return null;
+    var list = [];
+    try { list = G().pending(ctx.plan, ctx.rec); } catch (e) { list = []; }
+    var shown = ctx.plan.gameFirsts || (ctx.plan.gameFirsts = {});
+    var fresh = list.filter(function (f) { var k = f.ex + ':' + f.cell; if (shown[k]) return false; shown[k] = 1; return true; });
+    if (!fresh.length) return null;
+    var el = h('p.pl-note.gm-block-firsts', { 'data-gm': 'block-firsts' }, h('span.gm-first-k', fresh.length > 1 ? 'Firsts ' : 'First '),
+      fresh.slice(0, 3).map(function (f) { var d = PX.ex.get(f.ex); return cellOfKey(d, f.cell); }).join('; ') + (fresh.length > 3 ? '; and ' + (fresh.length - 3) + ' more' : '') + '.');
+    return el;
+  }
+
   /* ---------- after a verdict (item:reveal, when the player calls it) ---------- */
 
   function reveal(ctx) {
@@ -520,9 +535,10 @@
     Hk.on('settings:sections', function (ctx) { return settingsSection(ctx); }, { id: 'game.settings', order: 40 });
     Hk.on('exercise:lines', function (ctx) { return exerciseLines(ctx); }, { id: 'game.exercise', order: 70 });
     Hk.on('item:reveal', function (ctx) { return reveal(ctx); }, { id: 'game.reveal', order: 40 });
+    Hk.on('item:notes', function (ctx) { return blockFirsts(ctx); }, { id: 'game.firsts', order: 60 });
   }
 
   PX.ui.game = { fx: fx, sound: sound, counter: counter, stamp: stamp, scale: scale, sweep: sweep, firstTime: firstTime, cellText: cellText, share: share, shareButton: shareButton,
     celebrate: celebrate, reduced: reduced, moving: moving, noteText: noteText, gradeCard: gradeCard, reachWords: reachWords, LINK: LINK,
-    _: { summaryPanel: summaryPanel, climbSlot: climbSlot, notesSlot: notesSlot, progressPanel: progressPanel, startNow: startNow, exerciseLines: exerciseLines } };
+    _: { summaryPanel: summaryPanel, climbSlot: climbSlot, notesSlot: notesSlot, progressPanel: progressPanel, startNow: startNow, exerciseLines: exerciseLines, blockFirsts: blockFirsts } };
 })(window.PX);

@@ -36,3 +36,7 @@
 /* the Lab: learning curves on new exercises */
 .px-ms-curve-list { margin: var(--s2) 0 0; padding-left: 1.25rem; }
 .px-ms-curve-list li + li { margin-top: var(--s1); }
+
+/* the Lab: the Balance check (a check of one bet) */
+.px-ms-balance { margin: var(--s2) 0; }
+.px-ms-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }

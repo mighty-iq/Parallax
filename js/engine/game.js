@@ -281,6 +281,26 @@
     return days >= cfg().gapDays ? { days: days, since: last } : null;
   }
 
+  // The firsts a session has made so far, without writing anything (between items: a block end's note):
+  // the session's answers counted on a copy of its exercises' cells.
+  function pending(plan, rec) {
+    if (!plan || !isArray(plan.log) || !atlasMode(plan.mode)) return [];
+    var g = rec && isObj(rec.game) ? rec.game : null;
+    if (!g || g.seeded !== 1) return [];
+    var shadow = { atlas: {}, firsts: [] }, out = [];
+    plan.log.forEach(function (x) {
+      if (!x || (x.oc !== 0 && x.oc !== 1)) return;
+      var def = defOf(x.exId), p = null;
+      if (!def || def.role !== 'train') return;
+      if (!hasOwn.call(shadow.atlas, def.id)) shadow.atlas[def.id] = isObj(g.atlas[def.id]) ? U.deepCopy(g.atlas[def.id]) : undefined;
+      try { p = PX.ex.decodeParams(def, x.code); } catch (e) { p = null; }
+      if (!p) return;
+      var f = tally(shadow, def, p, x.oc === 1, isNum(x.g) ? x.g : chanceOf(def, p), 0, false);
+      if (f) out.push(f);
+    });
+    return out;
+  }
+
   /* ---------- the finish hook: what a session changed in the game layer ---------- */
 
   // How close this session's best block came to the exercise's best (a personal-best goal in small-area
@@ -451,7 +471,7 @@
   E.game = {
     ATLAS: ATLAS, RANKS: RANKS, game: game, gradeOf: gradeOf, band: band, bestOf: bestOf, grades: grades, reach: reach, rank: rank,
     atlasDims: atlasDims, cellOf: cellOf, tail: tail, handledBy: handledBy, atlas: atlas, cellEase: cellEase,
-    withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair, firstOk: firstOk,
+    withinReach: withinReach, fresh: fresh, update: update, merge: merge, repair: repair, firstOk: firstOk, pending: pending,
     _: { tally: tally, seedAtlas: seedAtlas, slotOf: slotOf, chanceOf: chanceOf, atlasMode: atlasMode, trainDefs: trainDefs, reachDefs: reachDefs, defOf: defOf, near: near },
   };
 })(window.PX);

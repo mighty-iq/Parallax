@@ -17,6 +17,8 @@ const NEW_PROBES = [
     dims: [{ key: 'steps', levels: [1, 2, 3], step: 0.8 }, { key: 'strand', levels: [0, 1, 2, 3, 4, 5], step: 0.1 }], base: -2.0 },
   { id: 'motiongraphs', code: 'PR-7', name: 'Motion Graphs', abilities: ['MA'], cell: 'extrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 4,
     dims: [{ key: 'segments', levels: [2, 3, 4], step: 0.7 }, { key: 'graph', levels: [0, 1], step: 0.6 }], base: -2.1 },
+  { id: 'balance', code: 'PR-8', name: 'Balance', abilities: ['Vz'], cell: 'extrinsic-static', role: 'probe', answer: 'choice', nOptions: 4,
+    variants: ['centroid', 'median'], cycle: 'variant', dims: [{ key: 'level', levels: [0, 1, 2], step: 0.35 }], base: -0.3 },
 ];
 function stub(id) {
   return {
@@ -44,6 +46,7 @@ export async function run(t0) {
   meterAndVerdicts(t);
   container(t);
   curves(t);
+  balance(t);
 }
 
 /* ---------- helpers ---------- */
@@ -438,4 +441,40 @@ function curves(t) {
   } finally {
     CC.ex = keep;
   }
+}
+
+/* ---------- Balance, the Lab check of the calibrate bet ---------- */
+
+function balance(t) {
+  t.section('measure: the Balance check (Lab)');
+  const PX = t.mk({ store: true }), E = PX.engine, A = E.assess, S = PX.core.store;
+  E.fields().forEach((f) => S.field(f.key, f.def, f.fix));
+  A.wire();
+  const L = new Learner(PX, 9), rec = newRecord(PX, T0);
+  measure(PX, rec, L, 'B1', T0);
+  const before = JSON.stringify(A.nextMeasure(rec, T0 + DAY)), nAssess = rec.assess.length;
+  const out = playSession(PX, rec, L, 'check', { now: T0 + 2 * HOUR, kind: 'balance' }, 0);
+  const b = rec.measure.balance;
+  t.ok(Array.isArray(b) && b.length === 1 && b[0].n === E.config.measure.lab.balance.items && b[0].items.length === b[0].n, `one run of ${E.config.measure.lab.balance.items} items in rec.measure.balance`);
+  t.ok(b[0].items.every((r) => r.length === 9 && (r[6] === 0 || r[6] === 1)), 'rows [b, g, ok, rtMs, distance, pull, kind, x, y]');
+  const kinds = b[0].items.map((r) => r[6]);
+  t.ok(kinds.filter((k) => k === 0).length === 6 && kinds.every((k, i) => k === i % 2), 'the two kinds in turn, six each');
+  t.eq(rec.assess.length, nAssess, 'nothing goes into rec.assess');
+  t.eq(JSON.stringify(A.nextMeasure(rec, T0 + DAY)), before, 'the schedule does not see it');
+  t.eq(rec.sessions[rec.sessions.length - 1].kind, 'lab', 'its session is marked lab');
+  const fc = out && out.fin && (out.fin.check || (out.fin.res && out.fin.res.check));
+  t.ok(fc && fc.lab && fc.balance && fc.balance.n === b[0].n, 'the result carries its summary');
+  // a second run takes other items (alternate forms by seed)
+  playSession(PX, rec, L, 'check', { now: T0 + 3 * HOUR, kind: 'balance' }, 0);
+  t.ok(rec.measure.balance.length === 2, 'a second run is kept');
+  // the summary: distance and pull per kind
+  const sum = A.balanceSummary({ date: 'x', n: 4, items: [[0, 0, 1, 900, 2, 1.1, 0, 1, 1], [0, 0, 0, 900, 8, 0.6, 0, 1, 1], [0, 0, 0, 900, 9, 0.9, 1, 1, 0], [0, 0, 1, 900, 1, 0.1, 1, 1, 0]] });
+  t.eq([sum.centroid.n, sum.centroid.right, sum.centroid.dist, sum.centroid.pull, sum.median.right, sum.median.dist, sum.median.pull], [2, 1, 5, 0.85, 1, 5, 0.5], 'per kind: items, right, mean distance, median pull');
+  t.eq(A.balanceReport(rec).length, 2, 'the report lists the runs, latest first');
+  // repair and merge
+  const g = S.guard(JSON.parse(JSON.stringify(rec)));
+  t.ok(g.measure.balance.length === 2, 'the store’s repair keeps the runs');
+  t.eq(A._.checkMeasure({ v: 1, balance: [{ date: 'd', n: 1, items: [] }, { n: 2 }, 'x'] }), { v: 1, balance: [{ date: 'd', n: 1, items: [] }] }, 'the repair drops broken runs');
+  const m = A._.mergeMeasure({ v: 1, balance: [{ date: '2026-11-02', n: 1, items: [] }] }, { v: 1, balance: [{ date: '2026-11-01', n: 2, items: [] }, { date: '2026-11-02', n: 1, items: [] }] }, {});
+  t.eq(m.balance.map((e) => e.date), ['2026-11-01', '2026-11-02'], 'two tabs: every run once, in time order');
 }

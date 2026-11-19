@@ -17,9 +17,9 @@
    centre, the cluster's mean and the point of least total distance (centroid items); the street's middle, the mean of
    the houses and the midpoint of the two end houses (median items).
    Item (JSON): { ex: 'balance', seed, params: { variant, level }, answer: 'point',
-     centroid: dots [[x, y], …] (shuffled), far: [indices of the far dots], key [x, y], core [x, y];
-     median: houses [x, …] (sorted), key x, mean μ;
-     cheap: { <name>: point } }
+     centroid: dots [[x, y], …] (shuffled), far: [indices of the far dots], key { x, y }, core { x, y };
+     median: houses [x, …] (sorted), key { x, y: 0 } (the street is the line y = 0), mean μ;
+     cheap: { <name>: point }, wrongResponse: a cheap answer (the tests' and PX.debug's wrong answer) }
    validate recomputes the key, the core or the mean and every cheap answer from the dots or the houses. */
 (function (PX) {
   'use strict';
@@ -98,7 +98,8 @@
     var cheap = cheapCentroid(shuffled, far);
     for (var c in cheap) if (dist(cheap[c], key) < TOL.centroid + CHEAP_GAP) return null;
     for (var q = 0; q < dots.length; q++) if (dist(dots[q], key) < TOL.centroid + 1) return null; // tapping a dot is never right
-    return { dots: shuffled, far: far.sort(function (a, b) { return a - b; }), key: [r2(key[0]), r2(key[1])], core: [r2(core[0]), r2(core[1])], cheap: roundCheap(cheap) };
+    return { dots: shuffled, far: far.sort(function (a, b) { return a - b; }), key: { x: r2(key[0]), y: r2(key[1]) }, core: { x: r2(core[0]), y: r2(core[1]) },
+      cheap: roundCheap(cheap), wrongResponse: { x: r2(cheap.cluster[0]), y: r2(cheap.cluster[1]) } };
   }
   function cheapCentroid(dots, far) {
     var isFar = {};
@@ -134,7 +135,7 @@
     if (Math.abs(mean - key) < 12) return null;
     var cheap = cheapMedian(houses);
     for (var c in cheap) if (Math.abs(cheap[c] - key) < TOL.median + CHEAP_GAP) return null;
-    return { houses: houses, key: key, mean: r2(mean), cheap: roundCheap(cheap) };
+    return { houses: houses, key: { x: key, y: 0 }, mean: r2(mean), cheap: roundCheap(cheap), wrongResponse: { x: r2(mean), y: 0 } };
   }
   function cheapMedian(houses) {
     return { street: 50, mean: mean1(houses), ends: (houses[0] + houses[houses.length - 1]) / 2 };
@@ -181,7 +182,7 @@
         if (i && hs[i] - hs[i - 1] < MIN_GAP.median - 1e-9) return 'two houses are too close (or not sorted)';
       }
       var key = hs[(n - 1) / 2], mean = mean1(hs);
-      if (item.key !== key) return 'the key is not the middle house';
+      if (!item.key || item.key.x !== key || item.key.y !== 0) return 'the key is not the middle house';
       if (!near(item.mean, mean)) return 'the mean is wrong';
       if (Math.abs(mean - key) < 12) return 'the mean is too near the middle house';
       var cm = cheapMedian(hs);
@@ -206,9 +207,9 @@
       for (var b = a + 1; b < nc; b++) if (dist(d, dots[b]) < MIN_GAP.centroid - 1e-9) return 'two dots overlap';
     }
     var cen = mean2(dots);
-    if (!Array.isArray(item.key) || !near(item.key[0], cen[0]) || !near(item.key[1], cen[1])) return 'the key is not the mean of the dots';
+    if (!item.key || !near(item.key.x, cen[0]) || !near(item.key.y, cen[1])) return 'the key is not the mean of the dots';
     var cc = cheapCentroid(dots, far);
-    if (!Array.isArray(item.core) || !near(item.core[0], cc.cluster[0]) || !near(item.core[1], cc.cluster[1])) return 'the core is not the mean of the cluster';
+    if (!item.core || !near(item.core.x, cc.cluster[0]) || !near(item.core.y, cc.cluster[1])) return 'the core is not the mean of the cluster';
     if (dist(cen, cc.cluster) < MIN_PULL) return 'the far dots hardly pull';
     // far dots: each is farther from the cluster's mean than every cluster dot
     var maxCore = 0, minFar = Infinity;
@@ -231,10 +232,10 @@
     var r = pointOf(response);
     if (!r) return { correct: false };
     if (variantOf(item.params) === 'median') {
-      var e = Math.abs(r[0] - item.key);
-      return { correct: e <= TOL.median, value: Math.round(e * 10) / 10, value2: r2((r[0] - item.key) / (item.mean - item.key)), at: [r2(r[0])] };
+      var m = item.key.x, e = Math.abs(r[0] - m);
+      return { correct: e <= TOL.median, value: Math.round(e * 10) / 10, value2: r2((r[0] - m) / (item.mean - m)), at: [r2(r[0])] };
     }
-    var k = item.key, c = item.core, ax = [k[0] - c[0], k[1] - c[1]], L2 = ax[0] * ax[0] + ax[1] * ax[1];
+    var k = [item.key.x, item.key.y], c = [item.core.x, item.core.y], ax = [k[0] - c[0], k[1] - c[1]], L2 = ax[0] * ax[0] + ax[1] * ax[1];
     var err = dist(r, k), t = ((r[0] - c[0]) * ax[0] + (r[1] - c[1]) * ax[1]) / L2;
     return { correct: err <= TOL.centroid, value: Math.round(err * 10) / 10, value2: r2(t), at: [r2(r[0]), r2(r[1])] };
   }

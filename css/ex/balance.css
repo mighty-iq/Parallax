@@ -1,0 +1,52 @@
+/* PR-8 Balance (js/ex/balance/view.js), a Lab check. Every rule under .ex-balance; tokens from css/base.css with
+   fallbacks. The board is 100 units square; the street 100 units long with the houses above it. */
+.ex-balance .bl-prompt { margin: 0 0 var(--s2, 0.5rem); font-size: var(--fs-lg, 1.125rem); font-weight: 600; color: var(--ink, #1A1D21); text-align: center; }
+.ex-balance .bl-stage { display: flex; flex-direction: column; align-items: center; padding: 0.75rem; }
+.ex-balance .bl-wrap { width: 100%; max-width: 30rem; margin: 0 auto; outline: none; border-radius: var(--r-plate, 2px); }
+/* desktops and tablets: the board leaves room for the question above it and Confirm below it (phones: below) */
+@media (min-width: 700px) and (min-height: 501px) {
+  .ex-balance-stem[data-kind="centroid"] .bl-wrap { max-width: min(30rem, calc(100vh - 23rem)); min-width: 12rem; }
+}
+.ex-balance .bl-wrap:focus-visible { box-shadow: 0 0 0 3px var(--focus, #0B6A86); }
+.ex-balance .bl-svg { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
+.ex-balance .bl-verdict { margin-top: 0.6rem; }
+
+.ex-balance .bl-board { fill: var(--surface, #FFFFFF); stroke: var(--rule-strong, #7B838A); stroke-width: 0.5; }
+.ex-balance .bl-dot { fill: var(--ink, #1A1D21); }
+.ex-balance .bl-hit { fill: transparent; }
+.ex-balance .bl-street { stroke: var(--ink-3, #5D646C); stroke-width: 1.2; stroke-linecap: round; }
+.ex-balance .bl-house-body { fill: var(--stim-face-2, #C9CED3); stroke: var(--ink, #1A1D21); stroke-width: 0.35; stroke-linejoin: round; }
+/* the marker: the stimulus target colour (--signal), ring and cross, or a stop sign on a pole */
+.ex-balance .bl-ring { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 0.9; }
+.ex-balance .bl-cross { fill: none; stroke: var(--signal, #0B6A86); stroke-width: 0.6; stroke-linecap: round; }
+.ex-balance .bl-pole { stroke: var(--signal, #0B6A86); stroke-width: 0.6; }
+.ex-balance .bl-sign { fill: var(--surface, #FFFFFF); stroke: var(--signal, #0B6A86); stroke-width: 0.8; }
+.ex-balance .bl-key-dot { fill: var(--right, #1B7F3B); }
+
+.ex-balance .bl-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s3, 0.75rem); margin-top: var(--s2, 0.5rem); }
+.ex-balance .bl-actions[hidden] { display: none; }
+.ex-balance .bl-hint { font-size: var(--fs-sm, 0.875rem); color: var(--ink-2, #454B52); }
+
+/* the answer time: one slow linear sweep (no ticks, no colour change), as in the other probes */
+.ex-balance .pr-timer { height: 4px; margin-top: 0.5rem; overflow: hidden; background: var(--surface-3, #DDE1DE); border-radius: 2px; }
+.ex-balance .pr-timer-fill { width: 100%; height: 100%; transform-origin: left center; transform: scaleX(1); background: var(--ink-3, #5D646C); }
+.ex-balance .pr-timer.is-running .pr-timer-fill { animation-name: bl-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
+.ex-balance .pr-timer.is-stopped .pr-timer-fill,
+html[data-hx-state="paused"] .ex-balance .pr-timer-fill,
+[data-paused] .ex-balance .pr-timer-fill { animation-play-state: paused; }
+@keyframes bl-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* phones in the player (css/play.css: --pl-avail, the height left for the item; --pl-w, its width): the board as
+   large as fits under the question and above Confirm */
+.pl-trial.ex-balance .ex-balance-stem[data-kind="centroid"] .bl-wrap {
+  width: min(100%, calc(var(--pl-avail, 100vh) - 8.5rem));
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  .pl-trial.ex-balance .ex-balance-stem[data-kind="centroid"] {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto 1fr; align-items: start; column-gap: var(--s4, 1rem);
+  }
+  .pl-trial.ex-balance .ex-balance-stem[data-kind="centroid"] .bl-stage { grid-column: 1; grid-row: 1 / -1; padding: 0.25rem; }
+  .pl-trial.ex-balance .ex-balance-stem[data-kind="centroid"] > :not(.bl-stage) { grid-column: 2; }
+  .pl-trial.ex-balance .ex-balance-stem[data-kind="centroid"] .bl-wrap { width: calc(var(--pl-avail, 100vh) - 1rem); max-width: calc(var(--pl-w, 100vw) * 0.55); }
+  .pl-trial.ex-balance .ex-balance-stem[data-kind="centroid"] .bl-prompt { text-align: left; }
+}
