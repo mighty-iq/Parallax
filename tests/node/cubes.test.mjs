@@ -1,14 +1,31 @@
-/* EX-18 Painted Cubes: generator, validator (independent recount and z-buffer), scorer, difficulty,
-   camera, shortcut solvers, Section-mode asks, timing and learn data (ARCHITECTURE §12; R3 §8.4).
-   Run through tests/node/run.mjs. PX_REPORT=1 prints the numbers; PX_TEST_ITEMS=<n> shortens it. */
+/* EX-18 Painted Cubes: generator, validator (independent recount and ray cast), scorer, difficulty,
+   camera, figure sets (version 3: 2–4 questions a figure, five painted sides), shortcut solvers on
+   every question, partial counts (O57), an independent solver from the picture with a one-column
+   uniqueness proof (O30), Section-mode asks, timing and learn data (ARCHITECTURE §12; R3 §8.4;
+   note D1 §6.3). Run through tests/node/run.mjs. PX_REPORT=1 prints the numbers; PX_TEST_ITEMS=<n>
+   shortens it. */
 import { MANIFEST, deepDiff } from './run.mjs';
 
 const FILES = [...MANIFEST, 'js/ex/cubes/gen.js', 'js/ex/cubes/learn.js'];
-const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // 40 level combinations × 252
+const N_ITEMS = +(process.env.PX_TEST_ITEMS || 10080); // figures: 40 level combinations × 252
 // The starter band (v1.2, note D2 §3.3): flat figures (height level 0) and 4–6 cubes (cubes level 0).
 const inBand = (p) => p.cubes === 0 || p.height === 0;
 const OLD_FLOOR = -2.3, NEW_FLOOR = -3.85;
+// Five painted sides: three counts evenly, so the most common answer sits at a third (a scoped
+// exception to chance + 10, DECISIONS 19 Nov), held here at FIVE_CAP.
+const FIVE_CAP = 0.38;
+// Partial counts (O57, DECISIONS 19 Nov): each needs every painted side counted right, so they are
+// held at caps per level on stacked figures above the band, not at chance + 10.
+const CAPS = { 'visible cubes only': { first: 0.72, later: 0.9 }, 'visible cubes plus one': { first: 0.45, later: 0.45 }, 'column tops only': { first: 0.55, later: 0.6 } };
 const procMs = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
+
+// One question of a figure as its own item: what generate returns with params.ask = j (the figure
+// does not depend on ask; the Section-mode section below regenerates a sample to show it).
+export function questionOf(L, item, j) {
+  const q = JSON.parse(JSON.stringify(item)), N = item.asks[j], k = L.histogram(item.heights)[N];
+  q.params.ask = j; q.pos = j; q.ask = N; q.count = k; q.key = k - 1;
+  return q;
+}
 
 export async function run(t) {
   const PX = t.context({ files: FILES }).PX;
@@ -18,7 +35,8 @@ export async function run(t) {
   if (!def) return;
   const L = def.lib;
   t.eq([def.id, def.version, def.code, def.abilities, def.role, def.answer, def.nOptions, def.pat, def.extraParams],
-    ['cubes', 2, 'EX-18', ['Vz'], 'train', 'choice', 5, true, ['ask']], 'id, version 2 (starter band), code, Vz, choice of 5, pat, extra param ask');
+    ['cubes', 3, 'EX-18', ['Vz'], 'train', 'choice', 5, true, ['ask']], 'id, version 3 (figure sets), code, Vz, choice of 5, pat, extra param ask');
+  t.ok(def.set && def.set.param === 'ask' && typeof def.set.size === 'function', 'def.set: the planner\'s questions per figure (param ask, size(params, seed))');
   t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 5], ['height', 4], ['asked', 2]], 'dims: a starter level in front of cubes and of tallest column');
   t.eq([def.dims[0].levels[0], def.dims[1].levels[0]], ['4–6', 1], 'the starter levels: 4–6 cubes, flat (one cube high)');
   t.eq(def.starters, [{ dim: 'height', levels: 1 }, { dim: 'cubes', levels: 1 }], 'starters: the flat level and the 4–6 cubes level');
@@ -26,8 +44,8 @@ export async function run(t) {
   t.eq(all.length, 40, 'every level combination is enumerated');
   const lo = PX.ex.minDifficulty(def), hi = PX.ex.maxDifficulty(def);
   t.ok(hi - lo >= 4 - 1e-9, `difficulty spans at least 4 logits (${lo.toFixed(2)} … ${hi.toFixed(2)})`);
-  t.near(lo, NEW_FLOOR, 1e-9, 'the new floor is −3.85 (flat, 4–6 cubes)');
-  t.near(hi, 1.7, 1e-9, 'the top of the range is the 1.1 top');
+  t.near(lo, NEW_FLOOR, 1e-9, 'the floor is −3.85 (flat, 4–6 cubes), as in version 2');
+  t.near(hi, 1.7, 1e-9, 'the top of the range is the 1.1 top, as in version 2 (the range is unchanged, so stored levels need no re-basing)');
   // Every 1.1 combination keeps its 1.1 difficulty: −2.3 + 0.85 · size + 0.3 · height + 0.85 · asked.
   let same11 = 0, n11 = 0;
   for (const p of all) if (!inBand(p)) { n11++; if (Math.abs(def.difficulty(p) - (OLD_FLOOR + 0.85 * (p.cubes - 1) + 0.3 * (p.height - 1) + 0.85 * p.asked)) < 1e-9) same11++; }
@@ -35,15 +53,23 @@ export async function run(t) {
   t.near(def.difficulty({ cubes: 1, height: 0, asked: 0 }), OLD_FLOOR - 0.85, 1e-9, 'flat: Δ −0.85');
   t.near(def.difficulty({ cubes: 0, height: 1, asked: 0 }), OLD_FLOOR - 0.7, 1e-9, '4–6 cubes: Δ −0.7');
   t.ok(def.difficulty({ cubes: 2, height: 0, asked: 0 }) >= OLD_FLOOR - 1e-9, 'flat 10–13 cubes sit at the pre-1.2 floor (strong beginners leave the band; firstband (c))');
-  // At 4–6 cubes the question is always about 3 or 4 sides and columns stand at most 3 high: those
-  // combinations are priced as what is built.
   t.ok([0, 1, 2, 3].every((h) => def.difficulty({ cubes: 0, height: h, asked: 1 }) === def.difficulty({ cubes: 0, height: h, asked: 0 })) &&
     def.difficulty({ cubes: 0, height: 3, asked: 0 }) === def.difficulty({ cubes: 0, height: 2, asked: 0 }), '4–6 cubes: unbuildable settings are priced as what is built');
+  t.ok(all.every((p) => def.difficulty({ ...p, ask: 2 }) === def.difficulty(p)), 'the extra param ask never changes the price (the first question is the rated one)');
   const easiest11 = all.filter((p) => !inBand(p)).reduce((a, p) => (def.difficulty(p) < def.difficulty(a) ? p : a));
   const pBeginner = 0.2 + (1 - 0.2 - 0.03) / (1 + Math.exp(def.difficulty(easiest11)));
   t.ok(pBeginner > 0.87 && pBeginner < 0.93, `the pre-1.2 floor is about 90 % right at θ = 0 (${(100 * pBeginner).toFixed(1)} %)`);
   const pBand = 0.2 + (1 - 0.2 - 0.03) / (1 + Math.exp(lo));
   t.ok(pBand > pBeginner + 0.05, `the starter floor is easier still (${(100 * pBand).toFixed(1)} % at θ = 0)`);
+  // Re-basing (js/engine/rebase.js): version 3 keeps version 2's range, so a stamped record converts
+  // nothing; a 1.1 record converts from V11 as before.
+  const rb = t.context({ files: [...FILES, 'js/engine/rebase.js'].filter((f, i, a) => a.indexOf(f) === i) }).PX;
+  if (rb.engine && rb.engine.rebase) {
+    const R = rb.engine.rebase, d3 = rb.ex.get('cubes'), M = rb.engine.model, r = M.range(d3);
+    const rec = { scales: { cubes: [Math.round(r.min * 1e4) / 1e4, Math.round(r.max * 1e4) / 1e4] }, ex: { cubes: { best: { block: { level: 40 } } } } };
+    R.run(rec, 4);
+    t.eq(rec.ex.cubes.best.block.level, 40, 're-basing: a record stamped with version 2\'s range keeps its levels (the range did not change)');
+  }
 
   t.section('cubes: camera');
   const unit = (v) => Math.hypot(...v);
@@ -58,11 +84,12 @@ export async function run(t) {
   }
   t.ok(minSep >= 0.34, `no two cube positions of a 5 × 5 × 4 figure closer than 0.34 cube edges on screen (${minSep.toFixed(3)}; isometric would give 0)`);
 
-  t.section('cubes: items');
+  t.section('cubes: items (every question of every figure)');
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
-  let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, fallbacks = 0, firstBad = null, n = 0, hiddenItems = 0;
-  const keyHist = [0, 0, 0, 0, 0], perN = {}, items = [], acc = {}, accBand = {}, laterN = {}, cellKeys = [], asksLen = [0, 0, 0, 0, 0, 0];
-  let asksBad = 0, rayOff = 0, minTopRay = 1, nOld = 0, flatBad = 0, nBand = 0;
+  let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, fallbacks = 0, firstBad = null, n = 0, nq = 0, hiddenItems = 0;
+  const keyHist = [0, 0, 0, 0, 0], items = [], acc = {}, accBand = {}, laterN = {}, posKeys = {}, cellKeys = [], laterCells = [], asksLen = [0, 0, 0, 0, 0];
+  const fiveH = [0, 0, 0, 0, 0, 0], partial = {};
+  let asksBad = 0, sizeBad = 0, rayOff = 0, minTopRay = 1, nOld = 0, flatBad = 0, nBand = 0, valueBad = 0, fiveSets = 0, fiveEligible = 0, fiveWrongLevel = 0;
   for (let ci = 0; ci < all.length; ci++) {
     for (let s = 0; s < per; s++) {
       const params = all[ci], seed = PX.rng.hash('cubes-test', ci, s);
@@ -70,72 +97,104 @@ export async function run(t) {
       try { item = def.generate(PX.rng(seed), params); } catch (e) { threw++; firstBad = firstBad || `throw ${JSON.stringify(params)}: ${e.message}`; continue; }
       n++;
       if (item.fallback) fallbacks++;
-      const v = def.validate(item);
-      if (v !== true) { invalid++; firstBad = firstBad || `${JSON.stringify(params)} seed ${seed}: ${v}`; continue; }
-      if (!def.score(item, item.key).correct) keyWrong++;
-      for (let i = 0; i < 5; i++) if (i !== item.key && def.score(item, i).correct) foilRight++;
+      if (!item.fallback && item.asks.length !== def.set.size(params, seed)) sizeBad++;
+      asksLen[Math.min(4, item.asks.length)] += inBand(params) ? 0 : 1;
+      if (L.fiveOk(params)) { fiveEligible++; if (item.asks.includes(5)) fiveSets++; } else if (item.asks.includes(5)) fiveWrongLevel++;
       if (n % 50 === 0 && deepDiff(JSON.parse(JSON.stringify(item)), item) !== null) nonJson++;
       if (n % 8 === 0) items.push({ seed, params, item });
-      keyHist[item.key]++;
-      (perN[item.ask] = perN[item.ask] || [0, 0, 0, 0, 0])[item.key]++;
       if (!inBand(params)) { nOld++; if (item.hidden > 0) hiddenItems++; }
-      shortcuts(L, item, acc);
-      if (inBand(params)) { nBand++; shortcuts(L, item, accBand); }
       // Flat figures: no cube hidden, and every cube's count is 5 minus the cubes it touches.
       if (params.height === 0 && (item.hidden !== 0 || L.cubesOf(item.heights).some((q) => q.painted !== 5 - [1, 2, 3, 4].filter((s2) => !q.sides[s2]).length))) flatBad++;
-      // Section mode's later questions: N in KRANGE at this size (never 5), each count in its range.
-      const hist = L.histogram(item.heights), KR = L.krange(params);
-      if (!inBand(params)) asksLen[Math.min(5, item.asks.length)]++; // Section practice draws from above the band
-      if (item.asks[0] !== item.ask || new Set(item.asks).size !== item.asks.length || item.asks.some((m) => !KR[m] || hist[m] < KR[m][0] || hist[m] > KR[m][1])) asksBad++;
-      item.asks.slice(1).forEach((m) => { (laterN[m] = laterN[m] || [0, 0, 0, 0, 0, 0])[hist[m]]++; });
-      cellKeys.push([`${params.cubes},${params.height},${item.ask}`, item.count, s % 2, inBand(params)]);
+      const hist = L.histogram(item.heights), five = item.asks.includes(5), KR = five ? L.krange5(params) : L.krange(params);
+      if (item.asks.some((m, j) => !(j > 0 && m === 5 ? m >= 1 && hist[5] >= 1 && hist[5] <= 3 : KR[m] && hist[m] >= KR[m][0] && hist[m] <= KR[m][1])) || new Set(item.asks).size !== item.asks.length) asksBad++;
       // The validator's ray cast against the generator's z-buffer.
       const rv = L.rayView(item.heights), zv = L.sight(item.heights);
       if (rv.hidden !== zv.hidden || (rv.minTop < 0.5) !== (zv.minTop < 0.5)) rayOff++;
       minTopRay = Math.min(minTopRay, rv.minTop);
+      const prevKeys = [], sight = zv;
+      for (let j = 0; j < item.asks.length; j++) {
+        const q = j === 0 ? item : questionOf(L, item, j);
+        nq++;
+        const v = def.validate(q);
+        if (v !== true) { invalid++; firstBad = firstBad || `${JSON.stringify(q.params)} seed ${seed}: ${v}`; continue; }
+        if (!def.score(q, q.key).correct) keyWrong++;
+        for (let i = 0; i < 5; i++) if (i !== q.key && def.score(q, i).correct) foilRight++;
+        if (def.score(q, q.key).value !== j) valueBad++;
+        keyHist[q.key]++;
+        (posKeys[j] = posKeys[j] || [0, 0, 0, 0, 0, 0])[q.count]++;
+        if (j > 0) (laterN[q.ask] = laterN[q.ask] || [0, 0, 0, 0, 0, 0])[q.count]++;
+        if (q.ask === 5) fiveH[q.count]++;
+        const sc = solverHits(L, q, prevKeys, sight);
+        const pos = j === 0 ? 'first' : 'later';
+        for (const [name, hit] of Object.entries(sc)) {
+          if (name === '_partial') continue;
+          addHit(acc, name, hit); addHit(acc, `${name} | ${pos}`, hit);
+          if (inBand(params)) addHit(accBand, name, hit);
+        }
+        if (!inBand(params) && q.ask !== 5) for (const [name, hit] of Object.entries(sc._partial)) { addHit(partial, `${name} | ${pos} | cubes ${params.cubes}`, hit); addHit(partial, `${name} | ${pos}`, hit); }
+        if (j === 0) cellKeys.push([`${params.cubes},${params.height},${q.ask}`, q.count, s % 2, inBand(params)]);
+        else laterCells.push([`${params.cubes},${params.height},${q.ask}`, q.count, s % 2]);
+        prevKeys.push(q.key);
+      }
+      if (inBand(params)) nBand++;
     }
   }
   t.eq(threw, 0, 'generate never throws' + (firstBad && threw ? ` (${firstBad})` : ''));
-  t.ok(n >= Math.min(10000, N_ITEMS), `at least ${Math.min(10000, N_ITEMS)} items (${n})`);
-  t.eq(invalid, 0, 'validate passes on every item' + (firstBad && invalid ? ` (${firstBad})` : ''));
+  t.ok(n >= Math.min(10000, N_ITEMS), `at least ${Math.min(10000, N_ITEMS)} figures (${n}; ${nq} questions)`);
+  t.eq(invalid, 0, 'validate passes on every question of every figure' + (firstBad && invalid ? ` (${firstBad})` : ''));
   t.eq(keyWrong, 0, 'the key scores right');
   t.eq(foilRight, 0, 'every other option scores wrong');
+  t.eq(valueBad, 0, 'score() reports the question\'s place in its set (the trial row\'s value)');
   t.eq(nonJson, 0, 'items survive JSON round trips');
   t.eq(fallbacks, 0, 'no item needed the fallback construction');
-  t.ok(keyHist.every((c) => c / n <= 0.3 && c / n >= 0.12), `keys spread over 1–5 cubes, none above 30 % (${keyHist.join(', ')})`);
-  t.ok(!perN[5] && !perN[0], 'never asks for 0 or 5 painted sides');
-  const bestPerN = Object.values(perN).reduce((s, h) => s + Math.max(...h), 0) / n;
-  t.ok(bestPerN <= 0.3, `"the most common answer for the asked N" ≤ chance + 10 (${(100 * bestPerN).toFixed(1)} %)`);
+  t.ok(keyHist.every((c) => c / nq <= 0.3 && c / nq >= 0.12), `keys spread over 1–5 cubes, none above 30 % (${keyHist.join(', ')})`);
+  t.eq(sizeBad, 0, 'every figure has as many questions as def.set.size(params, seed) says');
+  t.eq(asksBad, 0, 'asks: different numbers, each count in its level\'s range (five painted sides: 1–3)');
+  t.eq(fiveWrongLevel, 0, 'five painted sides is asked only on stacked figures from 10 cubes up');
+  t.ok(fiveSets / fiveEligible > 0.18 && fiveSets / fiveEligible < 0.32, `about a quarter of the figures that can ask five painted sides ask it (${fiveSets} of ${fiveEligible})`);
+  const meanAsks = asksLen.reduce((x, c, i) => x + c * i, 0) / nOld;
+  t.ok(meanAsks >= 2.3 && asksLen[4] > 0 && asksLen[1] === 0, `above the starter band 2–4 questions a figure (mean ${meanAsks.toFixed(2)}; 2/3/4: ${asksLen.slice(2, 5).join('/')})`);
   t.ok(hiddenItems / nOld > 0.5, `above the starter band most figures hide supports the solver must count (${(100 * hiddenItems / nOld).toFixed(0)} %)`);
   t.eq(flatBad, 0, 'flat figures hide no cube, and every cube has 5 minus its neighbours painted sides');
   // RV-dat-style-A §12: the most common answer per level and N, learned on half the items and
-  // tried on the other half (N and k are kept across the figure search's retries); all items, then
-  // the starter band's own pool.
+  // tried on the other half (N and k are kept across the figure search's retries); first questions
+  // (the rated ones), all items and the starter band's own pool.
   const priorRate = (keys) => {
     const prior = {};
     keys.filter((c) => c[2] === 0).forEach(([cell, k]) => { (prior[cell] = prior[cell] || [0, 0, 0, 0, 0, 0])[k]++; });
     const test = keys.filter((c) => c[2] === 1), guess = (cell) => { const h = prior[cell] || [0, 1, 0, 0, 0, 0]; return h.indexOf(Math.max(...h)); };
     return { hit: test.filter(([cell, k]) => guess(cell) === k).length / test.length, n: test.length };
   };
-  for (const [name, keys] of [['all items', cellKeys], ['starter band', cellKeys.filter((c) => c[3])]]) {
+  for (const [name, keys] of [['first questions', cellKeys], ['starter band', cellKeys.filter((c) => c[3])]]) {
     const pr = priorRate(keys), slack = pr.n < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / pr.n) : 0;
     t.ok(pr.hit <= 0.3 + slack, `"the most common answer for the level and N" (learned on half the items, ${name}) ≤ chance + 10 (${(100 * pr.hit).toFixed(1)} %${slack ? '; quick run, noise allowed' : ''})`);
   }
   t.eq(rayOff, 0, `the validator's ray cast and the generator's z-buffer agree on every figure (smallest column top in view ${minTopRay.toFixed(3)})`);
 
-  t.section('cubes: later questions (Section mode)');
-  t.eq(asksBad, 0, 'asks: the item\'s own question first, then other N that KRANGE allows at this size, counts in range, never 5');
-  // At the default size each N has 2,500 or more later questions and meets the bound itself; quick
-  // runs (PX_TEST_ITEMS) with fewer than 2,000 allow three standard errors of sampling noise.
+  t.section('cubes: later questions and positions');
+  // Pooled over sizes, as 1.1 bounded Section practice's later questions; at the default size each
+  // number has 2,000 or more later questions. Quick runs allow three standard errors of noise.
   for (const [m, h] of Object.entries(laterN)) {
+    if (m === '5') continue;
     const tot = h.reduce((x, y) => x + y, 0), top = Math.max(...h), slack = tot < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / tot) : 0;
-    t.ok(top / tot <= 0.3 + slack, `later questions for ${m} painted side${m === '1' ? '' : 's'}: the most common answer ≤ chance + 10 (${(100 * top / tot).toFixed(1)} % of ${tot}: ${h.slice(1).join('/')}${slack ? '; quick run, noise allowed' : ''})`);
+    t.ok(top / tot <= 0.3 + slack, `later questions about ${m} painted side${m === '1' ? '' : 's'}: the most common answer ≤ chance + 10 (${(100 * top / tot).toFixed(1)} % of ${tot}: ${h.slice(1).join('/')}${slack ? '; quick run, noise allowed' : ''})`);
   }
-  const meanAsks = asksLen.reduce((x, c, i) => x + c * i, 0) / nOld;
-  t.ok(meanAsks >= 2, `about two or more questions per figure for Section mode, above the starter band (mean ${meanAsks.toFixed(2)}; 1/2/3/4: ${asksLen.slice(1, 5).join('/')})`);
+  for (const [j, h] of Object.entries(posKeys)) {
+    const tot = h.reduce((x, y) => x + y, 0), top = Math.max(...h), slack = tot < 2000 ? 3 * Math.sqrt(0.25 * 0.75 / tot) : 0;
+    t.ok(top / tot <= 0.3 + slack, `question ${+j + 1} of a figure: the most common answer ≤ chance + 10 (${(100 * top / tot).toFixed(1)} % of ${tot}${slack ? '; quick run, noise allowed' : ''})`);
+  }
+  const fiveTot = fiveH.reduce((x, y) => x + y, 0);
+  t.ok(fiveTot > 0 && Math.max(...fiveH) / fiveTot <= FIVE_CAP && fiveH[4] === 0 && fiveH[5] === 0, `five painted sides: 1–3 cubes evenly, the most common at most ${100 * FIVE_CAP} % (scoped; ${fiveH.slice(1, 4).join('/')} of ${fiveTot})`);
+  const laterPrior = priorRate(laterCells);
+
+  t.section('cubes: partial counts (O57; caps per level on stacked figures above the band)');
+  for (const [k, v] of Object.entries(partial)) {
+    const [name, pos, lvl] = k.split(' | '), cap = CAPS[name][pos], slack = v.n < 1500 ? 3 * Math.sqrt(cap * (1 - cap) / v.n) : 0;
+    t.ok(v.hit / v.n <= cap + slack, `"${name}" on ${pos} questions${lvl ? ', ' + lvl : ''}: at most ${(100 * cap).toFixed(0)} % (${(100 * v.hit / v.n).toFixed(1)} % of ${v.n}${slack ? '; noise allowed' : ''})`);
+  }
 
   t.section('cubes: validator catches broken items');
-  const base = items.find((x) => x.item.hidden > 0).item;
+  const base = items.find((x) => x.item.hidden > 0 && x.item.asks.length >= 2).item;
   const broken = [
     ['the key moved', (it) => { it.key = (it.key + 1) % 5; }],
     ['a floating cube (a column made taller behind the view)', (it) => { it.heights[0][0] = 4; }],
@@ -143,8 +202,10 @@ export async function run(t) {
     ['options other than 1–5', (it) => { it.options = [0, 1, 2, 3, 4]; }],
     ['asked N changed', (it) => { it.ask = it.ask === 1 ? 2 : 1; }],
     ['a column split in two', (it) => { const G = it.grid; for (let z = 0; z < G; z++) it.heights[z][1] = 0; }],
-    ['a later question about 5 painted sides', (it) => { it.asks.push(5); }],
+    ['a later question about 5 painted sides added', (it) => { it.asks.push(5); }],
     ['a later question asked twice', (it) => { it.asks.push(it.asks[0]); }],
+    ['a question dropped from the set', (it) => { it.asks.pop(); }],
+    ['the question\'s place differs from params.ask', (it) => { it.pos = 1; }],
     ['the hidden count changed', (it) => { it.hidden += 1; }],
   ];
   for (const [name, edit] of broken) {
@@ -153,16 +214,16 @@ export async function run(t) {
     t.ok(def.validate(it) !== true, `rejects: ${name}`);
   }
 
-  t.section('cubes: Section-mode questions about one figure');
+  t.section('cubes: Section-mode questions about one figure (params.ask)');
   let askBad = 0;
-  for (const { seed, params, item } of items.slice(0, 120)) {
+  for (const { seed, params, item } of items.slice(0, 160)) {
     for (let a = 0; a < item.asks.length; a++) {
       const it = def.generate(PX.rng(seed), { ...params, ask: a });
-      const ok = def.validate(it) === true && deepDiff(it.heights, item.heights) === null && it.ask === item.asks[a];
+      const ok = def.validate(it) === true && deepDiff(it.heights, item.heights) === null && it.ask === item.asks[a] && it.pos === a && deepDiff(it, questionOf(L, item, a)) === null;
       if (!ok) askBad++;
     }
   }
-  t.eq(askBad, 0, 'params.ask asks the i-th question about the same figure, every one valid');
+  t.eq(askBad, 0, 'params.ask asks the i-th question about the same figure, every one valid and equal to the derived question');
 
   t.section('cubes: determinism');
   let diff = 0, firstDiff = null;
@@ -204,47 +265,137 @@ export async function run(t) {
   }
   t.ok(p95 < 20, `generation p95 at the hardest level under 20 ms (CPU ${p95.toFixed(1)} ms, max ${Math.max(...worst).toFixed(1)} ms)`);
 
-  t.section('cubes: shortcut solvers (all items, then the starter band\'s own pool)');
+  t.section('cubes: shortcut solvers on every question (all, first, later; then the starter band\'s own pool)');
   const bound = 0.2 + 0.10, pct = (x) => (100 * x).toFixed(1) + ' %';
   for (const [k, v] of Object.entries(acc)) {
-    if (k.startsWith('info:')) continue;
-    t.ok(v.hit / v.n <= bound, `"${k}" ≤ chance + 10 (${pct(v.hit / v.n)})`);
+    const slack = v.n < 2000 ? 3 * Math.sqrt(0.2 * 0.8 / v.n) : 0;
+    t.ok(v.hit / v.n <= bound + slack, `"${k}" ≤ chance + 10 (${pct(v.hit / v.n)} of ${v.n}${slack ? ', noise allowed' : ''})`);
   }
-  t.ok(nBand >= Math.min(2000, N_ITEMS / 3), `the starter band's pool holds ${nBand} items`);
+  t.ok(nBand >= Math.min(2000, N_ITEMS / 3), `the starter band's pool holds ${nBand} figures`);
   for (const [k, v] of Object.entries(accBand)) {
-    if (k.startsWith('info:')) continue;
     const slack = v.n < 2000 ? 3 * Math.sqrt(0.2 * 0.8 / v.n) : 0;
     t.ok(v.hit / v.n <= bound + slack, `starter band: "${k}" ≤ chance + 10 (${pct(v.hit / v.n)}${slack ? ', quick run' : ''})`);
   }
+
+  t.section('cubes: an independent solver from the picture (O30)');
+  // This file's own reading of the picture, by ray marching (the generator uses a z-buffer, the
+  // validator a slab ray cast). The format's rule says a cube out of sight only holds others up, so
+  // every column's top is in view; then a column is as tall as its highest top in view, and the
+  // painted sides follow from neighbour tests written here. A brute-force search then changes each
+  // column to every other height (0–4): none gives the same tops in view while keeping every
+  // column's top in view, so the picture has one reading (with every top in view, any reading with
+  // the same tops would rebuild to the same heights).
+  const sample = items.filter((x, i) => i % 6 === 0).slice(0, Math.min(150, items.length));
+  let solveBad = 0, ruleBad = 0, ambiguous = 0, firstSolve = null, tried = 0;
+  for (const { item } of sample) {
+    const H = item.heights, G = H.length, seen = topsInView(H, L.D, 3);
+    if (!topsAllInView(H, seen)) { ruleBad++; firstSolve = firstSolve || `a column top out of view (seed ${item.seed})`; continue; }
+    const R2 = reconstruct(G, seen);
+    if (deepDiff(R2, H) !== null) { solveBad++; firstSolve = firstSolve || `heights from the tops in view differ (seed ${item.seed})`; continue; }
+    const counts = paintedCounts(R2), hist = L.histogram(H);
+    if (item.asks.some((N) => counts[N] !== hist[N])) { solveBad++; firstSolve = firstSolve || `counts differ (seed ${item.seed})`; }
+    const key0 = [...topsInView(H, L.D, 2)].sort().join(';');
+    for (let z = 0; z < G; z++) for (let x = 0; x < G; x++) for (let h = 0; h <= 4; h++) {
+      if (h === H[z][x]) continue;
+      const H2 = H.map((row) => row.slice()); H2[z][x] = h;
+      tried++;
+      const s2 = topsInView(H2, L.D, 2);
+      if ([...s2].sort().join(';') === key0 && topsAllInView(H2, s2)) { ambiguous++; firstSolve = firstSolve || `a column of another height reads the same (seed ${item.seed}, ${x},${z} → ${h})`; }
+    }
+  }
+  t.eq(ruleBad, 0, `every column's top is in view by this file's own ray marching (${sample.length} figures)` + (firstSolve && ruleBad ? `: ${firstSolve}` : ''));
+  t.eq(solveBad, 0, `every question of every figure is solved from the tops in view alone (${sample.length} figures)` + (firstSolve && solveBad ? `: ${firstSolve}` : ''));
+  t.eq(ambiguous, 0, `no column of another height gives the same tops in view under the format's rule (${tried} figures searched)` + (firstSolve && ambiguous ? `: ${firstSolve}` : ''));
+
   if (process.env.PX_REPORT) {
     console.log('       cubes: ' + Object.entries(acc).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
     console.log('       cubes, starter band: ' + Object.entries(accBand).map(([k, v]) => `${k} ${pct(v.hit / v.n)}`).join(', '));
-    console.log(`       keys ${keyHist.join(',')}; per N ${JSON.stringify(perN)}; hidden in ${(100 * hiddenItems / nOld).toFixed(0)} % above the band; CPU p95 ${p95.toFixed(1)} ms`);
-    console.log(`       later questions by N (counts 0–5) ${JSON.stringify(laterN)}; questions per figure 1/2/3/4 ${asksLen.slice(1, 5).join('/')} (mean ${meanAsks.toFixed(2)}); ray cast: smallest top ${minTopRay.toFixed(3)}`);
+    console.log('       partial counts: ' + Object.entries(partial).map(([k, v]) => `${k} ${pct(v.hit / v.n)} (${v.n})`).join(', '));
+    console.log(`       keys ${keyHist.join(',')}; positions ${JSON.stringify(posKeys)}; five ${fiveH.slice(1, 4).join('/')}; hidden in ${(100 * hiddenItems / nOld).toFixed(0)} % above the band; CPU p95 ${p95.toFixed(1)} ms`);
+    console.log(`       later questions by N (counts 0–5) ${JSON.stringify(laterN)}; questions per figure 2/3/4 ${asksLen.slice(2, 5).join('/')} (mean ${meanAsks.toFixed(2)}); ray cast: smallest top ${minTopRay.toFixed(3)}`);
+    console.log(`       info: the most common answer per level and N on later questions (learned on half) ${(100 * laterPrior.hit).toFixed(1)} % of ${laterPrior.n} (unrated questions; bounded per number over all sizes above)`);
   }
   testLearn(t, PX, def);
 }
 
-// Cheap solvers: each predicts a count; it scores when the prediction is the key (a prediction
-// outside 1–5 is moved to the nearest option).
-function shortcuts(L, item, acc) {
-  const add = (name, hit) => { const a = acc[name] = acc[name] || { hit: 0, n: 0 }; a.hit += hit; a.n++; };
-  const k = item.count, N = item.ask, H = item.heights;
+function addHit(acc, name, hit) { const a = acc[name] = acc[name] || { hit: 0, n: 0 }; a.hit += hit; a.n++; }
+
+// Cheap solvers on one question: each predicts a count and scores when it is the key (a prediction
+// outside 1–5 is moved to the nearest option). prevKeys: the keys of the figure's earlier questions.
+// _partial: the partial counts of O57 (each needs every painted side counted right).
+function solverHits(L, item, prevKeys, sight) {
+  const out = {}, k = item.count, N = item.ask, H = item.heights;
   const clampHit = (pred) => (Math.min(5, Math.max(1, pred)) === k ? 1 : 0);
-  for (let c = 1; c <= 5; c++) add(`always ${c}`, k === c ? 1 : 0);
+  for (let c = 1; c <= 5; c++) out[`always ${c}`] = k === c ? 1 : 0;
   const cubes = L.total(H), cols = H.flat().filter((h) => h > 0).length;
-  add('cubes mod 5', clampHit((cubes % 5) + 1));
-  add('columns mod 5', clampHit((cols % 5) + 1));
-  add('tallest column', clampHit(Math.max(...H.flat())));
-  const s = L.sight(H);
-  add('cubes that show N painted faces (the novice error)', clampHit(L.shownCount(s, N)));
-  // The bottom counted as painted for cubes on the ground.
-  const wrongBottom = L.cubesOf(H).filter((q) => q.painted + (q.y === 0 ? 1 : 0) === N).length;
-  add('counting the bottom as painted', clampHit(wrongBottom));
-  // Visible cubes only (correct counts, hidden supports missed): a partial solution, reported only.
-  const rr = L.render(H), visOnly = rr.cubes.filter((q, i) => q.painted === N && rr.perCube[i].any > 0).length;
-  const a = acc['info: visible cubes only'] = acc['info: visible cubes only'] || { hit: 0, n: 0 };
-  a.hit += clampHit(visOnly); a.n++;
+  out['cubes mod 5'] = clampHit((cubes % 5) + 1);
+  out['columns mod 5'] = clampHit((cols % 5) + 1);
+  out['tallest column'] = clampHit(Math.max(...H.flat()));
+  const s = sight || L.sight(H);
+  out['cubes that show N painted faces (the novice error)'] = clampHit(L.shownCount(s, N));
+  const pt = L.partials(s, H, N);
+  out['counting the bottom as painted'] = clampHit(pt.bottom);
+  if (prevKeys && prevKeys.length) {
+    const used = new Set(prevKeys);
+    out['an answer the figure has not had yet'] = used.has(item.key) ? 0 : 1 / (5 - used.size);
+    out['the answer of the question before'] = prevKeys[prevKeys.length - 1] === item.key ? 1 : 0;
+  }
+  out._partial = {
+    'visible cubes only': clampHit(pt.vis), 'visible cubes plus one': clampHit(pt.vis + 1), 'column tops only': clampHit(pt.tops),
+  };
+  return out;
+}
+
+/* ---------- the picture, read with this file's own code (O30) ---------- */
+
+// The tops in view: every column-top face (x, y, z) with a ray from one of n × n points on it that
+// reaches the open air towards the viewer (marched in steps of 1/40 of an edge).
+function occupied(H, x, y, z) {
+  const G = H.length, cx = Math.floor(x), cz = Math.floor(z);
+  return cx >= 0 && cz >= 0 && cx < G && cz < G && y >= 0 && y < H[cz][cx];
+}
+function rayFree(H, P, D) {
+  const G = H.length;
+  for (let t2 = 0.002; t2 < 40; t2 += 0.025) {
+    const x = P[0] + t2 * D[0], y = P[1] + t2 * D[1], z = P[2] + t2 * D[2];
+    if (y > 4 || x > G || z > G) return true;
+    if (occupied(H, x, y, z)) return false;
+  }
+  return true;
+}
+function topsInView(H, D, n) {
+  const G = H.length, out = new Set();
+  for (let z = 0; z < G; z++) for (let x = 0; x < G; x++) {
+    const h = H[z][x];
+    if (!h) continue;
+    let free = false;
+    for (let i = 0; i < n && !free; i++) for (let j = 0; j < n && !free; j++) free = rayFree(H, [x + (i + 0.5) / n, h, z + (j + 0.5) / n], D);
+    if (free) out.add(`t${x},${h - 1},${z}`);
+  }
+  return out;
+}
+// Heights from the tops in view: a column is as tall as its highest top in view.
+function reconstruct(G, seen) {
+  const H = Array.from({ length: G }, () => new Array(G).fill(0));
+  for (const f of seen) {
+    if (f[0] !== 't') continue;
+    const [x, y, z] = f.slice(1).split(',').map(Number);
+    H[z][x] = Math.max(H[z][x], y + 1);
+  }
+  return H;
+}
+function topsAllInView(H, seen) {
+  for (let z = 0; z < H.length; z++) for (let x = 0; x < H.length; x++) if (H[z][x] > 0 && !seen.has(`t${x},${H[z][x] - 1},${z}`)) return false;
+  return true;
+}
+// Painted sides by neighbour tests (this file's own count): top if nothing above, each side with no
+// neighbour at that height; never the bottom.
+function paintedCounts(H) {
+  const G = H.length, c = [0, 0, 0, 0, 0, 0], at = (x, z) => (x < 0 || z < 0 || x >= G || z >= G ? 0 : H[z][x]);
+  for (let z = 0; z < G; z++) for (let x = 0; x < G; x++) for (let y = 0; y < H[z][x]; y++) {
+    c[(y === H[z][x] - 1 ? 1 : 0) + (at(x + 1, z) <= y ? 1 : 0) + (at(x - 1, z) <= y ? 1 : 0) + (at(x, z + 1) <= y ? 1 : 0) + (at(x, z - 1) <= y ? 1 : 0)]++;
+  }
+  return c;
 }
 
 /* ---------- learn data (js/ex/cubes/learn.js) ---------- */
@@ -291,10 +442,13 @@ function testLearn(t, PX, def) {
   t.ok(rr4.cubes.some((q, i) => q.painted === tryItems[3].ask && rr4.perCube[i].any === 0), 'Try 4 hides a cube that the count includes');
   for (const tip of L.tips || []) {
     const tr = tip.when || {};
-    const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).length && tr.levels.every((l) => l >= 0 && l < d.levels.length));
+    const dimOk = !tr.dim || def.dims.some((d) => d.key === tr.dim && (tr.levels || []).length && tr.levels.every((l) => l >= 0 && l < d.levels.length)) ||
+      (def.extraParams.includes(tr.dim) && (tr.levels || []).length && tr.levels.every((l) => Number.isInteger(l) && l >= 1 && l <= 3));
     t.ok(tip.id && tip.text && tr.dim && dimOk, `tip ${tip.id} has a valid trigger`);
   }
   t.ok((L.tips || []).length >= 3, 'just-in-time tips');
+  t.ok((L.tips || []).some((tip) => tip.id === 'set' && tip.when && tip.when.dim === 'ask'), 'a tip for a figure\'s later questions (version 3: params.ask 1–3)');
+  t.ok(/2 to 4 questions/.test(L.parts.find((x) => x.id === 'question').text), 'the question part says that larger figures come with 2 to 4 questions');
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
   const caps = ['figure', 'hidden', 'question', 'options', 'explode', 'numbers', 'numbersFlat', 'tally', 'tallyHidden', 'skip', 'done', 'chosen', 'assist'];
@@ -307,4 +461,30 @@ function testLearn(t, PX, def) {
   const texts = JSON.stringify(L).split(ADA).join('');
   t.ok(!/\b(raise|boost|improve)s? (your )?(DAT|PAT) scores?\b|predicted (DAT|PAT)|DAT score gain/i.test(texts), 'no claim of DAT score gains');
   t.ok(!/\biq\b|smarter|intelligence|brain age|mastered/.test(texts.toLowerCase()), 'no IQ, intelligence or "mastered" claims (CLAUDE.md rules 2 and 12)');
+}
+
+/* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
+// Every question of every figure is an item there (shortcutItems: about 11,000 questions on 5,000
+// figures over every combination), so the rules this file bounds are checked per level of every
+// dimension on first and later questions alike. The partial counts (O57) are reported, not bounded
+// (info): they are held at caps per level above.
+export function shortcutScores(PX, def, item) {
+  const L = def.lib, out = {};
+  const prev = item.asks.slice(0, item.pos).map((N) => L.histogram(item.heights)[N] - 1);
+  for (const [name, hit] of Object.entries(solverHits(L, item, prev))) {
+    if (name === '_partial') for (const [pn, ph] of Object.entries(hit)) out[pn] = { hit: ph, chance: 0.2, info: true };
+    else out[name] = { hit, chance: 0.2 };
+  }
+  return out;
+}
+export const SHORTCUT_EXEMPT = [];
+export function* shortcutItems(PX, def) {
+  const combos = PX.ex.enumerate(def), per = Math.ceil(5000 / combos.length), L = def.lib;
+  for (let ci = 0; ci < combos.length; ci++) {
+    for (let s = 0; s < per; s++) {
+      const item = def.generate(PX.rng(PX.rng.hash('shortcut-levels', 'cubes', ci, s)), combos[ci]);
+      if (item.fallback) continue;
+      for (let j = 0; j < item.asks.length; j++) { const q = j === 0 ? item : questionOf(L, item, j); yield { params: q.params, item: q }; }
+    }
+  }
 }
