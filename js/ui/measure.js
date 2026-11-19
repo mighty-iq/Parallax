@@ -212,16 +212,15 @@
         P.setLabel(def);
         return new Promise(function (resolve) {
           var shown = false;
+          // the end of the example: a card of its own, so nothing covers the options and no caption is left over from the
+          // walkthrough (fresh-player run, item 4)
           function startBtn() {
             if (shown) return;
             shown = true;
-            var marked = markKey(def, item);
-            var b = ui.button('Start ' + nameOf(def), { kind: 'primary', key: 'Enter', onClick: function () { P.abort(); } });
-            b.setAttribute('data-card', 'start');
-            P.note(h('div.pl-note', h('p', 'That was the worked example' + (marked ? '; its answer is marked ✓' : '') + '. The items that follow count, and give no feedback.'), h('div.pl-note-actions', b)));
-            P.el.feedback.hidden = false;
-            P.el.actions.hidden = true;
-            try { b.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+            markKey(def, item);
+            o.card({ id: 'probe-example-end', title: 'That was the worked example', lines: ['The items that follow count, and give no feedback.'],
+              actions: [{ label: 'Start ' + nameOf(def), value: 'start', primary: true }] })
+              .then(function () { P.abort(); });
           }
           P.demo(item, { feedback: false, goal: Play.goalOf(learn, item), onDemoEnd: startBtn }).then(function (tr) {
             P.el.actions.hidden = false;
