@@ -279,10 +279,8 @@ def balance_lab(b, C, w, hgt, n_items):
     while time.time() - t0 < 240 and len(fits) < n_items:
         cid = card(page)
         if cid:
-            if cid == 'probe-format' and 'bus stop' in page.locator('[data-card-box]').inner_text() and 'New kind of question' in page.locator('[data-card-box]').inner_text():
-                seen['median-card'] = True
-            if cid == 'probe-intro' and 'balance point' in page.locator('[data-card-box]').inner_text():
-                seen['centroid-card'] = True
+            if cid == 'probe-format':
+                seen['kind-card'] = True  # the kinds' lines live in their first items now, never on a card between items
             page.locator('[data-card-box] .px-btn--primary').first.click()
             page.wait_for_timeout(150)
             continue
@@ -290,6 +288,10 @@ def balance_lab(b, C, w, hgt, n_items):
             page.wait_for_timeout(100)
             continue
         m = page.evaluate(BAL_FIT_JS)
+        hint = page.evaluate('''(() => { const e = document.querySelector('.ex-balance .ex-kindhint'); return e && !e.hidden ? e.textContent : ''; })()''')
+        kind = page.evaluate('''(document.querySelector('.ex-balance-stem') || {}).getAttribute ? document.querySelector('.ex-balance-stem').getAttribute('data-kind') : null''')
+        if hint and kind:
+            seen[kind + '-line'] = seen.get(kind + '-line', 0) + 1
         if m:
             fits.append(m)
             if len(fits) <= 2:
@@ -309,7 +311,8 @@ def balance_lab(b, C, w, hgt, n_items):
         page.wait_for_timeout(150)
     bad = [f for f in fits if f['hscroll'] or not f['svgIn'] or not f['btnIn'] or f['small']]
     C.ok(len(fits) >= n_items and not bad, f'{tag}: {len(fits)} items fit (figure and Confirm on the screen, no sideways scroll, text 13 px or more) {bad[:2]}')
-    C.ok(seen.get('centroid-card') and seen.get('median-card'), f'{tag}: the first kind on the task card, the second on a light "New kind of question" card ({seen})')
+    C.ok(seen.get('centroid-line') == 1 and seen.get('median-line') == 1 and not seen.get('kind-card'),
+         f'{tag}: each kind\'s line under the question of its first item, once, and no card between items ({seen})')
     if n_items >= 12:
         page.wait_for_selector('.px-ms-balance-end', timeout=20000)
         end = page.locator('.px-ms-balance-end').inner_text()

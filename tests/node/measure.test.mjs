@@ -293,9 +293,12 @@ function meterAndVerdicts(t) {
   const rec = newRecord(PX, T0);
   t.eq(A.meter(rec, T0).p, null, 'no meter before the baselines');
   measure(PX, rec, L, 'B1', T0);
+  const mb1 = A.meter(rec, T0 + HOUR);
+  t.ok(mb1.p === null && /second starting point comes at the start of a session \d+ or more hours from now: the same kinds of task, about [\d.]+ minutes\. The meter starts once you train after it\./.test(mb1.line),
+    `after B1 the line says when the second starting point comes and how long it takes (${mb1.line})`);
   measure(PX, rec, L, 'B2', T0 + 13 * HOUR);
   const m0 = A.meter(rec, T0 + 14 * HOUR);
-  t.ok(m0.p === null && /starting points/.test(m0.line), 'none before training after the baselines either');
+  t.ok(m0.p === null && m0.line === 'The meter starts once you train.', 'none before training after the baselines either');
   let now = T0 + DAY, verdicts = 0;
   for (let d = 1; d <= 30; d += 2) {
     now = T0 + d * DAY;
@@ -530,4 +533,29 @@ function cells(t) {
   t.ok(f && f.ok && f.probes.includes('patterns@2'), 'the trend model fits it, under its version');
   t.eq(A._.rowCells([0, 0.01, 0, null, 7, 6]), null, 'a row with s above k is not read as cells');
   t.eq(A._.rowCells([0, 0.01, 0, null, 3]), null, 'nor a short row');
+
+  // A probe met for the first time climbs (config.measure.climb): a player who passes every item meets each item at
+  // most 1 logit above the hardest passed so far; scored by cells, a pass is 3 squares in 4
+  t.section('measure: a new probe climbs');
+  const rc = newRecord(PX, T0), pc = E.modes.start(rc, 'check', { now: T0, kind: 'B1' }), seq = {};
+  let tc = T0;
+  for (let i = 0; i < 200; i++) {
+    const st = E.modes.next(pc, rc, tc);
+    if (st.done) break;
+    tc += 5000;
+    (seq[st.exId] || (seq[st.exId] = [])).push(st.b);
+    E.modes.answer(pc, rc, st, st.exId === 'patterns' ? { correct: false, rt: 3000, value: 0.8 } : { correct: true, rt: 2000 }, tc);
+  }
+  E.modes.finish(pc, rc, tc);
+  const climb = E.config.measure.climb, jumps = [];
+  for (const [id, bs] of Object.entries(seq)) for (let i = 1; i < bs.length; i++) {
+    const top = Math.max(...bs.slice(0, i));
+    if (bs[i] > top + climb + 1e-9) jumps.push(`${id} item ${i + 1}: ${bs[i].toFixed(2)} after ${top.toFixed(2)}`);
+  }
+  t.eq(jumps, [], 'no item more than 1 logit above the hardest passed so far');
+  const pm = seq.patterns || [];
+  t.ok(pm.length >= 4 && pm[pm.length - 1] > pm[0] + 1, `… and it still climbs: Pattern Memory ${pm.map((b) => b.toFixed(2)).join(', ')}`);
+  // a block of probes met before does not climb: its items aim at the trend model's prediction
+  const pb = E.modes.start(rc, 'check', { now: tc + 13 * HOUR, kind: 'B2' });
+  t.ok(pb.check.probes.every((x) => !x.fresh), 'probes met before are not new, so they do not climb');
 }

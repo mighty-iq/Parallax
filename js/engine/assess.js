@@ -21,7 +21,8 @@
    probe (config.measure.full). Missing probes (not built yet, or not runnable on this device) leave their places
    empty. Items aim at g + (1 − g)·0.6 (a probe's own def.measureK where it has one: Pattern Memory's 0.35, since its
    cells carry the information) under a prior centred on the trend model's prediction for the probe (SD 1.5); a
-   probe's first two items ever at 0.85, after its worked example.
+   probe's first two items ever at 0.85, after its worked example, and while it is new no item more than
+   config.measure.climb (1 logit) above the hardest one passed so far.
 
      start/next/answer/void/finish     the check session (called by modes, mode 'check'; opts.kind picks the kind)
      nextMeasure(rec, now) → { due, kind, when: 'after-tutorial' | 'session-start' | 'check', minutes, why,
@@ -71,6 +72,11 @@
     weekDays: 4,           // the opt-in measurement week: the 4 days ending at each 4-weekly mark
     targetSd: 1.5,         // the targeting prior's SD around the trend model's prediction
     k: 0.6, easyFirst: 2, easyK: 0.85,
+    // A probe (version) met for the first time climbs: no item more than `climb` logits above the hardest one passed
+    // so far (the first item's own level until one is), a pass being a right answer or, scored by cells, `climbPass`
+    // of the squares; the estimate is untouched, only how fast items get harder (fresh-player run of 19 Nov: Pattern
+    // Memory went from 6 squares to 18 at its third item)
+    climb: 1.0, climbPass: 0.75,
     curveMinutes: 240,     // h = 1 − exp(−training minutes since the first occasion / 240): the training-gain curve
     secPerItem: 15,        // for the minutes Today shows
     formRandom: true,      // the record's first form drawn at B1 (O16); false keeps 1.1's A, B, C from A
@@ -477,7 +483,7 @@
       // items aim at the trend model's prediction for the probe (B1: the middle of its range); the stored posterior
       // keeps the standard prior N(middle, 1.5²), so every entry stays comparable
       return { id: m.id, v: def.version, n: 0, items: m.items, lw: newPost(def, centerOf(rec, def, f, now), C.measure.targetSd), lwS: newPost(def), right: 0, rts: [], recent: [], voids: 0, log: [],
-        fresh: fresh, easy: fresh ? C.measure.easyFirst : 0 };
+        fresh: fresh, easy: fresh ? C.measure.easyFirst : 0, top: null };
     });
     plan.exs = probes.map(function (p) { return p.id; });
     // a B1 after rated training began is marked late (its baseline already holds some training)
@@ -510,8 +516,14 @@
     // A probe of several formats (def.cycle 'variant': Other Way Round's strands) reads them in turn: item i is
     // variant i mod n, and its items adapt within the variant.
     var cyc = def.cycle === 'variant' && isArray(def.variants) && def.variants.length ? def.variants[pr.n % def.variants.length] : null;
-    var r = E.select.pick(def, post, { kind: 'target', k: k, recent: { keys: pr.recent }, rng: plan.rng, policy: 'high',
-      filter: cyc ? function (c) { return c.params.variant === cyc; } : null });
+    var byKind = cyc ? function (c) { return c.params.variant === cyc; } : null, filt = byKind;
+    if (pr.fresh && isNum(pr.top) && isNum(C.measure.climb)) {
+      var cap = pr.top + C.measure.climb + 1e-9;
+      filt = function (c) { return c.b <= cap && (!byKind || byKind(c)); };
+    }
+    var popt = { kind: 'target', k: k, recent: { keys: pr.recent }, rng: plan.rng, policy: 'high', filter: filt };
+    var r = E.select.pick(def, post, popt);
+    if (!r && filt !== byKind) { popt.filter = byKind; r = E.select.pick(def, post, popt); } // nothing under the cap
     if (!r) return null;
     pr.recent.push(r.key);
     if (pr.recent.length > C.select.avoid) pr.recent.shift();
@@ -564,6 +576,11 @@
     // scored by cells: s from the score's value (s / k), or from the exact verdict when no value came (a timeout)
     var k = cellsOf(PX.ex.get(pr.id), step.params), s = null;
     if (k) s = result && isNum(result.value) ? Math.max(0, Math.min(k, mround(result.value * k))) : ok ? k : 0;
+    // the climb of a probe met for the first time (config.measure.climb): the hardest level passed so far
+    if (pr.fresh && isNum(step.b)) {
+      var passed = k ? s >= C.measure.climbPass * k : ok;
+      if (!isNum(pr.top)) pr.top = step.b; else if (passed && step.b > pr.top) pr.top = step.b;
+    }
     updatePost(pr.lw, step.b, step.g, ok, k, s);
     if (pr.lwS) updatePost(pr.lwS, step.b, step.g, ok, k, s);
     if (plan.check.lab) { // Balance: [b, g, ok, rtMs, distance, pull, kind (0 balance point, 1 bus stop), x, y]
@@ -674,7 +691,7 @@
   function meter(rec, now) {
     var f = fit(rec), occ = occasions(rec);
     if (!f || !f.ok || !f.gain.comp || !(f.hNow > 0) || checks(rec).length < 2) {
-      return { p: null, occasions: occ.length, line: occ.length ? 'The meter starts once you train after your two starting points.' : 'The meter starts with your starting points.' };
+      return { p: null, occasions: occ.length, line: meterWait(rec, now, occ) };
     }
     var g = f.gain.comp, v = latestVerdict(rec), day = (now - f.t0) / DAY, nm = nextMilestone(f.t0, now);
     var line;
@@ -689,6 +706,19 @@
       milestone: v ? { day: v.day, words: v.words, at: v.at } : null, next: { day: nm.day, at: nm.at }, line: line,
       rungs: rungs, occasions: occ.length, day: U.round(day, 2), late: occ.length ? !!occ[0].late : false,
     };
+  }
+  // Before the meter starts: what comes next, in plain words (fresh-player run of 19 Nov: "after your two starting
+  // points" did not say when the second comes or how long it takes).
+  function meterWait(rec, now, occ) {
+    if (!occ.length) return 'The meter starts with your starting points.';
+    var full = checks(rec);
+    if (full.length < 2 && !full.some(function (a) { return a.kind === 'B2'; })) {
+      var b2 = mixOf('B2', rec, {}, null), at = full.length ? timeOf(full[0]) + C.measure.b2Hours * HOUR : now;
+      var mins = minutesOf(b2), hrs = Math.max(0, Math.round((at - now) / HOUR));
+      return 'Your second starting point comes at the start of a session ' + (hrs > 0 ? hrs + ' or more hours from now' : 'from now on') + ': the same kinds of task, about ' +
+        (mins % 1 ? mins.toFixed(1) : mins) + ' minutes. The meter starts once you train after it.';
+    }
+    return 'The meter starts once you train.';
   }
   function nextMilestone(t0, now) {
     var cfg = E.trend.config.milestones, days = cfg.days, d = (now - t0) / DAY;

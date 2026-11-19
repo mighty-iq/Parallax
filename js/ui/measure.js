@@ -100,7 +100,7 @@
 
   function play(o) {
     var Play = PX.ui.play, P = o.P, kind = o.kind;
-    var S = { done: false, answered: 0, instructed: {}, freeSkip: {}, skips: 0, inputs: {}, probeNo: 0, lastProbe: null };
+    var S = { done: false, answered: 0, instructed: {}, freeSkip: {}, skips: 0, inputs: {}, probeNo: 0, lastProbe: null, shown: {} };
     var plan;
     try { plan = E().modes.start(rec(), 'check', { now: now(), display: displayOf(), can: canRun, kind: kind, optional: !!o.optional }); } catch (e) { log('start failed', e); plan = { unavailable: 'The measurement could not start.' }; }
     if (plan.unavailable) return Promise.resolve({ res: null, unavailable: plan.unavailable });
@@ -174,11 +174,38 @@
       right.forEach(function (i) { g.mark(i, 'right'); });
       return right.length > 0;
     }
-    function newKind(def, step) {
-      var learn = PX.ex.learn(def.id) || {}, v = step.params && step.params.variant, expl = v && learn.explain && learn.explain[v];
-      if (!expl || !expl.length) return Promise.resolve(null);
-      return o.card({ id: 'probe-format', title: 'New kind of question', lines: [expl[0]], actions: [{ label: 'Go on', value: 'go', primary: true }] })
-        .then(function (x) { return x === 'closed' ? 'stop' : null; });
+    // The item for a step, from its seed; when its stem repeats one this run already showed for the probe (a small
+    // pool at an easy level), the next seed of a fixed chain from the step's seed instead, kept on the step so the
+    // trial row names the seed that was shown (fresh-player run of 19 Nov: item 8 repeated item 2's sheet).
+    function fresh(def, step) {
+      var seen = S.shown[def.id] || (S.shown[def.id] = {}), seed = step.seed, item = null, sig = null;
+      for (var k = 0; k <= REPEAT_TRIES; k++) {
+        if (k) seed = E().select.sharedSeed(PX.rng.hash(step.seed, 'not-a-repeat', k));
+        try { item = def.generate(PX.rng(seed), step.params); } catch (e) { log('generate failed', e); return null; }
+        if (!item) return null;
+        sig = stemOf(def, item);
+        if (!sig || !seen[sig]) break;
+      }
+      if (sig) seen[sig] = true;
+      step.seed = seed;
+      return item;
+    }
+    function stemOf(def, item) {
+      if (typeof def.stemKey === 'function') { try { return def.stemKey(item); } catch (e) { return null; } }
+      var c = {};
+      Object.keys(item).forEach(function (k) { if (k !== 'seed' && k !== 'fallback') c[k] = item[k]; });
+      try { return JSON.stringify(c); } catch (e) { return null; }
+    }
+    // A kind's one line (learn.kinds[variant], else learn.explain[variant][0]) for the first item of each kind inside a
+    // probe of several kinds
+    // (Other Way Round's strands, Motion Graphs' and Balance's kinds): shown under the item's own question, with
+    // HINT_MS more time, instead of a card before the item (fresh-player run of 19 Nov: five cards in six items).
+    function kindLine(def, step) {
+      if (def.cycle !== 'variant') return null;
+      var learn = PX.ex.learn(def.id) || {}, v = step.params && step.params.variant;
+      if (v && learn.kinds && typeof learn.kinds[v] === 'string') return learn.kinds[v];
+      var expl = v && learn.explain && learn.explain[v];
+      return expl && expl.length && typeof expl[0] === 'string' ? expl[0] : null;
     }
     // The probe's instruction card; on first contact (or in a full check) its worked example, never scored. A probe
     // of several formats (Other Way Round) brings each format's example before that format's first item (again).
@@ -192,10 +219,10 @@
       var v = step.params && step.params.variant, expl = v && learn.explain && learn.explain[v];
       if (again) lines = expl && expl.length ? [expl[0]] : [];
       var ex = step.probe && step.probe.example, canDemo = !!(ex && P.view && P.view.demo);
-      if (!again && !canDemo && expl && expl.length && def.cycle === 'variant') lines.push(expl[0]); // no worked example: the first kind's own line
+      // a probe of several kinds: the count, and where each kind's line will be (under the first item of the kind)
       if (!again && def.cycle === 'variant' && Array.isArray(def.variants) && def.variants.length > 1 && step.probe && step.probe.of) {
         var kinds = WORDNUM[def.variants.length] || String(def.variants.length);
-        lines.unshift(step.probe.of + ' items: ' + kinds + ' kinds of question in turn. Each new kind opens with one line about it.');
+        lines.push(step.probe.of + ' items, ' + kinds + ' kinds in turn. The first item of each kind adds one line on how to read it.');
       }
       var lim = limitRange(def);
       if (again) { var ms = def.timeLimit ? def.timeLimit(step.params) : null; lim = ms ? { lo: Math.round(ms / 1000), hi: Math.round(ms / 1000) } : null; }
@@ -288,18 +315,18 @@
         progress(step);
         var first = step.probe && step.probe.index === 0 && !S.instructed[def.id];
         if (first) S.instructed[def.id] = true;
-        var again = !first && step.probe && (step.probe.example || step.probe.newVariant);
-        // a new kind of question inside a probe (Other Way Round's strands, Motion Graphs' kinds, Balance's two) gets a
-        // light card: its one line and Go on (fresh-player run, item 2); only the probe's first card offers an example
-        (first ? instruct(step, def, false) : again ? newKind(def, step) : Promise.resolve(null)).then(function (r) {
+        // the first item of each kind inside a probe of several kinds (met for the first time): the kind's line goes
+        // under its question; only the probe's first card offers an example
+        var newKind = (first || step.probe && (step.probe.example || step.probe.newVariant)) ? kindLine(def, step) : null;
+        (first ? instruct(step, def, false) : Promise.resolve(null)).then(function (r) {
           if (S.done) return null;
           if (r === 'stop') { stop(true); return null; }
-          var item;
-          try { item = def.generate(PX.rng(step.seed), step.params); } catch (e) { log('generate failed', e); item = null; }
+          var item = fresh(def, step);
           if (!item) { E().modes.answer(plan, rec(), step, { correct: false, outcome: 'skipped' }, now()); loop(); return null; }
+          if (newKind) { item.hint = newKind; item.extraMs = HINT_MS; }
           P.setLabel(def);
           progress(step);
-          var limit = def.timeLimit ? def.timeLimit(item.params) : null;
+          var limit = def.timeLimit ? def.timeLimit(item.params) + (item.extraMs || 0) : null;
           return P.run(item, { feedback: false, limitMs: limit || null, limitBar: false, goal: Play.goalOf(PX.ex.learn(def.id), item) }).then(function (tr) {
             if (S.done || tr.outcome === 'aborted') return null;
             if (tr.end) { stop(true); return null; }
@@ -321,6 +348,12 @@
               if (!tr.timeout) { var inp = inputName(tr.input || tr.source); S.inputs[inp] = (S.inputs[inp] || 0) + 1; }
             }
             progress(step);
+            // a time-out: the next item waits for the player, so a player called away loses one item, not a run of them
+            // (fresh-player run of 19 Nov: two items timed out in a row and the task ended unseen)
+            if (tr.timeout && !S.done) {
+              return o.card({ id: 'probe-timeout', title: 'Time is up', lines: ['That item ran out of time. The next one starts when you are ready.'],
+                actions: [{ label: 'Next item', value: 'go', primary: true }] }).then(function (x) { if (x === 'closed') { stop(true); return null; } return loop(); });
+            }
             return P.waitNext().then(loop);
           });
         }).catch(function (e) { log('item failed', e); finish(); });
@@ -501,7 +534,8 @@
     });
     return ctx.card({
       id: 'expect', title: 'One question first',
-      lines: ['How much do you expect practising in Parallax to change your results on tasks like these?', row,
+      // the tasks are named, since none has been seen yet (fresh-player run of 19 Nov: "tasks like these" before any)
+      lines: ['Your starting point is a set of short tasks that Parallax never trains: turning and folding shapes in your mind, gears and belts, motion graphs, remembering patterns, word pairs. How much do you expect practising in Parallax to change your results on tasks like those?', row,
         h('p.px-meta', 'Expectations alone can change test results, so the Lab keeps your answer next to your data. There is no right answer.')],
       actions: [{ label: 'Skip', value: 'skip' }],
       onShow: function (pnl, done) { close = done; },
@@ -637,6 +671,8 @@
 
   // The schedule in words, from the config (RV-wave2 finding 15: no number typed beside the constant that sets it).
   var WORDNUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  var HINT_MS = 10000;     // more time for the first item of a kind, which carries the kind's line
+  var REPEAT_TRIES = 8;    // seeds tried for an item whose stem this run already showed
   function scheduleText(r) {
     var MX = E().config.measure, T = E().trend && E().trend.config ? E().trend.config.milestones : null, n = 0, m;
     try { A().mix('block', r, null, canRun).forEach(function (x) { n += x.items; }); } catch (e) { n = 0; }
