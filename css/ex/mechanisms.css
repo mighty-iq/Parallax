@@ -55,7 +55,8 @@
 .ex-mechanisms .pr-timer.is-running .pr-timer-fill { animation-name: mx-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
 .ex-mechanisms .pr-timer.is-stopped .pr-timer-fill,
 html[data-hx-state="paused"] .ex-mechanisms .pr-timer-fill,
-[data-paused] .ex-mechanisms .pr-timer-fill { animation-play-state: paused; }
+[data-paused] .ex-mechanisms .pr-timer-fill,
+.ex-mechanisms[data-paused] .pr-timer-fill { animation-play-state: paused; }
 @keyframes mx-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 @media (max-width: 600px) {

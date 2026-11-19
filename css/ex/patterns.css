@@ -47,7 +47,8 @@
 .ex-patterns .pr-timer.is-running .pr-timer-fill { animation-name: pm-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
 .ex-patterns .pr-timer.is-stopped .pr-timer-fill,
 html[data-hx-state="paused"] .ex-patterns .pr-timer-fill,
-[data-paused] .ex-patterns .pr-timer-fill { animation-play-state: paused; }
+[data-paused] .ex-patterns .pr-timer-fill,
+.ex-patterns[data-paused] .pr-timer-fill { animation-play-state: paused; }
 @keyframes pm-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* Phones held sideways (css/play.css: --pl-avail): the grid on the left at full height, so the
