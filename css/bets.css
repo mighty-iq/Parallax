@@ -192,3 +192,15 @@
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-slice[data-item-layout="custom"] .ex-slice-stage { height: min(24rem, var(--pl-w), calc(var(--pl-avail) - 8rem)); }
 }
+/* Fold's mark items on phones: the fold panels in one row (up to six, at most 5.5rem each), so the strip,
+   the sheet and Clear and Check fit 360 × 640 (fit.py) */
+@media (max-width: 719px) {
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip { gap: var(--s1); max-width: calc(var(--fold-cols) * 5.5rem + (var(--fold-cols) - 1) * var(--s1)); }
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-plabel { letter-spacing: 0; } /* "Fold 5" stays inside a sixth of the width */
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip[data-n="2"] { --fold-cols: 2; }
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip[data-n="3"] { --fold-cols: 3; }
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip[data-n="4"] { --fold-cols: 4; }
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip[data-n="5"] { --fold-cols: 5; }
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip[data-n="6"] { --fold-cols: 6; }
+  .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-stage { padding: var(--s1); }
+}
