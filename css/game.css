@@ -162,6 +162,8 @@ body.px-stim .gm-fx-sweep .px-bar-fill { animation: none !important; }
 .gm-climb-scale .gm-scale { margin: 0; }
 .gm-climb-h { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
 .gm-climb-note { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.gm-climb-note p { margin: 0; }
+.gm-climb-note .gm-scale { max-width: 15rem; margin: var(--s1) 0 0; }
 .gm-print-head { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: 0.1em; color: var(--ink-2); margin: 0; }
 .gm-print-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--s2); margin: var(--s2) 0 0; }
 .gm-print-big { font-size: var(--fs-4xl); line-height: 1; font-variant-numeric: tabular-nums; }

@@ -38,6 +38,12 @@
   function spareText(K) { return K.spare < 1 ? 'no spare' : K.misses >= K.spare ? 'spare used' : 'one spare'; }
 
   var current = null;
+  // Playtest mode (test builds): where a visit is, how a run ended, and three taps on the Climb's printout.
+  function emit(evt, data) { try { if (PX.bus) PX.bus.emit(evt, data); } catch (e) { /* a listener failed */ } }
+  function playtestRow(c) {
+    var T = PX.ui.playtest;
+    try { return T && typeof T.on === 'function' && T.on() && typeof T.rateRow === 'function' ? T.rateRow({ exId: 'climb', mode: 'climb', key: 'climb:' + c.week + ':' + c.attempt, label: 'Weekly Climb, attempt ' + c.attempt }) : null; } catch (e) { return null; }
+  }
 
   function render(host, route) {
     var X = { host: host, wrap: h('div.gm-climb-screen', { 'data-climb-state': 'intro' }), plan: null, P: null, clock: null, done: true, offs: [], res: null };
@@ -63,6 +69,7 @@
     try { win.scrollTo(0, 0); } catch (e) { /* ignore */ }
     X.wrap.setAttribute('data-climb-state', 'intro');
     var st = E().climb.state(rec(), now()), K = PX.ui.kit;
+    emit('play:screen', { screen: 'climb-intro', mode: 'climb', exId: null });
     head(X, 'Week of ' + fmtDay(st.week), 'Weekly Climb #' + st.number, st.rungs + ' rungs from easy to hard, the same for everyone this week.');
     var p = K.panel({ title: 'This week', className: 'gm-panel gm-climb-week' });
     p.body.appendChild(GU().scale({ max: st.rungs, value: st.best || 0, best: st.pb ? st.pb.h : null, width: 320 }));
@@ -118,6 +125,7 @@
     X.plan = plan; X.done = false; X.ended = false; X.res = null;
     X.wrap.setAttribute('data-climb-state', 'run');
     var K = plan.climb;
+    emit('play:screen', { screen: 'climb-run', mode: 'climb', exId: plan.exs && plan.exs[0] || null });
     X.scaleBox = h('div.gm-climb-scale', { 'aria-hidden': 'true' });
     X.run = h('div.gm-climb-run', { 'data-pstate': 'idle' }, X.scaleBox);
     X.wrap.appendChild(h('h1.px-sr', 'Weekly Climb, attempt ' + K.attempt));
@@ -204,7 +212,13 @@
     if (tr.outcome === 'skipped' || tr.error) { loop(X); return null; }
     if (K.height > h0) { drawScale(X, true); GU().sound.rung(K.height); X.live.textContent = 'Rung ' + (h0 + 1) + ' cleared. Height ' + K.height + '.'; }
     else if (K.misses > m0) { drawScale(X, false); X.live.textContent = K.misses > K.spare ? 'A second miss: the run ends at height ' + K.height + '.' : 'A miss: a notch at rung ' + K.rung + '. The rung comes again.'; }
-    if (out.outcome === 0 || out.outcome === 1) X.P.note(h('p.pl-note.gm-climb-note', K.height > h0 ? 'Rung ' + K.height + ' cleared.' : K.misses > K.spare ? 'Second miss: the run ends at height ' + K.height + '.' : 'Miss: rung ' + K.rung + ' comes again with another item (spare used).'));
+    if (out.outcome === 0 || out.outcome === 1) {
+      // the step up (or the notch) on a small ruled scale under the verdict, between rungs only
+      var mini = GU().scale({ max: K.R, value: K.height, notches: K.notches, best: K.weekBest, width: 220 });
+      var note = h('div.pl-note.gm-climb-note', h('p', K.height > h0 ? 'Rung ' + K.height + ' cleared.' : K.misses > K.spare ? 'Second miss: the run ends at height ' + K.height + '.' : 'Miss: rung ' + K.rung + ' comes again with another item (spare used).'), mini);
+      X.P.note(note);
+      if (K.height > h0) GU().fx.run(mini, 'gm-fx-step', 200);
+    }
     hud(X, def);
     return X.P.waitNext({ label: out.done || X.ended ? 'See the result' : 'Next rung' }).then(function (w) {
       if (w === 'end') X.ended = true;
@@ -219,6 +233,7 @@
     try { res = E().modes.finish(X.plan, rec(), now(), { activeMs: X.clock ? X.clock.activeMs() : 0, ended: how || undefined, session: { viewport: win.innerWidth + 'x' + win.innerHeight } }); } catch (e) { log('finish failed', e); }
     save();
     X.res = res;
+    if (res && res.session) emit('play:session', { mode: 'climb', ended: how || 'complete', practiceMs: res.session.practiceMs, answered: res.session.trials, right: res.session.right, exIds: res.session.exs });
     if (X.clock) { try { X.clock.destroy(); } catch (e) { /* gone */ } X.clock = null; }
     if (how === 'closed') return;
     if (X.P) { try { X.P.destroy(); } catch (e) { /* gone */ } X.P = null; }
@@ -240,6 +255,9 @@
       return;
     }
     head(X, 'Week of ' + fmtDay(c.week) + ' · attempt ' + c.attempt + (c.practice ? ' · practice' : ''), c.partial ? 'Run paused at height ' + c.height : 'Height ' + c.height, null);
+    emit('play:screen', { screen: 'climb-end', mode: 'climb', exId: null });
+    var pr = playtestRow(c);
+    if (pr) X.wrap.appendChild(pr);
     var p = K.panel({ title: c.partial ? 'Kept for later' : c.summit ? 'Summit' : 'Your run', className: 'gm-panel gm-print', aside: 'Climb #' + c.number });
     p.el.setAttribute('data-height', String(c.height));
     p.el.setAttribute('data-climb-end', c.partial ? 'partial' : 'done');
