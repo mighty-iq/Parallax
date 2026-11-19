@@ -323,6 +323,28 @@ function testClimb(t) {
   t.ok(rs.fin.climb.newPb, '… and a personal best');
 }
 
+function testDevices(t) {
+  t.section('a device that cannot show every exercise');
+  const PX = mk(t), E = PX.engine, K = E.climb, D = E.daily, wk = K.week(T0);
+  const full = Array.from({ length: 20 }, (_, i) => K.item(wk, 'A', i + 1, 0));
+  const skip = full[2].exId, can = (d) => d.id !== skip;
+  const part = Array.from({ length: 20 }, (_, i) => K.item(wk, 'A', i + 1, 0, can));
+  t.ok(part.every((x, i) => full[i].exId === skip ? x.exId !== skip && x.swapped : x.exId === full[i].exId && x.seed === full[i].seed && !x.swapped),
+    'the Climb keeps every other rung as on any device; only the rungs of ' + skip + ' move to the next exercise in the order');
+  const rec = newRecord(PX, T0), plan = E.modes.start(rec, 'climb', { now: T0, can });
+  let s = E.modes.next(plan, rec, T0), guard = 0;
+  while (!s.done && guard++ < 30) { E.modes.answer(plan, rec, s, { correct: s.climb.rung <= 4, rt: 1000 }, T0 + guard); s = E.modes.next(plan, rec, T0 + guard); }
+  const fin = E.modes.finish(plan, rec, T0 + 99);
+  t.ok(fin.climb.swapped === (full.slice(0, fin.climb.height + 1).filter((x) => x.exId === skip).length), 'the run counts its rungs on another exercise (' + fin.climb.swapped + ')');
+  // the Daily keeps its items and marks a shortened line
+  const day = '2026-11-21', its = D.items(day), gone = its[0].exId, now = Date.UTC(2026, 10, 21, 12);
+  const r2 = newRecord(PX, T0), p2 = E.modes.start(r2, 'daily', { now, can: (d) => d.id !== gone });
+  let q = E.modes.next(p2, r2, now), g2 = 0;
+  while (!q.done && g2++ < 20) { E.modes.answer(p2, r2, q, { correct: true, rt: 1000 }, now + g2); q = E.modes.next(p2, r2, now + g2); }
+  const f2 = E.modes.finish(p2, r2, now + 99), n = its.filter((x) => x.exId !== gone).length;
+  t.ok(f2.daily.n === n && new RegExp(' · ' + n + ' of 8 items on this device · ').test(f2.daily.share), 'the Daily says when a device showed fewer items (' + f2.daily.share + ')');
+}
+
 /* ============================================================ field notes */
 
 function testNotes(t) {
@@ -476,6 +498,7 @@ export async function run(t) {
   testDaily(t);
   testDailyRelease(t);
   testClimb(t);
+  testDevices(t);
   testNotes(t);
   testContainer(t);
   testNoChains(t);

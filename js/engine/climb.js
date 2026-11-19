@@ -32,20 +32,26 @@
   function number(wk) { return Math.floor((U.dayNum(wk) - U.dayNum(E.streak.weekKey(C().epoch))) / 7) + 1; }
   function letters() { return C().attempts.slice(); }
 
-  // The attempt's exercise order: the week's pool (the Daily's epoch of that Monday) shuffled by the week
-  // and the attempt; `can` drops exercises this device cannot show (as the Daily does).
+  // The attempt's exercise order: the week's whole pool (the Daily's epoch of that Monday) shuffled by the
+  // week and the attempt, the same on every device; `can` then leaves out what this device cannot show.
   function order(wk, attempt, can) {
-    var defs = E.daily.poolFor(wk).filter(function (d) { return !can || can(d); });
-    return defs.length ? PX.rng(PX.rng.hash('px-climb', wk, attempt)).shuffle(defs) : [];
+    var defs = E.daily.poolFor(wk);
+    var all = defs.length ? PX.rng(PX.rng.hash('px-climb', wk, attempt)).shuffle(defs) : [];
+    return can ? all.filter(function (d) { return can(d); }) : all;
   }
+  // Rung r's exercise comes from the whole order, so every device climbs the same rungs; on a device that
+  // cannot show it, the next exercise in the order that it can show takes its place (item.swapped).
   function item(wk, attempt, rung, misses, can) {
-    var list = order(wk, attempt, can);
+    var list = order(wk, attempt, null);
     if (!list.length) return null;
-    var R = C().rungs, def = list[(rung - 1) % list.length], rg = M.range(def);
+    var R = C().rungs, at = (rung - 1) % list.length, j = 0;
+    while (can && j < list.length && !can(list[(at + j) % list.length])) j++;
+    if (j >= list.length) return null;
+    var def = list[(at + j) % list.length], rg = M.range(def);
     var aim = rg.min + ((rung - 0.5) / R) * (rg.max - rg.min);
     var c = E.daily.nearestAt(def, aim, PX.rng(PX.rng.hash('px-climb-variant', wk, attempt, rung)));
     var seed = E.select.sharedSeed(PX.rng.hash('px-climb-seed', wk, attempt, rung, misses || 0));
-    return { exId: def.id, params: JSON.parse(JSON.stringify(c.params)), seed: seed, rung: rung, b: c.b };
+    return { exId: def.id, params: JSON.parse(JSON.stringify(c.params)), seed: seed, rung: rung, b: c.b, swapped: j > 0 };
   }
 
   function slot(rec) {
@@ -108,6 +114,7 @@
     if (over(plan)) return null;
     var it = item(K.week, K.attempt, K.rung, K.misses, plan.can), def = it && PX.ex.get(it.exId);
     if (!def) return null;
+    if (it.swapped) { K.swapped = K.swapped || {}; K.swapped[K.rung] = 1; }
     var r = E.select.fixed(def, E.est.get(rec, def, { display: plan.display }, now), it.params);
     if (!r) return null;
     return E.modes._.makeStep(plan, rec, def, r, 'climb', {
@@ -149,6 +156,7 @@
     res.climb = {
       week: wk, number: K.number, attempt: K.attempt, scored: K.scored, practice: !K.scored, height: K.height, misses: K.misses,
       notches: K.notches.slice(), rungs: K.R, spare: K.spare, complete: complete, partial: !complete, resumed: K.resumed,
+      swapped: K.swapped ? Object.keys(K.swapped).length : 0, // rungs this device climbed on another exercise
       weekBest: st.best, weekBefore: before, pb: st.pb ? st.pb.h : null, pbBefore: pb0, left: st.left,
       newWeekBest: K.scored && complete && K.height > 0 && (before === null || K.height > before),
       newPb: K.scored && complete && K.height > 0 && (pb0 === null || K.height > pb0),

@@ -297,7 +297,8 @@
       pa.body.appendChild(h('ul.pl-ach', ach.map(function (a) { return h('li', K.icon('award', 'pl-ach-mark'), h('div', h('b', a.name), h('span', a.desc))); })));
       X.wrap.appendChild(pa.el);
     }
-    var text = 'Parallax Climb #' + c.number + ' · height ' + c.height + ' of ' + c.rungs + ' · ' + GU().LINK;
+    // a device that cannot show every exercise climbed some rungs on others: the line says so
+    var text = 'Parallax Climb #' + c.number + ' · height ' + c.height + ' of ' + c.rungs + (c.swapped ? ' · ' + plural(c.swapped, 'rung', 'rungs') + ' on another exercise' : '') + ' · ' + GU().LINK;
     // only a scored run is shared or invited: a practice run is no result to compare (as the Daily shares
     // only its scored attempt)
     if (!c.partial && !c.practice) {
