@@ -20,10 +20,13 @@ STATE = "(s) => window.__harness && __harness.state === s"
 PHONE = {'device_scale_factor': 2, 'is_mobile': True, 'has_touch': True}
 
 
-def band_checks(b, cons, C, ex, out_dir, items, assist_check=None, try1=None, extra_q=None, assists=None):
+def band_checks(b, cons, C, ex, out_dir, items, assist_check=None, try1=None, extra_q=None, assists=None, player_rows=None):
     """items: [(name, params, seed)] starter-band items; try1: (params, seed) of learn.practice[0];
     assist_check(C, page, tag): what Try 1's drawn step must show; extra_q: query fields (e.g. v);
-    assists: [(name, params, seed, assist_json, before(C, page, tag), after(C, page, tag) or None)]."""
+    assists: [(name, params, seed, assist_json, before(C, page, tag), after(C, page, tag) or None)];
+    player_rows: the player's answer-row height in px (Angles: 56, two rows of 3.5rem), where the
+    harness draws taller answer tiles than the player: the span is then the harness stem plus the
+    player's two rows and gaps (the player's own fit is tests/e2e/fit.py's)."""
     q0 = dict(extra_q or {})
     ctx = b.new_context(viewport={'width': 360, 'height': 640}, **PHONE)
     page = ctx.new_page()
@@ -38,11 +41,15 @@ def band_checks(b, cons, C, ex, out_dir, items, assist_check=None, try1=None, ex
         d = page.evaluate(f"""() => {{
             const stem = document.querySelector('.ex-{ex}-stem').getBoundingClientRect();
             const opts = Array.from(document.querySelectorAll('.hx-grid .px-choice')).map((e) => e.getBoundingClientRect());
-            return {{ span: Math.round(Math.max(...opts.map((r) => r.bottom)) - stem.top),
+            return {{ span: Math.round(Math.max(...opts.map((r) => r.bottom)) - stem.top), stemH: Math.round(stem.height),
                      minW: Math.round(Math.min(...opts.map((r) => r.width))), minH: Math.round(Math.min(...opts.map((r) => r.height))),
                      right: Math.round(Math.max(...opts.map((r) => r.right))), sw: document.documentElement.scrollWidth, iw: innerWidth }};
         }}""")
-        C.ok(d['span'] <= 568, f'{tag} at 360×640: stem and answers within 568 px ({d})')
+        if player_rows:
+            d['spanPlayer'] = d['stemH'] + 2 * player_rows + 3 * 8
+            C.ok(d['spanPlayer'] <= 568, f'{tag} at 360×640: stem and the player\'s two answer rows within 568 px ({d})')
+        else:
+            C.ok(d['span'] <= 568, f'{tag} at 360×640: stem and answers within 568 px ({d})')
         C.ok(d['minW'] >= 44 and d['minH'] >= 44 and d['right'] <= 360 and d['sw'] <= d['iw'], f'{tag} at 360×640: answer targets ≥ 44 px, inside the screen, no horizontal scroll ({d})')
         ok, s = non_blank(page.locator(f'.ex-{ex}-stage').screenshot(), min_distinct=4, max_top=0.985)
         C.ok(ok, f'{tag}: the stage shows the item ({s})')

@@ -16,7 +16,7 @@
     parts: [
       { id: 'angles', label: 'Angles', text: 'Four angles, numbered 1 to 4. Only the opening between the two arms counts: arm length and how the angle is turned do not.' },
       { id: 'options', label: 'Answers', text: 'Answers A to D each list the four angles\' numbers from the smallest angle to the largest, for example 3 – 1 – 4 – 2. Exactly one is right.' },
-      { id: 'answer', label: 'Answer', text: 'Pick an answer with keys A–D (or 1–4), or tap it.' },
+      { id: 'answer', label: 'Answer', text: 'Pick an answer with keys A–D, or tap it.' },
     ],
     // The teaching template (v1.2, docs/research/v1.2/D2-first-band.md §3.0 C, §3.2): the rules card
     // first, the Watch at the 9° starter level, the "Extremes first" card before Try 1, Try 1 with

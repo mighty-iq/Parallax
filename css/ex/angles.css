@@ -22,18 +22,21 @@
   background: var(--ang-cell); color: var(--ang-ink);
 }
 .ex-angles .ex-angles-cell.is-pointed { outline: 2px solid var(--ang-mark); outline-offset: 2px; }
-/* The number sits in a corner the arms keep clear of (view.js labelCorners: top left when free). */
-.ex-angles .ex-angles-n { position: absolute; top: 0.25rem; left: 0.25rem; z-index: 1; font-size: var(--fs-md, 1rem); font-weight: 600; color: var(--ang-ink); }
-.ex-angles .ex-angles-n[data-corner="tr"] { left: auto; right: 0.25rem; }
-.ex-angles .ex-angles-n[data-corner="bl"] { top: auto; bottom: 0.25rem; }
-.ex-angles .ex-angles-n[data-corner="br"] { top: auto; left: auto; right: 0.25rem; bottom: 0.25rem; }
-.ex-angles .ex-angles-size {
-  position: absolute; right: 0.3rem; bottom: 0.2rem; font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums;
-  font-size: var(--fs-sm, 0.875rem); color: var(--ang-mark); background: var(--ang-cell); padding: 0 0.15rem;
+/* Under each drawing a strip of fixed height (--ang-strip): the number centred, as on the format's
+   sheet; Try 1's ring round it; the reveal's size at its right end. No label sits on the drawing, every
+   number keeps its place, and the strip is there from the start, so the reveal moves nothing. */
+.ex-angles { --ang-strip: 1.5rem; }
+.ex-angles .ex-angles-strip {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); align-items: center; column-gap: 0.25rem;
+  height: var(--ang-strip); padding: 0 0.3rem;
 }
-.ex-angles .ex-angles-size[data-corner="bl"] { right: auto; left: 0.3rem; }
-.ex-angles .ex-angles-size[data-corner="tr"] { bottom: auto; top: 0.2rem; }
-.ex-angles .ex-angles-size[data-corner="tl"] { bottom: auto; right: auto; top: 0.2rem; left: 0.3rem; }
+.ex-angles .ex-angles-n { grid-column: 2; grid-row: 1; justify-self: center; font-family: var(--font-sans, inherit); font-size: var(--fs-md, 1rem); font-weight: 600; line-height: 1; color: var(--ang-ink); }
+.ex-angles .ex-angles-pad { grid-column: 1; grid-row: 1; }
+.ex-angles .ex-angles-slot { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; min-width: 0; }
+.ex-angles .ex-angles-size {
+  font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums; line-height: 1;
+  font-size: var(--fs-sm, 0.875rem); color: var(--ang-mark); white-space: nowrap;
+}
 .ex-angles .ex-angles-size[hidden] { display: none; }
 .ex-angles .ex-angles-svg { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; }
 .ex-angles .ex-angles-arms {
@@ -85,28 +88,27 @@
    cells' colour is --ang-cell) take what the two rows of answers leave, so the item never scrolls. */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-angles {
-    --ang-size: min(calc((var(--pl-w) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 2 * 3.5rem - 2.375rem - 3 * var(--s2, 0.5rem) - 3 * var(--s1, 0.25rem) - 4px) / 2));
+    --ang-size: min(calc((var(--pl-w) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 2 * 3.5rem - 2.375rem - 3 * var(--s2, 0.5rem) - 3 * var(--s1, 0.25rem) - 2 * var(--ang-strip) - 6px) / 2));
   }
   .pl-trial.ex-angles .ex-angles-cells { grid-template-columns: repeat(2, var(--ang-size)); justify-content: center; max-width: none; }
   /* Narrow answer buttons: a smaller size (as Rotate's answers on phones) and tighter spaces, so a
      list stays on one line at the usual text size, takes two lines (not three) at 150 % text, and
      keeps clear of the answer's number in the corner. */
+  .ex-angles .ex-angles-size { font-size: var(--fs-xs, 0.75rem); }
   .pl-trial.ex-angles .ex-angles-opt .ex-answer-text { margin-top: 0.25rem; font-size: var(--fs-md, 1rem); letter-spacing: 0; word-spacing: -0.12em; }
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-angles { --ang-size: min(calc((var(--pl-col) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 3 * var(--s1, 0.25rem) - 1rem - 2.375rem) / 2)); }
+  .pl-trial.ex-angles { --ang-size: min(calc((var(--pl-col) - 3 * var(--s1, 0.25rem) - 2px) / 2), calc((var(--pl-avail) - 3 * var(--s1, 0.25rem) - 1rem - 2.375rem - 2 * var(--ang-strip) - 2px) / 2)); }
 }
 
-/* v1.2: Try 1's first step done (the smallest angle marked) and show me's crossed-out answers:
+/* v1.2: Try 1's first step done (the smallest angle marked: its cell outlined, its number ringed)
+   and show me's crossed-out answers:
    greyed and struck through, still answerable (shape as well as tone). */
 .ex-angles .ex-angles-cell.is-assist { outline: 2px dashed var(--ang-mark); outline-offset: 2px; }
 .ex-angles .ex-angles-flag {
-  position: absolute; right: 0.3rem; bottom: 0.2rem; z-index: 1; padding: 0 0.3rem;
-  font-size: var(--fs-xs, 0.75rem); font-weight: 600; color: var(--ang-mark); background: var(--ang-cell); border: 1px solid var(--ang-mark); border-radius: 0.6rem;
+  grid-column: 2; grid-row: 1; justify-self: center; align-self: center; box-sizing: border-box; width: 1.375rem; height: 1.375rem;
+  border: 2px solid var(--ang-mark); border-radius: 50%; pointer-events: none;
 }
-.ex-angles .ex-angles-flag[data-corner="bl"] { right: auto; left: 0.3rem; }
-.ex-angles .ex-angles-flag[data-corner="tr"] { bottom: auto; top: 0.2rem; }
-.ex-angles .ex-angles-flag[data-corner="tl"] { bottom: auto; right: auto; top: 0.2rem; left: 0.3rem; }
 .ex-angles .ex-angles-out { opacity: 0.45; }
 .ex-angles .ex-angles-out .ex-answer-text { text-decoration: line-through; text-decoration-thickness: 2px; }
 /* Rule figures on the rules card (play.js .pl-rule-fig): on the card's own ground, so in the
