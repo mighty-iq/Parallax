@@ -61,3 +61,13 @@ six-word quote scan against BRIEF.md, and a list of claims with the code behind 
   Angles and Central Point in no similar group: model.js groups); a new page "Your edge on every setting" and
   "Plateaus get a change" (ENGINE §19, §20; progress-sim.md §0, §2; plateau-sim numbers); "Which mode, when" in
   the app's MODE_WHEN words; the simulation panel with 1.2's runs (ENGINE §18, §24).
+- 2026-11-19 12:39 UTC, guide step 4: chapter 5 rewritten in the voice. The lead treats transfer as an
+  open engineering problem; the ladder has practice, near (Other Way Round), mid (Cube Match, View Match, Pattern
+  Memory), far (Motion Graphs, Mechanisms; another domain inside the app) and "beyond" (cited, never promised);
+  Uttal's caveats are read as design responses (familiarity model and control; delayed check). "How Parallax trains
+  for transfer" updated (four cells, logged show-me, named bets and add-ons, exact feedback on estimates, seven
+  off-screen challenges). The W2-bets page kept (its tested lines). Three new pages replace 1.1's check pages:
+  Design A (occasions, the model, the meter and milestone words, how soon a change can show: measure-sim.md §0,
+  1.64/1.27 SD central and 1.26/0.97 optimistic, false "likely gain" 5.9 % ever through week 8), the eight probes
+  (gallery: pr6 and pr7 new; pr1, pr3, pr4 to retake), and reading the measure (an illustrative record whose
+  numbers are marked invented; the panel; one person and many). No effect size in IQ points (O24).
