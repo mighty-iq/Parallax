@@ -12,6 +12,8 @@ items W3-phones owns the files they need, and every file touched is listed here.
 - css/ex/knots.css (B4's v1.1 file): the sideways margins (O48).
 - js/ui/progress.js, css/screens.css, tests/e2e/screens.py (O20); js/ui/play.js, js/ui/settings.js (O22).
 - tests/e2e/fit.py (W2-core; O27), tests/e2e/section.py (O28).
+- tests/node/run.mjs (--shard), tests/node/knots.test.mjs (runPart), new tests/node/knots-b.test.mjs and
+  tests/node/shards.test.mjs, .github/workflows/tests.yml (O33).
 - tests/e2e/band_a.py (W1-band-A): reveal_stable and wtg_checks mute wave 2's hooks, as play.py does (both
   timed out in Train for every band-A and band-B exercise since the hooks: a baseline card after the first
   tutorial; harness_cubes 217/0 after, and the same holds for Angles).
@@ -47,5 +49,13 @@ items W3-phones owns the files they need, and every file touched is listed here.
 - Hole Punch's Watch at 360 x 640 (seen once before the settle fix): the floating Pause button covers the end of
   the stem's first line.
 
+- 02:49 UTC, O33: tests/node/run.mjs --shard k/n deals the test files heaviest first to the least-loaded shard
+  (measured weights; shard 1 also runs the load check); CI runs four shards side by side (each about 6 min by
+  the weights, 352-354 s); Knots split in two files (knots 203 s + knots-b 145 s at 10 000 items per variant,
+  was 396 s in one file; 518/0); shards.test.mjs checks every file runs once for 1-6 shards and CI's four stay
+  under 15 min each (47/0). Openings stays one file (one pool of 10 080 seeds for rule 5).
+
 ## Next
-O33.
+All ten items done. Left for later: the Watch caption and Fold's draw-the-answer controls at 360 x 640 (other
+owners), Section's part card at 740 x 360, the Levels tab's length on phones (about 11 screens with the game
+layer's panel), a full node run sharded 4 ways on the integrated tree.

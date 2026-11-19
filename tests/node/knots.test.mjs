@@ -1,7 +1,10 @@
 /* EX-13 Knots: knot mathematics against known values, generator, validator, scorer, difficulty,
    shortcut solvers per variant, show-me replay, fallback, timing and learn data (ARCHITECTURE §12,
    PLAN M4, docs/research/v1.1/R2-knots.md). Run through tests/node/run.mjs.
-   PX_REPORT=1 prints the numbers; PX_TEST_ITEMS=<n> sets the items per variant (default 10 000). */
+   PX_REPORT=1 prints the numbers; PX_TEST_ITEMS=<n> sets the items per variant (default 10 000).
+   v1.2 O33 (W3-phones): the item checks of tie and link (10 000 items each, their shortcut solvers and show-me
+   replays) run from tests/node/knots-b.test.mjs through runPart, so that no file holds up a CI shard; this file
+   keeps everything else and pull and untie. Together they check the same items as before. */
 import { MANIFEST, deepDiff } from './run.mjs';
 import { performance } from 'node:perf_hooks';
 
@@ -36,11 +39,27 @@ export async function run(t) {
   knownValues(t, PX, H);
   seamPin(t, PX, def, H);
   moveChecks(t, PX, H);
-  const pools = itemChecks(t, PX, def, H, all);
+  const pools = itemChecks(t, PX, def, H, all, PART_A);
   fallbackAndTiming(t, PX, def, H, all, hardest);
   shortcuts(t, H, pools);
   replays(t, H, pools);
   testLearn(t, PX, def, H);
+}
+
+// O33: the variants whose items this file checks; knots-b.test.mjs checks the others (PART_B)
+export const PART_A = ['pull', 'untie'], PART_B = ['tie', 'link'];
+// The item checks, shortcut solvers and show-me replays of some variants, in a context of their own.
+export async function runPart(t, variants) {
+  const PX = t.context({ files: FILES }).PX;
+  const def = PX.ex.get('knots');
+  t.section('knots: ' + variants.join(' and ') + ' (part)');
+  t.ok(def, 'knots is registered');
+  if (!def) return;
+  t.ok(variants.every((v) => def.variants.indexOf(v) >= 0), `the variants exist (${variants.join(', ')})`);
+  t.eq([...PART_A, ...PART_B].sort(), [...def.variants].sort(), 'the two parts check every variant once');
+  const pools = itemChecks(t, PX, def, def.lib, PX.ex.enumerate(def), variants);
+  shortcuts(t, def.lib, pools);
+  replays(t, def.lib, pools);
 }
 
 /* ---------- knot mathematics against published values ---------- */
@@ -182,9 +201,9 @@ function moveChecks(t, PX, H) {
 
 /* ---------- items: 10 000 per variant ---------- */
 
-function itemChecks(t, PX, def, H, all) {
+function itemChecks(t, PX, def, H, all, only) {
   const pools = {};
-  for (const variant of def.variants) {
+  for (const variant of def.variants.filter((v) => !only || only.indexOf(v) >= 0)) {
     t.section(`knots: ${variant} items`);
     const combos = all.filter((p) => p.variant === variant), per = Math.max(1, Math.ceil(PER_VARIANT / combos.length));
     let threw = 0, invalid = 0, keyWrong = 0, otherRight = 0, malformedRight = 0, nonJson = 0, fallbacks = 0, n = 0, firstBad = null;
@@ -356,7 +375,7 @@ function shortcuts(t, H, pools) {
   t.section('knots: shortcut solvers');
   const lines = [];
   // pull: every cheap count, best threshold ≤ 60 %
-  {
+  if (pools.pull) {
     const its = pools.pull.items.map((x) => x.item), keys = its.map((it) => it.key), F = its.map((it) => {
       const dg = H.diagramOf(H.curvesOf(it), it.over), f = H.ropeFeatures(dg), ps = plateStats(H, it);
       return Object.assign(f, { altFrac: f.alt / Math.max(1, 2 * f.n - 1), aw: Math.abs(f.writhe), r12: f.r1 + f.r2, len: ps.len, aspect: ps.aspect });
@@ -374,7 +393,7 @@ function shortcuts(t, H, pools) {
     lines.push('pull: ' + res.join(', ') + `, descending ${pct(mono)}`);
   }
   // untie / tie: per option, max / min / odd one out / most like the others, ≤ 35 %
-  for (const variant of ['untie', 'tie']) {
+  for (const variant of ['untie', 'tie'].filter((v) => pools[v])) {
     const acc = {}, add = (k, v) => { acc[k] = (acc[k] || 0) + v; };
     const its = pools[variant].items.map((x) => x.item);
     for (const it of its) {
@@ -419,7 +438,7 @@ function shortcuts(t, H, pools) {
     lines.push(`${variant} per rung: worst ${worstRung[1]} ${pct(worstRung[0])}`);
   }
   // link: parity of A-over-B crossings (sound when odd), loops wholly on top, cheap counts
-  {
+  if (pools.link) {
     const its = pools.link.items.map((x) => x.item), keys = its.map((it) => it.key);
     let odd = 0, layered = 0, parity = 0, signed = 0;
     const alts = [], aw = [], r2 = [];
@@ -459,7 +478,7 @@ function replays(t, H, pools) {
   // 0.5137 and 0.7713: a strand that slides across a parallel one lies exactly along it for one
   // instant (k = ½ when it starts and ends as far on either side), where the drawing has no
   // well-defined crossings; that instant is a projection, not a pass-through, so it is not sampled.
-  for (const variant of ['pull', 'untie', 'tie', 'link']) {
+  for (const variant of ['pull', 'untie', 'tie', 'link'].filter((v) => pools[v])) {
     const items = pools[variant].items, every = Math.max(1, Math.floor(items.length / 1000));
     const link = variant === 'link';
     const sig = (D) => H.tText(H.jones(D)) + (link ? ' lk ' + H.linking(D) : '');
