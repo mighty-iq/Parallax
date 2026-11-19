@@ -318,7 +318,7 @@
 
   function update(plan, rec, now, res) {
     if (!plan || !res || plan.unavailable || !isNum(now)) return null;
-    var g = game(rec), out = { reach: null, grades: [], firsts: [], notes: [], near: [], seeded: false };
+    var g = game(rec), out = { reach: null, grades: [], firsts: [], notes: [], near: [], seeded: !!plan.gameSeeded };
     // the Atlas: a record from before the game layer is seeded from its rows once (this session's rows
     // are already stored, so its firsts are new; older ones are marked old)
     if (g.seeded !== 1) {
@@ -458,7 +458,14 @@
     return out;
   }
 
-  // The finish hook (after the session is stored, before the weekly goal and achievements; CONTRACT Q).
+  // The start hook seeds the Atlas of a record from before the game layer, before its first item (so a
+  // block end can name this session's firsts); the finish hook (after the session is stored, before the
+  // weekly goal and achievements; CONTRACT Q) counts the session.
+  E.modes.hook('start', function (plan, rec) {
+    if (!rec || plan.unavailable) return;
+    var g = game(rec);
+    if (g.seeded !== 1) { seedAtlas(rec, g); plan.gameSeeded = true; }
+  }, { id: 'game.seed', order: 40 });
   E.modes.hook('finish', function (plan, rec, now, res) { update(plan, rec, now, res); }, { id: 'game.finish', order: 40 });
   if (E.record && typeof E.record.check === 'function') E.record.check('game', repair);
   if (E.events && typeof E.events.define === 'function') {
