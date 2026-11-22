@@ -16,7 +16,11 @@
    their largest size, the zero line kept). Foils are picked so the answer's rank on the cheap cues is random.
 
    Item: { ex, v, seed, params, kind, motion, x: [7 positions], key, nOptions: 4, answer: 'choice', options: [[7 numbers]],
-   why, bus (frame items: its step per tick) }. Hand-set item model: base + the kind's offset + 0.7 per level. */
+   why, bus (frame items: its step per tick) }. Hand-set item model: base + the kind's offset + 0.7 per level.
+   Version 2 (RV-items M7): a velocity item has at least two foils on the answer's side of the zero line (never
+   touching it, or touching or crossing it, as the answer does), so "the graph that never meets the zero line" finds
+   the answer no more often than chance + 10 (version 1: 59.8 % at level 0, where every cart keeps one direction).
+   Version 1's range stays in def.past. */
 (function (PX) {
   'use strict';
 
@@ -76,11 +80,14 @@
   function choose(rng, arr, k) { return rng.shuffle(arr).slice(0, k); }
   // Foil triples where, on every cue, some foil is at least as high as the answer and some at least as low (so no
   // cue singles the answer out), scored by how near the answer's rank comes to a random target per cue.
-  function balanced(rng, keyOpt, pool, feats) {
+  // comp(tri): a triple the item may use at all (velocity items: two foils on the answer's side of the zero line)
+  function balanced(rng, keyOpt, pool, feats, comp) {
     if (pool.length < 3) return null;
     var targets = feats.map(function () { return rng.int(0, 3); }), best = null, bestScore = Infinity;
     for (var t = 0; t < 400; t++) {
-      var tri = choose(rng, pool, 3), opts = [keyOpt].concat(tri.map(function (c) { return c.opt; })), sc = 0;
+      var tri = choose(rng, pool, 3);
+      if (comp && !comp(tri)) continue;
+      var opts = [keyOpt].concat(tri.map(function (c) { return c.opt; })), sc = 0;
       for (var fi = 0; fi < feats.length; fi++) {
         var vals = opts.map(function (o) { return feats[fi](o, opts); }), r = 0, up = 0, down = 0;
         for (var i = 1; i < 4; i++) {
@@ -100,6 +107,9 @@
   // how much a graph bends, to the eye (a tenth of its height)
   function curl(norm) { return function (o) { var n = norm(o), s = 0; for (var i = 1; i < n.length - 1; i++) s += mabs(n[i + 1] - 2 * n[i] + n[i - 1]); return mround(s * 10) / 10; }; }
   function rise(o) { var n = 0; for (var i = 1; i < o.length; i++) if (o[i] > o[i - 1] + 1e-9) n++; return n; }
+  // a velocity graph's side of the zero line: 0 when it never meets it (always forward or always back), 1 when it
+  // touches or crosses it (the cart stands still, or turns)
+  function zeroSide(o) { var lo = mmin.apply(null, o), hi = mmax.apply(null, o); return lo > 1e-9 || hi < -1e-9 ? 0 : 1; }
 
   /* ---------- the generator ---------- */
 
@@ -141,7 +151,11 @@
       add('double', x.map(function (v, k) { return v - 2 * u * k; }));
       others.forEach(function (o) { add('other-motion', o.x.map(function (v, k) { return v - u * k; })); });
     }
-    var pick = balanced(rng, key, pool, [totalTo(dist(norm)), last, rise, curl(norm)]);
+    // velocity: two foils on the answer's side of the zero line, three on one item in three (so the side gives the
+    // answer away about 31 % of the time at level 0, against 25 % chance)
+    var need = kind === 'vel' ? (rng.chance(1 / 3) ? 3 : 2) : 0;
+    var same = need ? function (tri) { return tri.filter(function (c) { return zeroSide(c.opt) === zeroSide(key); }).length >= need; } : null;
+    var pick = balanced(rng, key, pool, [totalTo(dist(norm)), last, rise, curl(norm)], same);
     if (!pick) return null;
     var order = rng.shuffle([0, 1, 2, 3]), options = [], why = [], keyAt = -1;
     order.forEach(function (o, i) { if (o === 0) { options.push(key); why.push(null); keyAt = i; } else { options.push(pick[o - 1].opt); why.push(pick[o - 1].why); } });
@@ -152,7 +166,7 @@
     var kind = kindOf(params), level = levelOf(params), it = null;
     for (var t = 0; t < 30 && !it; t++) it = generateOnce(rng, kind, level);
     if (!it) { it = generateOnce(PX.rng(PX.rng.hash('motiongraphs-fallback', kind, level)), kind, 0); if (it) it.fallback = true; }
-    it.ex = 'motiongraphs'; it.v = 1; it.seed = rng.seed; it.params = { variant: kind, level: level };
+    it.ex = 'motiongraphs'; it.v = 2; it.seed = rng.seed; it.params = { variant: kind, level: level };
     it.answer = 'choice'; it.nOptions = 4;
     return it;
   }
@@ -176,13 +190,16 @@
     var steps = velOf(item.x);
     if (steps.length !== N - 1) return 'six steps';
     if (item.kind === 'frame' && !(mabs(item.bus) > 0)) return 'a moving bus';
+    if (item.kind === 'vel' && item.options.filter(function (o, i) { return i !== item.key && zeroSide(o) === zeroSide(key); }).length < 2) return 'two foils on the answer\'s side of the zero line';
     return true;
   }
   function score(item, response) { return { correct: response === item.key }; }
   function difficulty(params) { return BASE + OFFSET[kindOf(params)] + STEP * levelOf(params); }
 
   PX.ex.define({
-    id: 'motiongraphs', version: 1, code: 'PR-7', name: 'Motion Graphs', short: 'Motion Graphs',
+    id: 'motiongraphs', version: 2, code: 'PR-7', name: 'Motion Graphs', short: 'Motion Graphs',
+    // version 1 (velocity foils not balanced on the zero line; test builds of 1.2 only): its range
+    past: { 1: { min: -1.2, max: 0.9 } },
     abilities: ['MA'], cell: 'extrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 4,
     format: FORMAT, // v1.2 (W2-measure): reserved formats, never in training material (tests/node/formats.test.mjs)
     variants: KINDS.slice(),
@@ -192,6 +209,6 @@
     chance: function () { return 0.25; },
     timeLimit: function (params) { return kindOf(params) === 'frame' ? 45000 : 35000; },
     generate: generate, validate: validate, score: score,
-    lib: { KINDS: KINDS, N: N, MARGIN: MARGIN, velAt: velAt, velOf: velOf, normPos: normPos, normVel: normVel, differ: differ, keyOf: keyOf, motion: motion },
+    lib: { KINDS: KINDS, N: N, MARGIN: MARGIN, zeroSide: zeroSide, velAt: velAt, velOf: velOf, normPos: normPos, normVel: normVel, differ: differ, keyOf: keyOf, motion: motion },
   });
 })(window.PX);

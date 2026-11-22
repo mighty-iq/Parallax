@@ -1,8 +1,9 @@
 /* PR-7 Motion Graphs (js/ex/motiongraphs/gen.js; PLAN milestone 6, the far rung; note T1 §5.2).
    10 008 seeds over the four kinds and three levels: every item validates (the answer is the motion's own graph or
    picture; every foil differs from it, and from each other, after any stretch of the vertical axis), keys spread,
-   deterministic, no fallback items. Shortcut solvers (CLAUDE.md rule 5) stay within chance + 10 points; a block
-   reads the four kinds in turn. */
+   deterministic, no fallback items. Shortcut solvers (CLAUDE.md rule 5) stay within chance + 10 points, among them
+   the velocity graph that never meets the zero line, or the one that does (RV-items M7); a block reads the four
+   kinds in turn. */
 import { newRecord } from './fixtures/learner.mjs';
 
 const SEEDS = 10008, LIMIT = 0.35;
@@ -13,6 +14,7 @@ export async function run(t) {
   if (!d) return t.fail('the Motion Graphs probe is not defined');
   const L = d.lib, K = L.KINDS;
   t.eq([d.role, d.cycle, d.variants], ['probe', 'variant', ['pos', 'vel', 'strobe', 'frame']], 'a probe of four kinds, read in turn');
+  t.eq([d.version, d.past && d.past[1] && d.past[1].min], [2, -1.2], 'version 2 (velocity foils balanced on the zero line); version 1\'s range kept');
 
   t.section('Motion Graphs: 10 008 seeds');
   const per = {};
@@ -84,4 +86,12 @@ const SOLVERS = {
   'ends lowest': (it) => argmin(it.options.map((o) => o[o.length - 1] - o[0])),
   'rises most often': (it) => argmax(it.options.map((o) => o.slice(1).filter((v, i) => v > o[i] + 1e-9).length)),
   'straightest': (it, L) => argmin(it.options.map((o) => { const n = norm(it, L)(o); let s = 0; for (let i = 1; i < n.length - 1; i++) s += Math.abs(n[i + 1] - 2 * n[i] + n[i - 1]); return s; }), 0.1),
+  // velocity graphs (RV-items M7): the one that never meets the zero line, or the one that does (others: no pick)
+  'never meets the zero line': (it, L) => onSide(it, L, 0),
+  'meets the zero line': (it, L) => onSide(it, L, 1),
 };
+function onSide(it, L, side) {
+  if (it.kind !== 'vel') return [0, 1, 2, 3];
+  const set = it.options.map((o, i) => (L.zeroSide(o) === side ? i : -1)).filter((i) => i >= 0);
+  return set.length ? set : [0, 1, 2, 3];
+}
