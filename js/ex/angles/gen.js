@@ -9,6 +9,11 @@
    exactly one is true. That is the format's labelling (v1.2 milestone 8; note D1 §2.3, §6.2,
    addendum A.1 row 2); 1.1 lettered the angles and numbered the answers. Version 3 (19 Nov):
    level-2 items keep a foil that shares both ends (see `resolve`); levels and range as in 2.
+   Version 4 (22 Nov, the independent item review RV-items-1.2 H5 and L1): the arm search also weighs
+   the arms' ratio and, in the aligned pose (arm 1 now always the flat one), the drawing's height and
+   width; it searches longer and weighs the tip distance and the vertex-to-midpoint length more; a
+   free pose's turn is drawn among the tries that fit within 60 % of the best (85 % made the flattest
+   arm a cue at obtuse 6°). Drawings are about 5 % smaller in the free pose. Levels and range as before.
 
    Test range (CONTRACT-v1.2 W3; DECISIONS 19 Nov): the 9° starter gap and the aligned pose (one arm
    lying flat, a shared base) are below the test; the other gaps and the free pose are inside the
@@ -91,7 +96,7 @@
    Levi 1996), resolve 0 → 2 (0.45), pose aligned → free (0.3). Base −2.2: the pre-1.2 floor (6°)
    is about 90 % right at θ = 0 with 4 options; the range is 4.95 logits (−3.15 … 1.8).
 
-   Item: { ex: 'angles', v: 3, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
+   Item: { ex: 'angles', v: 4, seed, params, key, angles: [{ v: [x, y], a: [x, y], b: [x, y] }] (by
    cell, lettered A–D on screen), deg: [design degrees by cell], order: [cells, smallest first],
    options: [[cells, smallest first] × 4], gaps: [three adjacent gaps by rank], close: index of the
    closest gap, scale }. */
@@ -114,14 +119,20 @@
   var ARM = [0.3, 1.0];
   // The longer arm of each angle is at least LONG_MIN·L (see the header; 0.7 keeps every cue and
   // answer-only rule within its bound, B5.md), and the cue weights of chooseArms: tip distance,
-  // area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint.
+  // area, arm sum, longer arm, shorter arm, vertex to the tips' midpoint, the arms' ratio (shorter
+  // over longer), and, in the aligned pose only, the drawing's height and width (version 4: the
+  // independent item review RV-items-1.2 H5 and L1 found the height 52 % and the ratio at its bound).
   var LONG_MIN = 0.7;
-  var CUE_W = [2.5, 1.5, 1, 1, 1, 2];
+  var CUE_W = [4, 1.5, 1, 1, 1, 4.5, 1.5, 0, 0];
+  var CUE_W_ALIGNED = [4, 1.5, 1, 1, 1, 3.5, 1.5, 2, 1.25];
   // At the 9° starter gap the angles span up to 38°, so the vertex-to-midpoint pull is stronger:
   // the search weighs it like the tip distance (v1.2 spike: the worst cue 34.4 % → see the test).
-  var CUE_W_BAND = [3, 1.5, 1, 1, 1, 3];
+  var CUE_W_BAND = [3, 1.5, 1, 1, 1, 3, 0, 0, 0];
+  var CUE_W_BAND_ALIGNED = [3, 1.5, 1, 1, 1, 3, 1.5, 3, 2];
   var FOIL_SLACK = 0.75, REV_PEN = 0.3;
-  var ARM_ROUNDS = 6, ARM_TRIES = 20;
+  // A free pose's turn: one of the tries that fit within FREE_FIT of the best (version 4; see the header).
+  var FREE_FIT = 0.6;
+  var ARM_ROUNDS = 10, ARM_TRIES = 30, ARM_ROUNDS_ALIGNED = 12, ARM_TRIES_ALIGNED = 40;
   function armMin() { return ARM[0]; }
   var MARGIN = 0.07, LMAX = 0.9, MIN_ARM = 0.1, FLOOR = 2, TOL = 0.02;
 
@@ -323,9 +334,11 @@
     do { a1 = rnd(lo + r.next() * (ARM[1] - lo), 1000); a2 = rnd(lo + r.next() * (ARM[1] - lo), 1000); } while ((a1 > a2 ? a1 : a2) < LONG_MIN);
     return [a1, a2];
   }
-  // The six cue values of one angle (cs = [sin, cos] of its size).
+  // The cue values of one angle (cs = [sin, cos] of its size). In the aligned pose arm 1 lies flat
+  // (choosePose keeps it so), so the drawing is arm 2 · sin θ high and spans the flat arm and arm 2's
+  // shadow on it.
   function cueVals(a, cs) {
-    var a1 = a[0], a2 = a[1], cr = 2 * a1 * a2 * cs[1];
+    var a1 = a[0], a2 = a[1], cr = 2 * a1 * a2 * cs[1], sx = a2 * cs[1];
     return [
       sqrt(a1 * a1 + a2 * a2 - cr),      // tip distance
       a1 * a2 * cs[0],                   // enclosed area (×2)
@@ -333,6 +346,9 @@
       a1 > a2 ? a1 : a2,                 // longer arm
       a1 > a2 ? a2 : a1,                 // shorter arm
       sqrt(a1 * a1 + a2 * a2 + cr),      // vertex to the tips' midpoint (×2)
+      a1 > a2 ? a2 / a1 : a1 / a2,       // the arms' ratio
+      a2 * cs[0],                        // aligned: the drawing's height
+      (a1 > sx ? (sx > 0 ? a1 : a1 - sx) : sx), // aligned: its width (flat arm and arm 2's shadow)
     ];
   }
   // Every cue here grows with the arms' size, so with arms of random sizes they all order the four
@@ -341,20 +357,21 @@
   // (weighted Kendall distance). Each cue then points at a random list, read either way round. The
   // angle itself pulls the tip distance up and the vertex-to-midpoint length down as it grows;
   // unequal arms weaken both pulls, and the search uses that.
-  function chooseArms(r, deg, lo, band) {
-    var tau = shuffle(r, [0, 1, 2, 3]), W = band ? CUE_W_BAND : CUE_W, NC = W.length;
+  function chooseArms(r, deg, lo, band, aligned) {
+    var tau = shuffle(r, [0, 1, 2, 3]), W = band ? (aligned ? CUE_W_BAND_ALIGNED : CUE_W_BAND) : (aligned ? CUE_W_ALIGNED : CUE_W), NC = W.length;
     var cs = deg.map(function (d) { return sincos(d); });
     var arms = [0, 1, 2, 3].map(function () { return armPair(r, lo); });
     var vals = arms.map(function (a, i) { return cueVals(a, cs[i]); });
     function costOf(v) {
       var c = 0;
-      for (var q = 0; q < NC; q++) c += W[q] * kendall(orderOf([v[0][q], v[1][q], v[2][q], v[3][q]]), tau);
+      for (var q = 0; q < NC; q++) if (W[q]) c += W[q] * kendall(orderOf([v[0][q], v[1][q], v[2][q], v[3][q]]), tau);
       return c;
     }
     var cost = costOf(vals);
-    for (var round = 0; round < ARM_ROUNDS && cost > 0; round++) {
+    var rounds = aligned ? ARM_ROUNDS_ALIGNED : ARM_ROUNDS, tries = aligned ? ARM_TRIES_ALIGNED : ARM_TRIES;
+    for (var round = 0; round < rounds && cost > 0; round++) {
       for (var i = 0; i < 4 && cost > 0; i++) {
-        for (var k = 0; k < ARM_TRIES; k++) {
+        for (var k = 0; k < tries; k++) {
           var a = armPair(r, lo), keep = vals[i];
           vals[i] = cueVals(a, cs[i]);
           var c2 = costOf(vals);
@@ -375,9 +392,10 @@
   function choosePose(r, a1, a2, theta, aligned) {
     var tries = [], k;
     if (aligned) {
-      for (k = 0; k < 8; k++) {
-        var swap = k & 4, phi = k & 1 ? 180 : 0, s = k & 2 ? -1 : 1;
-        tries.push({ f: figure(swap ? a2 : a1, swap ? a1 : a2, theta, phi, s), phi: phi, s: s, swap: !!swap });
+      // arm 1 lies flat (version 4: the arm search weighs the drawing's height and width with it so)
+      for (k = 0; k < 4; k++) {
+        var phi = k & 1 ? 180 : 0, s = k & 2 ? -1 : 1;
+        tries.push({ f: figure(a1, a2, theta, phi, s), phi: phi, s: s, swap: false });
       }
     } else {
       for (k = 0; k < 6; k++) {
@@ -386,7 +404,7 @@
       }
     }
     var top = Mth.max.apply(null, tries.map(function (t) { return t.f.fit; }));
-    var good = tries.filter(function (t) { return t.f.fit >= 0.85 * top; });
+    var good = tries.filter(function (t) { return t.f.fit >= (aligned ? 0.85 : FREE_FIT) * top; });
     return good[rint(r, good.length)];
   }
 
@@ -406,7 +424,7 @@
     var deg = rankOfCell.map(function (k) { return byRank[k]; });
     var foils = chooseFoils(r, res, close);
     if (!foils) return null;
-    var arms = chooseArms(r, deg, armMin(delta), p.gap === 0);
+    var arms = chooseArms(r, deg, armMin(delta), p.gap === 0, aligned);
     var poses = deg.map(function (d, i) { return choosePose(r, arms[i][0], arms[i][1], d, aligned); });
     var L = Mth.min(LMAX, Mth.min.apply(null, poses.map(function (q) { return q.f.fit; })));
     var angles = poses.map(function (q) {
@@ -418,7 +436,7 @@
     var toCells = function (o) { return o.map(function (k) { return cellOfRank[k]; }); };
     var opts = [[0, 1, 2, 3]].concat(foils).map(toCells), perm = shuffle(r, [0, 1, 2, 3]);
     return {
-      ex: 'angles', v: 3, seed: 0, params: p, key: perm.indexOf(0),
+      ex: 'angles', v: 4, seed: 0, params: p, key: perm.indexOf(0),
       angles: angles, deg: deg, order: toCells([0, 1, 2, 3]), options: perm.map(function (i) { return opts[i]; }),
       gaps: gaps, close: close, scale: rnd(L, 1e4),
     };
@@ -528,7 +546,7 @@
   }
 
   PX.ex.define({
-    id: 'angles', version: 3, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
+    id: 'angles', version: 4, code: 'EX-16', name: 'Angle ranking', short: 'Angles',
     abilities: ['LE'], cell: null, role: 'train', pat: true, perDisplay: true,
     bet: 'format', format: 'angles:rank-four-angles', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     practice: 'perception', // shown as perceptual-judgement practice, not visuospatial training

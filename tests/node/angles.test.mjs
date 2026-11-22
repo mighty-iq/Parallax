@@ -19,7 +19,7 @@ export async function run(t) {
   if (!def) return;
   const L = def.lib;
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions, def.pat, def.perDisplay, def.practice],
-    ['angles', 3, 'EX-16', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version 3 (level-2 items keep a foil with both ends), code, LE, no cell, choice of 4, pat, per display, perceptual practice');
+    ['angles', 4, 'EX-16', ['LE'], null, 'train', 'choice', 4, true, true, 'perception'], 'id, version 4 (the arm search weighs the drawing\'s height, width and the arms\' ratio), code, LE, no cell, choice of 4, pat, per display, perceptual practice');
   t.eq(def.dims.map((d) => d.key), ['gap', 'size', 'resolve', 'pose'], 'dims');
   t.eq(def.dims[0].levels, [9, 6, 5, 4, 3, 2], 'gaps: the 9° starter level in front of 6 … 2°');
   t.eq(def.starter, { dim: 'gap', levels: 1 }, 'starter: the 9° level');
@@ -301,6 +301,9 @@ function solverHits(L, item) {
       'longer arm': Math.max(lu, lw), 'shorter arm': Math.min(lu, lw),
       'vertex to the tips\' midpoint': Math.hypot((ux + wx) / 2, (uy + wy) / 2),
       'bounding box': (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)),
+      // RV-items-1.2 H5 and L1 (version 4): the drawing's height and width, the arms' ratio, the flattest arm
+      'drawing height': Math.max(...ys) - Math.min(...ys), 'drawing width': Math.max(...xs) - Math.min(...xs),
+      'arms\' ratio': Math.min(lu, lw) / Math.max(lu, lw), 'flattest arm': Math.min(Math.abs(uy) / lu, Math.abs(wy) / lw),
       'bisector slope': ((bis % Math.PI) + Math.PI) % Math.PI, 'bisector height': Math.abs(Math.sin(bis)),
       'vertex x': g.v[0], 'vertex y': g.v[1],
     };
