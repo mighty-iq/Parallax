@@ -1515,8 +1515,12 @@
     // The new-kind line (round 9): under the stem of a stem+options item, above an item with its own input; on phones
     // the item gives up the line's height (--pl-nk, css/play.css), so it still fits one screen
     function setNewKind(text) {
-      if (!text) { el.newKind.hidden = true; el.root.classList.remove('has-newkind'); el.root.style.removeProperty('--pl-nk'); return; }
+      if (!text) { el.newKind.hidden = true; el.root.classList.remove('has-newkind'); el.root.removeAttribute('data-newkind-goal'); el.root.style.removeProperty('--pl-nk'); return; }
       el.newKind.textContent = text;
+      // round 10 (fit.py at 1366 x 768: Spin's line repeated the goal shown above the item): where it only repeats the
+      // goal, a wide screen marks the goal instead (css/play.css); a phone keeps the line (its goal waits behind Help)
+      var g = el.goal.hidden ? '' : String(el.goal.textContent || '').trim();
+      el.root.toggleAttribute('data-newkind-goal', !!g && text === 'New kind of item: ' + g.charAt(0).toLowerCase() + g.slice(1));
       var before = P.layout === 'custom' ? el.host : el.grid;
       if (el.newKind.parentNode !== el.trial || el.newKind.nextSibling !== before) el.trial.insertBefore(el.newKind, before);
       el.newKind.hidden = false;

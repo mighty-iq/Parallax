@@ -97,6 +97,7 @@ body.px-stim .gm-stretch-why { visibility: hidden !important; }
 .gm-reach-big b { font-size: var(--fs-3xl); font-variant-numeric: tabular-nums; line-height: 1; }
 .gm-rank { font-family: var(--font-mono); font-size: var(--fs-sm); padding: 0.1rem 0.5rem; border: 1px solid var(--ink-2); border-radius: 3px; }
 .gm-table-wrap { overflow-x: auto; margin: var(--s3) 0; }
+.gm-table-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .gm-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .gm-table th, .gm-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--rule); text-align: right; }
 .gm-table th:first-child, .gm-table td:first-child { text-align: left; }

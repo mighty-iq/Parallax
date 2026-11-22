@@ -464,7 +464,9 @@
         h('td.px-num', x.best !== null ? String(x.best) : '–'), h('td.px-num', x.level !== null && x.best !== null ? String(x.level) : '–'), h('td.px-num', at ? at.handled + '/' + at.total : '–')));
     });
     tb.appendChild(body);
-    p.body.appendChild(h('div.gm-table-wrap', tb));
+    // round 10 (W2-core; RV-a11y-1.2 L2: at 200 % text the table scrolls sideways): its scroll region takes the focus
+    // and has a name, so the keyboard can scroll it
+    p.body.appendChild(h('div.gm-table-wrap', { tabindex: '0', role: 'region', 'aria-label': 'Grades table' }, tb));
     p.body.appendChild(h('p.px-meta', 'A grade is the tenth of the range that holds your best whole block of 10: grade 6 is levels 51–60, the band of Path stage 6. The Atlas counts the pairs of settings you have handled: right answers there that guessing would explain less than one time in ten.'));
     // the Climb and the Daily
     var cs = E().climb.state(r, now), dh = E().daily.history(r);

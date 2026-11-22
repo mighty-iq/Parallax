@@ -461,6 +461,10 @@
    height (--pl-nk), so it still fits one screen */
 .pl-newkind { padding: var(--s1) var(--s2); border-left: 3px solid var(--ink-3); background: var(--surface-2); color: var(--ink); font-size: var(--fs-sm); line-height: 1.4; }
 .pl-newkind[hidden] { display: none; }
+@media (min-width: 720px) and (min-height: 501px) {
+  .pl-player[data-newkind-goal] .pl-newkind { display: none; }
+  .pl-player[data-newkind-goal] > .pl-guide > .pl-goal::before { content: "New kind of item: "; font-weight: 600; color: var(--ink); }
+}
 @media (max-width: 719px), (max-height: 500px) {
   :root .pl-player.has-newkind { --pl-avail: calc(var(--pl-vh) - var(--tap) - 0.25rem - 3 * var(--s2) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pl-nk, 0px)); }
 }

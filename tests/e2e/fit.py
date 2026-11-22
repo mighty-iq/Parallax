@@ -34,7 +34,8 @@ from common import ROOT, OUT, launch, Checks
 
 READY = 'document.documentElement.getAttribute("data-px-ready") === "1"'
 SIZES = {'360x640': (360, 640), '390x844': (390, 844), '412x915': (412, 915), '844x390': (844, 390)}
-EXTRA = {'375x548': (375, 548)}  # an iPhone SE in Safari with its toolbars shown (on request: --sizes 375x548)
+EXTRA = {'375x548': (375, 548), '1366x768': (1366, 768)}  # an iPhone SE in Safari with its toolbars shown, and a desktop (on request: --sizes 375x548,1366x768)
+DESKTOP = {'1366x768'}  # a desktop: the item and its controls on the screen; the page itself may scroll (header, footer), and the phone rules (13 px, chrome) do not apply
 STRICT = '360x640'
 PROBES = ['wordlinks', 'cubematch', 'viewmatch', 'mechanisms', 'patterns', 'level', 'otherway', 'motiongraphs']  # the Spatial Check's probes ('balance' is the Lab's)
 
@@ -132,7 +133,10 @@ FIT_JS = r'''() => {
 
 def phone(b, size):
     w, h = SIZES[size]
-    ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    if size in DESKTOP:
+        ctx = b.new_context(viewport={'width': w, 'height': h})
+    else:
+        ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2, is_mobile=True, has_touch=True)
     page = ctx.new_page()
     errs = []
     page.on('pageerror', lambda e: errs.append(str(e)[:300]))
@@ -200,9 +204,12 @@ def judge(size, ex, label, m, rows):
         ok, why = not wide, ('sideways overflow: ' + str(m['scrollW']) + ' > ' + str(SIZES[size][0]) if wide else '')
         m = dict(m, small={})  # larger text is never under 13 px
     else:
-        ok = not m.get('error') and not m['bad'] and not m['scrolls'] and m['stim'] > 0 and m['ctl'] > 0
-        why = m.get('error') or '; '.join(m['bad'][:4]) or ('page scrolls: ' + str(m['scrollH']) + ' > ' + str(m['H']) if m['scrolls'] else '') \
+        desk = size in DESKTOP
+        ok = not m.get('error') and not m['bad'] and (desk or not m['scrolls']) and m['stim'] > 0 and m['ctl'] > 0
+        why = m.get('error') or '; '.join(m['bad'][:4]) or ('page scrolls: ' + str(m['scrollH']) + ' > ' + str(m['H']) if m['scrolls'] and not desk else '') \
             or ('no stimulus found' if not m['stim'] else 'no answer control found' if not m['ctl'] else '')
+        if desk:
+            m = dict(m, small={})
     rows.append({'ex': ex, 'item': label, 'ok': ok, 'why': why, 'lowest': m.get('lowest'), 'H': m.get('H'), 'params': m.get('params'), 'shot': m.get('shot'),
                  'small': m.get('small') or {}, 'chrome': [m.get('header'), m.get('overscroll'), m.get('pxItem'), m.get('touchAction')]})
     if size == STRICT or not ok:
@@ -468,7 +475,8 @@ with sync_playwright() as p:
         # During items: the app header steps aside, no pull-to-refresh, double-tap zoom off (CONTRACT B2 §1, §5).
         chrome = [r['chrome'] for r in rows if r.get('chrome')]
         bad_chrome = [c for c in chrome if c[0] or c[1] != 'none' or not c[2] or c[3] != 'manipulation']
-        C.ok(chrome and not bad_chrome, f'{size}: during items the header is hidden, overscroll is none, body.px-item is set and touch-action is manipulation ({bad_chrome[:2]})')
+        if size not in DESKTOP:
+            C.ok(chrome and not bad_chrome, f'{size}: during items the header is hidden, overscroll is none, body.px-item is set and touch-action is manipulation ({bad_chrome[:2]})')
     if not args.ex and args.scale == 1:
         failed_as_expected, row = control_case(b)
         report['control'] = row

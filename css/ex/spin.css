@@ -5,6 +5,11 @@
 .ex-spin .ex-spin-stage { width: 100%; height: clamp(9rem, min(40vh, 46vw), 22rem); }
 /* pick: the reference about as large as one option (four in a row on wide screens, 2 × 2 on phones). */
 .ex-spin .ex-spin-stem[data-variant="pick"] .ex-spin-stage { height: clamp(8rem, min(30vh, 50vw), 15rem); }
+/* round 10 (W2-core; W3-exfix's note: at 1366 x 768 the hardest pick item ended about 60 px under the fold with a tip
+   shown): on a wide screen the reference gives up what the goal, the tip, four options and Confirm need below 35rem */
+@media (min-width: 720px) and (min-height: 501px) {
+  .pl-trial.ex-spin .ex-spin-stem[data-variant="pick"] .ex-spin-stage { height: clamp(8rem, min(30vh, 50vw, calc(100vh - 35rem)), 15rem); }
+}
 /* One row exactly as tall as the plate, so each square figure box fits its half (meet). */
 .ex-spin .ex-spin-pair { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); }
 .ex-spin .ex-spin-stem[data-variant="pick"] .ex-spin-pair { grid-template-columns: 1fr; }

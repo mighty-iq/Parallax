@@ -2338,6 +2338,12 @@ def run_round10(b, C):
             page.screenshot(path=str(OUT / 'round10_tabbar_200.png'))
             C.ok(tabs['n'] == 5 and all(tabs['names']) and not tabs['over'] and tabs['hidden'] and tabs['header'] == 'static',
                  f'{tag} M3: at 200 % text on 360 px the tab bar shows its icons, its names kept for screen readers, and the header scrolls away ({tabs})')
+            # RV-a11y-1.2 L2: the Progress table's sideways scroll region takes the keyboard's focus and has a name
+            page.evaluate('PX.ui.hooks.mute(false); void PX.core.router.go("progress", {}, { force: true })')
+            page.wait_for_selector('.gm-table-wrap', timeout=8000)
+            tw = page.evaluate("(() => { const w = document.querySelector('.gm-table-wrap'); w.focus(); return { scrolls: w.scrollWidth > w.clientWidth, focus: document.activeElement === w, role: w.getAttribute('role'), name: w.getAttribute('aria-label') }; })()")
+            page.evaluate('PX.ui.hooks.mute(true)')
+            C.ok(tw['focus'] and tw['role'] == 'region' and tw['name'], f'{tag} a11y L2: at 200 % text the Progress table scrolls sideways in a region the keyboard can focus, with a name ({tw})')
         for ex in ('centralpoint', 'cubes'):
             go(page, {'mode': 'train', 'exId': ex, 'count': 1, 'minutes': 20})
             for _ in range(40):

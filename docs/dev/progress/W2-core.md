@@ -137,6 +137,19 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
   engine-w2 (section.last); play.py 307/2 (firstrun and round 9's Fold line: both pass alone), check.py 99/0,
   shell.py 274/0, flows.py check 19/0, fit.py 360 x 640 and 390 x 844 (Fold and Views 61/61 after the boards' rule).
 
+## 2026-11-22 14:46 UTC: a polish round (fit.py at 844 x 390 and 1366 x 768, RV-a11y-1.2 L2)
+- Views' and Fold's drawing items on a phone held sideways: the figure on the left, the drawing on the right, the board
+  as tall as the screen leaves (css/bets.css; one grid row, since a span left an empty row as tall as the gap).
+- Spin's pick item on a desktop: the reference gives up height on a short screen (css/ex/spin.css: at most 100vh less
+  35rem), and where the new-kind line only repeats the goal shown above the item, a wide screen marks the goal
+  "New kind of item:" instead (the tip stays).
+- The Progress table's scroll region takes the keyboard's focus and is named "Grades table" (js/ui/game.js).
+- fit.py has a desktop size on request (--sizes 1366x768: the item and its controls on the screen; the page may scroll
+  and the phone rules do not apply).
+- Guard: fit.py 844 x 390 Views 4/4 and Fold 2/2; 1366 x 768 Spin 2/2; 360 x 640 and 390 x 844 Spin, Views, Fold,
+  Slice 61 + 10 items, all fit; play.py round10 24/0 (with the table check). Found at 1366 x 768 and not changed (other
+  owners): Views 2 of 4 items (toview, toobject) and Slice 1 of 2 end 23 to 134 px under the fold.
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with
