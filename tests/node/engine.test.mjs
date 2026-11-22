@@ -81,8 +81,9 @@ function testModel(t) {
 
   const fields = E.fields();
   // v1.1: js/engine/section.js (Section mode, B7) adds 'section' when it is loaded; v1.2 (record
-  // format 4): js/engine/events.js adds 'events', js/engine/record.js plateau, bets, measure and game
-  t.eq(fields.map((f) => f.key).filter((k) => k !== 'section').sort(), ['bets', 'eng', 'events', 'game', 'lab', 'measure', 'path', 'plateau', 'spatial', 'strategies', 'timed', 'train'], 'engine-owned record fields');
+  // format 4): js/engine/events.js adds 'events', js/engine/record.js plateau, bets, measure and game;
+  // js/engine/rebase.js 'scalev' (which build wrote each level stamp, RV-code-1.2 L5)
+  t.eq(fields.map((f) => f.key).filter((k) => k !== 'section').sort(), ['bets', 'eng', 'events', 'game', 'lab', 'measure', 'path', 'plateau', 'scalev', 'spatial', 'strategies', 'timed', 'train'], 'engine-owned record fields');
   for (const f of fields) {
     const d = f.def();
     t.eq(f.fix(clone(d)), d, `${f.key}: the default survives its fixer`);
