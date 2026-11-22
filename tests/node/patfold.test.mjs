@@ -57,8 +57,9 @@ export async function run(t) {
   const per = Math.max(1, Math.ceil(N_ITEMS / all.length));
   let threw = 0, invalid = 0, keyWrong = 0, foilRight = 0, nonJson = 0, optCount = 0, fallbacks = 0, firstBad = null, n = 0;
   const ALW = { always0: 0, always1: 0, always2: 0, always3: 0, always4: 0 };
-  const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, ...ALW };
-  const band = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, gate: 0, oneFold: 0, shareUnder: 0, symFoil: 0, ...ALW };
+  const PLACE = Object.fromEntries(PLACE_KEYS.map((k) => [k, 0]));
+  const acc = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, ...ALW, ...PLACE };
+  const band = { count: 0, sym1: 0, low1: 0, like: 0, odd: 0, under: 0, symAny: 0, count2: 0, most: 0, fewest: 0, layers: 0, gate: 0, oneFold: 0, shareUnder: 0, symFoil: 0, ...ALW, ...PLACE };
   let sheetsOk = 0;
   const keyPos = [0, 0, 0, 0, 0], holesHist = {}, whyHist = {}, items = [], cs = {};
   for (let ci = 0; ci < all.length; ci++) {
@@ -72,9 +73,9 @@ export async function run(t) {
       if (v !== true) { invalid++; firstBad = firstBad || `${JSON.stringify(params)} seed ${seed}: ${v}`; continue; }
       if (!def.score(item, item.key).correct) keyWrong++;
       for (let i = 0; i < item.options.length; i++) if (i !== item.key && def.score(item, i).correct) foilRight++;
-      // dim 'sheets': all five at the key's count, or two wrong sheets at it and two with another count
+      // dim 'sheets': all five at the key's count, or two or three wrong sheets at it and the rest with another count
       const atKey = item.options.filter((o) => o.length === item.holes).length;
-      if (item.options.length !== 5 || atKey !== (params.sheets === 1 ? 5 : 3)) optCount++; else sheetsOk++;
+      if (item.options.length !== 5 || (params.sheets === 1 ? atKey !== 5 : atKey < 3 || atKey > 4)) optCount++; else sheetsOk++;
       if (n % 50 === 0 && deepDiff(JSON.parse(JSON.stringify(item)), item) !== null) nonJson++;
       if (n % 8 === 0) items.push({ seed, params, item });
       keyPos[item.key]++;
@@ -89,7 +90,7 @@ export async function run(t) {
   t.eq(invalid, 0, 'validate passes on every item' + (firstBad && invalid ? ` (${firstBad})` : ''));
   t.eq(keyWrong, 0, 'the key scores right');
   t.eq(foilRight, 0, 'every other option scores wrong');
-  t.eq(optCount, 0, `5 options: every sheet at the key's count, or (counts may differ) two wrong sheets at it and two with another count (${sheetsOk} items)`);
+  t.eq(optCount, 0, `5 options: every sheet at the key's count, or (counts may differ) two or three wrong sheets at it and the rest with another count (${sheetsOk} items)`);
   t.eq(nonJson, 0, 'items survive JSON round trips');
   t.eq(fallbacks, 0, 'no item needed the fallback construction');
   t.ok(keyPos.every((c) => Math.abs(c / n - 0.2) < Math.max(0.03, 3 * Math.sqrt(0.2 * (1 - 0.2) / n))), `keys spread over the five positions (${keyPos.join(', ')})`);
@@ -181,7 +182,7 @@ export async function run(t) {
   t.section('patfold: shortcut solvers');
   const bound = 0.2 + 0.10;
   const pct = (x) => (100 * x / acc.count).toFixed(1) + ' %';
-  for (const k of ['under', 'sym1', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest', 'always0', 'always1', 'always2', 'always3', 'always4']) {
+  for (const k of ['under', 'sym1', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest', 'always0', 'always1', 'always2', 'always3', 'always4', ...PLACE_KEYS]) {
     t.ok(acc[k] / acc.count <= bound, `"${NAMES[k]}" ≤ chance + 10 (${pct(acc[k])}, chance 20 %)`);
   }
   console.log(`       info  ${NAMES.layers}: ${pct(acc.layers)} (a third where counts may differ, a fifth where they may not)`);
@@ -192,7 +193,7 @@ export async function run(t) {
   t.eq(band.oneFold, band.count, 'one straight fold that matters (the band\'s type 0), or the level\'s one corner or slanted fold; two holes');
   t.eq(band.symFoil, band.count, 'every band item has a foil symmetric about the crease without the punch hole');
   t.ok(band.shareUnder / band.count >= 2.5, `most foils share the punch hole (${(band.shareUnder / band.count).toFixed(2)} of 4 on average)`);
-  for (const k of ['under', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest']) {
+  for (const k of ['under', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest', ...PLACE_KEYS]) {
     t.ok(band[k] / band.count <= bound, `starter band: "${NAMES[k]}" ≤ chance + 10 (${bp(band[k])}, chance 20 %)`);
   }
   console.log(`       info  starter band, the format's method (reported, not bounded; PLAN Defaults): crease symmetry alone ${bp(band.sym1)}, punch-gated crease symmetry ${bp(band.gate)}`);
@@ -212,6 +213,10 @@ export async function run(t) {
 const NAMES = { sym1: 'most symmetric about the first crease', low1: 'least symmetric about the first crease', symAny: 'most symmetric about any sheet axis',
   like: 'most like the others', odd: 'odd one out', under: 'a hole under the punch', count2: 'the hole count 2^folds', most: 'the most holes', fewest: 'the fewest holes',
   layers: 'as many holes as layers under the punch (the format\'s method, reported)',
+  // v1.2 (RV-items-1.2 H1, L2): where the holes sit, no folding needed
+  colour: 'every hole on the punch cell\'s checkerboard colour', pure: 'the most one-coloured sheet', mixed: 'the least one-coloured sheet',
+  far: 'holes farthest from the sheet\'s centre', near: 'holes nearest the sheet\'s centre', touchFew: 'the fewest holes side by side', touchMost: 'the most holes side by side',
+  spreadMost: 'the holes most spread out', spreadLeast: 'the holes least spread out', common: 'the most common hole count', twin: 'the sheet with the nearest neighbour',
   always0: 'always A', always1: 'always B', always2: 'always C', always3: 'always D', always4: 'always E' };
 function itemScores(A, lib, item) {
   const opts = item.options, k = item.key, masks = opts.map((o) => A.maskOf(o)), out = {};
@@ -231,8 +236,27 @@ function itemScores(A, lib, item) {
   out.fewest = pickBest(opts.map((o) => o.length), k, false);
   out.layers = pickBest(opts.map((o) => (o.length === item.holes ? 1 : 0)), k); // the layers under the punch are the true hole count
   for (let j = 0; j < 5; j++) out['always' + j] = k === j ? 1 : 0; // always the same letter
+  // v1.2 (RV-items-1.2 H1, L2): where the holes sit
+  const P = item.punches[0], par = (c) => (c[0] + c[1]) % 2, has = opts.map((o) => new Set(o.map((c) => c[0] + ',' + c[1])));
+  out.colour = pickBest(opts.map((o) => o.filter((c) => par(c) === par(P)).length / o.length), k);
+  const pureV = opts.map((o) => { const e = o.filter((c) => par(c) === 0).length; return Math.max(e, o.length - e) / o.length; });
+  out.pure = pickBest(pureV, k);
+  out.mixed = pickBest(pureV, k, false);
+  const cent = opts.map((o) => Math.round(Math.hypot(o.reduce((t, c) => t + c[0] + 0.5, 0) / o.length - 2, o.reduce((t, c) => t + c[1] + 0.5, 0) / o.length - 2) * 1e6));
+  out.far = pickBest(cent, k);
+  out.near = pickBest(cent, k, false);
+  const touch = opts.map((o, i) => o.filter((c) => has[i].has((c[0] + 1) + ',' + c[1])).length + o.filter((c) => has[i].has(c[0] + ',' + (c[1] + 1))).length);
+  out.touchFew = pickBest(touch, k, false);
+  out.touchMost = pickBest(touch, k);
+  const spread = opts.map((o) => Math.max(...o.map((c) => c[0])) - Math.min(...o.map((c) => c[0])) + Math.max(...o.map((c) => c[1])) - Math.min(...o.map((c) => c[1])));
+  out.spreadMost = pickBest(spread, k);
+  out.spreadLeast = pickBest(spread, k, false);
+  const cnt = {}; opts.forEach((o) => { cnt[o.length] = (cnt[o.length] || 0) + 1; });
+  out.common = pickBest(opts.map((o) => cnt[o.length]), k);
+  out.twin = pickBest(masks.map((m, i) => -Math.min(...masks.map((m2, j) => (i === j ? 99 : A.hamming(m, m2))))), k);
   return out;
 }
+const PLACE_KEYS = ['colour', 'pure', 'mixed', 'far', 'near', 'touchFew', 'touchMost', 'spreadMost', 'spreadLeast', 'common', 'twin'];
 function shortcuts(A, lib, item, acc) {
   acc.count++;
   const sc = itemScores(A, lib, item);
@@ -309,7 +333,7 @@ function testLearn(t, PX, def) {
   const tipIds = new Set((L.tips || []).map((x) => x.id));
   t.ok(L.practice[2].tip === 'idle' && L.practice.every((e) => e.tip === undefined || tipIds.has(e.tip)), 'Try 3 shows the idle-fold tip; forced tips exist');
   t.eq(new Set(items.map((it) => it.key)).size, 4, `the Try answers sit in four different places (${items.map((it) => it.key + 1).join(', ')})`);
-  const cls = (w) => (/not unfolded|hole missed|extra hole|layer counted/.test(w) ? 'count' : /wrong order/.test(w) ? 'order' : /one cell away|another place/.test(w) ? 'moved' : /turned/.test(w) ? 'turned' : /mirrored/.test(w) ? 'mirrored' : /across/.test(w) ? 'crease' : 'other');
+  const cls = (w) => (/not unfolded|hole missed|extra hole|layer counted/.test(w) ? 'count' : /wrong order/.test(w) ? 'order' : /one cell away|another place|one cell off/.test(w) ? 'moved' : /turned/.test(w) ? 'turned' : /mirrored/.test(w) ? 'mirrored' : /across/.test(w) ? 'crease' : 'other');
   const kindsOf = (it) => new Set(it.why.filter((w, i) => i !== it.key).map(cls));
   const dk = kindsOf(demoItem), tk = new Set(items.flatMap((it) => [...kindsOf(it)]));
   t.ok([...tk].every((k) => dk.has(k)), `every kind of wrong sheet in Try (${[...tk].join(', ')}) is in the Watch item (${[...dk].join(', ')})`);

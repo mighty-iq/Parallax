@@ -810,7 +810,10 @@
   // The stem-based counting solvers look at the solid: the corner counts of its three outlines, and of
   // its most featured faces (ties: each as likely).
   var SOLVERS = ['largest area', 'smallest area', 'most corners', 'fewest corners', 'like the others', 'odd one out', 'box fits the solid',
-    'corners = a face outline\'s', 'corners = the most featured face\'s', 'box and corners = a face outline\'s'];
+    'corners = a face outline\'s', 'corners = the most featured face\'s', 'box and corners = a face outline\'s',
+    // v1.2 (RV-items-1.2 H4): the share of its box an opening fills (the least or the most cut away), 35-43 % at
+    // test-range levels against a 30 % bound while only areas were held
+    'least cut away', 'most cut away'];
   function fitsBox(g, W, H, D) {
     var pairs = [[W, H], [W, D], [D, H]];
     return pairs.some(function (p) { return (g.A === p[0] && g.B === p[1]) || (g.A === p[1] && g.B === p[0]); }) ? 1 : 0;
@@ -826,10 +829,11 @@
     var topC = 0;
     S.top.forEach(function (t) { topC += pickShare(set.map(function (o) { return o.corners === S.outs[t].corners ? 1 : 0; }), true) / S.top.length; });
     var boxC = set.map(function (o) { return S.outs.some(function (q) { return q.corners === o.corners && boxIs(o.g, q.A, q.B); }) ? 1 : 0; });
+    var fill = set.map(function (o, i) { return Mth.round(1e6 * ar[i] / (o.g.A * o.g.B)); });
     return [pickShare(ar, true), pickShare(ar, false), pickShare(co, true), pickShare(co, false), pickShare(sum, false), pickShare(sum, true), pickShare(fit, true),
-      pickShare(anyC, true), topC, pickShare(boxC, true)];
+      pickShare(anyC, true), topC, pickShare(boxC, true), pickShare(fill, true), pickShare(fill, false)];
   }
-  var WEIGHTS = [1, 1, 1, 1, 3, 1.5, 1.5, 2.5, 2, 1];
+  var WEIGHTS = [1, 1, 1, 1, 3, 1.5, 1.5, 2.5, 2, 1, 4, 1.5];
   // minSame (the starter band): at least that many foils share the key's box, as far as the sample allows.
   // The composition of two of the eight turns and flips (k1 first, then k2), as one of them.
   function tfThen(k1, k2) {
@@ -919,7 +923,7 @@
   }
 
   /* ------------------------------------------------------------ generate */
-  var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, unseen: 0, interact: 0, place: 0, lastInvalid: null, lastError: null };
+  var stats = { tries: 0, nulls: 0, invalid: 0, errors: 0, fallbacks: 0, unseen: 0, interact: 0, place: 0, lastInvalid: null, lastError: null, fullest: 0 };
   function sameGrid(a, b) { if (a.A !== b.A || a.B !== b.B) return false; for (var k = 0; k < a.m.length; k++) if (a.m[k] !== b.m[k]) return false; return true; }
   // dim 'features': features per profile, dealt to the three profiles in a random order. Level 0 (v1.2,
   // the starter band): one feature in all, on the key's own profile; the other two profiles stay plain.
@@ -1072,6 +1076,10 @@
     if (pool.length < 4) return null;
     var nF = names.map(function (nm2) { return feats[nm2].length; }), mx = Mth.max.apply(null, nF);
     var solid = { W: W, H: H, D: D, outs: names.map(function (nm2) { return { A: dm[nm2][0], B: dm[nm2][1], corners: polys[nm2].length }; }), top: [0, 1, 2].filter(function (i) { return nF[i] === mx; }) };
+    // v1.2 (RV-items-1.2 H4): where no wrong outline fills as much of its box as the key's, "the least cut away"
+    // would find the key whatever the choice; such solids are mostly drawn again
+    var fillOf = function (o) { return area4(o.g) / (o.g.A * o.g.B); }, kFill = fillOf(keyO);
+    if (!pool.some(function (o) { return fillOf(o) >= kFill - 1e-9; }) && rng.chance(0.75)) { stats.fullest++; return null; }
     var set = chooseFoils(rng, keyO, pool, solid, p.foils === 1);
     if (!set) return null;
     var perm = rshuffle(rng, [0, 1, 2, 3, 4]), all = [keyO].concat(set);
@@ -1219,7 +1227,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [2764413377, 1146957781, 4014106692, 3644707956, 3784165992, 3100478066];
+  var TUTORIAL = [1233018531, 1146957781, 3520260727, 346003597, 3784165992, 2131358731];
   function stemSig(item) { return PX.rng.hash('openings-stem', JSON.stringify([item.W, item.H, item.D, item.prof, item.pose])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params), sig;

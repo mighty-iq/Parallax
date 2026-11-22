@@ -324,6 +324,7 @@ function linesApart(a, b) {
 function testShortcuts(t, PX, def, L, pool) {
   t.section('patviews: shortcut solvers, starter band');
   shortcutPool(t, L, pool.filter((x) => x.p.cubes === 0), true);
+  testBandPieces(t, L, pool.filter((x) => x.p.cubes === 0));
   t.section('patviews: shortcut solvers, cube stacks above the band');
   shortcutPool(t, L, pool.filter((x) => x.p.cubes > 0 && !x.it.solid), false);
   t.section('patviews: shortcut solvers, solids');
@@ -352,6 +353,14 @@ function itemScores(L, it) {
     add('like the others', shareOf(sum, key, false));
     add('odd one out', shareOf(sum, key, true));
     add('size fits the stem', 1 / 4); // every option has the stem's size (checked above)
+    // v1.2 (RV-items-1.2 H2, M5): line pieces (runs of one style along a grid line: what the eye counts) and the
+    // nearest neighbour. On the starter band, where the structure is drawn beside the views, the pieces are a
+    // scoped exception (DECISIONS 22 Nov): reported, and bounded at their own level in testBandPieces.
+    const pc = g.map(L.pieces), nn = g.map((a, i) => Math.min(...g.map((b, j) => (i === j ? Infinity : L.gdist(a, b))))), bandP = it.params && it.params.cubes === 0;
+    add(bandP ? 'most pieces (starter band)' : 'most pieces', shareOf(pc, key, true));
+    add(bandP ? 'fewest pieces (starter band)' : 'fewest pieces', shareOf(pc, key, false));
+    add('farthest from its nearest neighbour', shareOf(nn, key, true));
+    add('nearest to its nearest neighbour', shareOf(nn, key, false));
     // Stem-based: the option most like a given view of the same size (as drawn, or mirrored).
     const gv = Object.keys(it.given).map((v) => L.grid(it.given[v]));
     const like = g.map((o) => Math.min(...gv.filter((x) => x.w === o.w && x.h === o.h).map((x) => L.gdist(o, x)).concat([99])));
@@ -365,7 +374,7 @@ function itemScores(L, it) {
 // Solids: the same cheap solvers on line runs (lengths in units; L.drawDiff for likeness), the drawing most like a
 // given view of its size, the most symmetric drawing; and, reported, the format's own method: every line position
 // of the drawing lines up with a line or corner of the given view that shares that axis.
-const REPORTED = ['size fits the stem', 'lines line up with the given views'];
+const REPORTED = ['size fits the stem', 'lines line up with the given views', 'most pieces (starter band)', 'fewest pieces (starter band)'];
 function solidScores(L, it) {
   const out = {}, add = (name, v) => { out[name] = v; }, key = it.key, D = it.options.map((o) => o.drawing);
   'ABCD'.split('').forEach((ch, j) => add('always ' + ch, key === j ? 1 : 0)); // always the same letter
@@ -394,6 +403,20 @@ function solidScores(L, it) {
   const aligned = D.map((d) => { let n = 0, ok = 0; for (let ax = 0; ax < 2; ax++) for (const c of coords(d, ax)) { n++; if (avail[ax].has(c)) ok++; } return ok / Math.max(1, n); });
   add('lines line up with the given views', shareOf(aligned.map((x) => Math.round(x * 1e3)), key, true));
   return out;
+}
+// The starter band's scoped exception (DECISIONS 22 Nov): the band's foils must be provably wrong by the hull or
+// the line test, drawn in solid lines from the key's own small box, and in most such boxes no wrong drawing has as
+// many line pieces as the true view, so "the busiest drawing" often finds the key; the structure is drawn beside
+// the views there. Bounded at the level it holds (per foil level and missing view), so it cannot grow unseen.
+function testBandPieces(t, L, pool) {
+  const cell = {};
+  for (const { it, p } of pool) {
+    const g = it.options.map((o) => L.grid(o.drawing)), pc = g.map(L.pieces), k = 'foil ' + p.foil + ', ' + it.missing + ' missing';
+    cell[k] = cell[k] || [0, 0]; cell[k][0] += shareOf(pc, it.key, true); cell[k][1]++;
+  }
+  const rows = Object.entries(cell).map(([k, v]) => [k, v[0] / v[1], v[1]]);
+  console.log('       patviews starter band, "the most line pieces" (scoped, reported): ' + rows.map(([k, a, n]) => `${k} ${(100 * a).toFixed(1)}% (n ${n})`).join('; '));
+  t.ok(rows.every(([, a]) => a <= 0.95), 'starter band: "the most line pieces" stays at its scoped level (≤ 95 % in every cell)');
 }
 function shortcutPool(t, L, pool, band, what) {
   t.ok(pool.length >= 2000, `${pool.length} items`);
@@ -683,4 +706,4 @@ export function shortcutScores(PX, def, item) {
   for (const [name, hit] of Object.entries(itemScores(def.lib, item))) out[name] = SHORTCUT_EXEMPT.includes(name) ? { hit, chance: 0.25, info: true } : { hit, chance: 0.25 };
   return out;
 }
-export const SHORTCUT_EXEMPT = ['size fits the stem', 'lines line up with the given views'];
+export const SHORTCUT_EXEMPT = ['size fits the stem', 'lines line up with the given views', 'most pieces (starter band)', 'fewest pieces (starter band)'];

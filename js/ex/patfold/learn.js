@@ -33,10 +33,11 @@
     // Try 4 brings two folds that both matter, after a worked example on a sister item (note D2 addendum
     // C change 4; Try has no slanted fold, so the example goes to the first item with two folds).
     practice: [
+      // v1.2 (22 Nov, RV-items-1.2 H1, L2: the foil choice changed): seeds again so the answers sit in four places
       { params: { folds: 0, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, assist: { twin: true }, seed: 1 },
-      { params: { folds: 0, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, seed: 2 },
-      { params: { folds: 1, type: 0, idle: 1, sheets: 0, task: 'tutorial' }, tip: 'idle', seed: 4 },
-      { params: { folds: 1, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, tip: 'two', seed: 6, example: { seed: 1 } },
+      { params: { folds: 0, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, seed: 13 },
+      { params: { folds: 1, type: 0, idle: 1, sheets: 0, task: 'tutorial' }, tip: 'idle', seed: 3 },
+      { params: { folds: 1, type: 0, idle: 0, sheets: 0, task: 'tutorial' }, tip: 'two', seed: 7, example: { seed: 11 } },
     ],
     // In Try and Go the first tip that fits the item is shown, so the slanted-crease tips come first.
     tips: [

@@ -34,10 +34,11 @@
       { params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, assist: { letters: true }, seed: 12 },
       { params: { solid: 0, marks: 0, view: 0, foil: 0, task: 'tutorial' }, seed: 14 }, // v1.2 (19 Nov): the Try answers in four places
       // v1.2 (fresh-player run, 19 Nov: three wrong-size picks in a row): every Try item and the worked example
-      // has its wrong size twice or half the pattern's (Try 1, 2 and the Watch by the band's rule; Try 3, 35: 2.5
-      // times; the example, 51, and Try 4, 151: twice), and Try 4's two shaded faces both show on the right solid
-      { params: { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, tip: 'plain', seed: 35, example: { seed: 51 } },
-      { params: { solid: 0, marks: 2, view: 0, foil: 0, task: 'tutorial' }, tip: 'shaded', seed: 151 },
+      // has its wrong size twice or half the pattern's (Try 1, 2 and the Watch by the band's rule; Try 3, 33, the
+      // example, 51, and Try 4, 250: twice), and Try 4's two shaded faces both show on the right solid (seeds again
+      // on 22 Nov, after RV-items-1.2 M4 changed the foil choice, so the answers sit in four places)
+      { params: { solid: 0, marks: 1, view: 0, foil: 0, task: 'tutorial' }, tip: 'plain', seed: 33, example: { seed: 51 } },
+      { params: { solid: 0, marks: 2, view: 0, foil: 0, task: 'tutorial' }, tip: 'shaded', seed: 250 },
     ],
     tips: [
       { id: 'one', when: { dim: 'marks', levels: [0] }, text: 'Starter items: one shaded face. First drop the solids of the wrong size, then check that the shaded face has the shape it has in the pattern.' },

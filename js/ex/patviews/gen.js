@@ -574,7 +574,17 @@
   }
   // "Lines only": the same, solid and dotted taken alike (where lines are, not how they are drawn).
   var SOLVERS = ['most solid', 'fewest solid', 'most dotted', 'fewest dotted', 'largest area', 'smallest area', 'like the others', 'odd one out',
-    'like the others (lines only)', 'odd one out (lines only)', 'most like a given view'];
+    'like the others (lines only)', 'odd one out (lines only)', 'most like a given view',
+    // v1.2 (RV-items-1.2 H2, M5): what the eye counts, the line pieces (a run of one style along a grid line;
+    // unit counts were held, pieces were not: the busiest drawing was the key 84-93 % on the band), and the
+    // drawing farthest from (or nearest to) its nearest neighbour
+    'most pieces', 'fewest pieces', 'farthest from its nearest neighbour', 'nearest to its nearest neighbour'];
+  function pieces(g) {
+    var n = 0, x, y, sv, prev;
+    for (y = 0; y <= g.h; y++) { prev = 0; for (x = 0; x < g.w; x++) { sv = g.hs[y * g.w + x]; if (sv && sv !== prev) n++; prev = sv; } }
+    for (x = 0; x <= g.w; x++) { prev = 0; for (y = 0; y < g.h; y++) { sv = g.vs[y * (g.w + 1) + x]; if (sv && sv !== prev) n++; prev = sv; } }
+    return n;
+  }
   function layoutOf(g) { var out = '', k; for (k = 0; k < g.hs.length; k++) out += g.hs[k] ? 1 : 0; for (k = 0; k < g.vs.length; k++) out += g.vs[k] ? 1 : 0; return out; }
   function gdistLines(a, b) {
     var n = 0, k;
@@ -589,10 +599,11 @@
     var c = gs.map(counts), sum = sums(gdist), sumL = sums(gdistLines);
     var sol = c.map(function (x) { return x.solid; }), dot = c.map(function (x) { return x.dotted; }), ar = c.map(function (x) { return x.area; });
     var like = gs.map(function (o) { var m = 99; (giv || []).forEach(function (v) { if (v.w === o.w && v.h === o.h) m = Mth.min(m, gdist(o, v)); }); return m; });
+    var pc = gs.map(pieces), nn = gs.map(function (a, i) { var m = INF; gs.forEach(function (b2, j) { if (i !== j) m = Mth.min(m, gdist(a, b2)); }); return m; });
     return [pickShare(sol, true), pickShare(sol, false), pickShare(dot, true), pickShare(dot, false), pickShare(ar, true), pickShare(ar, false), pickShare(sum, false), pickShare(sum, true),
-      pickShare(sumL, false), pickShare(sumL, true), pickShare(like, false)];
+      pickShare(sumL, false), pickShare(sumL, true), pickShare(like, false), pickShare(pc, true), pickShare(pc, false), pickShare(nn, true), pickShare(nn, false)];
   }
-  var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5, 2, 1, 2];
+  var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5, 2, 1, 2, 2.5, 2, 2, 1.5];
 
   // The same shares as shares(), from per-drawing counts and pairwise distances computed once per call
   // (the chooser scores a few hundred sets).
@@ -603,7 +614,7 @@
     // included), and a set where any cheap rule finds the key half the time or more is dropped (strict):
     // its small boxes leave few drawings, and random targets would leave each setting lopsided.
     var want = SOLVERS.map(function () { return strict ? 0.25 : rng.chance(0.25) ? 1 : 0; });
-    var gs = [keyG].concat(idx.map(function (i) { return pool[i].g; })), n = gs.length, C = gs.map(counts), G = [], GL = [];
+    var gs = [keyG].concat(idx.map(function (i) { return pool[i].g; })), n = gs.length, C = gs.map(counts), PC = gs.map(pieces), G = [], GL = [];
     var gsol = (giv || []).map(function (v) { return counts(v).solid; });
     var like = gs.map(function (o) { var m = 99; (giv || []).forEach(function (v) { if (v.w === o.w && v.h === o.h) m = Mth.min(m, gdist(o, v)); }); return m; });
     for (var i = 0; i < n; i++) { G.push([]); GL.push([]); for (var j = 0; j < n; j++) { G[i].push(j < i ? G[j][i] : i === j ? 0 : gdist(gs[i], gs[j])); GL[i].push(j < i ? GL[j][i] : i === j ? 0 : gdistLines(gs[i], gs[j])); } }
@@ -611,8 +622,9 @@
       function col(f) { return m.map(f); }
       function sums(M) { return m.map(function (a) { var t = 0; m.forEach(function (b2) { if (a !== b2) t += M[a][b2]; }); return t; }); }
       var sol = col(function (q) { return C[q].solid; }), dot = col(function (q) { return C[q].dotted; }), ar = col(function (q) { return C[q].area; }), su = sums(G), sl = sums(GL), lk = col(function (q) { return like[q]; });
+      var pcs = col(function (q) { return PC[q]; }), nn = m.map(function (a) { var t = INF; m.forEach(function (b2) { if (a !== b2) t = Mth.min(t, G[a][b2]); }); return t; });
       var out = [pickShare(sol, true), pickShare(sol, false), pickShare(dot, true), pickShare(dot, false), pickShare(ar, true), pickShare(ar, false), pickShare(su, false), pickShare(su, true),
-        pickShare(sl, false), pickShare(sl, true), pickShare(lk, false)];
+        pickShare(sl, false), pickShare(sl, true), pickShare(lk, false), pickShare(pcs, true), pickShare(pcs, false), pickShare(nn, true), pickShare(nn, false)];
       // the band also holds "as many solid units as a given view" (a stem-based count; tests/node)
       if (strict) out.push(pickShare(col(function (q) { return gsol.indexOf(C[q].solid) >= 0 ? 1 : 0; }), true));
       return out;
@@ -621,7 +633,7 @@
       var set = [pool[idx[a]], pool[idx[b]], pool[idx[c]]];
       if (need && !need(set)) continue;
       var sh = sharesOf([0, a + 1, b + 1, c + 1]), score = 0;
-      for (var k = 0; k < sh.length; k++) score += (WEIGHTS[k] || 1.5) * Mth.abs(sh[k] - (want[k] === undefined ? 0.25 : want[k]));
+      for (var k = 0; k < sh.length; k++) if (!strict || k < 11 || k > 14) score += (WEIGHTS[k] || 1.5) * Mth.abs(sh[k] - (want[k] === undefined ? 0.25 : want[k]));
       if (score < bestScore - 1e-9) { bestScore = score; best = set; bestSh = sh; }
     }
     // The pool can leave no choice (outline foils mostly add cubes, so the key's outline tends to be
@@ -630,7 +642,9 @@
     if (best && ((bestSh[5] >= 0.5 && !want[5]) || (bestSh[6] >= 0.5 && !want[6]) || (bestSh[10] >= 0.5 && !want[10])) && rng.chance(0.6)) return null;
     // The starter band's foils (no dotted line, no search-only foil, all from one small box) tend to
     // share what the key lacks, leaving the key the odd one out: there every lopsided set is dropped.
-    if (best && strict && bestSh.some(function (x) { return x >= STRICT_MAX; })) return null;
+    // (the solvers added on 22 Nov stay out of the band's choice: in most band boxes no wrong drawing that the
+    // band allows has as many line pieces as the key, and the outright rule left the band no set at all; DECISIONS)
+    if (best && strict && bestSh.some(function (x, k) { return (k < 11 || k > 14) && x >= STRICT_MAX; })) return null;
     return best;
   }
 
@@ -1705,7 +1719,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [337167328, 1869791245, 968252950, 1422305051, 242981060, 2398888743];
+  var TUTORIAL = [337167328, 1869791245, 968252950, 3846313730, 242981060, 892970417];
   function stemSig(item) { return PX.rng.hash('patviews-stem', JSON.stringify([item.missing, Object.keys(item.given).sort().map(function (v) { return [v, item.given[v].segs]; })])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params), sig;
@@ -1824,7 +1838,7 @@
       sameGrid: sameGrid, pub: pub, grid: grid, counts: counts, gdist: gdist, kindOf: kindOf, hullFails: hullFails, alignFails: alignFails,
       lineSet: lineSet, crossStyles: crossStyles, pairV: pairV, search: search, searchRay: searchRay, possibleViews: possibleViews, neighbours: neighbours,
       flips: flips, shares: shares, pickShare: pickShare, gdistLines: gdistLines, build: build, fallback: fallback, cleanParams: cleanParams,
-      cubeCount: cubeCount, bandBox: bandBox, bandStructure: bandStructure,
+      cubeCount: cubeCount, bandBox: bandBox, bandStructure: bandStructure, pieces: pieces,
       // profile solids (version 3)
       NCUBE: NCUBE, NOBJ: NOBJ, LEVEL_TAGS: LEVEL_TAGS, SOLID_KINDS: SOLID_KINDS, SOLID_LABELS: SOLID_LABELS, PLANE: PLANE, VAX: VAX,
       drawSolid: drawSolid, axisView: axisView, solidEdges: solidEdges, rayIn: rayIn, inSolid: inSolid, drawDiff: drawDiff, outlineOf: outlineOf,

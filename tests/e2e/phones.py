@@ -276,7 +276,7 @@ def part_holes(b, sizes=((360, 640), (390, 844), (412, 915), (844, 390), (1366, 
         touch = w < 1000
         ctx, page, errs = open_app(b, w, h, touch=touch)
         for folds in (0, 1, 2):
-            params = {'folds': folds, 'type': 0, 'idle': 0}
+            params = {'folds': folds, 'type': 0, 'idle': 0, 'sheets': 0}  # version 3's 'sheets' dim (W1-band-B, granted)
             if not C.ok(free_item(page, 'patfold', params), f'holes {w}x{h} folds {folds}: an item'):
                 continue
             page.wait_for_timeout(300)
@@ -290,7 +290,7 @@ def part_holes(b, sizes=((360, 640), (390, 844), (412, 915), (844, 390), (1366, 
                 C.ok(not m['scrolls'] and m['lowest'] <= h + 1, f'holes {w}x{h} folds {folds}: the item fits without a scroll ({m})')
             if (w, h) != (360, 640):  # 360 x 640 keeps v1.1's sizes (two rows of options leave no more room)
                 C.ok(min(m['panels']) >= 110, f'holes {w}x{h} folds {folds}: each panel is 110 px or more ({m["panels"]})')
-        if touch and free_item(page, 'patfold', {'folds': 1, 'type': 0, 'idle': 0}):
+        if touch and free_item(page, 'patfold', {'folds': 1, 'type': 0, 'idle': 0, 'sheets': 0}):
             # show me's single large sheet has a size on every phone (it was 0 px wide sideways)
             big = show_me_steps(page, f'holes_{w}x{h}_showme', max_s=12, shots=(w, h) == (844, 390),
                                 measure=lambda pg: pg.evaluate("(() => { const e = [...document.querySelectorAll('.pl-trial .ex-patfold-big .ex-patfold-svg')].find(x => x.getBoundingClientRect().height > 0); return e ? Math.round(e.getBoundingClientRect().width) : 0; })()"))

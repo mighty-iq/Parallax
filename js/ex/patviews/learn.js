@@ -35,8 +35,10 @@
     practice: [
       { params: { cubes: 0, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, assist: { proj: true }, seed: 100 },
       { params: { cubes: 0, grid: 0, missing: 1, foil: 0, task: 'tutorial' }, seed: 202 },
-      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'hidden', seed: 300, example: { seed: 3 } },
-      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'search', seed: 401 },
+      // v1.2 (22 Nov, RV-items-1.2 H2, M5: the cube stacks' foil choice changed): Try 3 and 4 on new seeds, so the
+      // answers sit in four places
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'hidden', seed: 14, example: { seed: 3 } },
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'search', seed: 9 },
     ],
     tips: [
       { id: 'shown', when: { dim: 'cubes', levels: [0] }, text: 'Starter items: the structure is drawn beside the views. Look at it from the missing side, then check the lines against the given views.' },
@@ -90,6 +92,7 @@
       },
     ],
     captions: {
+      helpStops: 'The structure is no longer drawn: build it from the two views.',
       views: 'Two views are given; the third slot is empty.',
       slot: 'The missing view goes here, at the same scale.',
       intro: 'Two views are given; the missing one goes in the slot, at the same scale. One of the four drawings fits.',

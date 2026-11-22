@@ -721,12 +721,16 @@
   var BAND_MAX = 5; // no size grows past this (the pictures' common scale)
   function classCount(s) { var c = {}; shapeClasses(s).forEach(function (k) { c[k] = 1; }); return Object.keys(c).length; }
   function bandRatioOk(r, foil) { var b = BAND_RATIO[foil]; return r >= b[0] - 1e-9 && (foil === 0 ? r <= b[1] + 1e-9 : r < b[1] - 1e-9); }
+  // v1.2 (RV-items-1.2 M4): larger or smaller as often (larger sizes had more candidates, so the pattern's size was
+  // mostly the smaller, and "the smallest solid" found the key's pair 46 % of the time on L-, T- and U-prisms)
   function stretchedBand(rng, s, foil) {
+    var up = rng.chance(0.5);
     for (var t = 0; t < 8; t++) {
       var i = rint(rng, 0, s.kind === 'frus' ? 2 : s.dims.length - 1), d0 = s.dims[i], cand = [];
+      if (t === 4) up = !up; // no room that way: the other way
       for (var k = -10; k <= 10; k++) {
         var dd = d0 + k / 2;
-        if (k && dd >= 1 && dd <= BAND_MAX && bandRatioOk(Mth.max(dd, d0) / Mth.min(dd, d0), foil)) cand.push(dd);
+        if (k && (k > 0) === up && dd >= 1 && dd <= BAND_MAX && bandRatioOk(Mth.max(dd, d0) / Mth.min(dd, d0), foil)) cand.push(dd);
       }
       if (!cand.length) continue;
       var d = s.dims.slice();
@@ -832,12 +836,18 @@
     for (var i = 0; i < a.dims.length; i++) d += Mth.abs(Mth.log(a.dims[i] / b.dims[i]));
     return d;
   }
-  var PLAIN_SOLVERS = ['largest solid', 'smallest solid', 'most faces seen', 'fewest faces seen', 'most like the others in size', 'least like the others in size'];
+  // v1.2 (RV-items-1.2 M4): and the longest edge, shortest or longest (38-43 % at the plain kind while only volumes
+  // were held)
+  var PLAIN_SOLVERS = ['largest solid', 'smallest solid', 'most faces seen', 'fewest faces seen', 'most like the others in size', 'least like the others in size',
+    'shortest longest edge', 'longest longest edge'];
   function plainShares(F) {
     var sum = F.map(function (a) { var t = 0; F.forEach(function (b) { t += sizeDist(a, b); }); return t; });
     function col(k) { return F.map(function (x) { return x[k]; }); }
-    return [pickShare(col('vol'), true), pickShare(col('vol'), false), pickShare(col('seen'), true), pickShare(col('seen'), false), pickShare(sum, false), pickShare(sum, true)];
+    var mx = F.map(function (x) { return Mth.max.apply(null, x.dims); });
+    return [pickShare(col('vol'), true), pickShare(col('vol'), false), pickShare(col('seen'), true), pickShare(col('seen'), false), pickShare(sum, false), pickShare(sum, true),
+      pickShare(mx, false), pickShare(mx, true)];
   }
+  var PLAIN_W = [1, 1, 1, 1, 1, 1, 1.6, 1.2];
   function buildPlain(rng, p) {
     var kind = rpick(rng, KINDS[p.solid]), S = build(kind, randomDims(rng, kind)), net = null;
     for (var t = 0; t < 12 && !net; t++) net = unfold(rng, S, true);
@@ -877,7 +887,7 @@
         if (nSame !== 1 || ot.length !== 2 || !pairedSizes(ot[0].solid, ot[1].solid)) continue;
       }
       var sh = plainShares([kf].concat(tri.map(function (x) { return pf[x]; }))), score = 0;
-      for (var q = 0; q < sh.length; q++) score += Mth.abs(sh[q] - want[q]);
+      for (var q = 0; q < sh.length; q++) score += PLAIN_W[q] * Mth.abs(sh[q] - want[q]);
       if (score < bestScore - 1e-9) { bestScore = score; best = set; }
     }
     if (!best) { stats.noSet++; return null; }
@@ -1430,7 +1440,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [1543916583, 3094203016, 203963846, 2157057468, 3655275672, 580503644];
+  var TUTORIAL = [1543916583, 3094203016, 203963846, 3870123101, 3655275672, 2728848427];
   function stemSig(item) { return PX.rng.hash('form-stem', JSON.stringify([item.solid.kind, item.solid.verts, item.net, item.marks])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params), sig;

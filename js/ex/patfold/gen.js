@@ -72,8 +72,9 @@
   var TYPES = ['half', 'corner', 'diagonal', 'mixed'];
   var IDLE = [0, 1, 2];
   // dim 'sheets' (version 3; note D1 addendum A.1 row 5): as on the official samples, wrong sheets may
-  // have another hole count (a fold not undone, a hole missed, an extra hole or layer), two of the four
-  // keep the key's count so a full unfold still decides; 1.1's "every sheet at the key's count" stays as
+  // have another hole count (a fold not undone, a hole missed, an extra hole or layer), two or three of the
+  // four keep the key's count so a full unfold still decides (always two until RV-items-1.2 L2: the key's count
+  // was then always the most common); 1.1's "every sheet at the key's count" stays as
   // the harder level, beyond the official samples. Counting the layers under the punch is the format's
   // own method there (reported, DECISIONS); the naive counts stay within chance + 10.
   var SHEETS = ['counts may differ', 'all at the key\'s count'], SHEETS_AT = [-0.4, 0];
@@ -167,6 +168,20 @@
       }
     }
     for (var q = 1; q <= 3; q++) add(ctx.key.map(function (c) { return turnCell(c, q); }), 'the answer turned');
+    // v1.2 (RV-items-1.2 H1): where every true hole has the punch cell's checkerboard colour (diagonal creases
+    // keep a cell's colour), the pool held about two sheets that share it; a hole one cell off along a diagonal
+    // (any hole but the punch's) keeps both the colour and the hole under the punch
+    var col = (P[0] + P[1]) % 2;
+    if (ctx.key.every(function (c) { return (c[0] + c[1]) % 2 === col; })) {
+      ctx.key.forEach(function (c, ci) {
+        if (c[0] === P[0] && c[1] === P[1]) return;
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (d) {
+          var nc = [c[0] + d[0], c[1] + d[1]];
+          if (nc[0] < 0 || nc[1] < 0 || nc[0] >= SIZE || nc[1] >= SIZE) return;
+          add(ctx.key.map(function (x, xi) { return xi === ci ? nc : x; }), 'a hole one cell off');
+        });
+      });
+    }
     if (diffNow) diffPool(ctx, pool, seen);
     return pool;
   }
@@ -218,14 +233,37 @@
     return [above, above + tie];
   }
 
+  // v1.2 (RV-items-1.2 H1, L2): cues on where the holes sit that need no folding, each held at a random target
+  // rank for the key (both directions): the share of holes on the punch cell's checkerboard colour (a crease on
+  // a diagonal keeps a cell's colour, so with diagonal folds every true hole has it: there as many foils as
+  // possible share it, as the hole under the punch is shared), how one-coloured a sheet is, how far the holes'
+  // centre lies from the sheet's centre, how many holes touch side by side, and how far they spread.
+  var NCUE = 5, CUE_W = [1.2, 1, 1.2, 1.2, 1], W_COLOUR = 10, W_TWIN = 1, W_SYM = 1.5;
+  function cueVals(cells, P) {
+    var n = cells.length, on = 0, even = 0, cx = 0, cy = 0, adj = 0, x0 = INF, x1 = -INF, y0 = INF, y1 = -INF, has = {};
+    cells.forEach(function (c) { has[c[0] + ',' + c[1]] = 1; });
+    cells.forEach(function (c) {
+      if ((c[0] + c[1]) % 2 === (P[0] + P[1]) % 2) on++;
+      if ((c[0] + c[1]) % 2 === 0) even++;
+      cx += c[0] + 0.5; cy += c[1] + 0.5;
+      if (has[(c[0] + 1) + ',' + c[1]]) adj++;
+      if (has[c[0] + ',' + (c[1] + 1)]) adj++;
+      if (c[0] < x0) x0 = c[0]; if (c[0] > x1) x1 = c[0]; if (c[1] < y0) y0 = c[1]; if (c[1] > y1) y1 = c[1];
+    });
+    var h = SIZE / 2;
+    return [on / n, Math.max(even, n - even) / n, Math.round(Math.hypot(cx / n - h, cy / n - h) * 1e6) / 1e6, adj, (x1 - x0) + (y1 - y0)];
+  }
+
   function selectFoils(r, keyCells, keyMask, pool, nf, line1, relaxed, punchMask) {
     var A = api;
     if (pool.length < nf) return null;
-    var K = features(A, keyMask, line1, punchMask);
+    var K = features(A, keyMask, line1, punchMask), P0 = A.maskCells(punchMask)[0], KC = cueVals(keyCells, P0);
     pool.forEach(function (f) {
       var ft = features(A, f.mask, line1, punchMask);
       f.s1 = ft.s1; f.sa = ft.sa; f.up = ft.up;
       f.dk = A.hamming(f.mask, keyMask);
+      f.cv = cueVals(A.maskCells(f.mask), P0);
+      f.n = A.popcount(f.mask[0]) + A.popcount(f.mask[1]);
     });
     // Random target ranks (0 = the key scores best) for the rank heuristics; capped ones (the key
     // already has the largest possible score: the hole under the punch, full symmetry) want as
@@ -234,10 +272,15 @@
     // the capped heuristics compete for the three foils (one fold that matters), a random tilt
     // decides which one gets the extra tie, so neither is favoured over the pool.
     var tc = rint(r, nf + 1), ts1 = rint(r, nf + 1), tsa = rint(r, nf + 1), tilt = rint(r, 2) * 0.6, tmost = rint(r, nf + 1), tfew = rint(r, nf + 1);
+    var tq = [], tcc = rint(r, nf + 1), ttw = rint(r, nf + 1);
+    for (var qi = 0; qi < NCUE; qi++) tq.push(rint(r, nf + 1));
+    // where counts may differ, one or two wrong sheets have another count (v1.2, RV-items-1.2 L2: with always two,
+    // the key's count was always the most common one, a third of the time right; one sheet off, three in five)
+    var ndWant = diffNow ? (r.next() < 0.6 ? 1 : 2) : 0;
     var nKey = keyCells.length, diffs = pool.filter(function (f) { return f.diff; }).length;
-    if (diffNow && (diffs < 2 || pool.length - diffs < 2)) return null;
+    if (diffNow && (diffs < ndWant || pool.length - diffs < nf - ndWant)) return null;
     var cap1 = K.s1 > 1 - EPS, capA = K.sa > 1 - EPS;
-    var wU = 12 + tilt, wS = 12.6 - tilt;
+    var wU = 20 + tilt, wS = 20.6 - tilt;
     var best = null, bestCost = INF, n = pool.length, idx = new Array(nf);
     var tries = n <= 9 ? 240 : diffNow ? 900 : 600;
     for (var t = 0; t < tries; t++) {
@@ -250,11 +293,11 @@
       var opt = idx.map(function (i2) { return pool[i2]; });
       var nd = 0;
       for (q = 0; q < nf; q++) if (opt[q].diff) nd++;
-      if (nd !== (diffNow ? 2 : 0)) continue; // counts may differ: two wrong sheets at the key's count, two not
+      if (nd !== ndWant) continue; // counts may differ: one to three wrong sheets with another count
       // total Hamming distance of every option to the others ("most like the others")
-      var tot = [0], q2, w2;
-      for (q2 = 0; q2 < nf; q2++) { tot[0] += opt[q2].dk; tot.push(opt[q2].dk); }
-      for (q2 = 0; q2 < nf; q2++) for (w2 = q2 + 1; w2 < nf; w2++) { var d = A.hamming(opt[q2].mask, opt[w2].mask); tot[q2 + 1] += d; tot[w2 + 1] += d; }
+      var tot = [0], near = [INF], q2, w2;
+      for (q2 = 0; q2 < nf; q2++) { tot[0] += opt[q2].dk; tot.push(opt[q2].dk); near[0] = Math.min(near[0], opt[q2].dk); near.push(opt[q2].dk); }
+      for (q2 = 0; q2 < nf; q2++) for (w2 = q2 + 1; w2 < nf; w2++) { var d = A.hamming(opt[q2].mask, opt[w2].mask); tot[q2 + 1] += d; tot[w2 + 1] += d; if (d < near[q2 + 1]) near[q2 + 1] = d; if (d < near[w2 + 1]) near[w2 + 1] = d; }
       var below = 0, tie = 0;
       for (q2 = 1; q2 <= nf; q2++) { if (tot[q2] < tot[0]) below++; else if (tot[q2] === tot[0]) tie++; }
       var r1 = rankRange(K.s1, opt.map(function (f) { return f.s1; }));
@@ -273,9 +316,24 @@
         var rm = rankRange(nKey, c), rf = rankRange(-nKey, c.map(function (x) { return -x; }));
         return rankCost(tmost, rm[0], rm[1]) + rankCost(tfew, rf[0], rf[1]);
       })() : 0;
-      var cost = cnt + rankCost(tc, below, below + tie)
-        + (bandNow ? 0 : cap1 ? wS / (1 + r1[1]) : rankCost(ts1, r1[0], r1[1]))
-        + (capA ? wS / (1 + ra[1]) : rankCost(tsa, ra[0], ra[1]))
+      var cue = 0, cueCap = 0;
+      for (var ci = 0; ci < NCUE; ci++) {
+        var cv = opt.map(function (f) { return f.cv[ci]; });
+        if (ci < 2 && KC[ci] > 1 - EPS) { var same1 = 0; for (q2 = 0; q2 < nf; q2++) if (cv[q2] > 1 - EPS) same1++; cueCap += (ci ? CUE_W[ci] * 4 : W_COLOUR) / (1 + same1); }
+        else { var rc = rankRange(KC[ci], cv); cue += CUE_W[ci] * rankCost(tq[ci], rc[0], rc[1]); }
+      }
+      // the sheet with the nearest neighbour ("it has a twin"): the key, a near miss of every foil, had it
+      var rtw = rankRange(-near[0], near.slice(1).map(function (x) { return -x; }));
+      cue += W_TWIN * rankCost(ttw, rtw[0], rtw[1]);
+      if (diffNow) { // how many sheets share each count
+        var cs = {}; cs[nKey] = 1;
+        for (q2 = 0; q2 < nf; q2++) cs[opt[q2].n] = (cs[opt[q2].n] || 0) + 1;
+        var rcc = rankRange(cs[nKey], opt.map(function (f) { return cs[f.n]; }));
+        cue += 1.5 * rankCost(tcc, rcc[0], rcc[1]);
+      }
+      var cost = cueCap + (bandNow ? 0.6 : 1) * cue + cnt + rankCost(tc, below, below + tie)
+        + (bandNow ? 0 : cap1 ? wS / (1 + r1[1]) : W_SYM * rankCost(ts1, r1[0], r1[1]))
+        + (capA ? wS / (1 + ra[1]) : W_SYM * rankCost(tsa, ra[0], ra[1]))
         + wU / (1 + ups);
       if (cost < bestCost - EPS) { bestCost = cost; best = opt; }
     }
@@ -323,7 +381,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [1013064581, 667686021, 256731889, 2839566138, 248429863, 1197173088];
+  var TUTORIAL = [1013064581, 667686021, 3477199578, 240767694, 1471884249, 1236946097];
   function stemSig(item) { return PX.rng.hash('patfold-stem', JSON.stringify([item.folds.map(function (f) { return [f.line, f.seg]; }), item.punches])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params), sig;
@@ -386,7 +444,7 @@
       }
     }
     if (item.holes !== item.options[item.key].length) return 'hole count';
-    // dim 'sheets': all at the key's count, or two wrong sheets at it and two with another count. A sheet
+    // dim 'sheets': all at the key's count, or two or three wrong sheets at it and the rest with another count. A sheet
     // with another count cannot be the true holes (Fold's check below proves the key's count is theirs);
     // here it must lie on the 16 positions without repeats and differ from every other sheet.
     var same = [], seenS = {};
@@ -397,7 +455,7 @@
       seenS[key2] = o2 + 1;
       if (cells.length === item.holes) same.push(o2);
     }
-    if (sheets === 1 ? same.length !== NOPT : same.length !== 3) return sheets === 1 ? 'every sheet at the key\'s count' : 'two wrong sheets at the key\'s count and two with another count';
+    if (sheets === 1 ? same.length !== NOPT : same.length < 3 || same.length > 4) return sheets === 1 ? 'every sheet at the key\'s count' : 'two or three wrong sheets at the key\'s count, the rest with another count';
     // Fold's independent re-simulation on 4·16 triangles: legal folds of the stated classes, one
     // piece, a clean punch through whole cells, the folds that matter, exactly one option equal to
     // the true holes (the key), every option it is given with that count, options pairwise different,

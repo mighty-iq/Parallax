@@ -304,6 +304,10 @@ function itemScores(L, it, p) {
   const pairs = [[it.W, it.H], [it.W, it.D], [it.D, it.H]];
   add('box fits the solid', shareOf(dims.map(([w, h]) => (pairs.some(([a, b]) => (a === w && b === h) || (a === h && b === w)) ? 1 : 0)), key, true), true);
   add('squarest box', shareOf(dims.map(([w, h]) => -Math.abs(w - h)), key, true), true);
+  // v1.2 (RV-items-1.2 H4): the share of its box an opening fills
+  const fill = area.map((a, i) => Math.round(1e6 * a / (R[i].w * R[i].h)));
+  add('least cut away', shareOf(fill, key, true), true);
+  add('most cut away', shareOf(fill, key, false), true);
   // Counting with the solid in view (review RV-dat-style-B §2): corners of each face outline, the most
   // featured faces (ties: each as likely), and the box as well (reported only: comparing corners and
   // then proportions is the format's analytic method, which the strategy card teaches).
@@ -450,7 +454,9 @@ function testLearn(t, PX, def) {
   t.ok(Array.isArray(L.demo) && L.demo.length >= 1 && L.demo.every((d) => valid(d.params) && Number.isInteger(d.seed)), 'demo items with valid params');
   const demoItem = def.generate(PX.rng(L.demo[0].seed), L.demo[0].params);
   t.ok(def.validate(demoItem) === true && !demoItem.fallback, `demo seed ${L.demo[0].seed} gives a valid item`);
-  t.ok(PX.ex.difficulty(def, L.demo[0].params) === PX.ex.minDifficulty(def), 'the Watch is at the starter band (the easiest level)');
+  // v1.2 (desktop fresh-player run, 22 Nov): the Watch turns its outline, so the turn is shown before Try
+  t.ok(L.demo[0].params.features === 0 && L.demo[0].params.turn === 1 && demoItem.options[demoItem.key].tf !== lib.seenTf(demoItem.pose, demoItem.keyAxis) && (demoItem.options[demoItem.key].tf < 4) === (lib.seenTf(demoItem.pose, demoItem.keyAxis) < 4),
+    'the Watch is at the starter band, its opening turned a quarter (it shows the turn)');
   t.ok(Array.isArray(L.practice) && L.practice.length === 4 && L.practice.every((e) => e && valid(e.params) && Number.isInteger(e.seed)), 'four Try items, each { params, seed }');
   if (!Array.isArray(L.practice) || L.practice.length !== 4) return;
   const P = L.practice.map((e) => e.params), items = L.practice.map((e) => def.generate(PX.rng(e.seed), e.params));
@@ -460,6 +466,7 @@ function testLearn(t, PX, def) {
     `Try 3 (turned openings) comes after a worked example on a sister item whose opening is turned, not flipped (seed ${exE && exE.seed}, turn ${xe && xe.options[xe.key].tf})`);
   t.ok(items.every((it) => def.validate(it) === true && !it.fallback), 'every Try item is valid and no fallback');
   t.ok(P[0].features === 0 && P[1].features === 0, 'Try 1 and Try 2 are at the starter band');
+  t.ok(P[0].turn === 0 && P[1].turn === 1 && L.practice[1].tip === 'turned' && items[1].options[items[1].key].tf !== lib.seenTf(items[1].pose, items[1].keyAxis), 'Try 1 as seen, Try 2 turned (one feature, with its tip)');
   t.eq(P[2], { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 1, task: 'tutorial' }, 'Try 3: two in all, openings turned (version 3)');
   t.ok(P[3].features === 1 && P[3].turn === 2 && L.practice[3].tip === 'flipped', 'Try 4: openings turned or flipped, with its tip');
   t.ok((items[3].options[items[3].key].tf < 4) !== (lib.seenTf(items[3].pose, items[3].keyAxis) < 4), 'Try 4\'s key opening is flipped (the new feature)');
@@ -487,7 +494,7 @@ function testLearn(t, PX, def) {
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
   t.eq(L.strategies.find((x) => x.id === L.strategyFirst).steps.length, 3, 'the first card has three steps');
-  const caps = ['lead', 'turn', 'spin', 'straight', 'land', 'assist', 'whyFeature', 'whyFace', 'whyProportion'];
+  const caps = ['lead', 'turn', 'spin', 'spinFlip', 'straight', 'land', 'assist', 'whyFeature', 'whyFace', 'whyProportion'];
   t.ok(caps.every((k) => typeof (L.captions || {})[k] === 'string' && L.captions[k].length > 5), 'every caption the view plays is there');
   const all = JSON.stringify(L);
   t.ok(all.includes(ADA), 'the ADA line sits wherever the DAT is named');

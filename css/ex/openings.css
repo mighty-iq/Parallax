@@ -101,3 +101,8 @@
 .ex-openings .op-stem.op-plain .op-stage { background: var(--plate, #FFFFFF); border: 1px solid var(--plate-frame, #9AA1A7); }
 /* The opening's letter (A–E) stays above the drawing, on a chip of the cell's ground. */
 .ex-openings .px-choice .px-choice-key { position: absolute; z-index: 2; padding: 0 0.15rem; border-radius: 2px; background: var(--stim-ground, #F4F5F3); }
+
+/* v1.2 (desktop fresh-player run, 22 Nov: show me's flight drew a solid black copy over the figure and the caption):
+   the outline that flies from the solid to its opening is drawn like the trace. Its SVG sits on the page (view.js
+   flyAt: fixed, above everything), outside .ex-openings, so this one rule is not scoped to it. */
+.op-fly .op-fly-path { fill: var(--stim-target, #0B6A86); fill-opacity: 0.16; stroke: var(--stim-target, #0B6A86); stroke-width: 3px; stroke-linejoin: round; }

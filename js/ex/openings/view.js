@@ -411,7 +411,7 @@
       // (2-4 s a movement, as the exercise guide sets: the turn is what the turned levels teach)
       var r = tn.n ? 1 : 0, f = tn.flip ? 1 : 0, kr = r / (r + f);
       list.push({
-        ms: 1300 * (r + f) + 900, caption: cap('spin'),
+        ms: 1300 * (r + f) + 900, caption: cap(f ? 'spinFlip' : 'spin'),
         enter: function () { reset(); straight(); st.spinA = outlinePage(item); st.spinC = centreOf(st.spinA); inkPage(st.spinA, 1); },
         update: function (k) {
           var u = Math.min(1, k * 1.25), a = kr ? ease(Math.min(1, u / kr)) : 1, b = f ? ease(U.clamp((u - kr) / (1 - kr), 0, 1)) : 0;

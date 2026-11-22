@@ -106,9 +106,16 @@
     if (lib.cleanParams(item.params).cubes === 0) { // the starter band: the structure, drawn and labelled
       var fr = Lo.free, sg = SV.el('g', { class: 'pv-shown' });
       sg.appendChild(isoGroup(item, { x: fr.x, y: fr.y + 16, w: fr.w, h: fr.h - 20 }));
-      sg.appendChild(SV.text(fr.x + fr.w / 2, fr.y + 8, cap('shown'), { class: 'pv-label pv-label--shown' }));
+      var lt = SV.text(fr.x + fr.w / 2, fr.y + 8, cap('shown'), { class: 'pv-label pv-label--shown' });
+      sg.appendChild(lt);
       svg.appendChild(sg);
       st.shown = sg;
+      // v1.2 (fresh-player run on a 390 px phone: "TOP" and "THE STRUCTURE" touched): the label moves right of
+      // the top view's label, as far as the stage allows
+      try {
+        var tl = st.groups.top && st.groups.top.querySelector('.pv-label'), tb = tl && tl.getBBox(), lb = lt.getBBox();
+        if (tb && lb.width && lb.x < tb.x + tb.width + 10) lt.setAttribute('x', Math.min(tb.x + tb.width + 10 + lb.width / 2, Wpx - 4 - lb.width / 2));
+      } catch (e) { /* not laid out (no layout engine) */ }
     } else st.shown = null;
     if (st.assist && st.assist.proj) svg.appendChild(SV.el('path', { d: projectors(item).join(''), class: 'pv-proj pv-proj--assist' }));
     st.over = SV.el('g', { class: 'pv-over' });
@@ -165,6 +172,9 @@
   function optionLabel(item, i) { return 'Drawing ' + nm(i); }
   function gridCols() { return 4; }
 
+  // v1.2 (fresh-player run, 19 Nov: in scored items the drawn structure stopped with no word): the item after a
+  // starter one says in a line that the structure is no longer drawn (Try says it in its tip)
+  var lastShown = null;
   function present(item, ctx) {
     if (!st) mount(ctx);
     newItem(item);
@@ -175,7 +185,10 @@
     st.desc.textContent = describe(item);
     st.assist = ctx && ctx.assist && ctx.assist.proj ? ctx.assist : null;
     drawStem(item);
+    var shown = lib.cleanParams(item.params).cubes === 0, tut = !!(item.params && item.params.task === 'tutorial');
     if (st.assist) st.caption.textContent = cap('assist', { view: item.missing });
+    else if (!shown && lastShown === true && !tut) st.caption.textContent = cap('helpStops');
+    if (!tut) lastShown = shown;
     return timing.nextPaint();
   }
 
@@ -427,8 +440,8 @@
     function S(extra) { var o = { picked: -1 }; for (var k in extra) o[k] = extra[k]; return o; }
     var side = { end: 'right', front: 'front', top: 'top' }[miss];
     var list = [
-      { ms: 1500, caption: cap('views'), enter: function () { draw(item, S({ pointed: true })); } },
-      { ms: 1100, caption: cap('slot'), enter: function () { draw(item, S({ slot: true })); } },
+      { id: 'views', ms: 1500, caption: cap('views'), enter: function () { draw(item, S({ pointed: true })); } },
+      { id: 'slot', ms: 1100, caption: cap('slot'), enter: function () { draw(item, S({ slot: true })); } },
       { ms: 1400 + 110 * projectors(item).length, caption: cap('project', { view: miss }), enter: function () { draw(item, S({ proj: 0.001, slot: true })); }, update: function (k) { draw(item, S({ proj: Math.max(0.001, k), slot: true })); } },
       // 2/3: the structure turns in sight to the missing side (Keehner et al. 2008: the informative view);
       // a solid is drawn in the corner as the two views fix it
@@ -447,7 +460,7 @@
     if (picked >= 0) {
       var why = item.options[picked].why, kind = item.options[picked].kind;
       var whyCap = item.solid ? (kind === 'outline' ? 'whyOutline' : kind === 'dashes' ? 'whyDashes' : 'whyLines') : why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch';
-      list.push({ ms: 3200, caption: cap(whyCap, { n: nm(picked) }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
+      list.push({ id: 'why', ms: 3200, caption: cap(whyCap, { n: nm(picked) }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
     }
     return list;
   }
@@ -486,10 +499,13 @@
       if (r.top < 0 || r.bottom > vh) st.stage.scrollIntoView({ block: 'start', behavior: ctx && (ctx.fast || ctx.reducedMotion) ? 'auto' : 'smooth' });
     } catch (e) { /* not fatal */ }
   }
+  // v1.2 (fresh-player run, 19 Nov: after an answer the strip's first caption only said that two views are given):
+  // after an answer show me leaves out the stem's tour (the two views, the empty slot), which stays in the Watch,
+  // and starts with the lines the given views send into the slot
   function showMe(item, response, ctx) {
     if (!st || st.item !== item) return Promise.resolve();
     revealStage(ctx);
-    return play(steps(item, response), ctx, { name: 'show-me' });
+    return play(steps(item, response).filter(function (x) { return x.id !== 'views' && x.id !== 'slot'; }), ctx, { name: 'show-me' });
   }
   // The Watch (v1.2: each caption waits for a tap in the player, so few of them): the views, the slot and
   // the drawings under one caption; the card's three steps, the drawing laid in the slot under the

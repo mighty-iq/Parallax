@@ -229,6 +229,7 @@
     if (/hole missed/.test(w)) return 'Hole missed';
     if (/extra hole/.test(w)) return 'Extra hole';
     if (/layer counted/.test(w)) return 'Extra layer';
+    if (/one cell off/.test(w)) return 'Hole moved';
     if (/one cell away|another place/.test(w)) return 'Punch moved';
     if (/turned/.test(w)) return 'Turned';
     if (/mirrored/.test(w)) return 'Mirrored';

@@ -8,11 +8,13 @@
 
   PX.ex.learn('openings', {
     goal: 'Which opening would the solid pass through, turned the right way and with nothing to spare?',
+    // v1.2 (desktop fresh-player run, 22 Nov: on a wide screen the parts run as one legend, and these four ran
+    // to four crammed lines above the figure): each part in a line or so
     parts: [
-      { id: 'solid', label: 'Solid', text: 'A block with notches, steps and slanted cuts. Every cut runs straight through it, so what you see on one face continues to the opposite face.' },
-      { id: 'rules', label: 'Rules', text: 'The solid may be turned any way before it goes in. Then it slides straight through without turning, so the opening is its outline seen along that direction.' },
-      { id: 'fit', label: 'Exact fit', text: 'An opening must match the outline exactly. The openings are drawn at the same scale as the solid, so one that is too large or too small is wrong.' },
-      { id: 'options', label: 'Openings', text: 'Five openings, A to E. First they are drawn the way their face is seen, then turned, then turned or flipped. Exactly one fits. Tap it or press its letter (A–E; 1–5 work too).' },
+      { id: 'solid', label: 'Solid', text: 'A block with notches, steps and slanted cuts; every cut runs straight through it.' },
+      { id: 'rules', label: 'Rules', text: 'Turn it any way, then push it straight through: the opening is its outline from that side.' },
+      { id: 'fit', label: 'Exact fit', text: 'Same shape, same size: the openings are drawn at the solid\'s scale.' },
+      { id: 'options', label: 'Openings', text: 'Five, A to E, maybe turned or flipped; exactly one fits. Tap it or press its letter (A–E; 1–5 work too).' },
     ],
     // Teaching template (v1.2; CONTRACT-v1.2 D, note D2 §3.0 C and §3.4): the rules card first, the
     // Watch at the starter band (one feature, openings drawn as the face is seen), the strategy card
@@ -25,20 +27,22 @@
     strategyFirst: 'analytic',
     minutes: 3,
     // the Watch goes in side first (fresh-player test: which face leads was unclear); Try 1 goes in front
-    // first, Try 2 side first
-    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 0, task: 'tutorial' }, seed: 39, kind: 'side' }],
-    // Try 3 brings two features and turned openings, after a worked example of a quarter-turned one on a
-    // sister item (note D2 addendum C change 4); Try 4 openings turned or flipped (version 3: dim 'turn').
+    // first, Try 2 side first. v1.2 (desktop fresh-player run, 22 Nov: turning the outline was first met in Try 3,
+    // and Try 3 and 4 went wrong): the Watch's opening is turned a quarter, so its second step turns the outline,
+    // and Try 2 practises the turn on one feature with its tip.
+    demo: [{ params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 1, task: 'tutorial' }, seed: 2, kind: 'side' }],
+    // Try 3 brings two features (turned openings), after a worked example of a quarter-turned one on a sister item
+    // (note D2 addendum C change 4); Try 4 openings turned or flipped (version 3: dim 'turn').
     practice: [
       { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 0, task: 'tutorial' }, assist: { trace: true }, seed: 104 },
-      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 0, task: 'tutorial' }, seed: 239 },
-      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 1, task: 'tutorial' }, tip: 'turned', seed: 1, example: { seed: 3 } },
-      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 2, task: 'tutorial' }, tip: 'flipped', seed: 400 },
+      { params: { features: 0, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 1, task: 'tutorial' }, tip: 'turned', seed: 14 },
+      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 1, task: 'tutorial' }, tip: 'two', seed: 4, example: { seed: 3 } },
+      { params: { features: 1, edges: 0, keyview: 0, pose: 0, foils: 0, turn: 2, task: 'tutorial' }, tip: 'flipped', seed: 5 },
     ],
     tips: [
       { id: 'one', when: { dim: 'features', levels: [0] }, text: 'Starter items: one notch, step or cut, on one face. Find that face, then the opening with its outline.' },
       { id: 'two', when: { dim: 'features', levels: [1] }, text: 'Two features now, on two faces. Each outline shows only its own face\'s feature: trace one face at a time.' },
-      { id: 'turned', when: { dim: 'turn', levels: [1] }, text: 'From here the openings may be turned in quarter steps. Turn the outline in your mind, not the opening: same corners in the same order.' },
+      { id: 'turned', when: { dim: 'turn', levels: [1] }, text: 'The openings may be turned in quarter steps, as in the Watch. Turn the outline in your mind, not the opening: same corners in the same order.' },
       { id: 'flipped', when: { dim: 'turn', levels: [2] }, text: 'Openings may now be flipped as well as turned: the solid can go in either way round, so the mirror image of the outline fits too.' },
       { id: 'front', when: { dim: 'keyview', levels: [0] }, text: 'Start with the face nearest you: push the solid in face first and trace that face\'s outline. No fit? Try the side.' },
       { id: 'side', when: { dim: 'keyview', levels: [1] }, text: 'Any face can fit now: check the front, the side and the top outline in turn.' },
@@ -86,7 +90,8 @@
       // the Watch (v1.2: few captions, each waits for a tap): the first says that any face may go in first
       lead: '1/3 · Any face may go in first: front, side or top. Here the {face} has the cut: turned to face you, its outline is the shape to find.',
       turn: '1/3 · Pick a face: the {face}, turned to face you. Every cut runs straight through, so this face shows the whole outline.',
-      spin: '2/3 · Same corners in the same order: the outline turns and flips until it lies the way the openings are drawn.',
+      spin: '2/3 · Same corners in the same order: turn the outline until it lies the way the openings are drawn.',
+      spinFlip: '2/3 · Same corners in the same order: the outline turns and flips until it lies the way the openings are drawn.',
       straight: '2/3 · Same corners in the same order: the openings are drawn the way this face is seen, so no turn is needed.',
       land: '3/3 · Sizes last: the same shape at the same size is opening {n}.',
       assist: 'The {face} outline is traced for you.',
