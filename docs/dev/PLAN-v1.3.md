@@ -17,3 +17,4 @@ Started 2026-11-18 at the v1.2 plan. Add each item the moment it is deferred, wi
 | Rebalance Hole Punch's two- and three-fold diagonal and mixed combinations, where colour, distance from the centre and touching holes still beat chance + 10 (scoped exceptions in 1.2) | RV-items-1.2 H1 | the residual cells were accepted for 1.2 with per-cell bounds | M |
 | Move Missing View's session guard (no stem twice in a session) into the player, for every exercise with small pools | W1-band-B's request, 22 Nov | lives in js/ex/patviews for 1.2 | S |
 | Rerun the independent item review where 1.2's stopped early: Level, Word Links, an independent solver for Missing View's solids | RV-items-1.2 "not reached" | review cut short for usage | M |
+| Reckon's route 2 fold-back routes, where "the start is straight back along the last leg" beats chance + 10 in 16 of 98 cells (reported in 1.2, like v1.1's turn-only answers) | RV-items-1.2 L4 | a generator change, deferred after 1.2 | M |
