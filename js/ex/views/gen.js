@@ -46,7 +46,16 @@
    floor −2.2 → −3.8). For count and toobject the starter level is today's level 0 (same items, same
    difficulty), as the note proposes: their Watch comes with their first run.
 
-   Item: { ex: 'views', v: 2, seed, params, variant, key, grid, heights (the shown or the key structure),
+   Version 3 (22 Nov, the independent item review RV-items-1.2 M3): toview items are balanced on more
+   stem-blind solvers (the drawings' height, width and filled area both ways, the odd one out by unit
+   edges and size, the drawing nearest a twin), at every level, not only the starter level. The key is
+   no longer one random member of the family: up to KEY_TRIES members (KEY_TRIES_BAND on the starter
+   level) are tried as the key and the one whose foils come closest to the balance targets is kept. A
+   top view fits the grid, so a front or right view taller than the grid is no top-view foil (a foil the
+   outline rules out at a glance, and the reason the shortest drawing was the key). No stem twice in a
+   session: lib.sigOf and lib.fewStems (js/ex/patviews/gen.js has the guard).
+
+   Item: { ex: 'views', v: 3, seed, params, variant, key, grid, heights (the shown or the key structure),
            iso: { from: [1, 1, 1] }, view?: 'top'|'front'|'right' (toview), views?: { top, front,
            right } (toobject stem), options: toview [{ kind, drawing }] | toobject [{ kind, heights,
            matches: [view names] }] | count [numbers, ascending] }
@@ -362,15 +371,31 @@
   // low); the foils are chosen to match, misses weighted by w[k]. toview's area target depends on
   // the asked view: a top view's area always equals the number of top cells, so the best a foil set
   // can do there is a four-way tie.
-  // The starter level balances three more stem-blind solvers: its small drawings made the odd one
-  // out (by unit edges) and the smallest drawing land on the key 36 % and 33 % of the time.
-  function toviewSharesBand(set, pool, D, T) {
-    var size = set.map(function (i) { return pool[i].d.w * pool[i].d.h; });
-    return toviewShares(set, pool, D, T).concat([pickShare(sums(set, D), true), pickShare(size, false), pickShare(size, true)]);
+  // Version 2 balanced three more stem-blind solvers on the starter level only (its small drawings made the
+  // odd one out by unit edges and the smallest drawing land on the key 36 % and 33 % of the time).
+  // Version 3 (the independent item review RV-items-1.2 M3: on top views of 4 and 6 cubes the shortest
+  // drawing was the key 41–44 % and the smallest filled area 40–41 %): every toview level balances the
+  // starter level's solvers and the drawings' height, width and filled area both ways, the drawing
+  // farthest from its nearest neighbour and the one nearest a twin (unit edges, + 6 when the sizes differ).
+  // Order: toviewShares (0–3), odd one out (4), smallest and largest size (5, 6), height (7, 8), width
+  // (9, 10), filled area (11, 12), farthest from its nearest neighbour (13), nearest a twin (14).
+  function toviewSharesAll(set, pool, D, T) {
+    function of(f) { return set.map(function (i) { return f(pool[i].d); }); }
+    var near = set.map(function (a) {
+      var m = INF;
+      set.forEach(function (b) { var x = D[a][b] + (pool[a].d.w === pool[b].d.w && pool[a].d.h === pool[b].d.h ? 0 : 6); if (a !== b && x < m) m = x; });
+      return m;
+    });
+    var size = of(function (d) { return d.w * d.h; }), hh = of(function (d) { return d.h; }), ww = of(function (d) { return d.w; }), ar = of(function (d) { return d.area; });
+    return toviewShares(set, pool, D, T).concat([pickShare(sums(set, D), true), pickShare(size, false), pickShare(size, true),
+      pickShare(hh, false), pickShare(hh, true), pickShare(ww, false), pickShare(ww, true), pickShare(ar, false), pickShare(ar, true),
+      pickShare(near, true), pickShare(near, false)]);
   }
+  // The starter level weighs the narrowest drawing, the smallest filled area and the odd one out more:
+  // its pools are small (4–6 drawings), and a right view of a one-row structure is a narrow strip.
   var BAL = {
-    toview: { t: [0.25, 0.25, 0.25, 0.25], tAreaTop: 0, w: [2, 2, 1, 1.5] },
-    band: { t: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25], tAreaTop: 0, w: [2, 2, 1, 1.5, 2, 1.5, 1] },
+    toview: { t: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25], tAreaTop: 0, w: [2, 2, 1, 1.5, 2, 1.5, 1, 2, 1, 1, 1, 2, 1, 1.5, 1.5] },
+    band: { t: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25], tAreaTop: 0, w: [2, 2, 1, 1.5, 2, 1.5, 1, 2, 1, 2.5, 1, 2.5, 1, 3, 1.5] },
     toobject: { t: [0.15, 0.25, 0.25, 0.25, 0, 0, 0], w: [2, 1.5, 1.5, 1.5, 0.3, 0.3, 0.3] },
   };
   function chooseFoils(rng, pool, sharesOf, want, w) {
@@ -387,6 +412,7 @@
         }
       }
     }
+    if (best) best.score = bestScore; // how far the set is from the targets (the key search compares them)
     return best;
   }
   function table(pool, dist) {
@@ -597,8 +623,11 @@
     if (!fam) return null;
     var keys = fam.map(function (_, i) { return i; }).filter(function (i) { var n = total(fam[i]); return n >= BAND.nMin && n <= BAND.nMax; });
     if (!keys.length) return null;
-    var ki = rpick(rng, keys), h = fam[ki];
-    var keyD = view(h, dir), mirD = mirror(keyD), pool = [{ kind: 'key', d: keyD }];
+    return bestKey(rng, p, G, dir, fam, rshuffle(rng, keys), KEY_TRIES_BAND, poolBand);
+  }
+  // The key and its foils when fam[ki] is the key (null: fewer than four drawings).
+  function poolBand(rng, G, dir, fam, ki) {
+    var h = fam[ki], keyD = view(h, dir), mirD = mirror(keyD), pool = [{ kind: 'key', d: keyD }];
     function admit(o) {
       if (ddist(o.d, keyD) < 5) return false;                       // never a single-cell edit of the key's drawing
       if (ddist(o.d, mirD) < BAND.mirrorMin) return false;          // no mirror, not even in disguise
@@ -612,40 +641,57 @@
       var e = editSize(h, fam[j]);
       if (e.cols >= 2 && e.sum >= 2) admit({ kind: 'neighbour', d: view(fam[j], dir), heights: fam[j] });
     });
-    return finishToview(rng, p, G, dir, h, pool);
+    return pool.length < 4 ? null : pool;
+  }
+  // Version 3: up to `tries` family members (in `order`) are tried as the key, with one draw of the balance
+  // targets; the item whose foil set comes closest to them is kept.
+  var KEY_TRIES = 6, KEY_TRIES_BAND = 10;
+  function bestKey(rng, p, G, dir, fam, order, tries, poolOf) {
+    var B = isBand(p) ? BAL.band : BAL.toview, best = null;
+    var want = B.t.map(function (t, k) { return rng.chance(k === 0 && dir === 'top' ? B.tAreaTop : t) ? 1 : 0; });
+    for (var t = 0; t < order.length && t < tries; t++) {
+      var pool = poolOf(rng, G, dir, fam, order[t]), out = pool && finishToview(rng, p, G, dir, fam[order[t]], pool, want);
+      if (out && (!best || out.score < best.score - 1e-9)) best = out;
+    }
+    if (best) delete best.score;
+    return best;
   }
 
   function genToview(rng, p) {
     if (isBand(p)) return genToviewBand(rng, p);
     var G = GRIDS[p.grid], dir = ASKED[p.view], fam = family(rng, G, drawN(rng, p), 16);
     if (!fam) return null;
-    var ki = rint(rng, 0, fam.length - 1), h = fam[ki];
-    if (total(h) < 4 || total(h) > 12) return null;
-    var keyD = view(h, dir), pool = [{ kind: 'key', d: keyD }];
+    var order = rshuffle(rng, fam.map(function (_, i) { return i; })).filter(function (i) { var n = total(fam[i]); return n >= 4 && n <= 12; });
+    return order.length ? bestKey(rng, p, G, dir, fam, order, KEY_TRIES, poolToview) : null;
+  }
+  function poolToview(rng, G, dir, fam, ki) {
+    var h = fam[ki], keyD = view(h, dir), pool = [{ kind: 'key', d: keyD }];
     function admit(o) {
       if (ddist(o.d, keyD) < 5) return false; // never a single-cell edit of the key's drawing
       for (var i = 1; i < pool.length; i++) if (ddist(o.d, pool[i].d) < 3) return false;
       pool.push(o);
       return true;
     }
-    DIRS.forEach(function (d2) { if (d2 !== dir) admit({ kind: 'direction', from: d2, d: view(h, d2) }); });
+    // A top view fits the grid: a side view taller than the grid is no top-view foil (version 3).
+    DIRS.forEach(function (d2) { var dv = view(h, d2); if (d2 !== dir && (dir !== 'top' || dv.h <= G)) admit({ kind: 'direction', from: d2, d: dv }); });
     admit({ kind: 'mirror', d: mirror(keyD) });
     rshuffle(rng, fam.map(function (_, i) { return i; })).forEach(function (j) {
       if (j === ki || pool.length >= 14) return;
       var e = editSize(h, fam[j]);
       if (e.cols >= 2 && e.sum >= 2) admit({ kind: 'neighbour', d: view(fam[j], dir), heights: fam[j] }); // never a single-column edit
     });
-    return finishToview(rng, p, G, dir, h, pool);
+    return pool.length < 4 ? null : pool;
   }
-  // Foils chosen from the pool so the shortcut solvers land on the key about one time in four (BAL).
-  function finishToview(rng, p, G, dir, h, pool) {
+  // Foils chosen from the pool so the shortcut solvers land on the key about one time in four (BAL; want:
+  // the targets drawn for the item). The item carries score (the distance to the targets) for bestKey.
+  function finishToview(rng, p, G, dir, h, pool, want) {
     if (pool.length < 4) return null;
     pool.forEach(function (o) { o.edges = edgeCount(o.d); });
-    var D = table(pool, function (a, b) { return ddist(a.d, b.d); }), T = footprint(h), B = isBand(p) ? BAL.band : BAL.toview, shares = isBand(p) ? toviewSharesBand : toviewShares;
-    var want = B.t.map(function (t, k) { return rng.chance(k === 0 && dir === 'top' ? B.tAreaTop : t) ? 1 : 0; });
-    var set = chooseFoils(rng, pool, function (s) { return shares(s, pool, D, T); }, want, B.w);
+    var D = table(pool, function (a, b) { return ddist(a.d, b.d); }), T = footprint(h), B = isBand(p) ? BAL.band : BAL.toview;
+    var set = chooseFoils(rng, pool, function (s) { return toviewSharesAll(s, pool, D, T); }, want, B.w);
     var perm = rshuffle(rng, [0, 1, 2, 3]);
     return {
+      score: set.score,
       variant: 'toview', grid: G, heights: h, view: dir, key: perm.indexOf(0),
       options: perm.map(function (i) {
         var o = pool[set[i]], out = { kind: o.kind, drawing: pub(o.d) };
@@ -903,7 +949,7 @@
     } catch (e) { stats.errors++; stats.lastError = String(e && e.stack || e); return null; }
     if (!item) { stats.nulls++; return null; }
     item.ex = 'views';
-    item.v = 2;
+    item.v = 3;
     item.iso = { from: [1, 1, 1] };
     item.params = p;
     var ok = validate(item);
@@ -991,9 +1037,41 @@
     return out;
   }
   function generateAll(rng, params) {
-    var item = generate(rng, params);
+    var item = generateFresh(rng, params);
     return params && params.variant === DRAW ? drawItem(item) : item;
   }
+
+  /* ---------- no stem twice (version 3) ----------
+     The independent item review (RV-items-1.2 M3): toobject at 12 cubes on 3 × 3 holds about 50–110 items, so 20 of
+     them repeat one with 82–98 % probability, and 80 draws repeated a stem at 86 of 108 settings (up to 2.4 % of
+     pairs alike; the starter level most). A stem is the structure and, for toview and draw, the asked view.
+     (1) An item of the tutorial (params.task 'tutorial': the Watch and the Try items in learn.js) never comes back
+     as a rated item: a rated item whose stem is one of theirs (TUTORIAL: hashes of their stems; the node test
+     recomputes them from learn.js) is drawn again from the seed's stream. (2) A session shows no stem twice: the
+     player's guard (js/ex/patviews/gen.js sessionGuard, at item:before) runs for every exercise whose lib has
+     sigOf(seed, params); the item generated last is remembered, so the player's own item is not made twice.
+     fewStems (Section forms; Views has none) says every setting can repeat. */
+  var TUTORIAL = [1125122828, 2014630070, 365195019, 3457927770, 2022759975, 1435079534, 3375974499];
+  function stemSig(item) {
+    var v = item.variant === 'toobject' ? 'o' : item.variant === 'count' ? 'c' : 'v';
+    return PX.rng.hash('views-stem', JSON.stringify([v, item.heights, v === 'v' ? item.view : '']));
+  }
+  var lastGen = null;
+  function generateFresh(rng, params) {
+    var item = generate(rng, params), sig = stemSig(item);
+    if (!(params && params.task === 'tutorial')) {
+      for (var k = 1; k <= 8 && TUTORIAL.indexOf(sig) >= 0; k++) { item = generate(rng.fork('fresh' + k), params); item.seed = rng.seed; sig = stemSig(item); }
+    }
+    lastGen = { seed: rng.seed, params: params, sig: sig };
+    return item;
+  }
+  function sigOf(seed, params) {
+    var g = lastGen, s = PX.rng(seed).seed;
+    if (g && g.seed === s && (g.params === params || PX.ex.paramsKey(g.params) === PX.ex.paramsKey(params))) return g.sig;
+    generateFresh(PX.rng(s), params);
+    return lastGen.sig;
+  }
+  function fewStems(params) { return !!params; }
   function validateAll(item) {
     if (!item || item.produce !== DRAW) return validate(item);
     if (item.variant !== 'toview' || item.answer !== 'targets' || !item.params || item.params.variant !== DRAW) return 'draw: a toview item with produce, answer and params';
@@ -1024,7 +1102,7 @@
   /* ===== end of the 'draw' block (W2-bets) ===== */
 
   PX.ex.define({
-    id: 'views', version: 2, code: 'EX-07', name: 'Orthographic views', short: 'Views',
+    id: 'views', version: 3, code: 'EX-07', name: 'Orthographic views', short: 'Views',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', answer: 'choice', nOptions: 4,
     bet: 'produce', format: { toview: 'views:object-to-view', toobject: 'views:views-to-object', count: 'views:count-cubes', draw: 'views:object-to-drawn-view' }, // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     layers: { produce: DRAW }, // v1.2 wave 2 (W2-bets): the produce variant (block above)
@@ -1039,7 +1117,7 @@
     // v1.2 wave 2 (W2-bets): these five also serve the 'draw' variant (the block above)
     difficulty: difficultyAll,
     chance: chanceAll,
-    generate: generateAll,
+    generate: generateAll, extraParams: ['task'],
     validate: validateAll,
     score: scoreAll,
     lib: {
@@ -1049,7 +1127,8 @@
       depthImage: depthImage, drawing: drawing, view: view, mirror: mirror, ddist: ddist, edgeCount: edgeCount,
       cubesOf: cubesOf, isoOwners: isoOwners, isoFaces: isoFaces, allVisible: allVisible, isoSignature: isoSignature,
       rayImage: rayImage, voxels: voxels, imageEdges: imageEdges, linesEdges: linesEdges, edgeDiff: edgeDiff, rayVisibility: rayVisibility,
-      move: move, viewCode: viewCode, visibleStructure: visibleStructure, plateaus: plateaus, keepTop: keepTop, keepSide: keepSide, reheight: reheight, toviewShares: toviewShares, toobjectShares: toobjectShares, pickShare: pickShare,
+      move: move, viewCode: viewCode, visibleStructure: visibleStructure, plateaus: plateaus, keepTop: keepTop, keepSide: keepSide, reheight: reheight, toviewShares: toviewShares, toviewSharesAll: toviewSharesAll, toobjectShares: toobjectShares, pickShare: pickShare,
+      KEY_TRIES: KEY_TRIES, KEY_TRIES_BAND: KEY_TRIES_BAND, TUTORIAL: TUTORIAL, stemSig: stemSig, sigOf: sigOf, fewStems: fewStems, generateRaw: generate,
       genToview: genToview, genToobject: genToobject, genCount: genCount, fallback: fallback, cleanParams: cleanParams,
     },
   });

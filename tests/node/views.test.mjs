@@ -2,6 +2,7 @@
    N_ITEMS seeds spread over every level and variant (90 combinations); determinism on every 10th. */
 import { performance } from 'node:perf_hooks';
 import { MANIFEST } from './run.mjs';
+import { checkSessions } from './patviews.test.mjs';
 
 // An own context with only the files Views needs, so other exercises' work in progress
 // cannot break this test.
@@ -29,6 +30,7 @@ export async function run(t) {
   testFallback(t, PX, def, L);
   testTiming(t, PX, def);
   testLearn(t, PX, def);
+  testFresh(t);
 }
 
 const sig = (x) => 1 / (1 + Math.exp(-x));
@@ -39,7 +41,7 @@ const pk = (p) => `${p.variant}:${p.cubes}${p.grid}${p.view}`;
 
 function testDefinition(t, PX, def) {
   t.eq([def.id, def.version, def.code, def.abilities, def.cell, def.role, def.answer, def.nOptions],
-    ['views', 2, 'EX-07', ['Vz'], 'intrinsic-static', 'train', 'choice', 4], 'definition fields (version 2: the starter level)');
+    ['views', 3, 'EX-07', ['Vz'], 'intrinsic-static', 'train', 'choice', 4], 'definition fields (version 3: toview balanced on the drawings\' sizes at every level, RV-items-1.2 M3)');
   t.eq(def.dims.map((d) => [d.key, d.levels.length]), [['cubes', 6], ['grid', 2], ['view', 3]], 'dims: cubes × grid × view');
   t.eq(def.dims[0].levels, ['3–4', 4, 6, 8, 10, 12], 'cubes: the starter level, then 4–12 in steps of two');
   t.eq(def.starter, { dim: 'cubes', levels: 1 }, 'starter: the first cubes level');
@@ -193,6 +195,19 @@ function share(scores, key, high) {
   return scores[key] === best ? 1 / scores.filter((x) => x === best).length : 0;
 }
 const sums = (n, f) => Array.from({ length: n }, (_, i) => { let s = 0; for (let j = 0; j < n; j++) if (j !== i) s += f(i, j); return s; });
+// Version 3 (RV-items-1.2 M3): the drawings' sizes both ways, and the drawing farthest from its nearest
+// neighbour (unit edges, + 6 when the sizes differ); stem-blind, so each stays within chance + 10.
+function sizeSolvers(it, E, L) {
+  const D = it.options.map((o) => o.drawing), of = (f) => D.map(f);
+  const dist = (i, j) => L.edgeDiff(E[i], E[j]) + (D[i].w === D[j].w && D[i].h === D[j].h ? 0 : 6);
+  const near = D.map((_, i) => Math.min(...D.map((__, j) => (i === j ? Infinity : dist(i, j)))));
+  return [
+    ['shortest drawing', share(of((d) => d.h), it.key, false)], ['tallest drawing', share(of((d) => d.h), it.key, true)],
+    ['narrowest drawing', share(of((d) => d.w), it.key, false)], ['widest drawing', share(of((d) => d.w), it.key, true)],
+    ['smallest filled area', share(of((d) => d.area), it.key, false)], ['largest filled area', share(of((d) => d.area), it.key, true)],
+    ['farthest from its nearest neighbour', share(near, it.key, true)],
+  ];
+}
 
 function testShortcuts(t, PX, def, L, pool) {
   t.section('views: shortcut solvers');
@@ -217,6 +232,7 @@ function testShortcuts(t, PX, def, L, pool) {
     badd('largest drawing', share(it.options.map((o) => o.drawing.w * o.drawing.h), it.key, true));
     badd('smallest drawing', share(it.options.map((o) => o.drawing.w * o.drawing.h), it.key, false));
     badd('odd one out', share(sums(4, (i, j) => L.edgeDiff(E[i], E[j])), it.key, true));
+    for (const [name, v] of sizeSolvers(it, E, L)) badd(name, v);
   }
   t.eq(bandInvalid, 0, `starter level: every extra item is valid (${bandItems.length} in the pool)`);
   for (const [name, a] of Object.entries(bacc)) t.ok(a.v / a.n <= LIMIT, `starter level: "${name}" ${(100 * a.v / a.n).toFixed(1)} % ≤ chance + 10 (${a.n} items)`);
@@ -231,6 +247,8 @@ function testShortcuts(t, PX, def, L, pool) {
       add('toview: largest drawing', share(it.options.map((o) => o.drawing.w * o.drawing.h), it.key, true), false);
       add('toview: smallest drawing', share(it.options.map((o) => o.drawing.w * o.drawing.h), it.key, false), false);
       add('toview: odd one out', share(sums(4, (i, j) => L.edgeDiff(E[i], E[j])), it.key, true), false);
+      for (const [name, v] of sizeSolvers(it, E, L)) add('toview: ' + name, v, false);
+      if (it.view === 'top') for (const [name, v] of sizeSolvers(it, E, L)) add('toview, top view: ' + name, v, false);
     } else if (p.variant === 'toobject') {
       const H = it.options.map((o) => o.heights), n = H.map(L.total), mean = n.reduce((a, b) => a + b, 0) / 4;
       add('toobject: like the others', share(sums(4, (i, j) => L.hdist(H[i], H[j])), it.key, false), true);
@@ -323,6 +341,42 @@ function testTiming(t, PX, def) {
     const r = p95Rounds((round, s) => def.generate(PX.rng(PX.rng.hash('views-timing', round, s)), hard));
     t.ok(r.best.cpu < 20, `generation p95 at ${hard.variant} ${hard.cubes},${hard.grid},${hard.view}: ${r.best.cpu.toFixed(1)} ms CPU < 20 ms (rounds: ${r.text})`);
   }
+}
+
+/* ------------------------------------------------------------------ no stem twice (version 3) */
+
+// RV-items-1.2 M3: toobject at 12 cubes on 3 × 3 holds about 50–110 items, and 80 draws repeated a stem at most
+// settings. (1) No tutorial stem comes back as a rated item: every learn.js item carries params.task 'tutorial';
+// lib.TUTORIAL holds exactly their stems' hashes; rated items at the tutorial's settings never have one, and an
+// item whose first draw is not one is unchanged. (2) A session shows no stem twice (the guard and its runs:
+// js/ex/patviews/gen.js, tests/node/patviews.test.mjs).
+function testFresh(t) {
+  t.section('views: no stem twice (tutorial items; a session)');
+  const PX = t.context({ files: [...FILES, 'js/ex/patviews/gen.js'] }).PX, def = PX.ex.get('views'), L = def.lib, Lr = PX.ex.learn('views');
+  const entries = [...(Lr.demo || []).map((d) => [d.params, d.seed]), ...(Lr.practice || []).map((e) => [e.params, e.seed])];
+  t.ok(entries.every(([p]) => p && p.task === 'tutorial'), 'every Watch and Try item is marked task: tutorial');
+  t.ok(def.extraParams.indexOf('task') >= 0, 'task is an extra parameter of the definition');
+  const sigs = [...new Set(entries.map(([p, s]) => L.stemSig(def.generate(PX.rng(s), p))))].sort((a, b) => a - b);
+  t.eq([...L.TUTORIAL].sort((a, b) => a - b), sigs, `lib.TUTORIAL is the tutorial items' stems (${sigs.length})`);
+  let n = 0, repeats = 0, guarded = 0, changed = 0;
+  const sets = entries.map(([p]) => { const q = Object.assign({}, p); delete q.task; return q; });
+  for (const q of sets) for (let s = 1; s <= 300; s++) {
+    n++;
+    const raw = L.generateRaw(PX.rng(s), q), it = def.generate(PX.rng(s), q), hit = L.TUTORIAL.indexOf(L.stemSig(raw)) >= 0;
+    if (hit) guarded++;
+    if (L.TUTORIAL.indexOf(L.stemSig(it)) >= 0) repeats++;
+    if (!hit && (L.stemSig(it) !== L.stemSig(raw) || it.key !== raw.key)) changed++;
+  }
+  t.eq(repeats, 0, `no rated item at the tutorial's settings has a tutorial stem (${n} items; ${guarded} first draws were drawn again)`);
+  t.eq(changed, 0, 'an item whose first draw is not a tutorial stem is the same as before');
+  const all = PX.ex.enumerate(def);
+  t.ok(all.every((p) => L.fewStems(p)), 'fewStems: every setting can repeat a stem');
+  t.ok([1, 2, 3, 4, 5, 6].every((s) => { const p = all[(s * 17) % all.length]; return L.sigOf(s, p) === L.stemSig(def.generate(PX.rng(s), p)); }), 'sigOf gives the stem of the item the seed makes');
+  const before = L.stats.tries, p0 = { cubes: 0, grid: 0, view: 2, variant: 'toview' };
+  def.generate(PX.rng(4242), p0);
+  const mid = L.stats.tries, sig = L.sigOf(4242, Object.assign({}, p0));
+  t.ok(mid > before && L.stats.tries === mid && sig === L.stemSig(def.generate(PX.rng(4242), p0)), 'sigOf reads the last item\'s stem without generating it again');
+  checkSessions(t, PX, def, [p0, { cubes: 0, grid: 0, view: 1, variant: 'toview' }, { cubes: 5, grid: 0, view: 0, variant: 'toobject' }], 10, 'views, the settings with the fewest stems', false);
 }
 
 /* ------------------------------------------------------------------ learn data */

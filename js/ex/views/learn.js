@@ -36,21 +36,22 @@
     strategyFirst: 'outline',
     // One Watch per variant (the player plays the item's own); the first is the main variant at the
     // starter level, with both foil kinds Try uses (another direction, a neighbouring structure).
-    // Seeds are fixed so the answers vary their slot (Watch 3, Try 2, 4, 1, 3) and no Try item has a
-    // mirror foil, which the Watch cannot show at the starter level.
+    // Seeds are fixed so the answers vary their slot (Watch 3, Try 1, 2, 4, 3) and no Try item has a
+    // mirror foil, which the Watch cannot show at the starter level. Version 3 (22 Nov) changed the items,
+    // so the Try seeds were picked again for the same structures (the Watch's seed still gives its own).
     demo: [
-      { params: { cubes: 0, grid: 0, view: 0, variant: 'toview' }, seed: 56, kind: 'toview' },
-      { params: { cubes: 0, grid: 0, view: 0, variant: 'toobject' }, seed: 2, kind: 'toobject' },
-      { params: { cubes: 0, grid: 0, view: 0, variant: 'count' }, seed: 3, kind: 'count' },
+      { params: { cubes: 0, grid: 0, view: 0, variant: 'toview', task: 'tutorial' }, seed: 56, kind: 'toview' },
+      { params: { cubes: 0, grid: 0, view: 0, variant: 'toobject', task: 'tutorial' }, seed: 2, kind: 'toobject' },
+      { params: { cubes: 0, grid: 0, view: 0, variant: 'count', task: 'tutorial' }, seed: 3, kind: 'count' },
     ],
     practice: [
-      { params: { cubes: 0, grid: 0, view: 0, variant: 'toview' }, seed: 73, assist: { outline: true } },
-      { params: { cubes: 0, grid: 0, view: 1, variant: 'toview' }, seed: 3, tip: 'front' },
+      { params: { cubes: 0, grid: 0, view: 0, variant: 'toview', task: 'tutorial' }, seed: 63, assist: { outline: true } },
+      { params: { cubes: 0, grid: 0, view: 1, variant: 'toview', task: 'tutorial' }, seed: 1102, tip: 'front' },
       // Try 3: the right view at the starter level, its tip on where the front is (Views fresh test:
-      // the first right view came in Go); seed 175 has the front view among its drawings.
-      { params: { cubes: 0, grid: 0, view: 2, variant: 'toview' }, seed: 175, tip: 'right' },
-      // Try 4: four cubes in an L, one stack three high at the back (seed 41: read at a glance)
-      { params: { cubes: 1, grid: 0, view: 0, variant: 'toview' }, seed: 41, tip: 'stacks' },
+      // the first right view came in Go); seed 793 has the front view among its drawings.
+      { params: { cubes: 0, grid: 0, view: 2, variant: 'toview', task: 'tutorial' }, seed: 793, tip: 'right' },
+      // Try 4: four cubes in an L, one stack three high at the back (seed 91: read at a glance)
+      { params: { cubes: 1, grid: 0, view: 0, variant: 'toview', task: 'tutorial' }, seed: 91, tip: 'stacks' },
     ],
     tips: [
       // The view tips only where a view is asked or drawn: when.variant may list several variants,
