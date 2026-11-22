@@ -173,3 +173,19 @@ this log, and its own lines in docs/dev/DECISIONS.md and docs/dev/v1.2/requests.
   grouped kinds); fit.py every probe at 360 x 640, 390 x 844, 844 x 390: 58/0; harness_patterns 115/0 (mouse and real
   touch strokes), harness_mechanisms 180/0, harness_wordlinks 103/0; flows.py check 19/0 (snapshot of HEAD, since
   the working tree's tests/e2e/play.py does not parse: not mine, W2-core told).
+
+## 2026-11-22 14:23 UTC: RV-items (M6–M9, L5, L6) and RV-claims L4 in the probes
+- Mechanisms version 3: "it cannot turn" only at the jams level, one item in five (version 2: 48 % at the jams level);
+  no loops at the belts level, a loop on every jams-level item; new cues "always it cannot turn" and "a loop means it
+  cannot turn" tested per structure level (19.6 % at the jams level, 0 below); answers even at every level.
+- Motion Graphs version 2: two or three velocity foils on the answer's side of the zero line (the "never meets the
+  zero line" pick 59.8 % to 30.5 % at level 0); validator and test cue.
+- View Match keeps version 1; the check leaves out six settings (def.checkCell) where a cheap pick finds the key by
+  geometry (far side at 160°, near side at 45° with far foils, most-like-others at 45° with near foils, reversed order
+  at 135°); every cue at the used settings ≤ 33 %; range in the check −1.5…1.6.
+- assess.freshItem: no item comes back across a player's checks (last 60 rows per probe version and setting): five
+  checks and twelve blocks at the easiest settings, 0 whole-item repeats (7 without), stems only where a pool is used up.
+- Cube Match quarter × swap logged with the scoped cells (36.4 % of 6,000); the "6 to 8 in 10 right" line made true
+  in measure.js and check.js (guide line sent to W3-voice).
+- Verified: node probe and measurement suites (see the commit), check.py 99/0, fit.py every probe at 360 x 640,
+  390 x 844 and 844 x 390 58/0, harness_mechanisms 180/0.

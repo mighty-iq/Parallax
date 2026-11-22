@@ -1,8 +1,10 @@
 /* PR-1 Cube Match, version 2 (v1.2, W2-measure; PLAN milestone 6's probe upgrades): which of four drawings is the
    reference cube turned? Definition and version change (version 1's range in def.past), glyph library, rotations,
    validator (not vacuous), 10 000 seeds (valid, no fallback, keys spread, deterministic, fast), the two solvers
-   agreeing, shortcut solvers (CLAUDE.md rule 5: pooled within chance + 10 points; per cell too, except the two
-   scoped cells spin × swap and flip × swap, reported: DECISIONS 2026-11-19), and the learn data. */
+   agreeing, shortcut solvers (CLAUDE.md rule 5: pooled within chance + 10 points; per cell too, except the scoped
+   cells spin × swap and flip × swap, reported: DECISIONS 2026-11-19, and quarter turn × swap, where "the most symbols
+   in the reference's places" finds the key 36.4 % of 6,000 times: DECISIONS 2026-11-22, RV-items L6), and the learn
+   data. */
 import { MANIFEST } from './run.mjs';
 
 const FILE = 'js/ex/cubematch/gen.js';
@@ -10,7 +12,7 @@ const LEARN = 'js/ex/cubematch/learn.js';
 const SEEDS_TOTAL = 10008;
 const LIMIT = 0.35;
 // Cells kept out of the per-cell bound (structural; reported): rotation level, change level
-const SCOPED = new Set(['0/0', '2/0']);
+const SCOPED = new Set(['0/0', '2/0', '1/0']);
 // Captions js/ex/cubematch/view.js reads.
 const CAPTIONS = ['first', 'options', 'turn', 'match', 'answer', 'verdict'];
 // The core and the registry only (all a generator needs), so engine files being edited never break these checks.

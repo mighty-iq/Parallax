@@ -66,7 +66,7 @@
       });
       var lines = [
         mix.length + ' short tasks that Parallax never trains, ' + items + ' items in all: about ' + minutes(m) + '.',
-        'There is no feedback. The items adapt to your answers, so expect roughly 6 to 8 in 10 right, depending on the task: the difficulty you reach carries the information, not the count.',
+        'There is no feedback. The items adapt to your answers, so expect roughly 6 to 8 in 10 right on most tasks, and a third to a half of the patterns exact in Pattern Memory, which counts every square: the difficulty you reach carries the information, not the count.',
         'Answer as well as you can, and guess when you are unsure. Each task has a time limit per item, shown as a slow bar.',
         baseline ? 'This is ' + name(kind).toLowerCase() + ': your starting point. Two of them make it steadier, and everything later is compared with them.' :
           block ? 'It adds one more reading to your probe trend; the meter counts only the rise beyond what familiarity with the tasks predicts.' :
@@ -145,7 +145,7 @@
       var def = PX.ex.get(id), r = c.results[id];
       return h('li', { 'data-probe': id }, h('b', def ? def.short || def.name : id), ': ' + r.n + ' items' + (isNum(r.rtMed) ? ', median time of right answers ' + Play.fmtRt(r.rtMed) : '') + '.');
     })));
-    p.body.appendChild(h('p', 'The items adapted to your answers, so roughly 6 to 8 in 10 right is expected. Parallax records the difficulty you reached on each task’s own scale, with its uncertainty, and follows it over time; these are not scores against other people and not an IQ.'));
+    p.body.appendChild(h('p', 'The items adapted to your answers, so roughly 6 to 8 in 10 right is expected on most tasks, and a third to a half of the patterns exact in Pattern Memory, which counts every square. Parallax records the difficulty you reached on each task’s own scale, with its uncertainty, and follows it over time; these are not scores against other people and not an IQ.'));
     out.appendChild(p.el);
     var pn = K.panel({ title: 'Next', className: 'pl-panel pl-next' }), mt = c.meter || {};
     if (c.verdict) pn.body.appendChild(h('p', Mx.words[c.verdict.words] + ' (verdict at day ' + c.verdict.day + ')'));
