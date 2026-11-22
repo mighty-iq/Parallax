@@ -127,8 +127,23 @@ Design source: docs/research/v1.2/D2-first-band.md §3.0, §3.4–3.9, §4. Requ
 - phones.py: Hole Punch's checks carry 'sheets' (80/1: the one failure is Painted Cubes' numbers, 9.7 px at 360 x 640,
   not mine). fit.py at both phone sizes for my four, and harness_form, pass.
 
+## Round 5: the band's line pieces, level 1's area, Hole Punch's cells (22 Nov)
+- Missing View's band: wrong drawings with a line added or taken away (seen against the structure drawn there) and,
+  at the outline level, another outline as busy as the key ('Not its outline'); the chooser holds the pieces, the
+  nearest neighbour, symmetry, likeness to a given view of any size and the middle; the 95 % exception is gone
+  (DECISIONS). Review's tools: every cube-stack cell within chance + 10, the band's full combinations too.
+- Level 1's outline level: the key's area is no extreme unless two foils share it (60 % of items); odd one out,
+  nearest neighbour and likeness of any size redrawn when lopsided.
+- Found, not held by any harness: "the middle" (neither the most nor the fewest) on the band's outline level, 39 %
+  in solid units and 47 % in area (61 % before this round); about 35 % at its other levels. Wider band drawings
+  would be the fix (PLAN-v1.3 candidate).
+- Tutorial: Watch seed 4 (its given views show dotted lines), Try 1 seed 101, Try 2 seed 204, worked example seed 1.
+- Hole Punch: ten diagonal or mixed two- and three-fold cells scoped (DECISIONS), each cue bounded per cell at its
+  measured share + 3 points. My own solvers also put, per full combination, crease symmetry about the first crease
+  (the format's method) at up to 44 % in two-fold corner and mixed cells, and on the one-fold band "the most spread
+  out" 37 % (corner, all at the key's count) and "the least one-coloured" 35 % (half folds): not scoped, reported.
+
 ## Open
 - W2-core: the session guard into play.js (requests.md); the desktop parts legend's Close button and the result
   strip's three rows (requests.md, 22 Nov).
-- The lead: whether Missing View's band keeps its scoped "most line pieces" or takes wrong drawings with an added
-  line; Hole Punch's per-combination residuals above.
+- The lead: the band's "middle" cue (above); Hole Punch's other per-combination findings (above).

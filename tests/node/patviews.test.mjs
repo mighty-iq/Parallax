@@ -214,6 +214,7 @@ function testKinds(t, PX, def, L, pool) {
   const why = {}, kinds = {}, ranks = [0, 0, 0, 0];
   let lvl0 = 0, n0 = 0, lvl1 = 0, n1 = 0, lvl2 = 0, n2 = 0, size = 0, missOk = 0, unique = 0, countOk = 0;
   let nBand = 0, bandBox = 0, bandSolid = 0, bandProof = 0;
+  const bandWhy = {};
   for (const { p, it } of pool) {
     ranks[it.key]++;
     const nc = it.heights.flat().reduce((a, b) => a + b, 0), win = L.CUBES[p.cubes];
@@ -222,7 +223,14 @@ function testKinds(t, PX, def, L, pool) {
       nBand++;
       if (it.H === 2 && it.W >= 2 && it.D >= 2 && Math.max(it.W, it.D) <= 3 && (p.grid === 1 || it.missing === 'front' || (it.missing === 'end' && p.foil > 0) || Math.min(it.W, it.D) <= 2)) bandBox++;
       if (it.options.every((o) => o.drawing.segs.every((q) => q[4] === 1))) bandSolid++;
-      if (it.options.every((o, i) => i === it.key || o.why === 'hull' || o.why === 'align')) bandProof++;
+      {
+        // round 5 (DECISIONS): each foil fails the hull or the line test, or is the true view with lines added or taken
+        // away (the structure is drawn beside the views on the band), or, at the outline level, a wrong outline with as
+        // many line pieces as the key that only the search rules out
+        const g = it.options.map((o) => L.grid(o.drawing)), kg = g[it.key], kpc = L.pieces(kg);
+        if (it.options.every((o, i) => i === it.key || o.why === 'hull' || o.why === 'align' || (o.why === 'extra' && L.addsLines(kg, g[i])) || (o.why === 'drops' && L.dropsLines(kg, g[i])) || (o.why === 'shape' && p.foil === 0 && o.kind === 'outline' && L.pieces(g[i]) >= kpc))) bandProof++;
+        it.options.forEach((o, i) => { if (i !== it.key) bandWhy[o.why] = (bandWhy[o.why] || 0) + 1; });
+      }
       if (p.foil === 2) { // the band's subtlest level: same outline, every foil within three units of the key
         n2++;
         const g = it.options.map((o) => L.grid(o.drawing)), kg = g[it.key];
@@ -256,7 +264,8 @@ function testKinds(t, PX, def, L, pool) {
   t.ok(nBand >= 2000, `starter band items (${nBand})`);
   t.eq(bandBox, nBand, 'starter band: two high, in a box of at most 2 × 3 (grid level 1, a missing front view, or a missing end view with same-outline or solid-or-dotted foils: 3 × 3)');
   t.eq(bandSolid, nBand, 'starter band: no option has a dotted line (the key never does)');
-  t.eq(bandProof, nBand, 'starter band: every foil fails the hull or the line test (none needs the exhaustive search)');
+  t.eq(bandProof, nBand, 'starter band: every foil fails the hull or the line test, adds lines to the true view or takes some away, or (outline level) has another outline and as many line pieces as the key');
+  console.log('       patviews starter band, why each foil is wrong: ' + Object.entries(bandWhy).map(([k, v]) => `${k} ${(100 * v / (3 * nBand)).toFixed(1)}%`).join(', '));
   t.eq(missOk, N, 'every item asks for its level\'s missing view and gives the other two');
   t.eq(size, N, 'every option has the size the two given views require');
   t.eq(lvl0, n0, 'foil level 0: every foil has another outline');
@@ -324,7 +333,6 @@ function linesApart(a, b) {
 function testShortcuts(t, PX, def, L, pool) {
   t.section('patviews: shortcut solvers, starter band');
   shortcutPool(t, L, pool.filter((x) => x.p.cubes === 0), true);
-  testBandPieces(t, L, pool.filter((x) => x.p.cubes === 0));
   t.section('patviews: shortcut solvers, cube stacks above the band');
   shortcutPool(t, L, pool.filter((x) => x.p.cubes > 0 && !x.it.solid), false);
   t.section('patviews: shortcut solvers, solids');
@@ -354,13 +362,17 @@ function itemScores(L, it) {
     add('odd one out', shareOf(sum, key, true));
     add('size fits the stem', 1 / 4); // every option has the stem's size (checked above)
     // v1.2 (RV-items-1.2 H2, M5): line pieces (runs of one style along a grid line: what the eye counts) and the
-    // nearest neighbour. On the starter band, where the structure is drawn beside the views, the pieces are a
-    // scoped exception (DECISIONS 22 Nov): reported, and bounded at their own level in testBandPieces.
-    const pc = g.map(L.pieces), nn = g.map((a, i) => Math.min(...g.map((b, j) => (i === j ? Infinity : L.gdist(a, b))))), bandP = it.params && it.params.cubes === 0;
-    add(bandP ? 'most pieces (starter band)' : 'most pieces', shareOf(pc, key, true));
-    add(bandP ? 'fewest pieces (starter band)' : 'fewest pieces', shareOf(pc, key, false));
+    // nearest neighbour, bounded on the starter band too since round 5 (DECISIONS); the most symmetric drawing (left
+    // and right) and the drawing most like a given view of any size, lined up at the lower left corner (the review's
+    // own likeness: units that differ, and the fill compared cell by cell in reading order).
+    const pc = g.map(L.pieces), nn = g.map((a, i) => Math.min(...g.map((b, j) => (i === j ? Infinity : L.gdist(a, b)))));
+    add('most pieces', shareOf(pc, key, true));
+    add('fewest pieces', shareOf(pc, key, false));
     add('farthest from its nearest neighbour', shareOf(nn, key, true));
     add('nearest to its nearest neighbour', shareOf(nn, key, false));
+    add('most symmetric', shareOf(it.options.map((o) => (mirrorKey(o.drawing) === segKey(o.drawing.segs) ? 1 : 0)), key, true));
+    const givAll = Object.keys(it.given).map((v) => it.given[v]);
+    add('most like a given view of any size', shareOf(it.options.map((o) => Math.min(...givAll.map((v) => unitsApart(o.drawing, v)))), key, false));
     // Stem-based: the option most like a given view of the same size (as drawn, or mirrored).
     const gv = Object.keys(it.given).map((v) => L.grid(it.given[v]));
     const like = g.map((o) => Math.min(...gv.filter((x) => x.w === o.w && x.h === o.h).map((x) => L.gdist(o, x)).concat([99])));
@@ -374,7 +386,7 @@ function itemScores(L, it) {
 // Solids: the same cheap solvers on line runs (lengths in units; L.drawDiff for likeness), the drawing most like a
 // given view of its size, the most symmetric drawing; and, reported, the format's own method: every line position
 // of the drawing lines up with a line or corner of the given view that shares that axis.
-const REPORTED = ['size fits the stem', 'lines line up with the given views', 'most pieces (starter band)', 'fewest pieces (starter band)'];
+const REPORTED = ['size fits the stem', 'lines line up with the given views'];
 function solidScores(L, it) {
   const out = {}, add = (name, v) => { out[name] = v; }, key = it.key, D = it.options.map((o) => o.drawing);
   'ABCD'.split('').forEach((ch, j) => add('always ' + ch, key === j ? 1 : 0)); // always the same letter
@@ -404,19 +416,28 @@ function solidScores(L, it) {
   add('lines line up with the given views', shareOf(aligned.map((x) => Math.round(x * 1e3)), key, true));
   return out;
 }
-// The starter band's scoped exception (DECISIONS 22 Nov): the band's foils must be provably wrong by the hull or
-// the line test, drawn in solid lines from the key's own small box, and in most such boxes no wrong drawing has as
-// many line pieces as the true view, so "the busiest drawing" often finds the key; the structure is drawn beside
-// the views there. Bounded at the level it holds (per foil level and missing view), so it cannot grow unseen.
-function testBandPieces(t, L, pool) {
-  const cell = {};
-  for (const { it, p } of pool) {
-    const g = it.options.map((o) => L.grid(o.drawing)), pc = g.map(L.pieces), k = 'foil ' + p.foil + ', ' + it.missing + ' missing';
-    cell[k] = cell[k] || [0, 0]; cell[k][0] += shareOf(pc, it.key, true); cell[k][1]++;
+// Unit segments of a stored drawing ('h:u:v' or 'v:u:v' with their style), its left-right mirror, and the units
+// that differ between two drawings of any size (plus the fill strings compared cell by cell in reading order).
+function units(d) {
+  const m = new Map();
+  for (const [u0, v0, u1, v1, st] of d.segs) {
+    if (v0 === v1) for (let u = Math.min(u0, u1); u < Math.max(u0, u1); u++) m.set(`h:${u}:${v0}`, st);
+    else for (let v = Math.min(v0, v1); v < Math.max(v0, v1); v++) m.set(`v:${u0}:${v}`, st);
   }
-  const rows = Object.entries(cell).map(([k, v]) => [k, v[0] / v[1], v[1]]);
-  console.log('       patviews starter band, "the most line pieces" (scoped, reported): ' + rows.map(([k, a, n]) => `${k} ${(100 * a).toFixed(1)}% (n ${n})`).join('; '));
-  t.ok(rows.every(([, a]) => a <= 0.95), 'starter band: "the most line pieces" stays at its scoped level (≤ 95 % in every cell)');
+  return m;
+}
+const segKey = (segs) => [...units({ segs }).entries()].map(([k, x]) => k + '=' + x).sort().join(',');
+function mirrorKey(d) {
+  const out = [];
+  for (const [k, x] of units(d)) { const [t, u, v] = k.split(':'); out.push((t === 'h' ? `h:${d.w - 1 - u}:${v}` : `v:${d.w - u}:${v}`) + '=' + x); }
+  return out.sort().join(',');
+}
+function unitsApart(a, b) {
+  const A = units(a), B = units(b);
+  let n = 0;
+  for (const k of new Set([...A.keys(), ...B.keys()])) if (A.get(k) !== B.get(k)) n++;
+  for (let i = 0; i < Math.max(a.fill.length, b.fill.length); i++) if (a.fill[i] !== b.fill[i]) n++;
+  return n;
 }
 function shortcutPool(t, L, pool, band, what) {
   t.ok(pool.length >= 2000, `${pool.length} items`);
@@ -577,7 +598,7 @@ function testLearn(t, PX, def) {
   }
   t.eq((L.strategies || []).map((s) => s.id), ['imagery', 'analytic', 'switch'], 'strategy cards: imagery, analytic, when to switch');
   t.ok(L.strategies.every((s) => s.title && s.text && Array.isArray(s.steps) && s.steps.length >= 2 && s.when), 'every card has a title, a text, steps and when to use it');
-  const caps = ['views', 'slot', 'intro', 'project', 'turn', 'fade', 'fadeNone', 'lay', 'dotted', 'land', 'shown', 'assist', 'whyHull', 'whyAlign', 'whySearch', 'object', 'diffDotted', 'diffSolid', 'diffExtra', 'diffMissing', 'diffMixed',
+  const caps = ['views', 'slot', 'intro', 'project', 'turn', 'fade', 'fadeNone', 'lay', 'dotted', 'land', 'shown', 'assist', 'whyHull', 'whyAlign', 'whySearch', 'whyExtra', 'whyDrops', 'whyShape', 'object', 'diffDotted', 'diffSolid', 'diffExtra', 'diffMissing', 'diffMixed',
     'turnSolid', 'fadeSolid', 'fadeNoneSolid', 'whyOutline', 'whyLines', 'whyDashes'];
   // the solids' class is said on the rules card, and every solid level has its tip
   t.ok(L.rules.some((r) => /straight through/.test(r) && /line of sight/.test(r)), 'the rules card says the solids\' class: every cut straight through, along a given view\'s line of sight');
@@ -706,4 +727,4 @@ export function shortcutScores(PX, def, item) {
   for (const [name, hit] of Object.entries(itemScores(def.lib, item))) out[name] = SHORTCUT_EXEMPT.includes(name) ? { hit, chance: 0.25, info: true } : { hit, chance: 0.25 };
   return out;
 }
-export const SHORTCUT_EXEMPT = ['size fits the stem', 'lines line up with the given views', 'most pieces (starter band)', 'fewest pieces (starter band)'];
+export const SHORTCUT_EXEMPT = ['size fits the stem', 'lines line up with the given views'];

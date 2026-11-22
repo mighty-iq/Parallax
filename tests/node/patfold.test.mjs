@@ -202,6 +202,7 @@ export async function run(t) {
     console.log('       holes', JSON.stringify(holesHist), 'keys', keyPos.join(','));
     console.log('       foils', JSON.stringify(whyHist));
   }
+  testScopedCells(t, PX, def);
   testLearn(t, PX, def);
   testTutorialRepeat(t, PX, def, 'patfold');
   testSession(t);
@@ -257,6 +258,41 @@ function itemScores(A, lib, item) {
   return out;
 }
 const PLACE_KEYS = ['colour', 'pure', 'mixed', 'far', 'near', 'touchFew', 'touchMost', 'spreadMost', 'spreadLeast', 'common', 'twin'];
+
+// v1.2 (round 5; DECISIONS 22 Nov): Hole Punch's scoped cells for 1.2. With two or three diagonal or mixed folds both
+// creases often cross the sheet's centre, so the holes gather there, and where they sit (centre, colour, touching,
+// spread) or how like the others the sheet is says more than chance + 10 in these full combinations (the review's
+// cell scan; measured here on 400 items per cell, each share over the bound by more than two standard errors). Each
+// is bounded at its measured share plus 3 points, so none drifts upward; rebalancing them is planned for 1.3.
+const SCOPED_CELLS = [
+  [{ folds: 1, type: 2, idle: 0, sheets: 0 }, { near: 0.421, colour: 0.350 }],
+  [{ folds: 2, type: 2, idle: 0, sheets: 0 }, { like: 0.375 }],
+  [{ folds: 1, type: 3, idle: 0, sheets: 0 }, { far: 0.437 }],
+  [{ folds: 2, type: 3, idle: 0, sheets: 0 }, { touchFew: 0.379 }],
+  [{ folds: 2, type: 2, idle: 1, sheets: 0 }, { near: 0.424, colour: 0.356 }],
+  [{ folds: 1, type: 2, idle: 0, sheets: 1 }, { colour: 0.367, near: 0.367 }],
+  [{ folds: 1, type: 3, idle: 0, sheets: 1 }, { far: 0.476 }],
+  [{ folds: 2, type: 3, idle: 0, sheets: 1 }, { touchFew: 0.503, like: 0.377 }],
+  [{ folds: 2, type: 2, idle: 1, sheets: 1 }, { colour: 0.379, spreadMost: 0.368, near: 0.368 }],
+  [{ folds: 2, type: 3, idle: 1, sheets: 1 }, { far: 0.355 }],
+];
+const N_CELL = 400;
+function testScopedCells(t, PX, def) {
+  t.section('patfold: scoped cells (two or three diagonal or mixed folds; DECISIONS 22 Nov)');
+  const type = ['half', 'corner', 'diagonal', 'mixed'];
+  for (const [p, caps] of SCOPED_CELLS) {
+    const acc = {};
+    let n = 0;
+    for (let s = 0; s < N_CELL; s++) {
+      const it = def.generate(PX.rng(PX.rng.hash('patfold-cell', PX.ex.paramsKey(p), s)), p);
+      if (it.fallback) continue;
+      n++;
+      def.lib.onSheet((A) => { const sc = itemScores(A, def.lib, it); for (const k of Object.keys(caps)) acc[k] = (acc[k] || 0) + sc[k]; });
+    }
+    const name = `${p.folds + 1} folds, ${type[p.type]}, ${p.idle} idle, ${p.sheets ? 'all at the key\'s count' : 'counts may differ'}`;
+    for (const [k, m] of Object.entries(caps)) t.ok(n >= N_CELL - 4 && acc[k] / n <= m + 0.03 + 1e-9, `${name}: "${NAMES[k]}" ${(100 * acc[k] / n).toFixed(1)} % ≤ its scoped ${(100 * m).toFixed(1)} % + 3 (${n} items)`);
+  }
+}
 function shortcuts(A, lib, item, acc) {
   acc.count++;
   const sc = itemScores(A, lib, item);

@@ -192,7 +192,7 @@
     return timing.nextPaint();
   }
 
-  var WHY = { hull: 'Outline cannot fit', align: 'Lines do not line up', search: 'No structure fits', outline: 'Outline does not fit', lines: 'Lines do not fit', dashes: 'Solid or dotted wrong' };
+  var WHY = { hull: 'Outline cannot fit', align: 'Lines do not line up', search: 'No structure fits', extra: 'Line with no edge', drops: 'Edge left out', shape: 'Not its outline', outline: 'Outline does not fit', lines: 'Lines do not fit', dashes: 'Solid or dotted wrong' };
   function reveal(item, response, result, ctx) {
     if (!st) return Promise.resolve();
     st.root.classList.add('is-revealed');
@@ -459,7 +459,7 @@
     list.push({ id: 'land', ms: 1300, caption: cap('land', { n: nm(key) }), enter: function () { draw(item, S({ built: all, focus: key, ghostKey: true })); } });
     if (picked >= 0) {
       var why = item.options[picked].why, kind = item.options[picked].kind;
-      var whyCap = item.solid ? (kind === 'outline' ? 'whyOutline' : kind === 'dashes' ? 'whyDashes' : 'whyLines') : why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : 'whySearch';
+      var whyCap = item.solid ? (kind === 'outline' ? 'whyOutline' : kind === 'dashes' ? 'whyDashes' : 'whyLines') : why === 'hull' ? 'whyHull' : why === 'align' ? 'whyAlign' : why === 'extra' ? 'whyExtra' : why === 'drops' ? 'whyDrops' : why === 'shape' ? 'whyShape' : 'whySearch';
       list.push({ id: 'why', ms: 3200, caption: cap(whyCap, { n: nm(picked) }) + ' ' + diffCaption(item, picked), enter: function () { draw(item, S({ picked: picked, focus: picked, ghostKey: true, mark: picked })); } });
     }
     return list;

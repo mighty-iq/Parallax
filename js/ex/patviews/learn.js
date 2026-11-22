@@ -31,13 +31,15 @@
     ],
     strategyFirst: 'analytic',
     minutes: 3,
-    demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, seed: 13, kind: 'end' }],
+    demo: [{ params: { cubes: 0, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, seed: 4, kind: 'end' }], // v1.2 round 5: a stem whose given views show dotted lines (the Watch holds on them)
     practice: [
-      { params: { cubes: 0, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, assist: { proj: true }, seed: 100 },
-      { params: { cubes: 0, grid: 0, missing: 1, foil: 0, task: 'tutorial' }, seed: 202 },
+      // v1.2 (22 Nov, round 5: the starter band's wrong drawings changed): Try 1 and 2 and the worked example on new
+      // seeds, so Try 1 is not the Watch's stem and the four answers still sit in four places
+      { params: { cubes: 0, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, assist: { proj: true }, seed: 101 },
+      { params: { cubes: 0, grid: 0, missing: 1, foil: 0, task: 'tutorial' }, seed: 204 },
       // v1.2 (22 Nov, RV-items-1.2 H2, M5: the cube stacks' foil choice changed): Try 3 and 4 on new seeds, so the
       // answers sit in four places
-      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'hidden', seed: 14, example: { seed: 3 } },
+      { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'hidden', seed: 14, example: { seed: 1 } },
       { params: { cubes: 1, grid: 0, missing: 0, foil: 0, task: 'tutorial' }, tip: 'search', seed: 9 },
     ],
     tips: [
@@ -113,6 +115,9 @@
       whyHull: 'Drawing {n}: its outline cannot sit with the two given outlines.',
       whyAlign: 'Drawing {n}: its lines do not line up with the lines of the given views.',
       whySearch: 'Drawing {n}: no stack of cubes gives the two views and this one.',
+      whyExtra: 'Drawing {n}: it draws a line where the structure has no edge.',
+      whyDrops: 'Drawing {n}: it leaves out an edge the structure shows from that side.',
+      whyShape: 'Drawing {n}: seen from that side, the structure drawn beside the views has another outline.',
       whyOutline: 'Drawing {n}: its outline is not the outline of the solid the two views fix.',
       whyLines: 'Drawing {n}: some of its lines are not where the solid\'s edges are.',
       whyDashes: 'Drawing {n}: its lines sit in the right places, but solid and dotted are mixed up.',

@@ -228,6 +228,21 @@
   function alignFails(top, front, end) {
     return lineSet(top, false) !== lineSet(front, false) || lineSet(front, true) !== lineSet(end, true) || lineSet(top, true) !== lineSet(end, false);
   }
+  // (d) v1.2 (round 5, the starter band): the true view with lines added in solid (same outline, every line of the
+  // true view kept as drawn): those lines are edges the structure, drawn beside the views there, does not have.
+  function addsLines(key, g) {
+    var k, more = 0;
+    if (g.w !== key.w || g.h !== key.h) return false;
+    for (k = 0; k < key.fill.length; k++) if (key.fill[k] !== g.fill[k]) return false;
+    for (k = 0; k < key.hs.length; k++) { if (key.hs[k] ? g.hs[k] !== key.hs[k] : g.hs[k] && g.hs[k] !== 1) return false; if (!key.hs[k] && g.hs[k]) more++; }
+    for (k = 0; k < key.vs.length; k++) { if (key.vs[k] ? g.vs[k] !== key.vs[k] : g.vs[k] && g.vs[k] !== 1) return false; if (!key.vs[k] && g.vs[k]) more++; }
+    return more > 0;
+  }
+  // (e) ... and the true view with solid lines taken away (same outline, every line drawn kept as the true view has
+  // it): the edges missing are seen on the structure drawn beside the views.
+  function dropsLines(key, g) { return addsLines(g, key) && counts(g).dotted === counts(key).dotted; }
+  // (f) on the band, a wrong outline that passes (b) and (c) is told by its outline against the structure drawn
+  // there ('shape': the structure seen from that side has another outline).
 
   /* ------------------------------------------------------------ the exhaustive search */
   // One cross-section (a column over z, or a row over x): cells (d, y) filled when y < vec[d].
@@ -554,6 +569,68 @@
     else { for (var v = q[1]; v < q[3]; v++) if (f(q[0] - 1, v) !== f(q[0], v)) return true; }
     return false;
   }
+  // v1.2 (RV-items-1.2 H2, round 5): one more line. Copies of g, each with one chord added in solid: a run of
+  // unit segments along an inner grid line, inside the filled region, from the outline or a line across it to
+  // the next, where g draws nothing. The starter band takes them as busier wrong drawings (DECISIONS).
+  function chordsOf(g) {
+    var out = [], w = g.w, h = g.h, u, v, a, e;
+    function f(x, y) { return x >= 0 && y >= 0 && x < w && y < h ? g.fill[y * w + x] : 0; }
+    function vAt(x, y) { return (y > 0 && g.vs[(y - 1) * (w + 1) + x]) || (y < h && g.vs[y * (w + 1) + x]); } // a vertical line meets (x, y)
+    function hAt(x, y) { return (x > 0 && g.hs[y * w + x - 1]) || (x < w && g.hs[y * w + x]); } // a horizontal line meets (x, y)
+    function take(units, hor) {
+      var c = { w: w, h: h, hs: new Uint8Array(g.hs), vs: new Uint8Array(g.vs), fill: g.fill };
+      units.forEach(function (k) { (hor ? c.hs : c.vs)[k] = 1; });
+      out.push(c);
+    }
+    for (v = 1; v < h; v++) for (u = 0; u < w; u = e) {
+      e = u + 1;
+      if (!(f(u, v - 1) && f(u, v))) continue;
+      for (a = [v * w + u]; e < w && f(e, v - 1) && f(e, v) && !vAt(e, v); e++) a.push(v * w + e);
+      if (a.every(function (k) { return !g.hs[k]; })) take(a, true);
+    }
+    for (u = 1; u < w; u++) for (v = 0; v < h; v = e) {
+      e = v + 1;
+      if (!(f(u - 1, v) && f(u, v))) continue;
+      for (a = [v * (w + 1) + u]; e < h && f(u - 1, e) && f(u, e) && !hAt(u, e); e++) a.push(e * (w + 1) + u);
+      if (a.every(function (k) { return !g.vs[k]; })) take(a, false);
+    }
+    return out;
+  }
+  // ... and the reverse: copies of g, each with one such run between stops taken away where g draws it solid, unless
+  // a line would then end in the open (every line of a drawing of blocks ends on another line or the outline).
+  function dropsOf(g) {
+    var out = [], w = g.w, h = g.h, u, v, a, e;
+    function f(x, y) { return x >= 0 && y >= 0 && x < w && y < h ? g.fill[y * w + x] : 0; }
+    function vAt(x, y) { return (y > 0 && g.vs[(y - 1) * (w + 1) + x]) || (y < h && g.vs[y * (w + 1) + x]); }
+    function hAt(x, y) { return (x > 0 && g.hs[y * w + x - 1]) || (x < w && g.hs[y * w + x]); }
+    function take(units, hor) {
+      var c = { w: w, h: h, hs: new Uint8Array(g.hs), vs: new Uint8Array(g.vs), fill: g.fill };
+      units.forEach(function (k) { (hor ? c.hs : c.vs)[k] = 0; });
+      if (!loose(c)) out.push(c);
+    }
+    for (v = 1; v < h; v++) for (u = 0; u < w; u = e) {
+      e = u + 1;
+      if (!(f(u, v - 1) && f(u, v))) continue;
+      for (a = [v * w + u]; e < w && f(e, v - 1) && f(e, v) && !vAt(e, v); e++) a.push(v * w + e);
+      if (a.every(function (k) { return g.hs[k] === 1; })) take(a, true);
+    }
+    for (u = 1; u < w; u++) for (v = 0; v < h; v = e) {
+      e = v + 1;
+      if (!(f(u - 1, v) && f(u, v))) continue;
+      for (a = [v * (w + 1) + u]; e < h && f(u - 1, e) && f(u, e) && !hAt(u, e); e++) a.push(e * (w + 1) + u);
+      if (a.every(function (k) { return g.vs[k] === 1; })) take(a, false);
+    }
+    return out;
+  }
+  // a line that ends in the open: a corner of the grid that exactly one unit segment meets
+  function loose(g) {
+    var w = g.w, h = g.h, x, y, d;
+    for (y = 0; y <= h; y++) for (x = 0; x <= w; x++) {
+      d = (x > 0 && g.hs[y * w + x - 1] ? 1 : 0) + (x < w && g.hs[y * w + x] ? 1 : 0) + (y > 0 && g.vs[(y - 1) * (w + 1) + x] ? 1 : 0) + (y < h && g.vs[y * (w + 1) + x] ? 1 : 0);
+      if (d === 1) return true;
+    }
+    return false;
+  }
   function flips(g) {
     var out = [], d = pub(g);
     d.segs.forEach(function (s, i) {
@@ -572,6 +649,14 @@
     for (i = 0; i < scores.length; i++) if (scores[i] === best) ties++;
     return scores[0] === best ? 1 / ties : 0;
   }
+  // The middle: a pick among the options that are neither the most nor the fewest (all of them when none is).
+  function midShare(scores) {
+    var hi = -INF, lo = INF, n = 0, i;
+    for (i = 0; i < scores.length; i++) { if (scores[i] > hi) hi = scores[i]; if (scores[i] < lo) lo = scores[i]; }
+    for (i = 0; i < scores.length; i++) if (scores[i] !== hi && scores[i] !== lo) n++;
+    if (!n) return 1 / scores.length;
+    return scores[0] !== hi && scores[0] !== lo ? 1 / n : 0;
+  }
   // "Lines only": the same, solid and dotted taken alike (where lines are, not how they are drawn).
   var SOLVERS = ['most solid', 'fewest solid', 'most dotted', 'fewest dotted', 'largest area', 'smallest area', 'like the others', 'odd one out',
     'like the others (lines only)', 'odd one out (lines only)', 'most like a given view',
@@ -586,6 +671,23 @@
     return n;
   }
   function layoutOf(g) { var out = '', k; for (k = 0; k < g.hs.length; k++) out += g.hs[k] ? 1 : 0; for (k = 0; k < g.vs.length; k++) out += g.vs[k] ? 1 : 0; return out; }
+  // Mirror symmetry (left and right), and the units that differ between two drawings of any size lined up at
+  // their lower left corner (fill compared cell by cell in reading order): cheap likenesses an eye can use.
+  function mirrored(g) {
+    var u, v, w = g.w;
+    for (v = 0; v <= g.h; v++) for (u = 0; u < w; u++) if (g.hs[v * w + u] !== g.hs[v * w + w - 1 - u]) return 0;
+    for (v = 0; v < g.h; v++) for (u = 0; u <= w; u++) if (g.vs[v * (w + 1) + u] !== g.vs[v * (w + 1) + w - u]) return 0;
+    return 1;
+  }
+  function hamAny(a, b) {
+    var n = 0, W = Mth.max(a.w, b.w), H = Mth.max(a.h, b.h), u, v, L = Mth.max(a.fill.length, b.fill.length);
+    function hsAt(g, x, y) { return x < g.w && y <= g.h ? g.hs[y * g.w + x] : 0; }
+    function vsAt(g, x, y) { return x <= g.w && y < g.h ? g.vs[y * (g.w + 1) + x] : 0; }
+    for (v = 0; v <= H; v++) for (u = 0; u < W; u++) if (hsAt(a, u, v) !== hsAt(b, u, v)) n++;
+    for (v = 0; v < H; v++) for (u = 0; u <= W; u++) if (vsAt(a, u, v) !== vsAt(b, u, v)) n++;
+    for (u = 0; u < L; u++) if (u >= a.fill.length || u >= b.fill.length || a.fill[u] !== b.fill[u]) n++;
+    return n;
+  }
   function gdistLines(a, b) {
     var n = 0, k;
     for (k = 0; k < a.hs.length; k++) if (!a.hs[k] !== !b.hs[k]) n++;
@@ -604,9 +706,11 @@
       pickShare(sumL, false), pickShare(sumL, true), pickShare(like, false), pickShare(pc, true), pickShare(pc, false), pickShare(nn, true), pickShare(nn, false)];
   }
   var WEIGHTS = [1, 1, 1, 1, 1.8, 3, 2, 1.5, 2, 1, 2, 2.5, 2, 2, 1.5];
+  var BAND_W = { 11: 4, 12: 3, 16: 1.5, 17: 2, 18: 3, 19: 3 }; // the band's own weights where they differ (the pieces, symmetry, likeness of any size, the middle)
 
   // The same shares as shares(), from per-drawing counts and pairwise distances computed once per call
   // (the chooser scores a few hundred sets).
+  var W_SONLY = 0.5; // the band: a wrong outline that only the structure drawn beside the views rules out costs a little
   var STRICT_MAX = 0.34; // the band drops a set where a cheap rule picks the key at better than 1 in 3
   function chooseFoils(rng, keyG, pool, need, giv, strict) {
     var idx = rshuffle(rng, pool.map(function (_, i) { return i; })).slice(0, 13), best = null, bestScore = INF, bestSh = null;
@@ -616,6 +720,7 @@
     var want = SOLVERS.map(function () { return strict ? 0.25 : rng.chance(0.25) ? 1 : 0; });
     var gs = [keyG].concat(idx.map(function (i) { return pool[i].g; })), n = gs.length, C = gs.map(counts), PC = gs.map(pieces), G = [], GL = [];
     var gsol = (giv || []).map(function (v) { return counts(v).solid; });
+    var SYM = strict ? gs.map(mirrored) : null, LA = gs.map(function (o) { var m = INF; (giv || []).forEach(function (v) { m = Mth.min(m, hamAny(o, v)); }); return m; });
     var like = gs.map(function (o) { var m = 99; (giv || []).forEach(function (v) { if (v.w === o.w && v.h === o.h) m = Mth.min(m, gdist(o, v)); }); return m; });
     for (var i = 0; i < n; i++) { G.push([]); GL.push([]); for (var j = 0; j < n; j++) { G[i].push(j < i ? G[j][i] : i === j ? 0 : gdist(gs[i], gs[j])); GL[i].push(j < i ? GL[j][i] : i === j ? 0 : gdistLines(gs[i], gs[j])); } }
     function sharesOf(m) { // m: indices into gs, m[0] = 0 (the key)
@@ -625,26 +730,37 @@
       var pcs = col(function (q) { return PC[q]; }), nn = m.map(function (a) { var t = INF; m.forEach(function (b2) { if (a !== b2) t = Mth.min(t, G[a][b2]); }); return t; });
       var out = [pickShare(sol, true), pickShare(sol, false), pickShare(dot, true), pickShare(dot, false), pickShare(ar, true), pickShare(ar, false), pickShare(su, false), pickShare(su, true),
         pickShare(sl, false), pickShare(sl, true), pickShare(lk, false), pickShare(pcs, true), pickShare(pcs, false), pickShare(nn, true), pickShare(nn, false)];
-      // the band also holds "as many solid units as a given view" (a stem-based count; tests/node)
-      if (strict) out.push(pickShare(col(function (q) { return gsol.indexOf(C[q].solid) >= 0 ? 1 : 0; }), true));
+      // the band also holds "as many solid units as a given view" (a stem-based count; tests/node), and, in the
+      // score only, the most symmetric drawing, the drawing most like a given view of any size (lined up at its
+      // corner) and the middle (neither the most nor the fewest) in solid units and in filled area: its small drawings
+      // leave those to chance otherwise, and holding the extremes alone left the key in the middle (round 5)
+      if (strict) out.push(pickShare(col(function (q) { return gsol.indexOf(C[q].solid) >= 0 ? 1 : 0; }), true), pickShare(col(function (q) { return SYM[q]; }), true), pickShare(col(function (q) { return LA[q]; }), false), midShare(sol), midShare(ar));
+      else out.push(pickShare(col(function (q) { return LA[q]; }), false));
       return out;
     }
     for (var a = 0; a < idx.length; a++) for (var b = a + 1; b < idx.length; b++) for (var c = b + 1; c < idx.length; c++) {
       var set = [pool[idx[a]], pool[idx[b]], pool[idx[c]]];
       if (need && !need(set)) continue;
-      var sh = sharesOf([0, a + 1, b + 1, c + 1]), score = 0;
-      for (var k = 0; k < sh.length; k++) if (!strict || k < 11 || k > 14) score += (WEIGHTS[k] || 1.5) * Mth.abs(sh[k] - (want[k] === undefined ? 0.25 : want[k]));
+      var sh = sharesOf([0, a + 1, b + 1, c + 1]), score = W_SONLY * ((set[0].sOnly ? 1 : 0) + (set[1].sOnly ? 1 : 0) + (set[2].sOnly ? 1 : 0));
+      for (var k = 0; k < sh.length; k++) {
+        var dev = sh[k] - (want[k] === undefined ? 0.25 : want[k]);
+        score += (strict && BAND_W[k] || WEIGHTS[k] || 1.5) * Mth.abs(dev);
+      }
       if (score < bestScore - 1e-9) { bestScore = score; best = set; bestSh = sh; }
     }
     // The pool can leave no choice (outline foils mostly add cubes, so the key's outline tends to be
     // the smallest, and the key tends to be the drawing most like a given view of its size): such a
     // set is dropped more than half the time, and the item is drawn again.
     if (best && ((bestSh[5] >= 0.5 && !want[5]) || (bestSh[6] >= 0.5 && !want[6]) || (bestSh[10] >= 0.5 && !want[10])) && rng.chance(0.6)) return null;
-    // The starter band's foils (no dotted line, no search-only foil, all from one small box) tend to
-    // share what the key lacks, leaving the key the odd one out: there every lopsided set is dropped.
-    // (the solvers added on 22 Nov stay out of the band's choice: in most band boxes no wrong drawing that the
-    // band allows has as many line pieces as the key, and the outright rule left the band no set at all; DECISIONS)
-    if (best && strict && bestSh.some(function (x, k) { return (k < 11 || k > 14) && x >= STRICT_MAX; })) return null;
+    // ... and above the band a set where the key is the odd one out, farthest from its nearest neighbour or most like
+    // a given view of any size (none of them wanted) likewise (round 5: they rose where the area rule below holds)
+    if (best && !strict && ((bestSh[7] >= 0.5 && !want[7]) || (bestSh[13] >= 0.5 && !want[13]) || bestSh[15] >= 0.5) && rng.chance(0.6)) return null;
+    // The starter band's foils (no dotted line, all from one small box) tend to share what the key lacks,
+    // leaving the key the odd one out: there every lopsided set is dropped. The line pieces and the nearest
+    // neighbour enter the band's score but not this outright rule (their few values left the band no set at all);
+    // a set where the key still has the most or the fewest pieces is drawn again half the time (round 5, DECISIONS).
+    if (best && strict && bestSh.some(function (x, k) { return (k < 11 || k === 15) && x >= STRICT_MAX; })) return null;
+    if (best && strict && (bestSh[11] >= 0.5 || bestSh[12] >= 0.5) && rng.chance(0.5)) return null;
     return best;
   }
 
@@ -746,7 +862,7 @@
     var bs = band ? bandSearch(given, b.W, b.H, b.D, miss) : null, res = bs ? bs.res : search(given, b.W, b.H, b.D);
     stats.nodes += res.nodes;
     if (res.over) { stats.over++; return null; }
-    var poss = bs ? bs.poss : possibleViews(res, b.W, b.H, b.D, miss), keyG = views[miss], keyCode = codeOf(keyG);
+    var poss = bs ? bs.poss : possibleViews(res, b.W, b.H, b.D, miss), keyG = views[miss], keyCode = codeOf(keyG), kp = pieces(keyG);
     if (!poss[keyCode]) return null;
     if (band && counts(keyG).dotted) return null; // the band's key has no dotted line
     var pool = [], seen = {};
@@ -766,6 +882,9 @@
         near.push({ x: x, d: gdist(keyG, x.g) });
       });
       near.sort(function (u, v) { return u.d - v.d; }).slice(0, 40).forEach(function (u) { admit(u.x.g, 'box'); });
+      chordsOf(keyG).forEach(function (c) { admit(c, 'extra'); chordsOf(c).forEach(function (c2) { admit(c2, 'extra'); }); });
+      dropsOf(keyG).forEach(function (c) { admit(c, 'drops'); });
+      pool.filter(function (o) { return o.src === 'box'; }).forEach(function (o) { chordsOf(o.g).forEach(function (c) { admit(c, 'chord'); chordsOf(c).forEach(function (c2) { admit(c2, 'chord'); }); }); });
     }
     else [b0].concat(fam, neighbours(rng, b)).forEach(function (nb) { if (nb !== b) admit(drawView(nb, miss), 'neighbour'); });
     if (miss !== 'top' && !band) flips(keyG).forEach(function (g) { admit(g, 'flip'); });
@@ -773,10 +892,31 @@
     // At the dashes level a "lines" foil can come with its own flip, so the key's line layout is not
     // the only one shared by two options (the "lines only" solvers).
     if (level === 'dashes' && miss !== 'top') rshuffle(rng, pool.filter(function (o) { return o.kind === 'lines'; })).slice(0, 6).forEach(function (o) { flips(o.g).forEach(function (g) { admit(g, 'flip2'); }); });
-    // The band: no foil that only the exhaustive search rejects (each fails the hull or the line test).
+    // The band: every foil fails the hull or the line test, or is the true view with lines added or taken away
+    // (the structure is drawn beside the views there, so the edge it lacks or has is seen); at the outline level a
+    // wrong outline that only the search rules out may come too when it has as many line pieces as the key (the key
+    // was the busiest drawing 60-80 % of the time otherwise), at a small cost in the chooser (round 5, DECISIONS).
     // No option on the band has a dotted line (the key never does), so dotted lines are no cue there.
-    if (band) pool = pool.filter(function (o) { var t = Object.assign({}, views); t[miss] = o.g; return !counts(o.g).dotted && (hullFails(t.top, t.front, t.end, b.W, b.H, b.D) || alignFails(t.top, t.front, t.end)); });
-    if (level === 'outline') cands = pool.filter(function (o) { return o.kind === 'outline'; });
+    if (band) pool = pool.filter(function (o) {
+      var t = Object.assign({}, views); t[miss] = o.g;
+      if (counts(o.g).dotted) return false;
+      o.sOnly = !(addsLines(keyG, o.g) || dropsLines(keyG, o.g) || hullFails(t.top, t.front, t.end, b.W, b.H, b.D) || alignFails(t.top, t.front, t.end));
+      return !o.sOnly || (level === 'outline' && o.kind === 'outline' && pieces(o.g) >= kp);
+    });
+    if (level === 'outline') {
+      cands = pool.filter(function (o) { return o.kind === 'outline'; });
+      // v1.2 (RV-items-1.2 cells, round 5): above the band the key's outline is no extreme in filled area unless two
+      // wrong outlines share its area (the family's outlines tend to sit on one side of the key's)
+      if (!band) {
+        var ka = counts(keyG).area;
+        cands.forEach(function (o) { o.area = counts(o.g).area; });
+        if (rng.chance(0.6)) need = function (s) {
+          var lt = 0, eq = 0, gt = 0;
+          s.forEach(function (o) { if (o.area < ka) lt++; else if (o.area > ka) gt++; else eq++; });
+          return (lt || eq >= 2) && (gt || eq >= 2);
+        };
+      }
+    }
     else if (band) { // same outline, other lines; the subtlest level takes the closest of them
       cands = pool.filter(function (o) { return o.kind !== 'outline' && (level === 'lines' || o.d <= 3); });
       if (level === 'lines') need = function (s) { return s.filter(function (o) { return o.kind === 'lines'; }).length >= 2; };
@@ -794,10 +934,11 @@
     }
     if (cands.length < 3) { stats.fewCands++; return null; }
     // The band's pool holds every drawing of the box, mostly far from the key, which would leave the
-    // key the odd one out: the chooser sees the nearest eight and five others.
+    // key the odd one out: the chooser sees the nearest eight, up to three as busy as the key and others.
     if (band && cands.length > 13) {
       var near = cands.slice().sort(function (x, y) { return x.d - y.d; });
-      cands = near.slice(0, 8).concat(rshuffle(rng, near.slice(8)).slice(0, 5));
+      var busy = rshuffle(rng, near.slice(8).filter(function (o) { return pieces(o.g) >= kp; })).slice(0, 3);
+      cands = near.slice(0, 8).concat(busy, rshuffle(rng, near.slice(8).filter(function (o) { return busy.indexOf(o) < 0; })).slice(0, 5 - busy.length));
     }
     var set = chooseFoils(rng, keyG, cands, need, Object.keys(given).map(function (v) { return given[v]; }), band && !relaxed);
     if (!set) { stats.noSet++; return null; }
@@ -807,7 +948,7 @@
       if (i === 0) return { kind: 'key', drawing: pub(keyG) };
       var o = set[i - 1], t = Object.assign({}, views);
       t[miss] = o.g;
-      return { kind: o.kind, why: hullFails(t.top, t.front, t.end, b.W, b.H, b.D) ? 'hull' : alignFails(t.top, t.front, t.end) ? 'align' : 'search', drawing: pub(o.g) };
+      return { kind: o.kind, why: hullFails(t.top, t.front, t.end, b.W, b.H, b.D) ? 'hull' : alignFails(t.top, t.front, t.end) ? 'align' : band && addsLines(keyG, o.g) ? 'extra' : band && dropsLines(keyG, o.g) ? 'drops' : band && o.kind === 'outline' ? 'shape' : 'search', drawing: pub(o.g) };
     });
     return {
       W: b.W, H: b.H, D: b.D, heights: rowsOf(b), missing: miss, given: givenPub, key: perm.indexOf(0), options: options,
@@ -874,7 +1015,7 @@
         if (poss[codeOf(og[i])] || poss2[codeOf(og[i])]) return 'option ' + i + ' is the ' + miss + ' view of another structure with the same two views';
         if (o.kind !== kindOf(true3[miss], og[i])) return 'option ' + i + ' is not of its stated kind';
         t[miss] = og[i];
-        var why = hullFails(t.top, t.front, t.end, W, H, D) ? 'hull' : alignFails(t.top, t.front, t.end) ? 'align' : 'search';
+        var why = hullFails(t.top, t.front, t.end, W, H, D) ? 'hull' : alignFails(t.top, t.front, t.end) ? 'align' : band && addsLines(true3[miss], og[i]) ? 'extra' : band && dropsLines(true3[miss], og[i]) ? 'drops' : band && o.kind === 'outline' ? 'shape' : 'search';
         if (o.why !== why) return 'option ' + i + ' gives the wrong reason (' + o.why + ', not ' + why + ')';
         if (band && why === 'search') return 'starter: option ' + i + ' is ruled out by the exhaustive search alone';
       }
@@ -1719,7 +1860,7 @@
   // the tutorial (params.task 'tutorial': the Watch, the Try items and the worked examples in learn.js)
   // never comes back as a rated item. A rated item whose stem is one of theirs (TUTORIAL: hashes of
   // their stems; the node test recomputes them from learn.js) is drawn again from the seed's stream.
-  var TUTORIAL = [337167328, 1869791245, 968252950, 3846313730, 242981060, 892970417];
+  var TUTORIAL = [2033821569, 1869791245, 1929187063, 3846313730, 242981060, 420711610];
   function stemSig(item) { return PX.rng.hash('patviews-stem', JSON.stringify([item.missing, Object.keys(item.given).sort().map(function (v) { return [v, item.given[v].segs]; })])); }
   function generateFresh(rng, params) {
     var item = generate(rng, params), sig;
@@ -1835,7 +1976,7 @@
       TUTORIAL: TUTORIAL, stemSig: stemSig, generateRaw: generate, sigOf: sigOf, fewStems: fewStems, freshSeed: freshSeed, sessionGuard: sessionGuard, GUARD_OPTS: GUARD_OPTS,
       VIEWS: VIEWS, MISSING: MISSING, CUBES: CUBES, GRIDS: GRIDS, FOILS: FOILS, HMAX: HMAX, SOLVERS: SOLVERS, stats: stats,
       boxOf: boxOf, rowsOf: rowsOf, fills: fills, connectedBox: connectedBox, drawView: drawView, drawRay: drawRay, codeOf: codeOf,
-      sameGrid: sameGrid, pub: pub, grid: grid, counts: counts, gdist: gdist, kindOf: kindOf, hullFails: hullFails, alignFails: alignFails,
+      sameGrid: sameGrid, pub: pub, grid: grid, counts: counts, gdist: gdist, kindOf: kindOf, hullFails: hullFails, alignFails: alignFails, addsLines: addsLines, dropsLines: dropsLines, chordsOf: chordsOf, dropsOf: dropsOf, loose: loose, hamAny: hamAny, mirrored: mirrored,
       lineSet: lineSet, crossStyles: crossStyles, pairV: pairV, search: search, searchRay: searchRay, possibleViews: possibleViews, neighbours: neighbours,
       flips: flips, shares: shares, pickShare: pickShare, gdistLines: gdistLines, build: build, fallback: fallback, cleanParams: cleanParams,
       cubeCount: cubeCount, bandBox: bandBox, bandStructure: bandStructure, pieces: pieces,
