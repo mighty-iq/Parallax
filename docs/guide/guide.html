@@ -99,7 +99,7 @@
       </div>
       <div class="panel">
         <h3>A measure that moves</h3>
-        <p>Short blocks without feedback open up to four sessions a week, and a full check comes every 4 weeks. After each block a meter shows how likely it is that your probe scores have risen; words wait for milestones. New probes: Other Way Round (near) and Motion Graphs (far). <span class="see">Page <span class="pgref" data-for="check"></span></span></p>
+        <p>Short blocks without feedback open up to four sessions a week, and a full check comes every 4 weeks. After each block a meter shows how likely it is that your probe scores have risen beyond what familiarity predicts; words wait for milestones. New probes: Other Way Round (near) and Motion Graphs (far). <span class="see">Page <span class="pgref" data-for="check"></span></span></p>
       </div>
       <div class="panel">
         <h3>A game layer between items</h3>
@@ -122,10 +122,12 @@
       <thead><tr><th style="width:38mm">Where</th><th>What changed</th></tr></thead>
       <tbody>
         <tr><td><b>Reckon</b> <span class="spec">version 2</span></td><td>Every route ends with one more turn on the spot, of 30° to 150°; a legs level where the same turns end in places far apart, so every leg's length counts; a 15° tolerance level; walks back of 3 to 20 m. Homing's solution map draws each landmark in the direction it had from the start.</td></tr>
-        <tr><td><b>Motion comfort</b></td><td>Homing and Reckon show a one-time notice, check in after 3 minutes of motion and then every 5, and end a new player's first block of walks after about 5 minutes of motion. Gentle motion, in Settings, plays walks at two thirds of the speed with gentler starts and stops and a still dot to look at.</td></tr>
+        <tr><td><b>Motion comfort</b></td><td>Homing and Reckon show a one-time notice, check in after 3 minutes of motion and then every 5, and after about 5 minutes of motion offer a new player the end of the session (Go on stays one tap away). Gentle motion, in Settings, plays walks at two thirds of the speed with gentler starts and stops and a still dot to look at.</td></tr>
         <tr><td><b>Modes</b></td><td>Every mode says in the app when it is the right one, and Today suggests one at a time from your log (dismissed, it stays hidden for 14 days).</td></tr>
         <tr><td><b>Chimera</b></td><td>The full welcome shows on the first launch only; later launches show a one-tap note under the header. An invitation comes at natural high points: a personal best, a grade, a Path pass, a check result, a plateau card, an export.</td></tr>
-        <tr><td><b>Privacy</b></td><td>Cards and exports name nobody unless you add the nickname you typed, and carry no browser, language or time zone unless you tick device details; the community export keeps every time in UTC and no local day.</td></tr>
+        <tr><td><b>Privacy</b></td><td>Cards and exports name nobody unless you add the nickname you typed, and carry no browser, language, time zone or screen size unless you tick device details; the community export keeps every time in UTC and no local day.</td></tr>
+        <tr><td><b>Offline</b></td><td>On GitHub Pages, Parallax keeps a copy of itself after the first visit, so the app and its home-screen icon start without a connection; a change arrives at the launch after the one that finds it. Where the browser offers it, Settings can install Parallax on the device.</td></tr>
+        <tr><td><b>The player</b></td><td>See solution after every right answer; while a solution plays, Space goes on to the next item (after a scored answer, Enter too) and → steps it. A session the phone closes in the background is saved and counted once at the next start; a session too short to count offers Keep going.</td></tr>
         <tr><td><b>Phones</b></td><td>Progress in tabs; Confirm taps (a first tap marks an answer, a second gives it); larger words on the arrow circle; Section practice held sideways; clearer layouts for Hole Punch, Form, Painted Cubes and Knots.</td></tr>
         <tr><td><b>Fixes</b></td><td>Pause and End work while feedback shows; one way of writing answer times; the summary says its median time is of right answers; Section practice keeps its clock and its review over a reload and numbers its items without gaps; Reckon's tips and feedback read clearly.</td></tr>
         <tr><td><b>Playtest mode</b></td><td>For testers, off by default: three taps after each exercise, a note on any screen, and a report to copy. It stays on your device unless you copy it.</td></tr>
@@ -134,7 +136,7 @@
     <div class="cols push">
       <div class="panel">
         <span class="label">Your record</span>
-        <p>Version 1.2 stores the record in format 4. A 1.0 or 1.1 record upgrades when 1.2 first opens it, with nothing lost. Where an exercise's level scale changed (easier first levels for Views and the six DAT-style formats; new ranges for Reckon, Form and other rebuilt exercises), stored levels, bests and Path stages are converted once to the new scale, so a level may read differently for the same skill. New parts of the record hold plateau events, bet periods, measurement occasions and the game layer; each trial gains its kind, add-on, answer mode, screen orientation, deadline and difficulty offset. Rebuilt exercises log their trials under a new version.</p>
+        <p>Version 1.2 stores the record in format 4. A 1.0 or 1.1 record upgrades when 1.2 first opens it, with nothing lost. Where an exercise's level scale changed (easier first levels for Views and the six DAT-style formats; new ranges for Reckon, Form and other rebuilt exercises), stored levels, bests and Path stages are converted once to the new scale (never back: a build leaves alone the levels a newer build wrote), so a level may read differently for the same skill. New parts of the record hold plateau events, bet periods, measurement occasions and the game layer; each trial gains its kind, add-on, answer mode, screen orientation, deadline and difficulty offset. Rebuilt exercises log their trials under a new version. Cube Match and Mechanisms ask new items in 1.2, and Pattern Memory is scored square by square: each new version is a probe of its own, with its own familiarity curve, so for a record measured under 1.1 it adds little to the composite for some weeks; View Match, Level and Word Links are unchanged.</p>
       </div>
       <div class="panel">
         <span class="label">Also new</span>
@@ -184,7 +186,7 @@
           <li><b>Its own items:</b> no clones of Wechsler Block Design or Visual Puzzles, no item from a published test.</li>
           <li><b>No ranking, nothing for time:</b> no leaderboards, no points for minutes or logins.</li>
           <li><b>Each exercise says what it is.</b> Track is labelled attention practice, Angles perceptual-judgement practice; Homing and Reckon are experimental.</li>
-          <li><b>Offline:</b> no account, ads or analytics.</li>
+          <li><b>Offline:</b> from a file, or from the Pages copy once visited; no account, ads or analytics.</li>
         </ul>
         <h2>How we word claims</h2>
         <p>Reviews of cognitive training find extensive evidence that trained tasks improve, less for closely related tasks, and little so far for distant tasks or everyday life <span class="cite">(Simons et al., 2016)</span>. Consumer-protection guidance judges a claim by its overall impression, implied claims included <span class="cite">(FTC, 2022)</span>. So this guide says what studies found, what Parallax bets on and how it measures, and promises no outcome. The bets are open: test them with us.</p>
@@ -205,7 +207,7 @@
           <ul class="dash">
             <li><b>One file.</b> Download <code>Parallax.html</code> and open it in any modern browser. No installation, no internet connection needed.</li>
             <li><b>The repository.</b> Download or clone it and open <code>index.html</code>.</li>
-            <li><b>A web address.</b> Anyone can host a copy on GitHub Pages (chapter 11 shows how).</li>
+            <li><b>A web address.</b> Anyone can host a copy on GitHub Pages (chapter 11 shows how). After the first visit it starts without a connection too, and where the browser offers it, Settings installs it on the device.</li>
           </ul>
           <p>Phones work, upright or sideways (page <span class="pgref" data-for="phone"></span>).</p></li>
         <li><h3>Meet the Chimera pop-up</h3>
@@ -237,13 +239,13 @@
         <p>Baseline 2 opens a session at least 12 hours after the first, with the same mix of tasks. Retaking any task raises scores on its own, most at the second sitting <span class="cite">(Scharfen et al., 2018)</span>, so a second baseline takes up much of that familiarity. Then about 3.5 minutes without feedback open up to four sessions a week, and every 4 weeks a full check takes a block's place. From your first training after the baselines, a meter shows how your probe scores are moving (page <span class="pgref" data-for="check"></span>).</p></li>
       <li><h3>Train about 20 minutes, three times a week</h3>
         <p><b>Today</b> proposes three exercises: a <i>focus</i> (one you pin, one not tried yet, or the one where you improve fastest), a <i>review</i> (one due for another look) and a <i>variety</i> pick (the one practised least). Beside them: the weekly goal, the Daily Challenge, this week's Climb and field notes, and now and then a suggestion of another mode. On a new record its panels start empty and fill as you practise; it never shows sample data.</p>
-        <p>Twenty minutes is the default (10, 15 and 30 also work); the weekly goal is three sessions (2 to 6), on any days. Several programmes that worked in studies ran about 10 to 20 hours in all <span class="cite">(Miller &amp; Halpern, 2013)</span>, and more hours have not been shown to help more; in older adults, more than three sessions a week added nothing <span class="cite">(Lampit et al., 2014)</span>.</p></li>
+        <p>Twenty minutes is the default (10, 15 and 30 also work); the weekly goal is three sessions (2 to 6), on any days. Programmes that worked in studies ran about 10 to 20 hours in all (12 in <span class="cite">Miller &amp; Halpern, 2013</span>), and no review found that more hours helped more <span class="cite">(Hawes et al., 2022)</span>; in older adults, more than three sessions a week added nothing <span class="cite">(Lampit et al., 2014)</span>.</p></li>
     </ol>
     <figure class="app-fig wide"><div class="shot"><img src="../shots/app-today.png" alt="The Today screen: today's session of three exercises, the weekly goal and the Daily Challenge"></div>
       <figcaption><span class="label">Fig. 2.3</span>Today, after six weeks of simulated practice: the session plan with its focus, review and variety exercises, the weekly goal and the Daily Challenge.</figcaption></figure>
     <h2>A first week might look like this</h2>
     <div class="week">
-      <div><span class="label">Day 1 · about 15 min, or more</span>The welcome, the tutorial and Baseline 1, then a Train session; End stops it whenever you like.</div>
+      <div><span class="label">Day 1 · about 35 min</span>The welcome, the tutorial and Baseline 1, then a Train session; End stops it whenever you like.</div>
       <div><span class="label">Day 2 · about 30 min</span>Baseline 2 opens the session, then training.</div>
       <div><span class="label">Day 4 · about 25 min</span>A short block, then Train; the meter appears after the block.</div>
       <div><span class="label">Day 6 · 20 min and more</span>A session, then the Daily and a Climb attempt; compare notes in the Discord.</div>
@@ -274,7 +276,7 @@
         <figcaption><span class="label">Fig. 2.5</span>Show me, paused mid-turn.</figcaption></figure>
       <div>
         <h3>Show me, and the cards between items</h3>
-        <p>Show me replays the solution, built from the same model that graded your answer: here the reference turns until it matches. Space pauses, → steps, R replays, Esc closes; with reduced motion it steps through keyframes. Between items, a run may open with a short block without feedback, a comparison round or a bridge set (page <span class="pgref" data-for="ch-bets"></span>). They never interrupt an item.</p>
+        <p>Show me replays the solution, built from the same model that graded your answer: here the reference turns until it matches. While it plays, → shows the next step, R replays and Esc closes; Space goes on to the next item, and after a scored answer Enter does too. With reduced motion it steps through keyframes. Between items, a run may open with a short block without feedback, a comparison round or a bridge set (page <span class="pgref" data-for="ch-bets"></span>). They never interrupt an item.</p>
       </div>
     </div>
     <div class="session-row">
@@ -282,7 +284,7 @@
         <figcaption><span class="label">Fig. 2.6</span>The session summary.</figcaption></figure>
       <div>
         <h3>The summary</h3>
-        <p>Results against your own past, level changes, new grades, Reach and firsts, a plateau card when a change starts or ends, the meter after a block, the week and one next step. Success is held near your target on purpose, so the level, not the score, shows progress. Share makes a card with the Discord link.</p>
+        <p>Results against your own past, level changes, new grades, Reach and firsts, a plateau card when a change starts or ends, the meter after a block, the week and one next step. A level whose range is still wide reads "still settling"; a session too short to count for the week says how many answers would, and <b>Keep going</b> adds them to it. Success is held near your target on purpose, so the level, not the score, shows progress. Share makes a card with the Discord link.</p>
       </div>
     </div>
   </div>
@@ -319,7 +321,7 @@
       </div>
       <div>
         <h3>Where your progress lives</h3>
-        <p>On iPhone and iPad, Safari can clear a site's storage after seven days of use without a visit, and an app's built-in browser, Discord's included, keeps a copy of its own. On these devices the welcome says so before you start, and later offers a backup whenever none was made for 14 days. Adding Parallax to the home screen (Share, then Add to Home Screen) gives it a lasting home; served from GitHub Pages, it then has its own icon. Parallax also asks the browser to keep its storage, which the browser may decline. A backup is the safe choice on every device (chapter 9).</p>
+        <p>On iPhone and iPad, Safari can clear a site's storage after seven days of use without a visit, and an app's built-in browser, Discord's included, keeps a copy of its own. On these devices the welcome says so before you start, and later offers a backup whenever none was made for 14 days. Adding Parallax to the home screen (Share, then Add to Home Screen) gives it a lasting home; served from GitHub Pages, it then has its own icon, which starts Parallax without a connection too. Parallax also asks the browser to keep its storage, which the browser may decline. A backup is the safe choice on every device (chapter 9).</p>
       </div>
     </div>
   </div>
@@ -345,8 +347,8 @@
           <li><b>Appearance:</b> theme, text size (90 to 150 %), motion (Reduce shortens animations around the exercises; moving stimuli still move) and Gentle motion for Homing and Reckon.</li>
           <li><b>Sound and keys:</b> sounds (off by default; never while an item plays), key hints, Confirm taps. <b>Training:</b> session length and weekly goal.</li>
           <li><b>Game layer:</b> how strongly a grade or a best is celebrated (medium by default), the Climb's sounds, rank titles. <b>Measurement week</b> and <b>Join the bet trials</b> (chapter 5).</li>
-          <li><b>Sharing and privacy:</b> the nickname, the only name a card or export may carry, and device details in exports, off by default.</li>
-          <li><b>Test practice:</b> the DAT-style focus (page <span class="pgref" data-for="dat"></span>) and "Taking a test soon?" (page <span class="pgref" data-for="hygiene"></span>). <b>Your data:</b> back up, export, import and undo (chapter 9).</li>
+          <li><b>Sharing and privacy:</b> the nickname, the only name a card or export may carry, and device details in exports (browser, language, time zone and screen sizes), off by default.</li>
+          <li><b>Test practice:</b> the DAT-style focus (page <span class="pgref" data-for="dat"></span>) and "Taking a test soon?" (page <span class="pgref" data-for="hygiene"></span>). <b>Your data:</b> back up, export, import and undo (chapter 9), and install Parallax where the browser offers it.</li>
         </ul>
         <p class="note">Everything is playable by keyboard, touch targets are at least 44 pixels, nothing flashes faster than three times a second, and the device's reduced-motion setting is respected outside the stimulus itself.</p>
       </div>
@@ -406,7 +408,7 @@
         <tr><td><span class="spec">EX-11</span> Homing</td><td class="mono">NAV</td><td>extrinsic-dynamic</td><td>face the start after a walk, with landmarks on easier levels</td></tr>
       </tbody>
     </table>
-    <p class="note push">Training items are untimed, except Central Point's quick form. "Mark" and "draw" formats are draw-the-answer items (page <span class="pgref" data-for="ch-bets"></span>).</p>
+    <p class="note push">Training items are untimed, except Central Point's quick form and, once Speed opens for an exercise, the easy items that carry its deadline. "Mark" and "draw" formats are draw-the-answer items (page <span class="pgref" data-for="ch-bets"></span>).</p>
   </div>
 </section>
 
@@ -468,8 +470,8 @@
             <li><span class="k">Spheres</span><span>6, 8 or 10</span></li>
             <li><span class="k">Tracking</span><span>5, 8 or 12 seconds; the view still, or orbiting slowly</span></li>
           </ul>
-          <p class="strat"><span class="rk">Strategies</span><b>One shape:</b> see the targets as the corners of one shape and watch it stretch, turn and slide, eyes resting near its middle; good for 2 to 4 spread-out targets. <b>Watch the close passes:</b> when a sphere comes near a target, watch both until they part; good for fast or crowded displays. <span class="rk">Switch</span>when the shape falls apart, or when close passes come so often that you lose the picture. When most spheres are targets, follow the others instead.</p>
-          <p class="ev"><span class="rk">Evidence</span>Gains on the trained task are large (d = 1.6–2.0), with no transfer to a different tracking task beyond retest <span class="cite">(Harris et al., 2020)</span>. Studies of a commercial 3D tracking trainer gave very weak evidence for gains in attention or working memory; two of three tests of transfer to sport or driving found nothing, and none were preregistered <span class="cite">(Vater et al., 2021)</span>. A 2025 soccer study found no transfer to game performance <span class="cite">(Romeas et al., 2025)</span>.</p>
+          <p class="strat"><span class="rk">Strategies</span><b>One shape:</b> see the targets as the corners of one shape and watch it stretch, turn and slide, eyes resting near its middle; good for 2 to 4 spread-out targets. <b>Watch the close passes:</b> when a sphere comes near a target, watch both until they part; good for fast or crowded displays. <span class="rk">Switch</span>when the shape falls apart, or when close passes come so often that you lose the picture. When most spheres are targets, follow the few unmarked ones instead: the tutorial teaches it, and the cue line offers it.</p>
+          <p class="ev"><span class="rk">Evidence</span>Gains on the trained task are large (d = 1.6–2.0); evidence of transfer beyond it is weak so far, in the lab and on the pitch <span class="cite">(Harris et al., 2020;</span> <span class="cite">Vater et al., 2021;</span> <span class="cite">Romeas et al., 2025)</span>. Track's bet is attention control, and the pooled exports test it.</p>
         </div>
       </div>
     </article>
@@ -514,7 +516,7 @@
           <ul class="dims">
             <li><span class="k">Angle</span><span>10° to 170°, in 20° steps</span></li>
             <li><span class="k">Squares</span><span>5 to 9</span></li>
-            <li><span class="k">Time</span><span>none in Train; Speed mode and a deadline staircase in Threshold add it later</span></li>
+            <li><span class="k">Time</span><span>none at first; once Speed opens, Train's easy items carry its deadline, and Threshold has a deadline staircase</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Turn it as one piece:</b> picture a cut-out card turning on the table until it lines up. Quick for small turns and simple shapes. <b>Check one feature, then its side:</b> find a notch or the longest arm in both shapes, walk round the outline the same way, and see which side the next part is on. Steady for big turns. <span class="rk">Switch</span>when the picture blurs, check features; when that gets slow, turn the whole card. Never count squares: a mirror image has the same ones.</p>
           <p class="ev"><span class="rk">Evidence</span>Practice speeds rotation up a lot: over 21 days, response times fell from 3,132 to 1,480 ms while errors stayed flat <span class="cite">(Wright et al., 2008)</span>. Across training studies, rotation response times improved more than rotation accuracy (g = 0.69 against 0.31; <span class="cite">Uttal et al., 2013</span>).</p>
@@ -553,12 +555,12 @@
       <header class="ex-head"><span class="spec">EX-05 · Nets · Vz</span><h2>Nets</h2><span class="kind">Cube nets</span></header>
       <div class="ex-body">
         <div class="ex-figs">
-          <figure><div class="shot"><img src="../shots/ex05-nets.png" alt="Nets: a net of six lettered squares with face A marked, and four face options"></div><figcaption><span class="label">Question</span>Which face ends up opposite the marked face A? A 1-4-1 net.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex05-nets.png" alt="Nets: a net of six squares with one square shaded and hatched, and four face options"></div><figcaption><span class="label">Question</span>Which face ends up opposite the shaded square? A 1-4-1 net.</figcaption></figure>
           <figure><div class="shot"><img src="../shots/ex05-nets-showme.png" alt="Nets show me: the net folding up in a tilted view"></div><figcaption><span class="label">Show me, paused</span>The net folds up, one hinge at a time.</figcaption></figure>
         </div>
         <div class="ex-text">
           <p><span class="rk">Trains</span>Visualisation (Vz): folding a flat pattern into a cube in your head. Intrinsic-dynamic. <span class="rk">Bet</span>comparison, with comparison rounds.</p>
-          <p><span class="rk">How to play</span>Six squares joined at their edges; dashed lines are folds. Three questions: which face ends up <b>opposite</b> the marked face; do the two thick <b>edges</b> meet; does this pattern fold into a closed <b>cube</b>, every square on a side of its own? Keys 1–4, or 1 = Yes and 2 = No.</p>
+          <p><span class="rk">How to play</span>Six squares joined at their edges; dashed lines are folds. Three questions: which face ends up <b>opposite</b> the shaded square, which stays on the table while the others fold up; do the two thick <b>edges</b> meet; does this pattern fold into a closed <b>cube</b>, every square on a side of its own? Keys 1–4, or 1 = Yes and 2 = No.</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Carried</span><span>squares that move with each fold: from 2–4 up to 11–15</span></li>
@@ -614,7 +616,7 @@
             <li><span class="k">View</span><span>top → front → right</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Walk round it:</b> move in your mind to the marked side and look straight on, so that depth flattens out. Quick for small structures and the top view. <b>Read it column by column:</b> note each column's height on a top view; the front view shows the tallest stack in each column, the right view the same row by row, front on the left. Steady for large structures and side views. <span class="rk">Switch</span>when the picture slips, use the heights; when counting gets slow, picture the view. A mirrored drawing has the same parts in the opposite order: check which side the front is on.</p>
-          <p class="ev"><span class="rk">Evidence</span>Orthographic and isometric views are core modules of a spatial-skills course for first-year engineering students. Scores on a rotation test rose from about 50 % to 74–82 % correct, but these students were selected for low scores, so part of the rise is regression to the mean; the numbers are before and after, and the comparison groups were self-selected, so causal claims are weak <span class="cite">(Sorby, 2009; Sorby &amp; Veurink, n.d.)</span>. Off-screen challenge: build a structure, then sketch its views.</p>
+          <p class="ev"><span class="rk">Evidence</span>Orthographic and isometric views are core modules of a spatial-skills course for first-year engineering students. In that course, scores on a rotation test rose from about 50 % to 74–82 % correct in students selected for low scores, measured before and after without a randomised comparison <span class="cite">(Sorby, 2009;</span> <span class="cite">Sorby &amp; Veurink, n.d.)</span>. Off-screen challenge: build a structure, then sketch its views.</p>
         </div>
       </div>
     </article>
@@ -702,7 +704,7 @@
         </div>
         <div class="ex-text">
           <p><span class="rk">Trains</span>Navigation (NAV): keeping track of where you started as you move, with far landmarks as fixes on the easier levels. Extrinsic-dynamic. <b>Experimental.</b> It is the landmark-aided stage before Reckon. <span class="rk">Bet</span>calibration, with detailed feedback on your estimates.</p>
-          <p><span class="rk">How to play</span>You watch a short walk through your own eyes: straight legs, with turns on the spot between them. You start in a ring that disappears once you walk away. Then turn to face the start: drag the view sideways, drag or tap the arrow circle, or use the buttons for 5° and 1° steps (keys ← and →, Shift for 1°), and confirm. Far landmarks, placed where the walk shows them, barely move as you walk, so, like a navigator's fix, they show how far you have turned.</p>
+          <p><span class="rk">How to play</span>You watch a short walk through your own eyes: straight legs, with turns on the spot between them. You start in a ring that disappears once you walk away. Then turn to face the start: drag the view sideways, drag or tap the arrow circle (or tap beside it, in its row), or use the buttons for 5° and 1° steps (keys ← and →, Shift for 1°), and confirm. The top of the circle is the way you face now. Far landmarks, placed where the walk shows them, barely move as you walk, so, like a navigator's fix, they show how far you have turned.</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Route</span><span>2 to 4 legs with small (30–60°), medium (60–120°) or large (120–160°) turns, in eight steps</span></li>
@@ -710,7 +712,7 @@
             <li><span class="k">Tolerance</span><span>within 40°, 30° or 20° counts as right</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Draw the map in your head:</b> picture the walk from above as it happens, with yourself as a moving arrow. Natural for short routes. <b>Track the start like a compass needle:</b> keep one direction in mind, where the start lies from you, and update it after every leg and turn. Steady without landmarks. <span class="rk">Switch</span>when the picture blurs after several turns, track the direction; with landmarks, check your picture against them.</p>
-          <p class="ev"><span class="rk">Evidence</span>On a screen, Homing measures visual path integration only, without the body's own sense of turning and walking; whether it helps real wayfinding has not been studied. Since 1.1 it walks at 1.8 m/s and turns at 45°/s with gentle starts and stops, over routes of 12 to 28 m; since 1.2 its solution map draws each landmark in the direction it had from the start (page <span class="pgref" data-for="nav-phone"></span>).</p>
+          <p class="ev"><span class="rk">Evidence</span>Homing trains visual path integration: keeping track of home from the turns and distances you see. Whether practice on a screen helps wayfinding in real places has not been studied. Since 1.1 it walks at 1.8 m/s and turns at 45°/s with gentle starts and stops, over routes of 12 to 28 m; since 1.2 its solution map draws each landmark in the direction it had from the start (page <span class="pgref" data-for="nav-phone"></span>).</p>
         </div>
       </div>
     </article>
@@ -718,12 +720,12 @@
       <header class="ex-head"><span class="spec">EX-12 · Reckon · NAV</span><h2>Reckon</h2><span class="kind">Dead reckoning, nothing to steer by</span><span class="badge warn">experimental</span></header>
       <div class="ex-body">
         <div class="ex-figs">
-          <figure><div class="shot"><img src="../shots/ex12-reckon.png" alt="Reckon after the walk: an empty plain, the arrow circle, fine-turn buttons and Back, Walk and Here"></div><figcaption><span class="label">Question</span>After the walk: turn, hold Walk, tap Here.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex12-reckon.png" alt="Reckon after the walk: an empty plain, the arrow circle, fine-turn buttons and Back, Walk and Here"></div><figcaption><span class="label">Question</span>After the walk: turn, walk back, tap Here.</figcaption></figure>
           <figure><div class="shot"><img src="../shots/ex12-reckon-feedback.png" alt="Reckon feedback: the flag at the start, both arrows on the circle, and the errors in direction, distance and drift"></div><figcaption><span class="label">Feedback</span>The errors in direction and distance, and the drift per metre.</figcaption></figure>
         </div>
         <div class="ex-text">
           <p><span class="rk">Trains</span>Navigation (NAV): dead reckoning, keeping track of home from your own turns and steps alone. Extrinsic-dynamic. <b>Experimental;</b> rated per screen size. <span class="rk">Bet</span>calibration, with detailed feedback.</p>
-          <p><span class="rk">How to play</span>Watch a walk of 2 to 4 legs across an endless plain; it ends with one more turn on the spot. <b>Point:</b> turn to face the start and confirm. <b>Return:</b> turn, then hold Walk (↑) to walk back, Back (↓) to step back, and tap Here (Enter) where the start is. Nothing marks a place, and above the first speed level seconds do not measure distance (page <span class="pgref" data-for="nav-phone"></span>).</p>
+          <p><span class="rk">How to play</span>Watch a walk of 2 to 4 legs across an endless plain; it ends with one more turn on the spot. <b>Point:</b> turn to face the start and confirm. <b>Return:</b> turn, then walk back with Walk (↑) and step back with Back (↓), held or tapped once to start and again to stop, and tap Here (Enter) where the start is. The top of the circle is the way you face now. Nothing marks a place, and above the first speed level seconds do not measure distance (page <span class="pgref" data-for="nav-phone"></span>).</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Route</span><span>Homing's eight steps</span></li>
@@ -770,7 +772,7 @@
       </div>
       <div>
         <h3>Touch, and comfort</h3>
-        <p>Both exercises play by touch: drag the view to turn, then fine-tune with the 1° and 5° buttons, which turn when you lift your finger, so a swipe across them scrolls; captions sit over the view as subtitles, and held sideways the view and the controls sit side by side. Pause freezes the walk at once. The motion is gentle: Homing walks at 1.8 m/s; Reckon too on its steady level, and between 0.5 and 2.0 m/s above it, so a leg's walking time says little about its length. Turns run at 45°/s at most, with soft starts and stops. A one-time notice comes before the first walk, a check-in after 3 minutes of motion and then every 5, and a new player's first block of walks ends after about 5 minutes of motion. <b>Gentle motion</b>, in Settings, plays the walks at two thirds of the speed, one speed per leg, with gentler starts and stops and a still dot to look at. If the motion makes you feel unwell, pause or stop.</p>
+        <p>Both exercises play by touch: drag the view to turn, or tap the arrow circle or beside it, then fine-tune with the 1° and 5° buttons, which turn when you lift your finger, so a swipe across them scrolls; captions sit over the view as subtitles, and held sideways the view and the controls sit side by side. Pause freezes the walk at once. The motion is gentle: Homing walks at 1.8 m/s; Reckon too on its steady level, and between 0.5 and 2.0 m/s above it, so a leg's walking time says little about its length. Turns run at 45°/s at most, with soft starts and stops. A one-time notice comes before the first walk, a check-in after 3 minutes of motion and then every 5, and after about 5 minutes of motion a new player is offered the end of the session (Go on stays one tap away). <b>Gentle motion</b>, in Settings, plays the walks at two thirds of the speed, one speed per leg, with gentler starts and stops and a still dot to look at. If the motion makes you feel unwell, pause or stop.</p>
         <p>A trial is voided only when the walk itself was harmed: a freeze of more than a second while moving, slow frames for more than half of it, a lost 3D view, the screen changing shape during the walk or while you answer, or a pause. Homing's items changed in 1.1 and Reckon's in 1.2, so the trials of both are logged as version 2.</p>
       </div>
     </div>
@@ -861,12 +863,12 @@
       <header class="ex-head"><span class="spec">EX-20 · Central Point · LE Vz</span><h2>Central Point</h2><span class="kind">The spot closest to all the targets</span><span class="badge info">new in 1.2</span></header>
       <div class="ex-body">
         <div class="ex-figs">
-          <figure><div class="shot"><img src="../shots/ex20-centralpoint.png" alt="Central Point: a board of 7 by 7 dots with six ringed targets, and Confirm"></div><figcaption><span class="label">Question</span>Tap the spot with the least total distance to the rings, then tap it again before the bar runs out.</figcaption></figure>
+          <figure><div class="shot"><img src="../shots/ex20-centralpoint.png" alt="Central Point: a board of 7 by 7 dots with six ringed targets, Move and Confirm"></div><figcaption><span class="label">Question</span>Tap the spot with the least total distance to the rings, then tap it again before the bar runs out.</figcaption></figure>
           <figure><div class="shot"><img src="../shots/ex20-centralpoint-feedback.png" alt="Central Point feedback: lines from the answer to every target with their lengths, the best spot and the band of right answers"></div><figcaption><span class="label">Feedback</span>Lines and lengths from your spot to every target, the best spot, and both totals.</figcaption></figure>
         </div>
         <div class="ex-text">
           <p><span class="rk">Trains</span>Judging by eye where a set of points balances (LE, Vz): the meeting place that keeps everyone's walk shortest. Extrinsic-static. <span class="rk">Bet</span>calibration, with comparison rounds, a bridge set and detailed feedback on your estimates.</p>
-          <p><span class="rk">How to play</span>The targets are rings on a board of 7 × 7 dots; you answer on a dot or half-way between two. Your total is the sum of the straight-line distances to every ring. <b>Quick</b>, the default: tap to place the marker, then tap it again or Confirm before the bar runs out. <b>Exact</b>, a variant in the Library and Free play: no clock; drag the marker or nudge it half a dot with the arrows, then Confirm. No total shows before you answer.</p>
+          <p><span class="rk">How to play</span>The targets are rings on a board of 7 × 7 dots; you answer on a dot or half-way between two. Your total is the sum of the straight-line distances to every ring. <b>Quick</b>, the default: tap to place the marker, then tap it again or Confirm before the bar runs out; Move opens arrow buttons that step it half a dot. <b>Exact</b>, a variant in the Library and Free play: no clock; drag the marker or nudge it half a dot with the arrows, then Confirm. No total shows before you answer.</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Targets</span><span>4, 5, 6, 7 or 8</span></li>
@@ -874,7 +876,7 @@
             <li><span class="k">Deadline</span><span>Quick only: 20 s for a new player, then a staircase that keeps about 85 % of answers in time (2.5 to 30 s)</span></li>
           </ul>
           <p class="strat"><span class="rk">Strategies</span><b>Count the sides:</b> the middle column and the middle row of the targets cross at a first guess; wherever a line through your spot has clearly more targets on one side, move that way. With four targets, the lines joining opposite targets cross at the best spot. <b>Balance the pulls:</b> every target pulls on your spot with the same strength, however far away; move until the pulls cancel. <span class="rk">Switch</span>count first, then balance, until it runs by itself.</p>
-          <p class="ev"><span class="rk">Scoring</span>Credit is 1 inside the band and falls to 0 at four times it. Quick's round score multiplies the credit by your pace, from 1 for an instant answer to ½ at the deadline, so a near miss still scores and a quick one scores more. Your level counts right or wrong before the deadline.</p>
+          <p class="ev"><span class="rk">Scoring</span>Credit is 1 inside the band and falls to 0 at four times it. Quick's round score multiplies the credit by your pace, from 1 for an instant answer to ½ at the deadline, so a near miss, within four times the band, still scores (the verdict says Near miss) and a quick one scores more. Your level counts right or wrong before the deadline.</p>
         </div>
       </div>
     </article>
@@ -941,7 +943,7 @@
           <figure><div class="shot"><img src="../shots/ex14-openings.png" alt="Openings: a solid with features on its faces, and five openings lettered A to E, each turned or flipped"></div><figcaption><span class="label">Question</span>Which opening does the solid pass through? The openings are turned or flipped, as the format allows.</figcaption></figure>
         </div>
         <div class="ex-text">
-          <p><span class="rk">How to play</span>The solid may be turned any way before it goes in, then slides straight through, so the opening it needs is its outline seen along that direction: any face may go first. The openings, A to E, are drawn at the solid's scale and must fit exactly: the right features in the wrong proportions are wrong. Every cut runs straight through the solid. <span class="rk">Bet</span>format practice.</p>
+          <p><span class="rk">How to play</span>The solid may be turned any way before it goes in, then slides straight through, so the opening it needs is its outline seen along that direction: any face may go first. The openings, A to E, are drawn at the solid's scale and must fit exactly: the right features in the wrong proportions are wrong. Openings may be drawn turned or flipped: turn the outline to match, as the Watch shows. Every cut runs straight through the solid. <span class="rk">Bet</span>format practice.</p>
           <span class="rk">Difficulty grows with</span>
           <ul class="dims">
             <li><span class="k">Features</span><span>one in all (starter) → two in all → per face 1 + 1 + 1 → 2 + 1 + 1 → 2 + 2 + 1 → 2 + 2 + 2</span></li>
@@ -1021,7 +1023,7 @@
           </ul>
           <p><span class="rk">Test range</span>Two or three folds, with wrong sheets whose hole counts may differ, as on the official samples. One fold is a starter level (the official rules ask for more); wrong sheets that all keep the right count, Parallax's earlier rule, are beyond the samples.</p>
           <p class="strat"><span class="rk">Strategies</span><b>Count the layers</b> under the punch: each layer makes a hole, the format's own way to the count. <b>Unfold it in your mind,</b> the last fold first: every hole on a flap gets a twin across its crease.</p>
-          <p class="ev"><span class="rk">Checked</span>Fold's exact paper model on a smaller sheet; an independent re-simulation checks every drawn step, and sheets with another count are checked position by position. The fold count's power of two, the most or fewest holes and the sheet most like the others stay near chance.</p>
+          <p class="ev"><span class="rk">Checked</span>Fold's exact paper model on a smaller sheet; an independent re-simulation checks every drawn step, and sheets with another count are checked position by position. The fold count's power of two, the most or fewest holes, where the holes sit and the sheet most like the others stay near chance.</p>
         </div>
       </div>
     </article>
@@ -1047,7 +1049,7 @@
           </ul>
           <p><span class="rk">Test range</span>Stacked figures of 6 to 22 cubes, drawn in plain lines, as on the official sample; flat figures and 4–6 cubes are starter levels, drawn in tones. Figure sizes and the number of questions per figure on the test are not documented officially.</p>
           <p class="strat"><span class="rk">Strategies</span><b>Tally once, answer all:</b> go column by column, hidden cubes included, and note each cube's painted sides; every question is then read off the tally. <b>Know the common positions:</b> a corner cube on the ground with nothing on top has 3.</p>
-          <p class="ev"><span class="rk">Checked</span>A separate check reads every figure again by its own ray marching. Judging cubes by the painted faces in the picture, the painted-cube form of the classic error of counting only what is in view <span class="cite">(Kurtuluş &amp; Yolcu, 2013)</span>, is held near chance; counting only the cubes in view still finds about 6 first answers in 10: hidden cubes are where it fails.</p>
+          <p class="ev"><span class="rk">Checked</span>A separate check reads every figure again by its own ray marching. Judging cubes by the painted faces in the picture, the painted-cube form of the classic error of counting only what is in view <span class="cite">(Kurtuluş &amp; Yolcu, 2013)</span>, is held near chance; counting only the cubes in view still finds about 6 first answers in 10 on stacked figures: hidden cubes are where it fails.</p>
         </div>
       </div>
     </article>
@@ -1086,7 +1088,7 @@
       <tbody>
         <tr><td><b>Mastery gates or free practice</b></td><td>Gates keep each step secure before the next. Freedom supports autonomy, which predicts enjoyment <span class="cite">(Ryan et al., 2006)</span>. One restricts what you can reach; the other removes the restriction.</td><td><b>Path</b> is gated, <b>Free play</b> is open, and <b>Train</b> sits between: no gates, but the engine picks the difficulty.</td></tr>
         <tr><td><b>Training or measuring</b></td><td>Training should adapt and explain. Honest measurement needs a fixed protocol, no feedback, and tasks that training never touches.</td><td>Train, Path and Speed train. The <b>Spatial Check</b> measures, with tasks training never touches, and training never feeds it.</td></tr>
-        <tr><td><b>Untimed or timed</b></td><td>Accuracy is built without a clock; fluency needs one. Deadlines change the best strategy and, reportedly, what rotation tests measure <span class="cite">(Voyer, 2011)</span>.</td><td>Train is untimed, except Central Point's quick form, whose clock is part of the task. <b>Speed</b> opens later, on settings you already answer well, with its own timed rating.</td></tr>
+        <tr><td><b>Untimed or timed</b></td><td>Accuracy is built without a clock; fluency needs one. Deadlines change the best strategy and, reportedly, what rotation tests measure <span class="cite">(Voyer, 2011)</span>.</td><td>Train is untimed until <b>Speed</b> opens for an exercise, on settings you already answer well; then Train's easy items carry Speed's deadline and update only its own timed rating. Central Point's quick form has a clock of its own.</td></tr>
         <tr><td><b>A standard threshold or a training target</b></td><td>Research protocols use staircases that settle where half the trials are right; training aims higher, at 70 to 85 % right depending on the format <span class="cite">(Wilson et al., 2019; Pelánek et al., 2017)</span>. The two numbers cannot be compared.</td><td><b>Threshold</b> keeps the research protocol for Track as a Standard preset; Train aims at your own target.</td></tr>
       </tbody>
     </table>
@@ -1100,9 +1102,9 @@
         <tr><td><b>Speed</b></td><td>fluency</td><td>Deadlines on settings you already answer well without a clock.</td><td>its own timed rating</td></tr>
         <tr><td><b>Free play</b></td><td>choice</td><td>Pick the exercise, variant, settings and timer. Logged.</td><td>untouched</td></tr>
         <tr><td><b>Spatial Check</b></td><td>measurement</td><td>Short adaptive tests on tasks you never train, without feedback (chapter 5).</td><td>untouched</td></tr>
-        <tr><td><b>Daily Challenge</b></td><td>the community</td><td>The same 8 items for everyone on each date, from easy to hard; from 1.2's release, item <i>k</i> is worth <i>k</i> points, 36 in all. One scored attempt, resumed if left part-way; past days in an archive. Track, Homing, Reckon (their difficulty depends on the screen) and the six test formats stay out. Share line: <span class="mono">Parallax Daily #N · P of 36 points · ✓✗… · https://discord.gg/chmr</span>.</td><td>untouched</td></tr>
+        <tr><td><b>Daily Challenge</b></td><td>the community</td><td>The same 8 items for everyone on each date, from easy to hard; from 1.2's release, item <i>k</i> is worth <i>k</i> points, 36 in all. One scored attempt, saved with each answer and resumed if left part-way; past days in an archive. Track, Homing, Reckon (their difficulty depends on the screen) and the six test formats stay out. Share line: <span class="mono">Parallax Daily #N · P of 36 points · ✓✗… · https://discord.gg/chmr</span>.</td><td>untouched</td></tr>
         <tr><td><b>Weekly Climb</b> <span class="meta">1.2</span></td><td>the community</td><td>20 rungs from easy to hard, the same for everyone each week; the second miss ends a run; three seeded attempts a week, untimed (page <span class="pgref" data-for="ch-motivation"></span>).</td><td>untouched</td></tr>
-        <tr><td><b>Section practice</b></td><td>rehearsing six test formats</td><td>The six formats under test conditions, 30 items in 20 minutes or 90 in 60, reviewed at the end (page <span class="pgref" data-for="section"></span>).</td><td>untouched</td></tr>
+        <tr><td><b>Section practice</b></td><td>rehearsing six test formats</td><td>The six formats under test conditions, at their test-range settings, 30 items in 20 minutes or 90 in 60, reviewed at the end (page <span class="pgref" data-for="section"></span>).</td><td>untouched</td></tr>
       </tbody>
     </table>
     <p class="note push">Friends can share a challenge code to play the same items. No ranking anywhere, and nothing pays for time.</p>
@@ -1137,7 +1139,7 @@
       </div>
       <div>
         <h3>Levels 1 to 100</h3>
-        <p>Your level is the difficulty you would answer right with probability g + (1 − g) × 0.75, placed on the exercise's own range: level 1 is its easiest item, level 100 its hardest. The reference is fixed, so changing your style never changes your level. Each level comes with a likely range (95 %) and the settings typical of that difficulty, such as "120° turns, 10 cubes". It moves at the end of each block of 10 answers, not after every answer; block notes, summaries and bests all show this one level. Levels compare you with your own past on one exercise; they are not scores against other people. Where an exercise has starter items, level 1 shows your progress towards level 2.</p>
+        <p>Your level is the difficulty you would answer right with probability g + (1 − g) × 0.75, placed on the exercise's own range: level 1 is its easiest item, level 100 its hardest. The reference is fixed, so changing your style never changes your level. Each level comes with a likely range (95 %), which reads "still settling" while it spans more than 30 levels, and an example of its settings, such as "120° turns, 10 cubes". It moves at the end of each block of 10 answers, not after every answer; block notes, summaries and bests all show this one level. Levels compare you with your own past on one exercise; they are not scores against other people. Where an exercise has starter items, level 1 shows your progress towards level 2.</p>
         <h3>Which item comes next</h3>
         <p>In every 10 items, 8 aim at your target, 1 is easier and 1 is a stretch, set above your level; until an exercise has 10 rated answers, a stretch moves only one setting. Among equally good candidates, Parallax prefers the settings and variants used least recently, and does not repeat the last three combinations while another one fits. Varying what does not decide the answer helps learning generalise <span class="cite">(Raviv et al., 2022)</span>. Where you do clearly worse than predicted on one setting, over at least 15 answers, a fifth of target items come from it: a weak spot.</p>
         <h3>Interleaving stages</h3>
@@ -1267,11 +1269,11 @@
       </div>
       <div>
         <h3>Reloads</h3>
-        <p>A reload or a closed tab ends the session with what was played. Reopening the app shows that session's summary, for up to 12 hours, instead of starting a new session by itself.</p>
+        <p>A reload or a closed tab ends the session with what was played. A page the phone discards in the background was saved as it stood when it went out of view, and the next start finishes that session once, so nothing counts twice. Reopening the app shows that session's summary, for up to 12 hours, instead of starting a new session by itself.</p>
         <h3>The Daily Challenge</h3>
-        <p>The day's scored attempt counts only when all 8 items are answered. One left part-way, by "End now", a reload or a closed tab, goes on where it stopped when you open it again that day, and unanswered items are never counted wrong. The day is your local date, the same boundary everywhere in the app.</p>
+        <p>The day's scored attempt counts only when all 8 items are answered. One left part-way, by "End now", a reload or a closed tab, goes on where it stopped when you open it again that day, since each answer is saved as you give it, and unanswered items are never counted wrong. The day is your local date, the same boundary everywhere in the app.</p>
         <h3>The weekly goal</h3>
-        <p>A session counts towards it with 10 answers or 5 minutes of active practice. A Spatial Check is a measurement and never counts.</p>
+        <p>A session counts towards it with 10 answers or 5 minutes of active practice; one that falls short says how many answers would make it count, and Keep going adds them to the same session. A Spatial Check is a measurement and never counts.</p>
         <div class="panel signal">
           <span class="label">How it was checked</span>
           <p>A browser test plays five-minute Train, Path and Speed sessions with quick and slow stretches, a 100-second pause, a 100-second hidden tab and a 70-second idle stretch. Each session ended within one item of five active minutes, and the summary, the share card, the Log, Progress and Today all showed "5 min".</p>
@@ -1299,7 +1301,7 @@
         </table>
         <p>Both keep about 40 seconds an item, the test's average pace. A part that cannot run on this device is left out, and the section keeps the same pace for the rest.</p>
         <h3>Forms</h3>
-        <p>Each size has numbered forms. A form holds the same items for everyone with the same version of the exercises, so friends can compare one. Its items sit in the middle of each exercise's difficulty range, 35 to 65 % of the way up. The setup offers the next form as new to you, and marks the formats you have never practised, with a way to their Watch, Try, Go.</p>
+        <p>Each size has numbered forms. A form holds the same items for everyone with the same version of the exercises, so friends can compare one. Its items come from each format's test-range settings only, from the middle of their difficulty span (35 to 65 % of the way up), so starter levels and features beyond the format never appear, and no part shows an item twice. The setup offers the next form as new to you, and marks the formats you have never practised, with a way to their Watch, Try, Go.</p>
         <h3>During a section</h3>
         <ul class="dash">
           <li>Every part's instructions come first, on one page, before the clock starts: the official candidate guide asks candidates to study the test's instructions before test day <span class="cite">(American Dental Association, 2026, Candidate Guide)</span>.</li>
@@ -1377,7 +1379,7 @@
         <tr><td><b>Named bets and add-ons</b></td><td>Every exercise names one mechanism; comparison rounds, bridge sets, draw-the-answer items and detailed feedback on estimates come and go at random (page <span class="pgref" data-for="ch-bets"></span>).</td><td>No theory of transfer has won; a within-player crossover lets pooled exports compare the bets as randomised trials.</td></tr>
         <tr><td><b>Exact feedback on estimates</b> <span class="meta">Reckon, Homing, Central Point</span></td><td>Reckon has no landmark to correct a walk, and Central Point shows no total before you answer; after each answer comes the exact error, and with the add-on your running bias.</td><td>In a related lab task, feedback after every trial removed the overshoot of distance within one session <span class="cite">(Noel et al., 2020)</span>; whether such a correction carries over is the calibration bet.</td></tr>
         <tr><td><b>Hands on</b></td><td>Off-screen challenges with paper, blocks or a map on seven exercises, each with an "I did it" tap.</td><td>In studies of children, hands-on training went with larger maths gains <span class="cite">(Hawes et al., 2022; Gilligan-Lee et al., 2023)</span>; Parallax makes no maths claim, and logs the challenges for pooled data.</td></tr>
-        <tr><td><b>Dose</b></td><td>20-minute sessions, three a week, by default.</td><td>Several effective programmes ran about 10 to 20 hours, and more hours have not been shown to help more <span class="cite">(Hawes et al., 2022)</span>; more than three sessions a week added nothing in older adults <span class="cite">(Lampit et al., 2014)</span>.</td></tr>
+        <tr><td><b>Dose</b></td><td>20-minute sessions, three a week, by default.</td><td>Programmes that worked ran about 10 to 20 hours (12 in <span class="cite">Miller &amp; Halpern, 2013</span>), and no review found that more hours helped more <span class="cite">(Hawes et al., 2022)</span>; more than three sessions a week added nothing in older adults <span class="cite">(Lampit et al., 2014)</span>.</td></tr>
       </tbody>
     </table>
     <p class="note">Show-me is a design bet too: no study isolates animated against static corrective feedback for rotation; every show-me is now logged.</p>
@@ -1429,7 +1431,7 @@
           <li>A <b>delayed check</b> some weeks after training stops or slows; after more than 56 days away, two full checks start the run again.</li>
         </ul>
         <h3>Short adaptive items</h3>
-        <p>A probe met for the first time opens with a worked example and two easy items; then most probes aim each item at about 60 % of the way from chance to certain under the current estimate. Forms A, B and C share a blueprint; a record starts on one drawn at random, and full checks rotate. Each item has a calm time bar, and a time-out counts as wrong.</p>
+        <p>A probe met for the first time opens with a worked example and two easy items; then most probes aim each item at about 60 % of the way from chance to certain under the current estimate. Forms A, B and C share a blueprint; a record starts on one drawn at random, and full checks rotate, and no item comes back across your checks until a probe's pool is used up. A full check opens with its two short tasks, Pattern Memory and Cube Match, and the strip shows the time left in the whole check. Each item has a calm time bar; a time-out counts as wrong, and its card says so at once. View Match leaves out, in checks, the few settings where a cheap pick would find the flag's view.</p>
       </div>
       <div>
         <h3>One model for every occasion</h3>
@@ -1456,7 +1458,7 @@
       <figure><div class="shot"><img src="../shots/pr6-otherway.png" alt="Other Way Round: a trained operation asked the other way round, with four drawings"></div><figcaption><span class="spec">PR-6 · Other Way Round · near</span><br>Six trained operations asked backwards (turn back, fold back, cut back, net back, view from, where am I), in turn.</figcaption></figure>
       <figure><div class="shot"><img src="../shots/pr1-cubematch.png" alt="Cube Match: a cube with a symbol on each face and four drawings, one the same cube turned"></div><figcaption><span class="spec">PR-1 · Cube Match · mid</span><br>Which of four drawings is the first cube, turned? Each face has its own symbol.</figcaption></figure>
       <figure><div class="shot"><img src="../shots/pr2-viewmatch.png" alt="View Match: a table with objects and a flag, and four pictures"></div><figcaption><span class="spec">PR-2 · View Match · mid</span><br>Which picture shows the table from the flag?</figcaption></figure>
-      <figure><div class="shot"><img src="../shots/pr4-patterns.png" alt="Pattern Memory: a grid with filled squares"></div><figcaption><span class="spec">PR-4 · Pattern Memory · mid</span><br>Look at a pattern, then mark the squares that were filled; scored square by square.</figcaption></figure>
+      <figure><div class="shot"><img src="../shots/pr4-patterns.png" alt="Pattern Memory: a grid with filled squares"></div><figcaption><span class="spec">PR-4 · Pattern Memory · mid</span><br>Look at a pattern, then mark the squares that were filled, by tap or drag; scored square by square.</figcaption></figure>
       <figure><div class="shot"><img src="../shots/pr3-mechanisms.png" alt="Mechanisms: gears and belts with a driver and a marked gear"></div><figcaption><span class="spec">PR-3 · Mechanisms · far</span><br>Which way does the marked part turn, and faster or slower than the driver? Or can it not turn?</figcaption></figure>
       <figure><div class="shot"><img src="../shots/pr7-motiongraphs.png" alt="Motion Graphs: a strobe picture of a moving cart and four graphs"></div><figcaption><span class="spec">PR-7 · Motion Graphs · far</span><br>A cart's strobe picture matched to its position or speed graph, the other way round, or as seen from a moving bus.</figcaption></figure>
       <figure><div class="shot"><img src="../shots/pr5-level.png" alt="Level: a tilted glass and four pictures of the water line"></div><figcaption><span class="spec">PR-5 · Level · alone</span><br>Which picture shows the water surface, or a hanging string, as it would really be? Optional.</figcaption></figure>
@@ -1470,7 +1472,7 @@
         <h3>Taking a check well</h3>
         <ul class="dash">
           <li>Give it quiet minutes: a pause stops the clock. One skip per probe is free; after that a skip counts as wrong.</li>
-          <li>Answer as well as you can, and guess when you are unsure. The items adapt, so expect roughly 6 to 8 in 10 right: the difficulty you reach carries the information, not the count.</li>
+          <li>Answer as well as you can, and guess when you are unsure. The items adapt, so expect roughly 6 to 8 in 10 right on most tasks, and a third to a half of Pattern Memory's patterns exact, since it counts every square: the difficulty you reach carries the information, not the count.</li>
           <li>Later full checks first ask whether you have practised or taken other tests with such puzzles since the last one: logged, never scored.</li>
           <li>Do not look up or practise the probes. Their value is that they are new.</li>
         </ul>
@@ -1505,7 +1507,7 @@
         <ul class="dash">
           <li>The verdict of the latest milestone, then the meter and one line on what it means between milestones.</li>
           <li>Each rung's change since your baselines, beyond familiarity, with its 90 % range.</li>
-          <li>Changes are in points on each task's difficulty scale: +1 point is about the step from 50 % to 73 % right on the same item.</li>
+          <li>Changes are in points on each task's difficulty scale: +1 point is about the step from 50 % to 73 % of the way from chance to certain on the same item.</li>
           <li>Beside them, the level changes on the exercises you trained: practice gains, not transfer. Never an IQ, an index, a percentile or a brain age.</li>
         </ul>
       </div>
@@ -1628,7 +1630,7 @@
         <tr><td>Expectations raise scores</td><td>only the suggestively recruited group gained (d = 0.50 and 0.39)</td><td>Neutral wording; expectations logged at baseline</td><td>Foroughi et al. 2016</td></tr>
         <tr><td>Practice that varies is process-based</td><td>rotation and folding practice transferred to each other and to new items</td><td>Variants, varied settings, mixing without names</td><td>Wright et al. 2008</td></tr>
         <tr><td>Strategies matter</td><td>imagery plus analytic training closed a sex gap; strategy switching r = .50 with rotation scores</td><td>Two strategy cards with when to switch; one-tap check-ins</td><td>Stieff et al. 2014; Nazareth et al.</td></tr>
-        <tr><td>Hands-on materials help maths transfer in children</td><td>manipulatives beat none; physical gave larger, more consistent maths gains</td><td>Off-screen challenges for Fold, Nets, Views, for variety only; untested, no maths claim</td><td>Hawes et al. 2022; Gilligan-Lee et al. 2023</td></tr>
+        <tr><td>Hands-on materials help maths transfer in children</td><td>manipulatives beat none; physical gave larger, more consistent maths gains</td><td>Off-screen challenges on seven exercises, logged; untested, no maths claim</td><td>Hawes et al. 2022; Gilligan-Lee et al. 2023</td></tr>
         <tr><td colspan="4" class="group">Feedback and tutorials</td></tr>
         <tr><td>Feedback that explains works best</td><td>high-information d = 0.99; right/wrong plus answer 0.46; praise or rewards 0.24</td><td>Show me after errors; tags on every option</td><td>Wisniewski et al. 2020</td></tr>
         <tr><td>Animation and the right views</td><td>animation vs static d = 0.37; seeing informative views mattered more than interacting</td><td>Slow, pausable show-me from the grading model</td><td>Höffler &amp; Leutner 2007; Keehner et al. 2008</td></tr>
@@ -1655,7 +1657,7 @@
         <tr><td>Learning-progress bandits need limits</td><td>reached higher levels than an expert sequence on three of four exercise types but starved the fourth</td><td>Round-robin weighted by progress, 20–50 % shares, 15 % random</td><td>Clement et al. 2015</td></tr>
         <tr><td>Simple mastery rules are enough</td><td>moving averages nearly match model-based criteria</td><td>Path's gate: moving average plus rating</td><td>Pelánek &amp; Řihák 2018</td></tr>
         <tr><td>Speed–accuracy scores</td><td>BIS resisted trade-offs; IES and RCS did not</td><td>Speed reports BIS against your first timed sessions</td><td>Liesefeld &amp; Janczyk 2019</td></tr>
-        <tr><td>Dose and frequency</td><td>several effective programmes ran about 10–20 h; more hours not shown to help more; older adults: more than 3 sessions a week no extra benefit</td><td>20 minutes, 3 sessions a week by default (2 to 6), all logged</td><td>Hawes et al. 2022; Lampit et al. 2014</td></tr>
+        <tr><td>Dose and frequency</td><td>programmes that worked ran about 10–20 h (12 in Miller &amp; Halpern); no review found more hours helped more; older adults: more than 3 sessions a week no extra benefit</td><td>20 minutes, 3 sessions a week by default (2 to 6), all logged</td><td>Miller &amp; Halpern 2013; Hawes et al. 2022; Lampit et al. 2014</td></tr>
         <tr><td colspan="4" class="group">Tasks and test hygiene</td></tr>
         <tr><td>Paper-folding shortcuts</td><td>about 22 % mainly unfold; most count holes per fold</td><td>Same hole count on every option; shortcut solvers near chance</td><td>Burte et al. 2018</td></tr>
         <tr><td>Cross-section errors</td><td>the egocentric shape is the most chosen error (.23); oblique cuts harder</td><td>An egocentric option in every item</td><td>Cohen &amp; Hegarty 2007</td></tr>
@@ -1751,9 +1753,9 @@
       </div>
       <div>
         <h2>Shortcuts kept near chance</h2>
-        <p>Every item pool is attacked by cheap shortcut solvers: counting cubes or holes, the odd one out, the option most like the others, the shape as seen from here, the same letter every time, gear parity, the over-under pattern of a rope. Each must stay within 10 points of chance, or the exercise would train the shortcut instead of the skill, and since 1.2 that holds level by level, not just on average, on nineteen of the twenty exercises (Views is checked over its levels together and at its starter level); leading and fluency items keep off the few cells where an exception is allowed.</p>
-        <p>The exceptions are scoped, each with a decision on record and its own test: Nets' 1-4-1 nets with three faces between; Slice's first cut level and joined solids; Fold's single fold, where crease symmetry is the format's own method; Painted Cubes' five-painted-sides question; Homing's fixed angle on its easy routes; Cube Match's spins and flips with swapped symbols; and Pattern Memory's smallest grids, capped at 25 points above chance.</p>
-        <p>Some partial methods do better and are kept because they are part of the skill: unfolding by symmetry about the creases in Fold and Hole Punch, and counting the layers under the punch; comparing face shapes and sizes in Form; checking the featured faces in Openings; counting the signed crossings between two loops in Knots; counting only the cubes in view in Painted Cubes, which misses the hidden ones; in Central Point, moving the average towards the densest group; in Homing and Reckon, answers that follow every turn but treat the legs as equal, which the easier routes cannot hide, while on Reckon's legs level they are right at most half the time. The tests report them; the strategy cards and show-me teach the full method.</p>
+        <p>Every item pool is attacked by cheap shortcut solvers: counting cubes or holes, the odd one out, the option most like the others, the shape as seen from here, the same letter every time, gear parity, the over-under pattern of a rope. Each must stay within 10 points of chance, or the exercise would train the shortcut instead of the skill, and since 1.2 that holds level by level, not just on average, on nineteen of the twenty exercises (Views is tested over its levels together and at its starter level, and every level of its view questions was measured once on its own); leading and fluency items keep off the few cells where an exception is allowed.</p>
+        <p>The exceptions are scoped, each with a decision on record and its own test: Nets' 1-4-1 nets with three faces between; Slice's first cut level and joined solids; Fold's single fold, where crease symmetry is the format's own method; Painted Cubes' five-painted-sides question; Missing View's starter cube stacks, where counting line pieces finds about 60 %, since the band's wrong drawings must be provably wrong; Homing's fixed angle on its easy routes; Cube Match's spins, flips and quarter turns with swapped symbols; and Pattern Memory's smallest grids, capped at 25 points above chance.</p>
+        <p>Some partial methods do better and are kept because they are part of the skill: unfolding by symmetry about the creases in Fold and Hole Punch, and counting the layers under the punch; comparing face shapes and sizes in Form; checking the featured faces in Openings; counting the signed crossings between two loops in Knots; counting only the cubes in view in Painted Cubes, which misses the hidden ones; in Central Point, moving the average towards the densest group or half-way to the most central target; in Homing and Reckon, answers that follow every turn but treat the legs as equal, which the easier routes cannot hide, while on Reckon's legs level they are right at most half the time. The tests report them; the strategy cards and show-me teach the full method.</p>
       </div>
     </div>
   </div>
@@ -1855,8 +1857,9 @@
     <div class="cols-60">
       <div>
         <h2>Where it lives</h2>
-        <p>Parallax keeps your record in the browser's local storage. Where storage is blocked (some private windows, some embedded previews), it runs from memory and says so on screen: progress is then lost when you close it, so back up before you leave. Two open tabs stay in step with each other. After 60 simulated days a 1.1 record took at most about 1.1 MB; 1.2's game layer adds a few tens of kilobytes.</p>
+        <p>Parallax keeps your record in the browser's local storage. Where storage is blocked (some private windows, some embedded previews), it runs from memory and says so on screen: progress is then lost when you close it, so back up before you leave. Two open tabs stay in step with each other; when an older build is open beside a newer one, only the newer converts stored levels to a changed range, and never back. After 60 simulated days a 1.1 record took at most about 1.1 MB; 1.2's game layer adds a few tens of kilobytes.</p>
         <p>Since 1.2 the record is in format 4. A 1.0 or 1.1 record upgrades when 1.2 first opens it, with nothing lost; an older tab still open elsewhere then runs from memory rather than overwrite the newer record.</p>
+        <p>On GitHub Pages the browser also keeps a copy of the app's own files, never your record, so Parallax and its home-screen icon start without a connection. A few seconds after each launch it checks for changes; a new version runs from the next launch, and a copy is kept only when all its files belong to one version.</p>
         <h2>Export formats</h2>
         <table class="small">
           <thead><tr><th style="width:36mm">Export</th><th>What it holds</th></tr></thead>
@@ -1864,7 +1867,7 @@
             <tr><td><b>Backup</b> (JSON)</td><td>The whole record: ratings, sessions, trials, measurement occasions with their items, plateau events, bet periods and expectation ratings, the game layer, Threshold and Section runs, check-ins, the tests you noted, achievements, settings. The only format that can be imported again.</td></tr>
             <tr><td><b>Trials</b> (CSV)</td><td>One row per trial, 26 columns: time, exercise and version, mode, session, settings, seed, outcome, response time, values the exercise reports, the predicted chance of a right answer, the interleaving stage, the screen class and input, and since 1.2 the item's kind, add-on, answer mode, orientation, deadline and difficulty offset. For a spreadsheet; cannot be imported.</td></tr>
             <tr><td><b>Research</b> (CSV, Lab)</td><td>The trial rows plus each item's difficulty and guessing rate under the current item model, and its answer type.</td></tr>
-            <tr><td><b>Community</b> (JSON, Lab)</td><td>For pooling: trials, sessions, Spatial Check results and levels, the bets and their doses, a summary of the game layer; times in UTC, no calendar days of yours, no settings and no name. Your nickname and device details only if you tick them.</td></tr>
+            <tr><td><b>Community</b> (JSON, Lab)</td><td>For pooling: trials, sessions, Spatial Check results and levels, the bets and their doses, a summary of the game layer; times in UTC, no calendar days of yours, no settings and no name. Your nickname and device details (screen sizes included) only if you tick them; without them, each session and check says only whether the screen was small or large and what you answered with.</td></tr>
             <tr><td><b>Events, dose</b> (CSV, Lab)</td><td>One row per event in UTC (show-me plays, strategy cards, check-ins, comparison rounds, bridge sets, off-screen challenges, add-on periods); one row per exercise and week of practice.</td></tr>
           </tbody>
         </table>
@@ -1923,13 +1926,14 @@
 <section class="page" id="ch-dev" data-chapter="11 · For contributors">
   <div class="content">
     <div class="chapter"><span class="no">Chapter 11</span><h1>For contributors</h1></div>
-    <p class="lead">Parallax is a static web app in plain JavaScript: classic scripts on one global, <span class="mono">window.PX</span>, no build step to run it, no framework, and no network. It has to work from a file, on GitHub Pages, in sandboxed previews and on phones.</p>
+    <p class="lead">Parallax is a static web app in plain JavaScript: classic scripts on one global, <span class="mono">window.PX</span>, no build step to run it, no framework, and nothing sent anywhere. It has to work from a file, on GitHub Pages (where a service worker keeps a copy for starts without a connection), in sandboxed previews and on phones.</p>
     <div class="cols">
       <div>
         <h2>Code layout</h2>
         <table class="small">
           <tbody>
             <tr><td class="mono" style="width:30mm">index.html</td><td>the app; scripts load in a fixed order</td></tr>
+            <tr><td class="mono">sw.js</td><td>the service worker of the GitHub Pages copy; never registered from a file, a frame or the single-file build</td></tr>
             <tr><td class="mono">js/core/</td><td>random numbers, timing, the active-time clock, keys, storage, routing, the shared 3D stage</td></tr>
             <tr><td class="mono">js/engine/</td><td>ratings, item choice, modes, offsets, plateaus, bets, the trend model, the game layer; pure code that runs in Node</td></tr>
             <tr><td class="mono">js/ex/&lt;id&gt;/</td><td>one folder per exercise or probe: gen.js, learn.js, view.js, and layers.js for add-ons</td></tr>
@@ -1937,7 +1941,7 @@
             <tr><td class="mono">css/</td><td>design tokens, app, screens, player and one file per exercise</td></tr>
             <tr><td class="mono">tests/node/</td><td>generator, engine and simulation tests</td></tr>
             <tr><td class="mono">tests/e2e/</td><td>browser tests (Python Playwright)</td></tr>
-                        <tr><td class="mono">tools/</td><td>single-file build, screenshots, this guide's PDF, three.js vendoring</td></tr>
+                        <tr><td class="mono">tools/</td><td>single-file build, screenshots, this guide's PDF, three.js vendoring, the privacy check</td></tr>
             <tr><td class="mono">docs/</td><td>this guide, figures, ENGINE.md and EXERCISE-GUIDE.md</td></tr>
                       </tbody>
         </table>
@@ -1996,6 +2000,7 @@ tests/e2e/pwslot.sh python3 tests/e2e/section.py           # Section practice en
 tests/e2e/pwslot.sh python3 tests/e2e/overlap.py           # test hygiene: notes, helper, check question
 tests/e2e/pwslot.sh python3 tests/e2e/harness_rotate.py    # one exercise in the dev harness (any id)
 tests/e2e/pwslot.sh python3 tests/e2e/single.py            # the single-file build
+tests/e2e/pwslot.sh python3 tests/e2e/sw.py                # the service worker: offline start, updates
 tests/e2e/pwslot.sh python3 tests/e2e/longrun.py           # a bot plays 300 trials in each mode</pre>
     <p class="note"><span class="mono">pwslot.sh</span> lets at most two headless browsers run at once on one machine; more make every test slow and flaky. Screenshots land in <span class="mono">tests/e2e/out/</span>: look at them. On GitHub, Actions runs the Node tests as four shards side by side on every push.</p>
     <h3>Builds</h3>
@@ -2013,7 +2018,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
         <table class="small">
           <tbody>
             <tr><td style="width:34mm">Code</td><td>MIT licence</td></tr>
-            <tr><td>This guide's text</td><td><a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a> (LICENSE-GUIDE.md)</td></tr>
+            <tr><td>This guide and its figures, the README, the CHANGELOG</td><td><a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a> (LICENSE-GUIDE.md)</td></tr>
             <tr><td>three.js</td><td>MIT licence, vendor/LICENSE-three.txt</td></tr>
             <tr><td>IBM Plex Sans and Mono</td><td>SIL Open Font License 1.1, fonts/OFL.txt</td></tr>
           </tbody>
@@ -2040,7 +2045,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
       </div>
       <div class="panel">
         <span class="label">This guide</span>
-        <p>Version 1.1.0, 13 November 2026 (first published for 1.0.0, 6 November 2026). Text licensed CC BY-SA 4.0: you may share and adapt it, with credit, under the same licence. Corrections are welcome, especially about the research: if a number here is wrong, tell us on the Discord.</p>
+        <p>Version 1.2.0, November 2026 (first published for 1.0.0, 6 November 2026; updated for 1.1.0, 13 November 2026). Text licensed CC BY-SA 4.0: you may share and adapt it, with credit, under the same licence. Corrections are welcome, especially about the research: if a number here is wrong, tell us on the Discord.</p>
       </div>
     </div>
   </div>
@@ -2188,7 +2193,7 @@ tests/e2e/pwslot.sh python3 tools/build-pdf.py             # this guide, docs/Pa
       <li>Treviño, M., Zhu, X., Lu, Y. Y., Scheuer, L. S., Passell, E., Huang, G. C., Germine, L. T., &amp; Horowitz, T. S. (2021). How do we measure attention? Using factor analysis to establish construct validity of neuropsychological tests. <i>Cognitive Research: Principles and Implications, 6</i>, 51. <a href="https://doi.org/10.1186/s41235-021-00313-1">doi.org/10.1186/s41235-021-00313-1</a></li>
       <li>Tuzun, R. E., &amp; Sikora, A. S. (n.d.). Verification of the Jones unknot conjecture up to 24 crossings. arXiv:2003.06724. <a href="https://arxiv.org/abs/2003.06724">arxiv.org/abs/2003.06724</a></li>
       <li>Uttal, D. H., Meadow, N. G., Tipton, E., Hand, L. L., Alden, A. R., Warren, C., &amp; Newcombe, N. S. (2013). The malleability of spatial skills: A meta-analysis of training studies. <i>Psychological Bulletin, 139</i>(2), 352–402. <a href="https://doi.org/10.1037/a0028446">doi.org/10.1037/a0028446</a></li>
-      <li>Vater, C., Gray, R., &amp; Holcombe, A. O. (2021). A critical systematic review of the Neurotracker perceptual-cognitive training tool. <i>Psychonomic Bulletin &amp; Review, 28</i>(5), 1458–1483. <a href="https://doi.org/10.3758/s13423-021-01892-2">doi.org/10.3758/s13423-021-01892-2</a></li>
+      <li>Vater, C., Gray, R., &amp; Holcombe, A. O. (2021). A critical systematic review of [a commercial 3D multiple-object tracking] perceptual-cognitive training tool. <i>Psychonomic Bulletin &amp; Review, 28</i>(5), 1458–1483. <a href="https://doi.org/10.3758/s13423-021-01892-2">doi.org/10.3758/s13423-021-01892-2</a></li>
       <li>Vermeir, J. F., White, M. J., Johnson, D., Crombez, G., &amp; Van Ryckeghem, D. M. L. (2020). The effects of gamification on computerized cognitive training: Systematic review and meta-analysis. <i>JMIR Serious Games, 8</i>(3), e18644. <a href="https://doi.org/10.2196/18644">doi.org/10.2196/18644</a></li>
       <li>Voyer, D. (2011). Time limits and gender differences on paper-and-pencil tests of mental rotation: A meta-analysis. <i>Psychonomic Bulletin &amp; Review, 18</i>(2), 267–277. <a href="https://doi.org/10.3758/s13423-010-0042-0">doi.org/10.3758/s13423-010-0042-0</a></li>
       <li>Wiener, J. M., &amp; Mallot, H. A. (2006). Path complexity does not impair visual path integration. <i>Spatial Cognition and Computation, 6</i>, 333–346. <a href="https://doi.org/10.1207/s15427633scc0604_3">doi.org/10.1207/s15427633scc0604_3</a></li>

@@ -9,18 +9,19 @@ a measure that moves every week. A record from 1.0 or 1.1 upgrades by itself (fo
 
 - **Central Point (EX-20), new:** tap the spot with the least total distance to a set of marked dots on a 7 × 7
   board, answering on the half-steps. The quick form, the default, runs against a deadline that starts at 20 s and
-  tightens as you answer in time, with a round score from closeness and pace, so near misses still score; the
-  exact form, a variant, has no clock and nudge controls. The method is taught first in plain words (count the
-  sides, then balance equal pulls). Right within 1 %, 0.5 % or 0.25 % of the best total, with partial credit out to
-  four times the band. Its bet is calibration; every item keeps the cheap picks, the average included, out of the
-  band.
+  tightens as you answer in time, with a round score from closeness and pace, so near misses still score and say
+  "Near miss"; Move opens arrow buttons that step the marker half a dot. The exact form, a variant, has no clock.
+  The method is taught first in plain words (count the sides, then balance equal pulls). Right within 1 %, 0.5 % or
+  0.25 % of the best total, with partial credit out to four times the band. Its bet is calibration; every item
+  keeps the cheap picks, the average included, out of the band.
 - **A first session that reaches training:** one two-minute tutorial (Spin), then your starting point (Baseline
   1, about 11.5 minutes without feedback, or Later), then training. Views and the six DAT-style formats start
   lower, with a rules card, a worked example, a strategy card, and a first practice item with its first step done;
   Watch captions wait for you and name the strategy card's steps.
 - **Your edge on every setting:** from 100 rated answers on an exercise, Train fits how much each setting costs
   you and chooses items on your own difficulties; one target item in five leads with a setting at its frontier;
-  once Speed is open, easy items come with its deadline (fluency items).
+  once Speed is open, easy items come with its deadline (fluency items). Leading and fluency items keep off the
+  few settings where a cheap answer may beat chance by more than 10 points.
 - **Plateaus get a change:** when the last 640 rated answers on an exercise show no progress (over at least 8
   sessions on 8 days), Parallax changes one thing (the interleaving stage, a drill, deadlines, a rest, the other
   strategy, another variant or a wider mix, or harder items), says what and why, runs it for 3 sessions and 120
@@ -38,33 +39,67 @@ a measure that moves every week. A record from 1.0 or 1.1 upgrades by itself (fo
   yet" come only at milestones. New probes: Other Way Round (near) and Motion Graphs (far); Cube Match, Mechanisms
   and Pattern Memory upgraded (each version its own probe). In the Lab: Balance, a check of Central Point's bet,
   and learning curves on the exercises added since 1.0.
+- **Checks that feel shorter, measuring the same:** a full check opens with its two short tasks (Pattern Memory,
+  then Cube Match) and brings each kind's items together; the strip shows the time left in the whole check; each
+  task's card fits one screen; Pattern Memory takes drags; a time-out says at once that the item counts as not
+  answered; Mechanisms' worked example explains faster and slower. No check item comes back across your checks
+  until a pool is used up, and View Match leaves out, in checks, the settings where a cheap pick finds the view.
+  The check's "6 to 8 in 10 right" line now says that few of Pattern Memory's patterns come out exact.
 - **A game layer between items:** grades 1 to 10 per exercise, Reach (the sum of your best levels, never falling),
   the Atlas of settings handled with firsts, records, a Daily Challenge that ramps from easy to hard with points
   (1 to 8 per item, from the day 1.2 is released), the weekly Climb (20 rungs, three seeded attempts, sounds while
   Sound is on, and a Summit achievement), weekly field notes, a fresh-start note after a week away, and cards at
-  every high point. Nothing of it runs while an item is on screen; no daily streaks, no points for time, no
-  leaderboards.
+  every high point, each kind with a picture of its own (a grade, a Climb, Reach, an Atlas sheet, your start
+  against now). The grade stamp gives an example of its band's settings; a Daily answer is saved as you give it,
+  so a part-way attempt goes on item by item. Nothing of it runs while an item is on screen; no daily streaks, no
+  points for time, no leaderboards.
 - **The DAT-style formats, closer to the real ones:** lettered answers, plain line drawings in the test range, and
   a tag on every level (below the test, test range, beyond the test) that describes the format, never the test's
-  difficulty or a score; "test range only" in Free play. Angles numbers its angles and letters its answers;
-  Painted Cubes asks two to four questions about one figure, with an optional tally pad and five painted sides;
-  Openings turns or flips its openings; Hole Punch's wrong sheets may differ in hole count; Form gains the test's
-  kinds of pattern and L-, T- and U-prisms; Missing View moves to profile solids. Section practice runs under test
-  conditions: every part's instructions first, one clock across the parts, Back, Next, Mark, Strike and a review
-  list. Still opt-in, and still no score forecast.
+  difficulty or a score; "test range only" in Free play. Angles numbers its angles and takes letters only as
+  answers; Painted Cubes asks two to four questions about one figure, with an optional tally pad and five painted
+  sides, and its tutorial ends on one plain figure; Openings turns or flips its openings and teaches the turn in
+  its Watch; Hole Punch's wrong sheets may differ in hole count; Form gains the test's kinds of pattern and L-, T-
+  and U-prisms; Missing View moves to profile solids and says when its drawn structure stops. An independent item
+  review's cheap cues are held near chance in Hole Punch, Missing View, Openings, Form, Angles (version 4) and
+  Painted Cubes (version 4), and a session never shows an item twice where a setting has few. Section practice runs
+  under test conditions, at each format's test-range settings only: every part's instructions first, one clock
+  across the parts, Back, Next, Mark, Strike and a review list; no part shows an item twice. Still opt-in, and
+  still no score forecast.
+- **The other exercises, after fresh-player runs and the item review:** Views version 3 balances its view
+  questions at every level and never repeats a structure in a session; Spin's copies and mirrors lean alike, with
+  no turn within 6° of a quarter turn on same-or-mirror items; Nets has one name and one look for the square that
+  stays on the table, the shaded square; Track's tutorial teaches following the few unmarked spheres when most are
+  targets; Knots' first practice item is as easy as its demo; Slice keeps its labels clear of the picture.
 - **Reckon version 2 and motion comfort:** every route ends with a turn on the spot of 30 to 150°; a legs level
-  where the same turns end in places far apart; a 15° tolerance level; walks back of 3 to 20 m. Homing and Reckon
-  show a one-time notice, check in after 3 minutes of motion and then every 5, and offer Gentle motion. Homing's
-  solution map draws landmarks in their direction from the start.
+  where the same turns end in places far apart; a 15° tolerance level; walks back of 3 to 20 m; Walk and Back
+  toggle with a tap as well as a hold. Homing and Reckon take a tap beside the arrow circle, say in one line that
+  the top of the circle is the way you face now, show a one-time notice, check in after 3 minutes of motion and
+  then every 5, offer a new player the end of the session after about 5 minutes of motion, and offer Gentle
+  motion. Homing's solution map draws landmarks in their direction from the start.
+- **The player:** See solution after every right answer; while a solution plays, Space goes on to the next item
+  (after a scored answer, Enter too) and → steps it; Next item keeps its place on phones; a session too short to
+  count for the week says how many answers would and offers Keep going; a wide level range reads "still settling";
+  a kind of item met for the first time gets one line on what to do; a session the phone closes in the background
+  is saved as it stood and finished once at the next start. Accessibility: How to solve moves into Help where the
+  exercise's name does not fit the bar, question cards focus their title, large text folds the phone tab bar's
+  names, and every option's accessible name holds the words it shows.
+- **Offline and install:** on GitHub Pages a service worker keeps a copy of the app's own files, so Parallax and
+  its home-screen icon start without a connection; a change arrives at the launch after the one that finds it, and
+  a copy is kept only when all its files belong to one version. Settings offers "Install Parallax on this device"
+  where the browser allows, and the browser's own install bar never shows during play.
 - **Modes and the Chimera welcome:** every mode says when it is the right one, and Today suggests one at a time; the
   full welcome shows on the first launch, later launches a one-tap note, and invitations come at natural high points.
-- **Privacy in exports:** cards and exports carry no name unless you add your nickname, and no browser, language or
-  time zone unless you tick device details; the community export keeps times in UTC and no local days.
+- **Privacy in exports:** cards and exports carry no name unless you add your nickname, and no browser, language,
+  time zone or screen size unless you tick device details; the community export keeps times in UTC and no local
+  days.
 - **Phones and fixes:** Progress in tabs, Confirm taps, larger words on the arrow circle, Section practice held
   sideways, clearer layouts for Hole Punch, Form, Painted Cubes and Knots; Pause and End during feedback, one
   answer-time format, Section practice's clock and review over a reload. Playtest mode for testers, off by default.
 - **Under the hood:** record format 4 (plateau events, bet periods, measurement occasions, the game layer, an events
-  table); six new trial columns; hooks for modules between items; the node suite in four CI shards
+  table); six new trial columns; hooks for modules between items; trials of rebuilt exercises and probes under new
+  versions (Views 3, Angles 4, Painted Cubes 4; Mechanisms 3, Motion Graphs 2, Other Way Round 2); stored levels
+  converted to a changed range only forward, and two tabs of different builds aligned before they merge; the Atlas
+  read again after a merge joins its counts instead of adding them; the node suite in four CI shards
   (`node tests/node/run.mjs --shard k/n`); the guide rewritten for 1.2, with its research in docs/research/v1.2/.
 
 ## 1.1.0 · 2026-11-13
