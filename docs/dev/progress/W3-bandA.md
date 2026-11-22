@@ -55,3 +55,20 @@ Sources: note D1 §2.3, §2.5, §3.3, §3.5, §6.0–6.3 and its addendum (A.1 r
   42 figures at 360 x 640 and 390 x 844; fit cubes and angles 18/0). B (O30): the brute-force search of every reading of
   the picture, 600 figures, one reading each under the rule; 330 with others without it (cubes 210/0). C: Angles keys
   A–D alone (harness_angles 318/0). Commits 2e74ca1, a837a68; DECISIONS 416ea25.
+- 14:32 UTC, 22 Nov: the lead's round from the independent item review (RV-items-1.2), with Views. Angles
+  version 4 (H5, L1): the arm search weighs the drawing's height and width (aligned pose) and the arms' ratio; per-cell scan
+  at most 35.5 % but one cell's tip distance (32.6/33.4 % on 2,000). Views version 3 (M3): fifteen balanced solvers at every
+  toview level, the key the best of up to 6 (10) family members, no top-view foil taller than the grid; every stem-blind
+  cue at 35.1 % or less (top views were 41–46 %); TUTORIAL and the session guard (sigOf). Painted Cubes version 4: H3 the
+  starter's outline counts redrawn and the outline-fixed count dealt at chance (columns 24 %, was 51 %; one-high columns
+  27 %, was 48–52 %); M1 decoy pairs, peaks of other heights, a tallest-columns redraw, a plain figure after 8 failed
+  searches (tallest columns 19–27 %, was 100 % two high; no fallback in 24,000 figures); M2 first questions about an N with
+  four counts or more (pools 26–32 % on 290–600 items; FIRST_STACKED keeps "column tops only" under its cap, 56 % with
+  four painted sides alone); no tutorial figure rated, the guard on the starter band (sets need the guard to carry
+  plan.set: requests.md). From the coordinator: numbers never under 13.5 px (phones.py dat 33/0, 360 × 640 smallest 13.5 px;
+  badges that find no spot of that size take the roomiest spot clear of the others), the Tally's aria-controls only while
+  open (keyboard open, count, close in harness_cubes). Checks: angles 452/0, views 157/0, cubes 243/0, shortcut-levels 7/0,
+  bets, dims, dims-scoped, firstband, game, layers-*, overlap, section, rebase, engine all pass; harness_angles 318/0,
+  harness_views 180/0, harness_cubes 281/0, fit 31/1 (Views' draw item at 844 × 390 fails on the old tree too). Later
+  questions per setting skew more at flat 6–9 cubes (always 2: 41 %; pooled per N they hold 30 %). Commits 21ab1d6, 4c88a40,
+  0ea87ea; DECISIONS 5da1fc6.
