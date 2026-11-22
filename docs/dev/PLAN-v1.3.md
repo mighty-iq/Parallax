@@ -14,3 +14,6 @@ Started 2026-11-18 at the v1.2 plan. Add each item the moment it is deferred, wi
 | Hole Punch half folds | note D1 §6.8 | after the v1.2 look change settles | M |
 | Central Point weighted targets | note C1 §3.2, §9 | not simulated in v1.2 (the speed form moved into v1.2 as Central Point's default, Quick) | M |
 | Game option C pieces worth a later look: the cooperative tile on the Climb card, a ghost comparison on the summary only | note G1 §4 | only if the community asks | M |
+| Rebalance Hole Punch's two- and three-fold diagonal and mixed combinations, where colour, distance from the centre and touching holes still beat chance + 10 (scoped exceptions in 1.2) | RV-items-1.2 H1 | the residual cells were accepted for 1.2 with per-cell bounds | M |
+| Move Missing View's session guard (no stem twice in a session) into the player, for every exercise with small pools | W1-band-B's request, 22 Nov | lives in js/ex/patviews for 1.2 | S |
+| Rerun the independent item review where 1.2's stopped early: Level, Word Links, an independent solver for Missing View's solids | RV-items-1.2 "not reached" | review cut short for usage | M |
