@@ -33,9 +33,15 @@ function feats(poly) {
   }
   const s = Math.sign(A);
   A *= s; X2 *= s; Y2 *= s; XY *= s; // figures are centred on their centroid (checked below)
+  // Diagonal leans ("/" or "\" on the screen, y down): of the area (its xy moment), of the outline's corners
+  // (their xy moment about the centroid), and of the figure in its box (the corner of the box the figure's
+  // centroid sits towards: the sign of the box centre's x · y, measured from the centroid).
+  let V = 0;
+  for (const [x, y] of poly) V += x * y;
   return {
     area: A, w: x1 - x0, h: y1 - y0, asp: Math.log((x1 - x0) / (y1 - y0)),
     axis: 0.5 * Math.atan2(2 * XY, X2 - Y2) * 180 / Math.PI, elong: Math.hypot(X2 - Y2, 2 * XY) / (X2 + Y2),
+    leanA: Math.sign(XY), leanV: Math.sign(V), leanB: Math.sign((x0 + x1) * (y0 + y1)),
   };
 }
 function inside(poly, x, y) {
@@ -158,6 +164,11 @@ export async function run(t) {
   t.ok(Math.abs(dirRate - 0.5) < 0.03, `turns clockwise ≈ 50 % (${pct(dirRate)})`);
   const inBand = items.every(({ p, it }) => Math.abs(it.angle - def.dims[0].levels[p.angle]) <= 15 + 1e-9 && it.angle >= 0 && it.angle <= 180);
   t.ok(inBand, 'every item angle is its level ± 15° within 0–180°');
+  // At a quarter turn a copy is the reference moved by a symmetry of the screen (its box swaps and its lean
+  // flips exactly), which a mirror cannot match in both (gen.js header): same-or-mirror items keep clear of it.
+  const notch = L.NOTCH, nearQuarter = sd.filter((x) => Math.abs(x.it.angle - 90) < notch - 0.011).length;
+  const level4 = sd.filter((x) => x.p.angle === 4).map((x) => x.it.angle);
+  t.ok(notch === 6 && nearQuarter === 0 && level4.some((a) => a < 84.5) && level4.some((a) => a > 95.5), `samediff: no turn within ${notch}° of a quarter turn, both sides of it used (${nearQuarter} within)`);
   const mirrorSlots = pk.reduce((s, x) => s + x.it.options.filter((o) => o.mirror).length, 0);
   t.eq(mirrorSlots, 2 * pk.length, 'pick: always 2 copies and 2 mirrors (no odd one out by chirality)');
   // Copies and mirrors are dealt to the turns at random: the copies are the 2 least-turned options 1/6 of the time.
@@ -217,6 +228,9 @@ export async function run(t) {
   // A mirror that is the reference reflected across the vertical: seen at once as bilateral symmetry.
   m = clone(sdItem); { const refPhi = ((m.ref.rot % 90) + 90) % 90; m.probe.poly = m.ref.poly.map(([x, y]) => [-x, y]); m.probe.turn = Math.round(((-2 * refPhi) % 90 + 90) % 90 * 100) / 100; m.probe.mirror = true; }
   rejects('a mirror that is a left–right reflection of the reference', m, /reflected/);
+  // A same-or-mirror item turned a quarter turn exactly (the generator keeps 6° clear of it).
+  m = clone(sd.find((x) => x.it.key && x.p.angle === 4).it); m.probe = Object.assign(L.figure(m.shape, m.ref.rot + 90 * m.dir, false), { turn: 90 * m.dir }); m.angle = 90;
+  rejects('a same-or-mirror turn at a quarter turn', m, /quarter turn/);
 
   t.section('spin: shortcut solvers');
   const levels = def.dims[0].levels, report = [`hardest-level p95 CPU ${timings.join(', ')}`];
@@ -227,6 +241,11 @@ export async function run(t) {
     'box aspect': (r, q) => -Math.abs(r.asp - q.asp),
     'box aspect (unsigned)': (r, q) => -Math.abs(Math.abs(r.asp) - Math.abs(q.asp)),
     'box size': (r, q) => -(Math.abs(r.w - q.w) + Math.abs(r.h - q.h)),
+    // RV-items H6: "same when the lean flips, mirror when it keeps" (or the other way round: the threshold is
+    // fitted in both directions); copies and mirrors are drawn so that they lean alike (gen.js, pickBeta rule 3)
+    'lean of the area': (r, q) => (r.leanA === q.leanA ? 1 : 0),
+    'lean of the corners': (r, q) => (r.leanV === q.leanV ? 1 : 0),
+    'lean in the box': (r, q) => (r.leanB === q.leanB ? 1 : 0),
   };
   for (const [name, fn] of Object.entries(sdSolvers)) {
     const accs = byLevel(sd).map((list) => cvAccuracy(list.map(({ it }) => fn(feats(it.ref.poly), feats(it.probe.poly))), list.map(({ it }) => it.key)));
@@ -248,6 +267,13 @@ export async function run(t) {
       for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (dist(V[i], V[j]) < bd) { bd = dist(V[i], V[j]); best = [i, j]; }
       return best;
     },
+    // the options whose diagonal lean flips from the reference's (or keeps it)
+    'lean of the area flips': (R, F) => top2(F.map((f) => (f.leanA !== R.leanA ? 1 : 0))),
+    'lean of the area keeps': (R, F) => top2(F.map((f) => (f.leanA === R.leanA ? 1 : 0))),
+    'lean of the corners flips': (R, F) => top2(F.map((f) => (f.leanV !== R.leanV ? 1 : 0))),
+    'lean of the corners keeps': (R, F) => top2(F.map((f) => (f.leanV === R.leanV ? 1 : 0))),
+    'lean in the box flips': (R, F) => top2(F.map((f) => (f.leanB !== R.leanB ? 1 : 0))),
+    'lean in the box keeps': (R, F) => top2(F.map((f) => (f.leanB === R.leanB ? 1 : 0))),
   };
   const pickLimit = 1 / 6 + CHANCE_MARGIN;
   for (const [name, fn] of Object.entries(pkSolvers)) {
@@ -336,6 +362,9 @@ export function shortcutScores(PX, def, it, params) {
     out['samediff: ' + 'box aspect'] = cue(-Math.abs(R.asp - Q.asp));
     out['samediff: ' + 'box aspect (unsigned)'] = cue(-Math.abs(Math.abs(R.asp) - Math.abs(Q.asp)));
     out['samediff: ' + 'box size'] = cue(-(Math.abs(R.w - Q.w) + Math.abs(R.h - Q.h)));
+    out['samediff: ' + 'lean of the area'] = cue(R.leanA === Q.leanA ? 1 : 0);
+    out['samediff: ' + 'lean of the corners'] = cue(R.leanV === Q.leanV ? 1 : 0);
+    out['samediff: ' + 'lean in the box'] = cue(R.leanB === Q.leanB ? 1 : 0);
     return out;
   }
   if (p.variant !== 'pick') return out;
@@ -348,6 +377,10 @@ export function shortcutScores(PX, def, it, params) {
   let best = null, bd = Infinity;
   for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (scDist(V[i], V[j]) < bd) { bd = scDist(V[i], V[j]); best = [i, j]; }
   out['pick: closest pair (stem-blind)'] = hit(best);
+  for (const [k, name] of [['leanA', 'lean of the area'], ['leanV', 'lean of the corners'], ['leanB', 'lean in the box']]) {
+    out['pick: ' + name + ' flips'] = hit(top2(F.map((f) => (f[k] !== R[k] ? 1 : 0))));
+    out['pick: ' + name + ' keeps'] = hit(top2(F.map((f) => (f[k] === R[k] ? 1 : 0))));
+  }
   return out;
 }
 export const SHORTCUT_EXEMPT = [];

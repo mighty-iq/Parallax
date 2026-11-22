@@ -16,7 +16,10 @@
      its own `answer`, which the player must use (see `answers` on the definition).
 
    Dims: angle (9 overlapping bands: the item angle is the level angle ± 15°, clipped to 0–180°) and
-   cells (5–9, with a range of concave corners per level). Turns go either way (dir).
+   cells (5–9, with a range of concave corners per level). Turns go either way (dir). Same-or-mirror
+   items never turn within NOTCH (6°) of a quarter turn: there a copy is the reference moved by a symmetry
+   of the screen, so its box swaps and its diagonal lean flips exactly, and no mirror can match both (a
+   mirror with the copy's box leans the other way; one that leans like the copy has the reference's box).
 
    Mirror images reflect the figure across the lattice line (grid line or diagonal) nearest to its
    principal axis, so a mirror image keeps the edge directions, the long axis (within SHAPES[].eps) and
@@ -25,9 +28,16 @@
    tests/node/spin.test.mjs): the base orientation of the reference is chosen by rules that never look at
    the answer (every figure position is treated as if a mirror could stand there): (1) no mirror may be
    the reference reflected across a line within 12° of the screen's vertical or horizontal (bilateral
-   symmetry between two figures is seen without any rotation); (2) of a few orientations passing (1), the
-   one where, at every figure position, a copy's and a mirror's bounding box would lie equally far from
-   the reference's (aspect and size), so comparing boxes says nothing about which figures are copies.
+   symmetry between two figures is seen without any rotation); (3) at every figure position, the line
+   across which a copy and a mirror there would mirror each other stays farther from the screen's
+   vertical and horizontal than the figure's principal axes (of its area and of its outline's corners)
+   lie from its mirror line, so a copy and a mirror lean the same diagonal way ("/" or "\") and the lean
+   says nothing (v1.2: before, mirrors at about 90° kept the reference's lean while copies flipped it);
+   (2) of a few orientations passing (1) and (3), the one where, at every figure position, a copy's and a
+   mirror's bounding box would lie equally far from the reference's (aspect, signed and unsigned, and
+   size) and the figures would sit in the same diagonal corners of their boxes, so comparing boxes says
+   nothing about which figures are copies. Where (3) cannot be met beside (1) (pick items near a quarter
+   turn), the orientation that misses it least.
 
    Coordinates: screen units (x right, y down), 1 = one cell. Angles in degrees, clockwise on screen.
    Item (JSON):
@@ -242,12 +252,20 @@
     var elong = Math.sqrt((sxx - syy) * (sxx - syy) + 4 * sxy * sxy) / (sxx + syy);
     var near = 45 * Math.round(axis / 45);                            // nearest lattice line
     var rel = outline.map(function (p) { return [p[0] - cx, p[1] - cy]; });
-    var radius = 0;
-    rel.forEach(function (p) { var d = Math.sqrt(p[0] * p[0] + p[1] * p[1]); if (d > radius) radius = d; });
+    var radius = 0, vxx = 0, vyy = 0, vxy = 0;
+    rel.forEach(function (p) {
+      var d = Math.sqrt(p[0] * p[0] + p[1] * p[1]); if (d > radius) radius = d;
+      vxx += p[0] * p[0]; vyy += p[1] * p[1]; vxy += p[0] * p[1];
+    });
+    // Rule (3) in pickBeta: the principal axes of the area and of the outline's corners lie within `lean`
+    // (less LEAN_MARGIN) of the mirror line, so a copy's and a mirror's axes lie that close to the screen
+    // line across which they mirror each other.
+    var mirrorAxis = norm360(near) % 180, axisV = 0.5 * atan2d(2 * vxy, vxx - vyy);
     var f = forms(cells);
     return {
       n: n, cells: cells, outline: rel, concave: concave, w: Mx - mx + 1, h: My - my + 1,
-      axis: axis, elong: elong, mirrorAxis: norm360(near) % 180, eps: 2 * (axis - near),
+      axis: axis, elong: elong, mirrorAxis: mirrorAxis, eps: 2 * (axis - near),
+      lean: Math.max(offGrid(axis - mirrorAxis, 90), offGrid(axisV - mirrorAxis, 90)) + LEAN_MARGIN,
       radius: radius, forms: f, distinct: distinctCount(f),
     };
   }
@@ -284,6 +302,8 @@
   var SPAN_MAX = 40;                    // pick: all option turns lie within 40° of each other
   var DISTINCT_MIN = 6;                 // pick: option turns differ by at least this
   var PAIR_AXIS_MIN = 12;               // see the header: no mirror pair across a near-vertical/horizontal line
+  var LEAN_MARGIN = 2;                  // rule (3) in pickBeta: degrees beyond the shape's own axis tilts
+  var NOTCH = 6;                        // samediff: no turn within 6° of a quarter turn (see the header)
 
   function clampInt(x, n) { x = Number.isInteger(x) ? x : 0; return x < 0 ? 0 : x >= n ? n - 1 : x; }
   function normParams(params) {
@@ -297,6 +317,15 @@
   function angleRange(p) {
     var A = ANGLES[p.angle];
     return [Math.max(0, A - JITTER), Math.min(180, A + JITTER)];
+  }
+  // The item angle: uniform over the level's range; for samediff, over the range less (90 − NOTCH, 90 + NOTCH).
+  function drawAngle(r, p) {
+    var ar = angleRange(p), lo = ar[0], hi = ar[1];
+    if (p.variant === 'samediff') {
+      var a = Math.max(lo, 90 - NOTCH), b = Math.min(hi, 90 + NOTCH);
+      if (a < b) { var u = r.float(lo, hi - (b - a)); return r2(u >= a ? u + (b - a) : u); }
+    }
+    return r2(r.float(lo, hi));
   }
   function shapeOk(a, lv) {
     return !!a && a.n === lv.n && Math.max(a.w, a.h) <= lv.ext && a.concave >= lv.cmin && a.concave <= lv.cmax &&
@@ -331,7 +360,8 @@
   /* ------------------------------------------------------------ items */
   // Line across which a mirror at `turn` would reflect the reference (deg, mod 180).
   function pairAxis(beta, shape, turn) { return beta + shape.mirrorAxis + turn / 2; }
-  // Axis-aligned bounding box of the outline turned by rot (after the reflection when mirror): [w, h].
+  // Axis-aligned bounding box of the outline turned by rot (after the reflection when mirror):
+  // [w, h, mx, my], where (mx, my) is the box's centre measured from the figure's centroid.
   function bbox(shape, rot, mirror) {
     var sc = sincos(rot), x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (var i = 0; i < shape.outline.length; i++) {
@@ -339,39 +369,70 @@
       if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0];
       if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1];
     }
-    return [x1 - x0, y1 - y0];
+    return [x1 - x0, y1 - y0, (x0 + x1) / 2, (y0 + y1) / 2];
   }
-  // How much the bounding boxes would tell copies from mirrors, read the way a box heuristic reads them:
-  // at each turn of the item, how differently far a copy's box and a mirror's box lie from the
-  // reference's box (in log aspect, and in width + height relative to the reference's), summed over the
-  // turns. Zero means the boxes rank the options the same whichever are the copies.
+  function sgn(x) { return x > 0 ? 1 : x < 0 ? -1 : 0; }
+  // Positions (turns) where a copy and a mirror would sit in different diagonal corners of their boxes:
+  // the box centre off the figure's centroid towards top-left and bottom-right, or the other diagonal.
+  function cornerSwaps(shape, beta, turns) {
+    var n = 0;
+    for (var j = 0; j < turns.length; j++) {
+      var a = bbox(shape, beta + turns[j], false), b = bbox(shape, beta + turns[j], true);
+      if (sgn(a[2] * a[3]) !== sgn(b[2] * b[3])) n++;
+    }
+    return n;
+  }
+  // How much the bounding boxes would tell copies from mirrors, read the way box heuristics read them: at
+  // each turn of the item, how differently far a copy's box and a mirror's box lie from the reference's
+  // box: in log aspect, signed and unsigned (a box turned a quarter keeps its unsigned aspect), and in
+  // width + height relative to the reference's (counted BOX_SIZE times); plus BOX_CORNER per turn where
+  // the copy and the mirror would sit in different diagonal corners of their boxes. Summed over the turns;
+  // zero means the boxes rank the options the same whichever are the copies.
+  var BOX_SIZE = 3, BOX_CORNER = 0.2;
   function boxGap(shape, beta, turns) {
     var R = bbox(shape, beta, false), lr = PX.rng.ln(R[0] / R[1]), span = R[0] + R[1], g = 0;
     for (var j = 0; j < turns.length; j++) {
       var a = bbox(shape, beta + turns[j], false), b = bbox(shape, beta + turns[j], true);
-      var dA = Math.abs(PX.rng.ln(a[0] / a[1]) - lr), dB = Math.abs(PX.rng.ln(b[0] / b[1]) - lr);
+      var la = PX.rng.ln(a[0] / a[1]), lb = PX.rng.ln(b[0] / b[1]);
+      var dA = Math.abs(la - lr), dB = Math.abs(lb - lr);
+      var uA = Math.abs(Math.abs(la) - Math.abs(lr)), uB = Math.abs(Math.abs(lb) - Math.abs(lr));
       var sA = Math.abs(a[0] - R[0]) + Math.abs(a[1] - R[1]), sB = Math.abs(b[0] - R[0]) + Math.abs(b[1] - R[1]);
-      g += Math.abs(dA - dB) + Math.abs(sA - sB) / span;
+      g += Math.abs(dA - dB) + Math.abs(uA - uB) + BOX_SIZE * Math.abs(sA - sB) / span;
+      if (sgn(a[2] * a[3]) !== sgn(b[2] * b[3])) g += BOX_CORNER;
     }
     return g;
   }
-  // Base orientation of the reference. The rule never looks at the answer: it treats every turn of the
-  // item as if a mirror could stand there. Hard rule: no mirror would be the reference reflected across a
-  // line within PAIR_AXIS_MIN of the screen's vertical or horizontal. Soft rule: of BETA_TRIES orientations
-  // that pass, the one with the smallest boxGap (boxes then rank copies and mirrors alike).
-  var BETA_TRIES = 12;
+  // Base orientation of the reference. The rules never look at the answer: they treat every turn of the
+  // item as if a mirror could stand there. (1) Hard rule: no mirror would be the reference reflected across
+  // a line within PAIR_AXIS_MIN of the screen's vertical or horizontal. (3) At every turn, the screen line
+  // across which a copy and a mirror there would mirror each other (rot + mirrorAxis) lies at least
+  // shape.lean from the screen's vertical and horizontal: their principal axes (of the area and of the
+  // outline's corners) then lie on the same side of both, so the figures lean the same diagonal way and
+  // the lean tells nothing (a reflection across a near-vertical line turns a "/" lean into a "\" one).
+  // (2) Of up to BETA_TRIES orientations that pass both, the one with the smallest boxGap. Where none
+  // passes (3) (pick items near a quarter turn, where rules 1 and 3 pull apart), the one that misses it by
+  // the fewest degrees, counting CORNER_SWAP degrees for each turn where the box corners would differ.
+  var BETA_TRIES = 24, BETA_DRAWS = 200, CORNER_SWAP = 8;
   function pickBeta(r, shape, turns) {
-    var best = null, bestGap = Infinity, worst = 0, worstGap = -1, found = 0;
-    for (var i = 0; i < 80 && found < BETA_TRIES; i++) {
-      var b = r2(r.float(0, 360)), gap = Infinity;
-      for (var j = 0; j < turns.length; j++) gap = Math.min(gap, offGrid(pairAxis(b, shape, turns[j]), 90));
-      if (gap >= PAIR_AXIS_MIN + 0.5) {
-        found++;
-        var g = boxGap(shape, b, turns);
-        if (g < bestGap) { bestGap = g; best = b; }
-      } else if (gap > worstGap) { worstGap = gap; worst = b; }
+    var best = null, bestGap = Infinity, near = null, nearMiss = Infinity, worst = 0, worstGap = -1, found = 0;
+    for (var i = 0; i < BETA_DRAWS && found < BETA_TRIES; i++) {
+      var b = r2(r.float(0, 360)), gap = Infinity, lean = Infinity;
+      for (var j = 0; j < turns.length; j++) {
+        gap = Math.min(gap, offGrid(pairAxis(b, shape, turns[j]), 90));
+        lean = Math.min(lean, offGrid(b + shape.mirrorAxis + turns[j], 90));
+      }
+      if (gap < PAIR_AXIS_MIN + 0.5) { if (gap > worstGap) { worstGap = gap; worst = b; } continue; }
+      if (lean < shape.lean) {
+        var miss = shape.lean - lean + CORNER_SWAP * cornerSwaps(shape, b, turns);
+        if (miss < nearMiss) { nearMiss = miss; near = b; }
+        continue;
+      }
+      found++;
+      var g = boxGap(shape, b, turns);
+      if (g < bestGap) { bestGap = g; best = b; }
     }
-    return best === null ? worst : best;
+    if (best === null) stats.leanMiss++;
+    return best !== null ? best : near !== null ? near : worst;
   }
 
   function shapeOut(shape) {
@@ -386,7 +447,7 @@
   function build(r, p, shape) {
     shape = shape || makeShape(r.fork('shape'), SHAPES[p.cells]);
     if (!shape) return null;
-    var ar = angleRange(p), theta = r2(r.float(ar[0], ar[1])), dir = r.chance(0.5) ? 1 : -1;
+    var theta = drawAngle(r, p), dir = r.chance(0.5) ? 1 : -1;
     var item = {
       ex: 'spin', params: { angle: p.angle, cells: p.cells, variant: p.variant }, variant: p.variant,
       answer: p.variant === 'pick' ? 'multi' : 'yesno', nOptions: p.variant === 'pick' ? 4 : 2,
@@ -421,7 +482,7 @@
     return item;
   }
 
-  var stats = { fallbacks: 0 };
+  var stats = { fallbacks: 0, leanMiss: 0 };
   function generate(rng, params) {
     var p = normParams(params), item = null;
     for (var i = 0; i < 50 && !item; i++) {
@@ -559,6 +620,7 @@
     if (!pick) {
       if (item.key !== (copies.length === 1)) return 'the key does not match the probe';
       if (Math.abs(Math.abs(item.probe.turn) - item.angle) > 0.011) return 'probe turn does not match the item angle';
+      if (Math.abs(item.angle - 90) < NOTCH - 0.011) return 'a same-or-mirror turn within ' + NOTCH + '° of a quarter turn';
       if (item.angle > 0 && item.angle < 180 && Math.sign(item.probe.turn) !== item.dir) return 'probe turn has the wrong direction';
       return true;
     }
@@ -611,7 +673,7 @@
     validate: validate,
     score: score,
     lib: {
-      ANGLES: ANGLES, SHAPES: SHAPES, BETA_TRIES: BETA_TRIES, bbox: bbox, boxGap: boxGap, FIXED: FIXED, JITTER: JITTER, SPREAD: SPREAD, PAIR_AXIS_MIN: PAIR_AXIS_MIN,
+      ANGLES: ANGLES, SHAPES: SHAPES, BETA_TRIES: BETA_TRIES, bbox: bbox, boxGap: boxGap, NOTCH: NOTCH, LEAN_MARGIN: LEAN_MARGIN, drawAngle: drawAngle, FIXED: FIXED, JITTER: JITTER, SPREAD: SPREAD, PAIR_AXIS_MIN: PAIR_AXIS_MIN,
       stats: stats,
       sincos: sincos, atan2d: atan2d, norm180: norm180, norm360: norm360,
       xform: xform, canon: canon, forms: forms, grow: grow, outlineOf: outlineOf, analyse: analyse, shapeOk: shapeOk,
