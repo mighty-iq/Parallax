@@ -14,6 +14,8 @@
    document metadata.
 4. --png DIR: rasterises every page at 60 dpi with pdftoppm (for looking at the layout).
 Figures come from tools/shots.py (docs/shots/). Runs through tests/e2e/pwslot.sh (two browser slots). """
+import os
+os.environ['TZ'] = 'UTC'   # rule 13: the container keeps a private time zone; no figure may show its clock
 import json
 import pathlib
 import shutil

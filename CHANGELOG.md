@@ -61,7 +61,8 @@ a measure that moves every week. A record from 1.0 or 1.1 upgrades by itself (fo
   its Watch; Hole Punch's wrong sheets may differ in hole count; Form gains the test's kinds of pattern and L-, T-
   and U-prisms; Missing View moves to profile solids and says when its drawn structure stops. An independent item
   review's cheap cues are held near chance in Hole Punch, Missing View, Openings, Form, Angles (version 4) and
-  Painted Cubes (version 4), and a session never shows an item twice where a setting has few. Section practice runs
+  Painted Cubes (version 4), with ten combinations of diagonal or mixed folds in Hole Punch kept as scoped
+  exceptions for now; a session never shows an item twice where a setting has few. Section practice runs
   under test conditions, at each format's test-range settings only: every part's instructions first, one clock
   across the parts, Back, Next, Mark, Strike and a review list; no part shows an item twice. Still opt-in, and
   still no score forecast.
@@ -93,8 +94,9 @@ a measure that moves every week. A record from 1.0 or 1.1 upgrades by itself (fo
   time zone or screen size unless you tick device details; the community export keeps times in UTC and no local
   days.
 - **Phones and fixes:** Progress in tabs, Confirm taps, larger words on the arrow circle, Section practice held
-  sideways, clearer layouts for Hole Punch, Form, Painted Cubes and Knots; Pause and End during feedback, one
-  answer-time format, Section practice's clock and review over a reload. Playtest mode for testers, off by default.
+  sideways, clearer layouts for Hole Punch, Form, Painted Cubes and Knots, and drawing items held sideways with
+  the figure beside the drawing; Pause and End during feedback, one answer-time format, Section practice's clock
+  and review over a reload. Playtest mode for testers, off by default.
 - **Under the hood:** record format 4 (plateau events, bet periods, measurement occasions, the game layer, an events
   table); six new trial columns; hooks for modules between items; trials of rebuilt exercises and probes under new
   versions (Views 3, Angles 4, Painted Cubes 4; Mechanisms 3, Motion Graphs 2, Other Way Round 2); stored levels

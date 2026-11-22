@@ -29,6 +29,8 @@ import json
 import pathlib
 import sys
 
+import os
+os.environ['TZ'] = 'UTC'   # rule 13: the container keeps a private time zone; no figure may show its clock
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tests' / 'e2e'))
 from playwright.sync_api import sync_playwright  # noqa: E402
@@ -557,8 +559,8 @@ def section_run(page):
         mode = page.evaluate('window.__section && __section.state ? __section.state.mode : null')
         if mode == 'review':
             return True
-        if mode == 'intro' and page.locator('[data-card="start"]').count():
-            page.locator('[data-card="start"]').first.click()
+        if mode in ('intro', 'instructions') and page.locator('[data-card="start"]').count():   # v1.2: every part's
+            page.locator('[data-card="start"]').first.click()                                  # instructions first
         elif mode == 'partend' and page.locator('[data-card="next"]').count():
             page.locator('[data-card="next"]').first.click()
         elif mode == 'list' and page.locator('[data-sec-end]').count():   # v1.2: the review list ends a run

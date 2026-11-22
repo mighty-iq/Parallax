@@ -301,7 +301,8 @@ table.small td.num { text-align: right; white-space: nowrap; }
 .badge.info { border-color: var(--signal); color: var(--signal); background: var(--signal-wash); }
 .phone-row.narrow { grid-template-columns: 44mm 44mm 1fr; }
 .phone-row.narrow .app-fig.phone .shot img { max-width: 44mm; max-height: 92mm; }
-#ex-reckon .ex-figs .shot img { max-height: 40mm; }
+#ex-reckon .ex-figs .shot img { max-height: 38mm; }
+#ex-homing .ex-figs .shot img { max-height: 40mm; }   /* v1.2: the circle's frame line made both pictures taller */
 #ex-centralpoint .ex-figs .shot img { max-height: 43mm; }   /* v1.2: two square boards and their captions in one card */
 #ex-cubes .ex-figs .shot img { max-height: 50mm; }
 #knots-proof p { font-size: 8.4pt; line-height: 1.38; margin-bottom: 1.6mm; }

@@ -181,3 +181,78 @@ Numbers are the code's at HEAD (19 Nov) unless a note is named; "sim" = the simu
   About, the Library notes and the guide; then the figures (Missing View's last) and the PDF; then the self-check.
 - Not mine, left to their owners: M5 and L9 (done by W1-band-B, f2528b9), L7 (Views' learn.js), L8 (tour.js), L10
   (section.js), L16's measure.js line, settings.js:243's CSV line (L14).
+- Commits: a6e6b42 (README, About, the Library notes), faa7786 (guide text, CHANGELOG, DECISIONS line on L11),
+  then the figures and the PDF (below). requests.md: FYI to W2-core on library.js (M4's pattern, the fallback keys
+  line, the Section note).
+- Done from RV-claims-1.2: M1 (guide p. 11, Spin's Time row, the modes table), M2 (Section page, modes table, README,
+  Library note), M3 (colophon "Version 1.2.0, November 2026 (first published for 1.0.0 ...; updated for 1.1.0 ...)":
+  the lead sets the day at release), M4 (library.js pattern), L1, L2, L3 (three places), L4 (guide line), L5
+  (README, About, guide p. 3), L6, L11 (DECISIONS), L12 (two places), L13 (README), L14 (CHANGELOG, guide's Also in
+  1.2, chapters 2, 9, 11, README layout and tests), L15 (Track, Views, Homing), L16 (guide line), L17 (About, and the
+  guide's licence table), L18 (library.js text).
+- Requests answered: W3-misc 14:25 (README Runs everywhere and layout, CHANGELOG; CLAUDE.md's map and rule 6 are not
+  in my brief: left to the lead), W3-exfix 15:17 (Nets) and 13:58 (Spin's figures and captions; Central Point's Move
+  and the miss line), W2-core 16:15 and 13:22 (keys after an answer, the export without screen sizes, Near miss, the
+  stretch tag's "above your level" already matches "a stretch, set above your level"), W2-measure 14:23 (L4; probe
+  versions; no item back across checks), W3-bandA 14:32 (items changed; figures reshot), W3-misc 14:33 (the guide's
+  note on updates: a copy kept only when its files belong to one version; conversions only forward).
+
+## Self-check 1, round 2: the claims added and the code behind each
+- Train untimed until Speed opens, then easy items carry its deadline: js/engine/dims.js config `fluency: 0.1`
+  (fluency items once Speed is open). Central Point's quick form: its own pace staircase (js/engine/pace.js).
+- Section forms from test-range settings, 35–65 % within them: js/engine/section.js band() (4b0af60); no item twice
+  in a part: lib.fewStems seed skipping (DECISIONS 19 Nov, W1-band-B).
+- Motion offer after about 5 min of motion, "End the session" and "Go on": js/ui/play.js MOTION.newLimit 300000.
+- Off-screen challenges on seven exercises: `offscreen` in Fold, Nets, Slice, Views, Orient, Knots, Central Point.
+- Dose: note A-evidence.md line 118 (Miller & Halpern 12 h; no dose-response in Hawes, n.s.).
+- Pattern Memory: "a third to a half of the patterns exact": DECISIONS 22 Nov (W2-measure, L4), js/ui/check.js.
+- Meter beyond familiarity: js/engine/trend.js (P(D > 0) for the gain beyond the familiarity model).
+- Day 1 about 35 min: Spin tutorial 110 s (play.js), Baseline 1 46 × 15 s = 11.5 min (assess.js), session 20 min
+  (model.js `session.minutes`), plus the welcome.
+- Rings: js/ui/game.js reveal() (a ring when stretch or celebrate() === 'strong').
+- Offline copy, updates at the next launch, one version per copy: sw.js header; DECISIONS 19 and 22 Nov (W3-misc,
+  O21 and RV-code L6); the install row: js/ui/settings.js and app.js's held beforeinstallprompt (37ba451).
+- +1 point "from chance to certain": model.js `lapse: 0.03`; σ(1) = 0.731.
+- "still settling" above a 30-level range: js/ui/play.js SETTLING_WIDTH 30; "for example" settings: play.js and
+  game.js's stamp line.
+- Keep going: DECISIONS 19 Nov (W2-core, round 8). Session saved on hide and finished once at boot: rec.ui.live,
+  PX.ui.play.recover (6e1336b). Screen sizes only with device details: the pooled export (6e1336b); the Lab's line,
+  js/ui/lab.js:280.
+- Near miss within four times the band, Move with half-dot arrows, the miss line: js/ex/centralpoint (0e413e9,
+  22b3a03); keys after an answer: js/ui/play.js keys and the Keys sheet's line.
+- Homing and Reckon: a tap beside the circle, Walk and Back toggles, "The top of the circle is the way you face
+  now." (c75ad08). Openings' turn in the Watch and Try 2, Missing View's help line: DECISIONS 22 Nov (W1-band-B).
+- No item back across checks: assess.js freshItem (7bab4ac); View Match's check settings: def.checkCell; the full
+  check's order: config.measure.fullOrder (b885384); time left from measure.secPerItem 15.
+- Versions (registry dump, 22 Nov): views@3, angles@4, cubes@4, patviews@3, openings@3, patfold@3, form@3;
+  cubematch@2, patterns@2, mechanisms@3, otherway@2, motiongraphs@2, viewmatch@1, level@1, wordlinks@1.
+- Forward-only conversions and the merge's alignment: js/engine/rebase.js scalev (bcadf71).
+- Chapter 8: Missing View's starter stacks, "most line pieces" about 60 % over the band (DECISIONS 22 Nov,
+  W1-band-B, H2); Cube Match's quarter turns with swapped symbols (DECISIONS 22 Nov, W2-measure, L6); Central Point's
+  "half-way to the most central target" reported, not bounded (DECISIONS 22 Nov, W3-exfix, L3); Views' view
+  questions measured level by level once (DECISIONS 22 Nov, W3-bandA, M3; views.test.mjs still pools its levels).
+- Painted Cubes: counting only the cubes in view finds 62.3 % of first answers on stacked, test-range figures
+  (1,920 items, 80 per setting, measured 22 Nov with a script outside the repository; 60.0 / 64.1 / 63.0 % at two,
+  three and four high; 100 % on the starter figures, where every cube shows); five painted sides on a quarter of
+  stacked figures from 10 cubes: gen.js FIVE_SHARE 0.25, FIVE_FROM 2.
+- Hole Punch, "where the holes sit" near chance at every dimension level: DECISIONS 22 Nov (W1-band-B, H1).
+- Spin: same-or-mirror items keep 6° clear of a quarter turn (DECISIONS 22 Nov, W3-exfix, H6); the figure's item
+  (seed 7, angle level 4) turns 97.4° clockwise, shown as 97°.
+
+## Figures and the PDF, round 2 (22 Nov)
+- Privacy slip found and reported to the lead at once (15:12 UTC): tools/shots.py ran Chromium in the container's
+  own time zone, so three figures showed its clock: app-summary.png and app-settings.png (on build since 8000b84)
+  and app-section-review.png (on main since 1.1, and on build); the PDFs embed the first and the last (Fig. 2.6,
+  Fig. 4.2). tools/shots.py and tools/build-pdf.py now set TZ=UTC before the browser starts (checked: the page's
+  Date then reads UTC; without it, the container's zone). Every app figure was shot again under UTC, and the three
+  were looked at; no other figure shows a time of day (app-today, app-lab, app-check, app-progress: dates only or
+  none). The old versions stay in history: the owner's call, as with the 18 Nov stamps.
+- tools/shots.py's Section capture now clicks through the instructions screen (mode 'instructions').
+- Reshot: every exercise and probe (Missing View last, after W1-band-B's 29431d1), every app screen. Looked at:
+  ex03 (both: the item turns 97°), ex05 (both: the shaded square), ex07-feedback, ex12, ex15, ex16, ex18, ex20
+  (both: Move beside Confirm; the miss line), app-section-review, app-summary, app-settings.
+- build-pdf.py: 57 sheets, no overflow after trims (chapter 3's first note, Homing's and Reckon's cards, the modes
+  table's page, the engine page, the clock page, the probes page, chapter 9, chapter 11); chapter 9's iPhone panel
+  became one line pointing to chapter 2's "Where your progress lives". Pages looked at: 4, 11, 18, 21, 36, 48.
+  Metadata: /Author "the Chimera community (https://discord.gg/chmr)", /Subject "… Version 1.2.0.", dates
+  D:…+00'00', no XMP.
