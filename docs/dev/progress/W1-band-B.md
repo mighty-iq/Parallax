@@ -114,14 +114,21 @@ Design source: docs/research/v1.2/D2-first-band.md §3.0, §3.4–3.9, §4. Requ
 ## Next
 - Form's fresh-player rerun (the lead's); fix what it finds once.
 
-## Open (round 3 items not started: the coordinator stopped the round on 19 Nov at about 16:05 UTC, owner low on usage)
-- Missing View: one line when the drawn structure stops being drawn (step_209); one Try item with dotted hidden
-  lines (they first come in scored items, step_192); "TOP" and "THE STRUCTURE" touch in the header at 390 px
-  (step_188, step_196); the result strip packs the time, "The right answer is marked ✓" and the step caption into
-  three tight rows (step_197, 200, 210, 222): the caption side is mine, the strip is play.js's (request to file).
-- tests/e2e/phones.py (granted): Hole Punch's checks lack version 3's 'sheets' dim; Form's badge cover is 13 % of
-  12 % allowed.
-- Form after this round's view and size change: fit.py at 360 × 640 and 390 × 844, harness_form, and a look at the
-  real Try items in the app (harness_starter_b opens the band's settings, not the Try items themselves).
-- W2-core: the session guard could move into play.js (every exercise with a stemSig) and item:before's ctx could
-  carry the generated item (requests.md).
+## Round 4: the item review and the left-overs (22 Nov)
+- RV-items-1.2: Hole Punch's place cues (H1) and counts (L2), Missing View's line pieces and nearest neighbour (H2,
+  M5), Openings' cut-away share (H4) and Form's longest edge and band size direction (M4) are held in the foil
+  choices; every cheap rule is within chance + 10 at every dimension level (node tests, shortcut-levels). Residuals:
+  Hole Punch per full combination (300 items each) colour at most 38 %, "farthest from the centre" 48 %, "fewest
+  touching" 49 % in two- and three-fold diagonal or mixed combinations; Missing View's band keeps "the most line
+  pieces" as a scoped exception (about 60 %; DECISIONS); its cube level 1 at foil 0 still shows "largest filled area"
+  37-40 % per combination (within the per-level bound).
+- Openings: the turn taught in the Watch and Try 2; shorter parts; show me's flying outline styled (desktop run).
+- Missing View: the help-stops line, the structure's label clear of "TOP", show me after an answer without the stem's tour.
+- phones.py: Hole Punch's checks carry 'sheets' (80/1: the one failure is Painted Cubes' numbers, 9.7 px at 360 x 640,
+  not mine). fit.py at both phone sizes for my four, and harness_form, pass.
+
+## Open
+- W2-core: the session guard into play.js (requests.md); the desktop parts legend's Close button and the result
+  strip's three rows (requests.md, 22 Nov).
+- The lead: whether Missing View's band keeps its scoped "most line pieces" or takes wrong drawings with an added
+  line; Hole Punch's per-combination residuals above.
