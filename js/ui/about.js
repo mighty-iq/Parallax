@@ -75,7 +75,7 @@
         h('p', 'Spatial practice works on spatial tests: across 206 training studies it raised scores by about half a standard deviation, and spatial tests nobody had practised gained about as much, for at least several weeks (Uttal and colleagues, 2013). How far the gains reach beyond spatial tests is the open question: in school mathematics they were small and shown mainly in children and teenagers (Hawes and colleagues, 2022). Parallax is built to help answer it.'),
         h('ul',
           h('li', 'The Spatial Check measures you on tasks you never train: one near, three mid and two far, with a word task as a control. Two baselines set your starting point, short blocks at the start of some sessions keep the measure moving, and one model reads them all together.'),
-          h('li', 'Retaking any task raises scores on its own (Scharfen and colleagues, 2018), so the model allows for familiarity and for ordinary day-to-day ups and downs. A meter shows how likely it is that your probe scores have risen; at milestones it puts that into words. “Unclear yet” is not the same as no progress.'),
+          h('li', 'Retaking any task raises scores on its own (Scharfen and colleagues, 2018), so the model allows for familiarity and for ordinary day-to-day ups and downs. A meter shows how likely it is that your probe scores have risen beyond what familiarity predicts; at milestones it puts that into words. “Unclear yet” is not the same as no progress.'),
           h('li', 'Levels are estimates with a likely range that narrows as you practise. Everything compares you with yourself: Parallax shows no IQ, percentile, index or “brain age”, and promises no outcome.')),
       ], { 'data-section': 'claims' }),
 
@@ -86,7 +86,7 @@
       section('Test hygiene', hygiene(), { 'data-section': 'hygiene' }),
 
       section('Your data', [
-        h('p', 'Everything you do stays in this browser on this device. Nothing is sent anywhere: there are no accounts, no analytics and no ads. Back up in Settings to keep a copy or move to another device. To help test the bets, share the community export from the Lab: it carries no name unless you add your nickname, and no device details unless you tick them.'),
+        h('p', 'Everything you do stays in this browser on this device. Nothing is sent anywhere: there are no accounts, no analytics and no ads. Back up in Settings to keep a copy or move to another device. To help test the bets, share the community export from the Lab: it carries no name unless you add your nickname, and no device details, screen sizes included, unless you tick them.'),
         h('p', ui.button('Open Settings', { kind: 'secondary', small: true, go: 'settings' })),
       ], { 'data-section': 'data' }),
 
@@ -94,7 +94,7 @@
         h('dl.px-credits',
           h('div', h('dt', 'Parallax'), h('dd', 'Built by the Chimera community on Discord. Version ', h('span.px-num', PX.version), '.')),
           h('div', h('dt', 'Code'), h('dd', 'MIT licence.')),
-          h('div', h('dt', 'Guide and texts'), h('dd', 'The guide, the README and the notes: Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0).')),
+          h('div', h('dt', 'Guide and texts'), h('dd', 'The guide and its figures, the README, the CHANGELOG and the notes: Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0).')),
           h('div', h('dt', 'three.js'), h('dd', '3D rendering. MIT licence, © 2010–2026 three.js authors.')),
           h('div', h('dt', 'IBM Plex Sans and Mono'), h('dd', 'Typefaces by IBM. SIL Open Font License 1.1.'))),
       ], { 'data-section': 'credits' }),

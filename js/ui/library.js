@@ -328,7 +328,7 @@
       body: [
         h('p.px-howto-goal', L.goal || ''),
         parts.length ? h('ul.px-howto-parts', parts) : null,
-        h('p.px-meta', 'Keys: 1–9 pick an option, Enter confirms, Space goes on, Esc pauses, S shows the solution.'),
+        h('p.px-meta', 'Keys: the letter or number shown on an option picks it, Enter confirms, Space goes on, Esc pauses, S shows the solution.'),
       ],
       actions: [{ label: 'Close', kind: 'secondary' }],
     });
@@ -584,7 +584,7 @@
       };
       panel.appendChild(h('div.px-lib-section', { 'data-lib': 'section' },
         h('h3', 'Section practice'),
-        h('p', 'Under test conditions: every part’s instructions first, then the parts in the test’s order against one clock, with Back, Next, Mark and Strike: ' + st.text + '. No feedback until a review at the end, with a show-me for every item; your levels do not change.'),
+        h('p', 'Under test conditions: every part’s instructions first, then the parts in the test’s order against one clock, with Back, Next, Mark and Strike: ' + st.text + '. Items come from each format’s test-range settings only. No feedback until a review at the end, with a show-me for every item; your levels do not change.'),
         h('div.px-data-row', go('mini'), go('full'))));
     }
     panel.appendChild(h('p.px-lib-pat-use', 'These formats appear in the Perceptual Ability Test of the Dental Admission Test. ',
@@ -696,7 +696,7 @@
     if (strats) host.appendChild(section('Strategies', [h('p.px-muted.px-ex-intro', 'Two ways to solve the same item: one pictures it, one reasons it out. On rotation tasks, people who switch between strategies tend to score higher; try both here, and the check-ins that ask which one you used help find out where else that holds.'), strats], { 'data-section': 'strategies' }));
 
     if (L && L.bridge) {
-      var lim = /not been shown|not been studied|little or no|not established/i.test(L.bridge) ? null : h('p.px-limit', LIMIT);
+      var lim = /not been shown|not been studied|not been tested|little or no|not established/i.test(L.bridge) ? null : h('p.px-limit', LIMIT);
       host.appendChild(section(def.practice === 'attention' || def.practice === 'perception' ? 'Where this skill is used' : 'Where spatial thinking is used', [h('p', L.bridge), lim], { 'data-section': 'bridge' }));
     }
     if (L && L.offscreen) {

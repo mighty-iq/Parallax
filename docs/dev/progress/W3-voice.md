@@ -173,3 +173,11 @@ Numbers are the code's at HEAD (19 Nov) unless a note is named; "sim" = the simu
   /Author the Chimera community only.
 - Request lines to the guide's owner marked DONE in requests.md: 15:52 (W1-central), 22:50 (W2-bets), 01:30
   (W2-measure), 10:58 and 12:03 (W3-bandA), 13:05 (W1-band-B).
+
+## Final round before the release candidate (resumed 2026-11-22 14:39 UTC)
+- Intent: RV-claims-1.2 M1-M4 and the lows in my files (L1-L3, L4's guide line, L5, L6, L11-L18 where they touch
+  README, CHANGELOG, About, the Library notes or the guide); every open requests.md line to the guide or to me; the
+  changes since 8d0ea13 (79 commits; DECISIONS lines since then) in the README, CHANGELOG 1.2.0 (still "unreleased"),
+  About, the Library notes and the guide; then the figures (Missing View's last) and the PDF; then the self-check.
+- Not mine, left to their owners: M5 and L9 (done by W1-band-B, f2528b9), L7 (Views' learn.js), L8 (tour.js), L10
+  (section.js), L16's measure.js line, settings.js:243's CSV line (L14).
