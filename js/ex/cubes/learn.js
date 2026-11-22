@@ -31,26 +31,29 @@
     strategyFirst: 'analytic',
     // The Watch at the starter band: four flat cubes in an L, asked about 3 painted sides (the
     // corner and the middle of the row: 2 cubes). Seeds are fixed so the answers vary their slot
-    // (Watch 2, Try 3, 1, 3, 2, 1), Try 3 hides exactly one cube and Try 4 hides one that is counted.
+    // (Watch 2, Try 3, 1, 3, 2, 1), Try 3 hides exactly one cube and Try 4 hides one that is counted. Version 4
+    // (22 Nov) changed the starter band's items, so Try 2, Try 3 and the worked example took new seeds that give
+    // the same figures and questions (107, 455, 3855; were 2, 18, 5). Every item is marked task: 'tutorial', so
+    // none of its figures comes back as a rated item (gen.js, TUTORIAL).
     demo: [
-      { params: { cubes: 0, height: 0, asked: 0 }, seed: 1, kind: 'flat' },
+      { params: { cubes: 0, height: 0, asked: 0, task: 'tutorial' }, seed: 1, kind: 'flat' },
     ],
     practice: [
-      { params: { cubes: 0, height: 0, asked: 0 }, seed: 13, assist: { numbers: 2 } },
-      { params: { cubes: 0, height: 0, asked: 0 }, seed: 2 },
+      { params: { cubes: 0, height: 0, asked: 0, task: 'tutorial' }, seed: 13, assist: { numbers: 2 } },
+      { params: { cubes: 0, height: 0, asked: 0, task: 'tutorial' }, seed: 107 },
       // Before Try 3 one more item solved for you (play.js `example`): its hidden support shown dashed
       // and numbered, so the hidden-cube rule is seen worked once before it is used (note D2 addendum C
       // change 4: a second worked example right before its matched problem; Atkinson et al. 2000).
       // Try 3 itself draws its hidden support dashed, without its number: worked (the example,
       // dashed and numbered), faded (Try 3, dashed), alone (Try 4, nothing marked); note D2 §2.2,
       // where fading itself is a working assumption.
-      { params: { cubes: 0, height: 1, asked: 0 }, seed: 18, tip: 'hidden', example: { seed: 5 }, assist: { hidden: true } },
+      { params: { cubes: 0, height: 1, asked: 0, task: 'tutorial' }, seed: 455, tip: 'hidden', example: { seed: 3855 }, assist: { hidden: true } },
       // Try 4 and Try 5: the two questions of one figure (params.ask 0 and 1, one seed), six cubes two
       // high with a hidden support among the counted, drawn as on the test (plain lines, nothing marked):
       // the plain look comes with its own tip, and the set row and the tally are met before scored items
       // (the lead's fresh-player run, 19 Nov: Try 4 changed the look without a word, sets came unannounced).
-      { params: { cubes: 1, height: 1, asked: 0, ask: 0 }, seed: 324, tip: 'plain' },
-      { params: { cubes: 1, height: 1, asked: 0, ask: 1 }, seed: 324 },
+      { params: { cubes: 1, height: 1, asked: 0, ask: 0, task: 'tutorial' }, seed: 324, tip: 'plain' },
+      { params: { cubes: 1, height: 1, asked: 0, ask: 1, task: 'tutorial' }, seed: 324 },
     ],
     tips: [
       // version 3: a figure's later questions (params.ask 1–3) come one at a time, the figure unchanged.

@@ -216,23 +216,38 @@
   // fits there and clear of the badges placed before it, as large as the spot allows (between BADGE_MIN
   // and BADGE_R), so every badge sits on its own cube and never on a join. Ties: the front face, then the top.
   var BADGE_R = 0.22, BADGE_MIN = 0.15, RING_D = 0.07, HID_K = 0.88, FACE_PREF = [0.01, 0.02, 0];
+  // A number is never under DIGIT_PX on the screen (v1.2, W1-band-B's phones.py run of 22 Nov: 9.7 px at 360 × 640,
+  // the cramped spots' badges of a large figure): where the figure is drawn small, the digits keep DIGIT_PX and the
+  // discs the least that holds them (DIGIT_FIT of the digit's size), so a badge grows only as much as its digit
+  // needs and the placement plans for that size. floor: { font, r } in cube edges for the figure on the screen now
+  // (0 where it is not laid out, as in node).
+  var DIGIT_PX = 13.5, DIGIT_FIT = 0.58, floor = { font: 0, r: 0 };
+  function digitFloor() {
+    // the drawing's own scale on the screen (its CTM: a figure bounded by its height is drawn smaller than its width says)
+    var svg = st.fig && st.fig.svg, m = svg && svg.getScreenCTM ? svg.getScreenCTM() : null;
+    var s = m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 0, f = s > 0 ? DIGIT_PX / s : 0;
+    return { font: f, r: f * DIGIT_FIT };
+  }
   function placeOf(c, veils, discs) {
-    var q = c.q;
-    if (c.hidden) return { at: pt([q.x + 0.5, q.y + 0.5, q.z + 0.5]), r: BADGE_R * HID_K };
+    var q = c.q, rMin = Math.max(BADGE_MIN, floor.r), rMax = Math.max(BADGE_R, rMin);
+    if (c.hidden) return { at: pt([q.x + 0.5, q.y + 0.5, q.z + 0.5]), r: Math.max(BADGE_R * HID_K, floor.r) };
     var rr = st.rr;
     // clear of the badges placed so far (the hidden cubes' first): the distance to the region's edge then
     // bounds this badge's size, so the two never overlap
     var nearHid = function (X, Y) {
-      for (var j = 0; j < discs.length; j++) { var dx = X - discs[j].at[0], dy = Y - discs[j].at[1], g = discs[j].r + BADGE_MIN + 0.02; if (dx * dx + dy * dy < g * g) return true; }
+      for (var j = 0; j < discs.length; j++) { var dx = X - discs[j].at[0], dy = Y - discs[j].at[1], g = discs[j].r + rMin + 0.02; if (dx * dx + dy * dy < g * g) return true; }
       return false;
     };
     var inVeil = function (pad) {
       return function (X, Y) { if (nearHid(X, Y)) return true; for (var a = 0; a < veils.length; a++) if (nearHull(veils[a], X, Y, pad)) return true; return false; };
     };
     // out of the veils with a margin, then out of them, then anywhere clear of the other badges, then anywhere:
-    // the first tier where a badge of the smallest size fits, else the roomiest spot of all tiers
+    // the first tier where a badge of the smallest size fits; else (v1.2, 22 Nov: a seen cube's top beside a hidden
+    // badge took a spot over it) the roomiest spot clear of the other badges at the smallest size (every point there
+    // lies at least the smallest size from them, so the two never overlap); else the roomiest spot of all tiers
     var tiers = [inVeil(0.08), inVeil(0), nearHid, null], roomiest = null;
     for (var t = 0; t < tiers.length; t++) {
+      if (t === 3 && roomiest) return { at: roomiest.at, r: rMin };
       var best = null;
       for (var fi = 0; fi < rr.faces.length; fi++) {
         var f = rr.faces[fi];
@@ -242,12 +257,12 @@
         var score = r.clear + FACE_PREF[f.side];
         if (!best || score > best.score) best = { at: r.at, score: score, clear: r.clear };
       }
-      if (best && best.clear >= BADGE_MIN) return { at: best.at, r: Math.min(BADGE_R, best.clear) };
+      if (best && best.clear >= rMin) return { at: best.at, r: Math.min(rMax, best.clear) };
       if (best && (!roomiest || best.clear > roomiest.clear + 1e-9)) roomiest = best;
     }
-    if (roomiest) return { at: roomiest.at, r: BADGE_MIN };
+    if (roomiest) return { at: roomiest.at, r: rMin };
     var f0 = faceAt([q.x, q.y, q.z], 0);
-    return { at: [(f0[0][0] + f0[2][0]) / 2, (f0[0][1] + f0[2][1]) / 2], r: BADGE_MIN };
+    return { at: [(f0[0][0] + f0[2][0]) / 2, (f0[0][1] + f0[2][1]) / 2], r: rMin };
   }
   // A badge (v1.2 fresh-player run: sized to sit inside its face; a hidden cube's a little smaller, dashed).
   // kind: 'number' (ink), 'count' (counted for the question: the accent and a ring), 'unknown' ('?').
@@ -257,8 +272,9 @@
     if (kind === 'count') g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: r + RING_D, class: 'ex-cubes-ring' }));
     g.appendChild(S.el('circle', { cx: at[0], cy: at[1], r: r }));
     // S.text centres the em box on y (dominant-baseline central), which centres a digit within 0.01 edge
-    var t = S.text(at[0], at[1], String(text), { class: 'ex-cubes-badge-n' });
-    if (Math.abs(k - 1) > 1e-6 && !c.hidden) t.style.fontSize = (0.29 * k).toFixed(3) + 'px';
+    var t = S.text(at[0], at[1], String(text), { class: 'ex-cubes-badge-n' }), base = c.hidden ? 0.26 : 0.29;
+    var font = Math.max(c.hidden ? base : base * Math.min(k, 1), floor.font); // never under DIGIT_PX on the screen
+    if (Math.abs(font - base) > 1e-6) t.style.fontSize = font.toFixed(3) + 'px';
     g.appendChild(t);
     return g;
   }
@@ -288,6 +304,7 @@
   // with only] }. Ghosts go first, so no dashed edge crosses a number.
   function numbers(item, opts) {
     var m = marks(), all = cubeList(item), k = 0, ring = {}, also = opts.also || [];
+    floor = digitFloor();
     counted(item).forEach(function (c) { if (k++ < (opts.counted || 0)) ring[c.i] = true; });
     var shown = all.filter(function (c) { return opts.only ? ring[c.i] || also.indexOf(c.i) >= 0 : true; });
     var hid = shown.filter(function (c) { return c.hidden; });
@@ -365,7 +382,9 @@
     if (!several) return;
     // Try asks every question of its figure (learn.practice, by params.ask), so it names the total too.
     var label = set ? 'Question ' + (set.i + 1) + ' of ' + set.n : ctx && ctx.practice ? 'Question ' + (item.pos + 1) + ' of ' + item.asks.length : 'Question ' + (item.pos + 1) + ' about this figure';
-    var toggle = h('button.px-btn.ex-cubes-tally-toggle', { type: 'button', 'aria-pressed': st.tallyOpen ? 'true' : 'false', 'aria-controls': 'ex-cubes-tally' }, 'Tally');
+    // aria-controls only while the pad is open (it is built then; RV-a11y-1.2 L1: a closed pad's id named nothing)
+    var toggle = h('button.px-btn.ex-cubes-tally-toggle', { type: 'button', 'aria-pressed': st.tallyOpen ? 'true' : 'false' }, 'Tally');
+    if (st.tallyOpen) toggle.setAttribute('aria-controls', 'ex-cubes-tally');
     toggle.addEventListener('click', function () {
       var svg = st.figure.querySelector('svg'), h0 = svg ? svg.getBoundingClientRect().height : 0;
       st.tallyOpen = !st.tallyOpen;

@@ -84,7 +84,22 @@
    column (a tower whose counts are nearly fixed: 4–6 cubes stand at most 3 high). Flat figures
    and 4–6 cubes have their own count ranges (KRANGE_FLAT, KRANGE_SMALL, measured like KRANGE).
 
-   Item: { ex: 'cubes', v: 3, seed, params, key, grid, heights, ask: N, count, asks, pos (the
+   Version 4 (22 Nov, the independent item review RV-items-1.2 H3, M1, M2). (1) The starter band's
+   counts no longer follow from the figure's outline: at 4–6 cubes "the number of columns" was the
+   count of cubes with four painted sides 51 % of the time (two high) and "the number of one-high
+   columns" that of three painted sides 48–52 % (three high); a figure whose count equals the number
+   of columns, of one-high columns, of tallest columns or of cubes in the front row is redrawn
+   STARTER_CUE of the time. (2) Figures built for five painted sides get tall columns that are no
+   such cube (DECOY: pairs of side-by-side columns as tall as each other, up to the tallest), and
+   their peaks other heights than two: before, the peaks were exactly the tallest columns, so
+   counting the tallest columns answered that question (100 % two high, 59–64 % three high); it is
+   also redrawn FIVE_TALL of the time when it gives the count. (3) A first question's count comes
+   from at least four counts where the level has such a number (wideFirst, FIRST_FLAT, FIRST_STACKED): a range
+   of three (20 of 66 pools) made "the most common count for the level and N" right a third of the
+   time. (4) No figure twice in a session: lib.sigOf and lib.fewStems (js/ex/patviews/gen.js has the
+   guard), for the starter band, which deals one question a figure.
+
+   Item: { ex: 'cubes', v: 4, seed, params, key, grid, heights, ask: N, count, asks, pos (the
    question's place in asks), options: [1, 2, 3, 4, 5], hidden (cubes with no visible pixel) }.
    key = count − 1; score() returns value = pos (the trial row's value column, as Section logs it). */
 (function (PX) {
@@ -236,6 +251,45 @@
   function keepTables(KR, NT) { return KR.map(function (kr, c) { return keepOne(kr, NT[c]); }); }
   var KEEP = keepTables(KRANGE, NAT), KEEP_FLAT = keepTables(KRANGE_FLAT, NAT_FLAT);
   var KEEP5 = KRANGE5.map(function (byH, c) { return byH ? byH.map(function (kr, h) { return keepOne(kr, NAT5[c][h]); }) : null; });
+  // Version 4 (RV-items-1.2 M2): a first question's count is drawn evenly from at least four counts. Where the
+  // level's class has an N whose range spans four counts or more, only such N are asked first (wideFirst); flat
+  // 18–22-cube figures, where none does, get wider first ranges of their own (FIRST_FLAT: the searches find every
+  // count of them without a replan; spike, 22 Nov), and so does three painted sides on stacked 18–22-cube figures
+  // (FIRST_STACKED: two such cubes in 1–2 % of the figures whose tops all show), so their "many" class keeps three
+  // painted sides beside four (four alone made "count the column tops only" right 56 % of first questions there,
+  // over its cap of 55 %; O57). A figure built for five painted sides asks its first question
+  // about the same N as the level's other figures where KRANGE5 has it: its range of three counts is then mixed
+  // into that N's pool with three times as many figures of four or five counts (the pools stay under 30 %),
+  // where widening KRANGE5 needed counts its figures give under 1 % of the time (replans and fallbacks). Later
+  // questions keep KRANGE's ranges (KEEP evens their answers).
+  var FIRST_FLAT = [null, null, null, null, { 1: [2, 5], 3: [2, 5] }], FIRST_STACKED = [null, null, null, null, { 3: [2, 5] }];
+  // The ranges a first question uses (KR: the level's own; five: a figure built for five painted sides).
+  function firstRanges(p, KR, five) {
+    var e = eff(p), W = five ? null : e.flat ? FIRST_FLAT[p.cubes] : FIRST_STACKED[p.cubes], out = {};
+    Object.keys(KR).forEach(function (n) { out[n] = (W && W[n]) || KR[n]; });
+    return out;
+  }
+  // The N of the level's class whose first range spans four counts or more (on the level's own figures).
+  function wideFirst(p) {
+    var R = firstRanges(p, krange(p), false);
+    return ASK_OF[ASKED[eff(p).asked]].filter(function (n) { return R[n] && R[n][1] - R[n][0] >= 3; });
+  }
+  // Version 4 (RV-items-1.2 H3): on the starter band a count equal to one of these outline counts is redrawn
+  // STARTER_CUE of the time: the columns, the one-high columns, the tallest columns, the cubes of the front row.
+  // Where the outline fixes the count on every figure (4–6 cubes: flat, one such cube: the bottom counted as
+  // painted gives it; two high, four with four painted sides: the number of columns; three high, one with three:
+  // the tallest and the one-high columns), that count is dealt at chance (KW_SMALL, by height level 0–2, counts
+  // 1–4): 20 %, the other three 26.7 % each, so no answer passes 27 % and no outline count 30 % (spike, 22 Nov).
+  var T3 = 0.8 / 3, STARTER_CUE = 0.95, KW_SMALL = [[0.2, T3, T3, T3], [T3, T3, T3, 0.2], [0.2, T3, T3, T3]];
+  function outlineCounts(H) {
+    var cols = 0, ones = 0, tall = 0, m = maxH(H), G = H.length, front = 0;
+    H.forEach(function (row) { row.forEach(function (h) { if (h) { cols++; if (h === 1) ones++; if (h === m) tall++; } }); });
+    H[G - 1].forEach(function (h) { front += h; });
+    return [cols, ones, tall, front];
+  }
+  // Five painted sides (RV-items-1.2 M1): "count the tallest columns" giving its count is redrawn this often.
+  var FIVE_TALL = 0.8;
+  function tallestColumns(H) { var m = maxH(H), c = 0; H.forEach(function (row) { row.forEach(function (h) { if (h === m) c++; }); }); return c; }
   var GRIDS = [[3], [3, 4], [4], [4, 5], [5]];
   var OPTIONS = [1, 2, 3, 4, 5];
   var TOP_SHOW = 0.5, CLEAR = 0.2;
@@ -420,19 +474,24 @@
   // straight behind, to the left of and behind-left of each are kept empty, since a column taller
   // than its neighbours would hide their tops (the view looks from the front right, above); then the
   // footprint grows from them through the other cells, one cube high, until it is one piece of F
-  // columns; the P columns stand two high and one of them the level's height; then single cubes go
-  // where they keep every such column the tallest of its neighbourhood and make no new one (a column
-  // beside one stays lower than it, any other keeps a neighbour at least as tall), towards the back
-  // left as randomFigure raises columns. null when it cannot be done (the caller draws again).
+  // columns; the P columns stand two high or more and one of them the level's height; then version 4's
+  // decoys (DECOY): pairs of side-by-side columns raised as tall as each other (up to the level's
+  // height), away from the P columns unless lower than them, so the tallest columns are not simply the
+  // five-sided ones; then single cubes go where they keep every such column the tallest of its
+  // neighbourhood and make no new one (a column beside one stays lower than it, any other keeps a
+  // neighbour at least as tall), towards the back left as randomFigure raises columns. null when it
+  // cannot be done (the caller draws again).
   var RAISE = [0, 0, 2, 6, 10]; // by the level's height (index 2–4)
-  function peakFigure(r, G, nLo, nHi, hMax, P) {
+  // Version 4: the number of decoy pairs wanted (0, 1, 2), how often a decoy pair stands as tall as the figure
+  // (else 2 up to one less), and how often a peak other than the tallest stands above two.
+  var DECOY = [0.2, 0.45, 0.35], DECOY_TOP = 0.6, PEAK_UP = 0.4;
+  function peakFigure(r, G, nLo, nHi, hMax, P, plain) {
     var n = nLo + rint(r, nHi - nLo + 1), GG = G * G, i, j, q;
-    // F: the columns. The cubes above the footprint and the P columns go where the rules allow, which
-    // is little room at two high (only away from the P columns, beside a column as tall), so the
-    // footprint takes most cubes when the figure is low: at most RAISE[hMax] single cubes are left.
-    var maxF = Mth.min(GG, n - P - (hMax - 2)), minF = Mth.max(P + 1, maxF - RAISE[hMax]);
-    if (maxF < minF) return null;
-    var F = minF + rint(r, maxF - minF + 1);
+    // the peaks' heights (one at hMax) and the decoy pairs' (each pair as tall as each other); plain: version 3's
+    var ph = [], top = rint(r, P);
+    for (i = 0; i < P; i++) ph.push(i === top ? hMax : !plain && hMax > 2 && r.next() < PEAK_UP ? 3 + rint(r, hMax - 2) : 2);
+    var u = plain ? 0 : r.next(), nD = plain || u < DECOY[0] ? 0 : u < DECOY[0] + DECOY[1] ? 1 : 2, dh = [];
+    for (i = 0; i < nD; i++) dh.push(hMax === 2 || r.next() < DECOY_TOP ? hMax : 2 + rint(r, hMax - 2));
     // cells as indices c = z·G + x; NB[c]: the 4-neighbours (−1 off the grid)
     var NB = NBS[G], peak = new Int8Array(GG), bad = new Int8Array(GG), foot = new Int8Array(GG), h = new Int8Array(GG);
     var peaks = [], order = [];
@@ -450,6 +509,46 @@
       if (x > 0 && z > 0) bad[c - G - 1] = 1;
     }
     if (peaks.length < P) return null;
+    // the decoys (version 4): pairs of side-by-side cells beside no peak, where neither hides a peak, a decoy or
+    // its partner's top (the cells behind and to the left of each are then kept empty, as for the peaks)
+    var dec = new Int8Array(GG), dcells = [];
+    function behind(k) { var kx = k % G, kz = (k - kx) / G, o = []; if (kx > 0) o.push(k - 1); if (kz > 0) o.push(k - G); if (kx > 0 && kz > 0) o.push(k - G - 1); return o; }
+    function free(k) {
+      if (peak[k] || bad[k] || dec[k]) return false;
+      for (var w = 0; w < 4; w++) { var nb = NB[k * 4 + w]; if (nb >= 0 && (peak[nb] || dec[nb])) return false; }
+      return true;
+    }
+    for (i = 0; i < nD; i++) {
+      var opts = [];
+      for (j = 0; j < GG; j++) {
+        if (!free(j)) continue;
+        for (q = 0; q < 4; q += 2) { // the right and the front neighbour: each pair once
+          var b = NB[j * 4 + q], hideOk = true;
+          if (b < 0 || !free(b)) continue;
+          [j, b].forEach(function (k) { behind(k).forEach(function (m) { if (m !== j && m !== b && (peak[m] || dec[m])) hideOk = false; }); });
+          if (hideOk) opts.push(j, b);
+        }
+      }
+      if (!opts.length) { dh.length = i; break; } // no room: fewer decoys
+      var pk = 2 * rint(r, opts.length / 2), da = opts[pk], db = opts[pk + 1];
+      dec[da] = 1; dec[db] = 1; dcells.push(da, db);
+      [da, db].forEach(function (k) { behind(k).forEach(function (m) { if (m !== da && m !== db) bad[m] = 1; }); });
+    }
+    // the cubes above the footprint: the peaks', then each decoy pair's, lowered (to 2, then dropped) where the
+    // footprint would have fewer columns than the peaks, the decoys and two more
+    var lift = 0;
+    for (i = 0; i < P; i++) lift += ph[i] - 1;
+    for (i = 0; i < dh.length; i++) {
+      while (dh[i] > 2 && n - lift - 2 * (dh[i] - 1) < P + dcells.length + 2) dh[i]--;
+      if (n - lift - 2 * (dh[i] - 1) < P + dcells.length + 2) { dcells.length = 2 * i; dh.length = i; break; }
+      lift += 2 * (dh[i] - 1);
+    }
+    // F: the columns. The cubes above the footprint go where the rules allow, which is little room at
+    // two high (only away from the P columns, beside a column as tall), so the footprint takes most
+    // cubes when the figure is low: at most RAISE[hMax] single cubes are left.
+    var maxF = Mth.min(GG, n - lift), minF = Mth.max(P + dcells.length + 1, maxF - RAISE[hMax]);
+    if (maxF < minF) return null;
+    var F = minF + rint(r, maxF - minF + 1);
     // grow one piece: from a random cell of the footprint into a free neighbour (union-find keeps the
     // number of pieces), until it is one piece of at least F columns; once F is reached, only cells
     // that join two pieces are added
@@ -457,12 +556,32 @@
     function find(k) { while (parent[k] !== k) { parent[k] = parent[parent[k]]; k = parent[k]; } return k; }
     function add(k) {
       foot[k] = 1; h[k] = 1; parent[k] = k; cells.push(k); pieces++;
-      for (var u = 0; u < 4; u++) {
-        var nk = NB[k * 4 + u];
+      for (var w = 0; w < 4; w++) {
+        var nk = NB[k * 4 + w];
         if (nk >= 0 && foot[nk]) { var ra = find(k), rb = find(nk); if (ra !== rb) { parent[ra] = rb; pieces--; } }
       }
     }
     for (i = 0; i < P; i++) add(peaks[i]);
+    for (i = 0; i < dcells.length; i++) add(dcells[i]);
+    // version 4: the pieces are joined first, each by a shortest way through free cells (neighbours in a random
+    // order), since growing at random rarely joined them round the cells kept empty (most draws failed there)
+    for (var join = 0; pieces > 1 && join < 8; join++) {
+      var root = find(cells[0]), prev = new Int16Array(GG).fill(-2), queue = [], hit = -1, qi, w;
+      for (i = 0; i < cells.length; i++) if (find(cells[i]) === root) { prev[cells[i]] = -1; queue.push(cells[i]); }
+      for (qi = 0; qi < queue.length && hit < 0; qi++) {
+        var dirs = shuffle(r, [0, 1, 2, 3]);
+        for (w = 0; w < 4 && hit < 0; w++) {
+          var nb = NB[queue[qi] * 4 + dirs[w]];
+          if (nb < 0 || prev[nb] !== -2) continue;
+          if (foot[nb]) { if (find(nb) !== root) { prev[nb] = queue[qi]; hit = nb; } continue; }
+          if (bad[nb]) continue;
+          prev[nb] = queue[qi]; queue.push(nb);
+        }
+      }
+      if (hit < 0) return null;
+      for (var pk2 = prev[hit]; pk2 >= 0 && !foot[pk2]; pk2 = prev[pk2]) add(pk2);
+    }
+    if (pieces > 1) return null;
     for (var guard = 0; guard < 600 && (cells.length < F || pieces > 1); guard++) {
       var nk = NB[cells[rint(r, cells.length)] * 4 + rint(r, 4)];
       if (nk < 0 || foot[nk] || bad[nk]) continue;
@@ -476,10 +595,10 @@
       }
       add(nk);
     }
-    if (pieces > 1 || cells.length > n - P - (hMax - 2)) return null;
-    for (i = 0; i < P; i++) h[peaks[i]] = 2;
-    h[peaks[rint(r, P)]] = hMax;
-    var count = cells.length + P + (hMax - 2), cand = [], wt = [];
+    if (pieces > 1 || cells.length > n - lift) return null;
+    for (i = 0; i < P; i++) h[peaks[i]] = ph[i];
+    for (i = 0; i < dcells.length; i++) h[dcells[i]] = dh[i >> 1];
+    var count = cells.length + lift, cand = [], wt = [];
     while (count < n) {
       var nc = 0, ws = 0;
       for (i = 0; i < cells.length; i++) {
@@ -545,7 +664,8 @@
   // of a few cubes: 41 % of their questions at a redraw of 0.5, per-level check of 19 Nov): its count
   // there is 0 for nearly every figure with one cube of three painted sides, which "1 cube" (the
   // nearest answer) then gets right, and equals two in 60 % of the figures with two; so it is
-  // redrawn 95 % of the time there.
+  // redrawn 95 % of the time there. (Flat starter figures: with one such cube it always gives the count; version 4
+  // deals that count at chance, KW_SMALL, which holds the error at about 27 % there.)
   function askOk(r, e, s, H, N, k) {
     if (shownCount(s, N) === k && r.next() < 0.75) return false;
     var pt = partials(s, H, N);
@@ -575,11 +695,18 @@
   // range), how many questions it has (setSize) and, where five painted sides is asked, its count.
   function question(r, p, KR) {
     var asks0 = ASK_OF[ASKED[eff(p).asked]].filter(function (n) { return KR[n]; });
-    var N = asks0[rint(r, asks0.length)], kr = KR[N];
+    var wide = wideFirst(p).filter(function (n) { return KR[n]; }); // version 4 (M2), see FIRST_FLAT
+    if (wide.length) asks0 = wide;
+    var N = asks0[rint(r, asks0.length)], kr = KR[N], e = eff(p);
+    if (e.cubes === 0 && kr[0] === 1 && kr[1] === 4) { // the starter band's weights (KW_SMALL)
+      var u = r.next(), w = KW_SMALL[e.height], k = 1;
+      while (k < 4 && u >= w[k - 1]) { u -= w[k - 1]; k++; }
+      return [N, k];
+    }
     return [N, kr[0] + rint(r, kr[1] - kr[0] + 1)];
   }
   function plan(r, p, seed) {
-    var set = setOf(p, seed), q = question(r, p, set.five ? krange5(p) : krange(p)), k5 = 0;
+    var set = setOf(p, seed), q = question(r, p, firstRanges(p, set.five ? krange5(p) : krange(p), set.five)), k5 = 0;
     if (set.five) k5 = FIVE_RANGE[0] + rint(r, FIVE_RANGE[1] - FIVE_RANGE[0] + 1);
     return { N: q[0], k: q[1], m: set.m, k5: k5 };
   }
@@ -587,15 +714,20 @@
   // also the novice-error redraws; the first question, the set's size and five's count never relax.
   // Rare plans (a count its level seldom gives, with two more questions in range) then still find a
   // figure; the tests measure the later answers with it.
-  var RELAX = [2, 4], REPLAN = 20;
+  // relax 3 (version 4, from RELAX[2] failed searches): a figure built for five painted sides is built as
+  // version 3 built it (no decoys, the peaks but one two high) and the tallest-columns redraw is skipped, so a
+  // rare plan (three such columns and a count its figures seldom give) still finds a figure (no fallback).
+  var RELAX = [2, 4, 8], REPLAN = 20;
   function build(r, p, pl, relax) {
     var Gs = GRIDS[p.cubes], cr = CUBES[p.cubes], e = eff(p), hMax = HEIGHT[e.height], N = pl.N, k = pl.k;
     for (var t = 0; t < 400; t++) {
       var G = Gs[rint(r, Gs.length)];
-      var H = pl.k5 ? peakFigure(r, G, cr[0], cr[1], hMax, pl.k5) : randomFigure(r, G, cr[0], cr[1], hMax);
+      var H = pl.k5 ? peakFigure(r, G, cr[0], cr[1], hMax, pl.k5, relax >= 3) : randomFigure(r, G, cr[0], cr[1], hMax);
       if (!H || !figureOk(H, p)) continue;
       var hist = histogram(H);
       if (hist[N] !== k || (pl.k5 && hist[5] !== pl.k5)) continue;
+      if (e.cubes === 0 && outlineCounts(H).indexOf(k) >= 0 && r.next() < STARTER_CUE) continue; // version 4 (H3)
+      if (pl.k5 && relax < 3 && tallestColumns(H) === pl.k5 && r.next() < FIVE_TALL) continue; // version 4 (M1)
       // the later questions' counts first (cheap), the picture after
       var kept = keptLater(r, p, pl, hist, relax);
       if (!kept) continue;
@@ -638,7 +770,7 @@
   function finish(p, H, asks, hist, hidden) {
     var pos = isInt(p.ask) ? p.ask % asks.length : 0, ask = asks[pos];
     return {
-      ex: 'cubes', v: 3, seed: 0, params: p, key: hist[ask] - 1, grid: H.length, heights: H.map(function (row) { return row.slice(); }),
+      ex: 'cubes', v: 4, seed: 0, params: p, key: hist[ask] - 1, grid: H.length, heights: H.map(function (row) { return row.slice(); }),
       ask: ask, count: hist[ask], asks: asks, pos: pos, options: OPTIONS.slice(), hidden: hidden,
     };
   }
@@ -646,19 +778,54 @@
   // The plan (N and k, the number of questions, five's count) is drawn once and kept across retries
   // (only the figure search is retried), so hard counts are not under-represented in any level
   // (RV-dat-style-A §12).
-  function generate(rng, params) {
-    var p = normParams(params), pl = plan(rng, p, rng.seed), item;
+  // setSeed (version 4, generateFresh): the seed whose number of questions the figure keeps when it is drawn
+  // again from another stream (setOf reads the seed; the item carries it, so validate and the planner agree).
+  function generate(rng, params, setSeed) {
+    var s0 = isInt(setSeed) ? setSeed : rng.seed, p = normParams(params), pl = plan(rng, p, s0), item;
     for (var i = 0; i < 50; i++) {
       // a plan no figure met in REPLAN searches gets its first question drawn again from its own stream
       // (the number of questions and five's count stay, so neither leans towards what is easy): rare
-      if (i === REPLAN) { var q2 = plan(rng.fork('replan'), p, rng.seed); pl = { N: q2.N, k: q2.k, m: pl.m, k5: pl.k5 }; }
-      item = build(i === 0 ? rng : rng.fork('retry' + i), p, pl, i >= RELAX[1] ? 2 : i >= RELAX[0] ? 1 : 0);
-      if (item) { item.seed = rng.seed; if (validate(item) === true) return item; }
+      if (i === REPLAN) { var q2 = plan(rng.fork('replan'), p, s0); pl = { N: q2.N, k: q2.k, m: pl.m, k5: pl.k5 }; }
+      item = build(i === 0 ? rng : rng.fork('retry' + i), p, pl, i >= RELAX[2] ? 3 : i >= RELAX[1] ? 2 : i >= RELAX[0] ? 1 : 0);
+      if (item) { item.seed = s0; if (validate(item) === true) return item; }
     }
     item = fallbackFor(p);
-    item.seed = rng.seed;
+    item.seed = s0;
     return item;
   }
+
+  /* ---------- no figure twice (version 4) ----------
+     The independent item review (RV-items-1.2 H3): the starter band's settings hold 42–126 figure-and-question
+     items each, so 20 items at one of them repeat with 78–99 % probability, and a rated starter item could be one
+     the tutorial had just shown (80 draws: 45–64 different figures per setting, up to 1.9 % of pairs alike; above
+     the band up to 1.4 %). (1) An item of the tutorial (params.task 'tutorial': the Watch, the Try items and the
+     worked example in learn.js) never comes back as a rated item: a rated figure that is one of theirs (TUTORIAL:
+     hashes of their figures; the node test recomputes them from learn.js) is searched again from the seed's stream,
+     with the seed's number of questions (setSeed). (2) The player's session guard (js/ex/patviews/gen.js
+     sessionGuard, at item:before) shows no figure twice where sigOf names the figure: on the starter band, whose
+     figures carry one question. A figure set's first question cannot take a new seed there, since the engine has
+     opened the set on its seed (js/engine/modes.js setOpen), so above the band sigOf names the seed itself and the
+     guard leaves those steps alone (docs/dev/v1.2/requests.md: carry the set along, then name the figure). */
+  var TUTORIAL = [559662589, 633481244, 2137939489, 2325310268, 2790843647, 2054584992];
+  function stemSig(item) { return PX.rng.hash('cubes-stem', JSON.stringify(item.heights)); }
+  var lastGen = null;
+  function generateFresh(rng, params) {
+    var item = generate(rng, params), sig = stemSig(item);
+    if (!(params && params.task === 'tutorial')) {
+      for (var k = 1; k <= 8 && TUTORIAL.indexOf(sig) >= 0; k++) { item = generate(rng.fork('fresh' + k), params, rng.seed); sig = stemSig(item); }
+    }
+    lastGen = { seed: rng.seed, params: params, sig: sig };
+    return item;
+  }
+  function sigOf(seed, params) {
+    var s = PX.rng(seed).seed;
+    if (setKind(normParams(params)) !== 'one') return 'seed:' + s;
+    var g = lastGen;
+    if (g && g.seed === s && (g.params === params || PX.ex.paramsKey(g.params) === PX.ex.paramsKey(params))) return g.sig;
+    generateFresh(PX.rng(s), params);
+    return lastGen.sig;
+  }
+  function fewStems(params) { return !!params && normParams(params).cubes === 0; }
   // The last resort (the engine voids it): a figure for these params found by a fixed search, with
   // its own number of questions (validate skips the set size check on it).
   var fallbackCache = {};
@@ -768,9 +935,10 @@
       var set = setOf(p, item.seed);
       if (asks.length !== set.m || five !== set.five) return asks.length + ' questions' + (five ? ' with' : ' without') + ' five painted sides, the seed gives ' + set.m + (set.five ? ' with' : ' without');
     }
-    if (ASK_OF[ASKED[e.asked]].indexOf(asks[0]) < 0 || !KR[asks[0]]) return 'N ' + asks[0] + ' not asked at this level';
+    var KR1 = firstRanges(p, KR, five); // version 4: a first question's own ranges (FIRST_FLAT)
+    if (ASK_OF[ASKED[e.asked]].indexOf(asks[0]) < 0 || !KR1[asks[0]]) return 'N ' + asks[0] + ' not asked at this level';
     for (var a = 0; a < asks.length; a++) {
-      var na = asks[a], rg = na === 5 && a > 0 ? FIVE_RANGE : KR[na];
+      var na = asks[a], rg = na === 5 && a > 0 ? FIVE_RANGE : a === 0 ? KR1[na] : KR[na];
       if (!isInt(na) || seenN[na] || !rg || counts[na] < rg[0] || counts[na] > rg[1]) return 'asks: N ' + na;
       seenN[na] = true;
     }
@@ -795,11 +963,11 @@
   }
 
   PX.ex.define({
-    id: 'cubes', version: 3, code: 'EX-18', name: 'Painted cubes', short: 'Painted Cubes',
+    id: 'cubes', version: 4, code: 'EX-18', name: 'Painted cubes', short: 'Painted Cubes',
     abilities: ['Vz'], cell: 'intrinsic-static', role: 'train', pat: true,
     bet: 'format', format: 'cubes:count-painted-sides', // v1.2 wave 2 (W2-bets): PLAN milestone 4, CONTRACT-v1.2 S; note T1 §3.2
     answer: 'choice', nOptions: 5,
-    extraParams: ['ask'],
+    extraParams: ['ask', 'task'],
     // Questions per figure (version 3): the planner asks a figure's questions in a row, ask 0 … n − 1
     // (W2-core's planner; the field's name is proposed in docs/dev/v1.2/requests.md, 19 Nov 09:41 UTC).
     set: { param: 'ask', size: setSize },
@@ -824,7 +992,7 @@
     },
     difficulty: difficulty,
     chance: 0.2,
-    generate: generate,
+    generate: generateFresh,
     validate: validate,
     score: score,
     lib: {
@@ -833,6 +1001,8 @@
       render: render, sight: sight, rayView: rayView, shownCount: shownCount, norm: normParams, fallback: fallbackFor, KEEP: KEEP, NAT: NAT,
       KRANGE_FLAT: KRANGE_FLAT, KRANGE_SMALL: KRANGE_SMALL, NAT_FLAT: NAT_FLAT, KEEP_FLAT: KEEP_FLAT, CUBES_AT: CUBES_AT, HEIGHT_AT: HEIGHT_AT, eff: eff, krange: krange,
       randomFigure: randomFigure, peakFigure: peakFigure, partials: partials, setSize: setSize, setOf: setOf, setKind: setKind, fiveOk: fiveOk,
+      TUTORIAL: TUTORIAL, stemSig: stemSig, sigOf: sigOf, fewStems: fewStems, generateRaw: generate, plan: plan, firstRanges: firstRanges, wideFirst: wideFirst,
+      outlineCounts: outlineCounts, tallestColumns: tallestColumns, KW_SMALL: KW_SMALL, STARTER_CUE: STARTER_CUE, FIVE_TALL: FIVE_TALL, FIRST_FLAT: FIRST_FLAT, FIRST_STACKED: FIRST_STACKED, DECOY: DECOY, PEAK_UP: PEAK_UP,
       FIVE_FROM: FIVE_FROM, FIVE_SHARE: FIVE_SHARE, FIVE_RANGE: FIVE_RANGE, KRANGE5: KRANGE5, NAT5: NAT5, KEEP5: KEEP5, krange5: krange5, SET_P: SET_P, FOUR_FROM: FOUR_FROM, RELAX: RELAX, REPLAN: REPLAN, VO_REDRAW: VO_REDRAW, keepTables: keepTables,
     },
   });
