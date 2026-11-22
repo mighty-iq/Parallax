@@ -147,8 +147,10 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
 - fit.py has a desktop size on request (--sizes 1366x768: the item and its controls on the screen; the page may scroll
   and the phone rules do not apply).
 - Guard: fit.py 844 x 390 Views 4/4 and Fold 2/2; 1366 x 768 Spin 2/2; 360 x 640 and 390 x 844 Spin, Views, Fold,
-  Slice 61 + 10 items, all fit; play.py round10 24/0 (with the table check). Found at 1366 x 768 and not changed (other
-  owners): Views 2 of 4 items (toview, toobject) and Slice 1 of 2 end 23 to 134 px under the fold.
+  Slice 61 + 10 items, all fit; play.py round10 24/0 (with the table check). Then, granted css/ex/views.css and
+  css/ex/slice.css: on a short wide screen Views' stage is at most 100vh less 34rem and a structure option at most
+  100vh less 38rem (8rem to 13rem), Slice's stage at most 100vh less 31rem; fit.py 1366 x 768 Views 4/4, Slice 2/2,
+  and the default sizes Views 42/42, Slice 35/35 (phone rules unchanged).
 
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).

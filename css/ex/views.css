@@ -78,6 +78,13 @@
 .ex-views .ex-views-count .ex-answer-text { font-size: var(--fs-2xl, 2rem); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .ex-views .ex-views-unit { font-size: var(--fs-xs, 0.75rem); color: var(--ink-3, #5D646C); text-transform: uppercase; letter-spacing: 0.06em; }
 
+/* round 10 (W2-core; fit.py at 1366 x 768: the options ended up to 134 px under the fold with a tip shown): on a wide
+   screen that is short, the stage gives up height (at most the screen less 34rem: the header, the title row, the goal,
+   a two-line tip, the hint and a row of options) and a structure option is drawn no larger than a drawing option */
+@media (min-width: 720px) and (min-height: 501px) {
+  .pl-trial.ex-views .ex-views-stage { height: clamp(10.5rem, min(42vh, 60vw, calc(100vh - 34rem)), 22rem); }
+  .pl-trial.ex-views .px-choice .ex-thumb { max-width: min(13rem, max(8rem, calc(100vh - 38rem))); }
+}
 /* Phones in the player: the item fits one screen (css/play.css sets --pl-avail and --pl-w).
    Drawings and structures in a 2 × 2 grid of cells as wide as the screen allows; the stage takes
    what is left, less the two-line hint of "to the object". The tag a reveal adds sits over the

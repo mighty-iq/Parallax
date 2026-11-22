@@ -4,6 +4,11 @@
    side-face grey with a dark outline, an inner solid's region in the darker grey inside it. */
 .ex-slice .ex-slice-stem { width: 100%; }
 .ex-slice .ex-slice-stage { width: 100%; height: clamp(10rem, min(40vh, 58vw), 22rem); }
+/* round 10 (W2-core; fit.py at 1366 x 768: the outlines ended 23 px under the fold with a tip shown): on a wide screen
+   that is short, the solid gives up height (at most the screen less 31rem) */
+@media (min-width: 720px) and (min-height: 501px) {
+  .pl-trial.ex-slice .ex-slice-stage { height: clamp(10rem, min(40vh, 58vw, calc(100vh - 31rem)), 22rem); }
+}
 .ex-slice .ex-slice-label--plane {
   left: auto; right: 0.625rem;
   display: inline-flex; align-items: center; gap: 0.45em;
