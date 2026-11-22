@@ -101,7 +101,7 @@
 
   function play(o) {
     var Play = PX.ui.play, P = o.P, kind = o.kind;
-    var S = { done: false, answered: 0, instructed: {}, freeSkip: {}, skips: 0, inputs: {}, probeNo: 0, lastProbe: null, shown: {} };
+    var S = { done: false, answered: 0, instructed: {}, freeSkip: {}, skips: 0, inputs: {}, probeNo: 0, lastProbe: null, shown: {}, past: {} };
     var plan;
     try { plan = E().modes.start(rec(), 'check', { now: now(), display: displayOf(), can: canRun, kind: kind, optional: !!o.optional }); } catch (e) { log('start failed', e); plan = { unavailable: 'The measurement could not start.' }; }
     if (plan.unavailable) return Promise.resolve({ res: null, unavailable: plan.unavailable });
@@ -192,27 +192,12 @@
       right.forEach(function (i) { g.mark(i, 'right'); });
       return right.length > 0;
     }
-    // The item for a step, from its seed; when its stem repeats one this run already showed for the probe (a small
-    // pool at an easy level), the next seed of a fixed chain from the step's seed instead, kept on the step so the
-    // trial row names the seed that was shown (fresh-player run of 19 Nov: item 8 repeated item 2's sheet).
+    // The item for a step: no stem this run already showed for the probe (fresh-player run of 19 Nov: item 8 repeated
+    // item 2's sheet), and none this probe version showed at the same settings in the player's earlier measurements
+    // (RV-items M9, L5); js/engine/assess.js freshItem keeps the seed shown on the step for its trial row.
     function fresh(def, step) {
-      var seen = S.shown[def.id] || (S.shown[def.id] = {}), seed = step.seed, item = null, sig = null;
-      for (var k = 0; k <= REPEAT_TRIES; k++) {
-        if (k) seed = E().select.sharedSeed(PX.rng.hash(step.seed, 'not-a-repeat', k));
-        try { item = def.generate(PX.rng(seed), step.params); } catch (e) { log('generate failed', e); return null; }
-        if (!item) return null;
-        sig = stemOf(def, item);
-        if (!sig || !seen[sig]) break;
-      }
-      if (sig) seen[sig] = true;
-      step.seed = seed;
-      return item;
-    }
-    function stemOf(def, item) {
-      if (typeof def.stemKey === 'function') { try { return def.stemKey(item); } catch (e) { return null; } }
-      var c = {};
-      Object.keys(item).forEach(function (k) { if (k !== 'seed' && k !== 'fallback') c[k] = item[k]; });
-      try { return JSON.stringify(c); } catch (e) { return null; }
+      var seen = S.shown[def.id] || (S.shown[def.id] = {}), past = S.past[def.id] || (S.past[def.id] = {});
+      try { return E().assess.freshItem(rec(), def, step, seen, past); } catch (e) { log('generate failed', e); return null; }
     }
     // A kind's one line (learn.kinds[variant], else learn.explain[variant][0]) for the first item of each kind inside a
     // probe of several kinds
@@ -487,8 +472,11 @@
   function offer(ctx, nm, where, asked) {
     var name = NAMES[nm.kind] || 'Check', m = minutes(nm.minutes), full = nm.kind !== 'block';
     var lines = [nm.why];
-    if (nm.kind === 'B1') lines.push('It is measured once, before training changes it. There is no feedback: the items adapt to your answers, so expect roughly 6 to 8 in 10 right. Guess when you are unsure.');
-    else if (full) lines.push('No feedback, and the items adapt to you, so roughly 6 to 8 in 10 right is expected. It is not practice time.');
+    // the share right that the items aim at (js/engine/assess.js: g + (1 − g)·0.6 on most probes, 65–78 % simulated;
+    // Pattern Memory, scored square by square, aims at an exact pattern 35 % of the time, def.measureK, after two easy
+    // items on first contact: about a half in Baseline 1, a third later; RV-claims L4)
+    if (nm.kind === 'B1') lines.push('It is measured once, before training changes it. There is no feedback: the items adapt to your answers, so on most tasks expect roughly 6 to 8 in 10 right; Pattern Memory counts every square, and only a third to a half of its patterns come out exact. Guess when you are unsure.');
+    else if (full) lines.push('No feedback, and the items adapt to you: roughly 6 to 8 in 10 right on most tasks, a third to a half of the patterns exact in Pattern Memory (it counts every square). It is not practice time.');
     else lines.push('No feedback; it is not practice time.');
     var actions = nm.kind === 'block' ? [{ label: 'Skip this time', value: 'skip' }, { label: 'Start', value: 'start', primary: true }] :
       [{ label: 'Later', value: 'later' }, { label: 'Start', value: 'start', primary: true }];
@@ -712,7 +700,6 @@
 
   // The schedule in words, from the config (RV-wave2 finding 15: no number typed beside the constant that sets it).
   var WORDNUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
-  var REPEAT_TRIES = 8;    // seeds tried for an item whose stem this run already showed
   function scheduleText(r) {
     var MX = E().config.measure, T = E().trend && E().trend.config ? E().trend.config.milestones : null, n = 0, m;
     try { A().mix('block', r, null, canRun).forEach(function (x) { n += x.items; }); } catch (e) { n = 0; }

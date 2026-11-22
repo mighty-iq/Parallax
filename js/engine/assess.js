@@ -523,7 +523,10 @@
     // within the variant: in a block item i is variant i mod n (one of each), in a full check each variant's items
     // come together, in the same counts (kindAt)
     var cyc = def.cycle === 'variant' && isArray(def.variants) && def.variants.length ? kindAt(def.variants, pr, pc) : null;
-    var byKind = cyc ? function (c) { return c.params.variant === cyc; } : null, filt = byKind;
+    // a probe's settings the check may use at all (def.checkCell: View Match leaves out the settings where a cheap pick
+    // finds the key by geometry; RV-items M8), and the kind
+    var cell = typeof def.checkCell === 'function' ? def.checkCell : null;
+    var byKind = cyc || cell ? function (c) { return (!cyc || c.params.variant === cyc) && (!cell || cell(c.params)); } : null, filt = byKind;
     if (pr.fresh && isNum(pr.top) && isNum(C.measure.climb)) {
       var cap = pr.top + C.measure.climb + 1e-9;
       filt = function (c) { return c.b <= cap && (!byKind || byKind(c)); };
@@ -569,6 +572,65 @@
     var per = Math.floor(pr.items / n), extra = pr.items % n, i = pr.n;
     for (var k = 0; k < n; k++) { var c = per + (k < extra ? 1 : 0); if (i < c) return vs[k]; i -= c; }
     return vs[pr.n % n];
+  }
+
+  /* ---------- items without repeats (RV-items M9 and L5) ---------- */
+  // A measurement item comes from its step's seed. When its stem (def.stemKey, else the item without its seed) is one
+  // this run already showed, or one this probe version showed at the same settings in the player's earlier
+  // measurements (their last PAST_ROWS trial rows there), the next seed of a fixed chain from the step's seed takes
+  // its place, at most REPEAT_TRIES times; the seed shown is kept on the step, so its trial row names it. Small pools
+  // at easy settings (Pattern Memory's 3 × 3 grids hold 26 to 39 patterns a level) and pools of a few hundred (Other
+  // Way Round, Motion Graphs) would otherwise come back across a player's baselines, blocks and monthly checks.
+  var REPEAT_TRIES = 8, PAST_ROWS = 60, MEMO_MAX = 4000, stemMemo = {}, stemMemoN = 0;
+  function stemOf(def, item) {
+    if (!item) return null;
+    if (typeof def.stemKey === 'function') { try { return def.stemKey(item); } catch (e) { return null; } }
+    var c = {};
+    Object.keys(item).forEach(function (k) { if (k !== 'seed' && k !== 'fallback') c[k] = item[k]; });
+    try { return JSON.stringify(c); } catch (e) { return null; }
+  }
+  // the stem of an earlier item, from its row's seed and settings (generated once per session)
+  function stemAt(def, seed, params, code) {
+    var key = def.id + '@' + def.version + '|' + code + '|' + seed;
+    if (hasOwn.call(stemMemo, key)) return stemMemo[key];
+    var it = null;
+    try { it = def.generate(PX.rng(seed >>> 0), params); } catch (e) { it = null; }
+    if (stemMemoN >= MEMO_MAX) { stemMemo = {}; stemMemoN = 0; }
+    stemMemoN++;
+    return (stemMemo[key] = stemOf(def, it));
+  }
+  // seeds of this probe version's earlier measurement items, by settings code (one pass over the trial rows)
+  function pastSeeds(rec, def) {
+    var out = {};
+    var LG = E.log, COL = LG.COL;
+    LG.scan(rec, function (row, id, mode, v) {
+      if (id === def.id && v === (def.version || 1) && mode === 'check' && isNum(row[COL.seed])) (out[row[COL.code]] || (out[row[COL.code]] = [])).push(row[COL.seed]);
+    });
+    return out;
+  }
+  // → the item to show for a check step (null when the generator fails). shown: this run's stems of the probe (kept
+  // up to date); past: a per-run cache object for the probe (seeds by code, then stems by code).
+  function freshItem(rec, def, step, shown, past) {
+    shown = shown || {};
+    past = past || {};
+    if (!past.seeds) past.seeds = pastSeeds(rec, def);
+    if (!past.stems) past.stems = {};
+    var prior = past.stems[step.code];
+    if (!prior) {
+      prior = past.stems[step.code] = {};
+      (past.seeds[step.code] || []).slice(-PAST_ROWS).forEach(function (sd) { var st = stemAt(def, sd, step.params, step.code); if (st) prior[st] = true; });
+    }
+    var seed = step.seed, item = null, sig = null;
+    for (var k = 0; k <= REPEAT_TRIES; k++) {
+      if (k) seed = E.select.sharedSeed(PX.rng.hash(step.seed, 'not-a-repeat', k));
+      item = def.generate(PX.rng(seed), step.params);
+      if (!item) return null;
+      sig = stemOf(def, item);
+      if (!sig || (!shown[sig] && !prior[sig])) break;
+    }
+    if (sig) shown[sig] = true;
+    step.seed = seed;
+    return item;
   }
 
   function byId(plan, id) {
@@ -1086,7 +1148,8 @@
     form: form, checks: checks, occasions: occasions, composite: composite, needB3: needB3, expect: expect,
     nextMeasure: nextMeasure, meter: meter, later: later, trendInput: trendInput, fit: fit, settle: settle, wire: wire,
     mix: mixOf, FULL: FULL, curves: curves, balanceReport: balanceReport, balanceSummary: balanceSummary,
-    _: { kindAt: kindAt, fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0, cellsOf: cellsOf, rowCells: rowCells,
+    freshItem: freshItem, stemOf: stemOf,
+    _: { kindAt: kindAt, REPEAT_TRIES: REPEAT_TRIES, PAST_ROWS: PAST_ROWS, fitCurve: fitCurve, GRID: GRID, newPost: newPost, updatePost: updatePost, summary: summary, priorCenter: priorCenter, drawForm0: drawForm0, cellsOf: cellsOf, rowCells: rowCells,
       checkMeasure: checkMeasure, mergeMeasure: mergeMeasure, hAt: hAt, fromPosterior: fromPosterior, blockMix: blockMix, fullMix: fullMix },
   };
 })(window.PX);

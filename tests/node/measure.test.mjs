@@ -50,6 +50,64 @@ export async function run(t0) {
   curves(t);
   balance(t);
   cells(t);
+  repeats(t0);
+}
+
+/* ---------- no item comes back across a player's checks (RV-items M9, L5) ---------- */
+
+// Five full checks and twelve blocks of a player who answers every item wrong, so the items stay at the easiest
+// settings, where the pools are smallest (Pattern Memory's 3 × 3 grids: 26 to 39 patterns a level; Other Way Round's
+// cut-back faces: 9 at level 0, each with many option sets): every item shown, by probe and settings, drawn the way
+// js/ui/measure.js draws it (assess.freshItem) and, for comparison, from the step's own seed. An item comes back when
+// its picture and options are the same (the item without its seed, as RV-items counted them); a stem comes back when
+// the probe's own stem (def.stemKey: Other Way Round's figure, sheet, face, cube pictures, view or map) is.
+function repeats(t0) {
+  t0.section('measure: no item comes back across a player\'s checks (assess.freshItem)');
+  const play = (useFresh) => {
+    const PX = t0.context({}).PX, E = PX.engine, A = E.assess, rec = newRecord(PX, T0 - DAY), byKey = {}, stemsBy = {};
+    const occs = [['B1', T0], ['B2', T0 + 1.5 * DAY], ['regular', T0 + 30 * DAY], ['regular', T0 + 60 * DAY], ['regular', T0 + 90 * DAY]];
+    for (let b = 0; b < 12; b++) occs.push(['block', T0 + (3 + 2 * b) * DAY]);
+    occs.sort((a, b) => a[1] - b[1]);
+    let seedsKept = true;
+    for (const [kind, at] of occs) {
+      const plan = E.modes.start(rec, 'check', { now: at, kind }), shown = {}, past = {};
+      let i = 0;
+      for (; i < 80; i++) {
+        const st = E.modes.next(plan, rec, at + i * 9000);
+        if (!st || st.done) break;
+        const def = PX.ex.get(st.exId);
+        const item = useFresh ? A.freshItem(rec, def, st, shown[def.id] || (shown[def.id] = {}), past[def.id] || (past[def.id] = {})) : def.generate(PX.rng(st.seed), st.params);
+        if (useFresh && JSON.stringify(def.generate(PX.rng(st.seed), st.params)) !== JSON.stringify(item)) seedsKept = false;
+        const whole = Object.assign({}, item); delete whole.seed;
+        (byKey[def.id + ' ' + st.code] || (byKey[def.id + ' ' + st.code] = [])).push(JSON.stringify(whole));
+        (stemsBy[def.id + ' ' + st.code] || (stemsBy[def.id + ' ' + st.code] = [])).push(A.stemOf(def, item));
+        E.modes.answer(plan, rec, st, { correct: false, rt: 4000, value: 0 }, at + i * 9000 + 4000);
+      }
+      E.modes.finish(plan, rec, at + i * 9000);
+    }
+    const count = (by) => {
+      let rep = 0, n = 0;
+      const per = {}, size = {};
+      for (const [k, list] of Object.entries(by)) {
+        const seen = new Set();
+        size[k] = list.length;
+        for (const sig of list) { n++; if (seen.has(sig)) { rep++; per[k] = (per[k] || 0) + 1; } seen.add(sig); }
+      }
+      return { rep, n, per, size };
+    };
+    return { PX, items: count(byKey), stems: count(stemsBy), seedsKept, rows: rec.trials.length };
+  };
+  const raw = play(false), fresh = play(true), txt = (c) => `${c.rep} of ${c.n} ${JSON.stringify(c.per)}`;
+  t0.ok(raw.items.rep > 0, `from the steps' own seeds, items come back over five checks and twelve blocks at the easiest settings (items ${txt(raw.items)}; stems ${txt(raw.stems)})`);
+  t0.eq(fresh.items.rep, 0, `with assess.freshItem no item does (${fresh.rows} trial rows)`);
+  // a stem comes back only where the player has used up its settings' pool of stems (400 draws count the pool)
+  const PXf = fresh.PX, used = Object.keys(fresh.stems.per).map((k) => {
+    const [id, code] = k.split(' '), def = PXf.ex.get(id), params = PXf.ex.decodeParams(def, +code), pool = new Set();
+    for (let s = 0; s < 400; s++) pool.add(PXf.engine.assess.stemOf(def, def.generate(PXf.rng(PXf.rng.hash('pool', k, s)), params)));
+    return { k, shown: fresh.stems.size[k], pool: pool.size };
+  });
+  t0.ok(used.every((u) => u.shown > u.pool), `stems come back only where the pool is used up (${txt(fresh.stems)}: ${JSON.stringify(used)}; from the steps' own seeds ${txt(raw.stems)})`);
+  t0.ok(fresh.seedsKept, 'the seed shown is kept on the step, so each trial row regenerates the item that was shown');
 }
 
 /* ---------- helpers ---------- */

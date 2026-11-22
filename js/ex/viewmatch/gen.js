@@ -40,7 +40,12 @@
    sets are drawn against targets for the flag's place among the options (pickAzimuths); and an item whose
    stem-blind odd one out is the key is redrawn with chance ODD_REJECT. Left in by geometry: with all
    foils 80°+ away the flag at about 45° is the option nearest the default view, and at about 160° the
-   farthest (tests/node/viewmatch.test.mjs reports both per level).
+   farthest (tests/node/viewmatch.test.mjs reports both per level). The Spatial Check therefore uses only the
+   settings where every cheap pick stays within chance + 10 points (def.checkCell, RV-items M8): never the flag at
+   about 160°, nor at about 45° with the foils 80–110° or 35–50° away, nor at about 135° with them 55–110° away
+   (there the far-side view, the near-side view, the most reversed left-to-right order or the picture most like the
+   others finds the flag's view 35 % to 100 % of the time, mostly by geometry). The items themselves are those of
+   version 1, so records keep one probe version.
    validate (independent of the hulls): casts rays through a GRID × GRID picture of every option and of
    the stem (an ID buffer with exact ray–solid intersections), and from the pixels checks visibility,
    framing, left-to-right order and occlusion, and that the options differ as above and none is the key
@@ -569,6 +574,9 @@
       { key: 'foils', label: 'Nearest other view', levels: ['80–110° away', '55–75° away', '35–50° away'], step: 0.7 },
     ],
     base: -2.0,
+    // the settings the Spatial Check may use (js/engine/assess.js next(); RV-items M8, DECISIONS 2026-11-22): its range
+    // there runs from -1.5 to 1.6 logits
+    checkCell: function (p) { return !!p && p.angle !== 4 && !(p.angle === 0 && p.foils !== 1) && !(p.angle === 3 && p.foils < 2); },
     timeLimit: function () { return 30000; },
     generate: generate,
     validate: validate,

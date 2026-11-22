@@ -111,7 +111,18 @@ function testValidator(t, PX, def, L) {
 /* ---------------------------------------------------------------- 10 000+ seeds */
 
 function pickBy(vals, better) { let b = 0; for (let i = 1; i < vals.length; i++) if (better(vals[i], vals[b])) b = i; return b; }
-const SHORTCUTS = ['nearest the default view', 'most like the others', 'odd one out', 'like the default picture', 'farthest from the default view'];
+const SHORTCUTS = ['nearest the default view', 'most like the others', 'odd one out', 'like the default picture', 'farthest from the default view',
+  'left-to-right order least like the default picture'];
+// pairwise order flips between two pictures' left-to-right orders of the objects
+function flips(ids, a, b) {
+  const oa = ids.slice().sort((p, q) => a.x[p] - a.x[q]), pos = {};
+  ids.slice().sort((p, q) => b.x[p] - b.x[q]).forEach((id, i) => { pos[id] = i; });
+  let n = 0;
+  for (let i = 0; i < oa.length; i++) for (let j = i + 1; j < oa.length; j++) if (pos[oa[i]] > pos[oa[j]]) n++;
+  return n;
+}
+// the options tied for the best value (a pick among them is right one time in their number)
+function bestSet(vals, better) { let b = vals[0]; for (const v of vals) if (better(v, b)) b = v; return vals.map((v, i) => (v === b ? i : -1)).filter((i) => i >= 0); }
 // Picks of each shortcut: by camera azimuth, or stem-blind / stem-aware on the pictures' left-right
 // orders and occlusions (the generator's hull descriptors).
 function shortcutPicks(L, it) {
@@ -125,6 +136,22 @@ function shortcutPicks(L, it) {
     pickBy(tot, (a, b) => a > b),
     pickBy(D.map((d) => L.differences(d, stem, ids, 0)), (a, b) => a < b),
     pickBy(az.map(Math.abs), (a, b) => a > b),
+    pickBy(D.map((d) => flips(ids, d, stem)), (a, b) => a > b),
+  ];
+}
+// the same picks as sets of tied options (for the per-setting rates of the Spatial Check's settings)
+function shortcutSets(L, it) {
+  const az = it.options.map((o) => o.az), ids = it.objects.map((o) => o.id);
+  const D = az.map((a) => L.describe(it.objects, L.optionCam(it.camera, a), null, true));
+  const stem = L.describe(it.objects, L.stemCam(it.stem), null, true);
+  const tot = [0, 1, 2, 3].map((i) => [0, 1, 2, 3].reduce((s, j) => s + (i === j ? 0 : L.differences(D[i], D[j], ids, 0)), 0));
+  return [
+    bestSet(az.map(Math.abs), (a, b) => a < b),
+    bestSet(tot, (a, b) => a < b),
+    bestSet(tot, (a, b) => a > b),
+    bestSet(D.map((d) => L.differences(d, stem, ids, 0)), (a, b) => a < b),
+    bestSet(az.map(Math.abs), (a, b) => a > b),
+    bestSet(D.map((d) => flips(ids, d, stem)), (a, b) => a > b),
   ];
 }
 
@@ -136,7 +163,7 @@ function testSeeds(t, PX, X, def, L) {
   let firstBad = null;
   const times = [], hardTimes = [], keyPos = [0, 0, 0, 0], perCombo = {};
   const acc = Object.fromEntries(SHORTCUTS.map((nm) => [nm, { right: 0, n: 0, lv: {} }]));
-  const forms = [0, 1, 2].map(() => ({ n: 0, gap: 0, flag: 0, ego: 0 }));
+  const forms = [0, 1, 2].map(() => ({ n: 0, gap: 0, flag: 0, ego: 0 })), inCheck = {};
   for (const p of combos) {
     const code = X.paramsCode(def, p), lv = `angle ${p.angle} foils ${p.foils}`;
     const hardest = p.angle === 4 && p.objects === 2 && p.foils === 2;
@@ -164,6 +191,11 @@ function testSeeds(t, PX, X, def, L) {
         const a = acc[SHORTCUTS[i]], right = pick === it.key ? 1 : 0;
         a.right += right; a.n++;
         a.lv[lv] = a.lv[lv] || [0, 0]; a.lv[lv][0] += right; a.lv[lv][1]++;
+      });
+      // the Spatial Check's settings (def.checkCell): every cheap pick, ties shared, per flag angle and foil gap
+      if (def.checkCell(p)) shortcutSets(L, it).forEach((set, i) => {
+        const k = SHORTCUTS[i] + ' | ' + lv, x = inCheck[k] || (inCheck[k] = [0, 0]);
+        x[0] += set.includes(it.key) ? 1 / set.length : 0; x[1]++;
       });
       const f = forms[s % 3], foils = it.options.map((o) => o.az).filter((_, i) => i !== it.key);
       f.n++;
@@ -199,6 +231,14 @@ function testSeeds(t, PX, X, def, L) {
     t.ok(pooled <= 0.35, `shortcut "${name}" pooled ${pct(pooled)} ≤ 35 %`);
     lines.push(`${name} ${pct(pooled)} (worst level ${pct(Math.max(...levels))})`);
   }
+  // RV-items M8: the settings the Spatial Check uses keep every cheap pick within chance + 10 points
+  const worst = Object.entries(inCheck).map(([k, [r, n]]) => [k, r / n, n]).sort((a, b) => b[1] - a[1]);
+  t.ok(worst.length > 0 && worst.every(([, p]) => p <= 0.35), `every cheap pick at every setting the Spatial Check uses ≤ 35 % (worst: ${worst.slice(0, 3).map(([k, p, n]) => `${k} ${pct(p)} of ${n}`).join('; ')})`);
+  t.ok(!def.checkCell({ angle: 4, objects: 0, foils: 2 }) && !def.checkCell({ angle: 0, objects: 1, foils: 0 }) && !def.checkCell({ angle: 0, objects: 1, foils: 2 }) &&
+    !def.checkCell({ angle: 3, objects: 2, foils: 1 }) && def.checkCell({ angle: 3, objects: 0, foils: 2 }) && def.checkCell({ angle: 0, objects: 0, foils: 1 }),
+    'the check leaves out the flag at about 160°, at about 45° with far or near foils, at about 135° with far and mid foils');
+  const inB = X.enumerate(def).filter((p) => def.checkCell(p)).map((p) => def.difficulty(p));
+  t.eq([Math.min(...inB), Math.max(...inB)].map((x) => Math.round(x * 100) / 100), [-1.5, 1.6], 'its range in the check: -1.5 to 1.6 logits');
   console.log(`       PR-2 viewmatch: ${c.n} items, p95 ${p95.toFixed(2)} ms; shortcuts: ${lines.join('; ')}`);
   console.log(`       PR-2 spread: ${spreadLine(X, def)}`);
 }
