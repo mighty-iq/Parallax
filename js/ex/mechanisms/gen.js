@@ -1,5 +1,11 @@
 /* PR-3 Mechanisms (probe; pure; ARCHITECTURE.md §5, PLAN.md §4, research/B-tasks.md §9 and §14b).
 
+   Version 3 (v1.2, W2-measure; RV-items M6): jams only at the jams level, on one item in five, so "it cannot turn"
+   is right as often as each turning answer there (version 2: a third of the belts level, half of the jams level,
+   where "always it cannot turn" found the key 48 % of the time). The belts level has no loops; the jams level has a
+   loop on every item (odd on one in five, even otherwise), so a loop alone says nothing. Version 2's range stays in
+   def.past.
+
    Version 2 (v1.2, W2-measure; PLAN milestone 6's probe upgrades, note M1 §4.3): every item asks one question with
    natural options: which way the marked axle turns AND whether it turns faster or slower than the driver (clockwise,
    faster / clockwise, slower / counter-clockwise, faster / counter-clockwise, slower), with "it cannot turn" as a
@@ -342,10 +348,10 @@
     if (item.answers[item.key] !== ans) return 'the key says ' + item.answers[item.key] + ' but the mechanism gives ' + ans;
     var p = item.params, f = levelFacts(item, res), S = p.structure;
     if (f.pathLinks !== PATH[p.gears] - 1) return 'a route of ' + (f.pathLinks + 1) + ' axles; the level wants ' + PATH[p.gears];
-    if (res.jam && S < 2) return 'a jam below the belts level';
+    if (res.jam && S < 3) return 'a jam below the jams level';
     if (S === 0 && (f.side || f.loops || f.belts !== 1 || f.pathBelts !== 1)) return 'a chain has one belt on the route and nothing else';
     if (S === 1 && (!f.side || f.loops || f.belts !== 1 || f.pathBelts !== 1)) return 'branches: side gears, one belt on the route, no loops';
-    if (S === 2 && f.belts < 2) return 'the belts level needs at least two belts';
+    if (S === 2 && (f.belts < 2 || f.loops)) return 'the belts level needs at least two belts and no loop';
     if (S === 3 && (!f.loops || f.belts < 1)) return 'the jams level needs a loop and a belt';
     return true;
   }
@@ -584,14 +590,15 @@
   // Why attempts fail, counted for diagnostics (helpers.stats); generation never depends on it.
   function miss(why) { why = why.replace(/[0-9]+/g, '#'); STATS[why] = (STATS[why] || 0) + 1; return null; }
   // Targets drawn once per item and kept through the retries (so that hard-to-build variants keep
-  // their share): the driver's direction; a jam (belts level 1 in 3, jams level 1 in 2, never for
-  // speed); whether the parity shortcut lands on the key (half of the time); the rope side; for speed
-  // items the answer (uniform) and whether the size shortcut lands on it (one time in three).
+  // their share): the driver's direction; a jam (version 3: the jams level only, 1 in 5, as often as each turning
+  // answer; never for speed); whether the parity shortcut lands on the key (half of the time); the rope side; for
+  // speed items the answer (uniform) and whether the size shortcut lands on it (one time in three).
+  var JAM_SHARE = 1 / 5;
   function targetsFor(rng, params) {
     var q = qOf(params), S = params.structure, two = q === V2Q;
     return {
       dir: rng.chance(0.5) ? 1 : -1,
-      jam: q !== 'speed' && S >= 2 && rng.chance(S === 2 ? 1 / 3 : 1 / 2),
+      jam: q !== 'speed' && S === 3 && rng.chance(JAM_SHARE),
       parityRight: rng.chance(0.5),
       side: rng.chance(0.5) ? 'left' : 'right',
       // version 2: faster or slower only, and the size rule right half the time (two answers, not three)
@@ -671,8 +678,9 @@
     var needBelts = S === 2 ? 2 : 1;
     while (st.belts.length < needBelts) if (!addSideBelt(st, rng)) return miss('side belt');
     if (S >= 2 && rng.chance(0.25)) addSideBelt(st, rng);
+    // version 3: loops at the jams level only, on every item there (odd when it jams), so a loop alone gives nothing away
     if (jam) { if (!addLoop(st, rng, true, target, nLinks)) return miss('odd loop'); }
-    else if (S === 3 || (S === 2 && rng.chance(0.4))) { if (!addLoop(st, rng, false, target, nLinks) && S === 3) return miss('even loop'); }
+    else if (S === 3) { if (!addLoop(st, rng, false, target, nLinks)) return miss('even loop'); }
 
     var rope = null, tax = st.axles[nPath - 1];
     if (q === 'lift') {
@@ -773,6 +781,9 @@
     'clockwise + size': function (item) { return 'cw-' + sizeOf(item); },
     'same way as the driver + size': function (item) { return (item.driver.dir > 0 ? 'cw' : 'ccw') + '-' + sizeOf(item); },
     'always the first': function (item) { return item.answers[0]; },
+    'always it cannot turn': function () { return 'jam'; },
+    // a loop anywhere taken as a jam, else parity + size (version 2's belts level: a loop came with most jams)
+    'a loop means it cannot turn': function (item) { var res = analyse(item); return res.loops ? 'jam' : shortcuts.parity(item) + '-' + sizeOf(item); },
   };
   var shortcuts = {
     // Shortest route length, every link (mesh or belt) taken as a reversal; never "cannot turn".
@@ -814,19 +825,20 @@
   };
 
   PX.ex.define({
-    id: 'mechanisms', version: 2, code: 'PR-3', name: 'Mechanisms', short: 'Mechanisms',
+    id: 'mechanisms', version: 3, code: 'PR-3', name: 'Mechanisms', short: 'Mechanisms',
     abilities: ['MA'], cell: 'intrinsic-dynamic', role: 'probe', answer: 'choice', nOptions: 5,
     format: 'mechanisms:gears-belts-pulleys', // v1.2 (W2-measure): a reserved format, never in training material (tests/node/formats.test.mjs)
-    // version 1 (three question kinds with three answers each, 1.0–1.1): its range, for 1.1's entries (js/engine/assess.js)
-    past: { 1: { min: -2.1, max: 2.1 } },
+    // version 1 (three question kinds with three answers each, 1.0–1.1): its range, for 1.1's entries (js/engine/assess.js);
+    // version 2 (jams on a third of the belts level and half of the jams level; test builds of 1.2 only)
+    past: { 1: { min: -2.1, max: 2.1 }, 2: { min: -0.9, max: 3.15 } },
     dims: [
       { key: 'gears', label: 'Axles on the route', levels: PATH, step: 0.45 },
       { key: 'structure', label: 'Structure', levels: STRUCT, step: 0.9 },
     ],
     base: -0.9, // hand-set: version 1's speed question (-1.2) plus a second judgement
-    // Below the belts level nothing can jam, so "it cannot turn" is never right there: a test-wise guess is one in
-    // four. Elsewhere one in five.
-    chance: function (params) { return params && params.structure < 2 ? 0.25 : 0.2; },
+    // Below the jams level nothing can jam (no loop is drawn), so "it cannot turn" is never right there: a test-wise
+    // guess is one in four. At the jams level one in five.
+    chance: function (params) { return params && params.structure < 3 ? 0.25 : 0.2; },
     // Item time limit (a calm countdown in the view): 35 s, +5 s per extra route axle.
     timeLimit: function (params) { var p = params || {}; return 35000 + 5000 * (p.gears || 0); },
     generate: generate,
