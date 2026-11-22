@@ -9,7 +9,9 @@
      (ETags, or bytes without them) or index.html lists another file, drops the old one, and keeps the copy when
      nothing changed or when the host fails part-way; a copy without its mark, of another format or of another
      scope is never used, and only this scope's copies are ever deleted;
-   - a new worker keeps the complete copy it finds. */
+   - a new worker keeps the complete copy it finds;
+   - a copy is written only when its files belong to one version (RV-code-1.2 L6): index.html's px-version stamp
+     equals px.js's PX.version, and a second read finds every file unchanged (a deploy landing part-way is caught). */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -50,7 +52,7 @@ class FakeCaches {
 
 // A host serving the repository's files under /Parallax/; edits, an ETag switch, outages and request counts.
 class Host {
-  constructor() { this.over = new Map(); this.etags = true; this.down = false; this.missing = new Set(); this.n = 0; this.seen = []; this.rev = new Map(); }
+  constructor() { this.over = new Map(); this.etags = true; this.down = false; this.missing = new Set(); this.n = 0; this.seen = []; this.rev = new Map(); this.after = null; }
   body(rel) {
     if (this.over.has(rel)) return this.over.get(rel);
     const abs = path.join(ROOT, rel);
@@ -60,6 +62,7 @@ class Host {
   fetch(req) {
     const url = typeof req === 'string' ? req : req.url;
     this.n++; this.seen.push(url);
+    if (this.after && this.n >= this.after.n) { const f = this.after.fn; this.after = null; f(); } // a deploy lands part-way
     if (this.down) return Promise.reject(new TypeError('Failed to fetch (test: offline)'));
     const u = new URL(url);
     if (u.origin !== ORIGIN || !u.pathname.startsWith('/Parallax/')) return Promise.resolve(new Response('not found', { status: 404 }));
@@ -73,18 +76,19 @@ class Host {
 
 // A worker: sw.js evaluated in its own context over shared caches and host (a new sw.js is a second worker).
 function worker(env) {
-  const handlers = {}, calls = { skipWaiting: 0 };
+  const handlers = {}, calls = { skipWaiting: 0 }, posted = [];
   const self = {
     registration: { scope: SCOPE }, location: { origin: ORIGIN },
     addEventListener: (type, fn) => { handlers[type] = fn; },
     skipWaiting: () => { calls.skipWaiting++; return Promise.resolve(); },
+    clients: { matchAll: () => Promise.resolve([{ postMessage: (m) => posted.push(m) }]) }, // one open page
   };
   const ctx = vm.createContext({
     self, caches: env.caches, fetch: (r) => env.host.fetch(r), Request, Response, Headers, URL,
     setTimeout: (fn) => setImmediate(fn), Date: { now: () => (env.clock += 1) }, console,
   });
   vm.runInContext(SRC, ctx, { filename: 'sw.js' });
-  return { handlers, calls };
+  return { handlers, calls, posted, last: () => posted[posted.length - 1] || null };
 }
 function env() { return { caches: new FakeCaches(), host: new Host(), clock: Date.UTC(2026, 10, 19, 12, 0, 0) }; }
 
@@ -158,6 +162,9 @@ export async function run(t) {
   const commented = [...(raw.match(/<!--[\s\S]*?-->/g) || []).join(' ').matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]).filter((x) => !want.includes(x));
   t.ok(commented.every((x) => !cs[0].mark.files.includes(x)), `scripts named only inside comments (${commented.length}, PENDING lines) are left out`);
 
+  const stamp = (fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/<meta name="px-version" content="([^"]+)">/) || [])[1];
+  t.eq(stamp, version, 'index.html\'s px-version stamp equals PX.version in js/core/px.js (bump both: the worker keeps a copy only when they agree)');
+
   t.section('sw.js: what it answers');
   const cases = [
     ['a launch at the scope', SCOPE, { mode: 'navigate' }, true],
@@ -188,6 +195,7 @@ export async function run(t) {
   t.ok(!(await text(r.res)).includes('// changed'), 'and every file the copy holds');
   r = await request(w, SCOPE + 'js/ex/nosuch/gen.js');
   t.ok(r.answered && r.res instanceof Error, 'a file the copy lacks goes to the network (here: down)');
+  t.ok(w.last() && w.last().outcome === 'failed', 'the launch\'s check with the host gone: told failed, nothing changed');
   E.host.down = false;
 
   t.section('sw.js: updates at launch');
@@ -197,12 +205,14 @@ export async function run(t) {
   r = await launch(w);
   cs = await copies(E);
   t.ok(cs.length === 1 && cs[0].name !== before && cs[0].name.startsWith(`parallax-${version}-`), 'a changed file (another ETag): the launch\'s check writes a new copy and drops the old one');
+  t.ok(w.last() && w.last().px === 'sw-check' && w.last().outcome === 'written' && w.last().name === cs[0].name, 'the open page is told: written, with the copy\'s name');
   r = await request(w, SCOPE + 'js/core/px.js');
   t.ok((await text(r.res)).includes('// changed'), 'the new copy answers from then on');
   before = cs[0].name;
   E.clock += 11000;
   await launch(w);
   t.eq((await copies(E)).map((c) => c.name), [before], 'nothing changed: the copy stays');
+  t.eq(w.last() && w.last().outcome, 'same', '... and told so');
   E.host.edit('js/core/px.js', (s) => s + '\n// twice\n');
   E.clock += 3000;
   await launch(w);
@@ -210,13 +220,41 @@ export async function run(t) {
   E.clock += 11000;
   await launch(w);
   t.ok((await copies(E))[0].name !== before, 'after 10 s it does');
-  // a new version number names the copy
+  // a new version number: px.js alone disagrees with index.html's stamp, so no copy (RV-code-1.2 L6)
   before = (await copies(E))[0].name;
   E.host.edit('js/core/px.js', (s) => s.replace(`PX.version = '${version}'`, `PX.version = '${version}.next'`));
   E.clock += 11000;
   await launch(w);
+  t.eq((await copies(E)).map((c) => c.name), [before], 'px.js says a new version and index.html\'s px-version stamp the old one: no copy is written');
+  t.ok(w.last() && w.last().outcome === 'refused' && /index\.html/.test(w.last().why || ''), 'told: refused (' + (w.last() && w.last().why) + ')');
+  // ... and with both stamps bumped, as a release does, the copy is named after it
+  E.host.edit('index.html', (s) => s.replace(`<meta name="px-version" content="${version}">`, `<meta name="px-version" content="${version}.next">`));
+  E.clock += 11000;
+  await launch(w);
   cs = await copies(E);
-  t.ok(cs.length === 1 && cs[0].name.startsWith(`parallax-${version}.next-`) && cs[0].mark.version === version + '.next', `a new PX.version: the copy is named after it (${cs[0].name})`);
+  t.ok(cs.length === 1 && cs[0].name.startsWith(`parallax-${version}.next-`) && cs[0].mark.version === version + '.next', `both stamps bumped: the copy is named after the new PX.version (${cs[0].name})`);
+  // a deploy that lands while the worker reads the files: the copy would mix two versions, so none is written
+  // (the worker reads index.html, then the stylesheets, then the scripts: css/base.css comes before the switch, play.js after)
+  before = cs[0].name;
+  const nDeploy = E.host.n;
+  let seenMix = null;
+  E.host.after = { n: nDeploy + 100, fn: () => {
+    seenMix = E.host.seen.slice(nDeploy).some((u) => u.endsWith('css/base.css')) && !E.host.seen.slice(nDeploy).some((u) => u.endsWith('js/ui/play.js'));
+    E.host.edit('css/base.css', (s) => s + '\n/* deploy 2 */\n');
+    E.host.edit('js/ui/play.js', (s) => s + '\n// deploy 2\n');
+  } };
+  E.clock += 11000;
+  await launch(w);
+  t.ok(seenMix === true, 'the deploy lands after css/base.css was read and before js/ui/play.js was: that read mixes two versions');
+  t.eq((await copies(E)).map((c) => c.name), [before], 'so the second read differs and no copy is written; the old one stays');
+  t.ok(w.last() && w.last().outcome === 'refused' && /changed/.test(w.last().why || ''), 'told: refused (' + (w.last() && w.last().why) + ')');
+  E.clock += 11000;
+  await launch(w);
+  cs = await copies(E);
+  r = await request(w, SCOPE + 'css/base.css');
+  const r2 = await request(w, SCOPE + 'js/ui/play.js');
+  t.ok(cs.length === 1 && cs[0].name !== before && (await text(r.res)).includes('/* deploy 2 */') && (await text(r2.res)).includes('// deploy 2'),
+    'the next launch reads one version twice and writes it whole (both files from the second deploy)');
   // index.html lists another file
   E.host.edit('index.html', (s) => s.replace('<script src="js/ui/app.js"></script>', '<script src="js/ui/extra.js"></script>\n<script src="js/ui/app.js"></script>'));
   E.host.over.set('js/ui/extra.js', Buffer.from('/* a new file */'));
@@ -244,6 +282,16 @@ export async function run(t) {
   await launch(w);
   cs = await copies(E);
   t.ok(cs.length === 1 && cs[0].name !== before, 'and the next launch writes the copy');
+
+  t.section('sw.js: a first copy is verified too');
+  {
+    const F = env();
+    F.host.edit('index.html', (s) => s.replace(/<meta name="px-version" content="[^"]+">/, '<meta name="px-version" content="9.9.9">'));
+    const wf = worker(F);
+    let threw = false;
+    try { await install(wf); } catch (e) { threw = true; }
+    t.ok(threw && (await F.caches.keys()).length === 0 && wf.calls.skipWaiting === 0, 'stamps that disagree at install: no copy and no worker (the next page load tries again)');
+  }
 
   t.section('sw.js: without ETags');
   E = env(); E.host.etags = false; w = worker(E);

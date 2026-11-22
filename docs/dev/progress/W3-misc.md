@@ -45,3 +45,15 @@ Times are UTC.
 - Tests: tests/e2e/sw.py 71/0: a synthetic offer is held and the row shows (44 px, no sideways scroll at 360 px), a tap
   prompts once and the row goes, dismissed and appinstalled clear it, an offer during an item shows nothing in the
   player; in every never-register case an offer is held without an error.
+
+## 2026-11-22 14:33: RV-code-1.2 L5 (rebase between builds) and L6 (one version a copy)
+- L5: js/engine/rebase.js records each stamp's writer (rec.scalev: definition version, PX.version) and converts only forward; a newer
+  writer's levels are left alone. E.merge is wrapped to align both sides to the newer writer first. tests/node/rebase-builds.test.mjs
+  21/0: 60 round trips between Views 2 and 3 (and between PX.version 1.2.0 and 1.2.1 at one version) change no level; the merge keeps
+  the newer build's best (merge.js alone converted it twice, 47 → 53); equal writers still drift (20 of 20). engine.test's field list
+  gains 'scalev'.
+- L6: index.html's <meta name="px-version"> must equal px.js's PX.version, and a second read 8 s later must find every file
+  unchanged, before sw.js keeps a copy; outcomes go to the open pages as messages. sw.test.mjs 40/0 (a deploy landing part-way through
+  the read, stamps that disagree, at install too, the repository's stamps agree); tests/e2e/sw.py 75/0 (the same in Chromium: the
+  server switches css/base.css and js/ui/app.js part-way through the worker's read; refused, then kept whole at the next launch).
+- Reruns: node rebase engine core game plateau record4 events hooks sw dims chimera pooled merge wave3 bets measure 3,063/0.

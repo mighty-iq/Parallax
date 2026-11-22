@@ -11,8 +11,10 @@ the folder in SW_APP_ROOT. Parts:
   a page of the scope that is not the app (dist/Parallax.html) is not answered from the copy;
 - updates: a change on the server without a new version number reaches the page at the launch after the one
   that fetched it (that launch still runs on the old files), then a new version number (the copy's name
-  follows PX.version); the older copy is dropped each time; a new sw.js takes over and keeps the copy, which
-  still starts the app offline;
+  follows PX.version; px.js alone, without index.html's px-version stamp, is refused); a deploy that lands
+  part-way through the worker's read leaves no copy, and the next launch keeps that deploy whole (RV-code-1.2
+  L6); the older copy is dropped each time; a new sw.js takes over and keeps the copy, which still starts the
+  app offline;
 - install (the lead's follow-up): a synthetic beforeinstallprompt is held (preventDefault) and kept in
   PX.ui.app.install; Settings → Your data shows "Install Parallax on this device" only while it is available (44 px,
   no sideways scroll at 360 px); the tap prompts once and the row goes; a dismissed prompt, appinstalled and a
@@ -57,7 +59,6 @@ COPIES = '''(async () => {
 })()'''
 ICONS = ['icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/icon.svg']
 GAP_S = 10.5          # sw.js CHECK_GAP (10 s) and a margin
-CHECK_WAIT_MS = 6000  # CHECK_DELAY (3 s) and the check itself
 FONTS = sorted('fonts/' + f.name for f in (SRC / 'fonts').glob('*.woff2'))
 
 
@@ -81,6 +82,9 @@ class PagesLike(http.server.SimpleHTTPRequestHandler):
 
     def send_head(self):
         self._etag = None
+        site = getattr(self.server, 'site', None)
+        if site:
+            site.on_request(self.path)
         path = self.translate_path(self.path)
         if os.path.isfile(path):
             st = os.stat(path)
@@ -115,9 +119,25 @@ class Site:
             (self.app / 'dist').mkdir()
             shutil.copy2(single, self.app / 'dist' / 'Parallax.html')
         self.httpd = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(PagesLike, directory=str(self.root)))
+        self.httpd.site = self
+        self.lock, self.count, self.trigger, self.asked = threading.Lock(), 0, None, []
         self.url = f'http://localhost:{self.httpd.server_address[1]}/Parallax/'
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
         self.up = True
+
+    def on_request(self, path):
+        with self.lock:
+            self.count += 1
+            self.asked.append(path)
+            if self.trigger and self.count >= self.trigger[0]:
+                fn, self.trigger = self.trigger[1], None
+                fn(list(self.asked))
+
+    def switch_after(self, n, fn):
+        """After n more requests, fn(paths asked so far) runs once (a deploy landing part-way through a read)."""
+        with self.lock:
+            self.asked = []
+            self.trigger = (self.count + n, fn)
 
     def edit(self, rel, fn):
         p = self.app / rel
@@ -175,17 +195,6 @@ def sw_state(target, ms=15000):
 
 def copies(page):
     return page.evaluate(COPIES)
-
-
-def wait_copy(page, pred, ms=30000):
-    """Polls the copies until pred(list) holds; returns the list (or the last one seen)."""
-    last = None
-    for _ in range(ms // 250):
-        last = copies(page)
-        if pred(last):
-            return last
-        page.wait_for_timeout(250)
-    return last
 
 
 def play_one(page, C, tag):
@@ -264,10 +273,24 @@ def part_offline(b, C, single):
     ctx.close()
 
 
+# Collects the worker's check outcomes in every page (installed before the page's scripts).
+LISTEN = '''(() => {
+  window.__swChecks = [];
+  try { navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.px === 'sw-check') window.__swChecks.push(e.data); }); } catch (e) { /* no workers here */ }
+})()'''
+
+
+def checked(page, ms=120000):
+    """The outcome of the check this launch started: { outcome: same | written | refused | failed, name, why }."""
+    page.wait_for_function('window.__swChecks && window.__swChecks.length > 0', timeout=ms)
+    return page.evaluate('window.__swChecks[window.__swChecks.length - 1]')
+
+
 def part_updates(b, C):
     tag = 'updates'
     site = Site('updates')
     ctx = b.new_context(viewport={'width': 1280, 'height': 800})
+    ctx.add_init_script(LISTEN)
     cons = []
     page = launch_page(ctx, site.url, cons)
     st = sw_state(page)
@@ -275,6 +298,7 @@ def part_updates(b, C):
     v0 = page.evaluate('PX.version')
     c0 = copies(page)
     C.ok(st.get('state') == 'registered' and len(c0) == 1, f'{tag}: registered, one copy', str(st))
+    names = lambda cs: [c['name'] for c in cs]
 
     def relaunch(gap=True):
         nonlocal page
@@ -289,33 +313,58 @@ def part_updates(b, C):
     relaunch(gap=False)
     C.ok(page.evaluate('window.PX.swProbe === undefined') and page.evaluate('!!navigator.serviceWorker.controller'),
          f'{tag}: the launch after a change still runs on the copy\'s files (cache first: one version a launch)')
-    c1 = wait_copy(page, lambda cs: len(cs) == 1 and cs[0]['name'] != c0[0]['name'])
-    C.ok(len(c1) == 1 and c1[0]['name'] != c0[0]['name'] and c1[0]['name'].startswith(f'parallax-{v0}-'),
-         f'{tag}: that launch\'s check wrote a new copy and dropped the old one ({c1[0]["name"] if c1 else None})', str([c['name'] for c in c1 or []]))
+    m, c1 = checked(page), copies(page)
+    C.ok(m['outcome'] == 'written' and names(c1) == [m['name']] and m['name'] != c0[0]['name'] and m['name'].startswith(f'parallax-{v0}-'),
+         f'{tag}: that launch\'s check wrote a new copy and dropped the old one ({m["name"]})', str((m, names(c1))))
     relaunch(gap=False)
     C.ok(page.evaluate('window.PX.swProbe') == 'one', f'{tag}: the next launch runs on the changed file (no new version number needed)')
-    # 2. a new version number
+    # 2. a new version number: px.js alone disagrees with index.html's px-version stamp, so no copy (RV-code-1.2 L6)
     v1 = v0 + '.sw'
     site.edit('js/core/px.js', lambda s: s.replace(f"PX.version = '{v0}'", f"PX.version = '{v1}'"))
     relaunch()
+    m = checked(page)
+    C.ok(page.evaluate('PX.version') == v0 and m['outcome'] == 'refused' and 'index.html' in (m['why'] or '') and names(copies(page)) == names(c1),
+         f'{tag}: px.js alone says {v1} and index.html\'s stamp {v0}: refused, no copy ({m["why"]})', str(m))
+    # ... with both stamps bumped, as a release does, it is written
+    site.edit('index.html', lambda s: s.replace(f'<meta name="px-version" content="{v0}">', f'<meta name="px-version" content="{v1}">'))
+    relaunch()
     C.ok(page.evaluate('PX.version') == v0, f'{tag}: the launch after a new version still runs on {v0}')
-    c2 = wait_copy(page, lambda cs: len(cs) == 1 and cs[0]['name'].startswith(f'parallax-{v1}-'))
-    C.ok(len(c2) == 1 and c2[0]['name'].startswith(f'parallax-{v1}-') and c2[0]['mark']['version'] == v1,
-         f'{tag}: the new copy is named after the new PX.version and the old one is gone ({c2[0]["name"] if c2 else None})', str([c['name'] for c in c2 or []]))
+    m, c2 = checked(page), copies(page)
+    C.ok(m['outcome'] == 'written' and len(c2) == 1 and c2[0]['name'].startswith(f'parallax-{v1}-') and c2[0]['mark']['version'] == v1,
+         f'{tag}: both stamps bumped: the new copy is named after the new PX.version and the old one is gone ({m["name"]})', str((m, names(c2))))
     relaunch(gap=False)
     C.ok(page.evaluate('PX.version') == v1 and page.evaluate('window.PX.swProbe') == 'one', f'{tag}: the next launch runs on {v1}')
+    # 2b. a deploy that lands while the worker reads the files (the first stylesheet before it, the last script after)
+    mixed = {}
+
+    def deploy(asked):
+        mixed['early'] = any(x.endswith('/css/base.css') for x in asked)
+        mixed['late'] = any(x.endswith('/js/ui/app.js') for x in asked)
+        site.edit('css/base.css', lambda s: s + '\n/* deploy 2 */\n')
+        site.edit('js/ui/app.js', lambda s: s + '\n// deploy 2\n')
+    site.edit('js/ui/home.js', lambda s: s + '\n// deploy 1\n')  # something changed, so the launch's check reads every file
+    site.switch_after(60, deploy)
+    relaunch()
+    m = checked(page)
+    C.ok(mixed.get('early') is True and mixed.get('late') is False, f'{tag}: the deploy lands part-way: css/base.css was read before it, js/ui/app.js not yet ({mixed})')
+    C.ok(m['outcome'] == 'refused' and 'changed' in (m['why'] or '') and names(copies(page)) == names(c2),
+         f'{tag}: that read mixes two versions: the second read differs, refused, no copy ({m["why"]})', str((m, names(copies(page)))))
+    relaunch()
+    m, c3 = checked(page), copies(page)
+    relaunch(gap=False)
+    got = page.evaluate('Promise.all(["css/base.css", "js/ui/app.js", "js/ui/home.js"].map(u => fetch(u).then(r => r.text())))')
+    C.ok(m['outcome'] == 'written' and len(c3) == 1 and '/* deploy 2 */' in got[0] and '// deploy 2' in got[1] and '// deploy 1' in got[2],
+         f'{tag}: the next launch reads one version twice and keeps it whole (both files of the second deploy)', str((m, names(c3))))
     # 3. nothing changed: a launch's check keeps the copy as it is
     relaunch()
-    page.wait_for_timeout(CHECK_WAIT_MS)
-    c3 = copies(page)
-    C.ok(len(c3) == 1 and c3[0]['name'] == c2[0]['name'], f'{tag}: with nothing changed on the server a launch keeps the copy', str([c['name'] for c in c3]))
+    m = checked(page)
+    C.ok(m['outcome'] == 'same' and names(copies(page)) == names(c3), f'{tag}: with nothing changed on the server a launch keeps the copy', str(m))
     # 4. a new sw.js: the browser installs it, it takes over and keeps the copy
     page.evaluate('navigator.serviceWorker.getRegistration().then(r => { window.__oldWorker = r.active; })')
     site.edit('sw.js', lambda s: s + '\n// a new worker (tests/e2e/sw.py)\n')
     page.evaluate('navigator.serviceWorker.getRegistration().then(r => r.update()).catch(() => 0)')
-    page.wait_for_function('navigator.serviceWorker.getRegistration().then(r => !!r && !!r.active && r.active !== window.__oldWorker && r.active.state === "activated")', timeout=20000)
-    c4 = copies(page)
-    C.ok(len(c4) == 1 and c4[0]['name'] == c2[0]['name'], f'{tag}: a new sw.js takes over and keeps the copy', str([c['name'] for c in c4]))
+    page.wait_for_function('navigator.serviceWorker.getRegistration().then(r => !!r && !!r.active && r.active !== window.__oldWorker && r.active.state === "activated")', timeout=60000)
+    C.ok(names(copies(page)) == names(c3), f'{tag}: a new sw.js takes over and keeps the copy', str(names(copies(page))))
     site.stop()
     ctx.set_offline(True)
     relaunch(gap=False)

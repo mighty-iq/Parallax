@@ -19,7 +19,10 @@
    again (conditional requests: an unchanged file costs a 304). When index.html lists other files or any file
    changed, it writes a new complete copy from those answers, and the older copies are deleted; the next launch
    runs on it. So any change on the server, with or without a new version number, reaches the player at the
-   launch after the one that fetched it, and nothing half-updated is ever served. A new sw.js is found by the
+   launch after the one that fetched it, and nothing half-updated is ever served. A copy is written only when
+   its files belong to one version (verify): index.html's px-version stamp names the version px.js declares,
+   and a second read of every file a few seconds later finds nothing changed, so a deploy still reaching the
+   CDN (some files old, some new) is never kept; the next launch checks again. A new sw.js is found by the
    browser itself (it compares the script with the network at navigations), installs, keeps the current copy
    and takes over at once (skipWaiting; no claim, so an open page keeps the files it loaded).
    Every step is wrapped: when anything fails, the worker answers from the network, as if it were not there. */
@@ -30,6 +33,7 @@
   var PREFIX = 'parallax-';
   var CHECK_DELAY = 3000;        // ms after a launch before the update check, so the page loads first
   var CHECK_GAP = 10000;         // ms: one check at most in this time (reloads in a row)
+  var STABLE_MS = 8000;          // ms between the two reads of every file that must agree before a copy is written
   var FILES = /^(?:js|css|fonts|vendor|icons)\/[^?#]+$/; // the paths a copy answers, with manifest.webmanifest
 
   var SCOPE = self.registration.scope;            // https://host/Parallax/
@@ -154,6 +158,30 @@
       return true;
     });
   }
+  // A copy is written only when its files belong to one version (RV-code-1.2 L6): index.html's
+  // <meta name="px-version"> (when it has one) names the version js/core/px.js declares, and a second read of
+  // every file STABLE_MS later finds the same list and every file unchanged. A deploy still reaching the CDN
+  // answers some files from each side for a moment, which the second read catches. Otherwise the copy is not
+  // written: the current one stays, and the next launch checks again. → got, or a rejection.
+  function stampOf(html) {
+    var tags = /<meta\b([^>]*)>/gi, m;
+    while ((m = tags.exec(html))) if (/^px-version$/i.test(attr(m[1], 'name') || '')) return attr(m[1], 'content');
+    return null;
+  }
+  function verify(got) {
+    return got.files['index.html'].clone().text().then(function (html) {
+      var stamp = stampOf(html.replace(/<!--[\s\S]*?-->/g, ''));
+      if (stamp !== null && stamp !== got.version) throw new Error('index.html is ' + stamp + ', js/core/px.js ' + got.version);
+      return wait(STABLE_MS).then(gather);
+    }).then(function (again) {
+      if (again.version !== got.version || again.paths.join('\n') !== got.paths.join('\n')) throw new Error('the list changed while it was read');
+      return Promise.all(got.paths.map(function (p) { return same(again.files[p], got.files[p]); }));
+    }).then(function (s) {
+      if (s.indexOf(false) >= 0) throw new Error('a file changed while the files were read');
+      return got;
+    });
+  }
+
   function changed(copy, got) {
     if (!copy || copy.files.join('\n') !== got.paths.join('\n')) return Promise.resolve(true);
     return Promise.all(got.paths.map(function (p) {
@@ -191,17 +219,37 @@
     });
   }
 
-  // The update check: one at a time, not twice within CHECK_GAP; failures (offline) change nothing.
+  // The update check: one at a time, not twice within CHECK_GAP; failures (offline) change nothing. Its outcome
+  // goes to this scope's open pages as a message { px: 'sw-check', outcome: 'same' | 'written' | 'refused' |
+  // 'failed', name, why } (the app ignores it; tests/e2e/sw.py waits for it).
   var checking = null, checkedAt = 0;
+  function outcome(kind, name, why) { return { px: 'sw-check', outcome: kind, name: name || null, why: why ? String(why).slice(0, 200) : null }; }
+  function tell(msg) {
+    try {
+      if (!self.clients || typeof self.clients.matchAll !== 'function') return Promise.resolve(msg);
+      return self.clients.matchAll({ type: 'window' }).then(function (list) {
+        list.forEach(function (c) { try { c.postMessage(msg); } catch (e) { /* gone */ } });
+        return msg;
+      }, function () { return msg; });
+    } catch (e) { return Promise.resolve(msg); }
+  }
   function check() {
     if (checking) return checking;
     if (Date.now() - checkedAt < CHECK_GAP) return Promise.resolve(null);
     checkedAt = Date.now();
     checking = gather().then(function (got) {
       return current(true).then(function (copy) {
-        return changed(copy, got).then(function (yes) { return yes ? write(got) : copy; });
+        return changed(copy, got).then(function (yes) {
+          if (!yes) return outcome('same', copy && copy.name);
+          return verify(got).then(function () {
+            return write(got).then(function (c) { return outcome('written', c.name); });
+          }, function (e) { return outcome('refused', copy && copy.name, e && e.message); });
+        });
       });
-    }).then(function (x) { checking = null; return x; }, function () { checking = null; return null; });
+    }).then(null, function (e) { return outcome('failed', null, e && e.message); }).then(function (msg) {
+      checking = null;
+      return tell(msg);
+    });
     return checking;
   }
 
@@ -224,7 +272,7 @@
 
   self.addEventListener('install', function (event) {
     // keep a complete copy of this scope when there is one (a new sw.js), else write one; then take over
-    event.waitUntil(current(true).then(function (copy) { return copy || gather().then(write); }).then(function () { return self.skipWaiting(); }));
+    event.waitUntil(current(true).then(function (copy) { return copy || gather().then(verify).then(write); }).then(function () { return self.skipWaiting(); }));
   });
   self.addEventListener('activate', function (event) {
     event.waitUntil(current(true).then(function (copy) { return copy ? cleanup(copy.name) : null; }).then(null, function () { /* nothing to drop */ }));
