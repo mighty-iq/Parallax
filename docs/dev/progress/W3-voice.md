@@ -256,3 +256,4 @@ Numbers are the code's at HEAD (19 Nov) unless a note is named; "sim" = the simu
   became one line pointing to chapter 2's "Where your progress lives". Pages looked at: 4, 11, 18, 21, 36, 48.
   Metadata: /Author "the Chimera community (https://discord.gg/chmr)", /Subject "… Version 1.2.0.", dates
   D:…+00'00', no XMP.
+- 15:32 UTC: Missing View's card adds its help line (a line says when the drawn structure stops); the PDF rebuilt, 57 sheets, no overflow; page 23 looked at. Checks after the round: node bets, overlap, chimera 851/0; tests/e2e/overlap.py 58/0; tools/privacy_check.py clean on what the push would publish; the six-word scan shares only the fixed Chimera line with BRIEF.md (and a file path in this log).
