@@ -564,12 +564,16 @@
       if (stretch) {
         // W2-core, fresh-player round 5 (Angles: the tag had no explanation): its words as its title and name, and
         // the first time one line under the verdict (rec.ui.seen.stretchNote; the player keeps the marks in view)
+        // round 10 (W2-core; a desktop fresh run: "STRETCH" read as unexplained): the tag says what it means each time
+        // ("above your level"), and the full line comes the first three times
         var line = stretchLine();
         ctx.verdict.appendChild(h('span.gm-stretch-tag.px-meta', { title: line, 'aria-label': line }, 'stretch'));
+        ctx.verdict.appendChild(h('span.gm-stretch-why.px-meta', { 'aria-hidden': 'true' }, 'above your level'));
         var u = rec().ui, seen = u && isObj(u.seen) ? u.seen : null;
         if (u && !seen) seen = u.seen = {};
-        if (seen && !seen.stretchNote && ctx.P && typeof ctx.P.note === 'function') {
-          seen.stretchNote = 1;
+        var shown = seen && isNum(seen.stretchNote) ? seen.stretchNote : 0;
+        if (seen && shown < 3 && ctx.P && typeof ctx.P.note === 'function') {
+          seen.stretchNote = shown + 1;
           save();
           ctx.P.note(h('p.px-meta.gm-stretch-note', line));
         }

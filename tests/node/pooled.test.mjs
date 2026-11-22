@@ -26,7 +26,7 @@ function fill(S) {
   s.trialDays['2026-11-02'] = { n: 4, right: 2, wrong: 2, stutter: 0, skipped: 0, rtSum: 4000, rtN: 4, ex: { rotate: { n: 4, right: 2 } } };
   s.streak = { weeks: { '2026-11-16': 3 } };
   s.achievements = { 'first-steps': '2026-11-18', 'new-best': new Date(T0).toISOString() };
-  s.assess.push({ date: '2026-10-28', form: 'A', results: {} }, { date: new Date(T0).toISOString(), form: 'B', results: {} });
+  s.assess.push({ date: '2026-10-28', form: 'A', results: {} }, { date: new Date(T0).toISOString(), form: 'B', results: {}, display: 'small', viewport: '390x844', input: 'touch' });
   s.mot.core.push({ date: '2026-11-03', threshold: 1.2 });
   s.timed = { rotate: { sessions: [['2026-11-18', 0.7, 2100, 20, 1]], deadline: 2400, mu: 0.1, sd: 0.5, n: 20, hist: [['2026-11-18', 0.1, 0.5]] } };
   s.sessions.push({ id: 's1', start: T0 - 3600000, end: T0 - 3000000, mode: 'train', trials: 20, right: 15, practiceMs: 600000, exs: ['rotate'], summary: null, viewport: '390x844' });
@@ -55,12 +55,15 @@ export async function run(t) {
     t.eq(P.achievements, ['first-steps', 'new-best'], 'achievements as ids only');
     t.eq([P.assess[0].date, P.assess[1].date], [null, new Date(T0).toISOString()], 'a day-only check date is dropped; UTC ISO dates stay');
     t.eq(P.timed.rotate.sessions[0], [null, 0.7, 2100, 20, 1], "Speed's day column is dropped");
-    t.ok(P.trials.length === 1 && P.idx.ex.length === 1 && P.sessions[0].viewport === '390x844', 'trials, their lookup tables and sessions are kept');
+    t.ok(P.trials.length === 1 && P.idx.ex.length === 1 && P.sessions.length === 1 && P.sessions[0].trials === 20, 'trials, their lookup tables and sessions are kept');
+    t.ok(!('viewport' in P.sessions[0]) && !('viewport' in P.assess[1]) && P.assess[1].display === 'small' && P.assess[1].input === 'touch',
+      'screen sizes stay out without device details; the screen class and the input stay (RV-code-1.2 L2)');
     t.ok(!('eng' in P), 'the seed counters stay out');
     t.ok(P.format === 'parallax-pooled' && P.record === S.VERSION, 'the export names its format');
     const P2 = S.pooled({ nickname: true, device: true });
     t.eq(P2.nickname, 'Ada', 'the typed nickname only when asked');
     t.ok(P2.device && P2.device.ua === 'UA-SENTINEL/1.0' && P2.device.lang === 'xx-SENTINEL' && 'tz' in P2.device, 'device details with the switch');
+    t.ok(P2.sessions[0].viewport === '390x844' && P2.assess[1].viewport === '390x844', 'screen sizes with device details');
     S.state.settings.exportDevice = true;
     t.ok(S.pooled().device && S.pooled({ device: false }).device === undefined, 'the setting turns device details on; opts.device overrides it');
     S.state.settings.exportDevice = false;

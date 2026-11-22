@@ -50,6 +50,26 @@ export async function run(t) {
   produceScale(t);
   dailyUntimed(t);
   keepGoing(t);
+  sectionLast(t);
+}
+
+// Round 10 (RV-code-1.2 L3): a two-tab merge keeps the kept Section review (rec.section.last), the later run's; for one
+// run on both sides, closed wins
+function sectionLast(t) {
+  t.section('merge: the kept Section review (section.last)');
+  const PX = mk(t), E = PX.engine, rec = newRecord(PX, T0);
+  const last = (id, end, open) => ({ v: 1, id, size: 'mini', form: 1, start: end - 600000, end, budgetMs: 1200000, usedMs: 600000, pausedMs: 0, display: 'large', ended: 'done', missing: [], open,
+    parts: [{ exId: 'patviews', version: 3, t0: 0, t1: 600000, items: [{ seed: 1, key: 0, answer: 0, status: 'answered', ms: 9000 }] }] });
+  const base = JSON.parse(JSON.stringify(rec));
+  base.section = { runs: [], next: { full: 1, mini: 2 }, live: null, last: null };
+  const mine = JSON.parse(JSON.stringify(base)), theirs = JSON.parse(JSON.stringify(base));
+  mine.section.last = last('s-a', T0, true);
+  t.eq([E.merge(theirs, mine).section.last && E.merge(theirs, mine).section.last.id, E.merge(mine, theirs).section.last && E.merge(mine, theirs).section.last.id], ['s-a', 's-a'],
+    'one side has a kept review: it stays, in either order');
+  theirs.section.last = last('s-b', T0 + 60000, true);
+  t.eq([E.merge(theirs, mine).section.last.id, E.merge(mine, theirs).section.last.id], ['s-b', 's-b'], 'two runs: the later one\'s review');
+  theirs.section.last = Object.assign(last('s-a', T0, false));
+  t.eq([E.merge(theirs, mine).section.last.open, E.merge(mine, theirs).section.last.open], [false, false], 'one run, closed on one side: closed');
 }
 
 // "Keep going" (first-session fresh test): a session of today that does not count toward the week goes on under its

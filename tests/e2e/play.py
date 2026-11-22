@@ -1532,10 +1532,11 @@ def run_round5(b, C):
       const P = { note: (n) => { notes.push(n.textContent); return n; } }, v1 = mk(), v2 = mk();
       PX.ui.hooks.collect('item:reveal', { step: { kind: 'stretch' }, tr: { result: { correct: true } }, verdict: v1, P: P });
       PX.ui.hooks.collect('item:reveal', { step: { kind: 'stretch1' }, tr: { result: { correct: true } }, verdict: v2, P: P });
-      const t = v1.querySelector('.gm-stretch-tag');
-      return { tag: t && t.textContent, title: t && t.getAttribute('title'), tag2: !!v2.querySelector('.gm-stretch-tag'), notes: notes, seen: seen.stretchNote }; })()""")
-    C.ok(sl['tag'] == 'stretch' and (sl['title'] or '').startswith('Stretch: an item set above your level') and sl['tag2'] and sl['notes'] == [sl['title']] and sl['seen'] == 1,
-         f'{tag}: a stretch tag carries its words, and the first one adds them as a line under the verdict, once ({sl})')
+      const t = v1.querySelector('.gm-stretch-tag'), w = v1.querySelector('.gm-stretch-why');
+      return { tag: t && t.textContent, why: w && w.textContent, title: t && t.getAttribute('title'), tag2: !!v2.querySelector('.gm-stretch-tag'), notes: notes, seen: seen.stretchNote }; })()""")
+    # round 10 (a desktop fresh run: "STRETCH" read as unexplained): its meaning beside it each time, the line the first three times
+    C.ok(sl['tag'] == 'stretch' and sl['why'] == 'above your level' and (sl['title'] or '').startswith('Stretch: an item set above your level') and sl['tag2'] and sl['notes'] == [sl['title'], sl['title']] and sl['seen'] == 2,
+         f'{tag}: a stretch tag says what it means beside it, and the first ones add the full line under the verdict ({sl})')
     C.ok(not con.errors(), f'{tag}: no console errors {con.errors()[:3]}')
     ctx.close()
 
@@ -2255,6 +2256,239 @@ def run_round9(b, C):
     ctx.close()
 
 
+HIDE_JS = """(on) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => on });
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (on ? 'hidden' : 'visible') });
+  document.dispatchEvent(new Event('visibilitychange')); }"""
+SESSIONS_JS = """(id) => { const s = PX.core.store.state, ses = s.sessions.filter((x) => x.id === id), A = (s.game && s.game.atlas) || {};
+  let atlas = 0; for (const k in A) for (const c in (A[k].c || {})) atlas += A[k].c[c][0];
+  return { n: ses.length, trials: ses[0] ? ses[0].trials : null, ended: ses[0] ? ses[0].ended : null, live: !!s.ui.live,
+    rec: s.ui.recovered ? s.ui.recovered[id] || null : null, atlas: atlas }; }"""
+NAMES_JS = """() => { const words = (t) => String(t || '').toLowerCase().replace(/[^0-9a-z\\u00c0-\\u024f]+/g, ' ').trim();
+  const shown = (el) => { const out = []; (function walk(n) { for (let c = n.firstChild; c; c = c.nextSibling) { if (c.nodeType === 3) out.push(c.nodeValue);
+    else if (c.nodeType === 1 && c.getAttribute('aria-hidden') !== 'true' && !c.hasAttribute('hidden') && !/^(title|desc|style|script)$/i.test(c.tagName)) walk(c); } })(el); return out.join(' '); };
+  const bad = [];
+  document.querySelectorAll('.pl-grid .px-choice').forEach((b) => { const v = words(shown(b.querySelector('.px-choice-body'))), n = words(b.getAttribute('aria-label'));
+    if (v && n.indexOf(v) < 0) bad.push([v, n]); });
+  [['.pl-hud-guide', 'help'], ['.pl-hud-keys', 'keys']].forEach(([sel, w]) => { const e = document.querySelector(sel); if (e && words(e.getAttribute('aria-label')).indexOf(w) !== 0) bad.push([w, e.getAttribute('aria-label')]); });
+  return { n: document.querySelectorAll('.pl-grid .px-choice').length, bad }; }"""
+
+
+def run_round10(b, C):
+    """Round 10: a session the page leaves to the background is saved and finished once at the next boot (RV-code-1.2
+    M2); the accessibility review's mediums (the bar's name, the question card's focus and keys, the tab bar at large
+    text, names that hold the shown words); Near miss; the Pause copy above a show me; the desktop Watch bar; the offer
+    after two misses waits for the walkthrough; Try answer times after long waits."""
+    tag = 'round 10'
+    # M2: the part saved on hide, finished at the next boot from it, once
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate('PX.ui.play.config.budgetMs = 600000')
+    go(page, {'mode': 'train', 'exId': 'rotate', 'count': 1, 'minutes': 20})
+    wait_state(page, 'respond')
+    for _ in range(3):
+        page.evaluate('__play.answer(true)')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+        page.evaluate('__play.next()')
+        wait_state(page, 'respond')
+    page.evaluate(HIDE_JS, True)
+    page.wait_for_timeout(300)
+    part = page.evaluate("(() => { const L = PX.core.store.state.ui.live; return L ? { id: L.id, n: L.plan.log.length, mode: L.mode } : null; })()")
+    stored = page.evaluate("localStorage.getItem('parallax.v1')")
+    kept = (json.loads(stored).get('ui') or {}).get('live') if stored else None
+    C.ok(part and part['n'] == 3 and part['mode'] == 'train' and kept and kept['id'] == part['id'] and page.evaluate('__play.state') == 'paused',
+         f'{tag} M2: hidden mid-session, the item is paused and the session as it stands is saved ({part})')
+    sid = part['id'] if part else ''
+    ctx2 = b.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
+    ctx2.add_init_script("if (!sessionStorage.getItem('seeded')) { localStorage.setItem('parallax.v1', %s); sessionStorage.setItem('seeded', '1'); }" % json.dumps(stored))
+    page2 = ctx2.new_page()
+    con2 = Console(page2)
+    boot(page2)
+    r1 = page2.evaluate(SESSIONS_JS, sid)
+    boot(page2)  # a second boot (the seed is not written again: sessionStorage)
+    r2 = page2.evaluate(SESSIONS_JS, sid)
+    C.ok(r1['n'] == 1 and r1['trials'] == 3 and r1['ended'] == 'closed' and not r1['live'] and r1['rec'] and r1['rec']['n'] == 3 and r1['atlas'] == 3,
+         f'{tag} M2: a page discarded in the background: the next boot finishes the session from its part, closed, with its 3 answers in the Atlas ({r1})')
+    C.ok(r2['n'] == 1 and r2['trials'] == 3 and r2['atlas'] == r1['atlas'] and not r2['live'], f'{tag} M2: a second boot counts nothing twice ({r2})')
+    C.ok(not con2.errors(), f'{tag} M2: no console errors at recovery {con2.errors()[:3]}')
+    ctx2.close()
+    page.evaluate(HIDE_JS, False)
+    page.locator('.pl-pause [data-resume]').tap()
+    wait_state(page, 'respond')
+    page.evaluate('__play.end()')
+    page.wait_for_selector('.pl-summary', timeout=8000)
+    r3 = page.evaluate(SESSIONS_JS, sid)
+    C.ok(r3['n'] == 1 and r3['trials'] == 3 and not r3['live'], f'{tag} M2: a page that comes back finishes as usual and clears its part ({r3})')
+    C.ok(not con.errors(), f'{tag} M2: no console errors {con.errors()[:3]}')
+    ctx.close()
+    # a11y M1 (the bar's name) at 360 x 640, also with Parallax's text size at 200 %; M3 (the tab bar at large text)
+    for scale in (1, 2):
+        ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        page = ctx.new_page()
+        con = Console(page)
+        boot(page)
+        seen_all(page)
+        if scale != 1:
+            page.evaluate('(v) => { PX.core.store.state.settings.textScale = v; PX.ui.app.applySettings(); }', scale)
+            tabs = page.evaluate("""() => { const t = [...document.querySelectorAll('.px-tabbar .px-tab')], r = t.map((e) => e.querySelector('span').getBoundingClientRect());
+              return { n: t.length, names: t.map((e) => e.textContent.trim()), over: r.some((a, i) => i && a.width > 2 && a.left < r[i - 1].right - 1), hidden: r.every((a) => a.width <= 1),
+                header: getComputedStyle(document.querySelector('.px-header')).position }; }""")
+            page.screenshot(path=str(OUT / 'round10_tabbar_200.png'))
+            C.ok(tabs['n'] == 5 and all(tabs['names']) and not tabs['over'] and tabs['hidden'] and tabs['header'] == 'static',
+                 f'{tag} M3: at 200 % text on 360 px the tab bar shows its icons, its names kept for screen readers, and the header scrolls away ({tabs})')
+        for ex in ('centralpoint', 'cubes'):
+            go(page, {'mode': 'train', 'exId': ex, 'count': 1, 'minutes': 20})
+            for _ in range(40):
+                cb = page.evaluate("[...document.querySelectorAll('[data-card-box]')].map((e) => e.getAttribute('data-card-box'))")
+                if page.evaluate('__play.state') == 'respond':
+                    break
+                if cb and page.locator('[data-card-box] [data-card="skip"], [data-card-box] [data-card="later"]').count():
+                    page.locator('[data-card-box] [data-card="skip"], [data-card-box] [data-card="later"]').first.tap()
+                elif cb and page.locator('[data-card-box] .px-btn--primary').count():
+                    page.locator('[data-card-box] .px-btn--primary').first.tap()
+                page.wait_for_timeout(250)
+            wait_state(page, 'respond')
+            page.evaluate('PX.ui.play.current().fitHud()')
+            hud = page.evaluate("""() => { const l = document.querySelector('.pl-hud-id'), p = document.querySelector('.pl-player'), how = document.querySelector('.pl-hud-tools [data-howto]');
+              return { name: l.textContent, over: l.scrollWidth > l.clientWidth + 1 && getComputedStyle(l).overflow === 'hidden', tight: p.hasAttribute('data-tight'), wrap: p.hasAttribute('data-hud-wrap'),
+                howBar: !!(how && how.offsetParent), howTo: !!PX.ui.play.current().howTo }; }""")
+            if hud['tight']:
+                page.locator('.pl-hud-guide').tap()
+                page.wait_for_timeout(200)
+                hud['howHelp'] = page.locator('.pl-guide [data-guide-howto]').is_visible()
+            page.screenshot(path=str(OUT / f'round10_hud_{ex}_{scale}.png'))
+            C.ok(not hud['over'] and (not hud['howTo'] or hud['howBar'] or hud.get('howHelp')),
+                 f'{tag} M1 360x640 text {scale * 100}%: {ex}: the name is not cut, How to solve stays one tap away ({hud})')
+            page.evaluate('__play.end()')
+            page.wait_for_selector('.pl-summary', timeout=8000)
+        C.ok(not con.errors(), f'{tag} M1 text {scale * 100}%: no console errors {con.errors()[:3]}')
+        ctx.close()
+    # a11y M2: the question card takes the focus and its keys 1 to 5 answer (desktop, a fresh profile)
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    page.evaluate('PX.ui.hooks.mute(false)')  # play.boot mutes the builders' hooks; the measurement's flow is one of them
+    page.evaluate('void PX.core.router.go("home")')
+    page.wait_for_selector('.px-today', timeout=8000)
+    go(page, {'mode': 'train'})
+    for _ in range(60):
+        cb = page.evaluate("[...document.querySelectorAll('[data-card-box]')].map((e) => e.getAttribute('data-card-box'))")
+        if 'expect' in cb:
+            break
+        if 'wtg-offer' in cb and page.locator('[data-card-box="wtg-offer"] [data-card="skip"]').count():
+            page.locator('[data-card-box="wtg-offer"] [data-card="skip"]').click()
+        elif 'measure-offer' in cb and page.locator('[data-card-box="measure-offer"] [data-card="start"]').count():
+            page.locator('[data-card-box="measure-offer"] [data-card="start"]').click()
+        page.wait_for_timeout(250)
+    foc = page.evaluate("(() => { const a = document.activeElement; return { title: !!(a && a.classList.contains('px-panel-title') && a.closest('[data-card-box=\"expect\"]')), tag: a && a.tagName }; })()")
+    page.keyboard.press('3')
+    page.wait_for_timeout(400)
+    ex3 = page.evaluate("(() => { const e = PX.core.store.state.spatial && PX.core.store.state.spatial.expect; return { v: e ? e.value : null, open: !!document.querySelector('[data-card-box=\"expect\"]') }; })()")
+    C.ok(foc['title'] and ex3['v'] == 3 and not ex3['open'], f'{tag} M2 (a11y): the question card takes the focus at its title, and the key 3 answers it ({foc}; {ex3})')
+    C.ok(not con.errors(), f'{tag} a11y M2: no console errors {con.errors()[:3]}')
+    ctx.close()
+    # desktop: M4 names, Near miss, the Watch bar's clear line, the offer after two misses, Try times after long waits
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768})
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate(STUBS_JS)
+    go(page, {'mode': 'free', 'exId': 'qtest', 'params': {'a': 0, 'variant': 'quick'}, 'trials': 3})
+    wait_state(page, 'respond')
+    page.evaluate('__play.answer(false)')
+    page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+    nm = page.evaluate("(() => { const v = document.querySelector('.pl-verdict'); return { kind: v.dataset.kind, word: v.querySelector('.pl-verdict-word').textContent, text: (v.querySelector('.pl-verdict-text') || {}).textContent, round: __play.last.result.round, right: __play.last.result.correct }; })()")
+    C.ok(nm['kind'] == 'near' and nm['word'] == 'Near miss' and nm['text'] == 'The best spot is shown.' and nm['round'] > 0 and nm['right'] is False,
+         f'{tag}: a miss that earns round points reads Near miss, and it stays a miss ({nm})')
+    page.evaluate('PX.debug.fast(true); __play.end()')
+    page.wait_for_selector('.pl-summary', timeout=8000)
+    page.evaluate('PX.debug.fast(false)')
+    go(page, {'mode': 'free', 'exId': 'patviews', 'trials': 4, 'run': 1})
+    wait_state(page, 'respond')
+    page.evaluate('PX.core.store.state.ui.showMe = {}')
+    names0 = page.evaluate(NAMES_JS)
+    page.evaluate('__play.answer(false)')
+    page.wait_for_function('__play.state === "showme"', timeout=15000)
+    page.wait_for_timeout(800)
+    names1 = page.evaluate(NAMES_JS)
+    C.ok(names0['n'] >= 4 and not names0['bad'] and not names1['bad'], f'{tag} M4: every option\'s name holds the words it shows, before and after an answer; Help and Keys start with their words ({names0}; {names1})')
+    page.keyboard.press('Escape')
+    wait_state(page, 'reveal')
+    page.evaluate('PX.debug.fast(true); __play.end()')
+    page.wait_for_selector('.pl-summary', timeout=8000)
+    page.evaluate('PX.debug.fast(false)')
+    # the offer after two misses waits for the walkthrough
+    go(page, {'mode': 'free', 'exId': 'rotate', 'params': {'angle': 1, 'axis': 0, 'cubes': 0, 'variant': 'samediff'}, 'trials': 6})
+    wait_state(page, 'respond')
+    off = None
+    for k in range(4):  # one panel per reveal: the offer may wait behind another note
+        page.evaluate('PX.core.store.state.ui.showMe = {}')
+        page.evaluate('__play.answer(false)')
+        page.wait_for_function('__play.state === "showme"', timeout=15000)
+        page.wait_for_timeout(500)
+        off = page.evaluate("(() => { const o = document.querySelector('.pl-notes > .pl-note--offer'); return o ? getComputedStyle(o).display : null; })()")
+        page.keyboard.press('Escape')
+        wait_state(page, 'reveal')
+        if off is not None:
+            break
+        page.evaluate('__play.next()')
+        wait_state(page, 'respond')
+    page.wait_for_timeout(300)
+    off2 = page.evaluate("""(() => { const o = document.querySelector('.pl-notes > .pl-note--offer'), g = document.querySelector('.pl-grid'), f = document.querySelector('.pl-feedback');
+      return o ? { d: getComputedStyle(o).display, h: Math.round(o.getBoundingClientRect().height), clear: Math.round(f.getBoundingClientRect().top - g.getBoundingClientRect().bottom) } : null; })()""")
+    page.screenshot(path=str(OUT / 'round10_offer_1366.png'))
+    C.ok(off == 'none' and off2 and off2['d'] != 'none' and off2['h'] <= 64 and off2['clear'] >= 0,
+         f'{tag}: the offer after two misses waits while the walkthrough plays, then takes one row and the marks stay above the strip ({off}; {off2})')
+    page.evaluate('PX.debug.fast(true); __play.end()')
+    page.wait_for_selector('.pl-summary', timeout=8000)
+    page.evaluate('PX.debug.fast(false)')
+    # the Watch bar keeps a clear line above the answer cards (Views at 1366 x 768)
+    go(page, {'mode': 'watch', 'exId': 'views'})
+    gap = None
+    for _ in range(120):
+        if page.evaluate('__play.state') == 'showme':
+            page.wait_for_timeout(300)
+            gap = page.evaluate("(() => Math.round(document.querySelector('.pl-feedback').getBoundingClientRect().top - Math.max(...[...document.querySelectorAll('.pl-grid .px-choice')].map((e) => e.getBoundingClientRect().bottom))))()")
+            break
+        if page.locator('[data-card-box] .px-btn--primary').count():
+            page.locator('[data-card-box] .px-btn--primary').first.click()
+        page.wait_for_timeout(250)
+    C.ok(gap is not None and gap >= 8, f'{tag}: on a desktop the Watch bar keeps a clear line above the answer cards ({gap} px)')
+    pc = page.evaluate("(() => { const b = document.querySelector('[data-parts-close]'); return b ? !!b.offsetParent : null; })()")
+    C.ok(not pc, f"{tag}: on a desktop the parts' list shows no Close button of its own (W1-band-B's request; {pc})")
+    C.ok(not con.errors(), f'{tag} desktop: no console errors {con.errors()[:3]}')
+    ctx.close()
+    # the copy of Pause never covers a show me's stage on a phone (360 x 640, Homing after a wrong answer)
+    ctx = b.new_context(viewport={'width': 360, 'height': 640}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    page.evaluate('PX.debug.fast(false)')
+    go(page, {'mode': 'free', 'exId': 'homing', 'trials': 3, 'run': 1})
+    for _ in range(80):  # its motion notice and comfort cards first
+        if page.evaluate('__play.state') == 'respond':
+            break
+        if page.locator('[data-card-box] [data-card="start"], [data-card-box] .px-btn--primary').count():
+            page.locator('[data-card-box] [data-card="start"], [data-card-box] .px-btn--primary').first.tap()
+        page.wait_for_timeout(500)
+    wait_state(page, 'respond', 40000)
+    page.evaluate('PX.core.store.state.ui.showMe = {}')
+    page.evaluate('__play.answer(false)')
+    page.wait_for_function('__play.state === "showme"', timeout=20000)
+    page.wait_for_timeout(1200)
+    fp = page.evaluate("""(() => { const f = document.querySelector('.pl-float-pause'), h = document.querySelector('.pl-host'), shown = f && getComputedStyle(f).display !== 'none';
+      return { shown, fpBottom: shown ? Math.round(f.getBoundingClientRect().bottom) : null, hostTop: Math.round(h.getBoundingClientRect().top) }; })()""")
+    page.screenshot(path=str(OUT / 'round10_float_pause_360.png'))
+    C.ok(not fp['shown'], f'{tag}: at 360 x 640 the copy of Pause steps aside while a show me plays, so it covers none of its stage ({fp})')
+    C.ok(not con.errors(), f'{tag} 360: no console errors {con.errors()[:3]}')
+    ctx.close()
+
+
 def run_wave3(b, C):
     """Shared support for PLAN milestone 8 (CONTRACT-v1.2 Wave 3): a view with optionKeys 'letters' shows A–D on
     its options, a letter key and a digit both answer, the keys sheet and the view context name letters (W1); Free
@@ -2349,7 +2583,7 @@ def main():
     only = sys.argv[1:]
     with sync_playwright() as p:
         b = launch(p)
-        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2, run_cubes2, run_first3, run_round9)
+        fns = (run_train, run_custom, run_phone, run_sandbox, shots, run_review, run_reload, run_v12, run_captions, run_hooks, run_round3, run_produce, run_gamefeel, run_round4, run_firstrun, run_wave3, run_round5, run_first2, run_cubes2, run_first3, run_round9, run_round10)
         for fn in fns:
             if only and fn.__name__.replace('run_', '') not in only:
                 continue

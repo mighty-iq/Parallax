@@ -78,7 +78,12 @@
       var lt = isObj(ts.live) ? ts.live : null, lm = isObj(ms.live) ? ms.live : null;
       var live = lt && lm ? (answered(lt) > answered(lm) ? lt : lm) : lm || lt;
       if (live && runs.some(function (r) { return r.id === live.id; })) live = null;
-      out.section = { runs: runs, next: next, live: live ? cp(live) : null };
+      // the kept review of the last finished run (v1.2 O10; round 10, RV-code-1.2 L3: it was dropped): the later run's;
+      // for one run on both sides, closed wins (its review was left on one side), mine on a tie
+      var kt = isObj(ts.last) && typeof ts.last.id === 'string' ? ts.last : null, km = isObj(ms.last) && typeof ms.last.id === 'string' ? ms.last : null;
+      var kept = kt && km ? (kt.id === km.id ? (kt.open === true && km.open !== true ? km : km.open === true && kt.open !== true ? kt : km)
+        : ((isNum(kt.end) ? kt.end : 0) > (isNum(km.end) ? km.end : 0) ? kt : km)) : km || kt;
+      out.section = { runs: runs, next: next, live: live ? cp(live) : null, last: kept ? cp(kept) : null };
     }
     if (isObj(theirs.reckon) || isObj(mine.reckon)) {
       var hist = union(obj(theirs.reckon).hist, obj(mine.reckon).hist, function (e) { return isArray(e) ? JSON.stringify(e) : null; })

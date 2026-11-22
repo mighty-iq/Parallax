@@ -62,6 +62,8 @@ body.px-stim .gm-fx-sweep .px-bar-fill { animation: none !important; }
 .gm-ring.gm-fx-ring { animation: gm-ring 300ms ease-out both; }
 @keyframes gm-ring { from { opacity: 0.9; transform: scale(0.6); } to { opacity: 0; transform: scale(1.8); } }
 .gm-stretch-tag { margin-left: var(--s2); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.gm-stretch-why { font-size: var(--fs-sm); color: var(--ink-2); } /* round 10: the tag's meaning beside it */
+body.px-stim .gm-stretch-why { visibility: hidden !important; }
 
 /* ---------- the summary panel ---------- */
 .gm-reach { margin: var(--s3) 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--s2); }

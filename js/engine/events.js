@@ -224,9 +224,17 @@
 
   /* ---------- the two-tab merge ---------- */
 
+  // Round 10 (RV-code-1.2 L4: two full tables counted the rows one side had folded twice, as rows and as counts): a side
+  // that folded rows holds none from before its oldest kept row, so the other side's rows from before then are among the
+  // ones it folded; they come off before the union (both sides share one history: two tabs of one record)
+  function sinceFold(x, y) {
+    if (!y.rows.length || !Object.keys(y.folded).length) return x.rows;
+    var t0 = y.rows[0][0];
+    return x.rows.filter(function (r) { return r[0] >= t0; });
+  }
   function merge(theirs, mine) {
     var a = fix(theirs) || blank(), b = fix(mine) || blank(), seen = {}, rows = [];
-    a.rows.concat(b.rows).forEach(function (r) {
+    sinceFold(a, b).concat(sinceFold(b, a)).forEach(function (r) {
       var k = JSON.stringify(r);
       if (seen[k]) return;
       seen[k] = 1;

@@ -372,8 +372,9 @@
           if (k === 0 || group[k] !== group[k - 1]) {
             label(); // a new caption: the button's words follow it at once
             // round 9 (Fold's Watch at 360 x 640: its large sheet came mid-demo and the page jumped at Your turn): a demo
-            // whose item grows keeps it above the bar and the Your turn room as each caption comes
-            if (k > 0 && turnPx) stageIntoView(P, true, turnPx);
+            // whose item grows keeps it above the bar and the Your turn room as each caption comes; round 10 (a desktop
+            // fresh run: a caption of two lines under the stage pushed the cards against the Watch bar): any walkthrough
+            if (k > 0) stageIntoView(P, true, turnPx);
           }
         }
         function finish() { var s = steps[i]; safe(s.update, 1); safe(s.exit); }
@@ -448,6 +449,9 @@
           P.el.pNext.hidden = true; P.el.pAuto.hidden = true; P.el.pStep.hidden = false; P.el.pSkip.hidden = true; P.el.player.removeAttribute('data-direct');
           if (P.state === 'showme') P.setState(prev === 'showme' ? 'reveal' : prev);
           if (answered && !FAST) P.nextLockUntil = timing.now() + AFTER_SHOWME_LOCK_MS; // a tap meant for the walkthrough's Next
+          // round 10: a note that waited for the walkthrough (the offer after two misses) may make the strip taller now;
+          // the marks stay above it
+          if (answered && P.keepMarks) P.keepMarks();
           resolve();
         }
         function frame(dt) {
@@ -556,13 +560,13 @@
     /* ---------- DOM ---------- */
     el.label = h('div.pl-hud-id');
     el.meta = h('div.pl-hud-meta.px-num', { 'aria-live': 'polite' });
-    el.helpBtn = ui.button('Keys', { kind: 'ghost', small: true, key: '?', ariaLabel: 'Keyboard keys', onClick: function () { help(); } });
+    el.helpBtn = ui.button('Keys', { kind: 'ghost', small: true, key: '?', ariaLabel: 'Keys: the keyboard keys', onClick: function () { help(); } });
     el.helpBtn.setAttribute('data-help', '');
     el.helpBtn.classList.add('pl-hud-keys');
     // H2: the goal and the tip live in one container; Help shows or hides it (css decides when it
     // is hidden: on phones during items).
     P.guideId = 'pl-guide-' + (++playerSeq);
-    el.guideBtn = ui.button('Help', { kind: 'ghost', small: true, ariaLabel: 'Goal and tips', onClick: function () { toggleGuide(); } });
+    el.guideBtn = ui.button('Help', { kind: 'ghost', small: true, ariaLabel: 'Help: the goal and the tips', onClick: function () { toggleGuide(); } });
     el.guideBtn.classList.add('pl-hud-guide');
     el.guideBtn.setAttribute('data-guide', '');
     el.guideBtn.setAttribute('aria-expanded', 'false');
@@ -586,7 +590,11 @@
     el.hud = h('div.pl-hud', h('div.pl-hud-row', el.label, el.meta, h('div.pl-hud-tools', el.howBtn, el.guideBtn, el.helpBtn, el.pauseBtn)), h('div.pl-hud-bar', el.bar));
     el.goal = h('p.pl-goal', { hidden: true });
     el.tip = h('p.pl-tip', { role: 'note', hidden: true });
-    el.guide = h('div.pl-guide', { id: P.guideId }, el.goal, el.tip);
+    // round 10 (RV-a11y-1.2 M1: "Central Poi", "Painted Cub" on a 360 px bar): where the exercise's name does not fit
+    // beside How to solve, Help and Pause, How to solve waits in the Help panel instead (fitHud, data-tight)
+    el.guideHow = ui.button('How to solve', { kind: 'secondary', small: true, onClick: function () { toggleGuide(false); if (P.howTo) strategySheet(P.howTo.def, P.howTo.card); } });
+    el.guideHow.setAttribute('data-guide-howto', '');
+    el.guide = h('div.pl-guide', { id: P.guideId }, el.goal, el.tip, el.guideHow);
     el.notice = h('div.pl-notice-slot');
     el.host = h('div.pl-host');
     // a tap on the figure is Next while a Watch caption waits for one
@@ -696,7 +704,22 @@
       return open;
     }
     // Help is offered only when the guide holds something.
-    function syncGuide() { el.guideBtn.hidden = el.goal.hidden && el.tip.hidden; }
+    function syncGuide() { el.guideBtn.hidden = el.goal.hidden && el.tip.hidden && !el.root.hasAttribute('data-tight'); }
+    // ...and where it still does not fit (a large text size), the name takes a second line instead of being cut
+    function fitHud() {
+      try {
+        var was = el.root.hasAttribute('data-tight');
+        el.root.removeAttribute('data-tight');
+        el.root.removeAttribute('data-hud-wrap');
+        var over = function () { return el.label.scrollWidth > el.label.clientWidth + 1; };
+        if (P.howTo && !el.howBtn.hidden && isPhone() && over()) el.root.setAttribute('data-tight', '');
+        if (was !== el.root.hasAttribute('data-tight')) syncGuide();
+        if (isPhone() && over()) el.root.setAttribute('data-hud-wrap', '');
+      } catch (e) { /* the bar keeps its buttons */ }
+    }
+    P.fitHud = fitHud;
+    win.addEventListener('resize', fitHud);
+    P.offs.push(function () { win.removeEventListener('resize', fitHud); });
     P.toggleGuide = toggleGuide;
 
     /* ---------- state ---------- */
@@ -1130,15 +1153,18 @@
       var done = null;
       try { done = P.view.reveal ? P.view.reveal(item, revealResponse(def, item, tr.response), tr.result, P.ctx) : null; } catch (e) { log('reveal failed (' + P.exId + ')', e); }
       ui.clear(el.verdict);
-      var kind = ok ? 'right' : tr.timeout ? 'timeout' : 'wrong';
+      // round 10 (W3-exfix's request, a fresh player on Central Point Quick read "Incorrect" beside "Round score 57"): a
+      // miss for the rating that still earns round points is a near miss; the log, the rating and the tone stay a miss
+      var near = !ok && !tr.timeout && isNum(tr.result.round) && tr.result.round > 0;
+      var kind = ok ? 'right' : tr.timeout ? 'timeout' : near ? 'near' : 'wrong';
       el.verdict.setAttribute('data-kind', kind);
-      el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, ok ? '✓' : '✗'));
-      el.verdict.appendChild(h('strong.pl-verdict-word', ok ? 'Correct' : tr.timeout ? 'Time is up' : 'Incorrect'));
+      el.verdict.appendChild(h('span.pl-verdict-icon', { 'aria-hidden': 'true' }, ok ? '✓' : near ? '≈' : '✗'));
+      el.verdict.appendChild(h('strong.pl-verdict-word', ok ? 'Correct' : tr.timeout ? 'Time is up' : near ? 'Near miss' : 'Incorrect'));
       if (isNum(tr.result.round)) el.verdict.appendChild(h('span.pl-verdict-round.px-num', { 'data-round': String(tr.result.round) }, 'Round score ' + tr.result.round));
       if (tr.result.late) el.verdict.appendChild(h('span.pl-verdict-text', 'Your placed answer earned the round score; it counts as late.'));
       // No time on the Watch item: the demo has just solved it, so a time says nothing (RV-play-dat).
       if (!tr.timeout && isNum(tr.rtMs) && !cfg.demo) el.verdict.appendChild(h('span.pl-verdict-rt.px-num', fmtRt(tr.rtMs)));
-      if (!ok) el.verdict.appendChild(h('span.pl-verdict-text', P.grid ? 'The right answer is marked ✓.' : 'The right answer is shown.'));
+      if (!ok) el.verdict.appendChild(h('span.pl-verdict-text', near ? 'The best spot is shown.' : P.grid ? 'The right answer is marked ✓.' : 'The right answer is shown.'));
       if (tr.outcome === 'stutter') el.verdict.appendChild(h('span.pl-verdict-void', voidText(tr.voidReason)));
       else sound.play(ok ? 'right' : 'wrong'); // a short tone when the setting is on (never during a stimulus)
       var canShow = !!(P.view && P.view.showMe);
@@ -1472,6 +1498,7 @@
         var tag = tagOf(def);
         if (tag) el.label.appendChild(h('span.px-tag.pl-tag', tag));
       } else if (text) el.label.appendChild(h('span.pl-hud-text', text));
+      fitHud();
     }
     // (aria-live: the text is replaced only when it changes, so the countdown's ticks are quiet)
     // The title row's meta keeps to its line (Angles fresh test: "Train · about 19 mi…" on a phone
@@ -1516,7 +1543,7 @@
     P.setTip = setTip; P.note = note; P.clearNotes = clearNotes; P.notice = notice;
     P.keepMarks = function () { if (P.state === 'reveal') marksIntoView(); }; // the marks stay above the reading strip
     // The "How to solve" button: P.setHowTo(def, card) shows it, P.setHowTo(null) hides it.
-    P.setHowTo = function (def, card) { P.howTo = def && card ? { def: def, card: card } : null; el.howBtn.hidden = !P.howTo; };
+    P.setHowTo = function (def, card) { P.howTo = def && card ? { def: def, card: card } : null; el.howBtn.hidden = !P.howTo; fitHud(); };
     P.showHud = function (on) { el.hud.hidden = !on; };
 
     function focusTrial() {
@@ -1856,11 +1883,22 @@
       parent.insertBefore(p.el, before && before.parentNode === parent ? before : null);
       p.el.setAttribute('data-card-box', o.id || '');
       var go = function () { if (primary) done(primary.v); return primary ? undefined : false; };
-      popK = keys.push({ Enter: go, Space: go }, { through: true });
+      var kmap = { Enter: go, Space: go };
+      // round 10 (RV-a11y-1.2 M2: "One question first" printed 1 to 5 on its choices, and the keys did nothing): a
+      // choice in the card that carries data-card-key answers to that key
+      [].slice.call(p.el.querySelectorAll('[data-card-key]')).forEach(function (b) {
+        var k = b.getAttribute('data-card-key');
+        if (k && k.length === 1) kmap[k.toLowerCase()] = function () { if (!b.disabled) b.click(); };
+      });
+      popK = keys.push(kmap, { through: true });
       p.done = done;
       openCards.push(done);
       if (o.onShow) o.onShow(p, done);
       if (primary) { try { primary.b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+      else { // no default action (a question): the focus goes to the card's title, not to the page (RV-a11y-1.2 M2)
+        var tt = p.el.querySelector('.px-panel-title');
+        if (tt) { tt.setAttribute('tabindex', '-1'); try { tt.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+      }
       // o.top (Watch, Try, Go's stepper): the card screen opens at that element's top, under a
       // sticky header if there is one (W1-band-A's request: the stepper was cut at the top edge)
       try {
@@ -1947,8 +1985,10 @@
           if (!e || e.closest('[hidden]')) return;
           var cs = win.getComputedStyle(e);
           if (cs.display === 'none' || (cs.position !== 'fixed' && cs.position !== 'sticky')) return;
+          // round 10 (a desktop fresh run: the Watch bar sat on the answer cards' edge): a sticky strip (wide screens)
+          // keeps a clear line above it, past its shadow
           var r = e.getBoundingClientRect();
-          if (r.height && r.top > top && r.top < vh) { limit = Math.min(limit, r.top - 4); found = true; }
+          if (r.height && r.top > top && r.top < vh) { limit = Math.min(limit, r.top - (cs.position === 'sticky' ? 16 : 4)); found = true; }
         });
         if (!found && isPhone()) limit = Math.min(limit, vh - 7.5 * rem);
         if (turn > 0) limit = Math.min(limit, vh - turn);
@@ -1993,7 +2033,7 @@
       partsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
       partsBtn.firstChild.textContent = open ? 'Hide parts' : 'Parts'; // the open list has a visible way out (fresh-player test)
     }
-    var partsBtn = ui.button('Parts', { kind: 'ghost', small: true, ariaLabel: 'What the parts of the item are', onClick: function () {
+    var partsBtn = ui.button('Parts', { kind: 'ghost', small: true, ariaLabel: 'Parts: what the parts of the item are', onClick: function () {
       var open = !head.classList.contains('is-parts-open');
       setParts(open);
       // O8: on a phone the list sits above the item, so a playing demo waits while it is open
@@ -2301,6 +2341,17 @@
     if (ui.modalOpen()) S.clock.pause('modal');
     S.offs.push(bus.on('modal:open', function () { if (S.clock) S.clock.pause('modal'); }));
     S.offs.push(bus.on('modal:close', function () { if (S.clock && !ui.modalOpen()) S.clock.resume('modal'); }));
+    // Round 10 (RV-code-1.2 M2): when the page goes to the background, the session as it stands is saved (a phone may
+    // discard the tab later with no pagehide); an item on the screen is paused first (a stimulus is voided by it)
+    function onHidden() {
+      if (!doc.hidden || S.done || !S.plan || S.plan.unavailable || mode === 'check') return;
+      if (P && (P.state === 'respond' || P.state === 'present')) { try { P.pause(); } catch (e) { /* the part is saved anyway */ } }
+      livePart(S);
+      save();
+      try { store.flush({ evenIfHeld: true }); } catch (e) { /* the store's own flush follows */ }
+    }
+    doc.addEventListener('visibilitychange', onHidden);
+    S.offs.push(function () { doc.removeEventListener('visibilitychange', onHidden); });
     // The HUD's minutes move on their own (every 5 s), never while a stimulus plays.
     S.clock.on('tick', function () { if (!S.done && !(doc.body && doc.body.classList.contains('px-stim'))) progress(); });
     S.clock.on('resume', function () { if (!S.done) progress(); });
@@ -2710,6 +2761,7 @@
     function finishPlan(ended) {
       if (S.clock) S.clock.stop(); // first: the reading stored is the reading kept
       var t = clockNow(), best = null;
+      afterRecovered(S.plan, t); // round 10: what another boot already finished of this plan counts once
       Object.keys(S.inputs).forEach(function (k) { if (!best || S.inputs[k] > S.inputs[best]) best = k; });
       t.ended = ended;
       t.session = { viewport: S.viewport, input: best || undefined };
@@ -2717,6 +2769,7 @@
       if (S.gentle) t.session.gentle = true; // the gentle motion profile was on (v1.2, O36)
       var res = null;
       try { res = E().modes.finish(S.plan, rec(), now(), t); } catch (e) { log('finish failed', e); }
+      clearPart(S.plan.id);
       var sm = res && res.summary;
       emit('play:session', { mode: mode, ended: S.plan.ended || ended || null, practiceMs: isNum(t.activeMs) ? Math.round(t.activeMs) : null,
         answered: sm ? sm.trials : 0, right: sm ? sm.right : 0, exIds: (S.plan.exs || []).slice() });
@@ -2780,6 +2833,84 @@
     };
   }
   var session = { S: null, P: null }; // the running session (tests)
+
+  /* ---------- a session the page left (round 10, RV-code-1.2 M2) ----------
+     A phone may discard a tab in the background with no pagehide, so a running session is saved as it stands each
+     time the page is hidden: rec.ui.live { v, id, mode, at, params, t, plan } (the plan without its functions). Every
+     finish clears it. At the next boot, recover() finishes a part left there as a closed session (its trial rows are
+     already in the log), so the week, the Log, bests and the game layer count it once; rec.ui.recovered keeps what it
+     finished of that plan for a day, so a tab that was only asleep and finishes the same plan later adds only what
+     came after (its answers, time and blocks), as a Keep-going part does. */
+  var LIVE_V = 1, RECOVERED_MS = 24 * 3600000;
+  function livePart(S) {
+    try {
+      var best = null, x = { viewport: S.viewport };
+      Object.keys(S.inputs || {}).forEach(function (k) { if (!best || S.inputs[k] > S.inputs[best]) best = k; });
+      if (best) x.input = best;
+      if (S.rounds && Object.keys(S.rounds).length) x.rounds = S.rounds;
+      if (S.gentle) x.gentle = true;
+      var plan = JSON.parse(JSON.stringify(S.plan, function (k, v) {
+        return k === 'can' || k === 'rng' || k === 'finished' || typeof v === 'function' ? undefined : v;
+      }));
+      uiRec().live = { v: LIVE_V, id: S.plan.id, mode: S.mode, at: now(), params: S.params || {},
+        t: { activeMs: S.clock ? Math.round(S.clock.activeMs()) : 0, session: x }, plan: plan };
+    } catch (e) { log('saving the session part failed', e); }
+  }
+  function clearPart(id) {
+    var u = uiRec();
+    if (isObj(u.live) && u.live.id === id) delete u.live;
+  }
+  // A later finish of a plan that recover() finished in part: the part's answers, time and blocks are taken off, and
+  // the rest joins the session record it made (plan.continues, as "Keep going" does)
+  function afterRecovered(plan, t) {
+    var u = uiRec(), rv = isObj(u.recovered) ? u.recovered[plan.id] : null;
+    if (!isObj(rv) || plan.finished) return;
+    delete u.recovered[plan.id];
+    var n = isNum(rv.n) ? Math.max(0, Math.min(rv.n, plan.log.length)) : 0, ms = isNum(rv.ms) ? rv.ms : 0;
+    plan.log = plan.log.slice(n);
+    plan.activeMs = Math.max(0, (plan.activeMs || 0) - ms);
+    if (t && isNum(t.activeMs)) t.activeMs = Math.max(0, t.activeMs - ms);
+    if (isObj(plan.blocks)) Object.keys(plan.blocks).forEach(function (id) {
+      plan.blocks[id] = (plan.blocks[id] || []).filter(function (b) { return !(isObj(b) && isNum(b.at) && isNum(rv.at) && b.at <= rv.at); });
+    });
+    plan.continues = plan.id;
+  }
+  // At boot (js/ui/app.js, after the record's first read): a session part left by a page that was discarded is
+  // finished as a closed session at the time it was saved; its summary is kept as a closed page's is.
+  function recover() {
+    var u;
+    try { u = uiRec(); } catch (e) { return null; }
+    if (isObj(u.recovered)) Object.keys(u.recovered).forEach(function (id) {
+      var r = u.recovered[id];
+      if (!isObj(r) || !isNum(r.at) || now() - r.at > RECOVERED_MS || now() < r.at) delete u.recovered[id];
+    });
+    var L = u.live;
+    if (!isObj(L)) return null;
+    delete u.live;
+    var res = null, M = E().modes;
+    if (L.v === LIVE_V && typeof L.id === 'string' && isObj(L.plan) && typeof L.mode === 'string' && hasOwn.call(M.MODES, L.mode) && L.mode !== 'check'
+      && Array.isArray(L.plan.log) && L.plan.id === L.id && !L.plan.done) {
+      var plan = L.plan, at = isNum(L.at) ? L.at : now();
+      plan.can = null;
+      plan.finished = null;
+      try { plan.rng = E().select.rng(rec(), 'plan:' + L.mode + ':' + plan.start); } catch (e) { /* finish draws nothing */ }
+      var t = { ended: 'closed', activeMs: isNum(L.t && L.t.activeMs) ? L.t.activeMs : plan.activeMs, session: isObj(L.t) && isObj(L.t.session) ? L.t.session : undefined };
+      var had = isObj(u.recovered) && isObj(u.recovered[L.id]) ? u.recovered[L.id] : null;
+      afterRecovered(plan, t); // a part of it finished at an earlier boot counts once
+      try { res = M.finish(plan, rec(), at, t); } catch (e) { log('recovering a session failed', e); res = null; }
+      if (res && res.session) {
+        if (!isObj(u.recovered)) u.recovered = {};
+        u.recovered[L.id] = { n: plan.log.length + (had && isNum(had.n) ? had.n : 0), ms: Math.round(plan.activeMs || 0) + (had && isNum(had.ms) ? had.ms : 0), at: at };
+        keepSummary({ plan: plan, mode: L.mode, params: isObj(L.params) ? L.params : {} }, res,
+          L.mode === 'daily' ? null : 'The page closed during this session. Everything you answered was saved.');
+        emit('play:session', { mode: L.mode, ended: 'closed', practiceMs: Math.round(plan.activeMs || 0), answered: res.summary ? res.summary.trials : 0,
+          right: res.summary ? res.summary.right : 0, exIds: (plan.exs || []).slice(), recovered: true });
+      }
+    }
+    save();
+    try { store.flush({ evenIfHeld: true }); } catch (e) { /* the debounced save runs later */ }
+    return res;
+  }
 
   // A reload or a closed tab ends a running session the way leaving its screen does (the
   // cleanup above): what was answered becomes a saved session (ended: 'closed'), so the weekly
@@ -3683,7 +3814,7 @@
     fillParams: fillParams, responseFor: responseFor, openShare: openShare, screenHead: screenHead,
     goalOf: goalOf, specOf: specOf, tagOf: tagOf, fmtRt: fmtRt, MODE_NAMES: MODE_NAMES, levelText: levelText,
     firstStrategy: firstStrategy, gentleMotion: gentleMotion, MOTION: MOTION, tutorialSeconds: wtgSeconds, minutesWords: minutesWords,
-    bootRoute: bootRoute, sound: sound, thresholdText: thresholdText,
+    bootRoute: bootRoute, recover: recover, sound: sound, thresholdText: thresholdText,
     isFast: function () { return FAST; },
     config: CONFIG,
     state: function () { return current ? current.state : 'idle'; },

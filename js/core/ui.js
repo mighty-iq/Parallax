@@ -468,6 +468,19 @@
   // so no letter key reaches a player or Section key such as F, R or S), else its number 1–9.
   var LETTERS = 'ABCDE';
   function optionName(i, letters) { return letters && i >= 0 && i < LETTERS.length ? LETTERS.charAt(i) : String(i + 1); }
+  // The words an element shows (text nodes, SVG text included; aria-hidden or hidden parts and SVG titles left out),
+  // and the same reduced to plain lower-case words for comparing names (round 10, RV-a11y-1.2 M4)
+  function shownText(el) {
+    var out = [];
+    (function walk(nd) {
+      for (var c = nd.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType === 3) out.push(c.nodeValue);
+        else if (c.nodeType === 1 && c.getAttribute('aria-hidden') !== 'true' && !c.hasAttribute('hidden') && !/^(title|desc|style|script)$/i.test(c.tagName)) walk(c);
+      }
+    })(el);
+    return out.join(' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  }
+  function words(s) { return String(s || '').toLowerCase().replace(/[^0-9a-z\u00c0-\u024f]+/g, ' ').trim(); }
 
   // layout: 'auto' (default) | 'grid' | 'row' | 'col' | a column count, or an options object
   // { layout, cols, label, labels: [..] or fn(i), multi, keys (default true), keyLabels ('digits' by
@@ -497,17 +510,32 @@
       return 'Option ' + optionName(i, letters);
     }
     function isSel(i) { return multi ? sel.indexOf(i) >= 0 : sel === i; }
+    // Round 10 (RV-a11y-1.2 M4, WCAG 2.5.3): the name holds the words the option shows (a view's "Same", or the tag
+    // a solution adds, "✓ End view"), so a voice command with what is on the screen reaches it: the shown words
+    // when they hold the label, the label when it holds them, else both
     function render(i) {
       var b = buttons[i], st = states[i];
       b.classList.toggle('is-selected', isSel(i));
       b.setAttribute('aria-pressed', isSel(i) ? 'true' : 'false');
       ['right', 'wrong', 'missed', 'dim'].forEach(function (s) { b.classList.toggle('is-' + s, st === s); });
       // A symbol as well as colour: never colour alone.
-      marks[i].textContent = st === 'right' || st === 'missed' ? '✓' : st === 'wrong' ? '✗' : '';
+      var m = st === 'right' || st === 'missed' ? '✓' : st === 'wrong' ? '✗' : '';
+      if (marks[i].textContent !== m) marks[i].textContent = m;
       var suffix = st === 'right' ? ', correct' : st === 'wrong' ? ', wrong' : st === 'missed' ? ', the correct answer' : '';
-      b.setAttribute('aria-label', baseLabel(i) + (isSel(i) ? ', selected' : '') + suffix);
+      var lab = baseLabel(i), vis = shownText(cells[i]), wv = words(vis), wl = words(lab);
+      if (wv && wl.indexOf(wv) < 0) lab = wv.indexOf(wl) >= 0 ? vis : vis + ', ' + lab;
+      var name = lab + (isSel(i) ? ', selected' : '') + suffix;
+      if (b.getAttribute('aria-label') !== name) b.setAttribute('aria-label', name);
     }
 
+    // the shown words change after a reveal or during a solution (a view's tags): the names follow
+    var watch = null;
+    try {
+      if (window.MutationObserver) {
+        watch = new window.MutationObserver(function () { for (var j = 0; j < buttons.length; j++) render(j); });
+        watch.observe(root, { childList: true, subtree: true, characterData: true });
+      }
+    } catch (e) { watch = null; }
     for (var i = 0; i < n; i++) {
       var cellBody = h('div.px-choice-body');
       var markEl = h('span.px-choice-mark', { 'aria-hidden': 'true' }); // not `mark`: that is the function below
@@ -595,6 +623,7 @@
 
     function destroy() {
       if (popKeys) { popKeys(); popKeys = null; }
+      if (watch) { watch.disconnect(); watch = null; }
       listeners.length = 0;
     }
 

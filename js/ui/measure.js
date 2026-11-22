@@ -570,6 +570,7 @@
         if (close) close('answered');
       } });
       b.setAttribute('data-expect', String(x[0]));
+      b.setAttribute('data-card-key', String(x[0])); // the card's key 1 to 5 answers (js/ui/play.js showCard; RV-a11y-1.2 M2)
       row.appendChild(b);
     });
     return ctx.card({

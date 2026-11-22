@@ -188,6 +188,12 @@
 .bets-slice-focus.is-on { visibility: visible; }
 .bets-draw.bets-slice { margin-top: var(--s2); }
 .bets-draw.bets-slice .bets-draw-task { margin-bottom: var(--s1); }
+/* round 10 (W2-core; fit.py at 360 x 640): when the player shows its line for a kind of item met for the first time
+   (play.js setNewKind, its height in --pl-nk), the drawing boards give up that height, so the item still fits */
+@media (max-width: 719px) {
+  .pl-player.has-newkind .bets-fold-board { width: min(100vw, calc(23rem - var(--pl-nk, 0px))); margin-left: calc(50% - min(50vw, calc(11.5rem - var(--pl-nk, 0px) / 2))); }
+  .pl-player.has-newkind .bets-views-board { width: min(100%, calc(18.75rem - var(--pl-nk, 0px))); }
+}
 /* Phones: with no options under it, the solid takes the room (the marks need it) */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-slice[data-item-layout="custom"] .ex-slice-stage { height: min(24rem, var(--pl-w), calc(var(--pl-avail) - 8rem)); }

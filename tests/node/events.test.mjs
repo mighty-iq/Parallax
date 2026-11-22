@@ -116,6 +116,16 @@ function repair(t) {
   t.eq(m.rows.map((r) => r[0]), [100, 150, 200], 'the merge unites both sides, each row once, in time order');
   t.eq(m.folded, { 'card|fold': 4, 'showme|-': 1 }, 'folded: the larger count per key');
   t.eq(V._.merge(undefined, b).rows.length, 2, 'a side without the field');
+  // round 10 (RV-code-1.2 L4): two tabs share 5,000 rows, one adds 10 (its cap folds its 10 oldest): 5,010 events, not 5,020
+  const total = (x) => x.rows.length + Object.values(x.folded).reduce((p, q) => p + q, 0);
+  const base = { events: { v: 1, rows: [], folded: {} } };
+  for (let i = 0; i < 5000; i++) V.add(base, 'showme', 'rotate', { seed: i, auto: 1, ms: 100, steps: 3, replays: 0, closed: 0 }, 1e12 + i * 1000);
+  const A = JSON.parse(JSON.stringify(base)), B = JSON.parse(JSON.stringify(base));
+  for (let i = 0; i < 10; i++) V.add(A, 'showme', 'rotate', { seed: 9000 + i, auto: 1, ms: 100, steps: 3, replays: 0, closed: 0 }, 2e12 + i * 1000);
+  t.eq([total(V._.merge(A.events, B.events)), total(V._.merge(B.events, A.events))], [5010, 5010], 'full tables: each event counted once, whichever side merges (5,010)');
+  for (let i = 0; i < 25; i++) V.add(B, 'card', 'fold', { card: 'imagery', src: 'howto', ms: 10 }, 3e12 + i * 1000);
+  const mAB = V._.merge(A.events, B.events);
+  t.eq([total(mAB), mAB.rows.length], [5035, 5000], 'both sides folded, each its own new rows: 5,035 events, 5,000 rows kept');
 }
 
 function store(t) {

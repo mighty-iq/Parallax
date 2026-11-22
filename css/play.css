@@ -98,6 +98,17 @@
 .pl-verdict[data-kind="timeout"] .pl-verdict-icon, .pl-verdict[data-kind="timeout"] .pl-verdict-word { color: var(--warn); }
 .pl-verdict[data-kind="right"] .pl-verdict-icon { background: var(--right-wash); }
 .pl-verdict[data-kind="wrong"] .pl-verdict-icon { background: var(--wrong-wash); }
+/* round 10 (RV-a11y-1.2 M1): on a bar too narrow for the exercise's name, How to solve waits in the Help panel
+   (play.js fitHud, data-tight); where the name still does not fit, it takes a second line (data-hud-wrap) */
+.pl-guide > [data-guide-howto] { display: none; }
+.pl-player[data-tight] > .pl-hud .pl-hud-tools [data-howto] { display: none; }
+.pl-player[data-tight] > .pl-guide > [data-guide-howto]:not([hidden]) { display: inline-flex; align-self: flex-start; }
+.pl-player[data-hud-wrap] > .pl-hud .pl-hud-id { white-space: normal; overflow: visible; flex-wrap: wrap; }
+.pl-player[data-hud-wrap] > .pl-hud .pl-hud-id .px-spec { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; white-space: normal; }
+.pl-player[data-hud-wrap] > .pl-hud .pl-hud-id .px-spec > :first-child { white-space: normal; overflow-wrap: anywhere; }
+/* round 10: a near miss (a miss that earns round points) in the miss colour, with a dashed frame and its own sign */
+.pl-verdict[data-kind="near"] .pl-verdict-icon, .pl-verdict[data-kind="near"] .pl-verdict-word { color: var(--wrong); }
+.pl-verdict[data-kind="near"] .pl-verdict-icon { background: var(--wrong-wash); border-style: dashed; }
 .pl-verdict[data-kind="timeout"] .pl-verdict-icon { background: var(--warn-wash); }
 /* after a Watch demo: what to do next (play.js yourTurn), with a way on */
 .pl-verdict[data-kind="turn"] { align-items: center; }
@@ -128,6 +139,12 @@
 .pl-note-range { color: var(--ink-3); }
 .pl-note-bar { margin: var(--s3) 0 var(--s2); }
 .pl-note--offer, .pl-note--checkin { border-left-color: var(--ink-2); }
+/* round 10 (a desktop fresh run: the offer after two misses covered the solution as it played): the offer waits while a
+   walkthrough plays and then takes one row where the width allows, its words beside its buttons */
+.pl-player[data-state="showme"] .pl-notes > .pl-note--offer { display: none; }
+.pl-note--offer:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); padding-top: var(--s2); padding-bottom: var(--s2); }
+.pl-note--offer > p { flex: 1 1 18rem; margin: 0; }
+.pl-note--offer > .pl-note-actions { margin-top: 0; }
 .pl-note-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
 
 /* ---------- cards (intros, offers) ---------- */
@@ -524,10 +541,10 @@
 /* Watch, Try, Go's tools (Parts, Skip, End the tour) are full 44 px targets with room between
    them (rule 8; fresh-player test); the parts list's own Close button shows only on phones. */
 .pl-wtg-tools .px-btn { min-height: var(--tap); min-width: var(--tap); }
-.pl-parts-close { display: none; }
+.pl-parts-close, .is-wtg .pl-parts li.pl-parts-close { display: none; } /* round 10 (W1-band-B's request): also where the list is inline (desktop) */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-wtg-tools { gap: var(--s2); }
-  .pl-wtg.is-parts-open .pl-parts-close { display: block; padding-left: 0; border-left: 0; }
+  .pl-wtg.is-parts-open .pl-parts li.pl-parts-close { display: block; padding-left: 0; border-left: 0; }
   .pl-parts-close .px-btn { min-height: var(--tap); }
 }
 
@@ -597,6 +614,11 @@
     top: calc(var(--s2) + env(safe-area-inset-top, 0px)); right: max(var(--gutter), env(safe-area-inset-right, 0px));
     background: var(--surface); box-shadow: var(--lift);
   }
+}
+/* round 10 (W3-exfix's request: at 360 x 640 the copy of Pause covered the corner of Homing's and Reckon's map in a show
+   me): while a walkthrough plays, the copy steps aside; its bar has Close or Next item, and the copy comes back after */
+@media (max-width: 719px) {
+  body.px-item .pl-player[data-hud-off][data-state="showme"] > .pl-float-pause { display: none; }
 }
 /* round 4 (the tour's Track: two buttons named Pause at once): while a view shows its own Pause on its
    stage (Track during its cue and motion), the title row's Pause steps aside; Esc and the view's own

@@ -276,6 +276,8 @@
     var ticks = h('div.px-pool-ticks', { role: 'group', 'aria-label': 'What the export includes' });
     if (nick) ticks.appendChild(tick('nickname', 'Add my nickname, “' + nick + '”', false, function (v) { opts.nickname = v; }));
     ticks.appendChild(tick('device', 'Add device details: browser, language, time zone and screen size', opts.device, function (v) { opts.device = v; }));
+    // round 10 (RV-code-1.2 L2): what goes without the tick, in words (rule 13)
+    ticks.appendChild(h('p.px-meta.px-pool-always', 'Without them, each session and check says only whether the screen was small or large and what you answered with: touch, mouse, pen or keys.'));
     PX.ui.app.exportDialog({
       title: 'Community export',
       intro: 'For pooling with other players: your trials, sessions, Spatial Check results and levels, with times in UTC and no calendar days of yours (day-by-day records become totals), no settings and no name. Nothing is sent anywhere: you choose what to share and where.',

@@ -641,7 +641,7 @@
   function renderExercise(host, route) {
     var def = PX.ex.get(route.arg);
     var rec = PX.core.store.state, now = Date.now();
-    host.appendChild(h('p.px-back', ui.button('Library', { kind: 'ghost', small: true, go: 'library', ariaLabel: 'Back to the Library' })));
+    host.appendChild(h('p.px-back', ui.button('Library', { kind: 'ghost', small: true, go: 'library', ariaLabel: 'Library: back to the list' })));
     if (!def || def.role !== 'train') {
       host.appendChild(h('div.px-screen-head', h('h1', 'Exercise not found'),
         h('p.px-lead', def ? 'This task is a Spatial Check probe: it is never trained, so it has no page here.' : 'There is no exercise called “' + route.arg + '” in this version.')));

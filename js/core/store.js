@@ -914,11 +914,17 @@
       for (var k in m) if (hasOwn.call(m, k) && Array.isArray(m[k])) m[k].forEach(function (e) { if (plain(e)) e.date = dayless(e.date); });
       return m;
     },
-    sessions: function (v) { return v; },
+    // round 10 (RV-code-1.2 L2): the screen size (viewport) of each session and check goes only with device details,
+    // as the Lab's tick says; the screen class (small or large) and the main input (touch, mouse, pen or key) stay
+    sessions: function (v, ctx) { if (!deviceOn(ctx && ctx.opts)) v.forEach(function (x) { if (plain(x)) delete x.viewport; }); return v; },
     trials: function (v) { return v; },
     practiceMs: function (v) { return v; },
     achievements: function (m) { return Object.keys(m).sort(); }, // ids only: the values are dates
-    assess: function (list) { list.forEach(function (a) { if (plain(a)) a.date = dayless(a.date); }); return list; },
+    assess: function (list, ctx) {
+      var dev = deviceOn(ctx && ctx.opts);
+      list.forEach(function (a) { if (plain(a)) { a.date = dayless(a.date); if (!dev) delete a.viewport; } });
+      return list;
+    },
     idx: function (v) { return v; },
     trialDays: function (m) { // folded trials, without their days
       var t = dayDefaults(), days = 0;

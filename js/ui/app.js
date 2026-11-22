@@ -303,6 +303,7 @@
     attr(root, 'data-keyhints', s.keyHints === false ? 'off' : null);
     var scale = typeof s.textScale === 'number' && isFinite(s.textScale) ? s.textScale : 1;
     root.style.fontSize = Math.abs(scale - 1) > 0.001 ? (scale * 100).toFixed(1) + '%' : '';
+    attr(root, 'data-text', scale >= 1.25 ? 'large' : null); // css/app.css: the phone tab bar and header at large text (round 10, RV-a11y-1.2 M3)
     themeColor();
     var dark = isDark();
     if (dark !== lastDark) {
@@ -810,6 +811,9 @@
     try { if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'; } catch (e) { /* sandboxed: ignore */ }
     registerEngineFields();
     var R = store.state; // first read of the record
+    // a session that a discarded page left part-way is finished now, before any screen counts the week (round 10,
+    // RV-code-1.2 M2: W2-core's js/ui/play.js recover)
+    try { if (PX.ui.play && typeof PX.ui.play.recover === 'function') PX.ui.play.recover(); } catch (e) { if (window.console) console.error('PX.ui.play.recover failed:', e); }
     applySettings();
     buildShell();
     bus.on('store:volatile', renderBanner);

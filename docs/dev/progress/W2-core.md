@@ -103,6 +103,40 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
 - The Library: Jump to and "DAT-style formats: opt-in ↓" come first; the group's head says opt-in, with the switch.
 - Guard: play.py run_round9 (390 x 844, 360 x 640, 1366 x 768 keys); flows.py today 12/0.
 
+## 2026-11-22 13:20 UTC: round 10 (RV-code-1.2 M2 and L2–L4, RV-a11y-1.2, W3-exfix's two requests, a desktop fresh run)
+- M2: when the page goes to the background mid-session, the item is paused and the session as it stands is saved
+  (rec.ui.live: the plan without its functions, the clock, the context); every finish clears it. At the next boot
+  (js/ui/app.js calls PX.ui.play.recover after the record's first read) a part left by a discarded page is finished as
+  a closed session at the time it was saved, its summary kept; rec.ui.recovered (a day) makes a later finish of the
+  same plan add only what came after, as a Keep-going part does. Nothing counts twice (play.py: 1 session, Atlas 3,
+  after two boots).
+- L2: the community export leaves out each session's and check's screen size unless device details are on; the
+  Lab says what goes without them (the screen class and the main input). L3: a two-tab merge keeps section.last (the
+  later run's; for one run, closed wins). L4: two full events tables count each event once (5,010, not 5,020).
+- RV-a11y M1: where the exercise's name does not fit the bar, How to solve waits in the Help panel, and where it still
+  does not fit (large text) the name takes a second line. M2: a card with no default action takes the focus at its
+  title; choices with data-card-key answer to their key (the expectation's 1 to 5). M3: at large text (the browser's
+  or Parallax's own, from 125 %) the phone tab bar shows its icons with the names kept for screen readers, and the
+  header scrolls away. M4: an option's name holds the words it shows (a view's tags included, kept in step by a
+  MutationObserver); Help, Keys, Parts and the Library button start their names with their words. L5: About's DOI
+  links are 44 px targets.
+- W3-exfix: "Near miss" for a miss that earns round points (dashed frame, "The best spot is shown."; the log, the
+  rating and the tone stay a miss); on a phone the copy of Pause steps aside while a walkthrough plays (its bar has
+  Close or Next item), so it covers no stage (the other way, keeping the stage below the copy, left the verdict half
+  under the pinned caption).
+- Desktop run: a walkthrough refits at each caption (a two-line caption pushed the cards against the Watch bar; a
+  sticky strip keeps 16 px clear); the offer after two misses waits while the walkthrough plays, then takes one row,
+  and the marks stay above the strip; the stretch tag says "above your level" beside it and the full line comes the
+  first three times. Views' "144 s": not reproduced: in the same flow (strategy card, 15 s on Your turn, 60 s idle
+  between items) Try answer times match the time on screen (2.8 to 2.9 s for 2.5 s); the run's driver waited up to
+  278 s for a browser slot around those steps.
+- W1-band-B's request of 13:23 UTC: on a desktop the Watch's parts list shows no Close of its own; its second item
+  (the strip's three rows) was done in round 9. When the new-kind line shows, Fold's and Views' drawing boards give up
+  its height (css/bets.css), so fit.py's draw items fit at 360 x 640 again.
+- Guard: play.py run_round10 (390 x 844, 360 x 640 at 100 and 200 % text, 1366 x 768); node pooled, events,
+  engine-w2 (section.last); play.py 307/2 (firstrun and round 9's Fold line: both pass alone), check.py 99/0,
+  shell.py 274/0, flows.py check 19/0, fit.py 360 x 640 and 390 x 844 (Fold and Views 61/61 after the boards' rule).
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with
