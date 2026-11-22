@@ -66,6 +66,20 @@ function crossOfOpposites(T) {
   return [(a * (p3[0] - p4[0]) - (p1[0] - p2[0]) * b) / d, (a * (p3[1] - p4[1]) - (p1[1] - p2[1]) * b) / d];
 }
 function farthestFromMean(T) { const m = meanOf(T); let f = T[0]; for (const t of T) if (hyp(t, m) > hyp(f, m)) f = t; return f; }
+// RV-items L3, partial skill (reported, not bounded): half-way between the most central target (the one
+// with the least total distance to the others) and the average; and the average with each target weighted
+// by 1/d² (d its distance from the average, at least half a dot), which shrugs off far targets.
+function medoidAverageMid(T) {
+  let best = T[0], bs = Infinity;
+  for (const t of T) { const s = T.reduce((a, o) => a + hyp(t, o), 0); if (s < bs - 1e-9) { bs = s; best = t; } }
+  const m = meanOf(T);
+  return [(best[0] + m[0]) / 2, (best[1] + m[1]) / 2];
+}
+function invSquareAverage(T) {
+  const m = meanOf(T); let x = 0, z = 0, w = 0;
+  for (const t of T) { const d = Math.max(1, hyp(t, m)), k = 1 / (d * d); x += k * t[0]; z += k * t[1]; w += k; }
+  return [x / w, z / w];
+}
 function oneWeiszfeldStep(T) {
   const m = meanOf(T); let x = 0, z = 0, w = 0;
   for (const t of T) { const d = Math.max(1e-9, hyp(t, m)); x += t[0] / d; z += t[1] / d; w += 1 / d; }
@@ -106,7 +120,7 @@ export async function run(t) {
   for (const variant of ['quick', 'exact']) for (let b = 0; b < 3; b++) for (let ti = 0; ti < 5; ti++) {
     const p = { variant, targets: ti, band: b }, n = variant === 'quick' ? ITEMS : Math.ceil(ITEMS / 10), band = L.BANDS[b], k = L.TARGETS[ti];
     const z = { chance: 0, bandPts: 0, keyFreq: new Float64Array(NP), nbAvg: 0, ring2: 0, parity: 0, betweenKeys: 0, dense15: 0, dense2: 0,
-      w1: 0, toward: [0, 0, 0, 0], away: [0, 0, 0, 0], obs03: 0, obs05: 0, obs07: 0, avgUser: 0, crKey: [], fam: {} };
+      w1: 0, mid: 0, isq: 0, toward: [0, 0, 0, 0], away: [0, 0, 0, 0], obs03: 0, obs05: 0, obs07: 0, avgUser: 0, crKey: [], fam: {} };
     const cpu = [];
     const obsRng = PX.rng(PX.rng.hash('centralpoint-observers', variant, b, ti));
     for (let s = 0; s < n; s++) {
@@ -162,6 +176,9 @@ export async function run(t) {
       if (inB(snap1(d2[0], d2[1]))) z.dense2++;
       const w1 = oneWeiszfeldStep(T);
       if (inB(snap1(w1[0], w1[1]))) z.w1++;
+      const mid = medoidAverageMid(T), isq = invSquareAverage(T);
+      if (inB(snap1(mid[0], mid[1]))) z.mid++;
+      if (inB(snap1(isq[0], isq[1]))) z.isq++;
       const dc = denseCentre(T, 2), far = farthestFromMean(T), dd = hyp(dc, m), fd = hyp(far, m);
       for (let sh = 1; sh <= 4; sh++) {
         const tw = dd < 1e-9 ? mPick : snap1(m[0] + sh * (dc[0] - m[0]) / dd, m[1] + sh * (dc[1] - m[1]) / dd);
@@ -184,7 +201,7 @@ export async function run(t) {
     const ch = z.chance / n;
     rows.push({
       variant, k, band, n, chance: ch, bandPts: z.bandPts / n, fixed: Math.max(...z.keyFreq) / n, nbAvg: z.nbAvg / n, ring2: z.ring2 / n,
-      parity: z.parity / n, between: z.betweenKeys / n, dense15: z.dense15 / n, dense2: z.dense2 / n, w1: z.w1 / n,
+      parity: z.parity / n, between: z.betweenKeys / n, dense15: z.dense15 / n, dense2: z.dense2 / n, w1: z.w1 / n, mid: z.mid / n, isq: z.isq / n,
       toward: z.toward.map((c) => c / n), away: z.away.map((c) => c / n), obs03: z.obs03 / n, obs05: z.obs05 / n, obs07: z.obs07 / n, avgUser: z.avgUser / n,
       crKey: z.crKey.sort((a, c) => a - c)[Math.floor(z.crKey.length / 2)], fam: z.fam,
     });
@@ -205,9 +222,9 @@ export async function run(t) {
   t.eq(v2KeyOff, 0, 'value2 at the key lies within 0.3–1.7 (the key sits within a dot of the best spot, the trap is at least a dot)');
 
   t.section('centralpoint: chance and the shortcut table (hit rates in %; bounds asserted from 2 000 items per cell)');
-  console.log('    cell (form targets band) | n | band pts | chance | fixed | next to avg | ring 2 | between dots | dense 1.5 / 2 dots | 1 Weiszfeld step | avg→group 1–4 half-steps | avg away from far 1–4 | observer 0.3 / 0.5 / 0.7 | avg user | value2 at key (median) | keys between dots');
+  console.log('    cell (form targets band) | n | band pts | chance | fixed | next to avg | ring 2 | between dots | dense 1.5 / 2 dots | 1 Weiszfeld step | central target↔avg mid | 1/d² avg | avg→group 1–4 half-steps | avg away from far 1–4 | observer 0.3 / 0.5 / 0.7 | avg user | value2 at key (median) | keys between dots');
   for (const r of rows) {
-    console.log(`    ${r.variant} ${r.k} ${r.band * 100}% | ${r.n} | ${r.bandPts.toFixed(2)} | ${pct(r.chance, 2)} | ${pct(r.fixed)} | ${pct(r.nbAvg)} | ${pct(r.ring2)} | ${pct(r.parity, 2)} | ${pct(r.dense15)} / ${pct(r.dense2)} | ${pct(r.w1)} | ${r.toward.map((x) => pct(x, 0)).join('/')} | ${r.away.map((x) => pct(x, 0)).join('/')} | ${pct(r.obs03, 0)} / ${pct(r.obs05, 0)} / ${pct(r.obs07, 0)} | ${pct(r.avgUser)} | ${r.crKey.toFixed(2)} | ${pct(r.between, 0)}`);
+    console.log(`    ${r.variant} ${r.k} ${r.band * 100}% | ${r.n} | ${r.bandPts.toFixed(2)} | ${pct(r.chance, 2)} | ${pct(r.fixed)} | ${pct(r.nbAvg)} | ${pct(r.ring2)} | ${pct(r.parity, 2)} | ${pct(r.dense15)} / ${pct(r.dense2)} | ${pct(r.w1)} | ${pct(r.mid)} | ${pct(r.isq)} | ${r.toward.map((x) => pct(x, 0)).join('/')} | ${r.away.map((x) => pct(x, 0)).join('/')} | ${pct(r.obs03, 0)} / ${pct(r.obs05, 0)} / ${pct(r.obs07, 0)} | ${pct(r.avgUser)} | ${r.crKey.toFixed(2)} | ${pct(r.between, 0)}`);
   }
   for (const r of rows.filter((x) => x.variant === 'quick')) {
     const lim = r.chance + 0.10, cell = `${r.k} targets, ${r.band * 100} %`;

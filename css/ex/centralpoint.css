@@ -68,6 +68,15 @@
 .ex-centralpoint .ex-cp-nudge { min-width: var(--tap, 44px); min-height: var(--tap, 44px); padding: 0; font-size: 0.875rem; line-height: 1; }
 .ex-centralpoint .ex-cp-confirm { flex: 1 1 auto; min-height: var(--tap, 44px); }
 .ex-centralpoint .ex-cp[data-form="quick"] .ex-cp-confirm { flex: 0 1 12rem; margin: 0 auto; }
+/* quick (v1.2, RV-a11y L3): Move beside Confirm; on, the arrows take a row of their own above them, and the plate
+   gives up that row's height (--cp-extra) wherever it is sized to the screen */
+.ex-centralpoint .ex-cp-movebtn { flex: 0 0 auto; min-width: var(--tap, 44px); min-height: var(--tap, 44px); }
+.ex-centralpoint .ex-cp-movebtn[hidden] { display: none; }
+.ex-centralpoint .ex-cp-movebtn.is-on { background: var(--surface-2, #ECEEF0); }
+.ex-centralpoint .ex-cp.is-nudging { --cp-extra: calc(var(--tap, 44px) + var(--s2, 0.5rem)); }
+.ex-centralpoint .ex-cp.is-nudging .ex-cp-controls { flex-wrap: wrap; }
+.ex-centralpoint .ex-cp[data-form="quick"] .ex-cp-controls { width: max(var(--cp-board), 18rem); } /* Move and Confirm keep one row under a small plate */
+.ex-centralpoint .ex-cp.is-nudging .ex-cp-nudges { flex: 1 0 100%; justify-content: center; }
 .ex-centralpoint .ex-cp-result { justify-content: space-between; }
 .ex-centralpoint .ex-cp-result-text { min-width: 0; }
 .ex-centralpoint .ex-cp-totals { margin: 0; font-size: var(--fs-sm, 0.875rem); line-height: 1.35; color: var(--ink, #1A1D21); font-variant-numeric: tabular-nums; }
@@ -93,7 +102,7 @@
    player's countdown bar */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-centralpoint .ex-cp {
-    --cp-board: min(var(--pl-w, 100%), calc(var(--pl-avail, 100vh) - var(--tap, 44px) - 2 * var(--s2, 0.5rem) - 1rem - 2px));
+    --cp-board: min(var(--pl-w, 100%), calc(var(--pl-avail, 100vh) - var(--tap, 44px) - 2 * var(--s2, 0.5rem) - 1rem - 2px - var(--cp-extra, 0px)));
     gap: var(--s2, 0.5rem);
   }
 }
@@ -105,5 +114,14 @@
   }
   .pl-trial.ex-centralpoint .ex-cp-stage { grid-row: 1 / span 3; }
   .pl-trial.ex-centralpoint .ex-cp-controls, .pl-trial.ex-centralpoint .ex-cp-result { width: 100%; flex-wrap: wrap; }
+}
+/* desktop (v1.2): in a short window (1366 x 768) the plate leaves room for the app header, the item's line, the
+   controls row and the player's countdown bar under it, and on a first meeting for the new-kind line (--pl-nk, its
+   measured height, play.js) and the tip above the item (up to three lines) */
+@media (min-width: 720px) and (min-height: 501px) {
+  .pl-trial.ex-centralpoint .ex-cp { --cp-board: min(100%, 30rem, calc(var(--pl-vh, 100vh) - 21rem - var(--pl-nk, 0px) - var(--cp-extra, 0px))); }
+  .pl-player:has(.pl-tip:not([hidden])) .pl-trial.ex-centralpoint .ex-cp {
+    --cp-board: min(100%, 30rem, calc(var(--pl-vh, 100vh) - 27rem - var(--pl-nk, 0px) - var(--cp-extra, 0px)));
+  }
 }
 /* reduced motion: show me and the Watch move in the runner's keyframes; nothing here animates by CSS */

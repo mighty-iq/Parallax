@@ -7,7 +7,8 @@
    - Input. Quick: a tap places the marker on the nearest answer point; a tap within about 24 px of it
      (a 48 px target) answers, as do Confirm and Enter; pressing and moving drags it. Exact: a tap places
      it, a press near it drags it (relative, so the finger need not cover it), the four 44 px arrow
-     buttons and the arrow keys move it half a dot, Confirm or Enter answers. No total shows before the
+     buttons and the arrow keys move it half a dot, Confirm or Enter answers. Quick has the same arrow
+     buttons behind its Move button (v1.2, RV-a11y L3) and the same keys. No total shows before the
      answer (C1 §2.3: a live readout turns the task into search). The quick deadline is the player's
      (step.deadlineMs from the engine's pace); atDeadline hands in a placed marker (CONTRACT-v1.2 E).
    - Try 1 (ctx.assist 'diagonals'): the kite's two diagonals are drawn, its first step done.
@@ -80,10 +81,17 @@
       b.addEventListener('click', function (e) { if (!canInput()) return; st.input = inputOf(e); move(dx, dy); });
       return b;
     }
-    var nudges = h('div.ex-cp-nudges', nudge(-1, 0, 'nudgeLeft', '◀'), nudge(0, -1, 'nudgeUp', '▲'), nudge(0, 1, 'nudgeDown', '▼'), nudge(1, 0, 'nudgeRight', '▶'));
+    var nudges = h('div.ex-cp-nudges', { id: id + '-nudges' }, nudge(-1, 0, 'nudgeLeft', '◀'), nudge(0, -1, 'nudgeUp', '▲'), nudge(0, 1, 'nudgeDown', '▼'), nudge(1, 0, 'nudgeRight', '▶'));
+    // v1.2 (RV-a11y L3): the quick form keeps its arrows behind Move, so a screen-reader or switch user on a touch
+    // screen can step the marker too; closed, it costs the row nothing but one button, and once opened it stays
+    // open for the session's next items
+    var moveBtn = PX.ui.button(cap('move') || 'Move', { kind: 'secondary', className: 'ex-cp-movebtn', onClick: function () { st.nudgeOpen = !st.nudgeOpen; syncNudges(); } });
+    moveBtn.setAttribute('aria-label', cap('moveLabel') || 'Move buttons');
+    moveBtn.setAttribute('aria-controls', id + '-nudges');
+    moveBtn.setAttribute('aria-expanded', 'false');
     var confirmBtn = PX.ui.button(cap('confirm') || 'Confirm', { kind: 'primary', className: 'ex-cp-confirm', disabled: true, onClick: function (e) { if (canInput()) confirm(inputOf(e)); } });
     confirmBtn.setAttribute('aria-keyshortcuts', 'Enter');
-    var controls = h('div.ex-cp-controls', nudges, confirmBtn);
+    var controls = h('div.ex-cp-controls', nudges, moveBtn, confirmBtn);
     var hint = h('p.ex-cp-hint.px-meta');
     var mapBtn = PX.ui.button(cap('map') || 'Map', { kind: 'secondary', small: true, className: 'ex-cp-mapbtn', onClick: function () { setMap(!st.mapOn); } });
     mapBtn.setAttribute('aria-pressed', 'false');
@@ -93,7 +101,7 @@
     var root = h('div.ex-cp', stage, controls, result, hint, live, sr);
     ctx.host.appendChild(root);
     st = {
-      ctx: ctx, root: root, svg: svg, L: L, stage: stage, controls: controls, nudges: nudges, confirmBtn: confirmBtn, hint: hint, live: live, sr: sr,
+      ctx: ctx, root: root, svg: svg, L: L, stage: stage, controls: controls, nudges: nudges, moveBtn: moveBtn, nudgeOpen: false, confirmBtn: confirmBtn, hint: hint, live: live, sr: sr,
       result: result, totals: totals, verdict: verdict, mapBtn: mapBtn, item: null, sol: null, marker: null, answering: false, respond: null,
       popKeys: null, press: null, input: null, mapOn: false, late: false, playing: false, markEls: null, revealed: false,
     };
@@ -260,7 +268,7 @@
     st.root.classList.remove('is-why');
     st.root.classList.toggle('is-map', st.mapOn);
     st.root.setAttribute('data-form', exact ? 'exact' : 'quick');
-    st.nudges.hidden = !exact;
+    syncNudges();
     st.controls.hidden = false;
     st.result.hidden = true;
     st.confirmBtn.disabled = true;
@@ -268,6 +276,16 @@
     st.live.textContent = '';
     describe(item);
     return timing.nextPaint();
+  }
+
+  // Exact shows its arrows; quick shows Move, and its arrows once Move is on (a row of their own, is-nudging).
+  function syncNudges() {
+    var exact = !!(st.item && st.item.form === 'exact'), open = !exact && st.nudgeOpen;
+    st.nudges.hidden = !(exact || open);
+    st.moveBtn.hidden = exact;
+    st.moveBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    st.moveBtn.classList.toggle('is-on', open);
+    st.root.classList.toggle('is-nudging', open);
   }
 
   /* ---------- input ---------- */
@@ -454,7 +472,7 @@
     // points (credit > 0: within four times the band) says so; right or wrong for the rating is unchanged
     var near = !!(result && !result.correct && isNum(result.credit) && result.credit > 0);
     st.verdict.textContent = !spot ? cap('noAnswer') : late ? cap('late') : e < 1e-12 ? cap('bestSpot') : e <= item.band ? cap('within', { band: bandWord(item.band) })
-      : near ? cap('near', { band: bandWord(item.band), pct: pctText(e) }) : cap('outside', { band: bandWord(item.band) });
+      : near ? cap('near', { band: bandWord(item.band), pct: pctText(e) }) : cap('outside', { band: bandWord(item.band), pct: pctText(e) });
     st.controls.hidden = true;
     st.result.hidden = false;
     clear(st.L.map);

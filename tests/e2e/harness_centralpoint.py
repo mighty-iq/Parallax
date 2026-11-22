@@ -5,8 +5,9 @@ Run:  tests/e2e/pwslot.sh python3 tests/e2e/harness_centralpoint.py   (two brows
    49 dots and the targets (non-blank pixels), the plate is square, no horizontal scroll; Confirm and
    the four nudge buttons (exact form) are at least 44 px; on the phones the plate and the controls fit
 2. quick form: a tap places the marker on the nearest answer point, a second tap on it answers (right at
-   the key); a tap far away and Confirm answers wrong; exact form: the arrow keys move the marker half a
-   dot and Enter answers; atDeadline hands in a placed marker
+   the key); a tap far away and Confirm answers wrong; Move opens the four arrow buttons (RV-a11y L3), which
+   step the marker, stay open for the next item and close again; exact form: no Move, the arrow keys move
+   the marker half a dot and Enter answers; atDeadline hands in a placed marker
 3. reveal: a line and a length label per target, the best answer point ringed and labelled ("you · best"
    when they are one point), totals; the band's other points only with Map, which draws labelled level
    lines (the band bold); nothing marks the average; over 45 reveals at 360 x 640 no two labels overlap,
@@ -189,6 +190,39 @@ def near_miss(page, touch, tag):
     C.ok(r2['res']['credit'] == 0 and 'near miss' not in r2['note'].lower(), f'{tag}: a far miss earns nothing and says so ({r2["note"]!r})')
 
 
+def quick_move(page, tag):
+    """RV-a11y L3: the quick form's Move button opens the four arrow buttons (closed at first, open for the next
+    items once opened); they step the marker half a dot, and Confirm answers."""
+    page.evaluate("() => __harness.next({ variant: 'quick', targets: 2, band: 0 }, 31)")
+    page.wait_for_function(READY, timeout=20000)
+    probe = """() => { const m = document.querySelector('.ex-cp-movebtn'), r = m.getBoundingClientRect();
+        return { shown: !!(m.offsetWidth || m.offsetHeight), w: r.width, h: r.height, exp: m.getAttribute('aria-expanded'), ctl: m.getAttribute('aria-controls'),
+          name: m.getAttribute('aria-label'), text: m.textContent, nudging: document.querySelector('.ex-cp').classList.contains('is-nudging'),
+          nudges: Array.from(document.querySelectorAll('.ex-cp-nudge')).filter((b) => b.offsetWidth || b.offsetHeight).map((b) => { const q = b.getBoundingClientRect(); return [q.width, q.height]; }),
+          ids: !!document.getElementById(m.getAttribute('aria-controls')) }; }"""
+    m0 = page.evaluate(probe)
+    C.ok(m0['shown'] and m0['w'] >= 44 and m0['h'] >= 44 and m0['exp'] == 'false' and not m0['nudges'] and m0['ids'] and m0['text'] in (m0['name'] or ''),
+         f'{tag}: quick shows Move (at least 44 px, collapsed, its name holds its text, it controls the arrows), no arrows yet ({m0})')
+    page.locator('.ex-cp-movebtn').click()
+    m1 = page.evaluate(probe)
+    C.ok(m1['exp'] == 'true' and m1['nudging'] and len(m1['nudges']) == 4 and all(w >= 44 and h >= 44 for w, h in m1['nudges']), f'{tag}: Move opens four arrow buttons of at least 44 px ({m1})')
+    page.locator('.ex-cp-nudge[data-nudge="1,0"]').click()
+    first = marker(page)
+    page.locator('.ex-cp-nudge[data-nudge="1,0"]').click()
+    page.locator('.ex-cp-nudge[data-nudge="0,1"]').click()
+    live = page.evaluate("() => document.querySelector('.ex-cp .px-sr[aria-live]').textContent")
+    C.ok(first == {'x': 6, 'y': 6} and marker(page) == {'x': 7, 'y': 7} and 'column' in live, f'{tag}: the first arrow puts the marker in the middle, the next ones step it half a dot ({first} then {marker(page)}; {live!r})')
+    page.locator('.ex-cp-confirm').click()
+    page.wait_for_function(STATE, arg='reveal', timeout=10000)
+    C.ok(page.evaluate('() => __harness.last.response') == {'x': 7, 'y': 7}, f'{tag}: Confirm answers with the stepped marker')
+    page.evaluate("() => __harness.next({ variant: 'quick', targets: 2, band: 0 }, 32)")
+    page.wait_for_function(READY, timeout=20000)
+    m2 = page.evaluate(probe)
+    page.locator('.ex-cp-movebtn').click()
+    m3 = page.evaluate(probe)
+    C.ok(m2['exp'] == 'true' and len(m2['nudges']) == 4 and m3['exp'] == 'false' and not m3['nudges'] and not m3['nudging'], f'{tag}: the arrows stay open on the next item, and Move closes them ({m2["exp"]}, {m3["exp"]})')
+
+
 def run_viewport(b, name, vp, touch, themes):
     for theme in themes:
         ctx = b.new_context(viewport=vp, device_scale_factor=2 if touch else 1, has_touch=touch, is_mobile=touch)
@@ -215,6 +249,7 @@ def run_viewport(b, name, vp, touch, themes):
         if theme == themes[0]:
             why_steps_ok(page, tag)
             near_miss(page, touch, tag)
+            quick_move(page, tag)
             page.evaluate("() => __harness.next({ variant: 'quick', targets: 2, band: 0 }, 11)")
             page.wait_for_function(READY, timeout=20000)
             k3 = page.evaluate('() => __harness.key')
@@ -231,6 +266,7 @@ def run_viewport(b, name, vp, touch, themes):
         page.evaluate("() => __harness.next({ variant: 'exact', targets: 0, band: 2 }, 23)")
         page.wait_for_function(READY, timeout=20000)
         layout_ok(page, tag + ' exact', touch)
+        C.ok(page.evaluate("() => { const m = document.querySelector('.ex-cp-movebtn'); return !(m.offsetWidth || m.offsetHeight); }"), f'{tag} exact: no Move button (the arrows always show)')
         k2 = page.evaluate('() => __harness.key')
         page.keyboard.press('ArrowLeft')
         m0 = marker(page)
