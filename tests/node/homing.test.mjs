@@ -440,6 +440,8 @@ export function shortcutReport(def, items, label, opts = {}) {
       I['equal legs'] = rate((x) => { const n = x.it.legs.length, e = eqKey(x.it, x.it.pathLength / n); return hitP(x, at(e.key, e.distance)); });
       I['net-turn prior'] = cvBest(list, sgrid, (x, g) => hitP(x, at(180 - sgn(T(x.it)) * g[0], g[1])));
       I['true direction + average distance'] = rate((x) => hitP(x, at(keyOf(x.it), meanD)));
+      // RV-items L4: back along the leg before the last turn, at the true distance (the most generous case)
+      I['back along the leg before the last turn, true distance'] = rate((x) => hitP(x, at(180 - Tl(x.it), x.it.distance)));
     }
     rows.push({ cell: k, rt: `${list[0].p.route}/${list[0].p.tolerance}`, route: list[0].p.route, tol: list[0].p.tolerance, legs: con(list[0]) ? 1 : 0, n: list.length, chance: ch, B, I });
   }

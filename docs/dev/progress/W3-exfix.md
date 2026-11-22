@@ -63,8 +63,27 @@ tests/node/<id>*.test.mjs and tests/e2e/harness_<id>*.py. Source: fresh players 
   tight (0.0015 units); after the fix its learn checks pass (a 300-item rerun; its shortcut cells fail only on that
   sample size); harness_knots 342/0; the app at 1366 × 768 (pull and untie): answers at 258 px before and after.
 
-## Left open (the lead's word at 16:00 UTC: stop after the items in hand)
-- Requests: W2-core, the verdict word "Near miss" (play.js) and the copy of Pause over a show me's stage at 360 × 640
-  (stageIntoView); W3-voice, the guide's Nets text and shot.
-- Not rerun for this round: fit.py for Central Point and Knots (their changes are a text line, larger tags on the plate
-  and a layout from 720 px wide; phones unchanged), and the full knots node run after the tolerance fix.
+## Round 2 (22 Nov, after the pause): review items
+- Spin, RV-items H6 (e684ace): copies and mirrors are drawn to lean alike (pickBeta rule 3, from the shape's own
+  axis tilts), the box gap weighs the unsigned aspect, size and box corner, and same-or-mirror items keep 6° clear of a
+  quarter turn, where no orientation hides both the lean and the box. Leans 50–55 % per angle (were up to 83 %), box
+  cues unchanged, pick lean pairs ≤ 25.5 % (bound 26.7 %); spin.test bounds three leans; the tutorial's demo and Try
+  items compared by eye (scratch renders in /tmp/w3exfix/spin/).
+- Central Point, RV-items L3 (22b3a03): the two guesses are partial skill, reported per cell, named in DECISIONS.
+- Central Point, RV-a11y L3 and L4 (22b3a03): Quick's Move button opens the four arrows (closed: one button beside
+  Confirm; open: a row above, the plate gives up its height; stays open for the session); a miss's line uses the
+  totals' excess. On desktops the plate leaves room for the countdown bar (1366 × 768: 16 of 16 items fit).
+- Reckon, RV-items L4: "back along the leg before the last turn" stays reported (16 of 98 cells over chance + 10,
+  worst route 2 at ±40°, 75 %; ≤ 35 % where the legs decide); homing.test's report prints it for walks back too.
+- Checks: knots node (full) 519/0 on 62598ff; fit.py 360 × 640 and 390 × 844: spin 22/22 + 2/2, knots 29/29 + 4/4,
+  centralpoint 21/21 + 2/2 (+ 844 × 390 2/2); at 1366 × 768 (a scratch copy of fit.py with that size; its text and
+  header rules are phone rules): knots 24/24, centralpoint 16/16, and Spin's hardest pick item does not fit (the four
+  options end 2 px under the fold, Confirm below; not changed, Spin's layout is as before). Node: spin 92/0,
+  shortcut-levels (spin) 4/0, centralpoint 393/0, reckon + homing 442/0; harness_spin 82/0, harness_centralpoint 247/0.
+
+## Left open
+- Requests: W3-voice, the guide's Spin figures and captions (a 92° item can no longer be made) and Central Point's
+  Move button (requests.md, 22 Nov); from round 1, the guide's Nets text and shot, and W2-core's copy of Pause over a
+  show me's stage at 360 × 640 (stageIntoView; not checked since). W2-core's round 10 did the "Near miss" verdict.
+- Spin at 1366 × 768: the hardest pick item (9 squares at 170°) overflows by about 60 px with a tip shown.
+- Reckon: a generator preference against route 2's fold-back routes, if pooled exports show the last-leg answer used.
