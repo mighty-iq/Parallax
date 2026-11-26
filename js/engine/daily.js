@@ -111,7 +111,7 @@
     var fits = vs.filter(function (v) { var c = M.nearest(def, aim, function (x) { return x.params.variant === v; }); return c && Math.abs(c.b - aim) <= tol; });
     var list = fits.length ? fits : vs, v = list[rng.int(0, list.length - 1)];
     var c = M.nearest(def, aim, function (x) { return x.params.variant === v; });
-    return c && Math.abs(c.b - aim) <= tol ? c : M.nearest(def, aim);
+    return c && Math.abs(c.b - aim) <= tol ? c : M.nearest(def, aim, function (x) { return vs.indexOf(x.params.variant) >= 0; }) || c;
   }
 
   // The seeds of a date's items, item i first: they come from the date alone (never from the epoch or its pool),
