@@ -302,6 +302,18 @@ def run_train(b, C):
     ctx.close()
 
 
+def cut_hud(page):
+    """Scrolls the page so that the title row is cut in half at the top edge, measures the title row and the copy of
+    Pause there ([data-hud-off], the row's visibility, the copy's display, the state), and scrolls back."""
+    hud = page.evaluate("(() => { const r = document.querySelector('.pl-hud').getBoundingClientRect(); return Math.round(r.top + window.scrollY); })()")
+    page.evaluate(f"document.body.style.paddingBottom = '1500px'; window.scrollTo(0, {hud} + 22)")
+    page.wait_for_timeout(400)
+    cut = page.evaluate("[document.querySelector('.pl-player').hasAttribute('data-hud-off'), getComputedStyle(document.querySelector('.pl-hud')).visibility, getComputedStyle(document.querySelector('[data-float-pause]')).display, __play.state]")
+    page.evaluate("document.body.style.paddingBottom = ''; window.scrollTo(0, 0)")
+    page.wait_for_timeout(300)
+    return cut
+
+
 def close_walk(page):
     """Closes a walkthrough: its Close, or Esc where Close has stepped aside (round 9: on a phone after a scored answer
     the bar's Next item takes its place)."""
@@ -1217,14 +1229,11 @@ def run_round3(b, C):
     page.wait_for_timeout(400)
     cap3 = page.evaluate("document.querySelector('.pl-caption').textContent")
     C.ok(cap3 != cap0 or state(page) == 'reveal', f'{tag}: Next step shows the next caption ({cap0!r} -> {cap3!r})')
-    # round 3: a title row half cut at the top edge steps aside for the copy of Pause
-    hud = page.evaluate("(() => { const r = document.querySelector('.pl-hud').getBoundingClientRect(); return Math.round(r.top + window.scrollY); })()")
-    page.evaluate(f"document.body.style.paddingBottom = '1500px'; window.scrollTo(0, {hud} + 22)")
-    page.wait_for_timeout(400)
-    cut = page.evaluate("[document.querySelector('.pl-player').hasAttribute('data-hud-off'), getComputedStyle(document.querySelector('.pl-hud')).visibility, getComputedStyle(document.querySelector('[data-float-pause]')).display]")
-    C.ok(cut[0] and cut[1] == 'hidden' and cut[2] != 'none', f'{tag}: a half-cut title row hides and the copy of Pause shows ({cut})')
-    page.evaluate("document.body.style.paddingBottom = ''; window.scrollTo(0, 0)")
-    page.wait_for_timeout(300)
+    # round 3: a title row half cut at the top edge steps aside for the copy of Pause; round 10 (W3-exfix's request):
+    # while a walkthrough plays, the copy steps aside too (its bar has Close or Next item); it comes back after
+    cut = cut_hud(page)
+    C.ok(cut[0] and cut[1] == 'hidden' and (cut[2] == 'none') == (cut[3] == 'showme'),
+         f'{tag}: a half-cut title row hides, and during the walkthrough the copy of Pause steps aside ({cut})')
     if state(page) != 'showme':  # the walkthrough ended: play it again, to close it
         page.locator('[data-showme]').tap()
         page.wait_for_function('__play.state === "showme"', timeout=8000)
@@ -1235,6 +1244,8 @@ def run_round3(b, C):
     page.wait_for_timeout(150)
     C.ok(state(page) == 'reveal' and page.evaluate('__play.item && __play.item.seed') == seed0, f'{tag}: a tap right after the walkthrough ends does not start the next item ({state(page)})')
     page.wait_for_timeout(800)
+    cut = cut_hud(page)
+    C.ok(cut[0] and cut[1] == 'hidden' and cut[2] != 'none' and cut[3] == 'reveal', f'{tag}: once the walkthrough has ended, a half-cut title row hides and the copy of Pause shows ({cut})')
     page.locator('[data-next]').tap()
     page.wait_for_function('__play.state === "respond" || __play.state === "present" || __play.state === "ready"', timeout=8000)
     C.ok(True, f'{tag}: a moment later Next item goes on')
@@ -2187,30 +2198,38 @@ def run_round9(b, C):
                  f'{tag}: after a wrong scored answer the bar has Next item, which goes on in one tap ({bar}; {seed0} → {seed1})')
             page.evaluate('PX.debug.fast(true); __play.end()')
             page.wait_for_selector('.pl-summary', timeout=8000)
-            # 5. a kind of item met for the first time: one line, placed by layout, the item still fits
-            for ex, params, where in (('fold', {'folds': 0, 'type': 0, 'punches': 0, 'idle': 0, 'variant': 'mark'}, 'above'), ('spin', {'angle': 0, 'cells': 0, 'variant': 'pick'}, 'under')):
-                go(page, {'mode': 'free', 'exId': ex, 'params': params, 'trials': 3})
-                wait_state(page, 'respond')
-                page.wait_for_timeout(300)
-                nk = page.evaluate("""() => { const l = document.querySelector('[data-newkind]'), t = document.querySelector('.pl-trial');
-                  const host = document.querySelector('.pl-host'), grid = document.querySelector('.pl-grid');
-                  const ctl = [...t.querySelectorAll('button, .px-choice')].filter((x) => x.offsetParent).map((x) => x.getBoundingClientRect().bottom);
-                  return { text: l && !l.hidden ? l.textContent : null, before: l && l.nextElementSibling ? (l.nextElementSibling === host ? 'host' : l.nextElementSibling === grid ? 'grid' : l.nextElementSibling.className) : null,
-                    lowest: Math.round(Math.max(0, ...ctl)), H: innerHeight, nk: document.querySelector('.pl-player').style.getPropertyValue('--pl-nk') }; }""")
-                page.screenshot(path=str(OUT / f'round9_newkind_{ex}.png'))
-                want = 'host' if where == 'above' else 'grid'
-                C.ok(nk['text'] and nk['text'].startswith('New kind of item: ') and nk['before'] == want and nk['lowest'] <= nk['H'] and nk['nk'],
-                     f'{tag}: {ex}: a kind met for the first time gets one line ({where} the item’s answers) and the item still fits ({nk})')
-                page.evaluate('__play.answer(true)')
-                page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
-                page.evaluate('__play.next()')
-                wait_state(page, 'respond')
-                again = page.evaluate("(() => { const l = document.querySelector('[data-newkind]'); return l && !l.hidden ? l.textContent : null; })()")
-                C.ok(again is None, f'{tag}: {ex}: the next item of that kind has no line ({again!r})')
-                page.evaluate('__play.end()')
-                page.wait_for_selector('.pl-summary', timeout=8000)
         C.ok(not con.errors(), f'{tag} {sz}: no console errors {con.errors()[:3]}')
         ctx.close()
+    # 5. a kind of item met for the first time: one line, placed by layout, the item still fits; in a fresh record, so
+    # no item dealt earlier in this run has met the kind already (RC1: a Train session of Fold above can deal a mark item)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    con = Console(page)
+    boot(page)
+    seen_all(page)
+    for ex, params, where in (('fold', {'folds': 0, 'type': 0, 'punches': 0, 'idle': 0, 'variant': 'mark'}, 'above'), ('spin', {'angle': 0, 'cells': 0, 'variant': 'pick'}, 'under')):
+        go(page, {'mode': 'free', 'exId': ex, 'params': params, 'trials': 3})
+        wait_state(page, 'respond')
+        page.wait_for_timeout(300)
+        nk = page.evaluate("""() => { const l = document.querySelector('[data-newkind]'), t = document.querySelector('.pl-trial');
+          const host = document.querySelector('.pl-host'), grid = document.querySelector('.pl-grid');
+          const ctl = [...t.querySelectorAll('button, .px-choice')].filter((x) => x.offsetParent).map((x) => x.getBoundingClientRect().bottom);
+          return { text: l && !l.hidden ? l.textContent : null, before: l && l.nextElementSibling ? (l.nextElementSibling === host ? 'host' : l.nextElementSibling === grid ? 'grid' : l.nextElementSibling.className) : null,
+            lowest: Math.round(Math.max(0, ...ctl)), H: innerHeight, nk: document.querySelector('.pl-player').style.getPropertyValue('--pl-nk') }; }""")
+        page.screenshot(path=str(OUT / f'round9_newkind_{ex}.png'))
+        want = 'host' if where == 'above' else 'grid'
+        C.ok(nk['text'] and nk['text'].startswith('New kind of item: ') and nk['before'] == want and nk['lowest'] <= nk['H'] and nk['nk'],
+             f'{tag}: {ex}: a kind met for the first time gets one line ({where} the item’s answers) and the item still fits ({nk})')
+        page.evaluate('__play.answer(true)')
+        page.wait_for_function('__play.state === "reveal" || __play.state === "showme"', timeout=8000)
+        page.evaluate('__play.next()')
+        wait_state(page, 'respond')
+        again = page.evaluate("(() => { const l = document.querySelector('[data-newkind]'); return l && !l.hidden ? l.textContent : null; })()")
+        C.ok(again is None, f'{tag}: {ex}: the next item of that kind has no line ({again!r})')
+        page.evaluate('__play.end()')
+        page.wait_for_selector('.pl-summary', timeout=8000)
+    C.ok(not con.errors(), f'{tag} new kind 390x844: no console errors {con.errors()[:3]}')
+    ctx.close()
     # 8. keys after a wrong scored answer on a desktop (Knots): the walkthrough does not take the focus; Space and Enter go
     # to the next item while it plays; → steps it, as its key says; a key on Next step, once the player picks it, steps
     ctx = b.new_context(viewport={'width': 1366, 'height': 768})

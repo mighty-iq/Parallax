@@ -152,6 +152,43 @@ Owns: see docs/dev/CONTRACT-v1.2.md, "Wave 2", file ownership. Requests: docs/de
   100vh less 38rem (8rem to 13rem), Slice's stage at most 100vh less 31rem; fit.py 1366 x 768 Views 4/4, Slice 2/2,
   and the default sizes Views 42/42, Slice 35/35 (phone rules unchanged).
 
+## 2026-11-26 17:35 UTC: RC1 regressions (the full browser suite on b228b60)
+- bets.py, the drawing grids on upright phones: round 10's rule in css/bets.css shrank Fold's and Views' boards by the
+  new-kind line's height (Fold 38.4 px cells, Views 53.0 px). Removed. On a short upright phone (at most 700 px tall)
+  with that line shown, the item's own task line steps aside (the line says what to do), Views' stage gives up the
+  line's height less 1.5rem and Fold's panels keep to 4.5rem; the grids keep their size: 360 x 640 Fold 44.3 px,
+  Views 65.2 px, no scroll (Fold's Check ends at 632, Views' at 627).
+- The same file, a phone held sideways (the polish round's layout had 24 to 28 px Fold cells and 42 to 50 px Views
+  cells): the board takes the height the screen leaves, at most 60 % of the width with its column; the task line,
+  count and buttons stand in a 7rem column beside it, and once answered the verdict takes their place (the buttons are
+  off by then), above the strip. 844 x 390: Views 65.2 px (61.3 px with the new-kind line), Fold 39.2 px (34.7 px).
+  Fold's 8 x 8 sheet cannot reach 44 px on one screen 390 px tall (357 px of board under a 64 px title row): the
+  lead's call whether a sideways Fold drawing may scroll instead. Fold's one-row strip and the short-phone rule are
+  upright only now, so 640 x 360 keeps css/ex/fold.css's rows of three (no 34 px panels). All fit at 844 x 390,
+  740 x 360, 667 x 375 and 640 x 360, with and without the line.
+- css/ex/span.css (granted): held sideways, Span's labels are drawn at 52 (was 46) units of the 1000-unit board, so
+  they stay over 13 px when the new-kind line takes its height from the board (12.9 px before).
+- play.py: round 3's copy of Pause follows round 10's rule (it steps aside while a walkthrough plays and shows once the
+  walkthrough has ended, both checked with the title row cut); round 9's new-kind checks run in a fresh record (the
+  Train session of Fold before them could deal a mark item, so the kind was met already).
+- plateau.py (the phone's invite): the bot's session made a first personal best (a 10-answer Fold block at 9 or 10 of
+  10 from random answers at 75 %, depending on which answers fell on Fold and which on the Rotate items mixed in), and
+  a best's invite outranks the plateau's (CONTRACT-v1.2 R), so Personal bests and its invite stood under the card. Not
+  the summary's rows. The bot now answers 7 of every 10 right on each exercise (below 9 of 10 at any guessing rate).
+- game.py alone fails as in the suite: the Climb's rung 5 of attempt A this week (from 23 Nov) is a Slice 'mark'
+  item at structure 2, curved 1, which Slice's mark variant cannot build (straight single solids only), so the
+  generator returns its fallback item; play.js voids it (rule 7) and the Climb deals the same item again, without
+  end. The cause is js/engine/daily.js nearestAt: when no automatic variant comes within a twentieth of the range of
+  the aim, it takes the nearest combination of any variant. Over the next 12 weeks 52 of 1,440 Climb rungs leave the
+  automatic variants (34 Slice mark fallbacks, 18 Central Point Exact), and the ramp Daily from today 32 of 960 items
+  in 120 days (23 fallbacks, the first on 6 Dec). The fix, for the file's owner (a patch to the lead, not applied
+  here): the last resort takes the nearest combination among the automatic variants. Tried on a copy of the tree:
+  no fallback item among those 1,440 rungs and 960 Daily items, none outside the automatic variants; node daily,
+  game, engine-v12, engine-w2 668/0; game.py 155/0 (desktop, both phones, resume).
+- Guard: bets.py 385/0; play.py 328/0; fit.py 238/0 (default sizes); plateau.py 30/0, and 15/0 on the phone alone.
+  fit.py --sizes 1366x768 50/9, the same nine on b228b60 (Track, Rotate, Missing View, Painted Cubes, Form and the
+  probes Cube Match, Other Way Round, View Match, Mechanisms: their options end under 768 px; not this round's files).
+
 ## Next (Phase B, after the lead's go)
 1. run.mjs: trend.js in the MANIFEST and a pending list for the new engine files; index.html PENDING lines (V).
 2. Record format 4 (store VERSION, js/engine/record.js, the upgrade hook, session kind and ext, E.record.check) with

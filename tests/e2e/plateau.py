@@ -3,8 +3,8 @@
 
 A record gets a long, steady history on Fold: 16 Train sessions on 16 days, 42 rated answers each, on items near
 the target at one level, right and wrong spread evenly (a low-discrepancy sequence), so the detector's slope over
-the last 640 answers is flat. A bot (PX.debug.answer, about 75 % right) then plays a Train session with Fold
-pinned and ends it from the pause sheet after 14 answers; the session's end runs the detector. At 1366 x 768
+the last 640 answers is flat. A bot (PX.debug.answer, 7 of every 10 right on each exercise) then plays a Train
+session with Fold pinned and ends it from the pause sheet after 14 answers; the session's end runs the detector. At 1366 x 768
 (mouse) and 360 x 640 (touch, DPR 2):
   - no plateau card while an item is on screen (body.px-stim);
   - the summary shows the card ([data-plateau]): the flat level and its range, the change and its reason, the
@@ -124,7 +124,7 @@ def run_viewport(p, C, name, ctx_opts, rnd):
     hooks = page.evaluate("['summary:panels', 'today:slots', 'today:session', 'item:before', 'exercise:lines', 'progress:panels'].map(function (p) { return PX.ui.hooks.list(p).map(function (h) { return h.id; }); })")
     C.ok(all(any(i.startswith('plateau.') for i in ids) for ids in hooks), f'{name}: the plateau handlers are mounted at all six points ({hooks})')
     page.evaluate('PX.debug.fast(false); void PX.core.router.go("play", { mode: "train", exId: "fold", pin: "fold" }, { force: true })')
-    fold, stim_card = 0, False
+    fold, stim_card, per_ex = 0, False, {}
     for i in range(14):
         if not to_respond(page):
             C.ok(False, f'{name}: answer {i + 1} never reached an answer phase ({page.evaluate("__play.state")})')
@@ -132,7 +132,13 @@ def run_viewport(p, C, name, ctx_opts, rnd):
         if page.evaluate('document.body.classList.contains("px-stim") && !!document.querySelector("[data-plateau]")'):
             stim_card = True
         page.evaluate('PX.debug.fast(true)')
-        page.evaluate(f'PX.debug.answer({"true" if rnd.random() < 0.75 else "false"})')
+        # RC1 (W2-core): seven right of every ten answers per exercise, wrong at its 3rd, 6th and 9th, so no block of
+        # 10 Fold answers reaches the level reference (9 of 10 at 4 options) and makes a personal best, whose invite
+        # outranks the plateau's (CONTRACT-v1.2 R): random answers at 75 % did, about one run in four, by chance
+        ex_now = page.evaluate('__play.exId') or '?'
+        k = per_ex.get(ex_now, 0)
+        per_ex[ex_now] = k + 1
+        page.evaluate(f'PX.debug.answer({"false" if k % 10 in (2, 5, 8) else "true"})')
         page.wait_for_function('__play.state === "reveal" || __play.state === "showme" || __play.state === "done"', timeout=15000)
         last = page.evaluate(LAST)
         if last and last.get('ex') == 'fold':

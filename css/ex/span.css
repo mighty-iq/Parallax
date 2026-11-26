@@ -101,6 +101,9 @@
     align-items: start; justify-items: start; gap: var(--s2) var(--s4);
   }
   .pl-trial.ex-span .ex-span-stage { grid-column: 1; grid-row: 1 / -1; width: var(--pl-avail); }
+  /* RC1 (fit.py at 844 x 390: the labels measured 12.9 px when the line for a kind met for the first time took its
+     height from the board): larger label glyphs, so they stay above 13 px on the smaller board */
+  .pl-trial.ex-span .ex-span-label { font-size: 52px; }
   .pl-trial.ex-span .ex-span-stem > :not(.ex-span-stage) { grid-column: 2; }
   .pl-trial.ex-span .ex-span-phase { width: auto; }
   .pl-trial.ex-span .ex-span-actions { width: 100%; }

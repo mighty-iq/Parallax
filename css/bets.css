@@ -157,16 +157,25 @@
   .pl-trial.ex-views[data-item-layout="custom"] .ex-views-stage { height: min(11rem, calc(var(--pl-w) * 0.6)); }
 }
 /* round 10 (W2-core; fit.py at 844 x 390: Check sat under the screen): a phone held sideways puts the figure on the left
-   and the drawing on the right, the board as tall as the screen leaves under its task line and buttons */
+   and the drawing on the right. RC1 (rule 8's 44 px targets; the board had shrunk to 24-28 px cells): the board takes
+   the height the screen leaves (at most 60 % of the width with its column, so the figure keeps room), and its task
+   line, count and buttons stand in a narrow column beside it; once answered, the verdict takes their place (the
+   buttons are off by then), so it stays above the strip that comes up from the bottom */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   .ex-views-stem:has(> .bets-draw), .ex-fold-stem:has(> .bets-draw) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s4); align-items: start; }
   .ex-views-stem:has(> .bets-draw) > .bets-draw, .ex-fold-stem:has(> .bets-draw) > .bets-draw { grid-column: 2; grid-row: 1; margin-top: 0; } /* one row: a span left an empty row as tall as the gap (Fold) */
   .ex-views-stem:has(> .bets-draw) > :not(.bets-draw), .ex-fold-stem:has(> .bets-draw) > :not(.bets-draw) { grid-column: 1; }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw { display: grid; grid-template-columns: auto 7rem; grid-template-rows: auto auto auto 1fr; column-gap: var(--s3); align-items: start; }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw > :is(.bets-fold-board, .bets-views-board) { grid-column: 1; grid-row: 1 / -1; margin: 0; }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw > :not(.bets-fold-board, .bets-views-board) { grid-column: 2; min-width: 0; }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw-task { margin: 0 0 var(--s2); }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw-actions { flex-direction: column; align-items: stretch; margin-top: 0; }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw-count { margin-right: 0; }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw.is-revealed > :is(.bets-draw-task, .bets-draw-actions) { display: none; }
+  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw.is-revealed > .bets-draw-verdict { margin-top: 0; }
   .pl-trial.ex-views[data-item-layout="custom"] .ex-views-stage { height: min(var(--pl-avail), 20rem); }
-  .pl-trial.ex-views[data-item-layout="custom"] .bets-views-board { width: min(18.75rem, calc(var(--pl-avail) - 5.5rem)); }
-  .pl-trial.ex-fold[data-item-layout="custom"] .bets-fold-board { width: min(23rem, calc(var(--pl-avail) - 5.5rem)); margin-left: 0; }
-  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw-task { margin-bottom: var(--s1); }
-  .pl-trial:is(.ex-views, .ex-fold)[data-item-layout="custom"] .bets-draw-actions { margin-top: var(--s1); }
+  .pl-trial.ex-views[data-item-layout="custom"] .bets-views-board { width: min(18.75rem, var(--pl-avail), calc(var(--pl-w) * 0.6 - 7rem - var(--s3))); }
+  .pl-trial.ex-fold[data-item-layout="custom"] .bets-fold-board { width: min(23rem, var(--pl-avail), calc(var(--pl-w) * 0.6 - 7rem - var(--s3))); }
 }
 /* Wide screens: the stage on the left, the drawing on the right */
 @media (min-width: 720px) and (min-height: 501px) {
@@ -200,19 +209,23 @@
 .bets-slice-focus.is-on { visibility: visible; }
 .bets-draw.bets-slice { margin-top: var(--s2); }
 .bets-draw.bets-slice .bets-draw-task { margin-bottom: var(--s1); }
-/* round 10 (W2-core; fit.py at 360 x 640): when the player shows its line for a kind of item met for the first time
-   (play.js setNewKind, its height in --pl-nk), the drawing boards give up that height, so the item still fits */
-@media (max-width: 719px) {
-  .pl-player.has-newkind .bets-fold-board { width: min(100vw, calc(23rem - var(--pl-nk, 0px))); margin-left: calc(50% - min(50vw, calc(11.5rem - var(--pl-nk, 0px) / 2))); }
-  .pl-player.has-newkind .bets-views-board { width: min(100%, calc(18.75rem - var(--pl-nk, 0px))); }
+/* RC1 (W2-core; bets.py: the drawing grids keep their 44 px cells): when the player's line for a kind met for the first
+   time shows on a short portrait phone, the item's own task line steps aside (the player's line says what to do) and
+   the figure gives up the rest: Views' stage the line's height less 1.5rem, Fold's panels at most 4.5rem; never the grid
+   (upright phones only: held sideways, the drawing has its own column) */
+@media (max-width: 719px) and (min-height: 501px) and (max-height: 700px) {
+  .pl-player.has-newkind .pl-trial[data-item-layout="custom"] .bets-draw-task { display: none; }
+  .pl-player.has-newkind .pl-trial.ex-views[data-item-layout="custom"] .ex-views-stage { height: calc(min(11rem, calc(var(--pl-w) * 0.6)) - var(--pl-nk, 0px) + 1.5rem); }
+  .pl-player.has-newkind .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip { max-width: calc(var(--fold-cols) * 4.5rem + (var(--fold-cols) - 1) * var(--s1)); }
 }
 /* Phones: with no options under it, the solid takes the room (the marks need it) */
 @media (max-width: 719px), (max-height: 500px) {
   .pl-trial.ex-slice[data-item-layout="custom"] .ex-slice-stage { height: min(24rem, var(--pl-w), calc(var(--pl-avail) - 8rem)); }
 }
 /* Fold's mark items on phones: the fold panels in one row (up to six, at most 5.5rem each), so the strip,
-   the sheet and Clear and Check fit 360 × 640 (fit.py) */
-@media (max-width: 719px) {
+   the sheet and Clear and Check fit 360 × 640 (fit.py); upright only (RC1: a small phone held sideways, 640 × 360,
+   keeps css/ex/fold.css's rows of three beside the drawing, not six 34 px panels) */
+@media (max-width: 719px) and (min-height: 501px) {
   .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip { gap: var(--s1); max-width: calc(var(--fold-cols) * 5.5rem + (var(--fold-cols) - 1) * var(--s1)); }
   .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-plabel { letter-spacing: 0; } /* "Fold 5" stays inside a sixth of the width */
   .pl-trial.ex-fold[data-item-layout="custom"] .ex-fold-strip[data-n="2"] { --fold-cols: 2; }
