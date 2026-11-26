@@ -163,7 +163,7 @@
         'Check each view by putting your eye level with the blocks, one side at a time, and correct the sketch.',
         'Swap roles with someone: one sketches three views, the other builds the structure from them.',
       ],
-      note: 'Sketching views and building block models was part of a spatial-skills course that raised spatial test scores in first-year engineering students (Sorby 2009).',
+      note: 'Sketching views and building block models was part of a spatial-skills course after which first-year engineering students scored higher on spatial tests (Sorby 2009; before and after, without a randomised comparison).',
     },
   });
 })(window.PX);

@@ -224,7 +224,8 @@
   /* ---------- running ---------- */
 
   // The one line on guessing (note D1 addendum A.4 row 6: the official guide says there is no penalty for it).
-  var GUESS = 'Guessing is not penalised: only right answers count, so answer every item, even with a guess. The Dental Admission Test has no penalty for guessing either.';
+  var GUESS_RUN = 'Guessing is not penalised: only right answers count, so answer every item, even with a guess.';
+  var GUESS = GUESS_RUN + ' The Dental Admission Test has no penalty for guessing either.'; // with the ADA line only (setup, instructions, review)
 
   function used(X) { return X.base + (X.C ? X.C.activeMs() : 0); }
   function pausedMs(X) {
@@ -659,7 +660,7 @@
     X.el.listClock = h('span.sec-list-clock.px-num', { 'aria-hidden': 'true' });
     var head = h('div.sec-list-head', h('h2', 'Review'), X.el.listClock);
     var lead = h('p.sec-list-lead', why0 === 'end' ? 'That was the last item. Go to any marked or unanswered item, or end the section. The clock is running.' : 'Go to any item, in any part. The clock is running.');
-    var guess = open.length ? h('p.px-meta.sec-guess', open.length + (open.length === 1 ? ' item is' : ' items are') + ' not answered yet. ' + GUESS) : null;
+    var guess = open.length ? h('p.px-meta.sec-guess', open.length + (open.length === 1 ? ' item is' : ' items are') + ' not answered yet. ' + GUESS_RUN) : null; // the run screen has no ADA line, so it names no test (RV-claims-1.2 L10)
     var chips = h('div.sec-list-parts');
     var seg = K.segmented({
       key: 'secList', legend: 'Show', value: filter,

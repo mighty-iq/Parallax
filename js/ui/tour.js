@@ -132,7 +132,7 @@
       Play.showCard(box, null, {
         id: 'baseline', title: 'Next: your starting point',
         lines: [about.charAt(0).toUpperCase() + about.slice(1) + ', no feedback: short tasks that Parallax never trains, plus a word task as a control.',
-          'Later checks are compared with this starting point, so you can see what practice changes beyond familiarity with the tasks.',
+          'Later checks are compared with this starting point, so you can see whether practice changes anything beyond familiarity with the tasks.',
           'Training follows either way. Later starts it now, and your next session opens with the check.'],
         actions: [{ label: 'Later', value: 'later' }, { label: 'Measure now' + (b1.text ? ' (' + b1.text + ' min)' : ''), value: 'now', primary: true }],
       }).then(function (v) {

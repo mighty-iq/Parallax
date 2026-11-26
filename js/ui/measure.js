@@ -734,7 +734,7 @@
         meterEl(rep.meter),
         h('p.px-meta', rep.meter.line)));
       b.appendChild(rangeRows(trendRows(rep)));
-      b.appendChild(h('p.px-meta.px-units', 'Changes are in points on each task’s difficulty scale: +1 point is about the step from 50 % to 73 % right on the same item. The ranges hold the change with a 90 % chance; the verdict words come only at milestones, and only for the combined probes.'));
+      b.appendChild(h('p.px-meta.px-units', 'Changes are in points on each task’s difficulty scale: +1 point is about the step from 50 % to 73 % of the way from chance to certain on the same item. The ranges hold the change with a 90 % chance; the verdict words come only at milestones, and only for the combined probes.'));
       b.appendChild(h('p.px-meta', rep.lines[1] || ''));
       if (rep.verdicts.length > 1) {
         b.appendChild(h('p.px-setting-label', 'Verdicts so far'));
