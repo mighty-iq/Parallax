@@ -265,8 +265,10 @@ function testDaily(t) {
 function testDailyRelease(t) {
   t.section('Daily v2 starts at release; older results are never scored again');
   const P0 = mk(t, false), D0 = P0.engine.daily;
-  t.eq(P0.engine.config.daily2.epochs[1].from, null, 'the ramp ships off: its first day is set at release');
-  t.eq([D0.epoch('2026-11-21').n, D0.epoch('2027-06-01').n], [1, 1], 'until then every date deals 1.1\'s challenge, so one number means one challenge in 1.1 and 1.2');
+  const REL = P0.engine.config.daily2.epochs[1].from;
+  t.ok(REL === null || /^\d{4}-\d{2}-\d{2}$/.test(REL), 'the ramp ships off in test builds and starts on the release day in a release (' + REL + ')');
+  if (REL) t.eq([D0.epoch('2026-11-21').n, D0.epoch(REL).n, D0.epoch('2027-06-01').n], [1, 2, 2], 'dates before the release deal 1.1\'s challenge; from the release day, the ramp');
+  else t.eq([D0.epoch('2026-11-21').n, D0.epoch('2027-06-01').n], [1, 1], 'until then every date deals 1.1\'s challenge, so one number means one challenge in 1.1 and 1.2');
   t.ok(D0.items('2026-11-21').every((x) => x.points === 0), 'no ramp points before the release');
   const PX = mk(t), E = PX.engine, D = E.daily, now = Date.UTC(2026, 10, 21, 12), key = '2026-11-21';
   // a result written by 1.1 on a ramp date (no points, no epoch): read as 1.1 wrote it

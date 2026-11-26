@@ -39,7 +39,7 @@
 (function (PX) {
   'use strict';
 
-  var BUILD = 'test'; // ← 'release' at release (CLAUDE.md, "Releasing")
+  var BUILD = 'release'; // ← 'release' at release (CLAUDE.md, "Releasing")
 
   // PX.ui's DOM helpers are used at run time only, so the log and the report also run in Node tests.
   var ui = PX.ui = PX.ui || {}, bus = PX.bus, store = PX.core.store, win = window, doc = window.document;
