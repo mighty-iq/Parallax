@@ -101,7 +101,9 @@
    v1.2 O48 (W3-phones): the item's top and bottom margins and the gap under the status strip are 4 px
    instead of 8 here, so the plate reaches R2's 320 px floor on a phone 390 px tall (318 -> 330 px) */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
-  .pl-trial.ex-knots { --knots-plate: min(var(--pl-col), calc(var(--pl-avail) + 3 * var(--s2) - 3 * var(--s1))); }
+  /* v1.2: a first meeting's new-kind line sits in the answers' column here, so the plate takes back the height
+     css/play.css's has-newkind rule gives up for it (--pl-nk; 0 when the line is off) */
+  .pl-trial.ex-knots { --knots-plate: min(var(--pl-col), calc(var(--pl-avail) + var(--pl-nk, 0px) + 3 * var(--s2) - 3 * var(--s1))); }
   :root body.px-item .px-main > .px-wrap:has(.pl-trial.ex-knots) {
     padding-top: calc(var(--s1) + env(safe-area-inset-top, 0px)); padding-bottom: calc(var(--s1) + env(safe-area-inset-bottom, 0px));
   }

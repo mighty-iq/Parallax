@@ -89,6 +89,13 @@ tests/node/<id>*.test.mjs and tests/e2e/harness_<id>*.py. Source: fresh players 
   alone (play route count 1); js/ui/bets.js and js/engine/bets.js need no change. bets.py round:centralpoint 44/0
   three times, round + draw + bridge 121/0, harness_centralpoint 247/0, node bets 400/0.
 
+## RC1 fix (26 Nov): Knots' plate on phones held sideways
+- phones.py (O48) failed at 844 x 390, 915 x 412, 740 x 360 and 667 x 375 on a first item: the plate gave up the height
+  of the new-kind line (css/play.css's has-newkind rule, --pl-nk) although that line sits in the answers' column there.
+  Not the desktop layout (its query needs 501 px of height). The sideways plate takes that height back
+  (css/ex/knots.css); 844 x 390 330 px, 740 x 360 300 px. phones.py knots 31/0, fit.py knots 29/29 + 4/4 x 3 and
+  1366 x 768 4/4, harness_knots 342/0.
+
 ## Left open
 - Requests: W3-voice, the guide's Spin figures and captions (a 92° item can no longer be made) and Central Point's
   Move button (requests.md, 22 Nov); from round 1, the guide's Nets text and shot, and W2-core's copy of Pause over a
