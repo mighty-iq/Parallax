@@ -1,6 +1,6 @@
 # STATE: Parallax (rewritten at every milestone; under 100 lines)
 
-Updated 2026-11-26 18:15 UTC. **v1.2 is at the release gate:** release candidate 2 (b2b2eed) waits for the owner's checklist and his yes to merge.
+Updated 2026-11-26 19:25 UTC. **v1.2 is at the release gate:** release candidate 2 (b2b2eed) waits for the owner's checklist and his yes to merge.
 
 ## Phase
 - **v1.1 is RELEASED** (14 Nov): `main` = b5ead08, GitHub Pages serves 1.1.0.
@@ -17,7 +17,7 @@ Owner decisions:
 
 ## Release candidate 2 (b2b2eed)
 - **Built:** milestones 1–10; 11 at its gate. Version 1.2.0, playtest mode behind its Settings switch, Daily v2 from 2026-11-26 (UTC; confirm it is the merge day, else edit js/engine/daily.js's epoch 2 `from`, rebuild dist, commit), guide 57 pages, dist/Parallax.html 5,416 KiB.
-- **Verified:** node 7,858/0 on RC1; RC1's full browser suite (46 files) and RC2's reruns of the 17 files its fixes touch (3,333/0); long runs on RC2 (see VERIFY); fresh-player runs of every exercise but Track, phone and desktop; independent reviews of code, items, claims, accessibility and the guide, all fixed or logged.
+- **Verified:** node 7,858/0 on RC1 and again on RC2; RC1's full browser suite (46 files) and RC2's reruns of the 17 files its fixes touch (3,333/0); long runs on RC2 in every mode (phone 24/0, desktop and srcdoc 33/0); a zip of the release tree and the tree itself pass the privacy check; fresh-player runs of every exercise but Track, phone and desktop; independent reviews of code, items, claims, accessibility and the guide, all fixed or logged.
 - **Published privately:** the test page carries RC2; the owner's release checklist page is out (his answers save to its database; links in BRIEF.md and the project status note).
 
 ## Next three steps
