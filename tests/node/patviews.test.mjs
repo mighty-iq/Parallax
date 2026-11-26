@@ -332,11 +332,31 @@ function linesApart(a, b) {
 }
 function testShortcuts(t, PX, def, L, pool) {
   t.section('patviews: shortcut solvers, starter band');
-  shortcutPool(t, L, pool.filter((x) => x.p.cubes === 0), true);
+  shortcutPool(t, L, pool.filter((x) => x.p.cubes === 0), true, undefined, MIDDLE_SCOPED.band);
   t.section('patviews: shortcut solvers, cube stacks above the band');
-  shortcutPool(t, L, pool.filter((x) => x.p.cubes > 0 && !x.it.solid), false);
+  shortcutPool(t, L, pool.filter((x) => x.p.cubes > 0 && !x.it.solid), false, undefined, MIDDLE_SCOPED.stacks);
   t.section('patviews: shortcut solvers, solids');
   shortcutPool(t, L, pool.filter((x) => x.it.solid), false, 'solids');
+}
+// A pick among the options that are neither the most nor the fewest (among all four when none is).
+function middleOf(scores, key) {
+  const hi = Math.max(...scores), lo = Math.min(...scores), mid = scores.map((_, i) => i).filter((i) => scores[i] !== hi && scores[i] !== lo);
+  return mid.length ? (mid.includes(key) ? 1 / mid.length : 0) : 1 / scores.length;
+}
+// Scoped exceptions for 1.2 (the lead's call, DECISIONS 26 Nov; wider band drawings in PLAN-v1.3): "the middle" where it
+// is over chance + 10 on this file's pool, each cell (foil level and missing view) bounded at the share measured here
+// plus 3 points; every other cell, and each pool's remaining cells together, stay at chance + 10.
+const MIDDLE_SCOPED = {
+  band: {
+    'the middle in solid units': { 'foil 0, front missing': 0.373, 'foil 0, top missing': 0.402, 'foil 1, top missing': 0.401, 'foil 2, top missing': 0.402 },
+    'the middle in filled area': { 'foil 0, end missing': 0.498, 'foil 0, front missing': 0.469, 'foil 0, top missing': 0.398 },
+  },
+  stacks: { 'the middle in filled area': { 'foil 0, end missing': 0.398, 'foil 0, front missing': 0.438 } },
+};
+function scopedHere(it) {
+  if (it.solid || !it.params) return [];
+  const sc = it.params.cubes === 0 ? MIDDLE_SCOPED.band : MIDDLE_SCOPED.stacks, tag = 'foil ' + (it.params.foil || 0) + ', ' + it.missing + ' missing';
+  return Object.keys(sc).filter((name) => sc[name][tag] !== undefined);
 }
 // Per item, every shortcut solver's share of the key (ties shared). One implementation for this file's pools
 // and for tests/node/shortcut-levels.test.mjs (the export at the end).
@@ -380,6 +400,9 @@ function itemScores(L, it) {
     // Stem-based: solid units equal to a given view's.
     const sc = gv.map((x) => L.counts(x).solid);
     add('as many solid units as a given view', shareOf(c.map((x) => (sc.includes(x.solid) ? 1 : 0)), key, true));
+    // "The middle" (round 5's review of the band): a pick among the options that are neither the most nor the fewest.
+    add('the middle in solid units', middleOf(c.map((x) => x.solid), key));
+    add('the middle in filled area', middleOf(c.map((x) => x.area), key));
   }
   return out;
 }
@@ -414,6 +437,7 @@ function solidScores(L, it) {
   const avail = share.map(([v, k]) => coords(it.given[v], k));
   const aligned = D.map((d) => { let n = 0, ok = 0; for (let ax = 0; ax < 2; ax++) for (const c of coords(d, ax)) { n++; if (avail[ax].has(c)) ok++; } return ok / Math.max(1, n); });
   add('lines line up with the given views', shareOf(aligned.map((x) => Math.round(x * 1e3)), key, true));
+  add('the middle in solid lines', middleOf(sol.map((x) => Math.round(x * 1e4)), key));
   return out;
 }
 // Unit segments of a stored drawing ('h:u:v' or 'v:u:v' with their style), its left-right mirror, and the units
@@ -439,14 +463,15 @@ function unitsApart(a, b) {
   for (let i = 0; i < Math.max(a.fill.length, b.fill.length); i++) if (a.fill[i] !== b.fill[i]) n++;
   return n;
 }
-function shortcutPool(t, L, pool, band, what) {
+function shortcutPool(t, L, pool, band, what, scoped = {}) {
   t.ok(pool.length >= 2000, `${pool.length} items`);
-  const acc = {}, cnt = {}, cell = {};
+  const acc = {}, cnt = {}, cell = {}, rest = {};
   for (const { it, p } of pool) {
     const tag = 'foil ' + p.foil + ', ' + it.missing + ' missing';
     for (const [name, v] of Object.entries(itemScores(L, it))) {
       acc[name] = (acc[name] || 0) + v; cnt[name] = (cnt[name] || 0) + 1;
       const k = name + ' @ ' + tag; cell[k] = cell[k] || [0, 0]; cell[k][0] += v; cell[k][1]++;
+      if (!(scoped[name] && scoped[name][tag] !== undefined)) { rest[name] = rest[name] || [0, 0]; rest[name][0] += v; rest[name][1]++; }
     }
   }
   const line = [];
@@ -454,6 +479,11 @@ function shortcutPool(t, L, pool, band, what) {
     const a = acc[name] / cnt[name];
     line.push(`${name} ${(a * 100).toFixed(1)}%`);
     if (REPORTED.includes(name)) continue; // the format's own method: reported, not bounded
+    if (scoped[name]) { // a scoped exception's cells are bounded below; the pool's other cells together at chance + 10
+      const r = rest[name] ? rest[name][0] / rest[name][1] : 0;
+      t.ok(r <= LIMIT, `shortcut "${name}" ${(r * 100).toFixed(1)} % ≤ chance + 10 outside its scoped cells (${(a * 100).toFixed(1)} % with them)`);
+      continue;
+    }
     t.ok(a <= LIMIT, `shortcut "${name}" ${(a * 100).toFixed(1)} % ≤ chance + 10`);
   }
   console.log(`       patviews shortcuts${band ? ' (starter band)' : what ? ' (' + what + ')' : ''}: ` + line.join(', '));
@@ -463,6 +493,8 @@ function shortcutPool(t, L, pool, band, what) {
   const over = [], near = [];
   Object.entries(cell).forEach(([k, v]) => {
     const a = v[0] / v[1], se = Math.sqrt(a * (1 - a) / v[1]), tag = `${k} ${(a * 100).toFixed(1)}% (n ${v[1]})`;
+    const [name, where] = k.split(' @ '), cap = scoped[name] && scoped[name][where];
+    if (cap !== undefined) { t.ok(a <= cap + 0.03 + 1e-9, `scoped (DECISIONS 26 Nov): "${name}" @ ${where} ${(a * 100).toFixed(1)} % ≤ its measured ${(cap * 100).toFixed(1)} % + 3`); return; }
     if (k.startsWith('size fits') || REPORTED.some((r) => k.startsWith(r)) || a <= LIMIT) return;
     (a > LIMIT + 2 * se ? over : near).push(tag);
   });
@@ -724,7 +756,8 @@ function testSession(t, PX, def) {
 /* v1.2 wave 2 (W2-progress): per-item shortcut scores for tests/node/shortcut-levels.test.mjs */
 export function shortcutScores(PX, def, item) {
   const out = {};
-  for (const [name, hit] of Object.entries(itemScores(def.lib, item))) out[name] = SHORTCUT_EXEMPT.includes(name) ? { hit, chance: 0.25, info: true } : { hit, chance: 0.25 };
+  const scoped = scopedHere(item);
+  for (const [name, hit] of Object.entries(itemScores(def.lib, item))) out[name] = SHORTCUT_EXEMPT.includes(name) || scoped.includes(name) ? { hit, chance: 0.25, info: true } : { hit, chance: 0.25 };
   return out;
 }
 export const SHORTCUT_EXEMPT = ['size fits the stem', 'lines line up with the given views'];

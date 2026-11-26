@@ -182,9 +182,12 @@ export async function run(t) {
   t.section('patfold: shortcut solvers');
   const bound = 0.2 + 0.10;
   const pct = (x) => (100 * x / acc.count).toFixed(1) + ' %';
-  for (const k of ['under', 'sym1', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest', 'always0', 'always1', 'always2', 'always3', 'always4', ...PLACE_KEYS]) {
+  for (const k of ['under', 'low1', 'symAny', 'like', 'odd', 'count2', 'most', 'fewest', 'always0', 'always1', 'always2', 'always3', 'always4', ...PLACE_KEYS]) {
     t.ok(acc[k] / acc.count <= bound, `"${NAMES[k]}" ≤ chance + 10 (${pct(acc[k])}, chance 20 %)`);
   }
+  // symmetry about the first crease is the last step of the format's method (the sheet opens across its first crease
+  // last): reported, not bounded, at every level (DECISIONS 13 Nov and 26 Nov)
+  console.log(`       info  ${NAMES.sym1} (the format's method, reported): ${pct(acc.sym1)}`);
   console.log(`       info  ${NAMES.layers}: ${pct(acc.layers)} (a third where counts may differ, a fifth where they may not)`);
   creaseReport(cs, [2, 3]);
   t.section('patfold: the starter band (one fold; note D2 §3.6)');
@@ -275,10 +278,20 @@ const SCOPED_CELLS = [
   [{ folds: 2, type: 3, idle: 0, sheets: 1 }, { touchFew: 0.503, like: 0.377 }],
   [{ folds: 2, type: 2, idle: 1, sheets: 1 }, { colour: 0.379, spreadMost: 0.368, near: 0.368 }],
   [{ folds: 2, type: 3, idle: 1, sheets: 1 }, { far: 0.355 }],
+  // ... and (26 Nov) the one-fold band: a straight half fold sends a cell to the other checkerboard colour on this 4 x 4
+  // sheet, so the true pair of holes is always two-coloured; a corner fold mirrors the punch across a slanted crease, so
+  // with every sheet at two holes the true pair tends to be the most spread out; and three straight half folds, whose
+  // true holes sit nearest the centre a little often (at the two-standard-error line)
+  [{ folds: 0, type: 0, idle: 0, sheets: 0 }, { mixed: 0.349 }],
+  [{ folds: 0, type: 0, idle: 1, sheets: 0 }, { mixed: 0.349 }],
+  [{ folds: 0, type: 0, idle: 2, sheets: 0 }, { mixed: 0.349 }],
+  [{ folds: 0, type: 1, idle: 0, sheets: 1 }, { spreadMost: 0.370 }],
+  [{ folds: 0, type: 1, idle: 1, sheets: 1 }, { spreadMost: 0.369 }],
+  [{ folds: 2, type: 0, idle: 0, sheets: 0 }, { near: 0.348 }],
 ];
 const N_CELL = 400;
 function testScopedCells(t, PX, def) {
-  t.section('patfold: scoped cells (two or three diagonal or mixed folds; DECISIONS 22 Nov)');
+  t.section('patfold: scoped cells (two or three diagonal or mixed folds, DECISIONS 22 Nov; the one-fold band, DECISIONS 26 Nov)');
   const type = ['half', 'corner', 'diagonal', 'mixed'];
   for (const [p, caps] of SCOPED_CELLS) {
     const acc = {};
@@ -445,9 +458,9 @@ export function shortcutScores(PX, def, item) {
   const out = {};
   def.lib.onSheet((A) => {
     const sc = itemScores(A, def.lib, item);
-    // reported: counting the layers (the method where counts differ) and, on the starter band, crease
-    // symmetry (the band's method: the key is the punch and its twin across the one crease; DECISIONS)
-    for (const k of Object.keys(sc)) out[NAMES[k]] = k === 'layers' || (k === 'sym1' && item.folds.length === 1) ? { hit: sc[k], chance: 0.2, info: true } : { hit: sc[k], chance: 0.2 };
+    // reported: counting the layers (the method where counts differ) and symmetry about the first crease (the last
+    // step of the format's method; on the starter band the key is the punch and its twin across the one crease; DECISIONS)
+    for (const k of Object.keys(sc)) out[NAMES[k]] = k === 'layers' || k === 'sym1' ? { hit: sc[k], chance: 0.2, info: true } : { hit: sc[k], chance: 0.2 };
   });
   return out;
 }
