@@ -61,10 +61,10 @@ a measure that moves every week. A record from 1.0 or 1.1 upgrades by itself (fo
   its Watch; Hole Punch's wrong sheets may differ in hole count; Form gains the test's kinds of pattern and L-, T-
   and U-prisms; Missing View moves to profile solids and says when its drawn structure stops. An independent item
   review's cheap cues are held near chance in Hole Punch, Missing View, Openings, Form, Angles (version 4) and
-  Painted Cubes (version 4), with ten combinations of diagonal or mixed folds in Hole Punch kept as scoped
-  exceptions for now; a session never shows an item twice where a setting has few. Section practice runs
+  Painted Cubes (version 4), apart from scoped cells (sixteen in Hole Punch, nine in Missing View) that are
+  bounded by tests and planned for 1.3; a session never shows an item twice where a setting has few. Section practice runs
   under test conditions, at each format's test-range settings only: every part's instructions first, one clock
-  across the parts, Back, Next, Mark, Strike and a review list; no part shows an item twice. Still opt-in, and
+  across the parts, Back, Next, Mark, Strike and a review list; a part never repeats an item, nor a drawing where a setting has few. Still opt-in, and
   still no score forecast.
 - **The other exercises, after fresh-player runs and the item review:** Views version 3 balances its view
   questions at every level and never repeats a structure in a session; Spin's copies and mirrors lean alike, with
@@ -99,7 +99,8 @@ a measure that moves every week. A record from 1.0 or 1.1 upgrades by itself (fo
   and review over a reload. Playtest mode for testers, off by default.
 - **Under the hood:** record format 4 (plateau events, bet periods, measurement occasions, the game layer, an events
   table); six new trial columns; hooks for modules between items; trials of rebuilt exercises and probes under new
-  versions (Views 3, Angles 4, Painted Cubes 4; Mechanisms 3, Motion Graphs 2, Other Way Round 2); stored levels
+  versions (Views 3, Angles 4, Painted Cubes 4, Openings 3, Hole Punch 3, Form 3, Missing View 3, Reckon 2;
+  Other Way Round 2, Cube Match 2, Pattern Memory 2, Mechanisms 3, Motion Graphs 2); stored levels
   converted to a changed range only forward, and two tabs of different builds aligned before they merge; the Atlas
   read again after a merge joins its counts instead of adding them; the node suite in four CI shards
   (`node tests/node/run.mjs --shard k/n`); the guide rewritten for 1.2, with its research in docs/research/v1.2/.
