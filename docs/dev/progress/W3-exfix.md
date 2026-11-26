@@ -81,6 +81,14 @@ tests/node/<id>*.test.mjs and tests/e2e/harness_<id>*.py. Source: fresh players 
   options end 2 px under the fold, Confirm below; not changed, Spin's layout is as before). Node: spin 92/0,
   shortcut-levels (spin) 4/0, centralpoint 393/0, reckon + homing 442/0; harness_spin 82/0, harness_centralpoint 247/0.
 
+## RC1 fix (26 Nov): bets.py's calibration check
+- The failure (Central Point at 390 x 844: 3 answers kept, 2 rows of layer 3) was not the Move button or the miss line:
+  the two-minute Train session gives Central Point its quota of three items and then interleaves other exercises
+  (traced: the apply item, two calib-detail items, then other exercises' rows), and the check needs five answers.
+  It failed in 3 of 4 runs on 2f97d81 depending on the session's mix. The calibration run now trains Central Point
+  alone (play route count 1); js/ui/bets.js and js/engine/bets.js need no change. bets.py round:centralpoint 44/0
+  three times, round + draw + bridge 121/0, harness_centralpoint 247/0, node bets 400/0.
+
 ## Left open
 - Requests: W3-voice, the guide's Spin figures and captions (a 92° item can no longer be made) and Central Point's
   Move button (requests.md, 22 Nov); from round 1, the guide's Nets text and shot, and W2-core's copy of Pause over a

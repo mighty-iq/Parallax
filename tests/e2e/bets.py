@@ -207,7 +207,9 @@ def round_for(b, ex, w, h, calib=False):
     boot(page)
     page.evaluate(PREP, ex)
     page.evaluate('PX.core.store.state.settings.sessionMin = 2; PX.ui.play.config.budgetMs = 60000;')
-    go(page, 'play', {'mode': 'train', 'exId': ex})
+    # the calibration check needs five answers on this exercise: a two-minute Train session interleaves its
+    # exercises and may give it only its quota of three (RC1's suite), so that run trains it alone (count 1)
+    go(page, 'play', {'mode': 'train', 'exId': ex, **({'count': 1} if calib else {})})
     try:
         wait_card(page, 'bets-compare')
         ok = True
