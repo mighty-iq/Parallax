@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0 · 2026-11-26
+## 1.2.0 · 2026-11-27
 
 The second update, built by the Chimera community on Discord (https://discord.gg/chmr). Parallax becomes a
 trainer to open every day without bending the science: a game layer between items, items at your edge on every

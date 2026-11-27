@@ -62,7 +62,7 @@
       { n: 1, from: '2026-11-01', ramp: false, pool: ['rotate', 'spin', 'fold', 'nets', 'slice', 'views', 'orient', 'span', 'hidden', 'knots'] },
       // from: the release day of v1.2 ('YYYY-MM-DD'), set at release (a line of the release checklist);
       // null keeps the epoch off
-      { n: 2, from: '2026-11-26', ramp: true, pool: ['rotate', 'spin', 'fold', 'nets', 'slice', 'views', 'orient', 'span', 'hidden', 'knots', 'centralpoint'] },
+      { n: 2, from: '2026-11-27', ramp: true, pool: ['rotate', 'spin', 'fold', 'nets', 'slice', 'views', 'orient', 'span', 'hidden', 'knots', 'centralpoint'] },
     ],
     max: 36,     // 1 + 2 + … + 8
     archiveDays: 28,
