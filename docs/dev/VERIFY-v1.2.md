@@ -118,6 +118,7 @@ The testers play from screenshots, so their action counts and times run slower t
 | Build log and playbook lessons | project docs | At release |
 
 ## For the owner
+- **Released 27 Nov 2026, 12:21 UTC:** build and main pushed together after the release rewrite (figures and late stamps; DECISIONS 27 Nov); the whole history passes `privacy_check.py --history`, the release zip passes `--zip`; the GitHub Pages deployment of the release commit succeeded.
 - His release checklist (a page of pass or fail taps), then his yes to merge. On 27 Nov he gave the go without the checklist (DECISIONS 27 Nov); Daily v2 and the CHANGELOG moved to the merge day, 27 Nov (UTC), and the Daily-related node files, single.py and game.py were rerun on it. Before the merge, the figure rewrite of build and main runs (his yes of 26 Nov); the old commit IDs join his GitHub Support list.
 - Known misses to accept: plateau detection within 800 answers (87–88 % against 90 %); milestone 7's edge share (93.8 % against 94 %) and Track's speed levels; the scoped shortcut cells in rule 5's row; Fold's sideways drawing cells (39 px); nine exercises that scroll a little at 1366 × 768; the item review's unreached parts (all in PLAN-v1.3).
 - Tags: v1.1.0 and v1.2.0 are his taps under Releases (the proxy refuses tags).
